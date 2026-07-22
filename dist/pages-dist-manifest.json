@@ -45527,7 +45527,7 @@
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
-      "size_bytes": 17716,
+      "size_bytes": 17855,
       "source_kind": "dist"
     },
     {
@@ -45577,7 +45577,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_ready_handoff.js",
-      "size_bytes": 10203,
+      "size_bytes": 10349,
       "source_kind": "dist"
     },
     {
@@ -45892,7 +45892,7 @@
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_runtime.js",
-      "size_bytes": 31816,
+      "size_bytes": 32164,
       "source_kind": "dist"
     },
     {
@@ -46322,7 +46322,7 @@
     },
     {
       "path": "app/js/core/scenario/bundle_loader.js",
-      "size_bytes": 44656,
+      "size_bytes": 44789,
       "source_kind": "dist"
     },
     {
@@ -46332,12 +46332,12 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 151611,
+      "size_bytes": 154958,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
-      "size_bytes": 13372,
+      "size_bytes": 13539,
       "source_kind": "dist"
     },
     {
@@ -46392,7 +46392,7 @@
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 44135,
+      "size_bytes": 44764,
       "source_kind": "dist"
     },
     {
@@ -46422,7 +46422,7 @@
     },
     {
       "path": "app/js/core/scenario_localization_state.js",
-      "size_bytes": 8127,
+      "size_bytes": 8118,
       "source_kind": "dist"
     },
     {
@@ -46447,12 +46447,12 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 52334,
+      "size_bytes": 52509,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/scenario_rollback.js",
-      "size_bytes": 23585,
+      "size_bytes": 24828,
       "source_kind": "dist"
     },
     {
@@ -46507,12 +46507,22 @@
     },
     {
       "path": "app/js/core/state/actions/scenario_activation_actions.js",
-      "size_bytes": 17603,
+      "size_bytes": 25385,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/state/actions/scenario_apply_request_actions.js",
       "size_bytes": 1667,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_chunk_promotion_actions.js",
+      "size_bytes": 5292,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_chunk_runtime_actions.js",
+      "size_bytes": 41151,
       "source_kind": "dist"
     },
     {
@@ -46522,7 +46532,7 @@
     },
     {
       "path": "app/js/core/state/actions/scenario_presentation_actions.js",
-      "size_bytes": 15144,
+      "size_bytes": 15937,
       "source_kind": "dist"
     },
     {
@@ -46532,7 +46542,7 @@
     },
     {
       "path": "app/js/core/state/actions/scenario_transaction_rollback_actions.js",
-      "size_bytes": 8639,
+      "size_bytes": 8319,
       "source_kind": "dist"
     },
     {
@@ -46567,7 +46577,7 @@
     },
     {
       "path": "app/js/core/state/content_state.js",
-      "size_bytes": 19779,
+      "size_bytes": 19851,
       "source_kind": "dist"
     },
     {
@@ -46597,7 +46607,7 @@
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
-      "size_bytes": 19516,
+      "size_bytes": 19987,
       "source_kind": "dist"
     },
     {
@@ -47472,7 +47482,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1469152,
+      "size_bytes": 1469443,
       "source_kind": "dist"
     },
     {
@@ -47602,9 +47612,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9434,
+      "file_count": 9436,
       "path": "app",
-      "size_bytes": 965742242
+      "size_bytes": 965803801
     },
     {
       "file_count": 57,
@@ -47614,7 +47624,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1469152
+      "size_bytes": 1469443
     },
     {
       "file_count": 1,
@@ -47637,5 +47647,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972309755
+  "total_bytes": 972371605
 }

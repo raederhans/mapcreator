@@ -2068,6 +2068,42 @@ test("unknown tracked calls fail closed while pure reads remain read-only", () =
   assert.deepEqual(intrinsicReads, []);
 });
 
+test("registered action payload Reflect.get resolves only static non-root projections", () => {
+  const findings = scanModule(`
+    import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
+    const dynamicKey = "ready";
+    setBootStateFields(${STATE_ROOT}, {
+      staticRootProjection: Reflect.get(${STATE_ROOT}, "ready"),
+      staticNestedProjection: Reflect.get(${member("runtime")}, "ready"),
+    });
+    setBootStateFields(${STATE_ROOT}, {
+      dynamicRootProjection: Reflect.get(${STATE_ROOT}, dynamicKey),
+    });
+    setBootStateFields(${STATE_ROOT}, {
+      dynamicNestedProjection: Reflect.get(${member("runtime")}, dynamicKey),
+    });
+    setBootStateFields(${STATE_ROOT}, {
+      rootProjection: Reflect.get(${STATE_ROOT}),
+    });
+  `);
+
+  assert.equal(findings.length, 3);
+  assert.deepEqual(
+    findings.map(({ operation, key, reason, evidenceKind }) => ({
+      operation,
+      key,
+      reason,
+      evidenceKind,
+    })),
+    Array.from({ length: 3 }, () => ({
+      operation: "unsupported",
+      key: "*",
+      reason: "state-alias-escape",
+      evidenceKind: "unknown-call-argument",
+    })),
+  );
+});
+
 test("named class expressions shadow module state across every class surface", () => {
   const findings = scanModule(`
     const Example = class ${STATE_ROOT} {
@@ -3032,6 +3068,7 @@ test("state action delegation rejects wrong-index and additional state arguments
     import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
     setBootStateFields({ phase: "ready" }, ${STATE_ROOT});
     setBootStateFields(${STATE_ROOT}, ${member("startup")});
+    setBootStateFields(${STATE_ROOT}, { nested: ${STATE_ROOT} });
   `);
 
   assert.deepEqual(
@@ -3049,6 +3086,11 @@ test("state action delegation rejects wrong-index and additional state arguments
       {
         operation: "unsupported",
         key: "startup",
+        reason: "state-alias-escape",
+      },
+      {
+        operation: "unsupported",
+        key: "*",
         reason: "state-alias-escape",
       },
     ],

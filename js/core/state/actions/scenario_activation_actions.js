@@ -10,7 +10,6 @@ export const SCENARIO_ACTIVATION_STATE_KEYS = Object.freeze([
   "activeScenarioMeshPack",
   "scenarioRuntimeTopologyData",
   "runtimePoliticalTopology",
-  "scenarioPoliticalChunkData",
   "runtimePoliticalMetaSeed",
   "runtimePoliticalFeatureCollectionSeed",
   "scenarioLandMaskData",
@@ -48,6 +47,16 @@ export const SCENARIO_ACTIVATION_STATE_KEYS = Object.freeze([
   "countryBaseColors",
 ]);
 
+export const SCENARIO_CHUNK_OPTIONAL_LAYER_STATE_CONFIGS = Object.freeze({
+  water: Object.freeze({ stateField: "scenarioWaterRegionsData", revisionField: "" }),
+  special: Object.freeze({ stateField: "scenarioSpecialRegionsData", revisionField: "" }),
+  scenario_atlantropa: Object.freeze({ stateField: "scenarioAtlantropaData", revisionField: "scenarioAtlantropaRevision" }),
+  specialzonelayers: Object.freeze({ stateField: "specialZoneLayers", revisionField: "" }),
+  relief: Object.freeze({ stateField: "scenarioReliefOverlaysData", revisionField: "scenarioReliefOverlayRevision" }),
+  cities: Object.freeze({ stateField: "scenarioCityOverridesData", revisionField: "cityLayerRevision" }),
+  strategicvalues: Object.freeze({ stateField: "scenarioStrategicValuesData", revisionField: "scenarioStrategicValuesRevision" }),
+});
+
 const hasOwn = (target, key) =>
   Object.hasOwn(target, key);
 
@@ -55,6 +64,189 @@ function assertStateTarget(target) {
   if (!target || typeof target !== "object" || Array.isArray(target)) {
     throw new TypeError("[scenario_activation_actions] target must be an object");
   }
+}
+
+function getOptionalLayerConfig(layerKey) {
+  const normalizedLayerKey = String(layerKey || "").trim();
+  const config = SCENARIO_CHUNK_OPTIONAL_LAYER_STATE_CONFIGS[normalizedLayerKey];
+  if (!config) throw new Error(`unknown scenario chunk optional layer: ${normalizedLayerKey}`);
+  return { layerKey: normalizedLayerKey, config };
+}
+
+function readOptionalLayerValue(target, layerKey) {
+  switch (layerKey) {
+    case "water": return target.scenarioWaterRegionsData;
+    case "special": return target.scenarioSpecialRegionsData;
+    case "scenario_atlantropa": return target.scenarioAtlantropaData;
+    case "specialzonelayers": return target.specialZoneLayers;
+    case "relief": return target.scenarioReliefOverlaysData;
+    case "cities": return target.scenarioCityOverridesData;
+    case "strategicvalues": return target.scenarioStrategicValuesData;
+  }
+}
+
+function hasOptionalLayerValue(target, layerKey) {
+  switch (layerKey) {
+    case "water": return hasOwn(target, "scenarioWaterRegionsData");
+    case "special": return hasOwn(target, "scenarioSpecialRegionsData");
+    case "scenario_atlantropa": return hasOwn(target, "scenarioAtlantropaData");
+    case "specialzonelayers": return hasOwn(target, "specialZoneLayers");
+    case "relief": return hasOwn(target, "scenarioReliefOverlaysData");
+    case "cities": return hasOwn(target, "scenarioCityOverridesData");
+    case "strategicvalues": return hasOwn(target, "scenarioStrategicValuesData");
+  }
+}
+
+function readOptionalLayerRevision(target, layerKey) {
+  switch (layerKey) {
+    case "scenario_atlantropa": return target.scenarioAtlantropaRevision;
+    case "relief": return target.scenarioReliefOverlayRevision;
+    case "cities": return target.cityLayerRevision;
+    case "strategicvalues": return target.scenarioStrategicValuesRevision;
+  }
+}
+
+function hasOptionalLayerRevision(target, layerKey) {
+  switch (layerKey) {
+    case "scenario_atlantropa": return hasOwn(target, "scenarioAtlantropaRevision");
+    case "relief": return hasOwn(target, "scenarioReliefOverlayRevision");
+    case "cities": return hasOwn(target, "cityLayerRevision");
+    case "strategicvalues": return hasOwn(target, "scenarioStrategicValuesRevision");
+    default: return false;
+  }
+}
+
+export function getScenarioChunkOptionalLayerState(target, layerKey) {
+  assertStateTarget(target);
+  const { layerKey: normalizedLayerKey } = getOptionalLayerConfig(layerKey);
+  return readOptionalLayerValue(target, normalizedLayerKey);
+}
+
+export function applyScenarioChunkOptionalLayerState(target, layerKey, payload) {
+  assertStateTarget(target);
+  const { layerKey: normalizedLayerKey } = getOptionalLayerConfig(layerKey);
+  if (normalizedLayerKey === "cities") {
+    return {
+      changed: target.scenarioCityOverridesData !== payload,
+      externalEffect: {
+        type: "scenario-city-overrides",
+        payload,
+        finalizerToken: null,
+      },
+    };
+  }
+  let changed = false;
+  switch (normalizedLayerKey) {
+    case "water":
+      changed = target.scenarioWaterRegionsData !== payload;
+      if (!changed) break;
+      target.scenarioWaterRegionsData = payload;
+      break;
+    case "special":
+      changed = target.scenarioSpecialRegionsData !== payload;
+      if (!changed) break;
+      target.scenarioSpecialRegionsData = payload;
+      break;
+    case "scenario_atlantropa":
+      changed = target.scenarioAtlantropaData !== payload;
+      if (!changed) break;
+      target.scenarioAtlantropaData = payload;
+      target.scenarioAtlantropaRevision =
+        Math.max(0, Number(target.scenarioAtlantropaRevision) || 0) + 1;
+      break;
+    case "specialzonelayers":
+      changed = target.specialZoneLayers !== payload;
+      if (!changed) break;
+      target.specialZoneLayers = payload;
+      break;
+    case "relief":
+      changed = target.scenarioReliefOverlaysData !== payload;
+      if (!changed) break;
+      target.scenarioReliefOverlaysData = payload;
+      target.scenarioReliefOverlayRevision =
+        Math.max(0, Number(target.scenarioReliefOverlayRevision) || 0) + 1;
+      break;
+    case "strategicvalues":
+      changed = target.scenarioStrategicValuesData !== payload;
+      if (!changed) break;
+      target.scenarioStrategicValuesData = payload;
+      target.scenarioStrategicValuesRevision =
+        Math.max(0, Number(target.scenarioStrategicValuesRevision) || 0) + 1;
+      break;
+  }
+  return { changed, externalEffect: null };
+}
+
+export function captureScenarioChunkPromotionState(target, layerKeys = []) {
+  assertStateTarget(target);
+  const entries = (Array.isArray(layerKeys) ? layerKeys : []).map((layerKey) => {
+    const { layerKey: normalizedLayerKey, config } = getOptionalLayerConfig(layerKey);
+    return Object.freeze({
+      layerKey: normalizedLayerKey,
+      statePresent: hasOptionalLayerValue(target, normalizedLayerKey),
+      stateValue: readOptionalLayerValue(target, normalizedLayerKey),
+      revisionPresent: !!config.revisionField && hasOptionalLayerRevision(target, normalizedLayerKey),
+      revisionValue: config.revisionField ? readOptionalLayerRevision(target, normalizedLayerKey) : undefined,
+    });
+  });
+  return Object.freeze(entries);
+}
+
+export function restoreScenarioChunkPromotionState(target, snapshot) {
+  assertStateTarget(target);
+  const externalEffects = [];
+  for (const entry of Array.isArray(snapshot) ? snapshot : []) {
+    const layerKey = entry?.layerKey;
+    if (layerKey === "cities") {
+      externalEffects[externalEffects.length] = {
+        type: "scenario-city-overrides",
+        payload: entry.statePresent ? entry.stateValue : null,
+        finalizerToken: {
+          type: "scenario-city-restore-finalizer",
+          statePresent: entry.statePresent === true,
+          stateValue: entry.stateValue,
+          revisionPresent: entry.revisionPresent === true,
+          revisionValue: entry.revisionValue,
+        },
+      };
+      continue;
+    }
+    switch (layerKey) {
+      case "water":
+        if (entry.statePresent) target.scenarioWaterRegionsData = entry.stateValue;
+        else delete target.scenarioWaterRegionsData;
+        break;
+      case "special":
+        if (entry.statePresent) target.scenarioSpecialRegionsData = entry.stateValue;
+        else delete target.scenarioSpecialRegionsData;
+        break;
+      case "scenario_atlantropa":
+        if (entry.statePresent) target.scenarioAtlantropaData = entry.stateValue;
+        else delete target.scenarioAtlantropaData;
+        if (entry.revisionPresent) target.scenarioAtlantropaRevision = entry.revisionValue;
+        else delete target.scenarioAtlantropaRevision;
+        break;
+      case "specialzonelayers":
+        if (entry.statePresent) target.specialZoneLayers = entry.stateValue;
+        else delete target.specialZoneLayers;
+        break;
+      case "relief":
+        if (entry.statePresent) target.scenarioReliefOverlaysData = entry.stateValue;
+        else delete target.scenarioReliefOverlaysData;
+        if (entry.revisionPresent) target.scenarioReliefOverlayRevision = entry.revisionValue;
+        else delete target.scenarioReliefOverlayRevision;
+        break;
+      case "strategicvalues":
+        if (entry.statePresent) target.scenarioStrategicValuesData = entry.stateValue;
+        else delete target.scenarioStrategicValuesData;
+        if (entry.revisionPresent) target.scenarioStrategicValuesRevision = entry.revisionValue;
+        else delete target.scenarioStrategicValuesRevision;
+        break;
+      default:
+        throw new Error(`unknown scenario chunk optional layer: ${layerKey || ""}`);
+    }
+  }
+  return { externalEffects };
 }
 
 function validateCompletePatch(patch) {
@@ -142,7 +334,6 @@ export function commitScenarioActivationState(target, patch) {
   target.runtimePoliticalTopology = patch.useDefaultRuntimePoliticalTopology
     ? (target.defaultRuntimePoliticalTopology || null)
     : patch.runtimePoliticalTopology;
-  target.scenarioPoliticalChunkData = patch.scenarioPoliticalChunkData;
   target.runtimePoliticalMetaSeed = patch.runtimePoliticalMetaSeed;
   target.runtimePoliticalFeatureCollectionSeed =
     patch.runtimePoliticalFeatureCollectionSeed;
@@ -435,17 +626,6 @@ function restoreScenarioActivationBeforeColorDirtyStateFromValidated(
   }
 }
 
-function restoreScenarioActivationAfterColorDirtyStateFromValidated(
-  target,
-  { values, presentKeys },
-) {
-  if (presentKeys.has("scenarioPoliticalChunkData")) {
-    target.scenarioPoliticalChunkData = values.scenarioPoliticalChunkData;
-  } else {
-    delete target.scenarioPoliticalChunkData;
-  }
-}
-
 export function restoreScenarioActivationBeforeAuditState(target, snapshot) {
   assertStateTarget(target);
   const validatedSnapshot = validateSnapshot(snapshot);
@@ -474,11 +654,7 @@ export function restoreScenarioActivationAfterColorDirtyState(
   snapshot,
 ) {
   assertStateTarget(target);
-  const validatedSnapshot = validateSnapshot(snapshot);
-  restoreScenarioActivationAfterColorDirtyStateFromValidated(
-    target,
-    validatedSnapshot,
-  );
+  validateSnapshot(snapshot);
   return true;
 }
 
@@ -490,10 +666,6 @@ export function restoreScenarioActivationState(target, snapshot) {
     validatedSnapshot,
   );
   restoreScenarioActivationBeforeColorDirtyStateFromValidated(
-    target,
-    validatedSnapshot,
-  );
-  restoreScenarioActivationAfterColorDirtyStateFromValidated(
     target,
     validatedSnapshot,
   );

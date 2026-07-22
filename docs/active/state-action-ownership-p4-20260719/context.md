@@ -8,7 +8,7 @@
 - Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
 - Parent status recaptured on 2026-07-21: local `main@68a62e54` remains pinned with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; remote integration and every P4 edit stay in the isolated worktree.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.2a audit checkpoint `f05b715567036474c5522145f814012f4c6c49e7` is green on `origin/main@03c34aa0`; this attestation records the verified selector, route, Windows wrapper and CRLF repairs before P4.2b.
+- Current phase: P4.2b implementation and deterministic working-tree gates are green on audited remote base `ecb36d45f1a556ee67bcd1ecc01049869bc561b7`; serialized live/dist/core verification and exact clean checkpoint evidence are active.
 
 ## Decisions and deviations
 
@@ -53,6 +53,11 @@
 | 2026-07-21 | Adaptive execution on Windows cannot assume a `python` executable even though the repository supports `py -3` through `tools/run_python.mjs` | Direct Python recommendations now use the project wrapper on Windows with `shell:false`; Linux keeps the existing `python` argv contract, and structural coverage verifies both mappings. |
 | 2026-07-21 | A fresh isolated Windows checkout exposed CRLF sensitivity in the Scenario rollback authority scanner | The test normalizes source newlines before structural extraction and carries an explicit LF/CRLF equivalence regression; production rollback behavior remains unchanged. |
 | 2026-07-21 | Audit checkpoint `f05b715567036474c5522145f814012f4c6c49e7`, tree `abc16ac376e24994d66cb945789e1e8136e64391`, completed on top of concurrent remote checkpoint `03c34aa0` | Exact Node 92/92, Python 58/58, policy, route 8/7/0/0, standalone policy 280/280, SF-ATS 17 child-safe / 0 main-thread / 0 CI-only / 0 unmatched and final APPROVE/CLEAR reviews pass. |
+| 2026-07-21 | P4.2b RED behavior and boundary contracts fail only because the two Scenario chunk action modules are absent | Implementation is limited to finite target-first runtime and promotion actions, caller delegation, policy progression, deterministic regressions and one serialized Scenario chunk live lane. |
+| 2026-07-21 | Chunk loader inspection reproduced stale async completion crossing a later scenario generation and a synchronous-loader temporal-dead-zone failure | `runtimeChunkLoadState.generation` provides the fence, the loader awaits directly inside its async task, and focused regressions cover late success/failure, shared in-flight reuse, synchronous loaders and frozen rollback. |
+| 2026-07-21 | Root-facade compatibility remains fixed while the generation fence needs durable state | The generation scalar is nested under the existing runtime chunk-load container; the default-state probe remains `402 → 488`, with 488 actual facade keys and zero ownership defects. |
+| 2026-07-21 | Final review reproduced stale registry completion crossing a reset generation and a broad frozen fallback swallowing setter failures | Registry settlement now carries the captured generation through a canonical conditional action; replacement uses property descriptors and propagates unexpected setter errors. Three focused regressions lock both repairs. |
+| 2026-07-21 | P4.2b deterministic gates are green on the working tree | Node 202/202, Python 76/76, policy 202 writers, route 46/38/0/0 and adaptive dry-run 46 changed / 238 selected / 215 child-safe / 23 main-thread complete before serialized live and exact checks. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
@@ -64,6 +69,9 @@
 | Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/` | exact-A Pages/dist passes at 927.27 MiB under serial ownership; lane released for P4.2b |
 | P4 audit exact validation | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/f05b715567036474c5522145f814012f4c6c49e7/` | complete; exact gate, standalone policy and governance checks pass; lane released before integration |
 | Policy performance probe | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/performance/` | complete; snapshot output byte-identical and checker 1.86x faster |
+| P4.2b child-safe policy and adaptive checks | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2b/` | complete on the working tree: Node 202/202, Python 76/76, policy green, route 46/38/0/0 and adaptive dry-run green; lane released |
+| P4.2b Scenario chunk browser/dev runtime | `/root` main integration owner | `.runtime/tests/playwright/p4/P4.2b/working/scenario-resilience/` | reserved for one serialized Scenario resilience run after final review |
+| P4.2b Pages/dist builder | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2b/working/dist/` | reserved for serialized dist and core verification after Scenario resilience |
 
 ## Handoff
 
@@ -71,4 +79,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Use the audited P4.2a remote tip as the P4.2b scenario chunk ownership base while preserving the dirty parent checkout and single-owner live-test lanes.
+Complete rebase semantic checks, then run the exact clean P4.2b gate plus serialized Scenario resilience and dist/core lanes before attestation and remote integration.

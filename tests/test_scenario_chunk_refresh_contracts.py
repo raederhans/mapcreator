@@ -14,6 +14,7 @@ RENDER_PHASE_LIFECYCLE_OWNER_PATH = ROOT / "js/core/map_renderer/render_phase_li
 SCENARIO_RESOURCES_PATH = ROOT / "js/core/scenario_resources.js"
 SCENARIO_MANAGER_PATH = ROOT / "js/core/scenario_manager.js"
 SCENARIO_CHUNK_RUNTIME_PATH = ROOT / "js/core/scenario/chunk_runtime.js"
+SCENARIO_BUNDLE_LOADER_PATH = ROOT / "js/core/scenario/bundle_loader.js"
 SCENARIO_CHUNK_PROMOTION_HELPERS_PATH = ROOT / "js/core/renderer/scenario_chunk_promotion_helpers.js"
 SCENARIO_POST_APPLY_EFFECTS_PATH = ROOT / "js/core/scenario_post_apply_effects.js"
 SCENARIO_APPLY_PIPELINE_PATH = ROOT / "js/core/scenario_apply_pipeline.js"
@@ -22,6 +23,7 @@ POST_READY_SCHEDULER_PATH = ROOT / "js/bootstrap/post_ready_scheduler.js"
 STARTUP_READY_HANDOFF_PATH = ROOT / "js/bootstrap/startup_ready_handoff.js"
 DEFERRED_DETAIL_PROMOTION_PATH = ROOT / "js/bootstrap/deferred_detail_promotion.js"
 SCENARIO_RUNTIME_STATE_PATH = ROOT / "js/core/state/scenario_runtime_state.js"
+SCENARIO_CHUNK_RUNTIME_ACTIONS_PATH = ROOT / "js/core/state/actions/scenario_chunk_runtime_actions.js"
 
 
 class ScenarioChunkRefreshContractsTest(unittest.TestCase):
@@ -38,6 +40,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.scenario_resources_source = SCENARIO_RESOURCES_PATH.read_text(encoding="utf-8")
         cls.scenario_manager_source = SCENARIO_MANAGER_PATH.read_text(encoding="utf-8")
         cls.scenario_chunk_runtime_source = SCENARIO_CHUNK_RUNTIME_PATH.read_text(encoding="utf-8")
+        cls.scenario_bundle_loader_source = SCENARIO_BUNDLE_LOADER_PATH.read_text(encoding="utf-8")
         cls.scenario_chunk_promotion_helpers_source = SCENARIO_CHUNK_PROMOTION_HELPERS_PATH.read_text(encoding="utf-8")
         cls.scenario_post_apply_effects_source = SCENARIO_POST_APPLY_EFFECTS_PATH.read_text(encoding="utf-8")
         cls.scenario_apply_pipeline_source = SCENARIO_APPLY_PIPELINE_PATH.read_text(encoding="utf-8")
@@ -46,6 +49,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.startup_ready_handoff_source = STARTUP_READY_HANDOFF_PATH.read_text(encoding="utf-8")
         cls.deferred_detail_promotion_source = DEFERRED_DETAIL_PROMOTION_PATH.read_text(encoding="utf-8")
         cls.scenario_runtime_state_source = SCENARIO_RUNTIME_STATE_PATH.read_text(encoding="utf-8")
+        cls.scenario_chunk_runtime_actions_source = SCENARIO_CHUNK_RUNTIME_ACTIONS_PATH.read_text(encoding="utf-8")
 
     def _slice_between(self, source, start_marker, end_marker):
         start = source.find(start_marker)
@@ -91,12 +95,57 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn('allowRefreshStart: true,', self.scenario_chunk_runtime_source)
         self.assertIn('if (!hasPendingReason) {', self.scenario_chunk_runtime_source)
 
+    def test_chunk_registry_status_delegates_to_the_runtime_action_owner(self):
+        self.assertIn(
+            "function createScenarioChunkRegistryEnsurer({\n  patchRuntimeChunkLoadState,",
+            self.scenario_bundle_loader_source,
+        )
+        self.assertRegex(
+            self.scenario_bundle_loader_source,
+            re.compile(
+                r"const expectedLoadStateGeneration = patchRuntimeChunkLoadState\(\s*"
+                r'\{ registryStatus: "loading" \},\s*'
+                r"\{ returnLoadStateGeneration: true \},\s*"
+                r"\);",
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            self.scenario_bundle_loader_source,
+            re.compile(
+                r"patchRuntimeChunkLoadState\(\{\s*"
+                r'registryStatus: scenarioBundleHasChunkedData\(bundle\) \? "ready" : "empty",\s*'
+                r"\}, \{\s*expectedLoadStateGeneration,\s*\}\);",
+                re.S,
+            ),
+        )
+        self.assertNotRegex(
+            self.scenario_bundle_loader_source,
+            re.compile(r"\bchunkState\.registryStatus\s*="),
+        )
+        self.assertIn(
+            'from "./state/actions/scenario_chunk_runtime_actions.js";',
+            self.scenario_resources_source,
+        )
+        self.assertIn(
+            "patchRuntimeChunkLoadState: (patch, options) =>",
+            self.scenario_resources_source,
+        )
+        self.assertIn(
+            "patchScenarioChunkLoadState(state, patch, options)",
+            self.scenario_resources_source,
+        )
+        self.assertNotIn("state.runtimeChunkLoadState", self.scenario_resources_source)
+
     def test_political_chunk_promotion_refreshes_union_of_previous_and_next_feature_ids(self):
         self.assertIn('const previousFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalChunkData);', self.scenario_chunk_runtime_source)
         self.assertIn('const nextFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPayload);', self.scenario_chunk_runtime_source)
         self.assertIn('const previousPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalVisibleChunkData);', self.scenario_chunk_runtime_source)
         self.assertIn('const nextPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPrimaryPayload);', self.scenario_chunk_runtime_source)
-        self.assertIn('bumpScenarioDataGenerationState(runtimeState, String(reason || "political-chunk-payload"));', self.scenario_chunk_runtime_source)
+        self.assertIn('commitScenarioPoliticalChunkPayloadState(runtimeState, {', self.scenario_chunk_runtime_source)
+        self.assertIn('generationReason: String(reason || "political-chunk-payload"),', self.scenario_chunk_runtime_source)
+        self.assertNotIn('runtimeState.scenarioPoliticalChunkData = normalizedPayload', self.scenario_chunk_runtime_source)
+        self.assertNotIn('runtimeState.scenarioPoliticalVisibleChunkData = nextPrimaryPoliticalChunkData', self.scenario_chunk_runtime_source)
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
@@ -127,8 +176,11 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
     def test_runtime_chunk_load_state_tracks_promotion_retry_observability_fields(self):
         self.assertIn('promotionRetryCount: 0,', self.scenario_runtime_state_source)
         self.assertIn('lastPromotionRetryAt: 0,', self.scenario_runtime_state_source)
-        self.assertIn('runtimeState.runtimeChunkLoadState.promotionRetryCount = Math.max(', self.scenario_chunk_runtime_source)
-        self.assertIn('runtimeState.runtimeChunkLoadState.lastPromotionRetryAt = Math.max(', self.scenario_chunk_runtime_source)
+        self.assertIn('patchScenarioChunkLoadState(runtimeState, {', self.scenario_chunk_runtime_source)
+        self.assertIn('promotionRetryCount:', self.scenario_chunk_runtime_source)
+        self.assertIn('lastPromotionRetryAt:', self.scenario_chunk_runtime_source)
+        self.assertNotIn('runtimeState.runtimeChunkLoadState.promotionRetryCount =', self.scenario_chunk_runtime_source)
+        self.assertNotIn('runtimeState.runtimeChunkLoadState.lastPromotionRetryAt =', self.scenario_chunk_runtime_source)
 
 
     def test_focus_country_override_has_selection_priority(self):
@@ -418,8 +470,11 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             ),
         )
         self.assertIn("const shouldSeedFirstReadyFlush = !!(", self.startup_ready_handoff_source)
-        self.assertIn("loadState.pendingReason = normalizedReason;", self.startup_ready_handoff_source)
-        self.assertIn("loadState.pendingDelayMs = 0;", self.startup_ready_handoff_source)
+        self.assertIn("patchScenarioChunkLoadState(targetRuntime, {", self.startup_ready_handoff_source)
+        self.assertIn("pendingReason: normalizedReason,", self.startup_ready_handoff_source)
+        self.assertIn("pendingDelayMs: 0,", self.startup_ready_handoff_source)
+        self.assertNotIn("loadState.pendingReason =", self.startup_ready_handoff_source)
+        self.assertNotIn("loadState.pendingDelayMs =", self.startup_ready_handoff_source)
 
     def test_startup_initial_visual_gate_runs_before_first_visible_and_deferred_work(self):
         self.assertTrue(
@@ -557,37 +612,60 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
-                r'loadState\.selectionVersion = nextSelectionVersion;[\s\S]*?pendingVisualPromotion = \{[\s\S]*?selectionVersion: nextSelectionVersion,[\s\S]*?pendingInfraPromotion = \{[\s\S]*?selectionVersion: nextSelectionVersion,[\s\S]*?pendingPromotion = \{[\s\S]*?selectionVersion: nextSelectionVersion,',
+                r'const pendingVisualPromotion = \{[\s\S]*?selectionVersion: nextSelectionVersion,[\s\S]*?const pendingInfraPromotion = \{[\s\S]*?selectionVersion: nextSelectionVersion,[\s\S]*?const pendingPromotion = \{[\s\S]*?selectionVersion: nextSelectionVersion,[\s\S]*?queueScenarioChunkPromotionState\(runtimeState, \{\s*visualPromotion: pendingVisualPromotion,\s*infraPromotion: pendingInfraPromotion,\s*promotion: pendingPromotion,',
                 re.S,
             ),
         )
 
-    def test_last_selection_records_post_refresh_selection_version(self):
+    def test_last_selection_records_post_refresh_selection_version_with_generation_fence(self):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
                 r'const currentSelectionVersion = Math\.max\(0, Number\(loadState\.selectionVersion \|\| 0\)\);\s*'
                 r'const nextSelectionVersion = selectionUnchanged \? currentSelectionVersion : currentSelectionVersion \+ 1;[\s\S]*?'
-                r'loadState\.lastSelection = \{[\s\S]*?selectionVersion: nextSelectionVersion,[\s\S]*?\};[\s\S]*?'
-                r'if \(selectionUnchanged\) \{[\s\S]*?\}\s*'
-                r'loadState\.selectionVersion = nextSelectionVersion;',
+                r'const lastSelection = \{[\s\S]*?selectionVersion: nextSelectionVersion,[\s\S]*?\};[\s\S]*?'
+                r'const committedSelectionVersion = commitScenarioChunkSelectionState\(\s*runtimeState,\s*'
+                r'\{\s*selectionVersion: nextSelectionVersion,[\s\S]*?lastSelection,\s*\},\s*'
+                r'\{ expectedLoadStateGeneration: refreshLoadStateGeneration \},\s*\);\s*'
+                r'if \(committedSelectionVersion === false\) \{[\s\S]*?return null;\s*\}',
                 re.S,
             ),
         )
 
     def test_timer_handle_check_requires_live_timer_shape(self):
-        self.assertIn('if (runtimeState.runtimeChunkLoadState.promotionTimerId && !isTimerHandle(runtimeState.runtimeChunkLoadState.promotionTimerId)) {', self.scenario_chunk_runtime_source)
-        self.assertIn('return Number.isFinite(value);', self.scenario_chunk_runtime_source)
-        self.assertIn('typeof value.ref === "function"', self.scenario_chunk_runtime_source)
-        self.assertIn('typeof value.unref === "function"', self.scenario_chunk_runtime_source)
-        self.assertIn('typeof value.hasRef === "function"', self.scenario_chunk_runtime_source)
-        self.assertIn('typeof value.refresh === "function"', self.scenario_chunk_runtime_source)
+        self.assertIn('ensureScenarioChunkRuntimeState(runtimeState);', self.scenario_chunk_runtime_source)
+        self.assertIn('function isRuntimeTimerHandle(value) {', self.scenario_chunk_runtime_actions_source)
+        self.assertIn('typeof value.ref === "function"', self.scenario_chunk_runtime_actions_source)
+        self.assertIn('typeof value.unref === "function"', self.scenario_chunk_runtime_actions_source)
+        self.assertIn('typeof value.hasRef === "function"', self.scenario_chunk_runtime_actions_source)
+        self.assertIn('typeof value.refresh === "function"', self.scenario_chunk_runtime_actions_source)
 
     def test_promotion_pipeline_uses_single_commit_entrypoint(self):
         self.assertIn('schedulePendingScenarioChunkPromotionCommit({', self.scenario_chunk_runtime_source)
         self.assertIn('let promotionCommitPromise = null;', self.scenario_chunk_runtime_source)
         self.assertIn('let promotionCommitRunId = 0;', self.scenario_chunk_runtime_source)
-        self.assertIn('void commitPendingScenarioChunkPromotion().catch((error) => {', self.scenario_chunk_runtime_source)
+        commit_call_sites = re.findall(
+            r'(?m)^(?!\s*//)(?!.*\bfunction\s+commitPendingScenarioChunkPromotion\b).*?'
+            r'\bcommitPendingScenarioChunkPromotion\s*\(',
+            self.scenario_chunk_runtime_source,
+        )
+        boundary_call_sites = re.findall(r'\b(?:void|await)\s+commitPendingScenarioChunkPromotionWithErrorBoundary\s*\(', self.scenario_chunk_runtime_source)
+        self.assertEqual(len(commit_call_sites), 1)
+        self.assertEqual(len(boundary_call_sites), 3)
+        error_boundary = self._slice_between(
+            self.scenario_chunk_runtime_source,
+            "async function commitPendingScenarioChunkPromotionWithErrorBoundary(",
+            "function captureMergedLayerRuntimeSnapshot(",
+        )
+        self.assertIn("runtimeState.runtimeChunkLoadState === loadState", error_boundary)
+        self.assertIn("let boundaryRunId = promotionCommitRunId;", error_boundary)
+        self.assertIn("promotionCommitRunId === boundaryRunId", error_boundary)
+        self.assertIn(
+            "Math.max(0, Number(loadState.promotionCommitRunId || 0)) === boundaryRunId",
+            error_boundary,
+        )
+        self.assertIn('setPromotionCommitStatus("error"', error_boundary)
+        self.assertIn('console.warn(', error_boundary)
         self.assertIn('return "promotion-commit-started";', self.scenario_chunk_runtime_source)
         self.assertIn('return "promotion-commit-in-flight";', self.scenario_chunk_runtime_source)
         self.assertIn('await yieldToFrame();', self.scenario_chunk_runtime_source)
@@ -630,12 +708,12 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("function protectZoomEndChunks(loadState, chunkIds = [], {", self.scenario_chunk_runtime_source)
         self.assertIn("function clearZoomEndChunkProtection(loadState)", self.scenario_chunk_runtime_source)
         self.assertIn("function isZoomEndChunkProtectionContextValid(protectionState = {}, {", self.scenario_chunk_runtime_source)
-        self.assertIn("function protectZoomEndChunksForSelection(loadState, chunkIds = [], {", self.scenario_chunk_runtime_source)
-        self.assertIn("function applyZoomEndChunkProtectionToSelection(selection, loadState, {", self.scenario_chunk_runtime_source)
+        self.assertIn("function protectZoomEndChunksForSelection(target, chunkIds = [], {", self.scenario_chunk_runtime_source)
+        self.assertIn("function applyZoomEndChunkProtectionToSelection(selection, target, {", self.scenario_chunk_runtime_source)
         self.assertIn("function applyZoomEndChunkProtection(selection, loadState, {", self.scenario_chunk_runtime_source)
         self.assertIn("selectionVersion: pendingPromotion.selectionVersion || loadState.selectionVersion || 0", self.scenario_chunk_runtime_source)
         self.assertIn("selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0))", self.scenario_chunk_runtime_source)
-        self.assertIn("clearZoomEndChunkProtectionState(loadState);", self.scenario_chunk_runtime_source)
+        self.assertIn("clearZoomEndChunkProtectionState(target);", self.scenario_chunk_runtime_source)
         self.assertIn("zoomEndProtectedChunkIds", self.scenario_runtime_state_source)
         self.assertIn("zoomEndProtectedUntil", self.scenario_runtime_state_source)
         self.assertIn("zoomEndProtectedSelectionVersion", self.scenario_runtime_state_source)
@@ -661,7 +739,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
-                r'applyZoomEndChunkProtectionToSelection\(selection, loadState, \{[\s\S]*?'
+                r'applyZoomEndChunkProtectionToSelection\(selection, target, \{[\s\S]*?'
                 r'reason = "",[\s\S]*?previousSelection = null,[\s\S]*?'
                 r'isZoomEndChunkProtectionContextValid\(\{[\s\S]*?zoomEndProtectedSelectionVersion[\s\S]*?zoomEndProtectedFocusCountry[\s\S]*?\}, \{[\s\S]*?\}\)[\s\S]*?'
                 r'isZoomEndChunkProtectionContextValid\(\{[\s\S]*?previousSelection\?\.selectionVersion[\s\S]*?previousSelection\?\.focusCountry[\s\S]*?\}, \{[\s\S]*?\}\)',
@@ -672,10 +750,23 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
     def test_promotion_commit_can_be_cancelled_by_runtime_hook(self):
         self.assertIn('import { registerRuntimeHook } from "../state/index.js";', self.scenario_chunk_runtime_source)
         self.assertIn('function cancelScenarioChunkPromotionCommit(reason = "cancel")', self.scenario_chunk_runtime_source)
-        self.assertIn('registerRuntimeHook(runtimeState, "cancelScenarioChunkPromotionCommitFn", cancelScenarioChunkPromotionCommit);', self.scenario_chunk_runtime_source)
-
+        self.assertRegex(
+            self.scenario_chunk_runtime_source,
+            re.compile(
+                r'registerRuntimeHook\(\s*runtimeState,\s*'
+                r'"cancelScenarioChunkPromotionCommitFn",\s*'
+                r'\(reason\) => cancelScenarioChunkPromotionCommit\(reason\),\s*'
+                r'\);',
+                re.S,
+            ),
+        )
+        self.assertIn(
+            "if (runtimeState.runtimeChunkLoadState !== loadState) return false;",
+            self.scenario_chunk_runtime_source,
+        )
     def test_chunk_promotion_visual_apply_yields_under_render_lock_and_revalidates(self):
-        visual_start = self.scenario_chunk_runtime_source.index('setPromotionCommitStatus(loadState, "applying-visual"')
+        self.assertIn('function setPromotionCommitStatus(status, details = {})', self.scenario_chunk_runtime_source)
+        visual_start = self.scenario_chunk_runtime_source.index('setPromotionCommitStatus("applying-visual"')
         visual_end = self.scenario_chunk_runtime_source.index('recordScenarioChunkRuntimeMetric("chunkPromotionCommitVisualMs"', visual_start)
         visual_slice = self.scenario_chunk_runtime_source[visual_start:visual_end]
 
@@ -683,7 +774,11 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("await yieldToFrame();", visual_slice)
         self.assertIn("isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })", visual_slice)
         self.assertIn("canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })", visual_slice)
-        self.assertIn("runtimeState.scenarioPoliticalChunkData = previousPoliticalChunkData;", visual_slice)
+        self.assertIn("restoreMergedLayerRuntimeSnapshot(mergedLayerSnapshot);", visual_slice)
+        self.assertIn(
+            "restoreScenarioChunkPromotionRootState(runtimeState, promotionRootSnapshot);",
+            visual_slice,
+        )
         self.assertIn('reason: "scenario-chunk-promotion-stale-rollback"', visual_slice)
         self.assertRegex(
             visual_slice,
@@ -691,7 +786,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
                 r'await yieldToFrame\(\);.*?'
                 r'if \(!isPendingScenarioChunkPromotionCurrent.*?'
                 r'flushRenderBoundary\("scenario-chunk-promotion"\);.*?'
-                r'runtimeState\.scenarioChunkPromotionRenderLocked = previousRenderLock;',
+                r'setScenarioChunkPromotionRenderLockState\(runtimeState, previousRenderLock\);',
                 re.S,
             ),
         )
@@ -703,8 +798,18 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         restore_start = self.scenario_chunk_runtime_source.index("function restoreMergedLayerRuntimeSnapshot")
         restore_end = self.scenario_chunk_runtime_source.index("function isPendingScenarioChunkPromotionCurrent", restore_start)
         restore_slice = self.scenario_chunk_runtime_source[restore_start:restore_end]
-        self.assertIn('entry.stateField === "scenarioCityOverridesData"', restore_slice)
-        self.assertIn("syncScenarioLocalizationState({ cityOverridesPayload: entry.value });", restore_slice)
+        self.assertIn("restoreScenarioChunkPromotionState(runtimeState, [entry])", restore_slice)
+        self.assertIn("if (!Array.isArray(restoreResult?.externalEffects))", restore_slice)
+        self.assertNotIn('entry?.layerKey === "cities"', restore_slice)
+        self.assertIn('externalEffect?.type === "scenario-city-overrides"', restore_slice)
+        self.assertIn("syncScenarioLocalizationState({ cityOverridesPayload: externalEffect.payload });", restore_slice)
+        token_validation = 'externalEffect.finalizerToken?.type !== "scenario-city-restore-finalizer"'
+        self.assertIn(token_validation, restore_slice)
+        self.assertLess(
+            restore_slice.index(token_validation),
+            restore_slice.index("syncScenarioLocalizationState({ cityOverridesPayload: externalEffect.payload });"),
+        )
+        self.assertIn("finalizeScenarioChunkCityExternalEffectState(", restore_slice)
 
     def test_chunk_promotion_infra_does_not_rebuild_static_meshes(self):
         start = self.scenario_refresh_runtime_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")

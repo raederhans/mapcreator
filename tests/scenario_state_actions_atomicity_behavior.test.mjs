@@ -19,7 +19,6 @@ const ACTIVATION_KEYS = Object.freeze([
   "activeScenarioMeshPack",
   "scenarioRuntimeTopologyData",
   "runtimePoliticalTopology",
-  "scenarioPoliticalChunkData",
   "runtimePoliticalMetaSeed",
   "runtimePoliticalFeatureCollectionSeed",
   "scenarioLandMaskData",
@@ -341,18 +340,14 @@ test("scenario activation rollback phases preserve the audit and color-dirty bou
   restoreScenarioActivationBeforeAuditState(target, snapshot);
   assert.equal(target.scenarioAudit, source.scenarioAudit);
   assert.equal(Object.hasOwn(target, "scenarioImportAudit"), false);
-  assert.equal(Object.hasOwn(target, "scenarioPoliticalChunkData"), false);
 
   restoreScenarioActivationBeforeColorDirtyState(target, snapshot);
   assert.equal(target.scenarioImportAudit, source.scenarioImportAudit);
   assert.equal(target.countryBaseColors, source.countryBaseColors);
-  assert.equal(Object.hasOwn(target, "scenarioPoliticalChunkData"), false);
 
+  const restoredKeysBeforeCompatibilityPhase = Object.keys(target).sort();
   restoreScenarioActivationAfterColorDirtyState(target, snapshot);
-  assert.equal(
-    target.scenarioPoliticalChunkData,
-    source.scenarioPoliticalChunkData,
-  );
+  assert.deepEqual(Object.keys(target).sort(), restoredKeysBeforeCompatibilityPhase);
 });
 
 test("scenario presentation authority uses one complete catalog for capture, commit, and restore", async () => {

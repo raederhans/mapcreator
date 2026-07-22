@@ -6,6 +6,7 @@ import {
   P4_STATE_WRITER_POLICY_TEST_FILES,
   resolveP4StateWriterPolicyTestFiles,
 } from "../tools/run_p4_state_writer_policy_tests.mjs";
+import { buildP4PhaseVerificationPlan } from "../tools/run_p4_phase_verification.mjs";
 import { buildNodeRoutes } from "../tools/test_route_registry.mjs";
 
 const EXPECTED_DEFAULT_SUITES = Object.freeze([
@@ -54,6 +55,20 @@ test("exact P4.2a Node gate reaches the batch scanner regression suite", () => {
       .split(/\s+/)
       .includes("tests/state_writer_policy_batch_scan_behavior.test.mjs"),
     exactPhaseCommand,
+  );
+});
+
+test("exact P4.2b gates reach chunk action and boundary regressions", () => {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const nodeCommand = packageJson.scripts["test:node:p4:p4-2b"];
+  const pythonCommand = packageJson.scripts["test:python:p4:p4-2b-boundary"];
+
+  assert.ok(nodeCommand.split(/\s+/).includes("tests/scenario_chunk_state_actions_behavior.test.mjs"));
+  assert.match(pythonCommand, /tests\.test_scenario_chunk_state_actions_boundary_contract/);
+  assert.ok(
+    buildP4PhaseVerificationPlan({ phase: "P4.2b" }).commands.includes(
+      "npm run test:node:p4:state-writer-policy",
+    ),
   );
 });
 

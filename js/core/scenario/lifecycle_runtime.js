@@ -2,6 +2,8 @@ import {
   createDefaultScenarioDataHealth,
   createDefaultScenarioHydrationHealthGate,
 } from "../state/scenario_runtime_state.js";
+import { setScenarioChunkRuntimeHooksState } from "../state/actions/scenario_chunk_runtime_actions.js";
+import { setScenarioPoliticalChunkPayloadState } from "../state/actions/scenario_chunk_promotion_actions.js";
 
 function createScenarioLifecycleRuntime({
   state = null,
@@ -214,7 +216,7 @@ function createScenarioLifecycleRuntime({
     runtimeState.scenarioGeneratedColorTags = [];
     runtimeState.scenarioRuntimeTopologyData = null;
     runtimeState.scenarioRuntimeTopologyVersionTag = "";
-    runtimeState.scenarioPoliticalChunkData = null;
+    setScenarioPoliticalChunkPayloadState(runtimeState, { payload: null });
     runtimeState.scenarioLandMaskData = null;
     runtimeState.scenarioContextLandMaskData = null;
     runtimeState.scenarioLandMaskVersionTag = "";
@@ -227,8 +229,7 @@ function createScenarioLifecycleRuntime({
     runtimeState.detailPromotionInFlight = false;
     runtimeState.detailPromotionCompleted = hasBaselineDetailTopology;
     resetScenarioChunkRuntimeState({ scenarioId: "" });
-    runtimeState.scheduleScenarioChunkRefreshFn = null;
-    runtimeState.awaitInitialScenarioChunkVisualPromotionFn = null;
+    setScenarioChunkRuntimeHooksState(runtimeState);
     runtimeState.scenarioWaterRegionsData = null;
     runtimeState.scenarioAtlantropaData = null;
     runtimeState.scenarioWaterOverlayVersionTag = "";

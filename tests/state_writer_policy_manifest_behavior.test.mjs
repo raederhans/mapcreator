@@ -5,11 +5,17 @@ import fs from "node:fs";
 import test from "node:test";
 
 import {
+  buildStateActionLegacyMembershipReplacementContractIdentity,
   buildStateActionCrossFileMigrationContractIdentity,
+  expandStateActionMembershipsWithLegacyReplacements,
+  findStateActionReadOnlyContractEntry,
+  getStateActionDelegationContractEntriesForModule,
   STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
   STATE_ACTION_DELEGATION_CONTRACT,
+  STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT,
   validateStateActionCrossFileMigrationContract,
   validateStateActionDelegationContract,
+  validateStateActionLegacyMembershipReplacementContract,
   validateStateActionModulePhaseAdmissions,
   validateStateActionModuleSource,
   validateStateActionPolicyBindings,
@@ -537,6 +543,7 @@ const EXPECTED_LAZY_STATE_KEYS_BY_AUTHORITY = Object.freeze({
     "runtimePoliticalFeatureCollectionSeed",
     "scenarioApplyActiveRequestId",
     "scenarioApplyActiveTargetId",
+    "scenarioAtlantropaRevision",
     "scenarioChunkPromotionRenderLocked",
     "scenarioFatalRecovery",
     "scenarioPerfMetrics",
@@ -1092,7 +1099,7 @@ test("canonical authority index locks the complete lazy-key catalog by domain an
     .map(([key]) => key)
     .sort();
 
-  assert.equal(expectedLazyKeys.length, 55);
+  assert.equal(expectedLazyKeys.length, 56);
   assert.deepEqual(actualLazyKeys, expectedLazyKeys);
   assert.deepEqual(
     Object.fromEntries(
@@ -1373,6 +1380,232 @@ test("state action delegation contract validates registered module exports and t
     },
   );
   assert.deepEqual(sourceViolations, []);
+});
+
+test("P4.2b chunk action modules register every writable and read-only export", () => {
+  const modules = [
+    {
+      modulePath:
+        "js/core/state/actions/scenario_chunk_runtime_actions.js",
+      writableExportNames: [
+        "ensureScenarioChunkRuntimeState",
+        "resetScenarioChunkRuntimeState",
+        "replaceScenarioChunkRuntimeState",
+        "patchScenarioChunkLoadState",
+        "commitScenarioChunkSelectionState",
+        "beginScenarioChunkLoadState",
+        "completeScenarioChunkLoadState",
+        "failScenarioChunkLoadState",
+        "finishScenarioChunkLoadState",
+        "commitScenarioChunkPayloadEntriesState",
+        "evictScenarioChunkPayloadsState",
+        "setScenarioChunkMergedLayerPayloadsState",
+        "replaceScenarioChunkPendingPromotionIdentityState",
+        "queueScenarioChunkPromotionState",
+        "setScenarioChunkPromotionStatusState",
+        "clearScenarioChunkPromotionState",
+        "setScenarioChunkRuntimeHooksState",
+      ],
+      readOnlyExportNames: [
+        "SCENARIO_CHUNK_LOAD_STATE_PATCH_KEYS",
+        "captureScenarioChunkLoadStateContinuation",
+      ],
+    },
+    {
+      modulePath:
+        "js/core/state/actions/scenario_activation_actions.js",
+      writableExportNames: [
+        "applyScenarioChunkOptionalLayerState",
+        "restoreScenarioChunkPromotionState",
+      ],
+      readOnlyExportNames: [
+        "SCENARIO_CHUNK_OPTIONAL_LAYER_STATE_CONFIGS",
+        "getScenarioChunkOptionalLayerState",
+        "captureScenarioChunkPromotionState",
+      ],
+    },
+    {
+      modulePath:
+        "js/core/state/actions/scenario_presentation_actions.js",
+      writableExportNames: [
+        "applyScenarioChunkCityExternalEffectState",
+        "finalizeScenarioChunkCityExternalEffectState",
+      ],
+      readOnlyExportNames: [],
+    },
+    {
+      modulePath:
+        "js/core/state/actions/scenario_chunk_promotion_actions.js",
+      writableExportNames: [
+        "setScenarioPoliticalChunkPayloadState",
+        "bumpScenarioChunkDataGenerationState",
+        "commitScenarioPoliticalChunkPayloadState",
+        "setScenarioChunkPromotionRenderLockState",
+        "setDefaultRuntimePoliticalTopologyState",
+        "restoreScenarioChunkPromotionRootState",
+      ],
+      readOnlyExportNames: [
+        "captureScenarioChunkPromotionRootState",
+      ],
+    },
+  ];
+
+  for (
+    const {
+      modulePath,
+      writableExportNames,
+      readOnlyExportNames,
+    } of modules
+  ) {
+    const entries = getStateActionDelegationContractEntriesForModule(
+      modulePath,
+    ).filter(({ introducedInPhase }) => introducedInPhase === "P4.2b");
+    assert.deepEqual(
+      entries.map(({ exportName }) => exportName),
+      writableExportNames,
+    );
+    assert.ok(entries.every(
+      ({ introducedInPhase, targetArgumentIndex }) =>
+        introducedInPhase === "P4.2b" && targetArgumentIndex === 0,
+    ));
+    assert.deepEqual(
+      readOnlyExportNames.map((exportName) =>
+        findStateActionReadOnlyContractEntry(modulePath, exportName)
+      ),
+      readOnlyExportNames.map((exportName) => ({
+        modulePath,
+        exportName,
+        targetArgumentIndex: 0,
+      })),
+    );
+    assert.deepEqual(
+      validateStateActionModuleSource(
+        fs.readFileSync(new URL(`../${modulePath}`, import.meta.url), "utf8"),
+        { filePath: modulePath },
+      ),
+      [],
+    );
+  }
+});
+
+test("P4.2b optional-layer actions explicitly replace the retired wildcard membership", () => {
+  const modulePath =
+    "js/core/state/actions/scenario_activation_actions.js";
+  const retiredMembership = "scenario|P4.2|assign|*";
+  const requiredConcreteMemberships = [
+    "scenario|P4.2|assign|scenarioAtlantropaData",
+    "scenario|P4.2|assign|scenarioAtlantropaRevision",
+    "scenario|P4.2|assign|scenarioReliefOverlayRevision",
+    "scenario|P4.2|assign|scenarioReliefOverlaysData",
+    "scenario|P4.2|assign|scenarioSpecialRegionsData",
+    "scenario|P4.2|assign|scenarioStrategicValuesData",
+    "scenario|P4.2|assign|scenarioStrategicValuesRevision",
+    "scenario|P4.2|assign|scenarioWaterRegionsData",
+    "ui|P4.4|assign|specialZoneLayers",
+  ];
+  assert.deepEqual(
+    validateStateActionLegacyMembershipReplacementContract(),
+    [],
+  );
+  assert.deepEqual(
+    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.map(({
+      contractIdentity: _contractIdentity,
+      ...entry
+    }) => entry),
+    [
+      {
+        modulePath,
+        exportName: "applyScenarioChunkOptionalLayerState",
+        retiredMembership,
+        requiredConcreteMemberships,
+      },
+      {
+        modulePath,
+        exportName: "restoreScenarioChunkPromotionState",
+        retiredMembership,
+        requiredConcreteMemberships,
+      },
+    ],
+  );
+  assert.ok(STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.every(
+    (entry) =>
+      /^[a-f0-9]{64}$/.test(entry.contractIdentity)
+      && entry.contractIdentity
+        === buildStateActionLegacyMembershipReplacementContractIdentity(entry),
+  ));
+  for (const exportName of [
+    "applyScenarioChunkOptionalLayerState",
+    "restoreScenarioChunkPromotionState",
+  ]) {
+    assert.deepEqual(
+      [...expandStateActionMembershipsWithLegacyReplacements({
+        modulePath,
+        exportName,
+        memberships: requiredConcreteMemberships,
+      })].sort(),
+      [...requiredConcreteMemberships, retiredMembership].sort(),
+    );
+    assert.equal(
+      expandStateActionMembershipsWithLegacyReplacements({
+        modulePath,
+        exportName,
+        memberships: requiredConcreteMemberships.slice(1),
+      }).has(retiredMembership),
+      false,
+    );
+    assert.equal(
+      expandStateActionMembershipsWithLegacyReplacements({
+        modulePath,
+        exportName,
+        memberships: [
+          ...requiredConcreteMemberships,
+          "scenario|P4.2|assign|unexpectedFutureKey",
+        ],
+      }).has(retiredMembership),
+      false,
+    );
+  }
+  assert.equal(
+    expandStateActionMembershipsWithLegacyReplacements({
+      modulePath,
+      exportName: "setScenarioChunkPromotionRenderLockState",
+      memberships: requiredConcreteMemberships,
+    }).has(retiredMembership),
+    false,
+  );
+});
+
+test("legacy wildcard replacement contract rejects malformed coverage", () => {
+  const valid = structuredClone(
+    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT[0],
+  );
+  const malformed = [
+    {
+      ...valid,
+      requiredConcreteMemberships:
+        valid.requiredConcreteMemberships.slice(1),
+    },
+    {
+      ...valid,
+      requiredConcreteMemberships: [
+        ...valid.requiredConcreteMemberships,
+        valid.requiredConcreteMemberships[0],
+      ],
+    },
+    {
+      ...valid,
+      requiredConcreteMemberships:
+        [...valid.requiredConcreteMemberships].reverse(),
+    },
+    {
+      ...valid,
+      retiredMembership: "scenario|P4.2|assign|concrete",
+    },
+  ];
+  assert.ok(malformed.every((entry) =>
+    validateStateActionLegacyMembershipReplacementContract([entry])
+      .length > 0
+  ));
 });
 
 test("state action delegation contract rejects invalid and duplicate entries", () => {
@@ -2256,6 +2489,7 @@ test("default state ownership locks the 16 plus 9 and 402 plus 488 baselines", a
   assert.equal(report.preCompatKeyCount, 402);
   assert.equal(report.compatibilityHookCount, 86);
   assert.equal(report.postCompatKeyCount, 488);
+  assert.ok(report.authorityOnlyLazyKeys.includes("scenarioAtlantropaRevision"));
   assert.deepEqual(report.collisions, []);
   assert.equal(report.actualFacadeKeyCount, 488);
   assert.deepEqual(report.unownedActualFacadeKeys, []);
@@ -3322,7 +3556,7 @@ test("P4.2a bootstrap seed selects and regenerates the current action edge", () 
   );
 });
 
-test("same-phase policy rebuild preserves byte offsets and refreshes stable caller evidence", () => {
+test("same-phase policy rebuild refreshes live caller evidence", () => {
   const entry = createCallerActionLedgerEntry(0);
   const initialEdge = createActionDelegationObservation(entry);
   const [normalizedInitialEdge] =
@@ -3364,8 +3598,8 @@ test("same-phase policy rebuild preserves byte offsets and refreshes stable call
     },
     {
       callerBindingId: movedEdge.callerBindingId,
-      start: entry.start,
-      end: entry.end,
+      start: movedEdge.start,
+      end: movedEdge.end,
       line: movedEdge.line,
       column: movedEdge.column,
       sourceFingerprint: movedEdge.sourceFingerprint,
@@ -3859,6 +4093,631 @@ test("caller-to-action proof requires the action edge in the retired mutation's 
   );
 });
 
+test("cross-phase policy rebuild refreshes one owned action successor and preserves retirement evidence", () => {
+  const enclosingFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{ name: "applyFixture00", ordinal: 0 }],
+  });
+  const entry = createCallerActionLedgerEntry(0, {
+    enclosingFunctionIdentity,
+    retiredEnclosingFunctionIdentity: enclosingFunctionIdentity,
+    retiredMutationSiteFingerprint: "a".repeat(64),
+    retiredMutationSiteCount: 2,
+    proofPrecision: "exact-site",
+  });
+  const [normalizedInitialEdge] = normalizeStateActionDelegations([
+    createActionDelegationObservation(entry, {
+      enclosingFunctionIdentity,
+    }),
+  ]);
+  Object.assign(entry, {
+    actionCallEdgeIdentity:
+      normalizedInitialEdge.actionCallEdgeIdentity,
+    occurrenceIndex: normalizedInitialEdge.occurrenceIndex,
+  });
+  const previousPolicy = createCallerActionLedgerPolicy([entry]);
+  const successorWriter = structuredClone(previousPolicy.writers[0]);
+  successorWriter.bindings[0].id =
+    "function:replaceBootMetricsState:0:$";
+  successorWriter.bindings[0].functionName =
+    "replaceBootMetricsState";
+  const successorEdge = createActionDelegationObservation(entry, {
+    callerBindingId: "function:applyFixture00:renamed:$/property:targetState",
+    enclosingFunctionIdentity,
+    actionExportName: "replaceBootMetricsState",
+    actionCallEdgeIdentity: undefined,
+    occurrenceIndex: undefined,
+    start: 500,
+    end: 550,
+    line: 50,
+    column: 7,
+    sourceFingerprint: "b".repeat(64),
+  });
+  const [normalizedSuccessorEdge] = normalizeStateActionDelegations([
+    successorEdge,
+  ]);
+  const retirementFields = [
+    "retiredMembershipIdentity",
+    "retiredEnclosingFunctionIdentity",
+    "retiredMutationSiteFingerprint",
+    "retiredMutationSiteCount",
+    "proofPrecision",
+    "retiredInPhase",
+    "recordedInPhase",
+    "backfilled",
+  ];
+
+  const ledger = buildCallerToActionLedger({
+    phase: "P4.2b",
+    previousPolicy,
+    writers: [successorWriter],
+    retiredLegacySemanticAuthority:
+      previousPolicy.progress.retiredLegacySemanticAuthority,
+    actionDelegations: [successorEdge],
+  });
+  const [refreshed] = ledger.entries;
+
+  assert.deepEqual(
+    Object.fromEntries(retirementFields.map((field) => [
+      field,
+      refreshed[field],
+    ])),
+    Object.fromEntries(retirementFields.map((field) => [
+      field,
+      entry[field],
+    ])),
+  );
+  assert.deepEqual(
+    {
+      actionModulePath: refreshed.actionModulePath,
+      actionExportName: refreshed.actionExportName,
+      targetArgumentIndex: refreshed.targetArgumentIndex,
+      actionCallEdgeIdentity: refreshed.actionCallEdgeIdentity,
+      occurrenceIndex: refreshed.occurrenceIndex,
+      callerBindingId: refreshed.callerBindingId,
+      start: refreshed.start,
+      end: refreshed.end,
+      line: refreshed.line,
+      column: refreshed.column,
+      sourceFingerprint: refreshed.sourceFingerprint,
+    },
+    {
+      actionModulePath: normalizedSuccessorEdge.actionModulePath,
+      actionExportName: normalizedSuccessorEdge.actionExportName,
+      targetArgumentIndex: normalizedSuccessorEdge.targetArgumentIndex,
+      actionCallEdgeIdentity:
+        normalizedSuccessorEdge.actionCallEdgeIdentity,
+      occurrenceIndex: normalizedSuccessorEdge.occurrenceIndex,
+      callerBindingId: normalizedSuccessorEdge.callerBindingId,
+      start: normalizedSuccessorEdge.start,
+      end: normalizedSuccessorEdge.end,
+      line: normalizedSuccessorEdge.line,
+      column: normalizedSuccessorEdge.column,
+      sourceFingerprint: normalizedSuccessorEdge.sourceFingerprint,
+    },
+  );
+
+  const policy = createCallerActionLedgerPolicy([refreshed]);
+  policy.writers = [successorWriter];
+  policy.progress.latestPhase = "P4.2b";
+  policy.progress.callerToActionLedger = ledger;
+  assert.deepEqual(
+    validateStateWriterPolicySchema(policy).filter(
+      ({ code }) => String(code).startsWith("caller-action-ledger-"),
+    ),
+    [],
+  );
+  const snapshot = validateStateWriterPolicySnapshot({
+    policy,
+    legacyAllowlistPaths: [],
+    scans: [{
+      path: successorWriter.path,
+      surface: successorWriter.surface,
+      bindingId: successorWriter.bindings[0].id,
+      findings: [createFinding({
+        filePath: successorWriter.path,
+        bindingId: successorWriter.bindings[0].id,
+      })],
+    }],
+    actionDelegations: [normalizedSuccessorEdge],
+  });
+  assert.ok(
+    !snapshot.violations.some(({ code }) =>
+      code === "caller-action-ledger-observation-missing"
+      || code === "caller-action-ledger-observation-mismatch"
+    ),
+    JSON.stringify(snapshot.violations, null, 2),
+  );
+});
+
+test("cross-phase policy rebuild collapses repeated calls to one owned action successor", () => {
+  const enclosingFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{ name: "applyFixture00", ordinal: 0 }],
+  });
+  const entry = createCallerActionLedgerEntry(0, {
+    enclosingFunctionIdentity,
+    actionExportName: "legacyBootStateAction",
+  });
+  const [normalizedInitialEdge] = normalizeStateActionDelegations([
+    createActionDelegationObservation(entry, {
+      enclosingFunctionIdentity,
+    }),
+  ]);
+  entry.actionCallEdgeIdentity =
+    normalizedInitialEdge.actionCallEdgeIdentity;
+  entry.occurrenceIndex = normalizedInitialEdge.occurrenceIndex;
+  const previousPolicy = createCallerActionLedgerPolicy([entry]);
+  const successorWriter = structuredClone(previousPolicy.writers[0]);
+  const successorEdge = (start) =>
+    createActionDelegationObservation(entry, {
+      enclosingFunctionIdentity,
+      actionExportName: "setBootStateFields",
+      actionCallEdgeIdentity: undefined,
+      occurrenceIndex: undefined,
+      start,
+      end: start + 20,
+      line: start,
+      sourceFingerprint: `${start % 10}`.repeat(64),
+    });
+  const observedSuccessors = [successorEdge(30), successorEdge(20)];
+  const [expectedSuccessor] = normalizeStateActionDelegations(
+    observedSuccessors,
+  );
+
+  const ledger = buildCallerToActionLedger({
+    phase: "P4.2b",
+    previousPolicy,
+    writers: [successorWriter],
+    retiredLegacySemanticAuthority:
+      previousPolicy.progress.retiredLegacySemanticAuthority,
+    actionDelegations: observedSuccessors,
+  });
+
+  assert.equal(
+    ledger.entries[0].actionCallEdgeIdentity,
+    expectedSuccessor.actionCallEdgeIdentity,
+  );
+  assert.equal(ledger.entries[0].occurrenceIndex, 0);
+  assert.equal(ledger.entries[0].start, 20);
+});
+
+test("cross-phase policy rebuild fails closed when two actions own the successor edge", () => {
+  const enclosingFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{ name: "applyFixture00", ordinal: 0 }],
+  });
+  const entry = createCallerActionLedgerEntry(0, {
+    enclosingFunctionIdentity,
+    actionExportName: "legacyBootStateAction",
+  });
+  const [normalizedInitialEdge] = normalizeStateActionDelegations([
+    createActionDelegationObservation(entry, {
+      enclosingFunctionIdentity,
+    }),
+  ]);
+  entry.actionCallEdgeIdentity =
+    normalizedInitialEdge.actionCallEdgeIdentity;
+  entry.occurrenceIndex = normalizedInitialEdge.occurrenceIndex;
+  const previousPolicy = createCallerActionLedgerPolicy([entry]);
+  const successorWriter = structuredClone(previousPolicy.writers[0]);
+  const originalBinding = successorWriter.bindings[0];
+  successorWriter.bindings = [
+    "setBootStateFields",
+    "replaceBootMetricsState",
+  ].map((functionName) => ({
+    ...structuredClone(originalBinding),
+    id: `function:${functionName}:0:$`,
+    functionName,
+  }));
+  const successorEdge = (actionExportName, start) =>
+    createActionDelegationObservation(entry, {
+      enclosingFunctionIdentity,
+      actionExportName,
+      actionCallEdgeIdentity: undefined,
+      occurrenceIndex: undefined,
+      start,
+      end: start + 20,
+      line: start,
+      sourceFingerprint: `${start % 10}`.repeat(64),
+    });
+
+  assert.throws(
+    () => buildCallerToActionLedger({
+      phase: "P4.2b",
+      previousPolicy,
+      writers: [successorWriter],
+      retiredLegacySemanticAuthority:
+        previousPolicy.progress.retiredLegacySemanticAuthority,
+      actionDelegations: [
+        successorEdge("setBootStateFields", 20),
+        successorEdge("replaceBootMetricsState", 30),
+      ],
+    }),
+    (error) =>
+      error?.code === "caller-action-ledger-proof-missing"
+      && error.violations?.[0]?.reason
+        === "caller-action-successor-edge-ambiguous",
+  );
+});
+
+test("P4.2b wildcard replacement builds and validates one schema-v2 proof across every enclosing function", () => {
+  const previousWriter = createPolicyFixture().writers[0];
+  const previousBinding = previousWriter.bindings[0];
+  const actionModulePath =
+    "js/core/state/actions/scenario_activation_actions.js";
+  const requiredConcreteMemberships = [
+    ...STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT[0]
+      .requiredConcreteMemberships,
+  ];
+  const retiredMembership = "scenario|P4.2|assign|*";
+  previousWriter.domain = "scenario";
+  previousWriter.migrationPhase = "P4.2";
+  previousBinding.grants = [{
+    domain: "scenario",
+    migrationPhase: "P4.2",
+    operations: ["assign"],
+    keys: ["*"],
+    memberships: [{
+      operation: "assign",
+      key: "*",
+      mutationSites: [],
+    }],
+    aliasSites: [],
+    dynamicSites: [],
+    ambiguousSites: [],
+    unsupportedSites: [],
+  }];
+  const callerBindingIdentity =
+    buildStableStateBindingIdentity(previousBinding);
+  const firstFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{ name: "firstCaller", ordinal: 0 }],
+  });
+  const secondFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{ name: "secondCaller", ordinal: 0 }],
+  });
+  previousBinding.grants[0].memberships[0].mutationSites = [
+    {
+      enclosingFunctionIdentity: firstFunctionIdentity,
+      sourceFingerprint: "a".repeat(64),
+      occurrenceIndex: 0,
+    },
+    {
+      enclosingFunctionIdentity: secondFunctionIdentity,
+      sourceFingerprint: "b".repeat(64),
+      occurrenceIndex: 0,
+    },
+  ];
+
+  const actionGrants = () => [
+    {
+      domain: "scenario",
+      migrationPhase: "P4.2",
+      operations: ["assign"],
+      keys: requiredConcreteMemberships
+        .filter((membership) => membership.startsWith("scenario|"))
+        .map((membership) => membership.split("|").at(-1)),
+      memberships: requiredConcreteMemberships
+        .filter((membership) => membership.startsWith("scenario|"))
+        .map((membership) => ({
+          operation: "assign",
+          key: membership.split("|").at(-1),
+          mutationSites: [],
+        })),
+      aliasSites: [],
+      dynamicSites: [],
+      ambiguousSites: [],
+      unsupportedSites: [],
+    },
+    {
+      domain: "ui",
+      migrationPhase: "P4.4",
+      operations: ["assign"],
+      keys: ["specialZoneLayers"],
+      memberships: [{
+        operation: "assign",
+        key: "specialZoneLayers",
+        mutationSites: [],
+      }],
+      aliasSites: [],
+      dynamicSites: [],
+      ambiguousSites: [],
+      unsupportedSites: [],
+    },
+  ];
+  const actionWriter = {
+    path: actionModulePath,
+    surface: "production",
+    domain: "scenario",
+    authority: "domain-action",
+    migrationPhase: "P4.2b",
+    bindings: [
+      "applyScenarioChunkOptionalLayerState",
+      "restoreScenarioChunkPromotionState",
+    ].map((functionName) => ({
+      id: `function:${functionName}:0:$`,
+      kind: "function-parameter",
+      name: "target",
+      functionName,
+      parameterName: "target",
+      parameterIndex: 0,
+      parameterPath: "$",
+      authority: "domain-action",
+      grants: actionGrants(),
+    })),
+  };
+  for (const binding of actionWriter.bindings) {
+    const concreteMemberships = binding.grants.flatMap((grant) =>
+      grant.memberships.map((membership) => [
+        grant.domain,
+        grant.migrationPhase,
+        membership.operation,
+        membership.key,
+      ].join("|"))
+    );
+    assert.deepEqual(concreteMemberships, requiredConcreteMemberships);
+    assert.equal(concreteMemberships.includes(retiredMembership), false);
+  }
+  const retiredLegacySemanticAuthority =
+    subtractLegacyStateWriterSemanticAuthority(
+      buildLegacyStateWriterSemanticAuthority([previousWriter]),
+      buildLegacyStateWriterSemanticAuthority([]),
+    );
+  const previousPolicy = {
+    writers: [previousWriter],
+    progress: {
+      latestPhase: "P4.2a",
+      retiredLegacySemanticAuthority:
+        createEmptyLegacySemanticAuthority(),
+      callerToActionLedger: {
+        schemaVersion: 1,
+        entries: [],
+      },
+    },
+  };
+  const edge = (
+    enclosingFunctionIdentity,
+    start,
+    actionExportName = "applyScenarioChunkOptionalLayerState",
+  ) => ({
+    callerPath: previousWriter.path,
+    callerBindingId: previousBinding.id,
+    callerBindingIdentity,
+    enclosingFunctionIdentity,
+    actionModulePath: actionWriter.path,
+    actionExportName,
+    targetArgumentIndex: 0,
+    start,
+    end: start + 10,
+    line: start,
+    column: 1,
+    sourceFingerprint: `${start % 10}`.repeat(64),
+  });
+  const build = (actionDelegations) =>
+    buildCallerToActionLedger({
+      phase: "P4.2b",
+      previousPolicy,
+      writers: [actionWriter],
+      retiredLegacySemanticAuthority,
+      actionDelegations,
+    });
+
+  assert.throws(
+    () => build([edge(firstFunctionIdentity, 10)]),
+    (error) =>
+      error?.code === "caller-action-ledger-proof-missing"
+      && error.violations?.[0]?.reason
+        === "matching-enclosing-function-action-edge-missing",
+  );
+
+  const ledger = build([
+    edge(firstFunctionIdentity, 10),
+    edge(
+      secondFunctionIdentity,
+      20,
+      "restoreScenarioChunkPromotionState",
+    ),
+  ]);
+  const [entry] = ledger.entries;
+  assert.equal(ledger.schemaVersion, 2);
+  assert.deepEqual(
+    {
+      proofPrecision: entry.proofPrecision,
+      retiredMutationSiteCount: entry.retiredMutationSiteCount,
+      retiredMutationFunctionCount:
+        entry.retiredMutationFunctionCount,
+      functionProofs: entry.functionProofs.map((proof) => ({
+        enclosingFunctionIdentity:
+          proof.enclosingFunctionIdentity,
+        retiredEnclosingFunctionIdentity:
+          proof.retiredEnclosingFunctionIdentity,
+        retiredMutationSiteCount:
+          proof.retiredMutationSiteCount,
+        actionExportName: proof.actionExportName,
+      })),
+    },
+    {
+      proofPrecision: "exact-site-multi-function",
+      retiredMutationSiteCount: 2,
+      retiredMutationFunctionCount: 2,
+      functionProofs: [
+        {
+          enclosingFunctionIdentity: firstFunctionIdentity,
+          retiredEnclosingFunctionIdentity:
+            firstFunctionIdentity,
+          retiredMutationSiteCount: 1,
+          actionExportName: "applyScenarioChunkOptionalLayerState",
+        },
+        {
+          enclosingFunctionIdentity: secondFunctionIdentity,
+          retiredEnclosingFunctionIdentity:
+            secondFunctionIdentity,
+          retiredMutationSiteCount: 1,
+          actionExportName: "restoreScenarioChunkPromotionState",
+        },
+      ],
+    },
+  );
+  assert.match(
+    entry.retiredMutationSiteFingerprint,
+    /^[a-f0-9]{64}$/,
+  );
+  assert.equal(entry.key, "*");
+  assert.equal(
+    entry.retiredMembershipIdentity.endsWith(`|${retiredMembership}`),
+    true,
+  );
+  assert.deepEqual(
+    validateLegacyMembershipRetirementReplacements({
+      previousWriters: [previousWriter],
+      writers: [actionWriter],
+      callerToActionLedger: ledger,
+    }),
+    [],
+  );
+
+  const policy = createCallerActionLedgerPolicy([entry]);
+  policy.writers = [structuredClone(actionWriter)];
+  policy.progress.latestPhase = "P4.2b";
+  policy.progress.callerToActionLedger = ledger;
+  const callerActionSchemaViolations =
+    validateStateWriterPolicySchema(policy).filter(
+      ({ code }) => String(code).startsWith("caller-action-ledger-"),
+    );
+  assert.deepEqual(callerActionSchemaViolations, []);
+  const invalidMultiProofMutations = [
+    (multiEntry) => {
+      multiEntry.functionProofs.pop();
+    },
+    (multiEntry) => {
+      multiEntry.functionProofs.push(
+        structuredClone(multiEntry.functionProofs[0]),
+      );
+    },
+    (multiEntry) => {
+      multiEntry.functionProofs.reverse();
+    },
+    (multiEntry) => {
+      multiEntry.retiredMutationSiteCount += 1;
+    },
+    (multiEntry) => {
+      multiEntry.retiredMutationSiteFingerprint = "invalid";
+    },
+  ];
+  for (const mutate of invalidMultiProofMutations) {
+    const invalidPolicy = structuredClone(policy);
+    mutate(
+      invalidPolicy.progress.callerToActionLedger.entries[0],
+    );
+    assert.ok(
+      validateStateWriterPolicySchema(invalidPolicy).some(
+        ({ code }) =>
+          code === "caller-action-ledger-entry-invalid",
+      ),
+    );
+  }
+
+  const refreshedLedger = buildCallerToActionLedger({
+    phase: "P4.2b",
+    previousPolicy: {
+      writers: [actionWriter],
+      progress: {
+        latestPhase: "P4.2b",
+        retiredLegacySemanticAuthority,
+        callerToActionLedger: ledger,
+      },
+    },
+    writers: [actionWriter],
+    retiredLegacySemanticAuthority,
+    actionDelegations: [
+      edge(firstFunctionIdentity, 11),
+      edge(
+        secondFunctionIdentity,
+        22,
+        "restoreScenarioChunkPromotionState",
+      ),
+    ],
+  });
+  assert.deepEqual(
+    refreshedLedger.entries[0].functionProofs.map(
+      ({ start, line, sourceFingerprint }) => ({
+        start,
+        line,
+        sourceFingerprint,
+      }),
+    ),
+    [
+      {
+        start: 11,
+        line: 11,
+        sourceFingerprint: "1".repeat(64),
+      },
+      {
+        start: 22,
+        line: 22,
+        sourceFingerprint: "2".repeat(64),
+      },
+    ],
+  );
+
+  const normalizedEdges = normalizeStateActionDelegations([
+    edge(firstFunctionIdentity, 10),
+    edge(
+      secondFunctionIdentity,
+      20,
+      "restoreScenarioChunkPromotionState",
+    ),
+  ]);
+  const actionPolicyWriter = policy.writers[0];
+  const scans = actionPolicyWriter.bindings.map((binding) => ({
+    path: actionPolicyWriter.path,
+    surface: actionPolicyWriter.surface,
+    bindingId: binding.id,
+    findings: [createFinding({
+      filePath: actionPolicyWriter.path,
+      bindingId: binding.id,
+    })],
+  }));
+  const completeSnapshot = validateStateWriterPolicySnapshot({
+    policy,
+    legacyAllowlistPaths: [],
+    scans,
+    actionDelegations: normalizedEdges,
+  });
+  assert.ok(
+    !completeSnapshot.violations.some(
+      ({ code }) =>
+        code === "caller-action-ledger-observation-missing"
+        || code === "caller-action-ledger-observation-mismatch",
+    ),
+    JSON.stringify(completeSnapshot.violations, null, 2),
+  );
+  const omittedEdge = normalizedEdges.find(
+    ({ enclosingFunctionIdentity }) =>
+      enclosingFunctionIdentity === secondFunctionIdentity,
+  );
+  const missingSecondFunction = validateStateWriterPolicySnapshot({
+    policy,
+    legacyAllowlistPaths: [],
+    scans,
+    actionDelegations: normalizedEdges.filter(
+      ({ actionCallEdgeIdentity }) =>
+        actionCallEdgeIdentity !== omittedEdge.actionCallEdgeIdentity,
+    ),
+  });
+  assert.ok(
+    missingSecondFunction.violations.some(
+      ({ code, actionCallEdgeIdentity }) =>
+        code === "caller-action-ledger-observation-missing"
+        && actionCallEdgeIdentity
+          === omittedEdge.actionCallEdgeIdentity,
+    ),
+    JSON.stringify(missingSecondFunction.violations, null, 2),
+  );
+});
+
 test("cross-file migration contract is deterministic and rejects forged or duplicate entries", () => {
   assert.deepEqual(
     validateStateActionCrossFileMigrationContract(),
@@ -3955,6 +4814,38 @@ test("caller-to-action ledger accepts only an exact explicit cross-file migratio
       crossFileMigrationContractIdentity:
         fixture.contract.contractIdentity,
     },
+  );
+
+  const successorWriter = structuredClone(fixture.actionWriter);
+  successorWriter.bindings[0].id =
+    "function:replaceBootMetricsState:0:$";
+  successorWriter.bindings[0].functionName =
+    "replaceBootMetricsState";
+  assert.throws(
+    () => buildCallerToActionLedger({
+      phase: "P4.2b",
+      previousPolicy: {
+        writers: [fixture.actionWriter],
+        progress: {
+          latestPhase: "P4.2b",
+          retiredLegacySemanticAuthority:
+            fixture.retiredLegacySemanticAuthority,
+          callerToActionLedger: ledger,
+        },
+      },
+      writers: [successorWriter],
+      retiredLegacySemanticAuthority:
+        fixture.retiredLegacySemanticAuthority,
+      actionDelegations: [{
+        ...fixture.actionDelegation,
+        actionExportName: "replaceBootMetricsState",
+      }],
+      crossFileMigrationContract: [fixture.contract],
+    }),
+    (error) =>
+      error?.code === "caller-action-ledger-proof-missing"
+      && error.violations?.[0]?.reason
+        === "explicit-cross-file-action-edge-stale",
   );
 
   assert.throws(
@@ -4139,11 +5030,11 @@ test("policy snapshot keeps every historical caller-to-action proof live after l
   );
 });
 
-test("P4.2a deterministically preserves exactly the 36 backfilled P4.1 caller-to-action proofs", async () => {
+test("current phase deterministically preserves exactly the 36 backfilled P4.1 caller-to-action proofs", async () => {
   const checkedIn = await readStateWriterPolicy();
   const build = () =>
     buildStateWriterPolicySnapshot({
-      phase: "P4.2a",
+      phase: checkedIn.progress.latestPhase,
       baseSha: checkedIn.baseline.sourceBaseSha,
       generatedAt: checkedIn.baseline.generatedAt,
       previousPolicy: checkedIn,

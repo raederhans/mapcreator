@@ -3,8 +3,11 @@ import fs from "node:fs";
 import test from "node:test";
 
 import {
+  STATE_ACTION_DELEGATION_CONTRACT,
   STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
+  STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT,
   STATE_TARGET_PURE_READER_CONTRACT,
+  validateStateActionModulePhaseAdmissions,
   validateStateTargetPureReaderContract,
 } from "../tools/state_action_delegation_contract.mjs";
 import {
@@ -32,6 +35,38 @@ function scan(source) {
     bindings: [MODULE_BINDING],
   });
 }
+
+test("P4.2b optional and city action exports have one canonical owner", () => {
+  const expectedOwners = new Map([
+    ["applyScenarioChunkOptionalLayerState", "js/core/state/actions/scenario_activation_actions.js"],
+    ["restoreScenarioChunkPromotionState", "js/core/state/actions/scenario_activation_actions.js"],
+    ["applyScenarioChunkCityExternalEffectState", "js/core/state/actions/scenario_presentation_actions.js"],
+    ["finalizeScenarioChunkCityExternalEffectState", "js/core/state/actions/scenario_presentation_actions.js"],
+  ]);
+  for (const [exportName, modulePath] of expectedOwners) {
+    const entries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+      (entry) => entry.exportName === exportName,
+    );
+    assert.equal(entries.length, 1, `${exportName} must have one registered owner`);
+    assert.equal(entries[0].modulePath, modulePath);
+    assert.equal(entries[0].introducedInPhase, "P4.2b");
+  }
+  assert.ok(STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.every(
+    ({ modulePath }) =>
+      modulePath === "js/core/state/actions/scenario_activation_actions.js",
+  ));
+  assert.deepEqual(
+    validateStateActionModulePhaseAdmissions({
+      modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
+      phase: "P4.2b",
+    }),
+    [],
+  );
+  assert.ok(validateStateActionModulePhaseAdmissions({
+    modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
+    phase: "P4.2a",
+  }).some(({ code }) => code === "state-action-module-phase-not-admitted"));
+});
 
 test("compatibility API returns findings plus canonical named action delegation edges", () => {
   const source = [
@@ -109,6 +144,294 @@ test("compatibility API returns findings plus canonical named action delegation 
     filePath: FILE_PATH,
     bindings: [MODULE_BINDING],
   })));
+});
+
+test("registered action payloads can project state while nested unknown calls remain diagnosed", () => {
+  const directProjection = [
+    'import { state as runtimeState } from "../core/state.js";',
+    "import {",
+    "  setBootStateFields as commitBootFields,",
+    '} from "../core/state/actions/boot_actions.js";',
+    "commitBootFields(runtimeState, {",
+    "  bootPhase: runtimeState.bootPhase,",
+    "  startupBootCacheState: {",
+    "    phase: runtimeState.bootPhase,",
+    "  },",
+    "});",
+    "",
+  ].join("\n");
+  const directInventory = scan(directProjection);
+  assert.equal(directInventory.actionDelegations.length, 1);
+  assert.deepEqual(directInventory.findings, []);
+
+  const nestedUnknownCall = directProjection.replace(
+    "bootPhase: runtimeState.bootPhase,",
+    "bootPhase: consumeUnknown(runtimeState.bootPhase),",
+  );
+  const nestedInventory = scan(nestedUnknownCall);
+  assert.equal(nestedInventory.actionDelegations.length, 1);
+  assert.deepEqual(
+    nestedInventory.findings.map(({ reason, evidenceKind, key }) => ({
+      reason,
+      evidenceKind,
+      key,
+    })),
+    [{
+      reason: "state-alias-escape",
+      evidenceKind: "unknown-call-argument",
+      key: "bootPhase",
+    }],
+  );
+});
+
+test("registered action payload containers accept concrete non-root projections", () => {
+  const imports = [
+    'import { state as runtimeState } from "../core/state.js";',
+    'import { setBootStateFields as commitBootFields } from "../core/state/actions/boot_actions.js";',
+    'const dynamicKey = "bootPhase";',
+  ];
+  const scanPayload = (payload) => scan([
+    ...imports,
+    `commitBootFields(runtimeState, ${payload});`,
+    "",
+  ].join("\n"));
+
+  const safeArrayInventory = scanPayload("[runtimeState.bootPhase]");
+  assert.equal(safeArrayInventory.actionDelegations.length, 1);
+  assert.deepEqual(safeArrayInventory.findings, []);
+
+  for (const payload of [
+    "{ ...runtimeState.startup }",
+    "{ nested: { ...runtimeState.startup } }",
+    "{ metric: runtimeState.bootMetrics[dynamicKey] }",
+    "{ nested: { ...runtimeState.bootMetrics[dynamicKey] } }",
+    "{ promotion: runtimeState.runtimeChunkLoadState.pendingPromotion || null }",
+    "{ count: Math.max(0, Number(runtimeState.retryCount) || 0) }",
+  ]) {
+    const inventory = scanPayload(payload);
+    assert.equal(inventory.actionDelegations.length, 1, payload);
+    assert.deepEqual(inventory.findings, [], payload);
+  }
+});
+
+test("registered action payload containers reject root, dynamic, and computed state aliases", () => {
+  const imports = [
+    'import { state as runtimeState } from "../core/state.js";',
+    'import { setBootStateFields as commitBootFields } from "../core/state/actions/boot_actions.js";',
+    'const dynamicKey = "bootPhase";',
+  ];
+  const scanPayload = (payload) => scan([
+    ...imports,
+    `commitBootFields(runtimeState, ${payload});`,
+    "",
+  ].join("\n"));
+
+  for (const payload of [
+    "{ nested: runtimeState }",
+    "[runtimeState]",
+    "{ ...runtimeState }",
+    "{ nested: { ...runtimeState } }",
+    "{ ...(runtimeState || {}) }",
+    "{ [runtimeState.bootPhase]: 1 }",
+    "{ nested: runtimeState[dynamicKey] }",
+    '{ nested: runtimeState[dynamicKey] + "suffix" }',
+    "{ nested: (runtimeState[dynamicKey], 1) }",
+  ]) {
+    const inventory = scanPayload(payload);
+    assert.equal(inventory.actionDelegations.length, 1, payload);
+    assert.deepEqual(
+      inventory.findings.map(({ reason, evidenceKind, key }) => ({
+        reason,
+        evidenceKind,
+        key,
+      })),
+      [{
+        reason: "state-alias-escape",
+        evidenceKind: "unknown-call-argument",
+        key: "*",
+      }],
+      payload,
+    );
+  }
+});
+
+test("registered action payload Reflect.get accepts static projections and rejects dynamic root access", () => {
+  const imports = [
+    'import { state as runtimeState } from "../core/state.js";',
+    'import { setBootStateFields as commitBootFields } from "../core/state/actions/boot_actions.js";',
+    'const dynamicKey = "bootPhase";',
+  ];
+  const scanPayload = (payload) => scan([
+    ...imports,
+    `commitBootFields(runtimeState, ${payload});`,
+    "",
+  ].join("\n"));
+
+  for (const payload of [
+    '{ phase: Reflect.get(runtimeState, "bootPhase") }',
+    '{ promotion: Reflect.get(runtimeState.runtimeChunkLoadState, "pendingPromotion") }',
+  ]) {
+    const inventory = scanPayload(payload);
+    assert.equal(inventory.actionDelegations.length, 1, payload);
+    assert.equal(inventory.findings.length, 0, payload);
+  }
+
+  for (const payload of [
+    "{ phase: Reflect.get(runtimeState, dynamicKey) }",
+    "{ promotion: Reflect.get(runtimeState.runtimeChunkLoadState, dynamicKey) }",
+    "{ root: Reflect.get(runtimeState) }",
+  ]) {
+    const inventory = scanPayload(payload);
+    assert.equal(inventory.actionDelegations.length, 1, payload);
+    assert.equal(inventory.findings.length, 1, payload);
+    assert.deepEqual(
+      inventory.findings.map(({ reason, evidenceKind, key }) => ({
+        reason,
+        evidenceKind,
+        key,
+      })),
+      [{
+        reason: "state-alias-escape",
+        evidenceKind: "unknown-call-argument",
+        key: "*",
+      }],
+      payload,
+    );
+  }
+});
+
+test("registered action payload spreads reject immutable aliases that can be the state root", () => {
+  const source = [
+    'import { state as runtimeState } from "../core/state.js";',
+    'import { setBootStateFields as commitBootFields } from "../core/state/actions/boot_actions.js";',
+    "export function applyBootFields(explicitRuntimeState = null) {",
+    "  const target = explicitRuntimeState || runtimeState;",
+    "  commitBootFields(target, { ...target });",
+    "}",
+    "",
+  ].join("\n");
+
+  const inventory = scan(source);
+  assert.equal(inventory.actionDelegations.length, 1);
+  assert.deepEqual(
+    inventory.findings.map(({ reason, evidenceKind, key }) => ({
+      reason,
+      evidenceKind,
+      key,
+    })),
+    [{
+      reason: "state-alias-escape",
+      evidenceKind: "unknown-call-argument",
+      key: "*",
+    }],
+  );
+});
+
+test("registered actions accept immutable unions whose tracked branch is the state root", () => {
+  const source = [
+    'import { state as runtimeState } from "../core/state.js";',
+    'import { setBootStateFields as commitBootFields } from "../core/state/actions/boot_actions.js";',
+    "export function applyBootFields(explicitRuntimeState = null) {",
+    "  const target = explicitRuntimeState || runtimeState;",
+    '  commitBootFields(target, { bootPhase: "ready" });',
+    "}",
+    "",
+  ].join("\n");
+
+  const inventory = scan(source);
+  assert.deepEqual(inventory.findings, []);
+  assert.equal(inventory.actionDelegations.length, 1);
+  assert.equal(
+    inventory.actionDelegations[0].actionExportName,
+    "setBootStateFields",
+  );
+});
+
+test("registered actions accept only declared static non-root read-only arguments", () => {
+  const source = [
+    'import { state as runtimeState } from "../core/state.js";',
+    "import {",
+    "  replaceScenarioChunkPendingPromotionIdentityState,",
+    '} from "../core/state/actions/scenario_chunk_runtime_actions.js";',
+    "replaceScenarioChunkPendingPromotionIdentityState(",
+    "  runtimeState,",
+    "  runtimeState.runtimeChunkLoadState.pendingPromotion,",
+    "  { scenarioApplyRequestId: 7 },",
+    ");",
+    "",
+  ].join("\n");
+
+  const inventory = scan(source);
+  assert.equal(inventory.actionDelegations.length, 1);
+  assert.deepEqual(inventory.findings, []);
+
+  const rootInventory = scan(source.replace(
+    "runtimeState.runtimeChunkLoadState.pendingPromotion,",
+    "runtimeState,",
+  ));
+  assert.equal(rootInventory.actionDelegations.length, 1);
+  assert.deepEqual(
+    rootInventory.findings.map(({ reason, evidenceKind, key }) => ({
+      reason,
+      evidenceKind,
+      key,
+    })),
+    [{
+      reason: "state-alias-escape",
+      evidenceKind: "unknown-call-argument",
+      key: "*",
+    }],
+  );
+
+  const unionSource = source
+    .replace(
+      "replaceScenarioChunkPendingPromotionIdentityState(\n  runtimeState,",
+      [
+        "export function replacePendingIdentity(explicitRuntimeState = null) {",
+        "  const target = explicitRuntimeState || runtimeState;",
+        "  replaceScenarioChunkPendingPromotionIdentityState(\n  target,",
+      ].join("\n"),
+    )
+    .replace(
+      "runtimeState.runtimeChunkLoadState.pendingPromotion,",
+      "target.runtimeChunkLoadState.pendingPromotion,",
+    )
+    .replace("\n);\n", "\n  );\n}\n");
+  const unionInventory = scan(unionSource);
+  assert.equal(unionInventory.actionDelegations.length, 1);
+  assert.deepEqual(unionInventory.findings, []);
+
+  const dynamicSource = source.replace(
+    "runtimeState.runtimeChunkLoadState.pendingPromotion,",
+    [
+      "runtimeState.runtimeChunkLoadState[dynamicKey],",
+      ");",
+      "replaceScenarioChunkPendingPromotionIdentityState(",
+      "  runtimeState,",
+      "  runtimeState.runtimeChunkLoadState.pendingPromotion[dynamicKey],",
+    ].join("\n"),
+  ).replace(
+    'import { state as runtimeState } from "../core/state.js";',
+    [
+      'import { state as runtimeState } from "../core/state.js";',
+      'const dynamicKey = "pendingPromotion";',
+    ].join("\n"),
+  );
+  const dynamicInventory = scan(dynamicSource);
+  assert.equal(dynamicInventory.actionDelegations.length, 2);
+  assert.equal(dynamicInventory.findings.length, 2);
+  assert.deepEqual(
+    dynamicInventory.findings.map(({ reason, evidenceKind, key }) => ({
+      reason,
+      evidenceKind,
+      key,
+    })),
+    Array.from({ length: 2 }, () => ({
+      reason: "state-alias-escape",
+      evidenceKind: "unknown-call-argument",
+      key: "runtimeChunkLoadState",
+    })),
+  );
 });
 
 test("action edges carry stable enclosing function identities that distinguish sibling callers", () => {
@@ -232,6 +555,24 @@ test("rollback supplemental capture is a registered read-only state action expor
     "    runtimeState,",
     "    { cloneValue, readHookSource },",
     "  );",
+    "}",
+    "",
+  ].join("\n");
+
+  const inventory = scan(source);
+  assert.deepEqual(inventory.findings, []);
+  assert.deepEqual(inventory.actionDelegations, []);
+});
+
+test("scenario chunk continuation capture is a registered read-only state action export", () => {
+  const source = [
+    'import { state as runtimeState } from "../core/state.js";',
+    "import {",
+    "  captureScenarioChunkLoadStateContinuation,",
+    '} from "../core/state/actions/scenario_chunk_runtime_actions.js";',
+    "",
+    "export function capture() {",
+    "  return captureScenarioChunkLoadStateContinuation(runtimeState);",
     "}",
     "",
   ].join("\n");

@@ -1,4 +1,7 @@
 import { countryNames, defaultCountryPalette, state as runtimeState } from "./state.js";
+import {
+  patchScenarioChunkLoadState,
+} from "./state/actions/scenario_chunk_runtime_actions.js";
 import { ensureSovereigntyState, markLegacyColorStateDirty } from "./sovereignty_manager.js";
 import { normalizeMapSemanticMode } from "./state.js";
 import {
@@ -769,7 +772,8 @@ const {
 });
 
 ensureScenarioChunkRegistryLoaded = createScenarioChunkRegistryEnsurer({
-  ensureRuntimeChunkLoadState,
+  patchRuntimeChunkLoadState: (patch, options) =>
+    patchScenarioChunkLoadState(state, patch, options),
 });
 
 let loadScenarioBundleForStartupHydration = null;

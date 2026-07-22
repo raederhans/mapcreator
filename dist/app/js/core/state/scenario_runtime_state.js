@@ -2,9 +2,15 @@
 // 这个文件只负责场景运行时默认 shape，保持 state.js 继续做公开 facade。
 // 这里收口的是容易在 scenario/chunk/reset/rollback 多条路径里漂移的默认对象。
 
+import {
+  setScenarioPoliticalChunkPayloadState,
+} from "./actions/scenario_chunk_promotion_actions.js";
+
 export function createDefaultActiveScenarioChunksState(scenarioId = "") {
   return {
     scenarioId: String(scenarioId || "").trim(),
+    scenarioApplyEpoch: 0,
+    scenarioApplyRequestId: 0,
     loadedChunkIds: [],
     payloadByChunkId: {},
     mergedLayerPayloads: {},
@@ -22,11 +28,13 @@ export function createDefaultRuntimeChunkLoadState({ scenarioId = "" } = {}) {
     // 所以字段语义必须稳定，不能把一次性局部状态随手塞进这个对象。
     shellStatus: ready ? "ready" : "idle",
     registryStatus: ready ? "ready" : "idle",
+    generation: 0,
     refreshScheduled: false,
     refreshTimerId: null,
     selectionVersion: 0,
     pendingReason: "",
     pendingDelayMs: null,
+    pendingScenarioApplyRequestId: 0,
     focusCountryOverride: "",
     focusCountryOverrideSource: "",
     focusCountryOverrideExpiresAt: 0,
@@ -57,6 +65,8 @@ export function createDefaultRuntimeChunkLoadState({ scenarioId = "" } = {}) {
     inFlightByChunkId: {},
     errorByChunkId: {},
     lastSelection: null,
+    scenarioApplyEpochBySelectionVersion: {},
+    scenarioApplyRequestIdBySelectionVersion: {},
     layerSelectionSignatures: {},
     mergedLayerPayloadCache: {},
   };
@@ -167,11 +177,16 @@ export function setScenarioRuntimeOptionalLayerState(target, nextState = {}) {
   if (hasOwn.call(nextState, "activeScenarioMeshPack")) {
     target.activeScenarioMeshPack = nextState.activeScenarioMeshPack || null;
   }
+  const politicalChunkState = {};
   if (hasOwn.call(nextState, "scenarioPoliticalChunkData")) {
-    target.scenarioPoliticalChunkData = nextState.scenarioPoliticalChunkData || null;
+    politicalChunkState.payload = nextState.scenarioPoliticalChunkData || null;
   }
   if (hasOwn.call(nextState, "scenarioPoliticalVisibleChunkData")) {
-    target.scenarioPoliticalVisibleChunkData = nextState.scenarioPoliticalVisibleChunkData || null;
+    politicalChunkState.visiblePayload =
+      nextState.scenarioPoliticalVisibleChunkData || null;
+  }
+  if (Object.keys(politicalChunkState).length) {
+    setScenarioPoliticalChunkPayloadState(target, politicalChunkState);
   }
   if (hasOwn.call(nextState, "scenarioAtlantropaData")) {
     target.scenarioAtlantropaData = nextState.scenarioAtlantropaData || null;

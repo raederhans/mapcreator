@@ -21,6 +21,10 @@ const SCENARIO_PALETTE_ACTION_MODULE_PATH =
   "js/core/state/actions/scenario_palette_actions.js";
 const SCENARIO_TRANSACTION_ROLLBACK_ACTION_MODULE_PATH =
   "js/core/state/actions/scenario_transaction_rollback_actions.js";
+const SCENARIO_CHUNK_RUNTIME_ACTION_MODULE_PATH =
+  "js/core/state/actions/scenario_chunk_runtime_actions.js";
+const SCENARIO_CHUNK_PROMOTION_ACTION_MODULE_PATH =
+  "js/core/state/actions/scenario_chunk_promotion_actions.js";
 
 const BOOT_ACTION_EXPORT_NAMES = Object.freeze([
   "setStartupInteractionMode",
@@ -51,8 +55,12 @@ const SCENARIO_ACTIVATION_ACTION_EXPORT_NAMES = Object.freeze([
   "commitScenarioActivationState",
   "restoreScenarioActivationBeforeAuditState",
   "restoreScenarioActivationBeforeColorDirtyState",
-  "restoreScenarioActivationAfterColorDirtyState",
   "restoreScenarioActivationState",
+]);
+
+const SCENARIO_ACTIVATION_CHUNK_OPTIONAL_ACTION_EXPORT_NAMES = Object.freeze([
+  "applyScenarioChunkOptionalLayerState",
+  "restoreScenarioChunkPromotionState",
 ]);
 
 const SCENARIO_PRESENTATION_ACTION_EXPORT_NAMES = Object.freeze([
@@ -60,6 +68,11 @@ const SCENARIO_PRESENTATION_ACTION_EXPORT_NAMES = Object.freeze([
   "restoreScenarioTransactionPresentationBeforeAuditState",
   "restoreScenarioPresentationState",
   "restoreScenarioTransactionPresentationState",
+]);
+
+const SCENARIO_PRESENTATION_CHUNK_CITY_ACTION_EXPORT_NAMES = Object.freeze([
+  "applyScenarioChunkCityExternalEffectState",
+  "finalizeScenarioChunkCityExternalEffectState",
 ]);
 
 const SCENARIO_APPLY_REQUEST_ACTION_EXPORT_NAMES = Object.freeze([
@@ -77,6 +90,35 @@ const SCENARIO_TRANSACTION_ROLLBACK_ACTION_EXPORT_NAMES = Object.freeze([
   "restoreScenarioTransactionSupplementBeforeAuditState",
   "restoreScenarioTransactionSupplementBeforeColorDirtyState",
   "restoreScenarioTransactionSupplementAfterColorDirtyState",
+]);
+
+const SCENARIO_CHUNK_RUNTIME_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureScenarioChunkRuntimeState",
+  "resetScenarioChunkRuntimeState",
+  "replaceScenarioChunkRuntimeState",
+  "patchScenarioChunkLoadState",
+  "commitScenarioChunkSelectionState",
+  "beginScenarioChunkLoadState",
+  "completeScenarioChunkLoadState",
+  "failScenarioChunkLoadState",
+  "finishScenarioChunkLoadState",
+  "commitScenarioChunkPayloadEntriesState",
+  "evictScenarioChunkPayloadsState",
+  "setScenarioChunkMergedLayerPayloadsState",
+  "replaceScenarioChunkPendingPromotionIdentityState",
+  "queueScenarioChunkPromotionState",
+  "setScenarioChunkPromotionStatusState",
+  "clearScenarioChunkPromotionState",
+  "setScenarioChunkRuntimeHooksState",
+]);
+
+const SCENARIO_CHUNK_PROMOTION_ACTION_EXPORT_NAMES = Object.freeze([
+  "setScenarioPoliticalChunkPayloadState",
+  "bumpScenarioChunkDataGenerationState",
+  "commitScenarioPoliticalChunkPayloadState",
+  "setScenarioChunkPromotionRenderLockState",
+  "setDefaultRuntimePoliticalTopologyState",
+  "restoreScenarioChunkPromotionRootState",
 ]);
 
 const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
@@ -115,6 +157,26 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
     exportNames: SCENARIO_TRANSACTION_ROLLBACK_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.2a",
   }),
+  Object.freeze({
+    modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_ACTIVATION_CHUNK_OPTIONAL_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.2b",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_PRESENTATION_CHUNK_CITY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.2b",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_CHUNK_RUNTIME_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_CHUNK_RUNTIME_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.2b",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_CHUNK_PROMOTION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_CHUNK_PROMOTION_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.2b",
+  }),
 ]);
 
 const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
@@ -129,7 +191,11 @@ const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
     SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
     new Set([
       "SCENARIO_ACTIVATION_STATE_KEYS",
+      "SCENARIO_CHUNK_OPTIONAL_LAYER_STATE_CONFIGS",
       "captureScenarioActivationState",
+      "captureScenarioChunkPromotionState",
+      "getScenarioChunkOptionalLayerState",
+      "restoreScenarioActivationAfterColorDirtyState",
     ]),
   ],
   [
@@ -155,6 +221,19 @@ const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
       "captureScenarioTransactionRollbackOptionalState",
       "captureScenarioTransactionRollbackSupplementalState",
       "validateScenarioTransactionRollbackSupplementalStatePatch",
+    ]),
+  ],
+  [
+    SCENARIO_CHUNK_RUNTIME_ACTION_MODULE_PATH,
+    new Set([
+      "SCENARIO_CHUNK_LOAD_STATE_PATCH_KEYS",
+      "captureScenarioChunkLoadStateContinuation",
+    ]),
+  ],
+  [
+    SCENARIO_CHUNK_PROMOTION_ACTION_MODULE_PATH,
+    new Set([
+      "captureScenarioChunkPromotionRootState",
     ]),
   ],
 ]);
@@ -379,16 +458,29 @@ function normalizeModulePath(value = "") {
     .replace(/^\.\//, "");
 }
 
+const STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID = new Map([
+  [
+    `${SCENARIO_CHUNK_RUNTIME_ACTION_MODULE_PATH}#replaceScenarioChunkPendingPromotionIdentityState`,
+    Object.freeze([1]),
+  ],
+]);
+
 function freezeDelegationEntry({
   modulePath,
   exportName,
   targetArgumentIndex = 0,
   introducedInPhase,
 }) {
+  const normalizedModulePath = normalizeModulePath(modulePath);
+  const normalizedExportName = String(exportName || "");
   return Object.freeze({
-    modulePath: normalizeModulePath(modulePath),
-    exportName: String(exportName || ""),
+    modulePath: normalizedModulePath,
+    exportName: normalizedExportName,
     targetArgumentIndex: Number(targetArgumentIndex),
+    readOnlyArgumentIndexes:
+      STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID.get(
+        `${normalizedModulePath}#${normalizedExportName}`,
+      ) || Object.freeze([]),
     introducedInPhase: String(introducedInPhase || ""),
   });
 }
@@ -416,6 +508,79 @@ const CONTRACT_ENTRY_BY_ID = new Map(
     entry,
   ]),
 );
+
+function normalizeStateActionMembership(value = "") {
+  return String(value || "").trim();
+}
+
+function stateActionLegacyMembershipReplacementIdentityPayload(
+  entry = {},
+) {
+  return {
+    modulePath: normalizeModulePath(entry.modulePath),
+    exportName: String(entry.exportName || ""),
+    retiredMembership: normalizeStateActionMembership(
+      entry.retiredMembership,
+    ),
+    requiredConcreteMemberships: (
+      Array.isArray(entry.requiredConcreteMemberships)
+        ? entry.requiredConcreteMemberships
+        : []
+    ).map(normalizeStateActionMembership),
+  };
+}
+
+export function buildStateActionLegacyMembershipReplacementContractIdentity(
+  entry = {},
+) {
+  return createHash("sha256")
+    .update(JSON.stringify(
+      stateActionLegacyMembershipReplacementIdentityPayload(entry),
+    ))
+    .digest("hex");
+}
+
+function freezeLegacyMembershipReplacementEntry(entry = {}) {
+  const normalized =
+    stateActionLegacyMembershipReplacementIdentityPayload(entry);
+  const contractIdentity =
+    buildStateActionLegacyMembershipReplacementContractIdentity(
+      normalized,
+    );
+  return Object.freeze({
+    ...normalized,
+    requiredConcreteMemberships: Object.freeze(
+      normalized.requiredConcreteMemberships,
+    ),
+    contractIdentity,
+  });
+}
+
+const SCENARIO_CHUNK_OPTIONAL_LAYER_ASSIGN_MEMBERSHIPS = Object.freeze([
+  "scenario|P4.2|assign|scenarioAtlantropaData",
+  "scenario|P4.2|assign|scenarioAtlantropaRevision",
+  "scenario|P4.2|assign|scenarioReliefOverlayRevision",
+  "scenario|P4.2|assign|scenarioReliefOverlaysData",
+  "scenario|P4.2|assign|scenarioSpecialRegionsData",
+  "scenario|P4.2|assign|scenarioStrategicValuesData",
+  "scenario|P4.2|assign|scenarioStrategicValuesRevision",
+  "scenario|P4.2|assign|scenarioWaterRegionsData",
+  "ui|P4.4|assign|specialZoneLayers",
+]);
+
+export const STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT =
+  Object.freeze([
+    "applyScenarioChunkOptionalLayerState",
+    "restoreScenarioChunkPromotionState",
+  ].map((exportName) =>
+    freezeLegacyMembershipReplacementEntry({
+      modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+      exportName,
+      retiredMembership: "scenario|P4.2|assign|*",
+      requiredConcreteMemberships:
+        SCENARIO_CHUNK_OPTIONAL_LAYER_ASSIGN_MEMBERSHIPS,
+    })
+  ));
 
 const SCENARIO_MANAGER_RUNTIME_STATE_BINDING_IDENTITY =
   JSON.stringify({
@@ -876,6 +1041,173 @@ export function findStateActionDelegationContractEntry(
   return CONTRACT_ENTRY_BY_ID.get(
     `${normalizeModulePath(modulePath)}#${String(exportName || "")}`,
   ) || null;
+}
+
+function parseStateActionMembership(value = "") {
+  const normalized = normalizeStateActionMembership(value);
+  const parts = normalized.split("|");
+  if (parts.length !== 4) {
+    return null;
+  }
+  const [domain, migrationPhase, operation, key] = parts;
+  if (!domain || !migrationPhase || !operation || !key) {
+    return null;
+  }
+  if (!/^P4\.[1-4]$/.test(migrationPhase)) {
+    return null;
+  }
+  return {
+    normalized,
+    domain,
+    migrationPhase,
+    operation,
+    key,
+  };
+}
+
+function legacyMembershipReplacementEntryId(entry = {}) {
+  return [
+    normalizeModulePath(entry.modulePath),
+    String(entry.exportName || ""),
+    normalizeStateActionMembership(entry.retiredMembership),
+  ].join("#");
+}
+
+export function validateStateActionLegacyMembershipReplacementContract(
+  entries = STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT,
+) {
+  if (!Array.isArray(entries)) {
+    return [createViolation(
+      "state-action-legacy-membership-replacement-contract-invalid",
+      { reason: "entries-not-array" },
+    )];
+  }
+  const violations = [];
+  const entryIds = entries.map(legacyMembershipReplacementEntryId);
+  const sortedEntryIds = [...entryIds].sort((left, right) =>
+    left.localeCompare(right)
+  );
+  if (JSON.stringify(entryIds) !== JSON.stringify(sortedEntryIds)) {
+    violations.push(createViolation(
+      "state-action-legacy-membership-replacement-order-invalid",
+    ));
+  }
+  const seenEntryIds = new Set();
+  for (const [index, entry] of entries.entries()) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      violations.push(createViolation(
+        "state-action-legacy-membership-replacement-entry-invalid",
+        { index, reason: "entry-not-object" },
+      ));
+      continue;
+    }
+    const normalized =
+      stateActionLegacyMembershipReplacementIdentityPayload(entry);
+    const entryId = legacyMembershipReplacementEntryId(normalized);
+    const retiredMembership = parseStateActionMembership(
+      normalized.retiredMembership,
+    );
+    const requiredMemberships =
+      normalized.requiredConcreteMemberships;
+    const parsedRequiredMemberships = requiredMemberships.map(
+      parseStateActionMembership,
+    );
+    const actionContract = CONTRACT_ENTRY_BY_ID.get(
+      `${normalized.modulePath}#${normalized.exportName}`,
+    );
+    const requiredMembershipsSorted =
+      [...requiredMemberships].sort((left, right) =>
+        left.localeCompare(right)
+      );
+    const valid = Boolean(
+      normalized.modulePath === String(entry.modulePath || "")
+      && actionContract
+      && retiredMembership?.key === "*"
+      && ["assign", "delete"].includes(retiredMembership?.operation)
+      && requiredMemberships.length > 0
+      && JSON.stringify(requiredMemberships)
+        === JSON.stringify(requiredMembershipsSorted)
+      && new Set(requiredMemberships).size === requiredMemberships.length
+      && parsedRequiredMemberships.every(
+        (membership) =>
+          membership
+          && membership.key !== "*"
+          && membership.operation === retiredMembership.operation,
+      )
+      && String(entry.contractIdentity || "")
+        === buildStateActionLegacyMembershipReplacementContractIdentity(
+          entry,
+        )
+    );
+    if (!valid) {
+      violations.push(createViolation(
+        "state-action-legacy-membership-replacement-entry-invalid",
+        {
+          index,
+          modulePath: normalized.modulePath,
+          exportName: normalized.exportName,
+          retiredMembership: normalized.retiredMembership,
+        },
+      ));
+    }
+    if (seenEntryIds.has(entryId)) {
+      violations.push(createViolation(
+        "state-action-legacy-membership-replacement-entry-duplicate",
+        { index, entryId },
+      ));
+    }
+    seenEntryIds.add(entryId);
+  }
+  return violations;
+}
+
+export function expandStateActionMembershipsWithLegacyReplacements({
+  modulePath = "",
+  exportName = "",
+  memberships = [],
+  contractEntries =
+    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT,
+} = {}) {
+  const effectiveMemberships = new Set(
+    [...(memberships instanceof Set
+      ? memberships
+      : (Array.isArray(memberships) ? memberships : []))]
+      .map(normalizeStateActionMembership)
+      .filter(Boolean),
+  );
+  if (
+    validateStateActionLegacyMembershipReplacementContract(
+      contractEntries,
+    ).length
+  ) {
+    return effectiveMemberships;
+  }
+  const normalizedModulePath = normalizeModulePath(modulePath);
+  const normalizedExportName = String(exportName || "");
+  for (const entry of contractEntries) {
+    const retiredOperation = parseStateActionMembership(
+      entry.retiredMembership,
+    )?.operation;
+    const concreteMembershipsForOperation = [...effectiveMemberships].filter(
+      (membership) => {
+        const parsed = parseStateActionMembership(membership);
+        return parsed?.operation === retiredOperation && parsed.key !== "*";
+      },
+    );
+    if (
+      entry.modulePath !== normalizedModulePath
+      || entry.exportName !== normalizedExportName
+      || concreteMembershipsForOperation.length
+        !== entry.requiredConcreteMemberships.length
+      || !entry.requiredConcreteMemberships.every(
+        (membership) => effectiveMemberships.has(membership),
+      )
+    ) {
+      continue;
+    }
+    effectiveMemberships.add(entry.retiredMembership);
+  }
+  return effectiveMemberships;
 }
 
 export function getStateActionDelegationContractEntriesForModule(
@@ -1387,6 +1719,40 @@ export function validateStateActionDelegationContract(
         }),
       );
     }
+    if (
+      entry.readOnlyArgumentIndexes !== undefined
+      && !Array.isArray(entry.readOnlyArgumentIndexes)
+    ) {
+      violations.push(
+        createViolation(
+          "state-action-contract-read-only-argument-indexes-invalid",
+          { index, modulePath, exportName },
+        ),
+      );
+    } else {
+      const seenReadOnlyIndexes = new Set();
+      for (const readOnlyArgumentIndex of entry.readOnlyArgumentIndexes || []) {
+        if (
+          !Number.isInteger(readOnlyArgumentIndex)
+          || readOnlyArgumentIndex < 0
+          || readOnlyArgumentIndex === entry.targetArgumentIndex
+          || seenReadOnlyIndexes.has(readOnlyArgumentIndex)
+        ) {
+          violations.push(
+            createViolation(
+              "state-action-contract-read-only-argument-index-invalid",
+              {
+                index,
+                modulePath,
+                exportName,
+                readOnlyArgumentIndex,
+              },
+            ),
+          );
+        }
+        seenReadOnlyIndexes.add(readOnlyArgumentIndex);
+      }
+    }
     const entryId = contractEntryId(entry);
     if (seenEntryIds.has(entryId)) {
       violations.push(
@@ -1455,7 +1821,7 @@ export function validateStateActionModulePhaseAdmissions({
         );
       }
     }
-    if (introducedPhases.size !== 1) {
+    if (!introducedPhases.size) {
       violations.push(
         createViolation("state-action-module-phase-ambiguous", {
           modulePath,
@@ -1465,7 +1831,12 @@ export function validateStateActionModulePhaseAdmissions({
       );
       continue;
     }
-    const [introducedInPhase] = introducedPhases;
+    const introducedInPhase = [...introducedPhases].reduce(
+      (latestPhase, candidatePhase) =>
+        compareP4StateActionPhases(candidatePhase, latestPhase) > 0
+          ? candidatePhase
+          : latestPhase,
+    );
     if (
       compareP4StateActionPhases(
         introducedInPhase,

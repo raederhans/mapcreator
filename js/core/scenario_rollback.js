@@ -14,6 +14,14 @@ import {
   ensureSceneSnapshotState,
 } from "./state/renderer_runtime_state.js";
 import {
+  replaceScenarioChunkRuntimeState,
+  setScenarioChunkRuntimeHooksState,
+} from "./state/actions/scenario_chunk_runtime_actions.js";
+import {
+  setDefaultRuntimePoliticalTopologyState,
+  setScenarioPoliticalChunkPayloadState,
+} from "./state/actions/scenario_chunk_promotion_actions.js";
+import {
   captureScenarioTransactionRollbackOptionalState,
   captureScenarioTransactionRollbackSupplementalState,
   restoreScenarioTransactionSupplementAfterColorDirtyState,
@@ -576,6 +584,10 @@ export function restoreScenarioApplyRollbackSnapshot(
     runtimeState,
     rollbackStatePatch.activation,
   );
+  setDefaultRuntimePoliticalTopologyState(
+    runtimeState,
+    rollbackStatePatch.supplemental.values.defaultRuntimePoliticalTopology,
+  );
   restoreScenarioTransactionSupplementBeforeAuditState(
     runtimeState,
     rollbackStatePatch.supplemental,
@@ -608,6 +620,24 @@ export function restoreScenarioApplyRollbackSnapshot(
     runtimeState,
     rollbackStatePatch.supplemental,
   );
+  setScenarioPoliticalChunkPayloadState(runtimeState, {
+    payload: rollbackStatePatch.supplemental.values.scenarioPoliticalChunkData,
+    visiblePayload:
+      rollbackStatePatch.supplemental.values.scenarioPoliticalVisibleChunkData,
+  });
+  replaceScenarioChunkRuntimeState(runtimeState, {
+    activeScenarioChunks:
+      rollbackStatePatch.supplemental.values.activeScenarioChunks,
+    runtimeChunkLoadState:
+      rollbackStatePatch.supplemental.values.runtimeChunkLoadState,
+  });
+  setScenarioChunkRuntimeHooksState(runtimeState, {
+    scheduleScenarioChunkRefreshFn:
+      rollbackStatePatch.supplemental.values.scheduleScenarioChunkRefreshFn,
+    awaitInitialScenarioChunkVisualPromotionFn:
+      rollbackStatePatch.supplemental.values
+        .awaitInitialScenarioChunkVisualPromotionFn,
+  });
   restoreScenarioTransactionPresentationState(
     runtimeState,
     rollbackStatePatch.presentation,

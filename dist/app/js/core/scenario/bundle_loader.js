@@ -390,7 +390,7 @@ async function loadScenarioChunkFile(
 }
 
 function createScenarioChunkRegistryEnsurer({
-  ensureRuntimeChunkLoadState,
+  patchRuntimeChunkLoadState,
 } = {}) {
   return async function ensureScenarioChunkRegistryLoaded(
     bundle,
@@ -407,11 +407,13 @@ function createScenarioChunkRegistryEnsurer({
     // registry/context LOD/runtime meta/mesh pack 是同一组 detail-runtime 配套资源。
     // 这里一次性把它们挂回 bundle，后续 facade/runtime controller 只消费已归位的 bundle 字段。
     if (bundle.chunkRegistry && bundle.contextLodManifest) {
-      ensureRuntimeChunkLoadState().registryStatus = "ready";
+      patchRuntimeChunkLoadState({ registryStatus: "ready" });
       return bundle.chunkRegistry;
     }
-    const chunkState = ensureRuntimeChunkLoadState();
-    chunkState.registryStatus = "loading";
+    const expectedLoadStateGeneration = patchRuntimeChunkLoadState(
+      { registryStatus: "loading" },
+      { returnLoadStateGeneration: true },
+    );
     const [chunkManifestResult, contextLodResult, runtimeMetaResult, meshPackResult] = await Promise.all([
       loadScenarioChunkFile(runtimeShell.detailChunkManifestUrl, {
         d3Client,
@@ -450,7 +452,11 @@ function createScenarioChunkRegistryEnsurer({
       runtimeMeta: runtimeMetaResult?.metrics || null,
       meshPack: meshPackResult?.metrics || null,
     };
-    chunkState.registryStatus = scenarioBundleHasChunkedData(bundle) ? "ready" : "empty";
+    patchRuntimeChunkLoadState({
+      registryStatus: scenarioBundleHasChunkedData(bundle) ? "ready" : "empty",
+    }, {
+      expectedLoadStateGeneration,
+    });
     return bundle.chunkRegistry;
   };
 }

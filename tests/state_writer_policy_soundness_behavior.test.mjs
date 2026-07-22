@@ -753,8 +753,7 @@ test("checker transition preserves caller-to-action ledger history append-only",
   removed.progress.callerToActionLedger.entries.pop();
   const modified = structuredClone(previousPolicy);
   modified.progress.latestPhase = "P4.2b";
-  modified.progress.callerToActionLedger.entries[0].actionExportName =
-    "replaceBootMetricsState";
+  modified.progress.callerToActionLedger.entries[0].recordedInPhase = "P4.2b";
 
   const missingCodes = policyChecker.validateStateWriterPolicyTransition({
     previousPolicy,
@@ -797,7 +796,191 @@ test("checker transition permits same-phase caller observation coordinate refres
   assert.deepEqual(callerActionViolations, []);
 });
 
-test("checker transition keeps same-phase caller semantics and later coordinates frozen", () => {
+test("checker transition permits cross-phase live successor refresh and freezes retirement provenance", () => {
+  const backfill = createP41ToP42aBackfillPolicies();
+  const previousPolicy = structuredClone(backfill.currentPolicy);
+  const previousEntry =
+    previousPolicy.progress.callerToActionLedger.entries[0];
+  Object.assign(previousEntry, {
+    enclosingFunctionIdentity: JSON.stringify({
+      kind: "function",
+      ancestry: [{ name: "applyBackfillFixture", ordinal: 0 }],
+    }),
+    retiredEnclosingFunctionIdentity: JSON.stringify({
+      kind: "function",
+      ancestry: [{ name: "applyBackfillFixture", ordinal: 0 }],
+    }),
+    retiredMutationSiteFingerprint: "a".repeat(64),
+    retiredMutationSiteCount: 1,
+    proofPrecision: "exact-site",
+  });
+  const currentPolicy = structuredClone(previousPolicy);
+  currentPolicy.progress.latestPhase = "P4.2b";
+  Object.assign(
+    currentPolicy.progress.callerToActionLedger.entries[0],
+    {
+      callerBindingId: "module:runtimeState:shifted",
+      actionModulePath:
+        "js/core/state/actions/scenario_chunk_runtime_actions.js",
+      actionExportName: "commitScenarioChunkSelectionState",
+      targetArgumentIndex: 1,
+      actionCallEdgeIdentity: "f".repeat(64),
+      occurrenceIndex: 3,
+      start: 900,
+      end: 940,
+      line: 90,
+      column: 7,
+      sourceFingerprint: "e".repeat(64),
+    },
+  );
+
+  assert.deepEqual(
+    policyChecker.validateCallerToActionLedgerHistoryTransition({
+      previousPolicy,
+      currentPolicy,
+    }),
+    [],
+  );
+
+  for (const mutate of [
+    (entry) => {
+      entry.retiredMutationSiteFingerprint = "b".repeat(64);
+    },
+    (entry) => {
+      entry.recordedInPhase = "P4.2b";
+    },
+  ]) {
+    const tampered = structuredClone(currentPolicy);
+    mutate(tampered.progress.callerToActionLedger.entries[0]);
+    assert.ok(
+      policyChecker.validateCallerToActionLedgerHistoryTransition({
+        previousPolicy,
+        currentPolicy: tampered,
+      }).some(
+        ({ code }) => code === "caller-action-ledger-history-drift",
+      ),
+    );
+  }
+});
+
+test("checker transition permits same-phase nested function-proof coordinate refresh", () => {
+  const backfill = createP41ToP42aBackfillPolicies();
+  const previousPolicy = structuredClone(backfill.currentPolicy);
+  previousPolicy.progress.latestPhase = "P4.2b";
+  previousPolicy.progress.callerToActionLedger.schemaVersion = 2;
+  const scalar =
+    previousPolicy.progress.callerToActionLedger.entries[0];
+  const firstFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{ name: "firstCaller", ordinal: 0 }],
+  });
+  const secondFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{ name: "secondCaller", ordinal: 0 }],
+  });
+  const proofFields = [
+    "callerPath",
+    "callerBindingId",
+    "callerBindingIdentity",
+    "actionModulePath",
+    "actionExportName",
+    "targetArgumentIndex",
+    "actionCallEdgeIdentity",
+    "occurrenceIndex",
+    "start",
+    "end",
+    "line",
+    "column",
+    "sourceFingerprint",
+  ];
+  const firstProof = Object.fromEntries(
+    proofFields.map((field) => [field, scalar[field]]),
+  );
+  Object.assign(firstProof, {
+    enclosingFunctionIdentity: firstFunctionIdentity,
+    retiredEnclosingFunctionIdentity: firstFunctionIdentity,
+    retiredMutationSiteFingerprint: "a".repeat(64),
+    retiredMutationSiteCount: 1,
+    proofPrecision: "exact-site",
+  });
+  const secondProof = {
+    ...structuredClone(firstProof),
+    enclosingFunctionIdentity: secondFunctionIdentity,
+    retiredEnclosingFunctionIdentity: secondFunctionIdentity,
+    retiredMutationSiteFingerprint: "b".repeat(64),
+    actionCallEdgeIdentity: "f".repeat(64),
+  };
+  const commonFields = [
+    "retiredMembershipIdentity",
+    "domain",
+    "migrationPhase",
+    "operation",
+    "key",
+  ];
+  previousPolicy.progress.callerToActionLedger.entries[0] = {
+    ...Object.fromEntries(
+      commonFields.map((field) => [field, scalar[field]]),
+    ),
+    retiredCallerPath: scalar.callerPath,
+    retiredCallerBindingIdentity: scalar.callerBindingIdentity,
+    retiredMutationSiteFingerprint: "c".repeat(64),
+    retiredMutationSiteCount: 2,
+    retiredMutationFunctionCount: 2,
+    proofPrecision: "exact-site-multi-function",
+    functionProofs: [firstProof, secondProof],
+    retiredInPhase: "P4.2b",
+    recordedInPhase: "P4.2b",
+    backfilled: false,
+  };
+
+  const currentPolicy = structuredClone(previousPolicy);
+  Object.assign(
+    currentPolicy.progress.callerToActionLedger.entries[0]
+      .functionProofs[1],
+    {
+      callerBindingId: "module:runtimeState:shifted",
+      start: 900,
+      end: 940,
+      line: 90,
+      column: 7,
+      sourceFingerprint: "e".repeat(64),
+    },
+  );
+  assert.deepEqual(
+    policyChecker.validateCallerToActionLedgerHistoryTransition({
+      previousPolicy,
+      currentPolicy,
+    }),
+    [],
+  );
+
+  const semanticDrift = structuredClone(currentPolicy);
+  semanticDrift.progress.callerToActionLedger.entries[0]
+    .functionProofs[1].actionExportName =
+      "replaceBootMetricsState";
+  assert.ok(
+    policyChecker.validateCallerToActionLedgerHistoryTransition({
+      previousPolicy,
+      currentPolicy: semanticDrift,
+    }).some(
+      ({ code }) => code === "caller-action-ledger-history-drift",
+    ),
+  );
+
+  const laterCoordinateDrift = structuredClone(previousPolicy);
+  laterCoordinateDrift.progress.latestPhase = "P4.2c";
+  laterCoordinateDrift.progress.callerToActionLedger.entries[0]
+    .functionProofs[1].line += 1;
+  assert.deepEqual(
+    policyChecker.validateCallerToActionLedgerHistoryTransition({
+      previousPolicy,
+      currentPolicy: laterCoordinateDrift,
+    }),
+    [],
+  );
+});
+
+test("checker transition freezes same-phase caller semantics and permits later live coordinates", () => {
   const backfill = createP41ToP42aBackfillPolicies();
   const previousPolicy = structuredClone(backfill.currentPolicy);
   const semanticDrift = structuredClone(previousPolicy);
@@ -807,16 +990,23 @@ test("checker transition keeps same-phase caller semantics and later coordinates
   laterCoordinateDrift.progress.latestPhase = "P4.2b";
   laterCoordinateDrift.progress.callerToActionLedger.entries[0].line += 1;
 
-  for (const currentPolicy of [semanticDrift, laterCoordinateDrift]) {
-    const codes = policyChecker.validateStateWriterPolicyTransition({
+  const semanticCodes =
+    policyChecker.validateStateWriterPolicyTransition({
       previousPolicy,
-      currentPolicy,
+      currentPolicy: semanticDrift,
     }).map(({ code }) => code);
-    assert.ok(
-      codes.includes("caller-action-ledger-history-drift"),
-      codes.join(", "),
-    );
-  }
+  assert.ok(
+    semanticCodes.includes("caller-action-ledger-history-drift"),
+    semanticCodes.join(", "),
+  );
+  assert.ok(
+    !policyChecker.validateStateWriterPolicyTransition({
+      previousPolicy,
+      currentPolicy: laterCoordinateDrift,
+    }).some(
+      ({ code }) => code === "caller-action-ledger-history-drift",
+    ),
+  );
 });
 
 test("checker transition permits the complete one-time P4.1 to P4.2a ledger backfill", () => {

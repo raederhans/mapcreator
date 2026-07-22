@@ -39,9 +39,9 @@ const P4_POLICY_SOURCE_REFS = Object.freeze([
   "tests/state_writer_policy_batch_scan_behavior.test.mjs",
   "tests/state_writer_scanner_soundness_behavior.test.mjs",
   "tests/state_writer_policy_soundness_behavior.test.mjs",
+  "tests/p4_state_action_routes_behavior.test.mjs",
   "tests/p4_state_writer_runner_reachability_behavior.test.mjs",
   "tests/state_writer_policy_manifest_behavior.test.mjs",
-  "tests/p4_state_action_routes_behavior.test.mjs",
   "tests/test_state_write_guardrail_contract.py",
   "tests/supervisor_domain_registry_behavior.test.mjs",
   "tests/verification_metadata_behavior.test.mjs",
@@ -194,10 +194,10 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
       entry.commandRef === exactPhaseEntry.commandRef
     ));
     const currentCommand = report.recommendedCommands.find((entry) => (
-      entry.commandRef === "verify:p4:p4-2a"
+      entry.commandRef === "verify:p4:p4-2b"
     ));
     assert.equal(staleCommand, undefined, `${sourceRef} should not select the stale P4.1 exact phase command`);
-    assert.ok(currentCommand, `${sourceRef} should select the current P4.2a exact phase command`);
+    assert.ok(currentCommand, `${sourceRef} should select the current P4.2b exact phase command`);
     assert.ok(currentCommand.domains.includes("state-ownership"));
   }
 });
@@ -212,13 +212,13 @@ test("shared P4 control files select only the policy current exact phase gate", 
     .map((entry) => entry.commandRef)
     .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
 
-  assert.deepEqual(exactPhaseCommands, ["verify:p4:p4-2a"]);
+  assert.deepEqual(exactPhaseCommands, ["verify:p4:p4-2b"]);
   assert.throws(
     () => buildRecommendation(
       changedFiles,
-      buildRouteIndex().filter((route) => route.id !== "p4:p4-2a-exact-phase"),
+      buildRouteIndex().filter((route) => route.id !== "p4:p4-2b-exact-phase"),
     ),
-    /No exact verification route is registered for current P4 phase P4\.2a/,
+    /No exact verification route is registered for current P4 phase P4\.2b/,
   );
 
   const renamedHistoricalRoutes = buildRouteIndex().map((route) => (
@@ -231,7 +231,7 @@ test("shared P4 control files select only the policy current exact phase gate", 
     const renamedExactCommands = renamedReport.recommendedCommands
       .map((entry) => entry.commandRef)
       .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
-    assert.deepEqual(renamedExactCommands, ["verify:p4:p4-2a"]);
+    assert.deepEqual(renamedExactCommands, ["verify:p4:p4-2b"]);
   }
 });
 
@@ -272,12 +272,61 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
     const report = buildRecommendation([sourceRef]);
     assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
     const command = report.recommendedCommands.find((entry) => (
-      entry.commandRef === exactPhaseEntry.commandRef
+      entry.commandRef === "verify:p4:p4-2b"
     ));
-    assert.ok(command, `${sourceRef} should select the P4.2a exact phase command`);
+    assert.ok(command, `${sourceRef} should select the current P4.2b exact phase command`);
     assert.ok(command.domains.includes("state-ownership"));
     assert.equal(command.domains.includes("renderer-runtime"), false);
   }
+});
+
+test("P4.2b scenario chunk actions own child-safe focused and exact routes", () => {
+  const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-2b-scenario-chunk-actions"
+  ));
+  const boundaryEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-2b-scenario-chunk-boundary"
+  ));
+  const exactPhaseEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "p4:p4-2b-exact-phase"
+  ));
+
+  for (const entry of [actionEntry, boundaryEntry, exactPhaseEntry]) {
+    assert.ok(entry);
+    assert.equal(entry.domain, "state-ownership");
+    assert.equal(entry.ownerHint, "state-ownership");
+    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.routeRegistry, true);
+  }
+  assert.equal(actionEntry.commandRef, "test:node:p4:p4-2b");
+  assert.equal(boundaryEntry.commandRef, "test:python:p4:p4-2b-boundary");
+  assert.equal(exactPhaseEntry.commandRef, "verify:p4:p4-2b");
+  const childCoveredSourceRefs = [
+    "js/core/state/actions/scenario_chunk_runtime_actions.js",
+    "js/core/state/actions/scenario_chunk_promotion_actions.js",
+    "js/core/scenario/chunk_runtime.js",
+    "tests/scenario_chunk_state_actions_behavior.test.mjs",
+    "tests/test_scenario_chunk_state_actions_boundary_contract.py",
+  ];
+  for (const sourceRef of childCoveredSourceRefs) {
+    assert.ok(actionEntry.sourceRefs.includes(sourceRef) || boundaryEntry.sourceRefs.includes(sourceRef));
+  }
+  for (const sourceRef of [
+    ...childCoveredSourceRefs,
+    "js/core/state/actions/scenario_presentation_actions.js",
+    "js/core/scenario_localization_state.js",
+    "js/core/scenario/bundle_loader.js",
+    "js/core/scenario_resources.js",
+    "js/core/scenario_rollback.js",
+    "tools/select_verification_targets.mjs",
+    "tests/test_scenario_state_actions_boundary_contract.py",
+  ]) {
+    assert.ok(exactPhaseEntry.sourceRefs.includes(sourceRef));
+  }
+  const defaultCommandRefs = new Set(commandRefsFromGroups(buildVerifyCoreDefaultGroups()));
+  assert.ok(defaultCommandRefs.has(actionEntry.commandRef));
+  assert.ok(defaultCommandRefs.has(boundaryEntry.commandRef));
+  assert.equal(defaultCommandRefs.has(exactPhaseEntry.commandRef), false);
 });
 
 test("P3.0 renderer pass family route is child-safe, exact, and part of renderer-owner", () => {

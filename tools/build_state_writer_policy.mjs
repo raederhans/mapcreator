@@ -13,6 +13,7 @@ import {
   scanStateMutations,
 } from "./state_writer_inventory.mjs";
 import {
+  expandStateActionMembershipsWithLegacyReplacements,
   findStateActionCrossFileMigrationContractEntry,
   getStateTargetPureReaderContractEntriesForModule,
   getStateActionDelegationContractEntriesForModule,
@@ -22,6 +23,7 @@ import {
   STATE_TARGET_PURE_READER_CONTRACT,
   validateStateActionCrossFileMigrationContract,
   validateStateActionDelegationContract,
+  validateStateActionLegacyMembershipReplacementContract,
   validateStateActionModulePhaseAdmissions,
   validateStateActionModuleSource,
   validateStateActionPolicyBindings,
@@ -1230,6 +1232,19 @@ function buildActionMembershipIndex(writers = []) {
       }
     }
   }
+  for (const [actionIdentity, memberships] of index) {
+    const separatorIndex = actionIdentity.lastIndexOf("#");
+    const modulePath = actionIdentity.slice(0, separatorIndex);
+    const exportName = actionIdentity.slice(separatorIndex + 1);
+    index.set(
+      actionIdentity,
+      expandStateActionMembershipsWithLegacyReplacements({
+        modulePath,
+        exportName,
+        memberships,
+      }),
+    );
+  }
   return index;
 }
 
@@ -1283,6 +1298,80 @@ function buildCallerToActionLedgerEntry({
     recordedInPhase: normalizeP4StateActionPhase(recordedInPhase),
     backfilled: Boolean(backfilled),
   };
+}
+
+function buildCallerToActionFunctionProof({
+  retiredMutationEvidence,
+  edge,
+}) {
+  return {
+    callerPath: edge.callerPath,
+    callerBindingId: edge.callerBindingId,
+    callerBindingIdentity: edge.callerBindingIdentity,
+    enclosingFunctionIdentity: edge.enclosingFunctionIdentity,
+    retiredEnclosingFunctionIdentity:
+      retiredMutationEvidence.enclosingFunctionIdentity,
+    retiredMutationSiteFingerprint:
+      retiredMutationEvidence.siteFingerprint,
+    retiredMutationSiteCount:
+      retiredMutationEvidence.siteCount,
+    proofPrecision: retiredMutationEvidence.proofPrecision,
+    actionModulePath: edge.actionModulePath,
+    actionExportName: edge.actionExportName,
+    targetArgumentIndex: edge.targetArgumentIndex,
+    actionCallEdgeIdentity: edge.actionCallEdgeIdentity,
+    occurrenceIndex: edge.occurrenceIndex,
+    start: edge.start,
+    end: edge.end,
+    line: edge.line,
+    column: edge.column,
+    sourceFingerprint: edge.sourceFingerprint,
+  };
+}
+
+function buildMultiFunctionCallerToActionLedgerEntry({
+  retiredMembership,
+  retiredMutationEvidence,
+  functionProofs,
+  retiredInPhase,
+  recordedInPhase,
+  backfilled,
+}) {
+  return {
+    retiredMembershipIdentity: retiredMembership.signature,
+    retiredCallerPath: retiredMembership.callerPath,
+    retiredCallerBindingIdentity:
+      retiredMembership.callerBindingIdentity,
+    retiredMutationSiteFingerprint:
+      retiredMutationEvidence.siteFingerprint,
+    retiredMutationSiteCount:
+      retiredMutationEvidence.siteCount,
+    retiredMutationFunctionCount:
+      retiredMutationEvidence.functionCount,
+    proofPrecision: retiredMutationEvidence.proofPrecision,
+    functionProofs,
+    domain: retiredMembership.domain,
+    migrationPhase: retiredMembership.migrationPhase,
+    operation: retiredMembership.operation,
+    key: retiredMembership.key,
+    retiredInPhase: normalizeP4StateActionPhase(retiredInPhase),
+    recordedInPhase: normalizeP4StateActionPhase(recordedInPhase),
+    backfilled: Boolean(backfilled),
+  };
+}
+
+function callerToActionEntryProofs(entry = {}) {
+  return Array.isArray(entry?.functionProofs)
+    ? entry.functionProofs
+    : [entry];
+}
+
+function callerToActionEntrySortEdgeIdentity(entry = {}) {
+  return String(
+    entry?.actionCallEdgeIdentity
+      || entry?.functionProofs?.[0]?.actionCallEdgeIdentity
+      || "",
+  );
 }
 
 function normalizeMutationSiteEvidence(site = {}) {
@@ -1436,9 +1525,31 @@ function buildRetiredMutationEvidence({
       ),
     ];
     if (functionIdentities.length !== 1) {
+      const functionEvidences = functionIdentities
+        .sort((left, right) => left.localeCompare(right))
+        .map((enclosingFunctionIdentity) => {
+          const functionMutationSites = mutationSites.filter(
+            (site) =>
+              site.enclosingFunctionIdentity
+                === enclosingFunctionIdentity,
+          );
+          return {
+            enclosingFunctionIdentity,
+            siteFingerprint: createHash("sha256")
+              .update(JSON.stringify(functionMutationSites))
+              .digest("hex"),
+            siteCount: functionMutationSites.length,
+            proofPrecision: "exact-site",
+          };
+        });
       return {
-        error:
-          "retired-membership-spans-multiple-enclosing-functions",
+        functionEvidences,
+        siteFingerprint: createHash("sha256")
+          .update(JSON.stringify(mutationSites))
+          .digest("hex"),
+        siteCount: mutationSites.length,
+        functionCount: functionEvidences.length,
+        proofPrecision: "exact-site-multi-function",
       };
     }
     return {
@@ -1658,54 +1769,126 @@ export function buildCallerToActionLedger({
   );
   const normalizedEdges =
     normalizeStateActionDelegations(actionDelegations);
-  for (const entry of entriesByRetiredIdentity.values()) {
-    if (entry.recordedInPhase !== normalizedPhase) {
-      continue;
-    }
-    const observed = normalizedEdges.find(
-      (edge) =>
-        edge.actionCallEdgeIdentity === entry.actionCallEdgeIdentity
-        || edge.legacyActionCallEdgeIdentity
-          === entry.actionCallEdgeIdentity,
-    );
-    if (!observed) {
-      continue;
-    }
-    const matchedLegacyIdentity =
-      observed.actionCallEdgeIdentity
-        !== entry.actionCallEdgeIdentity
-      && observed.legacyActionCallEdgeIdentity
-        === entry.actionCallEdgeIdentity;
-    const observedOccurrenceIndex = matchedLegacyIdentity
-      ? observed.legacyOccurrenceIndex
-      : observed.occurrenceIndex;
-    const semanticObservationMatches =
-      observed.callerPath === entry.callerPath
-      && observed.callerBindingIdentity
-        === entry.callerBindingIdentity
-      && observed.actionModulePath === entry.actionModulePath
-      && observed.actionExportName === entry.actionExportName
-      && observed.targetArgumentIndex
-        === entry.targetArgumentIndex
-      && observedOccurrenceIndex === entry.occurrenceIndex
-      && (
-        !entry.enclosingFunctionIdentity
-        || observed.enclosingFunctionIdentity
-          === entry.enclosingFunctionIdentity
-      );
-    if (!semanticObservationMatches) {
-      continue;
-    }
-    Object.assign(entry, {
-      callerBindingId: observed.callerBindingId,
-      // Preserve recorded byte offsets because checkout line endings can shift them.
-      line: observed.line,
-      column: observed.column,
-      sourceFingerprint: observed.sourceFingerprint,
-    });
-  }
   const actionMembershipIndex = buildActionMembershipIndex(writers);
   const missingProofs = [];
+  for (const entry of entriesByRetiredIdentity.values()) {
+    const retiredMembership =
+      parseLegacyMembershipSemanticSignature(
+        entry.retiredMembershipIdentity,
+      );
+    if (!retiredMembership) {
+      missingProofs.push({
+        code: "caller-action-ledger-entry-invalid",
+        retiredMembershipIdentity:
+          entry.retiredMembershipIdentity,
+        reason: "retired-membership-identity-invalid",
+      });
+      continue;
+    }
+    for (const proof of callerToActionEntryProofs(entry)) {
+      const observed = normalizedEdges.find(
+        (edge) =>
+          (
+            edge.actionCallEdgeIdentity
+              === proof.actionCallEdgeIdentity
+            || edge.legacyActionCallEdgeIdentity
+              === proof.actionCallEdgeIdentity
+          )
+          && edge.callerPath === proof.callerPath
+          && edge.callerBindingIdentity
+            === proof.callerBindingIdentity
+          && edge.actionModulePath === proof.actionModulePath
+          && edge.actionExportName === proof.actionExportName
+          && edge.targetArgumentIndex
+            === proof.targetArgumentIndex
+          && (
+            !proof.enclosingFunctionIdentity
+            || edge.enclosingFunctionIdentity
+              === proof.enclosingFunctionIdentity
+          ),
+      );
+      const observedActionMemberships = observed
+        ? actionMembershipIndex.get(
+          `${observed.actionModulePath}#${observed.actionExportName}`,
+        )
+        : null;
+      let liveEdge = observedActionMemberships?.has(
+        retiredMembership.replacementKey,
+      )
+        ? observed
+        : null;
+      if (!liveEdge && entry.crossFileMigrationContractIdentity) {
+        missingProofs.push({
+          code: "legacy-membership-retirement-replacement-missing",
+          retiredMembershipIdentity:
+            entry.retiredMembershipIdentity,
+          actionCallEdgeIdentity: proof.actionCallEdgeIdentity,
+          reason: "explicit-cross-file-action-edge-stale",
+        });
+        continue;
+      }
+      if (!liveEdge) {
+        const successorEdges = normalizedEdges.filter((edge) =>
+          edge.callerPath === proof.callerPath
+          && edge.callerBindingIdentity
+            === proof.callerBindingIdentity
+          && (
+            proof.enclosingFunctionIdentity
+              ? edge.enclosingFunctionIdentity
+                === proof.enclosingFunctionIdentity
+              : !edge.enclosingFunctionIdentity
+          )
+          && actionMembershipIndex.get(
+            `${edge.actionModulePath}#${edge.actionExportName}`,
+          )?.has(retiredMembership.replacementKey)
+        );
+        const successorActionIdentities = new Set(
+          successorEdges.map((edge) => [
+            edge.actionModulePath,
+            edge.actionExportName,
+            edge.targetArgumentIndex,
+          ].join("#")),
+        );
+        const hasOneSuccessorAction =
+          successorEdges.length > 0
+          && successorActionIdentities.size === 1;
+        if (!hasOneSuccessorAction) {
+          missingProofs.push({
+            code: "legacy-membership-retirement-replacement-missing",
+            retiredMembershipIdentity:
+              entry.retiredMembershipIdentity,
+            actionCallEdgeIdentity: proof.actionCallEdgeIdentity,
+            reason: successorEdges.length === 0
+              ? "caller-action-successor-edge-missing"
+              : "caller-action-successor-edge-ambiguous",
+            successorActionCallEdgeIdentities:
+              successorEdges.map(
+                ({ actionCallEdgeIdentity }) =>
+                  actionCallEdgeIdentity,
+              ).sort(),
+          });
+          continue;
+        }
+        // Repeated calls to one registered action still prove one authority
+        // boundary. normalizedEdges is source-stable, so the proof keeps the
+        // first exact call site while distinct action owners remain ambiguous.
+        [liveEdge] = successorEdges;
+      }
+      Object.assign(proof, {
+        callerBindingId: liveEdge.callerBindingId,
+        actionModulePath: liveEdge.actionModulePath,
+        actionExportName: liveEdge.actionExportName,
+        targetArgumentIndex: liveEdge.targetArgumentIndex,
+        actionCallEdgeIdentity: liveEdge.actionCallEdgeIdentity,
+        occurrenceIndex: liveEdge.occurrenceIndex,
+        start: liveEdge.start,
+        end: liveEdge.end,
+        line: liveEdge.line,
+        column: liveEdge.column,
+        sourceFingerprint: liveEdge.sourceFingerprint,
+      });
+    }
+  }
   for (const retiredMembershipIdentity of retiredMembershipIdentities) {
     if (entriesByRetiredIdentity.has(retiredMembershipIdentity)) {
       continue;
@@ -1810,7 +1993,26 @@ export function buildCallerToActionLedger({
         proofPrecision: "historical-backfill",
       };
     }
+    const functionProofs = retiredMutationEvidence.functionEvidences
+      ?.map((functionEvidence) => {
+        const edge = candidateEdges.find(
+          ({ enclosingFunctionIdentity }) =>
+            enclosingFunctionIdentity
+              === functionEvidence.enclosingFunctionIdentity,
+        );
+        return edge
+          ? buildCallerToActionFunctionProof({
+            retiredMutationEvidence: functionEvidence,
+            edge,
+          })
+          : null;
+      });
+    const missingFunctionEvidence =
+      retiredMutationEvidence.functionEvidences?.find(
+        (_, index) => !functionProofs[index],
+      ) || null;
     const candidate = retiredMutationEvidence.error
+      || retiredMutationEvidence.functionEvidences
       ? null
       : crossFileMigration
         ? candidateEdges[0]
@@ -1819,7 +2021,11 @@ export function buildCallerToActionLedger({
             enclosingFunctionIdentity
             === retiredMutationEvidence.enclosingFunctionIdentity,
         );
-    if (!candidate) {
+    if (
+      retiredMutationEvidence.error
+      || missingFunctionEvidence
+      || (!retiredMutationEvidence.functionEvidences && !candidate)
+    ) {
       missingProofs.push({
         code: "legacy-membership-retirement-replacement-missing",
         path: retiredMembership.callerPath,
@@ -1831,6 +2037,12 @@ export function buildCallerToActionLedger({
         reason:
           retiredMutationEvidence.error
           || "matching-enclosing-function-action-edge-missing",
+        ...(missingFunctionEvidence
+          ? {
+            enclosingFunctionIdentity:
+              missingFunctionEvidence.enclosingFunctionIdentity,
+          }
+          : {}),
       });
       continue;
     }
@@ -1838,19 +2050,29 @@ export function buildCallerToActionLedger({
       previousRetiredMembershipIdentities.has(
         retiredMembershipIdentity,
       );
+    const provenance = {
+      retiredInPhase: backfilled
+        ? previousPolicy.progress.latestPhase
+        : normalizedPhase,
+      recordedInPhase: normalizedPhase,
+      backfilled,
+    };
     entriesByRetiredIdentity.set(
       retiredMembershipIdentity,
-      buildCallerToActionLedgerEntry({
-        retiredMembership,
-        retiredMutationEvidence,
-        edge: candidate,
-        crossFileMigration,
-        retiredInPhase: backfilled
-          ? previousPolicy.progress.latestPhase
-          : normalizedPhase,
-        recordedInPhase: normalizedPhase,
-        backfilled,
-      }),
+      retiredMutationEvidence.functionEvidences
+        ? buildMultiFunctionCallerToActionLedgerEntry({
+          retiredMembership,
+          retiredMutationEvidence,
+          functionProofs,
+          ...provenance,
+        })
+        : buildCallerToActionLedgerEntry({
+          retiredMembership,
+          retiredMutationEvidence,
+          edge: candidate,
+          crossFileMigration,
+          ...provenance,
+        }),
     );
   }
   for (const previousIdentity of entriesByRetiredIdentity.keys()) {
@@ -1870,17 +2092,22 @@ export function buildCallerToActionLedger({
     error.violations = missingProofs;
     throw error;
   }
-  return {
-    schemaVersion: 1,
-    entries: [...entriesByRetiredIdentity.values()].sort(
+  const entries = [...entriesByRetiredIdentity.values()].sort(
       (left, right) =>
         left.retiredMembershipIdentity.localeCompare(
           right.retiredMembershipIdentity,
         )
-        || left.actionCallEdgeIdentity.localeCompare(
-          right.actionCallEdgeIdentity,
+        || callerToActionEntrySortEdgeIdentity(left).localeCompare(
+          callerToActionEntrySortEdgeIdentity(right),
         ),
-    ),
+    );
+  return {
+    schemaVersion:
+      Number(previousLedger?.schemaVersion) === 2
+      || entries.some((entry) => Array.isArray(entry.functionProofs))
+        ? 2
+        : 1,
+    entries,
   };
 }
 
@@ -1981,32 +2208,59 @@ export function validateLegacyMembershipRetirementReplacements({
     const proof = ledgerByRetiredMembershipIdentity.get(
       record.signature,
     );
+    const functionProofs = proof
+      ? callerToActionEntryProofs(proof)
+      : [];
     const proofRetiredCallerPath = String(
-      proof?.retiredCallerPath || proof?.callerPath || "",
+      proof?.retiredCallerPath
+        || functionProofs[0]?.callerPath
+        || "",
     );
     const proofRetiredCallerBindingIdentity = String(
       proof?.retiredCallerBindingIdentity
-        || proof?.callerBindingIdentity
+        || functionProofs[0]?.callerBindingIdentity
         || "",
     );
+    const expectedCallerBindingIdentity =
+      stableLegacyBindingIdentity(
+        previousWriters
+          .find(({ path: writerPath }) => writerPath === record.path)
+          ?.bindings?.find(({ id }) => id === record.bindingId),
+      );
+    const explicitCrossFileCaller = Boolean(
+      !Array.isArray(proof?.functionProofs)
+      && (
+      proof?.retiredCallerPath
+      || proof?.retiredCallerBindingIdentity
+      )
+    );
+    const functionProofsValid =
+      functionProofs.length > 0
+      && functionProofs.every((functionProof) =>
+        actionMembershipIndex.get(
+          `${functionProof.actionModulePath}#${functionProof.actionExportName}`,
+        )?.has(record.replacementKey)
+        && (
+          explicitCrossFileCaller
+          || (
+            functionProof.callerPath === record.path
+            && functionProof.callerBindingIdentity
+              === expectedCallerBindingIdentity
+          )
+        )
+      );
     if (
       !proof
       || proofRetiredCallerPath !== record.path
       || proofRetiredCallerBindingIdentity
-        !== stableLegacyBindingIdentity(
-          previousWriters
-            .find(({ path: writerPath }) => writerPath === record.path)
-            ?.bindings?.find(({ id }) => id === record.bindingId),
-        )
+        !== expectedCallerBindingIdentity
       || [
         proof.domain,
         proof.migrationPhase,
         proof.operation,
         proof.key,
       ].join("|") !== record.replacementKey
-      || !actionMembershipIndex.get(
-        `${proof.actionModulePath}#${proof.actionExportName}`,
-      )?.has(record.replacementKey)
+      || !functionProofsValid
     ) {
       violations.push({
         code: "legacy-membership-retirement-replacement-missing",
@@ -4183,6 +4437,17 @@ export async function buildStateWriterPolicySnapshot({
     );
     error.code = "state-action-delegation-contract-invalid";
     error.violations = actionDelegationContractViolations;
+    throw error;
+  }
+  const legacyMembershipReplacementContractViolations =
+    validateStateActionLegacyMembershipReplacementContract();
+  if (legacyMembershipReplacementContractViolations.length) {
+    const error = new Error(
+      "State action legacy membership replacement contract is invalid.",
+    );
+    error.code =
+      "state-action-legacy-membership-replacement-contract-invalid";
+    error.violations = legacyMembershipReplacementContractViolations;
     throw error;
   }
   const crossFileMigrationContractViolations =

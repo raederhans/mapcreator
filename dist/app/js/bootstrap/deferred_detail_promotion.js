@@ -8,6 +8,8 @@ import {
   setMapData,
 } from "../core/scenario/scenario_renderer_bridge.js";
 import { refreshScenarioShellOverlays } from "../core/scenario_shell_overlay.js";
+import { patchScenarioChunkLoadState } from "../core/state/actions/scenario_chunk_runtime_actions.js";
+import { setDefaultRuntimePoliticalTopologyState } from "../core/state/actions/scenario_chunk_promotion_actions.js";
 import { getDeferredPromotionDelay } from "./startup_bootstrap_support.js";
 
 const MAX_FORCED_STARTUP_INFRA_RETRIES = 2;
@@ -61,9 +63,11 @@ export function createDeferredDetailPromotionOwner({
       return;
     }
     if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
-      runtimeState.runtimeChunkLoadState.focusCountryOverride = focusCountry;
-      runtimeState.runtimeChunkLoadState.focusCountryOverrideSource = String(reason || "detail-promotion");
-      runtimeState.runtimeChunkLoadState.focusCountryOverrideExpiresAt = Date.now() + 5000;
+      patchScenarioChunkLoadState(runtimeState, {
+        focusCountryOverride: focusCountry,
+        focusCountryOverrideSource: String(reason || "detail-promotion"),
+        focusCountryOverrideExpiresAt: Date.now() + 5000,
+      });
     }
     if (typeof runtimeState.scheduleScenarioChunkRefreshFn === "function") {
       runtimeState.scheduleScenarioChunkRefreshFn({
@@ -183,7 +187,7 @@ export function createDeferredDetailPromotionOwner({
         runtimeState.runtimePoliticalTopology = runtimePoliticalTopology || runtimeState.runtimePoliticalTopology;
       }
       if (!String(runtimeState.activeScenarioId || "").trim()) {
-        runtimeState.defaultRuntimePoliticalTopology = runtimeState.runtimePoliticalTopology || null;
+        setDefaultRuntimePoliticalTopologyState(runtimeState);
       }
       runtimeState.topologyBundleMode = topologyBundleMode || "composite";
       runtimeState.detailDeferred = false;

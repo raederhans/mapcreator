@@ -33,6 +33,14 @@ import {
 import {
   recordRenderTransactionSnapshot,
 } from "./renderer/render_transaction_diagnostics.js";
+import {
+  patchScenarioChunkLoadState,
+  replaceScenarioChunkRuntimeState,
+  setScenarioChunkRuntimeHooksState,
+} from "./state/actions/scenario_chunk_runtime_actions.js";
+import {
+  setScenarioPoliticalChunkPayloadState,
+} from "./state/actions/scenario_chunk_promotion_actions.js";
 
 const SCENARIO_OWNER_COLOR_PROPERTY_KEYS = Object.freeze([
   "owner",
@@ -590,6 +598,10 @@ function createScenarioApplyPipeline({
       runtimeState,
       transactionPatch.scenarioActivationPatch,
     );
+    setScenarioPoliticalChunkPayloadState(runtimeState, {
+      payload:
+        transactionPatch.scenarioActivationPatch.scenarioPoliticalChunkData,
+    });
     commitScenarioPresentationState(
       runtimeState,
       transactionPatch.scenarioPresentationPatch,
@@ -617,20 +629,30 @@ function createScenarioApplyPipeline({
     // 非 chunked 场景直接 reset，避免旧场景留下的 detail/chunk 状态混进新场景。
     // 这里的 reset 不是保守清空，而是显式把 owner 交回当前场景，避免上一场景的缓存继续冒充已加载。
     const supportsChunkedRuntime = scenarioSupportsChunkedRuntime(bundle);
-    runtimeState.scheduleScenarioChunkRefreshFn = supportsChunkedRuntime ? scheduleScenarioChunkRefresh : null;
-    runtimeState.awaitInitialScenarioChunkVisualPromotionFn = supportsChunkedRuntime
-      ? awaitInitialScenarioChunkVisualPromotion
-      : null;
+    setScenarioChunkRuntimeHooksState(runtimeState, {
+      scheduleScenarioChunkRefreshFn: supportsChunkedRuntime ? scheduleScenarioChunkRefresh : null,
+      awaitInitialScenarioChunkVisualPromotionFn: supportsChunkedRuntime
+        ? awaitInitialScenarioChunkVisualPromotion
+        : null,
+    });
     if (supportsChunkedRuntime) {
       resetScenarioChunkRuntimeState({ scenarioId: staged.scenarioId });
       const chunkIds = Object.keys(bundle.chunkPayloadCacheById || {});
       if (chunkIds.length) {
-        runtimeState.activeScenarioChunks.loadedChunkIds = [...chunkIds];
-        runtimeState.activeScenarioChunks.payloadByChunkId = { ...(bundle.chunkPayloadCacheById || {}) };
-        runtimeState.activeScenarioChunks.lruChunkIds = [...chunkIds];
+        replaceScenarioChunkRuntimeState(runtimeState, {
+          activeScenarioChunks: {
+            ...runtimeState.activeScenarioChunks,
+            loadedChunkIds: [...chunkIds],
+            payloadByChunkId: { ...(bundle.chunkPayloadCacheById || {}) },
+            lruChunkIds: [...chunkIds],
+          },
+          runtimeChunkLoadState: runtimeState.runtimeChunkLoadState,
+        });
       }
-      ensureRuntimeChunkLoadState().shellStatus = chunkIds.length ? "ready" : "loading";
-      ensureRuntimeChunkLoadState().registryStatus = scenarioBundleHasChunkedData(bundle) ? "ready" : "idle";
+      patchScenarioChunkLoadState(runtimeState, {
+        shellStatus: chunkIds.length ? "ready" : "loading",
+        registryStatus: scenarioBundleHasChunkedData(bundle) ? "ready" : "idle",
+      });
       return;
     }
     resetScenarioChunkRuntimeState();

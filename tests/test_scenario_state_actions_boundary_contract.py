@@ -25,6 +25,10 @@ ACTION_MODULE_EXPORTS = {
         "restoreScenarioActivationBeforeAuditState",
         "restoreScenarioActivationBeforeColorDirtyState",
         "restoreScenarioActivationAfterColorDirtyState",
+        "getScenarioChunkOptionalLayerState",
+        "applyScenarioChunkOptionalLayerState",
+        "captureScenarioChunkPromotionState",
+        "restoreScenarioChunkPromotionState",
     ),
     "scenario_presentation_actions.js": (
         "captureScenarioPresentationState",
@@ -32,6 +36,7 @@ ACTION_MODULE_EXPORTS = {
         "restoreScenarioPresentationState",
         "restoreScenarioTransactionPresentationBeforeAuditState",
         "restoreScenarioTransactionPresentationState",
+        "finalizeScenarioChunkCityExternalEffectState",
     ),
     "scenario_apply_request_actions.js": (
         "setLatestScenarioApplyRequestState",

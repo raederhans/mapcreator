@@ -118,9 +118,11 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("target.activeScenarioMeshPack =", action_content)
         self.assertIn("target.activeScenarioMeshPack =", activation_content)
         self.assertIn(
-            "target.scenarioPoliticalVisibleChunkData =",
-            action_content,
+            "setScenarioPoliticalChunkPayloadState(runtimeState, {",
+            content,
         )
+        self.assertNotIn("setScenarioPoliticalChunkPayloadState(target, {", action_content)
+        self.assertNotIn("target.scenarioPoliticalVisibleChunkData =", action_content)
         self.assertNotIn("target.legendLabels =", action_content)
         self.assertNotIn("target.legendConfig =", action_content)
         self.assertIn(
@@ -131,8 +133,14 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
             "awaitInitialScenarioChunkVisualPromotionFn:",
             content,
         )
-        self.assertIn("target.scheduleScenarioChunkRefreshFn =", action_content)
-        self.assertIn("target.awaitInitialScenarioChunkVisualPromotionFn =", action_content)
+        self.assertIn("setScenarioChunkRuntimeHooksState(runtimeState, {", content)
+        self.assertIn("replaceScenarioChunkRuntimeState(runtimeState, {", content)
+        self.assertNotIn("setScenarioChunkRuntimeHooksState(target, {", action_content)
+        self.assertNotIn("replaceScenarioChunkRuntimeState(target, {", action_content)
+        self.assertNotIn("target.scheduleScenarioChunkRefreshFn =", action_content)
+        self.assertNotIn("target.awaitInitialScenarioChunkVisualPromotionFn =", action_content)
+        self.assertNotIn("target.activeScenarioChunks =", action_content)
+        self.assertNotIn("target.runtimeChunkLoadState =", action_content)
         self.assertNotIn("runtimeState.activeScenarioMeshPack =", content)
         self.assertNotIn("runtimeState.scenarioPoliticalVisibleChunkData =", content)
         self.assertNotIn("runtimeState.legendLabels =", content)
@@ -151,6 +159,7 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
         effect_order = [
             'callRuntimeHook(runtimeState, "cancelScenarioChunkPromotionCommitFn", "rolled-back");',
             "restoreScenarioActivationBeforeAuditState(",
+            "setDefaultRuntimePoliticalTopologyState(",
             "restoreScenarioTransactionSupplementBeforeAuditState(",
             "restoreScenarioTransactionPresentationBeforeAuditState(",
             "setScenarioAuditUiState(",
@@ -160,6 +169,9 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
             "markLegacyColorStateDirty();",
             "restoreScenarioActivationAfterColorDirtyState(",
             "restoreScenarioTransactionSupplementAfterColorDirtyState(",
+            "setScenarioPoliticalChunkPayloadState(",
+            "replaceScenarioChunkRuntimeState(",
+            "setScenarioChunkRuntimeHooksState(",
             "restoreScenarioTransactionPresentationState(",
             "restoreScenarioPaletteState(",
             "syncResolvedDefaultCountryPalette({ overwriteCountryPalette: false });",

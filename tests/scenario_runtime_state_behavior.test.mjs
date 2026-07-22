@@ -28,6 +28,7 @@ test("scenario runtime factory seeds scenario-aware defaults", () => {
   assert.equal(defaults.runtimeChunkLoadState.zoomEndProtectedSelectionVersion, 0);
   assert.equal(defaults.runtimeChunkLoadState.zoomEndProtectedScenarioId, "");
   assert.equal(defaults.runtimeChunkLoadState.zoomEndProtectedFocusCountry, "");
+  assert.equal(Object.hasOwn(defaults, "scenarioAtlantropaRevision"), false);
   assert.doesNotThrow(() => JSON.stringify(defaults.runtimeChunkLoadState));
 });
 
@@ -151,11 +152,12 @@ test("scenario perf metrics are written through the scenario runtime owner", () 
 });
 
 test("zoom-end detail chunk protection is one-shot and selection scoped", () => {
-  const loadState = createDefaultScenarioRuntimeState({ scenarioId: "tno_1962" }).runtimeChunkLoadState;
+  const targetState = createDefaultScenarioRuntimeState({ scenarioId: "tno_1962" });
+  const loadState = targetState.runtimeChunkLoadState;
   const normalizeScenarioIdFn = (value) => String(value || "").trim();
 
   protectZoomEndChunksForSelection(
-    loadState,
+    targetState,
     ["political.detail.country.cd", "political.detail.country.cd", "context.detail.water"],
     {
       scenarioId: "tno_1962",
@@ -174,17 +176,17 @@ test("zoom-end detail chunk protection is one-shot and selection scoped", () => 
   const protectedSelection = {
     evictableChunkIds: ["political.detail.country.cd", "political.detail.country.mx"],
   };
-  assert.equal(applyZoomEndChunkProtectionToSelection(protectedSelection, loadState, {
+  assert.equal(applyZoomEndChunkProtectionToSelection(protectedSelection, targetState, {
     scenarioId: "tno_1962",
     selectionVersion: 7,
     focusCountry: "CD",
     normalizeScenarioIdFn,
     nowMs: 1200,
-  }), true);
+  }, loadState), true);
   assert.deepEqual(protectedSelection.evictableChunkIds, ["political.detail.country.mx"]);
   assert.deepEqual(loadState.zoomEndProtectedChunkIds, []);
 
-  protectZoomEndChunksForSelection(loadState, ["political.detail.country.cd"], {
+  protectZoomEndChunksForSelection(targetState, ["political.detail.country.cd"], {
     scenarioId: "tno_1962",
     selectionVersion: 8,
     focusCountry: "CD",
@@ -192,17 +194,17 @@ test("zoom-end detail chunk protection is one-shot and selection scoped", () => 
     nowMs: 2000,
   });
   const changedSelection = { evictableChunkIds: ["political.detail.country.cd"] };
-  assert.equal(applyZoomEndChunkProtectionToSelection(changedSelection, loadState, {
+  assert.equal(applyZoomEndChunkProtectionToSelection(changedSelection, targetState, {
     scenarioId: "tno_1962",
     selectionVersion: 9,
     focusCountry: "CD",
     normalizeScenarioIdFn,
     nowMs: 2200,
-  }), false);
+  }, loadState), false);
   assert.deepEqual(changedSelection.evictableChunkIds, ["political.detail.country.cd"]);
   assert.deepEqual(loadState.zoomEndProtectedChunkIds, []);
 
-  protectZoomEndChunksForSelection(loadState, ["political.detail.country.cd"], {
+  protectZoomEndChunksForSelection(targetState, ["political.detail.country.cd"], {
     scenarioId: "tno_1962",
     selectionVersion: 10,
     focusCountry: "CD",
@@ -210,13 +212,13 @@ test("zoom-end detail chunk protection is one-shot and selection scoped", () => 
     nowMs: 3000,
   });
   const expiredSelection = { evictableChunkIds: ["political.detail.country.cd"] };
-  assert.equal(applyZoomEndChunkProtectionToSelection(expiredSelection, loadState, {
+  assert.equal(applyZoomEndChunkProtectionToSelection(expiredSelection, targetState, {
     scenarioId: "tno_1962",
     selectionVersion: 10,
     focusCountry: "CD",
     normalizeScenarioIdFn,
     nowMs: 9001,
-  }), false);
+  }, loadState), false);
   assert.deepEqual(expiredSelection.evictableChunkIds, ["political.detail.country.cd"]);
   assert.deepEqual(loadState.zoomEndProtectedChunkIds, []);
 });

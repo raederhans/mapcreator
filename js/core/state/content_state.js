@@ -2,6 +2,7 @@ import {
   createDefaultTransportCountryOverlayState,
 } from "../transport_country_overlay.js";
 import { replaceStartupBootCacheState } from "./actions/boot_actions.js";
+import { setDefaultRuntimePoliticalTopologyState } from "./actions/scenario_chunk_promotion_actions.js";
 
 // Content/data state defaults.
 // 这里收口 localization、topology、context layer 和底图数据默认 shape，
@@ -499,7 +500,7 @@ export function hydrateStartupBaseContentState(
   target.topologyPrimary = topologyPrimary || target.topology;
   target.topologyDetail = topologyDetail || null;
   target.runtimePoliticalTopology = runtimePoliticalTopology || null;
-  target.defaultRuntimePoliticalTopology = target.runtimePoliticalTopology || null;
+  setDefaultRuntimePoliticalTopologyState(target);
   target.topologyBundleMode = topologyBundleMode || "single";
   target.renderProfile = renderProfile || "auto";
   target.detailDeferred = !!detailDeferred;

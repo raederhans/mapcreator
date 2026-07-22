@@ -3088,6 +3088,44 @@ function analyzeBindingMutations(
         )
       ) {
         delegatedArgumentIndexes.add(importedTargetIndex);
+        if (importedDelegation.actionContract) {
+          for (
+            let argumentIndex = importedTargetIndex + 1;
+            argumentIndex < node.arguments.length;
+            argumentIndex += 1
+          ) {
+            const argument = unwrapChain(node.arguments[argumentIndex]);
+            if (
+              (
+                argument?.type === "ObjectExpression"
+                || argument?.type === "ArrayExpression"
+              )
+              && isSafeRegisteredActionPayloadContainer(
+                argument,
+                aliasRecords,
+              )
+            ) {
+              delegatedArgumentIndexes.add(argumentIndex);
+            }
+          }
+          for (
+            const argumentIndex of
+              importedDelegation.actionContract.readOnlyArgumentIndexes || []
+          ) {
+            if (
+              argumentIndex < node.arguments.length
+              && isSanctionedImportedStateActionReadOnlyArgument(
+                node.arguments[argumentIndex],
+                argumentIndex,
+                argumentClassifications[argumentIndex],
+                importedDelegation.actionContract,
+                aliasRecords,
+              )
+            ) {
+              delegatedArgumentIndexes.add(argumentIndex);
+            }
+          }
+        }
         if (
           importedDelegation.actionContract
           && currentActionProofReachability()
@@ -3152,12 +3190,99 @@ function analyzeBindingMutations(
     );
   }
 
+  function stateRootUnionShape(
+    expression,
+    aliasRecords,
+    visitedRecords = new Set(),
+  ) {
+    const node = unwrapChain(expression);
+    if (!node) return { valid: true, hasRoot: false };
+    if (node.type === "LogicalExpression") {
+      const left = stateRootUnionShape(
+        node.left,
+        aliasRecords,
+        visitedRecords,
+      );
+      const right = stateRootUnionShape(
+        node.right,
+        aliasRecords,
+        visitedRecords,
+      );
+      return {
+        valid: left.valid && right.valid,
+        hasRoot: left.hasRoot || right.hasRoot,
+      };
+    }
+    if (node.type === "ConditionalExpression") {
+      const consequent = stateRootUnionShape(
+        node.consequent,
+        aliasRecords,
+        visitedRecords,
+      );
+      const alternate = stateRootUnionShape(
+        node.alternate,
+        aliasRecords,
+        visitedRecords,
+      );
+      return {
+        valid: consequent.valid && alternate.valid,
+        hasRoot: consequent.hasRoot || alternate.hasRoot,
+      };
+    }
+    if (node.type === "SequenceExpression") {
+      return stateRootUnionShape(
+        node.expressions.at(-1),
+        aliasRecords,
+        visitedRecords,
+      );
+    }
+
+    const classification = referenceClassification(node, aliasRecords);
+    if (classification.status === "exact") {
+      const isRoot = (classification.reference?.segments || []).length === 0;
+      return { valid: isRoot, hasRoot: isRoot };
+    }
+    if (classification.status === "none") {
+      return { valid: true, hasRoot: false };
+    }
+    if (node.type !== "Identifier") {
+      return { valid: false, hasRoot: false };
+    }
+    const record = analysis.resolveIdentifier(node);
+    if (
+      record?.kind !== "variable"
+      || record.declarationKind !== "const"
+      || !record.init
+      || identityTransitionRecords.has(record)
+      || visitedRecords.has(record)
+    ) {
+      return { valid: false, hasRoot: false };
+    }
+    const nextVisitedRecords = new Set(visitedRecords);
+    nextVisitedRecords.add(record);
+    return stateRootUnionShape(
+      record.init,
+      aliasRecords,
+      nextVisitedRecords,
+    );
+  }
+
+  function isImmutableStateRootUnionArgument(argument, aliasRecords) {
+    const node = unwrapChain(argument);
+    if (node?.type !== "Identifier") return false;
+    const shape = stateRootUnionShape(node, aliasRecords);
+    return shape.valid && shape.hasRoot;
+  }
+
   function isSanctionedImportedStateActionTargetArgument(
     argument,
     classification,
     aliasRecords,
   ) {
     if (isDirectStateRootArgument(argument, classification)) {
+      return true;
+    }
+    if (isImmutableStateRootUnionArgument(argument, aliasRecords)) {
       return true;
     }
     const node = unwrapChain(argument);
@@ -3194,6 +3319,49 @@ function analyzeBindingMutations(
     );
   }
 
+  function isSanctionedImportedStateActionReadOnlyArgument(
+    argument,
+    argumentIndex,
+    classification,
+    actionContract,
+    aliasRecords,
+  ) {
+    if (!actionContract?.readOnlyArgumentIndexes?.includes(argumentIndex)) {
+      return false;
+    }
+    if (classification?.status === "exact") {
+      const segments = classification.reference?.segments || [];
+      return Boolean(
+        segments.length > 0
+        && segments.every((segment) => !segment.dynamic),
+      );
+    }
+
+    let node = unwrapChain(argument);
+    let segmentCount = 0;
+    while (node?.type === "MemberExpression") {
+      if (
+        node.computed
+        && !(
+          node.property?.type === "Literal"
+          && ["string", "number"].includes(typeof node.property.value)
+        )
+        && !(
+          node.property?.type === "TemplateLiteral"
+          && (node.property.expressions || []).length === 0
+        )
+      ) {
+        return false;
+      }
+      segmentCount += 1;
+      node = unwrapChain(node.object);
+    }
+    return Boolean(
+      segmentCount > 0
+      && isImmutableStateRootUnionArgument(node, aliasRecords),
+    );
+  }
+
   function isExplicitTargetArgument(argument) {
     const node = unwrapChain(argument);
     return Boolean(
@@ -3201,6 +3369,307 @@ function analyzeBindingMutations(
       && node.type !== "SpreadElement"
       && node.type !== "AwaitExpression",
     );
+  }
+
+  function isSafeRegisteredActionPayloadContainer(argument, aliasRecords) {
+    const root = unwrapChain(argument);
+    if (
+      root?.type !== "ObjectExpression"
+      && root?.type !== "ArrayExpression"
+    ) {
+      return false;
+    }
+
+    const emptyShape = () => ({
+      tracked: false,
+      mayBeRoot: false,
+      dynamic: false,
+      invalid: false,
+    });
+
+    function mergeShapes(shapes, { preserveRoot = true } = {}) {
+      return {
+        tracked: shapes.some((shape) => shape.tracked),
+        mayBeRoot: preserveRoot
+          && shapes.some((shape) => shape.mayBeRoot),
+        dynamic: shapes.some((shape) => shape.dynamic),
+        invalid: shapes.some((shape) => shape.invalid),
+      };
+    }
+
+    function payloadExpressionShape(
+      expression,
+      visitedRecords = new Set(),
+    ) {
+      const node = unwrapChain(expression);
+      if (!node) return emptyShape();
+      if (node.type === "ObjectExpression") {
+        const shapes = [];
+        for (const property of node.properties || []) {
+          if (property.type === "SpreadElement") {
+            const spreadShape = payloadExpressionShape(
+              property.argument,
+              visitedRecords,
+            );
+            shapes.push({
+              ...spreadShape,
+              invalid: spreadShape.invalid
+                || spreadShape.mayBeRoot
+                || spreadShape.dynamic,
+            });
+            continue;
+          }
+          if (property.computed) {
+            const keyShape = payloadExpressionShape(
+              property.key,
+              visitedRecords,
+            );
+            shapes.push({
+              ...keyShape,
+              invalid: keyShape.invalid || keyShape.tracked,
+            });
+          }
+          const valueShape = payloadExpressionShape(
+            property.value,
+            visitedRecords,
+          );
+          shapes.push({
+            ...valueShape,
+            invalid: valueShape.invalid
+              || valueShape.mayBeRoot
+              || valueShape.dynamic,
+          });
+        }
+        return mergeShapes(shapes, { preserveRoot: false });
+      }
+      if (node.type === "ArrayExpression") {
+        const shapes = (node.elements || []).filter(Boolean).map((element) => {
+          const spread = element.type === "SpreadElement";
+          const valueShape = payloadExpressionShape(
+            spread ? element.argument : element,
+            visitedRecords,
+          );
+          return {
+            ...valueShape,
+            invalid: valueShape.invalid
+              || valueShape.mayBeRoot
+              || valueShape.dynamic,
+          };
+        });
+        return mergeShapes(shapes, { preserveRoot: false });
+      }
+      if (node.type === "SpreadElement") {
+        return payloadExpressionShape(node.argument, visitedRecords);
+      }
+      if (node.type === "LogicalExpression") {
+        return mergeShapes([
+          payloadExpressionShape(node.left, visitedRecords),
+          payloadExpressionShape(node.right, visitedRecords),
+        ]);
+      }
+      if (node.type === "ConditionalExpression") {
+        const testShape = payloadExpressionShape(node.test, visitedRecords);
+        const resultShape = mergeShapes([
+          payloadExpressionShape(node.consequent, visitedRecords),
+          payloadExpressionShape(node.alternate, visitedRecords),
+        ]);
+        return {
+          tracked: testShape.tracked || resultShape.tracked,
+          mayBeRoot: resultShape.mayBeRoot,
+          dynamic: testShape.dynamic || resultShape.dynamic,
+          invalid: testShape.invalid || resultShape.invalid,
+        };
+      }
+      if (node.type === "SequenceExpression") {
+        const shapes = (node.expressions || []).map((item) =>
+          payloadExpressionShape(item, visitedRecords)
+        );
+        const resultShape = shapes.at(-1) || emptyShape();
+        return {
+          tracked: shapes.some((shape) => shape.tracked),
+          mayBeRoot: resultShape.mayBeRoot,
+          dynamic: shapes.some((shape) => shape.dynamic),
+          invalid: shapes.some((shape) => shape.invalid),
+        };
+      }
+      if (node.type === "MemberExpression") {
+        const objectShape = payloadExpressionShape(
+          node.object,
+          visitedRecords,
+        );
+        const propertyShape = node.computed
+          ? payloadExpressionShape(node.property, visitedRecords)
+          : emptyShape();
+        const classification = referenceClassification(node, aliasRecords);
+        const referenceSegments = classification.status === "exact"
+          ? classification.reference?.segments || []
+          : [];
+        const tracked = objectShape.tracked
+          || propertyShape.tracked
+          || classification.status !== "none";
+        const hasStaticComputedProperty = !node.computed
+          || (
+            node.property?.type === "Literal"
+            && ["string", "number"].includes(typeof node.property.value)
+          )
+          || (
+            node.property?.type === "TemplateLiteral"
+            && (node.property.expressions || []).length === 0
+          );
+        const dynamic = objectShape.dynamic
+          || propertyShape.dynamic
+          || (
+            node.computed
+            && !hasStaticComputedProperty
+            && tracked
+            && (
+              classification.status !== "exact"
+              || referenceSegments.length === 0
+              || referenceSegments[0]?.dynamic
+              || propertyShape.tracked
+            )
+          );
+        return {
+          tracked,
+          mayBeRoot: false,
+          dynamic,
+          invalid: objectShape.invalid || propertyShape.invalid,
+        };
+      }
+      if (
+        node.type === "CallExpression"
+        || node.type === "NewExpression"
+      ) {
+        const classification = referenceClassification(node, aliasRecords);
+        if (classification.status === "exact") {
+          const segments = classification.reference?.segments || [];
+          return {
+            tracked: true,
+            mayBeRoot: segments.length === 0,
+            dynamic: Boolean(segments[0]?.dynamic),
+            invalid: false,
+          };
+        }
+        if (classification.status === "maybe") {
+          return {
+            tracked: true,
+            mayBeRoot: true,
+            dynamic: false,
+            invalid: false,
+          };
+        }
+        if (
+          node.type === "CallExpression"
+          && unshadowedStaticCallName(node) === "Reflect.get"
+        ) {
+          const targetShape = payloadExpressionShape(
+            node.arguments?.[0],
+            visitedRecords,
+          );
+          if (targetShape.tracked) {
+            const property = propertyArgument(node.arguments?.[1]);
+            const propertyShape = payloadExpressionShape(
+              node.arguments?.[1],
+              visitedRecords,
+            );
+            return {
+              tracked: true,
+              mayBeRoot: property.dynamic,
+              dynamic:
+                targetShape.dynamic
+                || property.dynamic
+                || propertyShape.tracked,
+              invalid: targetShape.invalid || propertyShape.invalid,
+            };
+          }
+        }
+        const calleeShape = payloadExpressionShape(
+          node.callee,
+          visitedRecords,
+        );
+        const argumentShapes = (node.arguments || []).map((item) =>
+          payloadExpressionShape(
+            item.type === "SpreadElement" ? item.argument : item,
+            visitedRecords,
+          )
+        );
+        const inputShape = mergeShapes([calleeShape, ...argumentShapes]);
+        return {
+          tracked: inputShape.tracked,
+          mayBeRoot: inputShape.mayBeRoot,
+          dynamic: inputShape.dynamic,
+          invalid: inputShape.invalid,
+        };
+      }
+      if (node.type === "AwaitExpression") {
+        return payloadExpressionShape(node.argument, visitedRecords);
+      }
+      if (
+        node.type === "BinaryExpression"
+        || node.type === "UnaryExpression"
+        || node.type === "TemplateLiteral"
+      ) {
+        const childShapes = childNodes(node).map(({ node: child }) =>
+          payloadExpressionShape(child, visitedRecords)
+        );
+        const inputShape = mergeShapes(childShapes);
+        return {
+          tracked: inputShape.tracked,
+          mayBeRoot: false,
+          dynamic: inputShape.dynamic,
+          invalid: inputShape.invalid
+            || (node.type === "UnaryExpression" && node.operator === "delete"),
+        };
+      }
+
+      const classification = referenceClassification(node, aliasRecords);
+      if (classification.status === "exact") {
+        const segments = classification.reference?.segments || [];
+        return {
+          tracked: true,
+          mayBeRoot: segments.length === 0,
+          dynamic: Boolean(segments[0]?.dynamic),
+          invalid: false,
+        };
+      }
+      if (classification.status === "maybe") {
+        if (node.type === "Identifier") {
+          const record = analysis.resolveIdentifier(node);
+          if (
+            record?.kind === "variable"
+            && record.declarationKind === "const"
+            && record.init
+            && !identityTransitionRecords.has(record)
+            && !visitedRecords.has(record)
+          ) {
+            const nextVisitedRecords = new Set(visitedRecords);
+            nextVisitedRecords.add(record);
+            return payloadExpressionShape(record.init, nextVisitedRecords);
+          }
+        }
+        return {
+          tracked: true,
+          mayBeRoot: true,
+          dynamic: false,
+          invalid: false,
+        };
+      }
+      if (
+        node.type === "AssignmentExpression"
+        || node.type === "UpdateExpression"
+        || node.type === "YieldExpression"
+        || node.type === "TaggedTemplateExpression"
+      ) {
+        return {
+          ...emptyShape(),
+          invalid: true,
+        };
+      }
+      return emptyShape();
+    }
+
+    const shape = payloadExpressionShape(root);
+    return !shape.mayBeRoot && !shape.dynamic && !shape.invalid;
   }
 
   function processPatternExpressions(pattern, aliasRecords) {
@@ -3353,13 +3822,68 @@ function analyzeBindingMutations(
       if (node.type === "CallExpression") {
         processEvent(node, aliasRecords);
       }
+      const importedDelegation = node.type === "CallExpression"
+        ? importedTargetDelegation(node)
+        : null;
+      let sanctionedImportedActionTarget = false;
       const argumentClassifications = [];
-      for (const argument of node.arguments || []) {
-        processExpression(argument, aliasRecords);
-        const argumentSource = stateEscapeSourceExpression(argument);
-        argumentClassifications.push(
-          referenceClassification(argumentSource, aliasRecords),
+      for (
+        let argumentIndex = 0;
+        argumentIndex < (node.arguments || []).length;
+        argumentIndex += 1
+      ) {
+        const argument = node.arguments[argumentIndex];
+        const payloadNode = unwrapChain(argument);
+        const isImportedActionPayloadContainer = Boolean(
+          importedDelegation?.actionContract
+          && sanctionedImportedActionTarget
+          && argumentIndex !== importedDelegation.targetArgumentIndex
+          && (
+            payloadNode?.type === "ObjectExpression"
+            || payloadNode?.type === "ArrayExpression"
+          ),
         );
+        const isSafeImportedActionPayloadContainer = Boolean(
+          isImportedActionPayloadContainer
+          && isSafeRegisteredActionPayloadContainer(
+            payloadNode,
+            aliasRecords,
+          ),
+        );
+        processExpression(argument, aliasRecords, {
+          suppressContainerEscape: Boolean(
+            importedDelegation?.actionContract
+            && sanctionedImportedActionTarget,
+          ),
+        });
+        if (
+          isImportedActionPayloadContainer
+          && !isSafeImportedActionPayloadContainer
+        ) {
+          recordClassificationDiagnostic(
+            { status: "maybe", reference: null },
+            argument,
+            "state-alias-escape",
+            { evidenceKind: "unknown-call-argument" },
+          );
+        }
+        const argumentSource = stateEscapeSourceExpression(argument);
+        const classification = referenceClassification(
+          argumentSource,
+          aliasRecords,
+        );
+        argumentClassifications.push(classification);
+        if (
+          importedDelegation?.actionContract
+          && argumentIndex === importedDelegation.targetArgumentIndex
+        ) {
+          sanctionedImportedActionTarget =
+            isSanctionedImportedStateActionTargetArgument(
+              argument,
+              classification,
+              aliasRecords,
+            );
+        }
       }
       const delegatedArgumentIndexes = processSafeTargetDelegation(
         node,

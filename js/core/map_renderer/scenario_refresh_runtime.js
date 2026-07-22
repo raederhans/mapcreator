@@ -1,15 +1,9 @@
-import {
-  normalizeRendererRefreshPlan,
-  resolveScenarioChunkPromotionRendererRefreshDescriptor,
-} from "./scenario_refresh_plans.js";
+import { normalizeRendererRefreshPlan, resolveScenarioChunkPromotionRendererRefreshDescriptor } from "./scenario_refresh_plans.js";
 import { createScenarioVisualInvalidationExecutor } from "./scenario_visual_invalidation_executor.js";
-import {
-  buildScenarioChunkPromotionVisualMetricDetails,
-  createScenarioChunkPromotionDelta,
-  readFirstNonNegativeCount,
-  resolveScenarioChunkPromotionChangeSet,
-} from "../renderer/scenario_chunk_promotion_helpers.js";
+import { buildScenarioChunkPromotionVisualMetricDetails, createScenarioChunkPromotionDelta, readFirstNonNegativeCount, resolveScenarioChunkPromotionChangeSet } from "../renderer/scenario_chunk_promotion_helpers.js";
 import { getFeatureId } from "../feature_identity.js";
+import { patchScenarioChunkLoadState, queueScenarioChunkPromotionState } from "../state/actions/scenario_chunk_runtime_actions.js";
+import { setScenarioPoliticalChunkPayloadState } from "../state/actions/scenario_chunk_promotion_actions.js";
 
 const POLITICAL_DERIVED_STATE_MISSING_SAMPLE_LIMIT = 8;
 
@@ -294,7 +288,7 @@ function createScenarioRefreshRuntime(deps = {}) {
           )
         );
         if (hasPrimaryVisiblePoliticalSubset || shouldRestoreFullPoliticalDerivedState) {
-          runtimeState.scenarioPoliticalVisibleChunkData = null;
+          setScenarioPoliticalChunkPayloadState(runtimeState, { visiblePayload: null });
         }
         if (shouldRestoreFullPoliticalDerivedState) {
           rebuildPoliticalLandCollections();
@@ -365,7 +359,7 @@ function createScenarioRefreshRuntime(deps = {}) {
         renderSpecialZoneEditorOverlay();
       }
       if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
-        runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
+        patchScenarioChunkLoadState(runtimeState, { pendingInfraPromotion: null });
       }
       if (!suppressRender) {
         render();
@@ -462,8 +456,11 @@ function createScenarioRefreshRuntime(deps = {}) {
     scenarioChunkPromotionVersion = Number(scenarioChunkPromotionVersion || 0) + 1;
     markRendererTopologyChanged({ hitCanvasDirty: true });
     if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
-      runtimeState.runtimeChunkLoadState.pendingVisualPromotion = null;
-      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
+      queueScenarioChunkPromotionState(runtimeState, {
+        visualPromotion: null,
+        infraPromotion: null,
+        promotion: runtimeState.runtimeChunkLoadState.pendingPromotion || null,
+      });
     }
     if (hasPoliticalChange) {
       clearDeferredInternalBorderMeshCaches();
@@ -478,7 +475,7 @@ function createScenarioRefreshRuntime(deps = {}) {
     });
     const shouldSkipDeferredInfraRefresh = synchronizedSecondaryRegionIndexes && !hasPoliticalChange;
     if (shouldSkipDeferredInfraRefresh && runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
-      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
+      patchScenarioChunkLoadState(runtimeState, { pendingInfraPromotion: null });
     }
     const {
       rendererRefreshPlan,
@@ -547,7 +544,7 @@ function createScenarioRefreshRuntime(deps = {}) {
           hasPoliticalGeometryChange: hasPoliticalChange,
         },
       });
-      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = {
+      patchScenarioChunkLoadState(runtimeState, { pendingInfraPromotion: {
         reason: String(reason || "scenario-chunk-promotion"),
         selectionVersion,
         promotionVersion: scenarioChunkPromotionVersion,
@@ -556,7 +553,7 @@ function createScenarioRefreshRuntime(deps = {}) {
         completePoliticalDerivedStateReady,
         primaryDerivedStateReady: completePoliticalDerivedStateReady,
         promotionDelta,
-      };
+      } });
     }
     scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({
       reason,

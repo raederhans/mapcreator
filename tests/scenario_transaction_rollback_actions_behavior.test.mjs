@@ -33,6 +33,14 @@ import {
   SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
   validateScenarioTransactionRollbackSupplementalStatePatch,
 } from "../js/core/state/actions/scenario_transaction_rollback_actions.js";
+import {
+  replaceScenarioChunkRuntimeState,
+  setScenarioChunkRuntimeHooksState,
+} from "../js/core/state/actions/scenario_chunk_runtime_actions.js";
+import {
+  setDefaultRuntimePoliticalTopologyState,
+  setScenarioPoliticalChunkPayloadState,
+} from "../js/core/state/actions/scenario_chunk_promotion_actions.js";
 import { cloneScenarioStateValue } from "../js/core/scenario/shared.js";
 
 const REPO_ROOT = path.resolve(
@@ -53,6 +61,7 @@ const ROLLBACK_SOURCE = fs.readFileSync(
 
 const EXPECTED_SUPPLEMENTAL_KEYS = Object.freeze([
   "defaultRuntimePoliticalTopology",
+  "scenarioPoliticalChunkData",
   "scenarioHydrationHealthGate",
   "scenarioDataHealth",
   "activeScenarioPerformanceHints",
@@ -80,6 +89,7 @@ const AUTHORITY_KEY_SETS = Object.freeze({
 
 const EXPECTED_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY = Object.freeze({
   defaultRuntimePoliticalTopology: "P4.2b",
+  scenarioPoliticalChunkData: "P4.2b",
   scenarioHydrationHealthGate: "P4.2c",
   scenarioDataHealth: "P4.2c",
   activeScenarioPerformanceHints: "P4.2c",
@@ -186,6 +196,10 @@ function createRollbackPlan({
 function restoreScenarioTransactionRollbackPlan(target, plan, effects = {}) {
   validateScenarioTransactionRollbackSupplementalStatePatch(plan.supplemental);
   restoreScenarioActivationBeforeAuditState(target, plan.activation);
+  setDefaultRuntimePoliticalTopologyState(
+    target,
+    plan.supplemental.values.defaultRuntimePoliticalTopology,
+  );
   restoreScenarioTransactionSupplementBeforeAuditState(
     target,
     plan.supplemental,
@@ -207,6 +221,21 @@ function restoreScenarioTransactionRollbackPlan(target, plan, effects = {}) {
     target,
     plan.supplemental,
   );
+  setScenarioPoliticalChunkPayloadState(target, {
+    payload: plan.supplemental.values.scenarioPoliticalChunkData,
+    visiblePayload:
+      plan.supplemental.values.scenarioPoliticalVisibleChunkData,
+  });
+  replaceScenarioChunkRuntimeState(target, {
+    activeScenarioChunks: plan.supplemental.values.activeScenarioChunks,
+    runtimeChunkLoadState: plan.supplemental.values.runtimeChunkLoadState,
+  });
+  setScenarioChunkRuntimeHooksState(target, {
+    scheduleScenarioChunkRefreshFn:
+      plan.supplemental.values.scheduleScenarioChunkRefreshFn,
+    awaitInitialScenarioChunkVisualPromotionFn:
+      plan.supplemental.values.awaitInitialScenarioChunkVisualPromotionFn,
+  });
   restoreScenarioTransactionPresentationState(target, plan.presentation);
   restoreScenarioPaletteState(target, plan.palette);
 }
@@ -318,7 +347,7 @@ test("scenario rollback supplemental authority has an exact frozen phase handoff
       return counts;
     }, {}),
     {
-      "P4.2b": 6,
+      "P4.2b": 7,
       "P4.2c": 3,
     },
   );
@@ -376,6 +405,7 @@ test("scenario transaction supplemental capture deeply clones exact state and re
       capturedAt: new Date("2026-07-20T12:00:00.000Z"),
       topologyById: new Map([["main", { version: 1 }]]),
     },
+    scenarioPoliticalChunkData: { features: [{ id: "full" }] },
     scenarioHydrationHealthGate: {
       requiredLayers: new Set(["political", "water"]),
     },
@@ -411,6 +441,7 @@ test("scenario transaction supplemental capture deeply clones exact state and re
 
   assert.deepEqual(Object.keys(captured.values), [
     "defaultRuntimePoliticalTopology",
+    "scenarioPoliticalChunkData",
     "scenarioHydrationHealthGate",
     "scenarioDataHealth",
     "activeScenarioPerformanceHints",
@@ -444,6 +475,10 @@ test("scenario transaction supplemental capture deeply clones exact state and re
   assert.notEqual(
     captured.values.defaultRuntimePoliticalTopology.topologyById,
     target.defaultRuntimePoliticalTopology.topologyById,
+  );
+  assert.notEqual(
+    captured.values.scenarioPoliticalChunkData.features,
+    target.scenarioPoliticalChunkData.features,
   );
   assert.notEqual(
     captured.values.scenarioHydrationHealthGate.requiredLayers,
@@ -551,8 +586,17 @@ test("scenario rollback composes canonical domain restores around audit and colo
     ...SCENARIO_PALETTE_STATE_KEYS,
     ...SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
   ]) {
+    if (key === "runtimeChunkLoadState") continue;
     assert.equal(target[key], plan.values[key], `${key} should restore exactly`);
   }
+  assert.notEqual(
+    target.runtimeChunkLoadState,
+    plan.values.runtimeChunkLoadState,
+  );
+  assert.deepEqual(target.runtimeChunkLoadState, {
+    ...plan.values.runtimeChunkLoadState,
+    generation: 1,
+  });
   assert.equal(target.ui, originalUi);
   assert.equal(target.ui.preservedUiField, "keep");
   assert.equal(target.ui.politicalEditingExpanded, true);
@@ -619,19 +663,49 @@ test("scenario transaction supplemental action validates before mutation", () =>
   );
 });
 
-test("scenario transaction rollback action keeps a narrow static import-free state boundary", () => {
-  assert.doesNotMatch(ACTION_SOURCE, /^\s*import\s/m);
+test("scenario transaction rollback action keeps a narrow canonical state-action boundary", () => {
+  const importSources = [...ACTION_SOURCE.matchAll(
+    /^import\s*\{[\s\S]*?\}\s*from\s*"([^"]+)";/gm,
+  )].map((match) => match[1]).sort();
+  assert.deepEqual(importSources, []);
+  for (const actionName of [
+    "replaceScenarioChunkRuntimeState",
+    "setScenarioChunkRuntimeHooksState",
+    "setDefaultRuntimePoliticalTopologyState",
+    "setScenarioPoliticalChunkPayloadState",
+  ]) {
+    assert.match(ROLLBACK_SOURCE, new RegExp(`\\b${actionName}\\(`));
+    assert.doesNotMatch(ACTION_SOURCE, new RegExp(`\\b${actionName}\\(`));
+  }
   assert.doesNotMatch(
     ACTION_SOURCE,
     /\b(?:globalThis|window|document|runtimeState)\b/,
   );
   assert.doesNotMatch(ACTION_SOURCE, /\btarget\s*\[/);
   assert.doesNotMatch(ACTION_SOURCE, /\bdelete\s+target\s*\[/);
-  for (const key of SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS) {
+  const delegatedP42bKeys = new Set([
+    "defaultRuntimePoliticalTopology",
+    "scenarioPoliticalChunkData",
+    "scenarioPoliticalVisibleChunkData",
+    "activeScenarioChunks",
+    "runtimeChunkLoadState",
+    "scheduleScenarioChunkRefreshFn",
+    "awaitInitialScenarioChunkVisualPromotionFn",
+  ]);
+  for (const key of SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS.filter(
+    (key) => !delegatedP42bKeys.has(key),
+  )) {
     assert.match(
       ACTION_SOURCE,
       new RegExp(`\\btarget\\.${key}\\b`),
       `${key} must have an explicit static target write`,
+    );
+  }
+  for (const key of delegatedP42bKeys) {
+    assert.doesNotMatch(
+      ACTION_SOURCE,
+      new RegExp(`\\btarget\\.${key}\\s*=`),
+      `${key} must delegate to its P4.2b canonical action`,
     );
   }
   for (const key of ALL_DOMAIN_KEYS) {

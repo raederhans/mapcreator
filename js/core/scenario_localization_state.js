@@ -3,6 +3,7 @@ import {
   buildCityLocalizationPatch,
   normalizeCityText,
 } from "./data_loader.js";
+import { applyScenarioChunkCityExternalEffectState } from "./state/actions/scenario_presentation_actions.js";
 const state = runtimeState;
 
 function getScenarioOverrideLocaleEntry(overrideEntry) {
@@ -193,12 +194,11 @@ function applyScenarioGeoLocalization() {
 }
 
 export function syncScenarioLocalizationState({
-  cityOverridesPayload = runtimeState.scenarioCityOverridesData,
+  cityOverridesPayload,
   geoLocalePatchPayload = runtimeState.scenarioGeoLocalePatchData,
 } = {}) {
-  runtimeState.scenarioCityOverridesData = cityOverridesPayload || null;
+  applyScenarioChunkCityExternalEffectState(runtimeState, cityOverridesPayload);
   runtimeState.scenarioGeoLocalePatchData = geoLocalePatchPayload || null;
-  runtimeState.cityLayerRevision = (Number(runtimeState.cityLayerRevision) || 0) + 1;
   applyScenarioGeoLocalization();
 }
 

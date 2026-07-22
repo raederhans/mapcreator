@@ -24,6 +24,7 @@ export const SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS = Object.freeze([
 export const SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY =
   Object.freeze({
     defaultRuntimePoliticalTopology: "P4.2b",
+    scenarioPoliticalChunkData: "P4.2b",
     scenarioHydrationHealthGate: "P4.2c",
     scenarioDataHealth: "P4.2c",
     activeScenarioPerformanceHints: "P4.2c",
@@ -156,6 +157,11 @@ export function captureScenarioTransactionRollbackSupplementalState(
         target.defaultRuntimePoliticalTopology,
         cloneValue,
       ),
+    scenarioPoliticalChunkData:
+      cloneRollbackStateValue(
+        target.scenarioPoliticalChunkData,
+        cloneValue,
+      ),
     scenarioHydrationHealthGate:
       cloneRollbackStateValue(
         target.scenarioHydrationHealthGate,
@@ -235,8 +241,6 @@ export function restoreScenarioTransactionSupplementBeforeAuditState(
 ) {
   assertStateTarget(target);
   const values = validateSupplementalPatch(patch);
-  target.defaultRuntimePoliticalTopology =
-    values.defaultRuntimePoliticalTopology;
   target.scenarioHydrationHealthGate =
     values.scenarioHydrationHealthGate;
   return true;
@@ -260,13 +264,5 @@ export function restoreScenarioTransactionSupplementAfterColorDirtyState(
   const values = validateSupplementalPatch(patch);
   target.activeScenarioPerformanceHints =
     values.activeScenarioPerformanceHints;
-  target.scenarioPoliticalVisibleChunkData =
-    values.scenarioPoliticalVisibleChunkData;
-  target.activeScenarioChunks = values.activeScenarioChunks;
-  target.runtimeChunkLoadState = values.runtimeChunkLoadState;
-  target.scheduleScenarioChunkRefreshFn =
-    values.scheduleScenarioChunkRefreshFn;
-  target.awaitInitialScenarioChunkVisualPromotionFn =
-    values.awaitInitialScenarioChunkVisualPromotionFn;
   return true;
 }

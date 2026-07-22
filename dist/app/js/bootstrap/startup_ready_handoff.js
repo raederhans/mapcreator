@@ -1,4 +1,5 @@
 import { POST_READY_IDLE_QUIET_MS } from "./post_ready_scheduler.js";
+import { patchScenarioChunkLoadState } from "../core/state/actions/scenario_chunk_runtime_actions.js";
 
 const DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";
 
@@ -143,8 +144,10 @@ export function createStartupReadyHandoffOwner({
       && !loadState.pendingPromotion
     );
     if (shouldSeedFirstReadyFlush) {
-      loadState.pendingReason = normalizedReason;
-      loadState.pendingDelayMs = 0;
+      patchScenarioChunkLoadState(targetRuntime, {
+        pendingReason: normalizedReason,
+        pendingDelayMs: 0,
+      });
     }
     targetRuntime.scheduleScenarioChunkRefreshFn({
       reason: normalizedReason,

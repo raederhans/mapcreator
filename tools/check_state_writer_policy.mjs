@@ -227,26 +227,54 @@ export function validateCallerToActionLedgerHistoryTransition({
     const samePhaseObservationRefresh =
       previousPhase === currentPhase
       && previousEntry.recordedInPhase === currentPhase;
-    const expectedHistory = samePhaseObservationRefresh
-      ? { ...previousEntry }
+    const crossPhaseObservationRefresh =
+      previousPhase !== currentPhase;
+    const observationRefresh =
+      samePhaseObservationRefresh || crossPhaseObservationRefresh;
+    const expectedHistory = observationRefresh
+      ? structuredClone(previousEntry)
       : previousEntry;
-    const actualHistory = samePhaseObservationRefresh
-      ? { ...currentEntry }
+    const actualHistory = observationRefresh
+      ? structuredClone(currentEntry)
       : currentEntry;
-    if (samePhaseObservationRefresh) {
-      // The builder refreshes these live source coordinates within the phase
-      // that recorded the proof; snapshot validation still binds them to the
-      // currently observed action edge before this history check runs.
-      for (const field of [
+    if (observationRefresh) {
+      // The builder refreshes live source coordinates within the recording
+      // phase and may refresh the action edge across phases. Snapshot
+      // validation binds every live field to the current observation.
+      const liveFields = [
         "callerBindingId",
         "start",
         "end",
         "line",
         "column",
         "sourceFingerprint",
-      ]) {
+        ...(crossPhaseObservationRefresh
+          ? [
+            "actionModulePath",
+            "actionExportName",
+            "targetArgumentIndex",
+            "actionCallEdgeIdentity",
+            "occurrenceIndex",
+          ]
+          : []),
+      ];
+      for (const field of liveFields) {
         delete expectedHistory[field];
         delete actualHistory[field];
+      }
+      for (const proof of Array.isArray(expectedHistory.functionProofs)
+        ? expectedHistory.functionProofs
+        : []) {
+        for (const field of liveFields) {
+          delete proof[field];
+        }
+      }
+      for (const proof of Array.isArray(actualHistory.functionProofs)
+        ? actualHistory.functionProofs
+        : []) {
+        for (const field of liveFields) {
+          delete proof[field];
+        }
       }
     }
     if (!isDeepStrictEqual(expectedHistory, actualHistory)) {

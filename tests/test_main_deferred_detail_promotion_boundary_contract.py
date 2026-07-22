@@ -81,7 +81,11 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
             owner_content,
         )
         self.assertIn(
-            "runtimeState.defaultRuntimePoliticalTopology = runtimeState.runtimePoliticalTopology || null;",
+            "setDefaultRuntimePoliticalTopologyState(runtimeState);",
+            owner_content,
+        )
+        self.assertNotIn(
+            "runtimeState.defaultRuntimePoliticalTopology =",
             owner_content,
         )
         self.assertNotIn("forcePoliticalFullRepaint", owner_content)

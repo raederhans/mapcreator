@@ -54,6 +54,7 @@ import {
 } from "../js/core/state.js";
 import {
   buildStateActionCrossFileMigrationContractIdentity,
+  expandStateActionMembershipsWithLegacyReplacements,
   findStateActionDelegationContractEntry,
   findStateActionCrossFileMigrationContractEntry,
   validateStateActionCrossFileMigrationContract,
@@ -218,6 +219,7 @@ const LAZY_STATE_KEY_DOMAINS = Object.freeze({
   runtimePoliticalFeatureCollectionSeed: Object.freeze(["scenario", "P4.2"]),
   scenarioApplyActiveRequestId: Object.freeze(["scenario", "P4.2"]),
   scenarioApplyActiveTargetId: Object.freeze(["scenario", "P4.2"]),
+  scenarioAtlantropaRevision: Object.freeze(["scenario", "P4.2"]),
   scenarioChunkPromotionRenderLocked: Object.freeze(["scenario", "P4.2"]),
   scenarioFatalRecovery: Object.freeze(["scenario", "P4.2"]),
   scenarioPerfMetrics: Object.freeze(["scenario", "P4.2"]),
@@ -989,6 +991,16 @@ function isRegisteredP4Phase(value) {
   }
 }
 
+function callerToActionLedgerEntryProofs(entry = {}) {
+  return Array.isArray(entry?.functionProofs)
+    ? entry.functionProofs.map((proof) => ({
+      ...entry,
+      ...proof,
+      functionProofs: undefined,
+    }))
+    : [entry];
+}
+
 function validateCallerToActionLedgerSchema(policy = {}) {
   const violations = [];
   violations.push(
@@ -1011,7 +1023,18 @@ function validateCallerToActionLedgerSchema(policy = {}) {
     }
     return violations;
   }
-  if (Number(ledger.schemaVersion) !== 1) {
+  const ledgerSchemaVersion = Number(ledger.schemaVersion);
+  const ledgerSchemaVersionValid =
+    ledgerSchemaVersion === 1
+    || (
+      ledgerSchemaVersion === 2
+      && isRegisteredP4Phase(latestPhase)
+      && compareP4StateActionPhases(
+        latestPhase,
+        "P4.2b",
+      ) >= 0
+    );
+  if (!ledgerSchemaVersionValid) {
     violations.push(
       createViolation("caller-action-ledger-schema-version-invalid", {
         schemaVersion: ledger.schemaVersion,
@@ -1032,8 +1055,16 @@ function validateCallerToActionLedgerSchema(policy = {}) {
       String(left?.retiredMembershipIdentity || "").localeCompare(
         String(right?.retiredMembershipIdentity || ""),
       )
-      || String(left?.actionCallEdgeIdentity || "").localeCompare(
-        String(right?.actionCallEdgeIdentity || ""),
+      || String(
+        left?.actionCallEdgeIdentity
+          || left?.functionProofs?.[0]?.actionCallEdgeIdentity
+          || "",
+      ).localeCompare(
+        String(
+          right?.actionCallEdgeIdentity
+            || right?.functionProofs?.[0]?.actionCallEdgeIdentity
+            || "",
+        ),
       ),
   );
   if (JSON.stringify(entries) !== JSON.stringify(sortedEntries)) {
@@ -1058,6 +1089,128 @@ function validateCallerToActionLedgerSchema(policy = {}) {
       );
     }
     seenRetiredMemberships.add(retiredMembershipIdentity);
+    const functionProofs = Array.isArray(entry?.functionProofs)
+      ? entry.functionProofs
+      : null;
+    if (functionProofs) {
+      const retiredCallerPath = String(
+        entry?.retiredCallerPath || "",
+      );
+      const retiredCallerBindingIdentity = String(
+        entry?.retiredCallerBindingIdentity || "",
+      );
+      let parsedRetiredCallerBindingIdentity = null;
+      try {
+        parsedRetiredCallerBindingIdentity = JSON.parse(
+          retiredCallerBindingIdentity,
+        );
+      } catch {
+        parsedRetiredCallerBindingIdentity = null;
+      }
+      const sortedFunctionProofs = [...functionProofs].sort(
+        (left, right) =>
+          String(
+            left?.retiredEnclosingFunctionIdentity || "",
+          ).localeCompare(
+            String(
+              right?.retiredEnclosingFunctionIdentity || "",
+            ),
+          )
+          || String(
+            left?.actionCallEdgeIdentity || "",
+          ).localeCompare(
+            String(right?.actionCallEdgeIdentity || ""),
+          ),
+      );
+      const retiredFunctionIdentities = functionProofs.map(
+        (proof) =>
+          String(
+            proof?.retiredEnclosingFunctionIdentity || "",
+          ),
+      );
+      const retiredMutationSiteCount = Number(
+        entry?.retiredMutationSiteCount,
+      );
+      const topLevelEdgeFields = [
+        "callerPath",
+        "callerBindingId",
+        "callerBindingIdentity",
+        "enclosingFunctionIdentity",
+        "retiredEnclosingFunctionIdentity",
+        "actionModulePath",
+        "actionExportName",
+        "targetArgumentIndex",
+        "actionCallEdgeIdentity",
+        "occurrenceIndex",
+        "start",
+        "end",
+        "line",
+        "column",
+        "sourceFingerprint",
+      ];
+      const multiFunctionProofInvalid =
+        ledgerSchemaVersion !== 2
+        || !retiredCallerPath
+        || !parsedRetiredCallerBindingIdentity
+        || retiredMembershipIdentity !== [
+          retiredCallerPath,
+          retiredCallerBindingIdentity,
+          String(entry?.domain || ""),
+          String(entry?.migrationPhase || ""),
+          String(entry?.operation || ""),
+          String(entry?.key || ""),
+        ].join("|")
+        || functionProofs.length < 2
+        || JSON.stringify(functionProofs)
+          !== JSON.stringify(sortedFunctionProofs)
+        || new Set(retiredFunctionIdentities).size
+          !== functionProofs.length
+        || retiredFunctionIdentities.some((identity) => !identity)
+        || !/^[0-9a-f]{64}$/i.test(
+          String(entry?.retiredMutationSiteFingerprint || ""),
+        )
+        || !Number.isInteger(retiredMutationSiteCount)
+        || retiredMutationSiteCount <= 0
+        || Number(entry?.retiredMutationFunctionCount)
+          !== functionProofs.length
+        || functionProofs.reduce(
+          (total, proof) =>
+            total + Number(proof?.retiredMutationSiteCount || 0),
+          0,
+        ) !== retiredMutationSiteCount
+        || entry?.proofPrecision
+          !== "exact-site-multi-function"
+        || functionProofs.some(
+          (proof) =>
+            String(proof?.callerPath || "")
+              !== retiredCallerPath
+            || String(proof?.callerBindingIdentity || "")
+              !== retiredCallerBindingIdentity,
+        )
+        || topLevelEdgeFields.some(
+          (field) => entry?.[field] !== undefined,
+        );
+      if (multiFunctionProofInvalid) {
+        violations.push(
+          createViolation("caller-action-ledger-entry-invalid", {
+            index,
+            retiredMembershipIdentity,
+            reason: "multi-function-proof-invalid",
+          }),
+        );
+      }
+    }
+    const proofEntries = functionProofs
+      ? functionProofs.map((proof) => ({
+        ...entry,
+        ...proof,
+        functionProofs: undefined,
+        proofPrecision: proof?.proofPrecision,
+        retiredCallerPath: undefined,
+        retiredCallerBindingIdentity: undefined,
+      }))
+      : [entry];
+    for (const entry of proofEntries) {
     const callerPath = String(entry?.callerPath || "");
     const callerBindingId = String(entry?.callerBindingId || "");
     const callerBindingIdentity = String(
@@ -1123,18 +1276,27 @@ function validateCallerToActionLedgerSchema(policy = {}) {
         binding?.authority === "domain-action"
         && binding?.functionName === actionExportName,
     );
-    const actionOwnsMembership = (
-      actionBinding?.grants || []
-    ).some(
-      (grant) =>
-        grant?.domain === domain
-        && grant?.migrationPhase === migrationPhase
-        && (grant?.memberships || []).some(
-          (membership) =>
-            membership?.operation === operation
-            && membership?.key === key,
+    const actionOwnsMembership =
+      expandStateActionMembershipsWithLegacyReplacements({
+        modulePath: actionModulePath,
+        exportName: actionExportName,
+        memberships: (actionBinding?.grants || []).flatMap(
+          (grant) =>
+            (grant?.memberships || []).map((membership) =>
+              [
+                String(grant?.domain || ""),
+                String(grant?.migrationPhase || ""),
+                String(membership?.operation || ""),
+                String(membership?.key || ""),
+              ].join("|")
+            ),
         ),
-    );
+      }).has([
+        domain,
+        migrationPhase,
+        operation,
+        key,
+      ].join("|"));
     const targetArgumentIndex = Number(entry?.targetArgumentIndex);
     const occurrenceIndex = Number(entry?.occurrenceIndex);
     const start = Number(entry?.start);
@@ -1321,6 +1483,7 @@ function validateCallerToActionLedgerSchema(policy = {}) {
           retiredMembershipIdentity,
         }),
       );
+    }
     }
   }
   if (
@@ -2474,6 +2637,9 @@ export function validateStateWriterPolicySnapshot({
     ({ recordedInPhase }) =>
       recordedInPhase === policy?.progress?.latestPhase,
   );
+  const ledgerProofEntries = ledgerEntries.flatMap(
+    callerToActionLedgerEntryProofs,
+  );
   const normalizedActionDelegations = (
     Array.isArray(actionDelegations) ? actionDelegations : []
   ).map((edge) => ({
@@ -2507,7 +2673,7 @@ export function validateStateWriterPolicySnapshot({
     sourceFingerprint: String(edge?.sourceFingerprint || ""),
   }));
   let missingCallerActionProofs = 0;
-  for (const entry of ledgerEntries) {
+  for (const entry of ledgerProofEntries) {
     const observed = normalizedActionDelegations.find(
       ({
         actionCallEdgeIdentity,
@@ -3089,6 +3255,7 @@ export function validateStateWriterPolicySnapshot({
       },
       callerToActionLedger: {
         totalEntries: ledgerEntries.length,
+        totalProofs: ledgerProofEntries.length,
         backfilledEntries: ledgerEntries.filter(
           ({ backfilled }) => backfilled === true,
         ).length,

@@ -21,12 +21,242 @@ import { createRenderCacheOwner } from "../js/core/renderer/render_cache_owner.j
 import { createColorResolutionStrategyOwner } from "../js/core/renderer/color_resolution_strategy.js";
 import { buildSpatialGridSnapshot, getSpatialBucketKey } from "../js/core/renderer/spatial_index_runtime_builders.js";
 import { isScenarioWaterLikeFeature } from "../js/core/scenario_runtime_queries.js";
+import { applyScenarioChunkCityExternalEffectState } from "../js/core/state/actions/scenario_presentation_actions.js";
+import {
+  patchScenarioChunkLoadState,
+  resetScenarioChunkRuntimeState,
+} from "../js/core/state/actions/scenario_chunk_runtime_actions.js";
+import { createScenarioChunkRegistryEnsurer } from "../js/core/scenario/bundle_loader.js";
 
 const REPO_ROOT = process.cwd();
 
 function readRepoFile(...relativeParts) {
   return fs.readFileSync(path.join(REPO_ROOT, ...relativeParts), "utf8");
 }
+
+function createDeferredPromise() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+test("late registry load cannot settle a reset runtime generation", async () => {
+  const originalFetch = globalThis.fetch;
+  const deferredRegistryResponse = createDeferredPromise();
+  const targetState = {
+    runtimeChunkLoadState: {
+      generation: 1,
+      registryStatus: "idle",
+    },
+  };
+  const ensureScenarioChunkRegistryLoaded = createScenarioChunkRegistryEnsurer({
+    patchRuntimeChunkLoadState: (patch, options) =>
+      patchScenarioChunkLoadState(targetState, patch, options),
+  });
+  const bundle = {
+    manifest: { scenario_id: "tno_1962" },
+    runtimeShell: {
+      scenarioId: "tno_1962",
+      detailChunkManifestUrl: "detail-chunks.json",
+    },
+  };
+
+  globalThis.fetch = () => deferredRegistryResponse.promise;
+  try {
+    const registryPromise = ensureScenarioChunkRegistryLoaded(bundle);
+    await Promise.resolve();
+    assert.equal(targetState.runtimeChunkLoadState.registryStatus, "loading");
+
+    resetScenarioChunkRuntimeState(targetState, { scenarioId: "tno_1962" });
+    const currentLoadState = targetState.runtimeChunkLoadState;
+    currentLoadState.registryStatus = "current-generation-loading";
+
+    deferredRegistryResponse.resolve({
+      ok: true,
+      text: async () => JSON.stringify({
+        version: 1,
+        chunks: [{ id: "political.detail.tt", layer: "political" }],
+      }),
+    });
+    await registryPromise;
+
+    assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+    assert.equal(currentLoadState.registryStatus, "current-generation-loading");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+function createInitialVisualRegistryContinuationHarness({
+  currentScenarioApplyRequestId = 0,
+} = {}) {
+  const registryReady = createDeferredPromise();
+  const chunk = {
+    id: "political.coarse.world",
+    layer: "political",
+    lod: "coarse",
+    url: "political.coarse.world.json",
+  };
+  const createBundle = (scenarioId, { registryLoaded = false } = {}) => ({
+    manifest: { scenario_id: scenarioId },
+    chunkRegistry: registryLoaded
+      ? { chunks: [chunk], byLayer: { political: [chunk] } }
+      : null,
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+    chunkPayloadCacheById: {},
+  });
+  const staleBundle = createBundle("scenario_a");
+  const targetState = {
+    activeScenarioId: "scenario_a",
+    currentScenarioApplyRequestId,
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+    zoomTransform: { k: 1 },
+  };
+  let selectionCalls = 0;
+  const controller = createScenarioChunkRuntimeController({
+    runtimeState: targetState,
+    getSearchParams: () => new URLSearchParams(),
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+    normalizeScenarioPerformanceHints: (value) => value || {},
+    normalizeScenarioFeatureCollection: (payload) => payload,
+    getScenarioFeatureCollectionIdentityList: () => [],
+    areScenarioFeatureCollectionsEquivalent: () => true,
+    getScenarioDefaultCountryCode: () => "",
+    getScenarioBundleId: (bundle) => String(bundle?.manifest?.scenario_id || ""),
+    getCachedScenarioBundle: () => staleBundle,
+    getVisibleScenarioChunkLayers: () => ["political"],
+    selectScenarioChunks: () => {
+      selectionCalls += 1;
+      return {
+        scenarioId: targetState.activeScenarioId,
+        requiredChunks: [],
+        optionalChunks: [],
+        evictableChunkIds: [],
+        selectedFeatureCountSum: 0,
+      };
+    },
+    mergeScenarioChunkPayloads: () => null,
+    normalizeScenarioRenderBudgetHints: (value) => value || {},
+    loadScenarioChunkFile: async () => null,
+    scenarioSupportsChunkedRuntime: () => true,
+    scenarioBundleUsesChunkedLayer: (bundle, layerKey = "") => (
+      layerKey
+        ? !!bundle?.chunkRegistry?.byLayer?.[layerKey]?.length
+        : !!bundle?.chunkRegistry?.chunks?.length
+    ),
+    getScenarioOptionalLayerConfig: () => null,
+    syncScenarioLocalizationState: () => {},
+    refreshMapDataForScenarioChunkPromotion: () => {},
+    flushRenderBoundary: () => {},
+    recordScenarioPerfMetric: () => {},
+    ensureScenarioChunkRegistryLoaded: async (bundle) => {
+      await registryReady.promise;
+      bundle.chunkRegistry = {
+        chunks: [chunk],
+        byLayer: { political: [chunk] },
+      };
+    },
+  });
+
+  return {
+    controller,
+    targetState,
+    resolveRegistry: () => registryReady.resolve(),
+    getSelectionCalls: () => selectionCalls,
+  };
+}
+
+test("initial visual registry continuation cannot mutate a reset runtime generation", async () => {
+  const {
+    controller,
+    targetState,
+    resolveRegistry,
+    getSelectionCalls,
+  } = createInitialVisualRegistryContinuationHarness();
+
+  const staleContinuation = controller.awaitInitialScenarioChunkVisualPromotion();
+  await Promise.resolve();
+  const staleLoadState = targetState.runtimeChunkLoadState;
+  const staleGeneration = staleLoadState.generation;
+
+  controller.resetScenarioChunkRuntimeState({ scenarioId: "scenario_a" });
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  const currentActiveScenarioChunks = targetState.activeScenarioChunks;
+  const currentActiveScenarioChunksSnapshot = structuredClone(currentActiveScenarioChunks);
+  currentLoadState.pendingReason = "current-generation-pending";
+
+  resolveRegistry();
+  const result = await staleContinuation;
+
+  assert.equal(result.status, "stale");
+  assert.notEqual(currentLoadState, staleLoadState);
+  assert.notEqual(currentLoadState.generation, staleGeneration);
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.equal(targetState.activeScenarioChunks, currentActiveScenarioChunks);
+  assert.deepEqual(targetState.activeScenarioChunks, currentActiveScenarioChunksSnapshot);
+  assert.equal(currentLoadState.pendingReason, "current-generation-pending");
+  assert.equal(currentLoadState.shellStatus, "ready");
+  assert.equal(currentLoadState.selectionVersion, 0);
+  assert.equal(getSelectionCalls(), 0);
+});
+
+test("initial visual registry continuation treats a newly started request as stale", async () => {
+  const {
+    controller,
+    targetState,
+    resolveRegistry,
+    getSelectionCalls,
+  } = createInitialVisualRegistryContinuationHarness();
+
+  const staleContinuation = controller.awaitInitialScenarioChunkVisualPromotion();
+  await Promise.resolve();
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  targetState.currentScenarioApplyRequestId = 1;
+  const currentLoadStateSnapshot = structuredClone(currentLoadState);
+
+  resolveRegistry();
+  const result = await staleContinuation;
+
+  assert.equal(result.status, "stale");
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.deepEqual(currentLoadState, currentLoadStateSnapshot);
+  assert.equal(currentLoadState.selectionVersion, 0);
+  assert.equal(getSelectionCalls(), 0);
+});
+
+test("initial visual registry continuation treats a superseding request as stale", async () => {
+  const {
+    controller,
+    targetState,
+    resolveRegistry,
+    getSelectionCalls,
+  } = createInitialVisualRegistryContinuationHarness({
+    currentScenarioApplyRequestId: 12,
+  });
+
+  const staleContinuation = controller.awaitInitialScenarioChunkVisualPromotion();
+  await Promise.resolve();
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  targetState.currentScenarioApplyRequestId = 13;
+  const currentLoadStateSnapshot = structuredClone(currentLoadState);
+
+  resolveRegistry();
+  const result = await staleContinuation;
+
+  assert.equal(result.status, "stale");
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.deepEqual(currentLoadState, currentLoadStateSnapshot);
+  assert.equal(currentLoadState.selectionVersion, 0);
+  assert.equal(getSelectionCalls(), 0);
+});
 
 test("political chunk payload write skips stale scenario apply request", () => {
   const previousPayload = {
@@ -109,6 +339,464 @@ function loadVendorD3() {
   vm.createContext(context);
   vm.runInContext(readRepoFile("vendor", "d3.v7.min.js"), context);
   return context.d3;
+}
+
+function createTimerGenerationController(targetState, bundle) {
+  return createScenarioChunkRuntimeController({
+    runtimeState: targetState,
+    getSearchParams: () => new URLSearchParams(),
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+    normalizeScenarioPerformanceHints: (value) => value || {},
+    normalizeScenarioFeatureCollection: (payload) => payload,
+    getScenarioFeatureCollectionIdentityList: () => [],
+    areScenarioFeatureCollectionsEquivalent: () => true,
+    getScenarioDefaultCountryCode: () => "",
+    getScenarioBundleId: () => "tno_1962",
+    getCachedScenarioBundle: () => bundle,
+    getVisibleScenarioChunkLayers: () => ["political"],
+    selectScenarioChunks: () => ({
+      scenarioId: "tno_1962",
+      requiredChunks: [],
+      optionalChunks: [],
+      evictableChunkIds: [],
+      selectedFeatureCountSum: 0,
+    }),
+    mergeScenarioChunkPayloads: () => null,
+    normalizeScenarioRenderBudgetHints: (value) => value || {},
+    loadScenarioChunkFile: async () => null,
+    scenarioSupportsChunkedRuntime: () => true,
+    scenarioBundleUsesChunkedLayer: () => true,
+    getScenarioOptionalLayerConfig: () => null,
+    syncScenarioLocalizationState: () => {},
+    refreshMapDataForScenarioChunkPromotion: () => {},
+    flushRenderBoundary: () => {},
+    recordScenarioPerfMetric: () => {},
+    ensureScenarioChunkRegistryLoaded: async () => {},
+  });
+}
+
+function createChunkLoadGenerationFixture() {
+  const targetState = {
+    activeScenarioId: "tno_1962",
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+  };
+  const deferredByUrl = new Map();
+  const createBundle = (url) => ({
+    manifest: { scenario_id: "tno_1962" },
+    chunkRegistry: {
+      byLayer: {
+        political: [{
+          id: "political.detail.tt",
+          layer: "political",
+          lod: "detail",
+          url,
+          countryCodes: ["TT"],
+        }],
+      },
+    },
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+  });
+  const controller = createScenarioChunkRuntimeController({
+    runtimeState: targetState,
+    getSearchParams: () => new URLSearchParams(),
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+    normalizeScenarioPerformanceHints: (value) => value || {},
+    normalizeScenarioFeatureCollection: (payload) => payload,
+    getScenarioFeatureCollectionIdentityList: () => [],
+    areScenarioFeatureCollectionsEquivalent: () => true,
+    getScenarioDefaultCountryCode: () => "TT",
+    getScenarioBundleId: (bundle) => String(bundle?.manifest?.scenario_id || ""),
+    getCachedScenarioBundle: () => null,
+    getVisibleScenarioChunkLayers: () => ["political"],
+    selectScenarioChunks: () => ({ requiredChunks: [], optionalChunks: [], evictableChunkIds: [] }),
+    mergeScenarioChunkPayloads: () => null,
+    normalizeScenarioRenderBudgetHints: (value) => value || {},
+    loadScenarioChunkFile: (url) => {
+      const deferred = deferredByUrl.get(url);
+      assert.ok(deferred, `missing deferred loader for ${url}`);
+      if (deferred.throwError) throw deferred.throwError;
+      return deferred.promise;
+    },
+    scenarioSupportsChunkedRuntime: () => true,
+    scenarioBundleUsesChunkedLayer: () => true,
+    getScenarioOptionalLayerConfig: () => null,
+    syncScenarioLocalizationState: () => {},
+    refreshMapDataForScenarioChunkPromotion: () => {},
+    flushRenderBoundary: () => {},
+    recordScenarioPerfMetric: () => {},
+    ensureScenarioChunkRegistryLoaded: async () => {},
+  });
+  return {
+    controller,
+    createBundle,
+    createDeferredLoad(url) {
+      const deferred = createDeferredPromise();
+      deferredByUrl.set(url, deferred);
+      return deferred;
+    },
+    createSynchronousLoadFailure(url, error) {
+      deferredByUrl.set(url, { throwError: error });
+    },
+    targetState,
+  };
+}
+
+test("stale refresh timer cannot mutate a reset runtime generation", () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const timerCallbacks = new Map();
+  let nextTimerId = 0;
+  const bundle = {
+    manifest: { scenario_id: "tno_1962" },
+    chunkRegistry: { byLayer: { political: [] } },
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+  };
+  const targetState = {
+    activeScenarioId: "tno_1962",
+    renderPhase: "idle",
+  };
+
+  globalThis.setTimeout = (callback) => {
+    nextTimerId += 1;
+    timerCallbacks.set(nextTimerId, callback);
+    return nextTimerId;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    const controller = createTimerGenerationController(targetState, bundle);
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason: "old-generation", delayMs: 0 }), "scheduled");
+    const staleTimerCallback = timerCallbacks.get(1);
+
+    controller.resetScenarioChunkRuntimeState({ scenarioId: "tno_1962" });
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason: "new-generation", delayMs: 0 }), "scheduled");
+    const currentLoadState = targetState.runtimeChunkLoadState;
+    targetState.renderPhase = "drawing";
+    currentLoadState.pendingReason = "new-generation-pending";
+
+    staleTimerCallback();
+
+    assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+    assert.equal(currentLoadState.refreshTimerId, 2);
+    assert.equal(currentLoadState.refreshScheduled, true);
+    assert.equal(currentLoadState.pendingReason, "new-generation-pending");
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});
+
+test("late successful chunk load cannot clear current-generation bookkeeping", async () => {
+  const {
+    controller,
+    createBundle,
+    createDeferredLoad,
+    targetState,
+  } = createChunkLoadGenerationFixture();
+  const staleLoad = createDeferredLoad("stale-success.json");
+  const currentLoad = createDeferredLoad("current-success.json");
+  const stalePromise = controller.preloadScenarioFocusCountryPoliticalDetailChunk(
+    createBundle("stale-success.json"),
+  );
+  await Promise.resolve();
+  await Promise.resolve();
+  const staleLoadState = targetState.runtimeChunkLoadState;
+  assert.equal(staleLoadState.inFlightByChunkId["political.detail.tt"], true);
+
+  controller.resetScenarioChunkRuntimeState({ scenarioId: "tno_1962" });
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  const currentPromise = controller.preloadScenarioFocusCountryPoliticalDetailChunk(
+    createBundle("current-success.json"),
+  );
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(currentLoadState.inFlightByChunkId["political.detail.tt"], true);
+
+  staleLoad.resolve({ payload: { type: "FeatureCollection", features: [] } });
+  await stalePromise;
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.equal(currentLoadState.inFlightByChunkId["political.detail.tt"], true);
+  assert.deepEqual(currentLoadState.errorByChunkId, {});
+
+  currentLoad.resolve({ payload: { type: "FeatureCollection", features: [] } });
+  await currentPromise;
+  assert.deepEqual(currentLoadState.inFlightByChunkId, {});
+  assert.deepEqual(currentLoadState.errorByChunkId, {});
+});
+
+test("current generation observes a shared in-flight chunk fetch after reset", async () => {
+  const {
+    controller,
+    createBundle,
+    createDeferredLoad,
+    targetState,
+  } = createChunkLoadGenerationFixture();
+  const sharedLoad = createDeferredLoad("shared-generation.json");
+  const bundle = createBundle("shared-generation.json");
+  const stalePromise = controller.preloadScenarioFocusCountryPoliticalDetailChunk(bundle);
+  await Promise.resolve();
+  await Promise.resolve();
+
+  controller.resetScenarioChunkRuntimeState({ scenarioId: "tno_1962" });
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  const currentPromise = controller.preloadScenarioFocusCountryPoliticalDetailChunk(bundle);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(currentLoadState.inFlightByChunkId["political.detail.tt"], true);
+
+  sharedLoad.resolve({ payload: { type: "FeatureCollection", features: [] } });
+  const [stalePayload, currentPayload] = await Promise.all([stalePromise, currentPromise]);
+  assert.equal(stalePayload, currentPayload);
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.deepEqual(currentLoadState.inFlightByChunkId, {});
+  assert.deepEqual(currentLoadState.errorByChunkId, {});
+});
+
+test("late failed chunk load cannot write into current-generation bookkeeping", async () => {
+  const {
+    controller,
+    createBundle,
+    createDeferredLoad,
+    targetState,
+  } = createChunkLoadGenerationFixture();
+  const staleLoad = createDeferredLoad("stale-failure.json");
+  const currentLoad = createDeferredLoad("current-failure.json");
+  const stalePromise = controller.preloadScenarioFocusCountryPoliticalDetailChunk(
+    createBundle("stale-failure.json"),
+  );
+  await Promise.resolve();
+  await Promise.resolve();
+
+  controller.resetScenarioChunkRuntimeState({ scenarioId: "tno_1962" });
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  const currentPromise = controller.preloadScenarioFocusCountryPoliticalDetailChunk(
+    createBundle("current-failure.json"),
+  );
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(currentLoadState.inFlightByChunkId["political.detail.tt"], true);
+
+  staleLoad.reject(new Error("stale chunk failed"));
+  await assert.rejects(stalePromise, /stale chunk failed/);
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.equal(currentLoadState.inFlightByChunkId["political.detail.tt"], true);
+  assert.deepEqual(currentLoadState.errorByChunkId, {});
+
+  currentLoad.resolve({ payload: { type: "FeatureCollection", features: [] } });
+  await currentPromise;
+  assert.deepEqual(currentLoadState.inFlightByChunkId, {});
+  assert.deepEqual(currentLoadState.errorByChunkId, {});
+});
+
+test("synchronous chunk loader failure preserves its error and clears cache state", async () => {
+  const {
+    controller,
+    createBundle,
+    createSynchronousLoadFailure,
+    targetState,
+  } = createChunkLoadGenerationFixture();
+  const failure = new Error("synchronous chunk loader failed");
+  const bundle = createBundle("synchronous-failure.json");
+  createSynchronousLoadFailure("synchronous-failure.json", failure);
+
+  await assert.rejects(
+    controller.preloadScenarioFocusCountryPoliticalDetailChunk(bundle),
+    (error) => error === failure,
+  );
+  assert.deepEqual(targetState.runtimeChunkLoadState.inFlightByChunkId, {});
+  assert.deepEqual(targetState.runtimeChunkLoadState.errorByChunkId, {
+    "political.detail.tt": "synchronous chunk loader failed",
+  });
+  assert.deepEqual(bundle.chunkPayloadPromisesById, {});
+});
+
+test("stale promotion timer cannot clear the current generation timer", () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const timerCallbacks = new Map();
+  let nextTimerId = 0;
+  const bundle = {
+    manifest: { scenario_id: "tno_1962" },
+    chunkRegistry: { byLayer: { political: [] } },
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+  };
+  const targetState = {
+    activeScenarioId: "tno_1962",
+    renderPhase: "idle",
+  };
+
+  globalThis.setTimeout = (callback) => {
+    nextTimerId += 1;
+    timerCallbacks.set(nextTimerId, callback);
+    return nextTimerId;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    const controller = createTimerGenerationController(targetState, bundle);
+    controller.ensureRuntimeChunkLoadState().pendingPromotion = { scenarioId: "tno_1962", reason: "old" };
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason: "old-generation", delayMs: 0 }), "scheduled");
+    timerCallbacks.get(1)();
+    const stalePromotionTimerCallback = timerCallbacks.get(2);
+    assert.equal(typeof stalePromotionTimerCallback, "function");
+
+    controller.resetScenarioChunkRuntimeState({ scenarioId: "tno_1962" });
+    controller.ensureRuntimeChunkLoadState().pendingPromotion = { scenarioId: "tno_1962", reason: "new" };
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason: "new-generation", delayMs: 0 }), "scheduled");
+    timerCallbacks.get(3)();
+    const currentLoadState = targetState.runtimeChunkLoadState;
+    assert.equal(currentLoadState.promotionTimerId, 4);
+    assert.equal(currentLoadState.promotionScheduled, true);
+
+    stalePromotionTimerCallback();
+
+    assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+    assert.equal(currentLoadState.promotionTimerId, 4);
+    assert.equal(currentLoadState.promotionScheduled, true);
+    assert.equal(currentLoadState.promotionCommitStatus, "idle");
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});
+
+async function runStalePromotionCommitSettlement({
+  resetLoadState = false,
+} = {}) {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const timerCallbacks = new Map();
+  const frameCallbacks = [];
+  let nextTimerId = 0;
+  const bundle = {
+    manifest: { scenario_id: "tno_1962" },
+    chunkRegistry: { byLayer: { political: [] } },
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+  };
+  const targetState = {
+    activeScenarioId: "tno_1962",
+    renderPhase: "idle",
+  };
+
+  globalThis.setTimeout = (callback) => {
+    nextTimerId += 1;
+    timerCallbacks.set(nextTimerId, callback);
+    return nextTimerId;
+  };
+  globalThis.clearTimeout = () => {};
+  globalThis.requestAnimationFrame = (callback) => {
+    frameCallbacks.push(callback);
+    return frameCallbacks.length;
+  };
+
+  try {
+    const controller = createTimerGenerationController(targetState, bundle);
+    const staleLoadState = controller.ensureRuntimeChunkLoadState();
+    staleLoadState.selectionVersion = 1;
+    staleLoadState.pendingPromotion = {
+      scenarioId: "tno_1962",
+      selectionVersion: 1,
+      reason: "stale-generation",
+      mergedLayerPayloads: {},
+      primaryMergedLayerPayloads: {},
+      changedLayerKeys: [],
+      politicalFeatureIds: [],
+      requiredChunkIds: [],
+    };
+    assert.equal(
+      controller.scheduleScenarioChunkRefresh({
+        reason: "stale-generation",
+        delayMs: 0,
+      }),
+      "scheduled",
+    );
+    timerCallbacks.get(1)();
+    const promotionTimerCallback = timerCallbacks.get(2);
+    assert.equal(typeof promotionTimerCallback, "function");
+    promotionTimerCallback();
+    assert.equal(frameCallbacks.length, 1);
+    assert.equal(targetState.scenarioChunkPromotionRenderLocked, true);
+
+    if (resetLoadState) {
+      controller.resetScenarioChunkRuntimeState({ scenarioId: "tno_1962" });
+    } else {
+      targetState.cancelScenarioChunkPromotionCommitFn("test-cancel");
+    }
+    assert.equal(targetState.scenarioChunkPromotionRenderLocked, false);
+    const currentLoadState = targetState.runtimeChunkLoadState;
+    const pendingPostCommitRefresh = {
+      reason: "current-generation-replay",
+      scenarioId: "tno_1962",
+      selectionVersion: 77,
+    };
+    const currentRunId = resetLoadState ? 77 : 2;
+    Object.assign(currentLoadState, {
+      promotionCommitStatus: "current-generation",
+      promotionCommitInFlight: true,
+      promotionCommitRunId: currentRunId,
+      pendingPostCommitRefresh,
+    });
+    targetState.scenarioChunkPromotionRenderLocked = true;
+
+    frameCallbacks.shift()();
+    for (let index = 0; index < 10; index += 1) {
+      await Promise.resolve();
+    }
+
+    return {
+      currentLoadState,
+      currentRunId,
+      pendingPostCommitRefresh,
+      targetState,
+    };
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+    if (originalRequestAnimationFrame === undefined) {
+      delete globalThis.requestAnimationFrame;
+    } else {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  }
+}
+
+for (const { name, resetLoadState } of [
+  {
+    name: "stale promotion commit cannot settle a reset runtime generation",
+    resetLoadState: true,
+  },
+  {
+    name: "stale promotion commit cannot settle a newer run on the same load state",
+    resetLoadState: false,
+  },
+]) {
+  test(name, async () => {
+    const {
+      currentLoadState,
+      currentRunId,
+      pendingPostCommitRefresh,
+      targetState,
+    } = await runStalePromotionCommitSettlement({ resetLoadState });
+
+    assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+    assert.equal(currentLoadState.promotionCommitStatus, "current-generation");
+    assert.equal(currentLoadState.promotionCommitInFlight, true);
+    assert.equal(currentLoadState.promotionCommitRunId, currentRunId);
+    assert.equal(
+      currentLoadState.pendingPostCommitRefresh,
+      pendingPostCommitRefresh,
+    );
+    assert.equal(targetState.scenarioChunkPromotionRenderLocked, true);
+  });
 }
 
 function isWorldGeoBounds(bounds) {
@@ -405,8 +1093,9 @@ test("scheduled chunk refresh starts without seeded pending reason", async () =>
     bounds: [-1, -1, 1, 1],
     countryCodes: ["TT"],
   };
-  const runtimeState = {
+  const targetState = {
     activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: 21,
     activeScenarioChunks: {
       loadedChunkIds: [],
       payloadByChunkId: {},
@@ -429,7 +1118,7 @@ test("scheduled chunk refresh starts without seeded pending reason", async () =>
 
   try {
     const controller = createScenarioChunkRuntimeController({
-      runtimeState,
+      runtimeState: targetState,
       getSearchParams: () => new URLSearchParams(),
       normalizeScenarioId: (value) => String(value || "").trim(),
       normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
@@ -487,6 +1176,16 @@ test("scheduled chunk refresh starts without seeded pending reason", async () =>
     await Promise.resolve();
 
     assert.equal(selectCalls, 1);
+    assert.equal(targetState.runtimeChunkLoadState.pendingScenarioApplyRequestId, 0);
+    assert.equal(targetState.runtimeChunkLoadState.selectionVersion, 1);
+    assert.equal(
+      targetState.runtimeChunkLoadState.lastSelection.scenarioApplyRequestId,
+      21,
+    );
+    assert.equal(
+      targetState.runtimeChunkLoadState.scenarioApplyRequestIdBySelectionVersion[1],
+      21,
+    );
   } finally {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
@@ -1566,8 +2265,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function buildInitialScenarioChunkVisualPromotionResult[\s\S]*?scenarioPoliticalVisibleFeatureCount[\s\S]*?promotedVisibleFeatureCount: scenarioPoliticalVisibleFeatureCount,[\s\S]*?promotedTotalFeatureCount: scenarioPoliticalChunkFeatureCount/.test(chunkRuntimeSource)
       && /const ready = !!\([\s\S]*?scenarioPoliticalChunkFeatureCount > 0[\s\S]*?landFeatureCount > 0[\s\S]*?colorCount > 0/.test(chunkRuntimeSource)
       && /allowStartupInitialVisual = false,[\s\S]*?shouldForceStartupInitialVisualRefresh = !!allowStartupInitialVisual[\s\S]*?getFeatureCount\(runtimeState\.landData\) <= 0[\s\S]*?getColorCount\(\) <= 0[\s\S]*?forceRefresh: !!pendingPromotion\.primaryVisibleFeatureSubsetChanged \|\| shouldForceStartupInitialVisualRefresh/.test(chunkRuntimeSource)
-      && /loadState\.pendingVisualPromotion = \{[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:/.test(chunkRuntimeSource)
-      && /loadState\.pendingPromotion = \{[\s\S]*?requiredPoliticalChunkCount:[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:/.test(chunkRuntimeSource),
+      && /const pendingVisualPromotion = \{[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:/.test(chunkRuntimeSource)
+      && /const pendingPromotion = \{[\s\S]*?requiredPoliticalChunkCount:[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:[\s\S]*?queueScenarioChunkPromotionState\(runtimeState, \{[\s\S]*?visualPromotion: pendingVisualPromotion,[\s\S]*?promotion: pendingPromotion,/.test(chunkRuntimeSource),
     deferredInfraRestoresFullPoliticalDerivedStateWhenVisibleSubsetIsActive:
       scenarioRefreshRuntimeSource.includes("function analyzeScenarioPoliticalDerivedStateCoverage(runtimeState)")
       && scenarioRefreshRuntimeSource.includes('recordRenderPerfMetric("scenarioPoliticalDerivedStateCoverage"')
@@ -1575,7 +2274,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && scenarioRefreshRuntimeSource.includes("completePoliticalDerivedStateReady = false")
       && /const shouldRestoreFullPoliticalDerivedState = \([\s\S]*?politicalCoverageBeforeRestore\.completePoliticalFeatureCount > 0[\s\S]*?!resolvedCompletePoliticalDerivedStateReady[\s\S]*?primaryVisibleDerivedStateReady[\s\S]*?primaryVisibleFeatureSubsetActive[\s\S]*?landDataCoverageMissing[\s\S]*?colorCoverageMissing[\s\S]*?\);/.test(scenarioRefreshRuntimeSource)
       && /colorCoverageMissing: !!coverage\.colorCoverageMissing,/.test(scenarioRefreshRuntimeSource)
-      && /if \(hasPrimaryVisiblePoliticalSubset \|\| shouldRestoreFullPoliticalDerivedState\) \{[\s\S]*?runtimeState\.scenarioPoliticalVisibleChunkData = null;[\s\S]*?\}[\s\S]*?if \(shouldRestoreFullPoliticalDerivedState\) \{/.test(scenarioRefreshRuntimeSource)
+      && /if \(hasPrimaryVisiblePoliticalSubset \|\| shouldRestoreFullPoliticalDerivedState\) \{[\s\S]*?setScenarioPoliticalChunkPayloadState\(runtimeState, \{ visiblePayload: null \}\);[\s\S]*?\}[\s\S]*?if \(shouldRestoreFullPoliticalDerivedState\) \{/.test(scenarioRefreshRuntimeSource)
       && /if \(shouldRestoreFullPoliticalDerivedState\) \{[\s\S]*?rebuildPoliticalLandCollections\(\);[\s\S]*?rebuildRuntimeDerivedState\(\{[\s\S]*?includeRuntimePoliticalMeta: true,[\s\S]*?includeSecondarySpatial: false,[\s\S]*?\}\);/.test(scenarioRefreshRuntimeSource)
       && /restoredFullPoliticalChunkData = shouldRestoreFullPoliticalDerivedState;/.test(scenarioRefreshRuntimeSource),
     exactAfterSettleDefersPoliticalFastExact:
@@ -1664,7 +2363,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function preloadScenarioCoarseChunks[\s\S]*?viewportBbox: \[\.\.\.SCENARIO_CHUNK_FULL_WORLD_BBOX\],[\s\S]*?focusCountry:/.test(chunkRuntimeSource)
       && /function preloadScenarioCoarseChunks[\s\S]*?hasDetailScenarioChunkIds\(chunkState\.loadedChunkIds\)[\s\S]*?loadState\.promotionCommitInFlight[\s\S]*?return null;/.test(chunkRuntimeSource),
     zoomEndSettleRetainsPreviousRequiredPoliticalDetailChunks:
-      chunkRuntimeSource.includes('function applyZoomEndChunkProtectionToSelection(selection, loadState, {')
+      chunkRuntimeSource.includes('function applyZoomEndChunkProtectionToSelection(selection, target, {')
       && chunkRuntimeSource.includes('reason = "",')
       && chunkRuntimeSource.includes('previousSelection = null,')
       && chunkRuntimeSource.includes('"render-phase-idle", "exact-after-settle", "scenario-apply", "scenario-apply-detail-prewarm"')
@@ -1676,7 +2375,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     stalePostApplyRefreshDoesNotEvictRecentZoomEndDetail:
       /function shouldSkipStalePostApplyRefreshAfterZoomEnd\(loadState, reason = "", \{[\s\S]*?scenarioId = "",[\s\S]*?selectionVersion = 0,[\s\S]*?refreshSourceStartedAtMs = 0,[\s\S]*?lastSelection\?\.reason[\s\S]*?lastZoomEndToChunkVisibleMetric[\s\S]*?metric\?\.scenarioId[\s\S]*?metric\?\.selectionVersion[\s\S]*?sourceStartedAt > 0 && sourceStartedAt <= recordedAt/.test(chunkRuntimeSource)
       && /if \(shouldSkipStalePostApplyRefreshAfterZoomEnd\(loadState, nextReason, \{[\s\S]*?scenarioId,[\s\S]*?selectionVersion: loadState\.selectionVersion,[\s\S]*?refreshSourceStartedAtMs,[\s\S]*?normalizeScenarioIdFn: normalizeScenarioId,[\s\S]*?\}\)\) \{[\s\S]*?return "stale-post-apply-after-zoom-end";/.test(chunkRuntimeSource)
-      && /pendingPostCommitRefresh = \{[\s\S]*?refreshSourceStartedAtMs,[\s\S]*?requestedAt: Date\.now\(\),[\s\S]*?\};/.test(chunkRuntimeSource)
+      && /patchScenarioChunkLoadState\(runtimeState, \{ pendingPostCommitRefresh: \{[\s\S]*?refreshSourceStartedAtMs,[\s\S]*?requestedAt: Date\.now\(\),[\s\S]*?\} \}\);/.test(chunkRuntimeSource)
       && /scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: replayReason,[\s\S]*?refreshSourceStartedAtMs: Number\(pendingPostCommitRefresh\.refreshSourceStartedAtMs \|\| 0\),[\s\S]*?\}\);/.test(chunkRuntimeSource)
       && /scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: "scenario-apply-detail-prewarm",[\s\S]*?refreshSourceStartedAtMs: prewarmStartedAt,[\s\S]*?\}\);/.test(postApplyEffectsSource)
       && /scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: "scenario-apply",[\s\S]*?refreshSourceStartedAtMs: prewarmStartedAt,[\s\S]*?\}\);/.test(postApplyEffectsSource),
@@ -2672,23 +3371,24 @@ test("zoom-end evictable protection reuses unified validator across TTL, focusCo
     zoomEndProtectedScenarioId: "",
     zoomEndProtectedFocusCountry: "",
   };
+  const baseRuntimeState = { runtimeChunkLoadState: baseLoadState };
   const nowMs = 1_000;
   const selection = {
     evictableChunkIds: ["political.detail.a", "political.detail.b"],
   };
-  protectZoomEndChunksForSelection(baseLoadState, ["political.detail.a"], {
+  protectZoomEndChunksForSelection(baseRuntimeState, ["political.detail.a"], {
     scenarioId: "tno_1962",
     selectionVersion: 7,
     focusCountry: "de",
     nowMs,
   });
   assert.equal(
-    applyZoomEndChunkProtectionToSelection(selection, baseLoadState, {
+    applyZoomEndChunkProtectionToSelection(selection, baseRuntimeState, {
       scenarioId: "tno_1962",
       selectionVersion: 7,
       focusCountry: "DE",
       nowMs: nowMs + 4_000,
-    }),
+    }, baseLoadState),
     true,
   );
   assert.deepEqual(selection.evictableChunkIds, ["political.detail.b"]);
@@ -2704,13 +3404,14 @@ test("zoom-end evictable protection reuses unified validator across TTL, focusCo
     zoomEndProtectedFocusCountry: "DE",
   };
   const expiredSelection = { evictableChunkIds: ["political.detail.a"] };
+  const expiredRuntimeState = { runtimeChunkLoadState: expiredLoadState };
   assert.equal(
-    applyZoomEndChunkProtectionToSelection(expiredSelection, expiredLoadState, {
+    applyZoomEndChunkProtectionToSelection(expiredSelection, expiredRuntimeState, {
       scenarioId: "tno_1962",
       selectionVersion: 7,
       focusCountry: "DE",
       nowMs: nowMs + 5_001,
-    }),
+    }, expiredLoadState),
     false,
   );
   assert.deepEqual(expiredSelection.evictableChunkIds, ["political.detail.a"]);
@@ -2726,26 +3427,26 @@ test("zoom-end evictable protection reuses unified validator across TTL, focusCo
   };
   const focusChangedSelection = { evictableChunkIds: ["political.detail.a"] };
   assert.equal(
-    applyZoomEndChunkProtectionToSelection(focusChangedSelection, baseLoadState, {
+    applyZoomEndChunkProtectionToSelection(focusChangedSelection, baseRuntimeState, {
       reason: "scenario-apply",
       previousSelection,
       scenarioId: "tno_1962",
       selectionVersion: 8,
       focusCountry: "FR",
       nowMs: nowMs + 3_000,
-    }),
+    }, baseLoadState),
     false,
   );
   const versionChangedSelection = { evictableChunkIds: ["political.detail.a"] };
   assert.equal(
-    applyZoomEndChunkProtectionToSelection(versionChangedSelection, baseLoadState, {
+    applyZoomEndChunkProtectionToSelection(versionChangedSelection, baseRuntimeState, {
       reason: "scenario-apply",
       previousSelection,
       scenarioId: "tno_1962",
       selectionVersion: 9,
       focusCountry: "DE",
       nowMs: nowMs + 3_000,
-    }),
+    }, baseLoadState),
     false,
   );
 });
@@ -3049,6 +3750,8 @@ async function runOptionalChunkPromotionScenario({
   initialPayload = null,
   initialRevision = 0,
   staleBeforeVisualCommit = false,
+  failOnRenderFlush = false,
+  awaitInitialPromotion = false,
 } = {}) {
   const originalSetTimeout = globalThis.setTimeout;
   const originalClearTimeout = globalThis.clearTimeout;
@@ -3073,7 +3776,7 @@ async function runOptionalChunkPromotionScenario({
     countriesPayload: { countries: {} },
     chunkPayloadCacheById: {},
   };
-  const runtimeState = {
+  const targetState = {
     activeScenarioId: "tno_1962",
     activeScenarioChunks: {
       scenarioId: "tno_1962",
@@ -3104,25 +3807,38 @@ async function runOptionalChunkPromotionScenario({
     strategicvalues: "showStrategicResourceMarkers",
   };
   const resolvedVisibilityField = visibilityField || defaultVisibilityFields[layerKey] || "";
-  Object.assign(runtimeState, visibilityState);
+  Object.assign(targetState, visibilityState);
   if (initialPayload) {
-    runtimeState[stateField] = initialPayload;
+    targetState[stateField] = initialPayload;
   }
   if (revisionField && initialRevision) {
-    runtimeState[revisionField] = initialRevision;
+    targetState[revisionField] = initialRevision;
   }
   const refreshCalls = [];
+  const citySyncSnapshots = [];
+  const promotionError = failOnRenderFlush
+    ? new Error("promotion render flush failed")
+    : null;
   let rafCount = 0;
+  let nextTimerId = 0;
+  const deferredTimers = new Map();
 
   globalThis.setTimeout = (callback) => {
+    if (awaitInitialPromotion) {
+      nextTimerId += 1;
+      deferredTimers.set(nextTimerId, callback);
+      return nextTimerId;
+    }
     callback();
     return 1;
   };
-  globalThis.clearTimeout = () => {};
+  globalThis.clearTimeout = (timerId) => {
+    deferredTimers.delete(timerId);
+  };
   globalThis.requestAnimationFrame = (callback) => {
     rafCount += 1;
     if (staleBeforeVisualCommit && rafCount === 2) {
-      runtimeState.runtimeChunkLoadState.selectionVersion += 1;
+      targetState.runtimeChunkLoadState.selectionVersion += 1;
     }
     callback();
     return rafCount;
@@ -3130,7 +3846,7 @@ async function runOptionalChunkPromotionScenario({
 
   try {
     const controller = createScenarioChunkRuntimeController({
-      runtimeState,
+      runtimeState: targetState,
       getSearchParams: () => new URLSearchParams(),
       normalizeScenarioId: (value) => String(value || "").trim(),
       normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
@@ -3179,28 +3895,54 @@ async function runOptionalChunkPromotionScenario({
       isScenarioOptionalLayerRequestedForVisibility: (requestedLayerKey, config) => {
         const normalizedLayerKey = String(requestedLayerKey || "").trim().toLowerCase();
         if (normalizedLayerKey === "strategicvalues") {
-          return !!runtimeState.showStrategicResourceMarkers || !!String(runtimeState.strategicChoroplethMetric || "").trim();
+          return !!targetState.showStrategicResourceMarkers || !!String(targetState.strategicChoroplethMetric || "").trim();
         }
-        if (Object.prototype.hasOwnProperty.call(runtimeState, config.visibilityField)) {
-          return !!runtimeState[config.visibilityField];
+        if (Object.prototype.hasOwnProperty.call(targetState, config.visibilityField)) {
+          return !!targetState[config.visibilityField];
         }
         return config.visibilityField !== "showSpecialZones" && config.visibilityField !== "showStrategicResourceMarkers";
       },
-      syncScenarioLocalizationState: () => {},
+      syncScenarioLocalizationState: ({ cityOverridesPayload } = {}) => {
+        if (layerKey !== "cities") return;
+        applyScenarioChunkCityExternalEffectState(targetState, cityOverridesPayload);
+        citySyncSnapshots.push({
+          payload: targetState.scenarioCityOverridesData,
+          revision: targetState.cityLayerRevision,
+        });
+      },
       refreshMapDataForScenarioChunkPromotion: (options) => {
         refreshCalls.push(options);
       },
-      flushRenderBoundary: () => {},
+      flushRenderBoundary: () => {
+        if (promotionError) {
+          throw promotionError;
+        }
+      },
       recordScenarioPerfMetric: () => {},
       ensureScenarioChunkRegistryLoaded: async () => {},
     });
 
-    assert.equal(controller.scheduleScenarioChunkRefresh({ reason, delayMs: 0 }), "scheduled");
-    for (let i = 0; i < 10; i += 1) {
-      await Promise.resolve();
+    let awaitedError = null;
+    if (awaitInitialPromotion) {
+      try {
+        await controller.awaitInitialScenarioChunkVisualPromotion({ reason });
+      } catch (error) {
+        awaitedError = error;
+      }
+    } else {
+      assert.equal(controller.scheduleScenarioChunkRefresh({ reason, delayMs: 0 }), "scheduled");
+      for (let i = 0; i < 10; i += 1) {
+        await Promise.resolve();
+      }
     }
 
-    return { runtimeState, refreshCalls };
+    return {
+      runtimeState: targetState,
+      refreshCalls,
+      citySyncSnapshots,
+      promotionError,
+      awaitedError,
+    };
   } finally {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
@@ -3325,6 +4067,137 @@ test("stale optional-only promotion restores payload and generation snapshot", a
   assert.equal(runtimeState.runtimeChunkLoadState.promotionCommitStatus, "promotion-skipped-stale");
 });
 
+test("stale city promotion consumes its finalizer token and restores exact state", async () => {
+  const initialPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "city-old", properties: {}, geometry: null },
+    ],
+  };
+  const { runtimeState: targetState, refreshCalls, citySyncSnapshots } = await runOptionalChunkPromotionScenario({
+    layerKey: "cities",
+    stateField: "scenarioCityOverridesData",
+    revisionField: "cityLayerRevision",
+    reason: "cities-stale",
+    featureId: "city-new",
+    initialPayload,
+    initialRevision: 4,
+    staleBeforeVisualCommit: true,
+  });
+
+  assert.equal(Number(targetState.scenarioDataGeneration || 0), 0);
+  assert.equal(targetState.scenarioDataGenerationReason, undefined);
+  assert.equal(targetState.cityLayerRevision, 4);
+  assert.equal(targetState.scenarioCityOverridesData, initialPayload);
+  assert.equal(citySyncSnapshots.length, 2);
+  assert.equal(citySyncSnapshots[0].payload.features[0].id, "city-new");
+  assert.equal(citySyncSnapshots[0].revision, 5);
+  assert.equal(citySyncSnapshots[1].payload, initialPayload);
+  assert.equal(citySyncSnapshots[1].revision, 6);
+  assert.equal(refreshCalls.length, 0);
+  assert.equal(targetState.runtimeChunkLoadState.promotionCommitStatus, "promotion-skipped-stale");
+});
+
+test("failed optional promotion restores payload revision generation and render lock", async () => {
+  const initialPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "atl-old", properties: {}, geometry: null },
+    ],
+  };
+  const {
+    runtimeState: targetState,
+    refreshCalls,
+  } = await runOptionalChunkPromotionScenario({
+    layerKey: "scenario_atlantropa",
+    stateField: "scenarioAtlantropaData",
+    revisionField: "scenarioAtlantropaRevision",
+    reason: "atlantropa-error",
+    featureId: "atl-new",
+    initialPayload,
+    initialRevision: 4,
+    failOnRenderFlush: true,
+  });
+
+  assert.equal(Number(targetState.scenarioDataGeneration || 0), 0);
+  assert.equal(targetState.scenarioDataGenerationReason, undefined);
+  assert.equal(targetState.scenarioAtlantropaRevision, 4);
+  assert.equal(targetState.scenarioAtlantropaData, initialPayload);
+  assert.equal(targetState.scenarioChunkPromotionRenderLocked, false);
+  assert.equal(targetState.runtimeChunkLoadState.promotionCommitStatus, "error");
+  assert.equal(refreshCalls.length, 2);
+  assert.equal(refreshCalls[1].reason, "scenario-chunk-promotion-error-rollback");
+  assert.equal(refreshCalls[1].hasPoliticalPayloadChange, false);
+});
+
+test("failed city promotion restores localization state and consumes its finalizer", async () => {
+  const initialPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "city-old", properties: {}, geometry: null },
+    ],
+  };
+  const {
+    runtimeState: targetState,
+    refreshCalls,
+    citySyncSnapshots,
+  } = await runOptionalChunkPromotionScenario({
+    layerKey: "cities",
+    stateField: "scenarioCityOverridesData",
+    revisionField: "cityLayerRevision",
+    reason: "cities-error",
+    featureId: "city-new",
+    initialPayload,
+    initialRevision: 4,
+    failOnRenderFlush: true,
+  });
+
+  assert.equal(targetState.scenarioDataGeneration, undefined);
+  assert.equal(targetState.scenarioDataGenerationReason, undefined);
+  assert.equal(targetState.cityLayerRevision, 4);
+  assert.equal(targetState.scenarioCityOverridesData, initialPayload);
+  assert.equal(targetState.scenarioChunkPromotionRenderLocked, false);
+  assert.equal(targetState.runtimeChunkLoadState.promotionCommitStatus, "error");
+  assert.equal(citySyncSnapshots.length, 2);
+  assert.equal(citySyncSnapshots[0].payload.features[0].id, "city-new");
+  assert.equal(citySyncSnapshots[1].payload, initialPayload);
+  assert.equal(refreshCalls.length, 2);
+  assert.equal(refreshCalls[1].reason, "scenario-chunk-promotion-error-rollback");
+  assert.equal(refreshCalls[1].hasPoliticalPayloadChange, false);
+});
+
+test("startup initial visual promotion rethrows the original commit error after rollback", async () => {
+  const initialPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "atl-old", properties: {}, geometry: null },
+    ],
+  };
+  const {
+    runtimeState: targetState,
+    promotionError,
+    awaitedError,
+  } = await runOptionalChunkPromotionScenario({
+    layerKey: "scenario_atlantropa",
+    stateField: "scenarioAtlantropaData",
+    revisionField: "scenarioAtlantropaRevision",
+    reason: "atlantropa-startup-error",
+    featureId: "atl-new",
+    initialPayload,
+    initialRevision: 4,
+    failOnRenderFlush: true,
+    awaitInitialPromotion: true,
+  });
+
+  assert.equal(awaitedError, promotionError);
+  assert.equal(targetState.scenarioDataGeneration, undefined);
+  assert.equal(targetState.scenarioDataGenerationReason, undefined);
+  assert.equal(targetState.scenarioAtlantropaRevision, 4);
+  assert.equal(targetState.scenarioAtlantropaData, initialPayload);
+  assert.equal(targetState.scenarioChunkPromotionRenderLocked, false);
+  assert.equal(targetState.runtimeChunkLoadState.promotionCommitStatus, "error");
+});
+
 test("coarse prewarm keeps complete political payload for initial promotion", async () => {
   const politicalChunk = {
     id: "political.coarse.world",
@@ -3360,7 +4233,7 @@ test("coarse prewarm keeps complete political payload for initial promotion", as
     countriesPayload: { countries: {} },
     chunkPayloadCacheById: {},
   };
-  const runtimeState = {
+  const targetState = {
     activeScenarioId: "hoi4_1939",
     activeScenarioChunks: {
       scenarioId: "hoi4_1939",
@@ -3387,7 +4260,7 @@ test("coarse prewarm keeps complete political payload for initial promotion", as
   let capturedLandDataFeatureIds = [];
 
   const controller = createScenarioChunkRuntimeController({
-    runtimeState,
+    runtimeState: targetState,
     getSearchParams: () => new URLSearchParams(),
     normalizeScenarioId: (value) => String(value || "").trim(),
     normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
@@ -3437,7 +4310,7 @@ test("coarse prewarm keeps complete political payload for initial promotion", as
     getScenarioOptionalLayerConfig: () => null,
     syncScenarioLocalizationState: () => {},
     refreshMapDataForScenarioChunkPromotion: () => {
-      capturedLandDataFeatureIds = (runtimeState.landData?.features || [])
+      capturedLandDataFeatureIds = (targetState.landData?.features || [])
         .map((feature) => feature.id);
     },
     flushRenderBoundary: () => {},
@@ -3448,13 +4321,13 @@ test("coarse prewarm keeps complete political payload for initial promotion", as
   await controller.preloadScenarioCoarseChunks(bundle);
 
   assert.deepEqual(selectedViewportBbox, [-180, -90, 180, 90]);
-  assert.equal(runtimeState.scenarioDataGeneration, 1);
-  assert.equal(runtimeState.scenarioDataGenerationReason, "coarse-prewarm");
+  assert.equal(targetState.scenarioDataGeneration, 1);
+  assert.equal(targetState.scenarioDataGenerationReason, "coarse-prewarm");
   assert.deepEqual(
-    runtimeState.scenarioPoliticalChunkData.features.map((feature) => feature.id),
+    targetState.scenarioPoliticalChunkData.features.map((feature) => feature.id),
     ["visible-a", "outside-b", "visible-c"],
   );
-  assert.equal(runtimeState.scenarioPoliticalVisibleChunkData, null);
+  assert.equal(targetState.scenarioPoliticalVisibleChunkData, null);
   assert.deepEqual(capturedLandDataFeatureIds, ["full-land-a", "full-land-b", "full-land-c"]);
 });
 
@@ -3478,14 +4351,14 @@ test("zoom-end retained political detail chunks persist through exact-after-sett
   };
 
   assert.equal(
-    applyZoomEndChunkProtectionToSelection(selection, {}, {
+    applyZoomEndChunkProtectionToSelection(selection, { runtimeChunkLoadState: {} }, {
       reason: "exact-after-settle",
       previousSelection,
       scenarioId: "tno_1962",
       selectionVersion: 4,
       focusCountry: "DE",
       nowMs: nowMs + 3_000,
-    }),
+    }, {}),
     true,
   );
   assert.deepEqual(selection.evictableChunkIds, ["political.detail.other"]);

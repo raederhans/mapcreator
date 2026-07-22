@@ -425,6 +425,27 @@ export function restoreScenarioPresentationState(target, snapshot) {
   return true;
 }
 
+export function finalizeScenarioChunkCityExternalEffectState(target, token) {
+  assertStateTarget(target);
+  if (!token || token.type !== "scenario-city-restore-finalizer") return false;
+  if (token.statePresent) target.scenarioCityOverridesData = token.stateValue;
+  else delete target.scenarioCityOverridesData;
+  if (token.revisionPresent) target.cityLayerRevision = token.revisionValue;
+  else delete target.cityLayerRevision;
+  return true;
+}
+
+export function applyScenarioChunkCityExternalEffectState(target, payload) {
+  assertStateTarget(target);
+  target.scenarioCityOverridesData = (
+    payload === undefined
+      ? target.scenarioCityOverridesData
+      : payload
+  ) || null;
+  target.cityLayerRevision = Math.max(0, Number(target.cityLayerRevision || 0)) + 1;
+  return true;
+}
+
 export function restoreScenarioTransactionPresentationBeforeAuditState(
   target,
   snapshot,
