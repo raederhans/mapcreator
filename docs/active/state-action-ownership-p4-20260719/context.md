@@ -8,7 +8,7 @@
 - Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
 - Parent status recaptured on 2026-07-21: local `main@68a62e54` remains pinned with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; remote integration and every P4 edit stay in the isolated worktree.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.2a exact-A `662d3dffa7982b1938617e0ea41ac9c012a05946` is green and integrated into `origin/main`; this docs-only sync commit aligns the remote main and P4 refs before P4.2b.
+- Current phase: P4.2a audit checkpoint `f05b715567036474c5522145f814012f4c6c49e7` is green on `origin/main@03c34aa0`; this attestation records the verified selector, route, Windows wrapper and CRLF repairs before P4.2b.
 
 ## Decisions and deviations
 
@@ -52,6 +52,7 @@
 | 2026-07-21 | Integration-sync adaptive execution selected both P4.1 and P4.2a exact gates from shared active docs, then P4.1 failed closed with `phase-regression` | The selector now remaps every automatic P4 exact command match to the checked-in policy `progress.latestPhase`; historical route metadata and explicit commands remain intact, historical owner-file changes still receive the current cumulative gate, and the P4 route checker independently enforces direct ownership plus current-phase execution. |
 | 2026-07-21 | Adaptive execution on Windows cannot assume a `python` executable even though the repository supports `py -3` through `tools/run_python.mjs` | Direct Python recommendations now use the project wrapper on Windows with `shell:false`; Linux keeps the existing `python` argv contract, and structural coverage verifies both mappings. |
 | 2026-07-21 | A fresh isolated Windows checkout exposed CRLF sensitivity in the Scenario rollback authority scanner | The test normalizes source newlines before structural extraction and carries an explicit LF/CRLF equivalence regression; production rollback behavior remains unchanged. |
+| 2026-07-21 | Audit checkpoint `f05b715567036474c5522145f814012f4c6c49e7`, tree `abc16ac376e24994d66cb945789e1e8136e64391`, completed on top of concurrent remote checkpoint `03c34aa0` | Exact Node 92/92, Python 58/58, policy, route 8/7/0/0, standalone policy 280/280, SF-ATS 17 child-safe / 0 main-thread / 0 CI-only / 0 unmatched and final APPROVE/CLEAR reviews pass. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
@@ -61,7 +62,7 @@
 | Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/scenario-resilience/` | exact-A Scenario resilience passes 3/3; lane released for P4.2b |
 | P4 policy suite and generated reports | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/` | exact-A Node 91/91, Python 58/58 and route 4/4/0/0 pass; lane released for P4.2b |
 | Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/` | exact-A Pages/dist passes at 927.27 MiB under serial ownership; lane released for P4.2b |
-| Integration sync adaptive validation | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/integration-sync/adaptive-execute.json` | one serialized post-commit run owns the selector-selected child-safe commands; the lease ends with its terminal result |
+| P4 audit exact validation | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/f05b715567036474c5522145f814012f4c6c49e7/` | complete; exact gate, standalone policy and governance checks pass; lane released before integration |
 | Policy performance probe | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/performance/` | complete; snapshot output byte-identical and checker 1.86x faster |
 
 ## Handoff
@@ -70,4 +71,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Use the synchronized P4.2a milestone as the P4.2b scenario chunk ownership base while preserving the dirty parent checkout and single-owner live-test lanes.
+Use the audited P4.2a remote tip as the P4.2b scenario chunk ownership base while preserving the dirty parent checkout and single-owner live-test lanes.

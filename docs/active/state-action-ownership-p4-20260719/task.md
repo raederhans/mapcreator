@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.2a integrated / P4.2b entry` — exact attestation A `662d3dffa7982b1938617e0ea41ac9c012a05946` owns six Scenario action modules, atomic apply/rollback, deferred metadata commit leases and schema-2 caller-to-action proof. The exact-A matrix is green, the milestone has been fast-forwarded into `origin/main`, and this docs-only sync commit keeps the P4 continuation branch aligned for P4.2b.
+`P4.2a audited / P4.2b entry` — audit checkpoint `f05b715567036474c5522145f814012f4c6c49e7` keeps historical direct ownership, executes the policy-current exact gate, routes Windows Python through the project wrapper and makes Scenario rollback source scans LF/CRLF portable. The exact matrix and independent reviews are green; this attestation prepares the fast-forward into remote main and the P4 continuation branch.
 
 ## Checklist
 
@@ -54,6 +54,9 @@
 | Binding-scoped site baselines | Production legacy: 142 dynamic, 227 alias, 901 ambiguous, 6,692 unsupported; semantic multisets preserve occurrence counts and source fingerprints |
 | Parser foundation | Pinned dev-only `acorn@8.17.0` and `acorn-walk@8.3.5`; repository policy owns mutation classification and authority |
 | Default state ownership | 16 factory groups; 9 explicit keys; 402 pre-compat keys; 86 hooks; 488 post-compat keys; 0 collisions |
+| P4.2a audit checkpoint `f05b7155` | PASS; exact Node 92/92, Python 58/58, policy and route 8/7/0/0; selector schema 350; focused route 17/17, metadata 25/25, rollback 10/10, structural 40/40 |
+| Standalone state-writer policy runner | PASS 280/280 plus repository checker; 75 production + 43 test legacy-direct files |
+| Final audit review and SF-ATS | APPROVE/CLEAR; 8 changed, 17 child-safe, 0 main-thread, 0 CI-only, 0 unmatched |
 | Production `js/**` diff | Empty |
 
 ## P4.0 exact checkpoint C
@@ -174,6 +177,7 @@
 - The first integration-sync adaptive execution stopped on the historical `verify:p4:p4-1` route after the policy had advanced to P4.2a. Automatic recommendations now remap every matched P4 exact command to the gate named by `tools/state_writer_policy.json#progress.latestPhase`; historical routes and explicit commands remain available, while shared control files, historical owner files, and the P4 route checker have direct regression contracts.
 - Windows adaptive execution now routes direct `python ...` recommendations through `node tools/run_python.mjs`; the wrapper preserves the repository's `py -3` / Python fallback and avoids a platform-specific command-not-found stop.
 - Scenario rollback authority discovery now normalizes CRLF/LF source text and has an explicit line-ending equivalence regression, allowing the P4.2a Node gate to remain portable in fresh Windows worktrees.
+- Audit checkpoint `f05b715567036474c5522145f814012f4c6c49e7`, tree `abc16ac376e24994d66cb945789e1e8136e64391`, passes the four-command exact gate. Persistent phase report SHA256 is `c453cb0704d43a1924f2e3dd9cb244a4fdf6726be8ad7efc107a5520d4fb3feb`; policy report SHA256 is `e5f4a7275a47b131dd1fd51daa5edba77f8ee60bda4526d226093d74bc34e5fe`; adaptive route SHA256 is `db3b17dc0daf7fcbac0f616037b8ad32dee57e5b9932ee51c26a655cfe1f8db8`.
 
 ## Open risks and remaining work
 
