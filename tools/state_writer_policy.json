@@ -42845,7 +42845,7 @@
                   "sourceFingerprint": "35372e9e3540d4b0d89413d87ce431c2c8619c685d0c811a8ef31cfefdd58b39"
                 },
                 {
-                  "line": 2427,
+                  "line": 2457,
                   "column": 70,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42853,7 +42853,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 2437,
+                  "line": 2467,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42861,7 +42861,7 @@
                   "sourceFingerprint": "a70bbc5bb26094a47d0f265b4b6c2b248a57e62c5b0d5db002fb90fba8d20592"
                 },
                 {
-                  "line": 2444,
+                  "line": 2474,
                   "column": 65,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42869,7 +42869,7 @@
                   "sourceFingerprint": "47145099b0ef0f2e121751237c5e389b557557f34b0bc5c712cc931672b75f30"
                 },
                 {
-                  "line": 2447,
+                  "line": 2477,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42877,23 +42877,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2449,
-                  "column": 73,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "093dc698c06786ac082fb762244829a5b506f036efc8ce5cde803bab4db22706"
-                },
-                {
-                  "line": 2449,
-                  "column": 75,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "runtimeChunkLoadState",
-                  "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
-                },
-                {
-                  "line": 2478,
+                  "line": 2515,
                   "column": 121,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42901,7 +42885,7 @@
                   "sourceFingerprint": "fe1dbdd39461ecc3576a70fc443cf323bab6b3f0906cb85324593742c798d2a5"
                 },
                 {
-                  "line": 2483,
+                  "line": 2520,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42909,7 +42893,7 @@
                   "sourceFingerprint": "bf6460f438cc975239e85f24277e34c6233f4b4a4bca75f40a7c72b573e6b8a7"
                 },
                 {
-                  "line": 2484,
+                  "line": 2521,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42917,7 +42901,7 @@
                   "sourceFingerprint": "5685525ba254519276c8d4d0bd6c9a189659ec9b14e0e5b6e49d7e9f0210aa51"
                 },
                 {
-                  "line": 2491,
+                  "line": 2528,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42925,7 +42909,7 @@
                   "sourceFingerprint": "77b74933ebba678f67c461c11a5fe0adebd998e3afb1f63eb49e368d848c94c1"
                 },
                 {
-                  "line": 2537,
+                  "line": 2574,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42933,7 +42917,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 2554,
+                  "line": 2591,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42941,7 +42925,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2579,
+                  "line": 2616,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42949,7 +42933,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2605,
+                  "line": 2642,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42957,7 +42941,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2606,
+                  "line": 2643,
                   "column": 67,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42965,7 +42949,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2608,
+                  "line": 2645,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42973,7 +42957,7 @@
                   "sourceFingerprint": "bc60e5479333913a5cf72b103bfa93b3a31db64786a08c58f3b4f283a58fadef"
                 },
                 {
-                  "line": 2617,
+                  "line": 2654,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42981,7 +42965,7 @@
                   "sourceFingerprint": "a70bbc5bb26094a47d0f265b4b6c2b248a57e62c5b0d5db002fb90fba8d20592"
                 },
                 {
-                  "line": 2634,
+                  "line": 2671,
                   "column": 55,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42989,7 +42973,7 @@
                   "sourceFingerprint": "82be808b312e0aa07c1581f3173aa5610f08aa3569d826a4726938629e15db67"
                 },
                 {
-                  "line": 2636,
+                  "line": 2673,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -42997,7 +42981,7 @@
                   "sourceFingerprint": "a813ea88679e5d4f76b3821ac37b292ec06b25e4d66195d4a24fb90e0f146c70"
                 },
                 {
-                  "line": 2674,
+                  "line": 2711,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43005,7 +42989,7 @@
                   "sourceFingerprint": "e23a451802004de2eb053503837a6dc63468c7d95281eb2317f88d80ebcf6c79"
                 },
                 {
-                  "line": 2675,
+                  "line": 2712,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43013,7 +42997,7 @@
                   "sourceFingerprint": "59b960ea13ee8cdad9e40a76712567d2a37afb29a7cad4be53415fc003ce897e"
                 },
                 {
-                  "line": 2676,
+                  "line": 2713,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43021,7 +43005,7 @@
                   "sourceFingerprint": "01adb1e7665849d481bb46bedb3758dd0be13c69bd0677b1861e5d29be7b64eb"
                 },
                 {
-                  "line": 2677,
+                  "line": 2714,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43029,7 +43013,7 @@
                   "sourceFingerprint": "df37cadef088a1b61be936f64e7d921599e431e6a4a8b31a723b93da1238753e"
                 },
                 {
-                  "line": 2678,
+                  "line": 2715,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43037,7 +43021,7 @@
                   "sourceFingerprint": "d79ed377225aead84e938fbf4b7d71558cb047c5d90e3f46fa0db86d9b8d38bf"
                 },
                 {
-                  "line": 2685,
+                  "line": 2722,
                   "column": 72,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43045,7 +43029,7 @@
                   "sourceFingerprint": "a1d4c07bdd278d3cfa30f8c033b0dd458a8425b4547ad947a50d5dbdd87e7634"
                 },
                 {
-                  "line": 2689,
+                  "line": 2726,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43053,7 +43037,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2772,
+                  "line": 2809,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43061,7 +43045,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2811,
+                  "line": 2848,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43069,7 +43053,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2877,
+                  "line": 2914,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43077,7 +43061,7 @@
                   "sourceFingerprint": "92ec7dac7197edb75f56d7c16b3a9ef310945219b38bb5fbb20efeb54af38ce6"
                 },
                 {
-                  "line": 2879,
+                  "line": 2916,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43085,7 +43069,7 @@
                   "sourceFingerprint": "41a64de167445e4a6a18af362153d7a10a212ef9d87b1366e26354a4cda6e144"
                 },
                 {
-                  "line": 2902,
+                  "line": 2939,
                   "column": 47,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -43093,7 +43077,7 @@
                   "sourceFingerprint": "52af821d3c4873e6aad34fb6093b03932bad7464189edf5f6606cd56ecf3e482"
                 },
                 {
-                  "line": 2927,
+                  "line": 2964,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43101,7 +43085,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2928,
+                  "line": 2965,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43109,7 +43093,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2930,
+                  "line": 2967,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43117,7 +43101,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2932,
+                  "line": 2969,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43125,7 +43109,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3040,
+                  "line": 3077,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43133,7 +43117,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3050,
+                  "line": 3087,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43141,7 +43125,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3055,
+                  "line": 3092,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43149,7 +43133,7 @@
                   "sourceFingerprint": "2a6713bd3774cc4560c7c908fcb21a262a9ccc75c5e521889b78338be3d87771"
                 },
                 {
-                  "line": 3078,
+                  "line": 3115,
                   "column": 52,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43157,7 +43141,7 @@
                   "sourceFingerprint": "0c8eb82fe83f8ce995143e3c127f5d058360b1bd3997c61c23d85e3e4c57c12b"
                 },
                 {
-                  "line": 3079,
+                  "line": 3116,
                   "column": 50,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43165,7 +43149,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 3091,
+                  "line": 3128,
                   "column": 80,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43173,7 +43157,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3111,
+                  "line": 3148,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43181,7 +43165,7 @@
                   "sourceFingerprint": "088187b36fdbbca09df864349b1bc96c7963a0bafdd19d24219c99c47d45ef54"
                 },
                 {
-                  "line": 3112,
+                  "line": 3149,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43189,7 +43173,7 @@
                   "sourceFingerprint": "f121dad736a672d0675fe733e71591dbce7e3c7674ab91c3d767c2c4a97d96cb"
                 },
                 {
-                  "line": 3113,
+                  "line": 3150,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43197,7 +43181,7 @@
                   "sourceFingerprint": "f121dad736a672d0675fe733e71591dbce7e3c7674ab91c3d767c2c4a97d96cb"
                 },
                 {
-                  "line": 3114,
+                  "line": 3151,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43205,7 +43189,7 @@
                   "sourceFingerprint": "088187b36fdbbca09df864349b1bc96c7963a0bafdd19d24219c99c47d45ef54"
                 },
                 {
-                  "line": 3115,
+                  "line": 3152,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43213,7 +43197,7 @@
                   "sourceFingerprint": "f121dad736a672d0675fe733e71591dbce7e3c7674ab91c3d767c2c4a97d96cb"
                 },
                 {
-                  "line": 3116,
+                  "line": 3153,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43221,7 +43205,7 @@
                   "sourceFingerprint": "088187b36fdbbca09df864349b1bc96c7963a0bafdd19d24219c99c47d45ef54"
                 },
                 {
-                  "line": 3117,
+                  "line": 3154,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43229,7 +43213,7 @@
                   "sourceFingerprint": "ec0f91de6c1ed5761b3a2273d1463a29e69d579d1105e6dd9b5aac6c28b6fd5d"
                 },
                 {
-                  "line": 3132,
+                  "line": 3169,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43237,7 +43221,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 3151,
+                  "line": 3188,
                   "column": 79,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43245,7 +43229,7 @@
                   "sourceFingerprint": "765fb417c60f66aaad1186372d4d0aef88079d8f7a6983bee2f52a40c82a8d82"
                 },
                 {
-                  "line": 3151,
+                  "line": 3188,
                   "column": 89,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43253,7 +43237,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3165,
+                  "line": 3202,
                   "column": 76,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43261,7 +43245,7 @@
                   "sourceFingerprint": "765fb417c60f66aaad1186372d4d0aef88079d8f7a6983bee2f52a40c82a8d82"
                 },
                 {
-                  "line": 3165,
+                  "line": 3202,
                   "column": 86,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43269,7 +43253,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3167,
+                  "line": 3204,
                   "column": 92,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43277,7 +43261,7 @@
                   "sourceFingerprint": "bb9b705546e353bcae3c7b52d6511be106c4aac480a116f623b7263fb22a4c4f"
                 },
                 {
-                  "line": 3169,
+                  "line": 3206,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43285,7 +43269,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3177,
+                  "line": 3214,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43293,7 +43277,7 @@
                   "sourceFingerprint": "197959ca5f15336a27434796ddd32b3ecfc84d1d1d6f539607f87a51927dd6ea"
                 },
                 {
-                  "line": 3222,
+                  "line": 3259,
                   "column": 77,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43301,7 +43285,7 @@
                   "sourceFingerprint": "bb9b705546e353bcae3c7b52d6511be106c4aac480a116f623b7263fb22a4c4f"
                 },
                 {
-                  "line": 3224,
+                  "line": 3261,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43309,7 +43293,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3239,
+                  "line": 3276,
                   "column": 75,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43317,7 +43301,7 @@
                   "sourceFingerprint": "04215a04bf3a40a7d659638fcf6ef133783847822f8d3d57b80d0958990d9fa7"
                 },
                 {
-                  "line": 3241,
+                  "line": 3278,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43325,7 +43309,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3258,
+                  "line": 3295,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43333,7 +43317,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 3263,
+                  "line": 3300,
                   "column": 82,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43341,7 +43325,7 @@
                   "sourceFingerprint": "bbc7a91d45b82628639655921f30f4587193885015267b6b3142612cb39976ad"
                 },
                 {
-                  "line": 3265,
+                  "line": 3302,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43349,7 +43333,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3266,
+                  "line": 3303,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43357,7 +43341,7 @@
                   "sourceFingerprint": "c61a12aacc7ce0cd2f37e8a338be32783a2ca6bd3da273c960b23f655f677d12"
                 },
                 {
-                  "line": 3306,
+                  "line": 3343,
                   "column": 76,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43365,7 +43349,7 @@
                   "sourceFingerprint": "d6436a6f5e59d9840e5169c627aef2bb8c74112046d5dce41b6ac6f712bfbc22"
                 },
                 {
-                  "line": 3308,
+                  "line": 3345,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43373,7 +43357,7 @@
                   "sourceFingerprint": "c61a12aacc7ce0cd2f37e8a338be32783a2ca6bd3da273c960b23f655f677d12"
                 },
                 {
-                  "line": 3312,
+                  "line": 3349,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43381,7 +43365,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3333,
+                  "line": 3370,
                   "column": 11,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -43389,7 +43373,7 @@
                   "sourceFingerprint": "35372e9e3540d4b0d89413d87ce431c2c8619c685d0c811a8ef31cfefdd58b39"
                 },
                 {
-                  "line": 3348,
+                  "line": 3385,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43397,7 +43381,7 @@
                   "sourceFingerprint": "8bd9e5f4453601b7cd6456248a08c159056fda43cef3d70c04d898f8e750f7dd"
                 },
                 {
-                  "line": 3398,
+                  "line": 3435,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43500,7 +43484,7 @@
                   "sourceFingerprint": "a6216b5458fbd50cf5ee69976cf85ea15e6b0be2b65273fd2754154e33942e10"
                 },
                 {
-                  "line": 3333,
+                  "line": 3370,
                   "column": 11,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "a6216b5458fbd50cf5ee69976cf85ea15e6b0be2b65273fd2754154e33942e10"
@@ -44484,7 +44468,7 @@
                   "sourceFingerprint": "35372e9e3540d4b0d89413d87ce431c2c8619c685d0c811a8ef31cfefdd58b39"
                 },
                 {
-                  "line": 2427,
+                  "line": 2457,
                   "column": 70,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44492,7 +44476,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 2437,
+                  "line": 2467,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44500,7 +44484,7 @@
                   "sourceFingerprint": "a70bbc5bb26094a47d0f265b4b6c2b248a57e62c5b0d5db002fb90fba8d20592"
                 },
                 {
-                  "line": 2447,
+                  "line": 2477,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44508,15 +44492,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2449,
-                  "column": 75,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
-                },
-                {
-                  "line": 2483,
+                  "line": 2520,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44524,7 +44500,7 @@
                   "sourceFingerprint": "bf6460f438cc975239e85f24277e34c6233f4b4a4bca75f40a7c72b573e6b8a7"
                 },
                 {
-                  "line": 2484,
+                  "line": 2521,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44532,7 +44508,7 @@
                   "sourceFingerprint": "5685525ba254519276c8d4d0bd6c9a189659ec9b14e0e5b6e49d7e9f0210aa51"
                 },
                 {
-                  "line": 2491,
+                  "line": 2528,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44540,7 +44516,7 @@
                   "sourceFingerprint": "77b74933ebba678f67c461c11a5fe0adebd998e3afb1f63eb49e368d848c94c1"
                 },
                 {
-                  "line": 2537,
+                  "line": 2574,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44548,7 +44524,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 2554,
+                  "line": 2591,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44556,7 +44532,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2579,
+                  "line": 2616,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44564,7 +44540,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2605,
+                  "line": 2642,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44572,7 +44548,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2606,
+                  "line": 2643,
                   "column": 67,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44580,7 +44556,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2617,
+                  "line": 2654,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44588,7 +44564,7 @@
                   "sourceFingerprint": "a70bbc5bb26094a47d0f265b4b6c2b248a57e62c5b0d5db002fb90fba8d20592"
                 },
                 {
-                  "line": 2634,
+                  "line": 2671,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44596,7 +44572,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2636,
+                  "line": 2673,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44604,7 +44580,7 @@
                   "sourceFingerprint": "a813ea88679e5d4f76b3821ac37b292ec06b25e4d66195d4a24fb90e0f146c70"
                 },
                 {
-                  "line": 2674,
+                  "line": 2711,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44612,7 +44588,7 @@
                   "sourceFingerprint": "e23a451802004de2eb053503837a6dc63468c7d95281eb2317f88d80ebcf6c79"
                 },
                 {
-                  "line": 2675,
+                  "line": 2712,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44620,7 +44596,7 @@
                   "sourceFingerprint": "59b960ea13ee8cdad9e40a76712567d2a37afb29a7cad4be53415fc003ce897e"
                 },
                 {
-                  "line": 2676,
+                  "line": 2713,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44628,7 +44604,7 @@
                   "sourceFingerprint": "01adb1e7665849d481bb46bedb3758dd0be13c69bd0677b1861e5d29be7b64eb"
                 },
                 {
-                  "line": 2677,
+                  "line": 2714,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44636,7 +44612,7 @@
                   "sourceFingerprint": "df37cadef088a1b61be936f64e7d921599e431e6a4a8b31a723b93da1238753e"
                 },
                 {
-                  "line": 2678,
+                  "line": 2715,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44644,7 +44620,7 @@
                   "sourceFingerprint": "d79ed377225aead84e938fbf4b7d71558cb047c5d90e3f46fa0db86d9b8d38bf"
                 },
                 {
-                  "line": 2689,
+                  "line": 2726,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44652,7 +44628,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2750,
+                  "line": 2787,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44660,7 +44636,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 2772,
+                  "line": 2809,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44668,7 +44644,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2811,
+                  "line": 2848,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44676,7 +44652,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2816,
+                  "line": 2853,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44684,7 +44660,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2831,
+                  "line": 2868,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44692,7 +44668,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 2873,
+                  "line": 2910,
                   "column": 64,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44700,7 +44676,7 @@
                   "sourceFingerprint": "2391ae740baea4f907b8bcd3778b16ae0a3fc97d4dbfdc3c019aad3dc8bbef22"
                 },
                 {
-                  "line": 2877,
+                  "line": 2914,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44708,7 +44684,7 @@
                   "sourceFingerprint": "92ec7dac7197edb75f56d7c16b3a9ef310945219b38bb5fbb20efeb54af38ce6"
                 },
                 {
-                  "line": 2879,
+                  "line": 2916,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44716,7 +44692,7 @@
                   "sourceFingerprint": "41a64de167445e4a6a18af362153d7a10a212ef9d87b1366e26354a4cda6e144"
                 },
                 {
-                  "line": 2902,
+                  "line": 2939,
                   "column": 47,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -44724,7 +44700,7 @@
                   "sourceFingerprint": "52af821d3c4873e6aad34fb6093b03932bad7464189edf5f6606cd56ecf3e482"
                 },
                 {
-                  "line": 2927,
+                  "line": 2964,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44732,7 +44708,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2928,
+                  "line": 2965,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44740,7 +44716,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2930,
+                  "line": 2967,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44748,7 +44724,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2932,
+                  "line": 2969,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44756,7 +44732,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 2933,
+                  "line": 2970,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44764,7 +44740,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 3016,
+                  "line": 3053,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44772,7 +44748,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 3040,
+                  "line": 3077,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44780,7 +44756,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3050,
+                  "line": 3087,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44788,7 +44764,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3078,
+                  "line": 3115,
                   "column": 52,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44796,7 +44772,7 @@
                   "sourceFingerprint": "0c8eb82fe83f8ce995143e3c127f5d058360b1bd3997c61c23d85e3e4c57c12b"
                 },
                 {
-                  "line": 3079,
+                  "line": 3116,
                   "column": 50,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44804,7 +44780,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 3080,
+                  "line": 3117,
                   "column": 64,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44812,7 +44788,7 @@
                   "sourceFingerprint": "ab6675159a7fc26d98f0638ab77742d9d60d45a9ee6b7735dc91f2d6a5b3d983"
                 },
                 {
-                  "line": 3083,
+                  "line": 3120,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44820,7 +44796,7 @@
                   "sourceFingerprint": "f062f2405b647a3b695141ccfb1f5032ba1466f89109c957c6f3013242548e54"
                 },
                 {
-                  "line": 3085,
+                  "line": 3122,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44828,7 +44804,7 @@
                   "sourceFingerprint": "82c2616d26d5acf62d97726e9c687d8e9711cf297486cb49ee8c8e3a4fc43075"
                 },
                 {
-                  "line": 3091,
+                  "line": 3128,
                   "column": 80,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44836,7 +44812,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3111,
+                  "line": 3148,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44844,7 +44820,7 @@
                   "sourceFingerprint": "088187b36fdbbca09df864349b1bc96c7963a0bafdd19d24219c99c47d45ef54"
                 },
                 {
-                  "line": 3112,
+                  "line": 3149,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44852,7 +44828,7 @@
                   "sourceFingerprint": "f121dad736a672d0675fe733e71591dbce7e3c7674ab91c3d767c2c4a97d96cb"
                 },
                 {
-                  "line": 3113,
+                  "line": 3150,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44860,7 +44836,7 @@
                   "sourceFingerprint": "f121dad736a672d0675fe733e71591dbce7e3c7674ab91c3d767c2c4a97d96cb"
                 },
                 {
-                  "line": 3114,
+                  "line": 3151,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44868,7 +44844,7 @@
                   "sourceFingerprint": "088187b36fdbbca09df864349b1bc96c7963a0bafdd19d24219c99c47d45ef54"
                 },
                 {
-                  "line": 3115,
+                  "line": 3152,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44876,7 +44852,7 @@
                   "sourceFingerprint": "f121dad736a672d0675fe733e71591dbce7e3c7674ab91c3d767c2c4a97d96cb"
                 },
                 {
-                  "line": 3116,
+                  "line": 3153,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44884,7 +44860,7 @@
                   "sourceFingerprint": "088187b36fdbbca09df864349b1bc96c7963a0bafdd19d24219c99c47d45ef54"
                 },
                 {
-                  "line": 3117,
+                  "line": 3154,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44892,7 +44868,7 @@
                   "sourceFingerprint": "ec0f91de6c1ed5761b3a2273d1463a29e69d579d1105e6dd9b5aac6c28b6fd5d"
                 },
                 {
-                  "line": 3132,
+                  "line": 3169,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44900,7 +44876,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 3151,
+                  "line": 3188,
                   "column": 89,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44908,7 +44884,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3165,
+                  "line": 3202,
                   "column": 86,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44916,7 +44892,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3169,
+                  "line": 3206,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44924,7 +44900,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3177,
+                  "line": 3214,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44932,7 +44908,7 @@
                   "sourceFingerprint": "197959ca5f15336a27434796ddd32b3ecfc84d1d1d6f539607f87a51927dd6ea"
                 },
                 {
-                  "line": 3224,
+                  "line": 3261,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44940,7 +44916,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3241,
+                  "line": 3278,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44948,7 +44924,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3258,
+                  "line": 3295,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44956,7 +44932,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 3265,
+                  "line": 3302,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44964,7 +44940,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3266,
+                  "line": 3303,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44972,7 +44948,7 @@
                   "sourceFingerprint": "c61a12aacc7ce0cd2f37e8a338be32783a2ca6bd3da273c960b23f655f677d12"
                 },
                 {
-                  "line": 3278,
+                  "line": 3315,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44980,7 +44956,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 3306,
+                  "line": 3343,
                   "column": 53,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44988,7 +44964,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3308,
+                  "line": 3345,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44996,7 +44972,7 @@
                   "sourceFingerprint": "c61a12aacc7ce0cd2f37e8a338be32783a2ca6bd3da273c960b23f655f677d12"
                 },
                 {
-                  "line": 3312,
+                  "line": 3349,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -45004,7 +44980,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3313,
+                  "line": 3350,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -45012,7 +44988,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 3333,
+                  "line": 3370,
                   "column": 11,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -45020,7 +44996,7 @@
                   "sourceFingerprint": "35372e9e3540d4b0d89413d87ce431c2c8619c685d0c811a8ef31cfefdd58b39"
                 },
                 {
-                  "line": 3348,
+                  "line": 3385,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -45028,7 +45004,7 @@
                   "sourceFingerprint": "8bd9e5f4453601b7cd6456248a08c159056fda43cef3d70c04d898f8e750f7dd"
                 },
                 {
-                  "line": 3366,
+                  "line": 3403,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -45036,7 +45012,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 3384,
+                  "line": 3421,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -45044,7 +45020,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 3398,
+                  "line": 3435,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -45052,7 +45028,7 @@
                   "sourceFingerprint": "9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6"
                 },
                 {
-                  "line": 3406,
+                  "line": 3443,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -45060,7 +45036,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 3477,
+                  "line": 3514,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -114146,6 +114122,7 @@
         "js/core/scenario/bundle_loader.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"getScenarioRegistryEntries\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|71fdf886c88e273496a601d446af29369ed54ae552a7b86c23c2ddcc33779560",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|renderer|P4.3|state-alias-escape|unsupported|scenarioDataGenerationReason|9e226982a77afbd82c722699229745084ae4f9437e688b2d9740568a1412de08",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|renderer|P4.3|state-alias-escape|unsupported|scenarioDataGeneration|3dca862c4f2c44b73ff0bf58d3a1071ea9dc7a302e4e2057b721dc5cc99855a4",
+        "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|*|093dc698c06786ac082fb762244829a5b506f036efc8ce5cde803bab4db22706",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|*|2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|*|2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|*|2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7",
@@ -114179,6 +114156,7 @@
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|runtimeChunkLoadState|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|runtimeChunkLoadState|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|runtimeChunkLoadState|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",
+        "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|runtimeChunkLoadState|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|runtimeChunkLoadState|c61a12aacc7ce0cd2f37e8a338be32783a2ca6bd3da273c960b23f655f677d12",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|runtimeChunkLoadState|cd42404d52ad55ccfa9aca4adc828aa5800ad9d385a0671fbcbf724118320619",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-local-alias\",\"name\":\"runtimeState\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[\"explicitRuntimeState\",\"state\"],\"aliasOperators\":[\"||\"]}|scenario|P4.2|state-alias-escape|unsupported|runtimeChunkLoadState|d2afab4f3121a535ec044b40c4c913db548d010b394b3404d27e57f950fa909b",
@@ -114200,6 +114178,7 @@
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|73acbc4c7be9217b3d72f9f2129623495ae284cae8762e38c393c2008e31828a",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|8fe472b72ff9157a2bad073d11e7c0f275e7efb73425a28ae16cc6a2b6b72531",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|951b74e59cc5aac81efb71fbc4f5b70f6ea055feef3e8f29dca4c1517abb178c",
+        "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",
         "js/core/scenario/chunk_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioChunkRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|9db3116a2b7ca26bc512ce61b4fd055d13e4631433b7f25b27483f8f257dcce6",

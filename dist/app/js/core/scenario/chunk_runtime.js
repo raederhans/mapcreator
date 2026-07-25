@@ -2389,7 +2389,35 @@ function createScenarioChunkRuntimeController({
     } = {}
   ) {
     if (!scenarioSupportsChunkedRuntime(bundle?.manifest)) return null;
+    const bundleScenarioId = getScenarioBundleId(bundle);
+    ensureRuntimeChunkLoadState();
+    const prewarmContinuationState =
+      captureScenarioChunkLoadStateContinuation(runtimeState);
+    const prewarmLoadStateGeneration =
+      prewarmContinuationState.loadStateGeneration;
+    const prewarmScenarioApplyRequestId =
+      prewarmContinuationState.continuationScenarioApplyRequestId;
+    const isPrewarmContinuationCurrent = (callbackPhase) => {
+      if (isScenarioChunkLoadStateContinuationCurrent(
+        prewarmContinuationState,
+        {
+          scenarioId: bundleScenarioId,
+          scenarioApplyRequestId: prewarmScenarioApplyRequestId,
+        },
+      )) return true;
+      recordScenarioApplyStaleCallbackSkipped({
+        callbackPhase,
+        reason: "coarse-prewarm",
+        scenarioId: bundleScenarioId,
+        scenarioApplyRequestId: prewarmScenarioApplyRequestId,
+        extra: { loadStateGeneration: prewarmLoadStateGeneration },
+      });
+      return false;
+    };
     await ensureScenarioChunkRegistryLoaded(bundle, { d3Client });
+    if (!isPrewarmContinuationCurrent("coarse-prewarm-after-registry")) {
+      return null;
+    }
     const visibleLayers = getVisibleScenarioChunkLayers({
       includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
       showWaterRegions: normalizeScenarioPerformanceHints(bundle.manifest).waterRegionsDefault !== false,
@@ -2422,8 +2450,10 @@ function createScenarioChunkRuntimeController({
     await Promise.all(
       requiredChunksToLoad.map((chunk) => loadScenarioChunkPayload(bundle, chunk, { d3Client }))
     );
+    if (!isPrewarmContinuationCurrent("coarse-prewarm-after-load")) {
+      return null;
+    }
     bundle.chunkPreloaded = true;
-    const bundleScenarioId = getScenarioBundleId(bundle);
     if (bundleScenarioId && bundleScenarioId === normalizeScenarioId(runtimeState.activeScenarioId)) {
       if (!shouldCommitScenarioCoarsePrewarmImmediately(bundle)) {
         return null;
@@ -2446,13 +2476,18 @@ function createScenarioChunkRuntimeController({
         scenarioId: bundleScenarioId,
         loadState,
       });
-      const scenarioApplyRequestId = resolveScenarioChunkApplyRequestId({ loadState });
-      commitScenarioChunkSelectionState(runtimeState, {
-        selectionVersion: loadState.selectionVersion,
-        scenarioApplyEpoch,
-        scenarioApplyRequestId,
-        lastSelection: loadState.lastSelection,
-      });
+      const scenarioApplyRequestId = prewarmScenarioApplyRequestId;
+      const committedSelectionVersion = commitScenarioChunkSelectionState(
+        runtimeState,
+        {
+          selectionVersion: loadState.selectionVersion,
+          scenarioApplyEpoch,
+          scenarioApplyRequestId,
+          lastSelection: loadState.lastSelection,
+        },
+        { expectedLoadStateGeneration: prewarmLoadStateGeneration },
+      );
+      if (committedSelectionVersion === false) return null;
       commitScenarioChunkPayloadEntriesState(
         runtimeState,
         coarseSelection.requiredChunks
@@ -2473,6 +2508,8 @@ function createScenarioChunkRuntimeController({
       patchScenarioChunkLoadState(runtimeState, {
         layerSelectionSignatures: layerSignatures,
         mergedLayerPayloadCache: mergedLayerPayloads,
+      }, {
+        expectedLoadStateGeneration: prewarmLoadStateGeneration,
       });
       const mergedLayerResult = applyMergedScenarioChunkLayerPayloads(mergedLayerPayloads, { renderNow: false });
       const politicalPayloadChanged = applyScenarioPoliticalChunkPayload(bundle, mergedLayerPayloads.political || null, {

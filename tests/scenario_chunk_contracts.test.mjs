@@ -4331,6 +4331,216 @@ test("coarse prewarm keeps complete political payload for initial promotion", as
   assert.deepEqual(capturedLandDataFeatureIds, ["full-land-a", "full-land-b", "full-land-c"]);
 });
 
+function createCoarsePrewarmContinuationHarness({
+  currentScenarioApplyRequestId = 1,
+} = {}) {
+  const chunkLoadStarted = createDeferredPromise();
+  const chunkLoadResult = createDeferredPromise();
+  const politicalChunk = {
+    id: "political.coarse.world",
+    layer: "political",
+    lod: "coarse",
+    url: "political.coarse.world.json",
+    bounds: [-180, -90, 180, 90],
+    featureCount: 1,
+  };
+  const stalePayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "old-prewarm", properties: {}, geometry: null },
+    ],
+  };
+  const currentPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "current-request", properties: {}, geometry: null },
+    ],
+  };
+  const bundle = {
+    manifest: {
+      scenario_id: "scenario_a",
+      summary: { feature_count: 22502 },
+      render_budget_hints: {},
+      performance_hints: {},
+    },
+    chunkRegistry: {
+      chunks: [politicalChunk],
+      byLayer: { political: [politicalChunk] },
+    },
+    contextLodManifest: {},
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+    chunkPayloadCacheById: {},
+  };
+  const targetState = {
+    activeScenarioId: "scenario_a",
+    currentScenarioApplyRequestId,
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+    zoomTransform: { k: 1 },
+  };
+  let promotionRefreshCalls = 0;
+  const controller = createScenarioChunkRuntimeController({
+    runtimeState: targetState,
+    getSearchParams: () => new URLSearchParams(),
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+    normalizeScenarioPerformanceHints: () => ({
+      waterRegionsDefault: false,
+      specialRegionsDefault: false,
+      scenarioReliefOverlaysDefault: false,
+      scenarioAtlantropaDefault: false,
+    }),
+    normalizeScenarioFeatureCollection: (payload) => payload,
+    getScenarioFeatureCollectionIdentityList: (payload) => (
+      Array.isArray(payload?.features)
+        ? payload.features.map((feature) => String(feature?.id || ""))
+        : []
+    ),
+    areScenarioFeatureCollectionsEquivalent: () => false,
+    getScenarioDefaultCountryCode: () => "",
+    getScenarioBundleId: (candidate) => String(candidate?.manifest?.scenario_id || ""),
+    getCachedScenarioBundle: () => bundle,
+    getVisibleScenarioChunkLayers: () => ["political"],
+    selectScenarioChunks: ({ viewportBbox }) => ({
+      scenarioId: "scenario_a",
+      requiredChunks: [politicalChunk],
+      optionalChunks: [],
+      evictableChunkIds: [],
+      viewportBbox,
+      selectedFeatureCountSum: 1,
+      selectedVisibleFeatureCountSum: 1,
+      selectedPoliticalFeatureCountSum: 1,
+      selectedPoliticalVisibleFeatureCountSum: 1,
+      politicalVisibleFeatureSubsetSignature: "political.coarse.world:0",
+    }),
+    mergeScenarioChunkPayloads: (_layerKey, payloads) => ({
+      type: "FeatureCollection",
+      features: payloads.flatMap((payload) => payload?.features || []),
+    }),
+    mergeScenarioChunkPayloadsForViewport,
+    normalizeScenarioRenderBudgetHints: (value) => value || {},
+    loadScenarioChunkFile: async () => {
+      chunkLoadStarted.resolve();
+      return chunkLoadResult.promise;
+    },
+    scenarioSupportsChunkedRuntime: () => true,
+    scenarioBundleUsesChunkedLayer: (_bundle, layerKey = "") => !layerKey || layerKey === "political",
+    getScenarioOptionalLayerConfig: () => null,
+    syncScenarioLocalizationState: () => {},
+    refreshMapDataForScenarioChunkPromotion: () => {
+      promotionRefreshCalls += 1;
+    },
+    flushRenderBoundary: () => {},
+    recordScenarioPerfMetric: () => {},
+    ensureScenarioChunkRegistryLoaded: async () => {},
+  });
+
+  return {
+    bundle,
+    controller,
+    currentPayload,
+    targetState,
+    awaitChunkLoadStarted: () => chunkLoadStarted.promise,
+    getPromotionRefreshCalls: () => promotionRefreshCalls,
+    resolveChunkLoad: () => chunkLoadResult.resolve({ payload: stalePayload }),
+  };
+}
+
+test("coarse prewarm cannot commit after same-scenario runtime reset supersedes its request", async () => {
+  const {
+    bundle,
+    controller,
+    currentPayload,
+    targetState,
+    awaitChunkLoadStarted,
+    getPromotionRefreshCalls,
+    resolveChunkLoad,
+  } = createCoarsePrewarmContinuationHarness();
+
+  const stalePrewarm = controller.preloadScenarioCoarseChunks(bundle);
+  await awaitChunkLoadStarted();
+  const staleLoadState = targetState.runtimeChunkLoadState;
+  const staleGeneration = staleLoadState.generation;
+
+  controller.resetScenarioChunkRuntimeState({ scenarioId: "scenario_a" });
+  targetState.currentScenarioApplyRequestId = 2;
+  targetState.scenarioPoliticalChunkData = currentPayload;
+  targetState.scenarioPoliticalVisibleChunkData = null;
+  targetState.scenarioDataGeneration = 7;
+  targetState.scenarioDataGenerationReason = "current-request";
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  const currentActiveScenarioChunks = targetState.activeScenarioChunks;
+  const currentLoadStateSnapshot = structuredClone(currentLoadState);
+  const currentActiveScenarioChunksSnapshot = structuredClone(currentActiveScenarioChunks);
+
+  resolveChunkLoad();
+  const result = await stalePrewarm;
+
+  assert.equal(result, null);
+  assert.notEqual(currentLoadState, staleLoadState);
+  assert.notEqual(currentLoadState.generation, staleGeneration);
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.deepEqual(currentLoadState, currentLoadStateSnapshot);
+  assert.equal(targetState.activeScenarioChunks, currentActiveScenarioChunks);
+  assert.deepEqual(currentActiveScenarioChunks, currentActiveScenarioChunksSnapshot);
+  assert.equal(targetState.currentScenarioApplyRequestId, 2);
+  assert.equal(targetState.scenarioPoliticalChunkData, currentPayload);
+  assert.equal(targetState.scenarioPoliticalVisibleChunkData, null);
+  assert.equal(targetState.scenarioDataGeneration, 7);
+  assert.equal(targetState.scenarioDataGenerationReason, "current-request");
+  assert.equal(getPromotionRefreshCalls(), 0);
+  assert.equal(bundle.chunkPreloaded, undefined);
+});
+
+test("coarse prewarm cannot commit after its scenario apply request is superseded", async () => {
+  const {
+    bundle,
+    controller,
+    currentPayload,
+    targetState,
+    awaitChunkLoadStarted,
+    getPromotionRefreshCalls,
+    resolveChunkLoad,
+  } = createCoarsePrewarmContinuationHarness();
+
+  const stalePrewarm = controller.preloadScenarioCoarseChunks(bundle);
+  await awaitChunkLoadStarted();
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  const currentLoadStateGeneration = currentLoadState.generation;
+  const currentActiveScenarioChunks = targetState.activeScenarioChunks;
+  currentActiveScenarioChunks.scenarioApplyRequestId = 2;
+  const currentActiveScenarioChunksSnapshot = structuredClone(currentActiveScenarioChunks);
+  currentLoadState.pendingReason = "current-request";
+  currentLoadState.layerSelectionSignatures = { current: "signature" };
+  currentLoadState.mergedLayerPayloadCache = { current: currentPayload };
+  targetState.currentScenarioApplyRequestId = 2;
+  targetState.scenarioPoliticalChunkData = currentPayload;
+  targetState.scenarioPoliticalVisibleChunkData = null;
+  targetState.scenarioDataGeneration = 7;
+  targetState.scenarioDataGenerationReason = "current-request";
+
+  resolveChunkLoad();
+  const result = await stalePrewarm;
+
+  assert.equal(result, null);
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.equal(currentLoadState.generation, currentLoadStateGeneration);
+  assert.equal(currentLoadState.pendingReason, "current-request");
+  assert.deepEqual(currentLoadState.layerSelectionSignatures, { current: "signature" });
+  assert.deepEqual(currentLoadState.mergedLayerPayloadCache, { current: currentPayload });
+  assert.equal(targetState.activeScenarioChunks, currentActiveScenarioChunks);
+  assert.deepEqual(currentActiveScenarioChunks, currentActiveScenarioChunksSnapshot);
+  assert.equal(targetState.currentScenarioApplyRequestId, 2);
+  assert.equal(targetState.scenarioPoliticalChunkData, currentPayload);
+  assert.equal(targetState.scenarioPoliticalVisibleChunkData, null);
+  assert.equal(targetState.scenarioDataGeneration, 7);
+  assert.equal(targetState.scenarioDataGenerationReason, "current-request");
+  assert.equal(getPromotionRefreshCalls(), 0);
+  assert.equal(bundle.chunkPreloaded, undefined);
+});
+
 test("zoom-end retained political detail chunks persist through exact-after-settle within TTL", async () => {
   const {
     applyZoomEndChunkProtectionToSelection,
