@@ -338,6 +338,7 @@ test("regression policy blocks runtime regressions and keeps tooling-only deltas
   assert.throws(() => normalizePerfRegressionMode("ignore"), /regression mode/);
 });
 
+// 这组用例共同锁住 allowlist 与重试上限，防止把产品启动错误误归为 runner 网络抖动。
 test("explicit Chromium network-change failures get one isolated retry", async () => {
   const attempts = [];
   const result = await runWithTransientPerfNetworkRetry(async () => {

@@ -39,6 +39,7 @@ const MIN_GATE_WARMUPS = 3;
 const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;
 const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;
 const PERF_REGRESSION_MODES = new Set(["enforce", "diagnostic"]);
+// 这里只收录已从 Chromium requestfailed 证据确认的瞬时网络错误；命中后最多重跑一次，第二次失败原样上抛。
 const TRANSIENT_PERF_NETWORK_FAILURE_CODES = Object.freeze([
   "net::ERR_NETWORK_CHANGED",
   "net::ERR_CONNECTION_RESET",
@@ -191,6 +192,7 @@ async function ensureDir(dirPath) {
 }
 
 async function readJson(filePath, fallback = null) {
+  // 此宽松入口只读取可选的 active-server 元数据；缺失或损坏会按“没有可复用 server”处理，再走完整启服流程。
   try {
     return JSON.parse(await fs.readFile(filePath, "utf8"));
   } catch (_error) {
@@ -995,6 +997,7 @@ async function waitForPerfSnapshotReady(
 }
 
 async function measureScenarioRun(browser, serverLeaseRef, scenarioId, options) {
+  // 每次尝试都重新校验 server lease，让一次网络重试同时具备探活和按需重启能力。
   return runWithTransientPerfNetworkRetry(
     async () => {
       serverLeaseRef.current = await ensureMeasurementServer(serverLeaseRef.current);
