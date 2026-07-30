@@ -57,10 +57,16 @@ test("startup ready handoff owner owns all post-ready task keys", () => {
   assert.equal(ownerSource.includes("schedulePostReadyCityWarmup"), false);
 });
 
-test("startup ready handoff owner stays dependency-injected", () => {
+test("startup ready handoff owner uses target-first actions without importing global state", () => {
   const ownerSource = readRepoFile("js", "bootstrap", "startup_ready_handoff.js");
+  const coreStateImports = [...ownerSource.matchAll(
+    /from\s+["']([^"']*core\/state(?:\.js|\/[^"']+))["']/g,
+  )].map((match) => match[1]);
 
-  assert.equal(/from\s+["'][^"']*core\/state/.test(ownerSource), false);
+  assert.deepEqual(coreStateImports, [
+    "../core/state/actions/scenario_chunk_runtime_actions.js",
+  ]);
+  assert.ok(ownerSource.includes("patchScenarioChunkLoadState(targetRuntime,"));
   assert.equal(/from\s+["'][^"']*map_renderer\/public\.js["']/.test(ownerSource), false);
   assert.equal(/from\s+["'][^"']*startup_data_pipeline\.js["']/.test(ownerSource), false);
   assert.ok(ownerSource.includes("runtimeState,"));
