@@ -24,6 +24,7 @@ jobs:
         with:
           fetch-depth: 50
 
+      # 分类结果同时决定是否测量与是否阻断回归，生成的审计文件是后续复核这两个决定的真相源。
       - name: Classify perf-relevant changes
         id: classify
         shell: pwsh
@@ -178,6 +179,7 @@ jobs:
             $reason = 'skip npm run perf:gate because no perf-related classifier rules matched'
           }
 
+          # 三个 SHA 分别绑定比较基线、事件目标和实际 checkout，避免审计记录把 GitHub 事件身份混为一谈。
           $audit = [ordered]@{
             base_sha = $baseSha
             diff_head_sha = $diffHeadSha
@@ -294,6 +296,7 @@ jobs:
           }
 
           try {
+            # base 代码搭配 candidate 的测量工具、依赖与场景输入，使同 runner 对比只保留产品代码差异。
             $governedHeadInputs = @(
               'package.json'
               'package-lock.json'
@@ -326,6 +329,7 @@ jobs:
               Pop-Location
             }
           } finally {
+            # 临时 base worktree 删除前先复制服务日志和浏览器诊断，失败证据才能随 artifact 保留下来。
             $baseEvidenceSources = @(
               (Join-Path $baseWorktree '.runtime/tmp/perf-baseline-dev-server.out.log')
               (Join-Path $baseWorktree '.runtime/tmp/perf-baseline-dev-server.err.log')
