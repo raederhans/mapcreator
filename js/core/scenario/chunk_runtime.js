@@ -401,6 +401,18 @@ function createScenarioChunkRuntimeController({
     if (!normalizedScenarioId || normalizedScenarioId !== normalizeScenarioId(runtimeState?.activeScenarioId)) {
       return false;
     }
+    const currentContinuation =
+      captureScenarioChunkLoadStateContinuation(runtimeState);
+    const hasSupersedingScenarioApplyRequest =
+      currentContinuation.latestScenarioApplyRequestId
+      > currentContinuation.currentScenarioApplyRequestId;
+    if (
+      hasSupersedingScenarioApplyRequest
+      && currentContinuation.latestScenarioApplyTargetId
+      && currentContinuation.latestScenarioApplyTargetId !== normalizedScenarioId
+    ) {
+      return false;
+    }
     const expectedRequestId = Math.max(0, Number(scenarioApplyRequestId || 0));
     const currentRequestId = getCurrentScenarioApplyRequestId();
     return !(expectedRequestId > 0 && currentRequestId > 0 && expectedRequestId !== currentRequestId);
@@ -534,10 +546,25 @@ function createScenarioChunkRuntimeController({
       currentState.loadStateGeneration
       !== Math.max(0, Number(continuationState?.loadStateGeneration || 0))
     ) return false;
-    const normalizedScenarioId = normalizeScenarioId(scenarioId);
+    const normalizedScenarioId = normalizeScenarioId(
+      scenarioId || continuationState?.activeScenarioId,
+    );
     if (
       normalizedScenarioId
       && currentState.activeScenarioId !== normalizedScenarioId
+    ) return false;
+    if (
+      normalizedScenarioId
+      && currentState.scenarioApplyInFlight
+      && currentState.currentScenarioApplyTargetId
+      && currentState.currentScenarioApplyTargetId !== normalizedScenarioId
+    ) return false;
+    if (
+      normalizedScenarioId
+      && currentState.latestScenarioApplyRequestId
+        > currentState.currentScenarioApplyRequestId
+      && currentState.latestScenarioApplyTargetId
+      && currentState.latestScenarioApplyTargetId !== normalizedScenarioId
     ) return false;
     if (
       currentState.currentScenarioApplyRequestId
@@ -1388,7 +1415,11 @@ function createScenarioChunkRuntimeController({
     });
   }
 
-  function isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId = "", runId = 0 } = {}) {
+  function resolvePendingScenarioChunkPromotionOwnedScenarioId(
+    pendingPromotion,
+    loadState,
+    { scenarioId = "", runId = 0 } = {},
+  ) {
     if (!pendingPromotion || typeof pendingPromotion !== "object") return false;
     if (runtimeState.runtimeChunkLoadState !== loadState) return false;
     if (
@@ -1401,34 +1432,24 @@ function createScenarioChunkRuntimeController({
     ) return false;
     const normalizedScenarioId = normalizeScenarioId(scenarioId || pendingPromotion.scenarioId || runtimeState.activeScenarioId);
     if (!normalizedScenarioId || normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) return false;
-    if (!isScenarioApplyRequestCurrentForScenario({
-      scenarioId: normalizedScenarioId,
-      scenarioApplyRequestId: pendingPromotion.scenarioApplyRequestId,
-    })) return false;
     if (loadState.pendingPromotion && loadState.pendingPromotion !== pendingPromotion) return false;
     const pendingSelectionVersion = Math.max(0, Number(pendingPromotion.selectionVersion || 0));
     const currentSelectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
     if (pendingSelectionVersion > 0 && currentSelectionVersion > 0 && pendingSelectionVersion !== currentSelectionVersion) return false;
-    return true;
+    return normalizedScenarioId;
   }
 
-  function canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId = "", runId = 0 } = {}) {
-    if (!pendingPromotion || typeof pendingPromotion !== "object") return false;
-    if (runtimeState.runtimeChunkLoadState !== loadState) return false;
-    const normalizedScenarioId = normalizeScenarioId(scenarioId || pendingPromotion.scenarioId || runtimeState.activeScenarioId);
-    if (!normalizedScenarioId || normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) return false;
+  function isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId = "", runId = 0 } = {}) {
+    const ownedScenarioId = resolvePendingScenarioChunkPromotionOwnedScenarioId(
+      pendingPromotion,
+      loadState,
+      { scenarioId, runId },
+    );
+    if (!ownedScenarioId) return false;
     if (!isScenarioApplyRequestCurrentForScenario({
-      scenarioId: normalizedScenarioId,
+      scenarioId: ownedScenarioId,
       scenarioApplyRequestId: pendingPromotion.scenarioApplyRequestId,
     })) return false;
-    if (
-      runId > 0
-      && (
-        promotionCommitRunId !== runId
-        || Math.max(0, Number(loadState.promotionCommitRunId || 0))
-          !== runId
-      )
-    ) return false;
     return true;
   }
 
@@ -1534,6 +1555,38 @@ function createScenarioChunkRuntimeController({
       captureScenarioChunkPromotionRootState(runtimeState);
     const promotionContinuationState =
       captureScenarioChunkLoadStateContinuation(runtimeState);
+    const canRollbackPromotionContinuation = () => {
+      if (runtimeState.runtimeChunkLoadState !== loadState) return false;
+      if (
+        runId > 0
+        && (
+          promotionCommitRunId !== runId
+          || Math.max(0, Number(loadState.promotionCommitRunId || 0))
+            !== runId
+        )
+      ) return false;
+      if (loadState.pendingPromotion !== pendingPromotion) return false;
+      const currentContinuationState =
+        captureScenarioChunkLoadStateContinuation(runtimeState);
+      if (currentContinuationState.activeScenarioId !== scenarioId) return false;
+      if (promotionContinuationState.activeScenarioId !== scenarioId) return false;
+      const loadStateGeneration = Number(loadState.generation);
+      const continuationLoadStateGeneration = Number(
+        promotionContinuationState.loadStateGeneration,
+      );
+      if (
+        !Number.isSafeInteger(loadStateGeneration)
+        || loadStateGeneration < 0
+        || !Number.isSafeInteger(continuationLoadStateGeneration)
+        || continuationLoadStateGeneration < 0
+        || loadStateGeneration !== continuationLoadStateGeneration
+      ) return false;
+      const continuationRequestId = Math.max(
+        0,
+        Number(promotionContinuationState.continuationScenarioApplyRequestId || 0),
+      );
+      return promotionScenarioApplyRequestId === continuationRequestId;
+    };
     const restoreScenarioDataGenerationSnapshot = () => {
       restoreScenarioChunkPromotionRootState(runtimeState, promotionRootSnapshot);
     };
@@ -1576,7 +1629,7 @@ function createScenarioChunkRuntimeController({
       // 返回后还要重新验证 current，防止旧 run 在新 selection 之后继续落地。
       await yieldToFrame();
       if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
-        if (canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })) {
+        if (canRollbackPromotionContinuation()) {
           restoreMergedLayerRuntimeSnapshot(mergedLayerSnapshot);
           restoreScenarioDataGenerationSnapshot();
         }
@@ -1664,7 +1717,7 @@ function createScenarioChunkRuntimeController({
       // cannot be flushed while a newer promotion run is taking ownership.
       await yieldToFrame();
       if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
-        if (canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })) {
+        if (canRollbackPromotionContinuation()) {
           restoreMergedLayerRuntimeSnapshot(mergedLayerSnapshot);
           restoreScenarioChunkPromotionRootState(runtimeState, promotionRootSnapshot);
           if (politicalPayloadChanged) {
@@ -1824,17 +1877,7 @@ function createScenarioChunkRuntimeController({
       });
       return true;
     } catch (error) {
-      const rollbackIsCurrent = (
-        isScenarioChunkLoadStateContinuationCurrent(
-          promotionContinuationState,
-          {
-            scenarioId,
-            scenarioApplyRequestId: promotionScenarioApplyRequestId,
-          },
-        )
-        && promotionCommitRunId === runId
-        && Math.max(0, Number(loadState.promotionCommitRunId || 0)) === runId
-      );
+      const rollbackIsCurrent = canRollbackPromotionContinuation();
       if (rollbackIsCurrent) {
         try {
           restoreMergedLayerRuntimeSnapshot(mergedLayerSnapshot);
@@ -2549,7 +2592,31 @@ function createScenarioChunkRuntimeController({
     } = {}
   ) {
     if (!scenarioSupportsChunkedRuntime(bundle?.manifest)) return null;
+    const bundleScenarioId = getScenarioBundleId(bundle);
+    ensureRuntimeChunkLoadState();
+    const detailPrewarmContinuationState =
+      captureScenarioChunkLoadStateContinuation(runtimeState);
+    const detailPrewarmLoadStateGeneration =
+      detailPrewarmContinuationState.loadStateGeneration;
+    const detailPrewarmScenarioApplyRequestId =
+      detailPrewarmContinuationState.continuationScenarioApplyRequestId;
     await ensureScenarioChunkRegistryLoaded(bundle, { d3Client });
+    if (!isScenarioChunkLoadStateContinuationCurrent(
+      detailPrewarmContinuationState,
+      {
+        scenarioId: bundleScenarioId,
+        scenarioApplyRequestId: detailPrewarmScenarioApplyRequestId,
+      },
+    )) {
+      recordScenarioApplyStaleCallbackSkipped({
+        callbackPhase: "detail-prewarm-after-registry",
+        reason: "focus-country-detail-prewarm",
+        scenarioId: bundleScenarioId,
+        scenarioApplyRequestId: detailPrewarmScenarioApplyRequestId,
+        extra: { loadStateGeneration: detailPrewarmLoadStateGeneration },
+      });
+      return null;
+    }
     const focusCountry = resolveScenarioChunkFocusCountry(bundle);
     if (!focusCountry) return null;
     const politicalChunks = Array.isArray(bundle?.chunkRegistry?.byLayer?.political)

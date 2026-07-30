@@ -46,6 +46,7 @@ import {
   buildLegacyStateWriterSemanticAuthority,
   buildStateWriterBindingGrants,
   buildStateWriterPolicySnapshot,
+  buildProgressState,
   buildStableStateBindingIdentity,
   discoverCandidatePaths,
   discoverStateWriterBindingsForSource,
@@ -3613,6 +3614,41 @@ test("same-phase policy rebuild refreshes live caller evidence", () => {
     ledger.entries[0].recordedInPhase,
     entry.recordedInPhase,
   );
+});
+
+test("same-phase policy rebuild preserves the committed progress checkpoint", () => {
+  const committedCheckpoint = Object.freeze({
+    phase: "P4.2b",
+    productionLegacyDirectFiles: 75,
+    productionLegacyMemberships: 1011,
+    productionLegacyDynamicSites: 138,
+    productionLegacyAliasSites: 218,
+    productionLegacyAmbiguousSites: 621,
+    productionLegacyUnsupportedSites: 4079,
+  });
+  const progress = buildProgressState({
+    phase: "P4.2b",
+    currentMetrics: {
+      ...committedCheckpoint,
+      productionLegacyUnsupportedSites: 4075,
+    },
+    previousPolicy: {
+      progress: {
+        checkpoints: [committedCheckpoint],
+      },
+    },
+    refreshP4Baseline: false,
+    retiredLegacySemanticAuthority: {
+      bindings: [],
+      memberships: [],
+      writes: [],
+      sites: [],
+    },
+    callerToActionLedger: null,
+  });
+
+  assert.equal(progress.latestPhase, "P4.2b");
+  assert.deepEqual(progress.checkpoints, [committedCheckpoint]);
 });
 
 test("P4.2a caller proofs remain compatible while later entries require exact mutation-site evidence", () => {

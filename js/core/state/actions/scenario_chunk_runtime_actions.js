@@ -80,6 +80,22 @@ function getLoadStateGeneration(target) {
   );
 }
 
+function readValidLoadStateGeneration(target) {
+  if (
+    !target?.runtimeChunkLoadState
+    || typeof target.runtimeChunkLoadState !== "object"
+    || Array.isArray(target.runtimeChunkLoadState)
+  ) {
+    return null;
+  }
+  const rawGeneration = target.runtimeChunkLoadState.generation;
+  if (typeof rawGeneration !== "number") return null;
+  const generation = Number(rawGeneration);
+  return Number.isSafeInteger(generation) && generation >= 0
+    ? generation
+    : null;
+}
+
 function advanceLoadStateGeneration(target, currentGeneration = getLoadStateGeneration(target)) {
   const current = normalizeLoadStateGeneration(
     currentGeneration,
@@ -127,12 +143,17 @@ function isExpectedLoadStateGenerationCurrent(
   target,
   expectedLoadStateGeneration,
 ) {
-  return (
+  if (
     expectedLoadStateGeneration === null
     || expectedLoadStateGeneration === undefined
-    || getLoadStateGeneration(target)
-      === normalizeLoadStateGeneration(expectedLoadStateGeneration)
-  );
+  ) return true;
+  if (
+    typeof expectedLoadStateGeneration !== "number"
+    || expectedLoadStateGeneration < 0
+    || expectedLoadStateGeneration > Number.MAX_SAFE_INTEGER
+    || expectedLoadStateGeneration % 1 !== 0
+  ) return false;
+  return readValidLoadStateGeneration(target) === expectedLoadStateGeneration;
 }
 
 export function captureScenarioChunkLoadStateContinuation(target) {
@@ -151,6 +172,10 @@ export function captureScenarioChunkLoadStateContinuation(target) {
     0,
     Number(target.currentScenarioApplyRequestId || 0),
   );
+  const latestScenarioApplyRequestId = Math.max(
+    0,
+    Number(target.latestScenarioApplyRequestId || 0),
+  );
   const pendingScenarioApplyRequestId = Math.max(
     0,
     Number(loadState?.pendingScenarioApplyRequestId || 0),
@@ -168,6 +193,14 @@ export function captureScenarioChunkLoadStateContinuation(target) {
   return Object.freeze({
     loadStateGeneration: getLoadStateGeneration(target),
     activeScenarioId: normalizeScenarioId(target.activeScenarioId),
+    scenarioApplyInFlight: target.scenarioApplyInFlight === true,
+    currentScenarioApplyTargetId: normalizeScenarioId(
+      target.currentScenarioApplyTargetId,
+    ),
+    latestScenarioApplyTargetId: normalizeScenarioId(
+      target.latestScenarioApplyTargetId,
+    ),
+    latestScenarioApplyRequestId,
     currentScenarioApplyRequestId,
     continuationScenarioApplyRequestId:
       pendingScenarioApplyRequestId

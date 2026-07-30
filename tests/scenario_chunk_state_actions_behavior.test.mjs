@@ -549,15 +549,134 @@ test("scenario chunk load lifecycle rejects stale generation observers after res
   assert.deepEqual(currentLoadState.errorByChunkId, expectedErrors);
 });
 
+test("scenario chunk generation fences reject missing or invalid continuation tokens before initialization", async () => {
+  const {
+    beginScenarioChunkLoadState,
+    commitScenarioChunkSelectionState,
+    completeScenarioChunkLoadState,
+    ensureScenarioChunkRuntimeState,
+    failScenarioChunkLoadState,
+    finishScenarioChunkLoadState,
+    patchScenarioChunkLoadState,
+  } = await importExpectedModule(RUNTIME_ACTIONS_PATH, "scenario chunk runtime actions");
+  const attempts = Object.freeze([
+    Object.freeze({
+      name: "patch",
+      run: (target, expectedLoadStateGeneration) => patchScenarioChunkLoadState(
+        target,
+        { registryStatus: "stale-write" },
+        { expectedLoadStateGeneration },
+      ),
+    }),
+    Object.freeze({
+      name: "selection",
+      run: (target, expectedLoadStateGeneration) => commitScenarioChunkSelectionState(
+        target,
+        { selectionVersion: 9 },
+        { expectedLoadStateGeneration },
+      ),
+    }),
+    Object.freeze({
+      name: "begin",
+      run: (target, expectedLoadStateGeneration) => beginScenarioChunkLoadState(
+        target,
+        "political-1",
+        { expectedLoadStateGeneration },
+      ),
+    }),
+    Object.freeze({
+      name: "complete",
+      run: (target, expectedLoadStateGeneration) => completeScenarioChunkLoadState(
+        target,
+        "political-1",
+        { expectedLoadStateGeneration },
+      ),
+    }),
+    Object.freeze({
+      name: "fail",
+      run: (target, expectedLoadStateGeneration) => failScenarioChunkLoadState(
+        target,
+        "political-1",
+        "stale observer",
+        { expectedLoadStateGeneration },
+      ),
+    }),
+    Object.freeze({
+      name: "finish",
+      run: (target, expectedLoadStateGeneration) => finishScenarioChunkLoadState(
+        target,
+        "political-1",
+        { expectedLoadStateGeneration },
+      ),
+    }),
+  ]);
+  const malformedLoadStates = Object.freeze([
+    Object.freeze({ name: "missing", assign: false, value: undefined }),
+    Object.freeze({ name: "null", assign: true, value: null }),
+    Object.freeze({ name: "array", assign: true, value: [] }),
+    Object.freeze({ name: "missing-generation", assign: true, value: {} }),
+    Object.freeze({ name: "negative-generation", assign: true, value: { generation: -1 } }),
+    Object.freeze({ name: "string-generation", assign: true, value: { generation: "0" } }),
+    Object.freeze({ name: "nan-generation", assign: true, value: { generation: Number.NaN } }),
+  ]);
+
+  for (const attempt of attempts) {
+    for (const malformed of malformedLoadStates) {
+      const target = { sentinel: "preserved" };
+      if (malformed.assign) target.runtimeChunkLoadState = structuredClone(malformed.value);
+      const before = structuredClone(target);
+      assert.equal(
+        attempt.run(target, 0),
+        false,
+        `${attempt.name} must reject ${malformed.name} current generation`,
+      );
+      assert.deepEqual(
+        target,
+        before,
+        `${attempt.name} must not initialize or mutate ${malformed.name} state`,
+      );
+    }
+  }
+
+  const initializedTarget = {};
+  ensureScenarioChunkRuntimeState(initializedTarget, { scenarioId: "demo" });
+  const currentGeneration = initializedTarget.runtimeChunkLoadState.generation;
+  const invalidExpectedGenerations = Object.freeze([
+    String(currentGeneration),
+    -1,
+    Number.NaN,
+    currentGeneration + 0.5,
+    {},
+    [],
+  ]);
+  for (const attempt of attempts) {
+    for (const invalidExpectedGeneration of invalidExpectedGenerations) {
+      const target = structuredClone(initializedTarget);
+      const before = structuredClone(target);
+      assert.equal(
+        attempt.run(target, invalidExpectedGeneration),
+        false,
+        `${attempt.name} must reject invalid expected generation ${String(invalidExpectedGeneration)}`,
+      );
+      assert.deepEqual(target, before, `${attempt.name} must not mutate after an invalid expected generation`);
+    }
+  }
+});
+
 test("scenario chunk continuation captures request priority as frozen scalars", async () => {
   const {
     captureScenarioChunkLoadStateContinuation,
     ensureScenarioChunkRuntimeState,
   } = await importExpectedModule(RUNTIME_ACTIONS_PATH, "scenario chunk runtime actions");
-  const target = {};
+  const target = {
+    activeScenarioId: "demo",
+    currentScenarioApplyRequestId: 12,
+    latestScenarioApplyRequestId: 18,
+    latestScenarioApplyTargetId: "demo",
+    currentScenarioApplyTargetId: "next-demo",
+    scenarioApplyInFlight: true,
+  };
   ensureScenarioChunkRuntimeState(target, { scenarioId: "demo" });
-  target.activeScenarioId = "demo";
-  target.currentScenarioApplyRequestId = 12;
   const loadState = target.runtimeChunkLoadState;
   loadState.selectionVersion = 3;
   loadState.pendingScenarioApplyRequestId = 15;
@@ -566,6 +685,10 @@ test("scenario chunk continuation captures request priority as frozen scalars", 
 
   const pendingContinuation = captureScenarioChunkLoadStateContinuation(target);
   assert.equal(Object.isFrozen(pendingContinuation), true);
+  assert.equal(pendingContinuation.latestScenarioApplyRequestId, 18);
+  assert.equal(pendingContinuation.latestScenarioApplyTargetId, "demo");
+  assert.equal(pendingContinuation.currentScenarioApplyTargetId, "next-demo");
+  assert.equal(pendingContinuation.scenarioApplyInFlight, true);
   assert.equal(pendingContinuation.continuationScenarioApplyRequestId, 15);
 
   loadState.pendingScenarioApplyRequestId = 0;

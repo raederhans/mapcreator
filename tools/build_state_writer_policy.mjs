@@ -2520,7 +2520,7 @@ function createProgressCheckpoint(phase, {
   };
 }
 
-function buildProgressState({
+export function buildProgressState({
   phase,
   currentMetrics,
   previousPolicy,
@@ -2536,7 +2536,9 @@ function buildProgressState({
   const checkpointsByPhase = new Map(
     previousCheckpoints.map((entry) => [entry.phase, entry]),
   );
-  checkpointsByPhase.set(checkpoint.phase, checkpoint);
+  if (!checkpointsByPhase.has(checkpoint.phase)) {
+    checkpointsByPhase.set(checkpoint.phase, checkpoint);
+  }
   const progress = {
     latestPhase: checkpoint.phase,
     checkpoints: P4_STATE_ACTION_PHASES

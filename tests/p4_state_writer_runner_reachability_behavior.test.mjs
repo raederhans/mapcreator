@@ -64,6 +64,7 @@ test("exact P4.2b gates reach chunk action and boundary regressions", () => {
   const pythonCommand = packageJson.scripts["test:python:p4:p4-2b-boundary"];
 
   assert.ok(nodeCommand.split(/\s+/).includes("tests/scenario_chunk_state_actions_behavior.test.mjs"));
+  assert.ok(!nodeCommand.includes("--test-force-exit"), nodeCommand);
   assert.match(pythonCommand, /tests\.test_scenario_chunk_state_actions_boundary_contract/);
   assert.ok(
     buildP4PhaseVerificationPlan({ phase: "P4.2b" }).commands.includes(

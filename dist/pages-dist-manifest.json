@@ -46332,7 +46332,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 154958,
+      "size_bytes": 158822,
       "source_kind": "dist"
     },
     {
@@ -46522,7 +46522,7 @@
     },
     {
       "path": "app/js/core/state/actions/scenario_chunk_runtime_actions.js",
-      "size_bytes": 41151,
+      "size_bytes": 42257,
       "source_kind": "dist"
     },
     {
@@ -47614,7 +47614,7 @@
     {
       "file_count": 9436,
       "path": "app",
-      "size_bytes": 965803801
+      "size_bytes": 965808771
     },
     {
       "file_count": 57,
@@ -47647,5 +47647,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972371605
+  "total_bytes": 972376575
 }

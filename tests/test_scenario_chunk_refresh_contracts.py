@@ -773,7 +773,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("applyScenarioPoliticalChunkPayload(", visual_slice)
         self.assertIn("await yieldToFrame();", visual_slice)
         self.assertIn("isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })", visual_slice)
-        self.assertIn("canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })", visual_slice)
+        self.assertIn("canRollbackPromotionContinuation()", visual_slice)
         self.assertIn("restoreMergedLayerRuntimeSnapshot(mergedLayerSnapshot);", visual_slice)
         self.assertIn(
             "restoreScenarioChunkPromotionRootState(runtimeState, promotionRootSnapshot);",
@@ -792,9 +792,50 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         )
 
     def test_stale_promotion_rollback_is_current_owner_scoped_and_city_sync_aware(self):
-        self.assertIn("function canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId = \"\", runId = 0 } = {})", self.scenario_chunk_runtime_source)
-        self.assertIn("runtimeState.runtimeChunkLoadState !== loadState", self.scenario_chunk_runtime_source)
-        self.assertIn("loadState.promotionCommitRunId", self.scenario_chunk_runtime_source)
+        rollback_start = self.scenario_chunk_runtime_source.index(
+            "const canRollbackPromotionContinuation = () => {"
+        )
+        rollback_end = self.scenario_chunk_runtime_source.index(
+            "const restoreScenarioDataGenerationSnapshot = () => {",
+            rollback_start,
+        )
+        rollback_slice = self.scenario_chunk_runtime_source[rollback_start:rollback_end]
+        for required_token in (
+            "runtimeState.runtimeChunkLoadState !== loadState",
+            "promotionCommitRunId !== runId",
+            "loadState.promotionCommitRunId",
+            "loadState.pendingPromotion !== pendingPromotion",
+            "captureScenarioChunkLoadStateContinuation(runtimeState)",
+            "currentContinuationState.activeScenarioId !== scenarioId",
+            "promotionContinuationState.activeScenarioId !== scenarioId",
+            "Number.isSafeInteger(loadStateGeneration)",
+            "loadStateGeneration !== continuationLoadStateGeneration",
+            "promotionScenarioApplyRequestId === continuationRequestId",
+        ):
+            self.assertIn(required_token, rollback_slice)
+        self.assertNotIn("isScenarioApplyRequestCurrentForScenario", rollback_slice)
+        self.assertNotIn("canRollbackPendingScenarioChunkPromotion", self.scenario_chunk_runtime_source)
+        self.assertEqual(
+            self.scenario_chunk_runtime_source.count(
+                "canRollbackPromotionContinuation()"
+            ),
+            3,
+        )
+        ownership_start = self.scenario_chunk_runtime_source.index(
+            "function resolvePendingScenarioChunkPromotionOwnedScenarioId("
+        )
+        ownership_end = self.scenario_chunk_runtime_source.index(
+            "async function applyPendingScenarioChunkPromotion",
+            ownership_start,
+        )
+        ownership_slice = self.scenario_chunk_runtime_source[ownership_start:ownership_end]
+        self.assertIn("runtimeState.runtimeChunkLoadState !== loadState", ownership_slice)
+        self.assertIn("promotionCommitRunId !== runId", ownership_slice)
+        self.assertIn("loadState.promotionCommitRunId", ownership_slice)
+        self.assertIn(
+            "normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)",
+            ownership_slice,
+        )
         restore_start = self.scenario_chunk_runtime_source.index("function restoreMergedLayerRuntimeSnapshot")
         restore_end = self.scenario_chunk_runtime_source.index("function isPendingScenarioChunkPromotionCurrent", restore_start)
         restore_slice = self.scenario_chunk_runtime_source[restore_start:restore_end]

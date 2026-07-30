@@ -24,8 +24,16 @@ import { isScenarioWaterLikeFeature } from "../js/core/scenario_runtime_queries.
 import { applyScenarioChunkCityExternalEffectState } from "../js/core/state/actions/scenario_presentation_actions.js";
 import {
   patchScenarioChunkLoadState,
+  queueScenarioChunkPromotionState,
   resetScenarioChunkRuntimeState,
 } from "../js/core/state/actions/scenario_chunk_runtime_actions.js";
+import {
+  beginScenarioApplyRequestState,
+  clearActiveScenarioApplyRequestState,
+  setLatestScenarioApplyRequestState,
+} from "../js/core/state/actions/scenario_apply_request_actions.js";
+import { applyScenarioChunkOptionalLayerState } from "../js/core/state/actions/scenario_activation_actions.js";
+import { bumpScenarioChunkDataGenerationState } from "../js/core/state/actions/scenario_chunk_promotion_actions.js";
 import { createScenarioChunkRegistryEnsurer } from "../js/core/scenario/bundle_loader.js";
 
 const REPO_ROOT = process.cwd();
@@ -376,7 +384,9 @@ function createTimerGenerationController(targetState, bundle) {
   });
 }
 
-function createChunkLoadGenerationFixture() {
+function createChunkLoadGenerationFixture({
+  ensureScenarioChunkRegistryLoaded = async () => {},
+} = {}) {
   const targetState = {
     activeScenarioId: "tno_1962",
     renderPerfMetrics: {},
@@ -384,6 +394,7 @@ function createChunkLoadGenerationFixture() {
     renderDiagnostics: { perfOverlayEnabled: true },
   };
   const deferredByUrl = new Map();
+  let loadAttemptCount = 0;
   const createBundle = (url) => ({
     manifest: { scenario_id: "tno_1962" },
     chunkRegistry: {
@@ -417,6 +428,7 @@ function createChunkLoadGenerationFixture() {
     mergeScenarioChunkPayloads: () => null,
     normalizeScenarioRenderBudgetHints: (value) => value || {},
     loadScenarioChunkFile: (url) => {
+      loadAttemptCount += 1;
       const deferred = deferredByUrl.get(url);
       assert.ok(deferred, `missing deferred loader for ${url}`);
       if (deferred.throwError) throw deferred.throwError;
@@ -429,7 +441,7 @@ function createChunkLoadGenerationFixture() {
     refreshMapDataForScenarioChunkPromotion: () => {},
     flushRenderBoundary: () => {},
     recordScenarioPerfMetric: () => {},
-    ensureScenarioChunkRegistryLoaded: async () => {},
+    ensureScenarioChunkRegistryLoaded,
   });
   return {
     controller,
@@ -441,6 +453,9 @@ function createChunkLoadGenerationFixture() {
     },
     createSynchronousLoadFailure(url, error) {
       deferredByUrl.set(url, { throwError: error });
+    },
+    getLoadAttemptCount() {
+      return loadAttemptCount;
     },
     targetState,
   };
@@ -528,6 +543,68 @@ test("late successful chunk load cannot clear current-generation bookkeeping", a
   await currentPromise;
   assert.deepEqual(currentLoadState.inFlightByChunkId, {});
   assert.deepEqual(currentLoadState.errorByChunkId, {});
+});
+
+test("detail prewarm waiting for the registry cannot start after its continuation is superseded", async () => {
+  const registryLoad = createDeferredPromise();
+  const {
+    controller,
+    createBundle,
+    createDeferredLoad,
+    getLoadAttemptCount,
+    targetState,
+  } = createChunkLoadGenerationFixture({
+    ensureScenarioChunkRegistryLoaded: () => registryLoad.promise,
+  });
+  const chunkLoad = createDeferredLoad("stale-after-registry.json");
+  chunkLoad.resolve({ payload: { type: "FeatureCollection", features: [] } });
+  targetState.currentScenarioApplyRequestId = 1;
+  targetState.latestScenarioApplyTargetId = "tno_1962";
+  const stalePromise = controller.preloadScenarioFocusCountryPoliticalDetailChunk(
+    createBundle("stale-after-registry.json"),
+  );
+  await Promise.resolve();
+  const staleLoadState = targetState.runtimeChunkLoadState;
+
+  controller.resetScenarioChunkRuntimeState({ scenarioId: "tno_1962" });
+  targetState.currentScenarioApplyRequestId = 2;
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  registryLoad.resolve();
+
+  assert.equal(await stalePromise, null);
+  assert.equal(getLoadAttemptCount(), 0);
+  assert.notEqual(currentLoadState, staleLoadState);
+  assert.deepEqual(currentLoadState.inFlightByChunkId, {});
+  assert.deepEqual(currentLoadState.errorByChunkId, {});
+});
+
+test("detail prewarm cannot start while a different scenario target is applying", async () => {
+  const {
+    controller,
+    createBundle,
+    createDeferredLoad,
+    getLoadAttemptCount,
+    targetState,
+  } = createChunkLoadGenerationFixture();
+  const bundle = createBundle("different-target-in-flight.json");
+  const chunkLoad = createDeferredLoad("different-target-in-flight.json");
+  chunkLoad.resolve({ payload: { type: "FeatureCollection", features: [] } });
+  setLatestScenarioApplyRequestState(targetState, {
+    requestId: 2,
+    targetId: "scenario_b",
+  });
+  beginScenarioApplyRequestState(targetState, {
+    requestId: 2,
+    targetId: "scenario_b",
+  });
+
+  assert.equal(
+    await controller.preloadScenarioFocusCountryPoliticalDetailChunk(bundle),
+    null,
+  );
+  assert.equal(getLoadAttemptCount(), 0);
+  assert.deepEqual(targetState.runtimeChunkLoadState.inFlightByChunkId, {});
+  assert.deepEqual(targetState.runtimeChunkLoadState.errorByChunkId, {});
 });
 
 test("current generation observes a shared in-flight chunk fetch after reset", async () => {
@@ -3750,6 +3827,9 @@ async function runOptionalChunkPromotionScenario({
   initialPayload = null,
   initialRevision = 0,
   staleBeforeVisualCommit = false,
+  supersedeWithLatestTargetAtFrame = 0,
+  beginSupersedingRequestAtFrame = 0,
+  replacePromotionOwnerAtFrame = 0,
   failOnRenderFlush = false,
   awaitInitialPromotion = false,
 } = {}) {
@@ -3776,8 +3856,16 @@ async function runOptionalChunkPromotionScenario({
     countriesPayload: { countries: {} },
     chunkPayloadCacheById: {},
   };
+  const hasScenarioApplyRequest = (
+    supersedeWithLatestTargetAtFrame > 0
+    || beginSupersedingRequestAtFrame > 0
+    || replacePromotionOwnerAtFrame > 0
+  );
   const targetState = {
     activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: hasScenarioApplyRequest ? 1 : 0,
+    latestScenarioApplyRequestId: hasScenarioApplyRequest ? 1 : 0,
+    latestScenarioApplyTargetId: hasScenarioApplyRequest ? "tno_1962" : "",
     activeScenarioChunks: {
       scenarioId: "tno_1962",
       loadedChunkIds: [],
@@ -3839,6 +3927,34 @@ async function runOptionalChunkPromotionScenario({
     rafCount += 1;
     if (staleBeforeVisualCommit && rafCount === 2) {
       targetState.runtimeChunkLoadState.selectionVersion += 1;
+    }
+    if (supersedeWithLatestTargetAtFrame === rafCount) {
+      targetState.latestScenarioApplyRequestId = 2;
+      targetState.latestScenarioApplyTargetId = "scenario_b";
+    }
+    if (beginSupersedingRequestAtFrame === rafCount) {
+      setLatestScenarioApplyRequestState(targetState, {
+        requestId: 2,
+        targetId: "scenario_b",
+      });
+      beginScenarioApplyRequestState(targetState, {
+        requestId: 2,
+        targetId: "scenario_b",
+      });
+    }
+    if (replacePromotionOwnerAtFrame === rafCount) {
+      queueScenarioChunkPromotionState(targetState, { promotion: {
+        scenarioId: "tno_1962",
+        scenarioApplyRequestId: 1,
+        owner: "replacement",
+      } });
+      applyScenarioChunkOptionalLayerState(targetState, "scenario_atlantropa", {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", id: "atl-new-owner", properties: {}, geometry: null },
+        ],
+      });
+      bumpScenarioChunkDataGenerationState(targetState, "new-promotion-owner");
     }
     callback();
     return rafCount;
@@ -3937,6 +4053,7 @@ async function runOptionalChunkPromotionScenario({
     }
 
     return {
+      controller,
       runtimeState: targetState,
       refreshCalls,
       citySyncSnapshots,
@@ -4066,6 +4183,119 @@ test("stale optional-only promotion restores payload and generation snapshot", a
   assert.equal(refreshCalls.length, 0);
   assert.equal(runtimeState.runtimeChunkLoadState.promotionCommitStatus, "promotion-skipped-stale");
 });
+
+for (const [label, supersedeWithLatestTargetAtFrame] of [
+  ["after infra", 1],
+  ["after visual", 2],
+]) {
+  test(`different latest target ${label} rolls back the owned promotion snapshot`, async () => {
+    const initialPayload = {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", id: "atl-old", properties: {}, geometry: null },
+      ],
+    };
+    const { runtimeState, refreshCalls } = await runOptionalChunkPromotionScenario({
+      layerKey: "scenario_atlantropa",
+      stateField: "scenarioAtlantropaData",
+      revisionField: "scenarioAtlantropaRevision",
+      reason: `atlantropa-superseded-${supersedeWithLatestTargetAtFrame}`,
+      featureId: "atl-new",
+      initialPayload,
+      initialRevision: 4,
+      supersedeWithLatestTargetAtFrame,
+    });
+
+    assert.equal(Number(runtimeState.scenarioDataGeneration || 0), 0);
+    assert.equal(runtimeState.scenarioDataGenerationReason, undefined);
+    assert.equal(runtimeState.scenarioAtlantropaRevision, 4);
+    assert.deepEqual(
+      runtimeState.scenarioAtlantropaData.features.map((feature) => feature.id),
+      ["atl-old"],
+    );
+    assert.equal(runtimeState.scenarioChunkPromotionRenderLocked, false);
+    assert.equal(refreshCalls.length, 0);
+    assert.equal(
+      runtimeState.runtimeChunkLoadState.promotionCommitStatus,
+      "promotion-skipped-stale",
+    );
+  });
+}
+
+test("replacement promotion ownership prevents the stale continuation from restoring its snapshot", async () => {
+  const initialPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "atl-old", properties: {}, geometry: null },
+    ],
+  };
+  const { runtimeState: resultState } = await runOptionalChunkPromotionScenario({
+    layerKey: "scenario_atlantropa",
+    stateField: "scenarioAtlantropaData",
+    revisionField: "scenarioAtlantropaRevision",
+    reason: "atlantropa-replaced-owner",
+    featureId: "atl-stale",
+    initialPayload,
+    initialRevision: 4,
+    replacePromotionOwnerAtFrame: 2,
+  });
+
+  assert.equal(resultState.scenarioDataGeneration, 1);
+  assert.equal(resultState.scenarioDataGenerationReason, "new-promotion-owner");
+  assert.equal(resultState.scenarioAtlantropaRevision, 6);
+  assert.deepEqual(
+    resultState.scenarioAtlantropaData.features.map((feature) => feature.id),
+    ["atl-new-owner"],
+  );
+});
+
+for (const [label, beginSupersedingRequestAtFrame] of [
+  ["after infra", 1],
+  ["after visual", 2],
+]) {
+  test(`begun different-target request ${label} preserves its apply identity while rolling back the old promotion`, async (t) => {
+    const initialPayload = {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", id: "atl-old", properties: {}, geometry: null },
+      ],
+    };
+    const {
+      controller,
+      runtimeState: resultState,
+      refreshCalls,
+    } = await runOptionalChunkPromotionScenario({
+      layerKey: "scenario_atlantropa",
+      stateField: "scenarioAtlantropaData",
+      revisionField: "scenarioAtlantropaRevision",
+      reason: `atlantropa-begun-supersede-${beginSupersedingRequestAtFrame}`,
+      featureId: "atl-new",
+      initialPayload,
+      initialRevision: 4,
+      beginSupersedingRequestAtFrame,
+    });
+    t.after(() => controller.resetScenarioChunkRuntimeState());
+
+    assert.equal(Number(resultState.scenarioDataGeneration || 0), 0);
+    assert.equal(resultState.scenarioDataGenerationReason, undefined);
+    assert.equal(resultState.scenarioAtlantropaRevision, 4);
+    assert.deepEqual(
+      resultState.scenarioAtlantropaData.features.map((feature) => feature.id),
+      ["atl-old"],
+    );
+    assert.equal(resultState.currentScenarioApplyRequestId, 2);
+    assert.equal(resultState.latestScenarioApplyRequestId, 2);
+    assert.equal(resultState.latestScenarioApplyTargetId, "scenario_b");
+    assert.equal(resultState.currentScenarioApplyTargetId, "scenario_b");
+    assert.equal(resultState.scenarioApplyInFlight, true);
+    assert.equal(resultState.scenarioChunkPromotionRenderLocked, false);
+    assert.equal(refreshCalls.length, 0);
+    assert.equal(
+      resultState.runtimeChunkLoadState.promotionCommitStatus,
+      "promotion-deferred",
+    );
+  });
+}
 
 test("stale city promotion consumes its finalizer token and restores exact state", async () => {
   const initialPayload = {
@@ -4333,6 +4563,10 @@ test("coarse prewarm keeps complete political payload for initial promotion", as
 
 function createCoarsePrewarmContinuationHarness({
   currentScenarioApplyRequestId = 1,
+  seedCurrentPoliticalChunkData = false,
+  initialPoliticalVisibleChunkData = undefined,
+  initialScenarioDataGeneration = undefined,
+  initialScenarioDataGenerationReason = undefined,
 } = {}) {
   const chunkLoadStarted = createDeferredPromise();
   const chunkLoadResult = createDeferredPromise();
@@ -4375,6 +4609,11 @@ function createCoarsePrewarmContinuationHarness({
   const targetState = {
     activeScenarioId: "scenario_a",
     currentScenarioApplyRequestId,
+    scenarioPoliticalChunkData:
+      seedCurrentPoliticalChunkData ? currentPayload : undefined,
+    scenarioPoliticalVisibleChunkData: initialPoliticalVisibleChunkData,
+    scenarioDataGeneration: initialScenarioDataGeneration,
+    scenarioDataGenerationReason: initialScenarioDataGenerationReason,
     renderPerfMetrics: {},
     uiState: { developerMode: true },
     renderDiagnostics: { perfOverlayEnabled: true },
@@ -4533,6 +4772,128 @@ test("coarse prewarm cannot commit after its scenario apply request is supersede
   assert.equal(targetState.activeScenarioChunks, currentActiveScenarioChunks);
   assert.deepEqual(currentActiveScenarioChunks, currentActiveScenarioChunksSnapshot);
   assert.equal(targetState.currentScenarioApplyRequestId, 2);
+  assert.equal(targetState.scenarioPoliticalChunkData, currentPayload);
+  assert.equal(targetState.scenarioPoliticalVisibleChunkData, null);
+  assert.equal(targetState.scenarioDataGeneration, 7);
+  assert.equal(targetState.scenarioDataGenerationReason, "current-request");
+  assert.equal(getPromotionRefreshCalls(), 0);
+  assert.equal(bundle.chunkPreloaded, undefined);
+});
+
+test("coarse prewarm resumes after a failed apply rolls back without a newer queued request", async () => {
+  const {
+    bundle,
+    controller,
+    targetState,
+    getPromotionRefreshCalls,
+    resolveChunkLoad,
+  } = createCoarsePrewarmContinuationHarness({
+    currentScenarioApplyRequestId: 2,
+  });
+  setLatestScenarioApplyRequestState(targetState, {
+    requestId: 2,
+    targetId: "scenario_b",
+  });
+  beginScenarioApplyRequestState(targetState, {
+    requestId: 2,
+    targetId: "scenario_b",
+  });
+  clearActiveScenarioApplyRequestState(targetState);
+
+  const recoveredPrewarm = controller.preloadScenarioCoarseChunks(bundle);
+  resolveChunkLoad();
+  const result = await recoveredPrewarm;
+
+  assert.deepEqual(
+    result?.political?.features.map((feature) => feature.id),
+    ["old-prewarm"],
+  );
+  assert.equal(targetState.activeScenarioId, "scenario_a");
+  assert.equal(targetState.currentScenarioApplyRequestId, 2);
+  assert.equal(targetState.latestScenarioApplyRequestId, 2);
+  assert.equal(targetState.latestScenarioApplyTargetId, "scenario_b");
+  assert.equal(getPromotionRefreshCalls(), 1);
+  assert.equal(bundle.chunkPreloaded, true);
+});
+
+test("coarse prewarm cannot commit while a different scenario target is applying", async () => {
+  const {
+    bundle,
+    controller,
+    currentPayload,
+    targetState,
+    getPromotionRefreshCalls,
+    resolveChunkLoad,
+  } = createCoarsePrewarmContinuationHarness({
+    currentScenarioApplyRequestId: 2,
+    seedCurrentPoliticalChunkData: true,
+    initialPoliticalVisibleChunkData: null,
+    initialScenarioDataGeneration: 7,
+    initialScenarioDataGenerationReason: "current-request",
+  });
+  setLatestScenarioApplyRequestState(targetState, {
+    requestId: 2,
+    targetId: "scenario_b",
+  });
+  beginScenarioApplyRequestState(targetState, {
+    requestId: 2,
+    targetId: "scenario_b",
+  });
+
+  const blockedPrewarm = controller.preloadScenarioCoarseChunks(bundle);
+  resolveChunkLoad();
+  const result = await blockedPrewarm;
+
+  assert.equal(result, null);
+  assert.equal(targetState.scenarioPoliticalChunkData, currentPayload);
+  assert.equal(targetState.scenarioPoliticalVisibleChunkData, null);
+  assert.equal(targetState.scenarioDataGeneration, 7);
+  assert.equal(targetState.scenarioDataGenerationReason, "current-request");
+  assert.equal(getPromotionRefreshCalls(), 0);
+  assert.equal(bundle.chunkPreloaded, undefined);
+});
+
+test("coarse prewarm cannot commit after a different latest scenario target is queued", async () => {
+  const {
+    bundle,
+    controller,
+    currentPayload,
+    targetState,
+    awaitChunkLoadStarted,
+    getPromotionRefreshCalls,
+    resolveChunkLoad,
+  } = createCoarsePrewarmContinuationHarness();
+
+  const stalePrewarm = controller.preloadScenarioCoarseChunks(bundle);
+  await awaitChunkLoadStarted();
+  const currentLoadState = targetState.runtimeChunkLoadState;
+  const currentLoadStateGeneration = currentLoadState.generation;
+  const currentActiveScenarioChunks = targetState.activeScenarioChunks;
+  const currentActiveScenarioChunksSnapshot = structuredClone(currentActiveScenarioChunks);
+  currentLoadState.pendingReason = "current-request";
+  currentLoadState.layerSelectionSignatures = { current: "signature" };
+  currentLoadState.mergedLayerPayloadCache = { current: currentPayload };
+  targetState.latestScenarioApplyRequestId = 2;
+  targetState.latestScenarioApplyTargetId = "scenario_b";
+  targetState.scenarioPoliticalChunkData = currentPayload;
+  targetState.scenarioPoliticalVisibleChunkData = null;
+  targetState.scenarioDataGeneration = 7;
+  targetState.scenarioDataGenerationReason = "current-request";
+
+  resolveChunkLoad();
+  const result = await stalePrewarm;
+
+  assert.equal(result, null);
+  assert.equal(targetState.currentScenarioApplyRequestId, 1);
+  assert.equal(targetState.latestScenarioApplyRequestId, 2);
+  assert.equal(targetState.latestScenarioApplyTargetId, "scenario_b");
+  assert.equal(targetState.runtimeChunkLoadState, currentLoadState);
+  assert.equal(currentLoadState.generation, currentLoadStateGeneration);
+  assert.equal(currentLoadState.pendingReason, "current-request");
+  assert.deepEqual(currentLoadState.layerSelectionSignatures, { current: "signature" });
+  assert.deepEqual(currentLoadState.mergedLayerPayloadCache, { current: currentPayload });
+  assert.equal(targetState.activeScenarioChunks, currentActiveScenarioChunks);
+  assert.deepEqual(currentActiveScenarioChunks, currentActiveScenarioChunksSnapshot);
   assert.equal(targetState.scenarioPoliticalChunkData, currentPayload);
   assert.equal(targetState.scenarioPoliticalVisibleChunkData, null);
   assert.equal(targetState.scenarioDataGeneration, 7);
