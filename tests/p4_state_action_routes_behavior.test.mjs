@@ -194,7 +194,7 @@ test("historical owner routes stay direct while the selector upgrades execution 
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation([changedFile], routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.2b",
+    phase: "P4.2c",
     changedFiles: [changedFile],
     recommendation,
     routes,
@@ -202,16 +202,16 @@ test("historical owner routes stay direct while the selector upgrades execution 
 
   assert.equal(report.verdict, "pass");
   assert.ok(report.files[0].directStateOwnershipRecommendations.length > 0);
-  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-2b"]);
+  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-2c"]);
   assert.equal(
     report.files[0].directStateOwnershipRecommendations.some((route) => (
-      route.commandRef === "verify:p4:p4-2b"
+      route.commandRef === "verify:p4:p4-2c"
     )),
     false,
   );
 });
 
-test("the current selector control plane has zero P4.2b route gaps", () => {
+test("the current selector control plane has zero P4.2c route gaps", () => {
   const changedFiles = [
     "tools/select_verification_targets.mjs",
     "tools/check_p4_state_action_routes.mjs",
@@ -227,7 +227,7 @@ test("the current selector control plane has zero P4.2b route gaps", () => {
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation(changedFiles, routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.2b",
+    phase: "P4.2c",
     changedFiles,
     recommendation,
     routes,
@@ -304,8 +304,8 @@ test("the current phase command must remain in the state-ownership domain", () =
     sourceRef: changedFile,
   });
   const currentRoute = createRoute({
-    id: "p4:p4-2b-exact-phase",
-    commandRef: "verify:p4:p4-2b",
+    id: "p4:p4-2c-exact-phase",
+    commandRef: "verify:p4:p4-2c",
     sourceRef: "docs/active/state-action-ownership-p4-20260719",
   });
   const recommendation = createRecommendation({ changedFile, route: directRoute });
@@ -320,7 +320,7 @@ test("the current phase command must remain in the state-ownership domain", () =
     guidance: {},
   });
   const report = buildP4StateActionRouteReport({
-    phase: "P4.2b",
+    phase: "P4.2c",
     changedFiles: [changedFile],
     recommendation,
     routes: [directRoute, currentRoute],

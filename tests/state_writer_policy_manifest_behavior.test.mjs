@@ -1821,7 +1821,10 @@ test("state action module source rejects unregistered target-first exports and u
         contractEntries,
       },
     ).map(({ code }) => code),
-    ["state-action-module-contract-missing"],
+    [
+      "state-action-module-contract-missing",
+      "state-action-direct-export-unregistered",
+    ],
   );
 });
 
@@ -3651,6 +3654,43 @@ test("same-phase policy rebuild preserves the committed progress checkpoint", ()
   assert.deepEqual(progress.checkpoints, [committedCheckpoint]);
 });
 
+test("next-phase policy rebuild freezes P4.2b and appends the live P4.2c checkpoint", () => {
+  const p42bCheckpoint = Object.freeze({
+    phase: "P4.2b",
+    productionLegacyDirectFiles: 75,
+    productionLegacyMemberships: 1011,
+    productionLegacyDynamicSites: 138,
+    productionLegacyAliasSites: 218,
+    productionLegacyAmbiguousSites: 621,
+    productionLegacyUnsupportedSites: 4079,
+  });
+  const p42cMetrics = Object.freeze({
+    ...p42bCheckpoint,
+    phase: "P4.2c",
+    productionLegacyUnsupportedSites: 4075,
+  });
+  const progress = buildProgressState({
+    phase: "P4.2c",
+    currentMetrics: p42cMetrics,
+    previousPolicy: {
+      progress: {
+        checkpoints: [p42bCheckpoint],
+      },
+    },
+    refreshP4Baseline: false,
+    retiredLegacySemanticAuthority: {
+      bindings: [],
+      memberships: [],
+      writes: [],
+      sites: [],
+    },
+    callerToActionLedger: null,
+  });
+
+  assert.equal(progress.latestPhase, "P4.2c");
+  assert.deepEqual(progress.checkpoints, [p42bCheckpoint, p42cMetrics]);
+});
+
 test("P4.2a caller proofs remain compatible while later entries require exact mutation-site evidence", () => {
   const historicalEntry = createCallerActionLedgerEntry(0);
   const historicalPolicy =
@@ -5193,8 +5233,8 @@ test("repository checker reports a passing closed-world policy and default-state
 });
 
 test("checker rejects a requested phase that has no matching policy checkpoint", async () => {
-  const report = await buildStateWriterPolicyReport({ phase: "P4.2c" });
-  assert.equal(report.phase, "P4.2c");
+  const report = await buildStateWriterPolicyReport({ phase: "P4.3" });
+  assert.equal(report.phase, "P4.3");
   assert.equal(report.verdict, "fail");
   assert.ok(
     report.violations.some(({ code }) => code === "policy-phase-mismatch"),

@@ -17,17 +17,19 @@ import {
 import {
   restoreScenarioTransactionPresentationBeforeAuditState,
   restoreScenarioTransactionPresentationState,
+  setActiveScenarioPerformanceHintsState,
   SCENARIO_PRESENTATION_STATE_KEYS,
 } from "../js/core/state/actions/scenario_presentation_actions.js";
+import {
+  restoreScenarioDataHealthState,
+  restoreScenarioHydrationHealthGateState,
+} from "../js/core/state/actions/scenario_health_actions.js";
 import {
   restoreScenarioReadinessState,
   SCENARIO_READINESS_STATE_KEYS,
 } from "../js/core/state/actions/scenario_readiness_actions.js";
 import {
   captureScenarioTransactionRollbackOptionalState,
-  restoreScenarioTransactionSupplementAfterColorDirtyState,
-  restoreScenarioTransactionSupplementBeforeAuditState,
-  restoreScenarioTransactionSupplementBeforeColorDirtyState,
   SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY,
   SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS,
   SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
@@ -62,9 +64,6 @@ const ROLLBACK_SOURCE = fs.readFileSync(
 const EXPECTED_SUPPLEMENTAL_KEYS = Object.freeze([
   "defaultRuntimePoliticalTopology",
   "scenarioPoliticalChunkData",
-  "scenarioHydrationHealthGate",
-  "scenarioDataHealth",
-  "activeScenarioPerformanceHints",
   "scenarioPoliticalVisibleChunkData",
   "activeScenarioChunks",
   "runtimeChunkLoadState",
@@ -84,15 +83,14 @@ const AUTHORITY_KEY_SETS = Object.freeze({
   readiness: SCENARIO_READINESS_STATE_KEYS,
   presentation: SCENARIO_PRESENTATION_STATE_KEYS,
   palette: SCENARIO_PALETTE_STATE_KEYS,
+  health: ["scenarioHydrationHealthGate", "scenarioDataHealth"],
+  presentationHints: ["activeScenarioPerformanceHints"],
   supplemental: SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
 });
 
 const EXPECTED_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY = Object.freeze({
   defaultRuntimePoliticalTopology: "P4.2b",
   scenarioPoliticalChunkData: "P4.2b",
-  scenarioHydrationHealthGate: "P4.2c",
-  scenarioDataHealth: "P4.2c",
-  activeScenarioPerformanceHints: "P4.2c",
   scenarioPoliticalVisibleChunkData: "P4.2b",
   activeScenarioChunks: "P4.2b",
   runtimeChunkLoadState: "P4.2b",
@@ -152,6 +150,9 @@ function createRollbackPlan({
   const values = createValues([
     ...ALL_DOMAIN_KEYS,
     ...SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+    "scenarioHydrationHealthGate",
+    "scenarioDataHealth",
+    "activeScenarioPerformanceHints",
   ]);
   values.ui = Object.freeze({
     politicalEditingExpanded: true,
@@ -190,6 +191,11 @@ function createRollbackPlan({
         ]),
       ),
     },
+    scenarioHealth: {
+      scenarioHydrationHealthGate: values.scenarioHydrationHealthGate,
+      scenarioDataHealth: values.scenarioDataHealth,
+    },
+    activeScenarioPerformanceHints: values.activeScenarioPerformanceHints,
   };
 }
 
@@ -200,9 +206,9 @@ function restoreScenarioTransactionRollbackPlan(target, plan, effects = {}) {
     target,
     plan.supplemental.values.defaultRuntimePoliticalTopology,
   );
-  restoreScenarioTransactionSupplementBeforeAuditState(
+  restoreScenarioHydrationHealthGateState(
     target,
-    plan.supplemental,
+    plan.scenarioHealth.scenarioHydrationHealthGate,
   );
   restoreScenarioTransactionPresentationBeforeAuditState(
     target,
@@ -211,15 +217,15 @@ function restoreScenarioTransactionRollbackPlan(target, plan, effects = {}) {
   effects.audit?.();
   restoreScenarioActivationBeforeColorDirtyState(target, plan.activation);
   restoreScenarioReadinessState(target, plan.readiness);
-  restoreScenarioTransactionSupplementBeforeColorDirtyState(
+  restoreScenarioDataHealthState(
     target,
-    plan.supplemental,
+    plan.scenarioHealth.scenarioDataHealth,
   );
   effects.colorDirty?.();
   restoreScenarioActivationAfterColorDirtyState(target, plan.activation);
-  restoreScenarioTransactionSupplementAfterColorDirtyState(
+  setActiveScenarioPerformanceHintsState(
     target,
-    plan.supplemental,
+    plan.activeScenarioPerformanceHints,
   );
   setScenarioPoliticalChunkPayloadState(target, {
     payload: plan.supplemental.values.scenarioPoliticalChunkData,
@@ -346,10 +352,7 @@ test("scenario rollback supplemental authority has an exact frozen phase handoff
       counts[phase] = (counts[phase] || 0) + 1;
       return counts;
     }, {}),
-    {
-      "P4.2b": 7,
-      "P4.2c": 3,
-    },
+    { "P4.2b": 7 },
   );
 });
 
@@ -406,11 +409,6 @@ test("scenario transaction supplemental capture deeply clones exact state and re
       topologyById: new Map([["main", { version: 1 }]]),
     },
     scenarioPoliticalChunkData: { features: [{ id: "full" }] },
-    scenarioHydrationHealthGate: {
-      requiredLayers: new Set(["political", "water"]),
-    },
-    scenarioDataHealth: { status: { ready: true } },
-    activeScenarioPerformanceHints: { detail: ["full"] },
     scenarioPoliticalVisibleChunkData: { features: [{ id: "visible" }] },
     activeScenarioChunks: { loaded: new Set(["political"]) },
     runtimeChunkLoadState: {
@@ -442,9 +440,6 @@ test("scenario transaction supplemental capture deeply clones exact state and re
   assert.deepEqual(Object.keys(captured.values), [
     "defaultRuntimePoliticalTopology",
     "scenarioPoliticalChunkData",
-    "scenarioHydrationHealthGate",
-    "scenarioDataHealth",
-    "activeScenarioPerformanceHints",
     "scenarioPoliticalVisibleChunkData",
     "activeScenarioChunks",
     "runtimeChunkLoadState",
@@ -479,10 +474,6 @@ test("scenario transaction supplemental capture deeply clones exact state and re
   assert.notEqual(
     captured.values.scenarioPoliticalChunkData.features,
     target.scenarioPoliticalChunkData.features,
-  );
-  assert.notEqual(
-    captured.values.scenarioHydrationHealthGate.requiredLayers,
-    target.scenarioHydrationHealthGate.requiredLayers,
   );
   assert.notEqual(
     captured.values.scenarioPoliticalVisibleChunkData.features,
@@ -585,6 +576,9 @@ test("scenario rollback composes canonical domain restores around audit and colo
     ...SCENARIO_READINESS_STATE_KEYS,
     ...SCENARIO_PALETTE_STATE_KEYS,
     ...SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+    "scenarioHydrationHealthGate",
+    "scenarioDataHealth",
+    "activeScenarioPerformanceHints",
   ]) {
     if (key === "runtimeChunkLoadState") continue;
     assert.equal(target[key], plan.values[key], `${key} should restore exactly`);
@@ -636,7 +630,7 @@ test("canonical domain restores preserve rollback absent-key semantics", () => {
   assert.equal(target.activeScenarioId, plan.values.activeScenarioId);
 });
 
-test("scenario transaction supplemental action validates before mutation", () => {
+test("scenario transaction supplemental validator rejects incomplete patches", () => {
   const plan = createRollbackPlan();
   const target = {
     defaultRuntimePoliticalTopology: "before",
@@ -645,22 +639,12 @@ test("scenario transaction supplemental action validates before mutation", () =>
   delete plan.supplemental.values.defaultRuntimePoliticalTopology;
 
   assert.throws(
-    () =>
-      restoreScenarioTransactionSupplementBeforeAuditState(
-        target,
-        plan.supplemental,
-      ),
+    () => validateScenarioTransactionRollbackSupplementalStatePatch(
+      plan.supplemental,
+    ),
     /missing required key: defaultRuntimePoliticalTopology/,
   );
   assert.deepEqual(target, before);
-  assert.throws(
-    () =>
-      restoreScenarioTransactionSupplementBeforeAuditState(
-        null,
-        createRollbackPlan().supplemental,
-      ),
-    /target must be an object/,
-  );
 });
 
 test("scenario transaction rollback action keeps a narrow canonical state-action boundary", () => {

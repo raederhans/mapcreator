@@ -51,6 +51,22 @@ function assertStateTarget(target) {
   }
 }
 
+export function captureActiveScenarioPerformanceHintsState(target) {
+  assertStateTarget(target);
+  return Object.freeze({
+    values: Object.freeze({
+      activeScenarioPerformanceHints:
+        target.activeScenarioPerformanceHints,
+    }),
+  });
+}
+
+export function setActiveScenarioPerformanceHintsState(target, value) {
+  assertStateTarget(target);
+  target.activeScenarioPerformanceHints = value;
+  return value;
+}
+
 function validateCompletePatch(patch) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new TypeError("[scenario_presentation_actions] patch must be an object");

@@ -15,6 +15,8 @@ const SCENARIO_ACTIVATION_ACTION_MODULE_PATH =
   "js/core/state/actions/scenario_activation_actions.js";
 const SCENARIO_PRESENTATION_ACTION_MODULE_PATH =
   "js/core/state/actions/scenario_presentation_actions.js";
+const SCENARIO_HEALTH_ACTION_MODULE_PATH =
+  "js/core/state/actions/scenario_health_actions.js";
 const SCENARIO_APPLY_REQUEST_ACTION_MODULE_PATH =
   "js/core/state/actions/scenario_apply_request_actions.js";
 const SCENARIO_PALETTE_ACTION_MODULE_PATH =
@@ -75,6 +77,10 @@ const SCENARIO_PRESENTATION_CHUNK_CITY_ACTION_EXPORT_NAMES = Object.freeze([
   "finalizeScenarioChunkCityExternalEffectState",
 ]);
 
+const SCENARIO_PRESENTATION_HEALTH_ACTION_EXPORT_NAMES = Object.freeze([
+  "setActiveScenarioPerformanceHintsState",
+]);
+
 const SCENARIO_APPLY_REQUEST_ACTION_EXPORT_NAMES = Object.freeze([
   "setLatestScenarioApplyRequestState",
   "beginScenarioApplyRequestState",
@@ -86,10 +92,11 @@ const SCENARIO_PALETTE_ACTION_EXPORT_NAMES = Object.freeze([
   "restoreScenarioPaletteState",
 ]);
 
-const SCENARIO_TRANSACTION_ROLLBACK_ACTION_EXPORT_NAMES = Object.freeze([
-  "restoreScenarioTransactionSupplementBeforeAuditState",
-  "restoreScenarioTransactionSupplementBeforeColorDirtyState",
-  "restoreScenarioTransactionSupplementAfterColorDirtyState",
+const SCENARIO_HEALTH_ACTION_EXPORT_NAMES = Object.freeze([
+  "setScenarioHydrationHealthGateState",
+  "restoreScenarioHydrationHealthGateState",
+  "setScenarioDataHealthState",
+  "restoreScenarioDataHealthState",
 ]);
 
 const SCENARIO_CHUNK_RUNTIME_ACTION_EXPORT_NAMES = Object.freeze([
@@ -153,11 +160,6 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
     introducedInPhase: "P4.2a",
   }),
   Object.freeze({
-    modulePath: SCENARIO_TRANSACTION_ROLLBACK_ACTION_MODULE_PATH,
-    exportNames: SCENARIO_TRANSACTION_ROLLBACK_ACTION_EXPORT_NAMES,
-    introducedInPhase: "P4.2a",
-  }),
-  Object.freeze({
     modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
     exportNames: SCENARIO_ACTIVATION_CHUNK_OPTIONAL_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.2b",
@@ -176,6 +178,16 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
     modulePath: SCENARIO_CHUNK_PROMOTION_ACTION_MODULE_PATH,
     exportNames: SCENARIO_CHUNK_PROMOTION_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.2b",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_HEALTH_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_HEALTH_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.2c",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_PRESENTATION_HEALTH_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.2c",
   }),
 ]);
 
@@ -202,7 +214,14 @@ const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
     SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
     new Set([
       "SCENARIO_PRESENTATION_STATE_KEYS",
+      "captureActiveScenarioPerformanceHintsState",
       "captureScenarioPresentationState",
+    ]),
+  ],
+  [
+    SCENARIO_HEALTH_ACTION_MODULE_PATH,
+    new Set([
+      "captureScenarioHealthState",
     ]),
   ],
   [
@@ -627,6 +646,77 @@ const SCENARIO_ACTIVATION_COMMIT_FUNCTION_IDENTITY =
       ordinal: 0,
     }],
   });
+const SCENARIO_RUNTIME_DATA_HEALTH_RETIRED_BINDING_IDENTITY =
+  JSON.stringify({
+    kind: "function-parameter",
+    name: "",
+    functionName: "setScenarioDataHealthState",
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath: "$",
+    importSource: "",
+    importedName: "",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+const SCENARIO_RUNTIME_HYDRATION_HEALTH_RETIRED_BINDING_IDENTITY =
+  JSON.stringify({
+    kind: "function-parameter",
+    name: "",
+    functionName: "setScenarioHydrationHealthGateState",
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath: "$",
+    importSource: "",
+    importedName: "",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+const SCENARIO_DATA_HEALTH_RUNTIME_STATE_BINDING_IDENTITY =
+  JSON.stringify({
+    kind: "module",
+    name: "runtimeState",
+    functionName: "",
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath: "",
+    importSource: "./state.js",
+    importedName: "state",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+const SCENARIO_STARTUP_HYDRATION_STATE_BINDING_IDENTITY =
+  JSON.stringify({
+    kind: "function-parameter",
+    name: "",
+    functionName: "createScenarioStartupHydrationController",
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath: "$/property:state",
+    importSource: "",
+    importedName: "",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+const SCENARIO_DATA_HEALTH_REFRESH_FUNCTION_IDENTITY =
+  JSON.stringify({
+    kind: "function",
+    ancestry: [{
+      name: "refreshScenarioDataHealth",
+      ordinal: 0,
+    }],
+  });
+const SCENARIO_HYDRATION_HEALTH_ENFORCEMENT_FUNCTION_IDENTITY =
+  JSON.stringify({
+    kind: "function",
+    ancestry: [{
+      name: "createScenarioStartupHydrationController",
+      ordinal: 0,
+    }, {
+      name: "enforceScenarioHydrationHealthGate",
+      ordinal: 0,
+    }],
+  });
 function normalizeMigrationMutationSite(site = {}) {
   return Object.freeze({
     enclosingFunctionIdentity: String(
@@ -817,6 +907,39 @@ function createScenarioDetailCrossFileMigrationEntry(
   });
 }
 
+function createScenarioHealthCrossFileMigrationEntry({
+  retiredCallerBindingIdentity,
+  key,
+  retiredEnclosingFunctionIdentity,
+  retiredSourceFingerprint,
+  replacementCallerPath,
+  replacementCallerBindingIdentity,
+  replacementEnclosingFunctionIdentity,
+  actionExportName,
+  replacementActionSourceFingerprint,
+}) {
+  return freezeCrossFileMigrationEntry({
+    retiredCallerPath: "js/core/state/scenario_runtime_state.js",
+    retiredCallerBindingIdentity,
+    domain: "scenario",
+    migrationPhase: "P4.2",
+    operation: "assign",
+    key,
+    retiredMutationSites: [{
+      enclosingFunctionIdentity: retiredEnclosingFunctionIdentity,
+      sourceFingerprint: retiredSourceFingerprint,
+      occurrenceIndex: 0,
+    }],
+    replacementCallerPath,
+    replacementCallerBindingIdentity,
+    replacementEnclosingFunctionIdentity,
+    actionModulePath: SCENARIO_HEALTH_ACTION_MODULE_PATH,
+    actionExportName,
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint,
+  });
+}
+
 export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
   Object.freeze([
     ...[
@@ -845,6 +968,51 @@ export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
           "48de10ee32e9c2cb07dee776e315e5bf98c22ac658d90af9180f76712616a22a",
       },
     ),
+    createScenarioHealthCrossFileMigrationEntry({
+      retiredCallerBindingIdentity:
+        SCENARIO_RUNTIME_DATA_HEALTH_RETIRED_BINDING_IDENTITY,
+      key: "scenarioDataHealth",
+      retiredEnclosingFunctionIdentity: JSON.stringify({
+        kind: "function",
+        ancestry: [{
+          name: "setScenarioDataHealthState",
+          ordinal: 0,
+        }],
+      }),
+      retiredSourceFingerprint:
+        "499c46a92c442aca4ea8ac280d759b930abe5821c3ff06dcc2c6e2f910d749b5",
+      replacementCallerPath: "js/core/scenario_data_health.js",
+      replacementCallerBindingIdentity:
+        SCENARIO_DATA_HEALTH_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        SCENARIO_DATA_HEALTH_REFRESH_FUNCTION_IDENTITY,
+      actionExportName: "setScenarioDataHealthState",
+      replacementActionSourceFingerprint:
+        "34e8ad9722db769ba6c7da4c2e84fcee70c24ef65a9d8a5ef0a96fd08f3f5373",
+    }),
+    createScenarioHealthCrossFileMigrationEntry({
+      retiredCallerBindingIdentity:
+        SCENARIO_RUNTIME_HYDRATION_HEALTH_RETIRED_BINDING_IDENTITY,
+      key: "scenarioHydrationHealthGate",
+      retiredEnclosingFunctionIdentity: JSON.stringify({
+        kind: "function",
+        ancestry: [{
+          name: "setScenarioHydrationHealthGateState",
+          ordinal: 0,
+        }],
+      }),
+      retiredSourceFingerprint:
+        "c84938fde26b1d2af44477315d953497d4ef55223b474dc4dc5c9b0d3ec99f6a",
+      replacementCallerPath:
+        "js/core/scenario/startup_hydration.js",
+      replacementCallerBindingIdentity:
+        SCENARIO_STARTUP_HYDRATION_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        SCENARIO_HYDRATION_HEALTH_ENFORCEMENT_FUNCTION_IDENTITY,
+      actionExportName: "setScenarioHydrationHealthGateState",
+      replacementActionSourceFingerprint:
+        "cc4831af773186e73e4d9dc6b705d379fdc5b384fe574bacef03b89ed3bfbc75",
+    }),
   ].sort(
     (left, right) =>
       left.retiredMembershipIdentity.localeCompare(
@@ -1979,14 +2147,6 @@ export function validateStateActionModuleSource(
         normalizeModulePath(entry?.modulePath) === normalizedPath,
     );
   const violations = validateStateActionDelegationContract(entries);
-  if (!entries.length) {
-    return [
-      ...violations,
-      createViolation("state-action-module-contract-missing", {
-        modulePath: normalizedPath,
-      }),
-    ];
-  }
 
   let ast;
   try {
@@ -2003,6 +2163,19 @@ export function validateStateActionModuleSource(
 
   const { directFunctions, nonDirectExports } =
     collectNamedExportShapes(ast);
+  const registeredReadOnlyExportCount = [
+    ...directFunctions.keys(),
+    ...nonDirectExports.keys(),
+  ].filter((exportName) => (
+    isRegisteredReadOnlyExport(normalizedPath, exportName)
+  )).length;
+  if (!entries.length && registeredReadOnlyExportCount === 0) {
+    violations.push(
+      createViolation("state-action-module-contract-missing", {
+        modulePath: normalizedPath,
+      }),
+    );
+  }
   const registeredExportNames = new Set(
     entries.map(({ exportName }) => String(exportName || "")),
   );

@@ -8,6 +8,9 @@ import {
   STATE_BUS_EVENTS,
   emitStateBusEvent,
 } from "../state/index.js";
+import {
+  setActiveScenarioPerformanceHintsState,
+} from "../state/actions/scenario_presentation_actions.js";
 
 function emitScenarioPresentationUiUpdates() {
   emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_WATER_INTERACTION);
@@ -45,7 +48,7 @@ function createScenarioDisplayRestoreRuntime({
   function applyScenarioPerformanceHints(manifest) {
     captureScenarioDisplaySettingsBeforeActivate();
     const hints = normalizeScenarioPerformanceHints(manifest);
-    state.activeScenarioPerformanceHints = hints;
+    setActiveScenarioPerformanceHintsState(state, hints);
     if (hints.renderProfileDefault) {
       state.renderProfile = normalizeScenarioRenderProfile(hints.renderProfileDefault, state.renderProfile || "auto");
     }
@@ -84,7 +87,7 @@ function createScenarioDisplayRestoreRuntime({
       state.strategicChoroplethMetric = String(snapshot.strategicChoroplethMetric || "");
     }
     state.scenarioDisplaySettingsBeforeActivate = null;
-    state.activeScenarioPerformanceHints = null;
+    setActiveScenarioPerformanceHintsState(state, null);
     syncScenarioPresentationUi();
   }
 

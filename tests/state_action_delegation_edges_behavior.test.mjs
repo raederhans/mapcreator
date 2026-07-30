@@ -7,12 +7,14 @@ import {
   STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
   STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT,
   STATE_TARGET_PURE_READER_CONTRACT,
+  validateStateActionModuleSource,
   validateStateActionModulePhaseAdmissions,
   validateStateTargetPureReaderContract,
 } from "../tools/state_action_delegation_contract.mjs";
 import {
   applyStateWriterBindingFindingContracts,
   discoverStateWriterBindingsForSource,
+  normalizeStateActionDelegations,
   scanStateWriterBindingInventoriesBatch,
 } from "../tools/build_state_writer_policy.mjs";
 import {
@@ -66,6 +68,82 @@ test("P4.2b optional and city action exports have one canonical owner", () => {
     modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
     phase: "P4.2a",
   }).some(({ code }) => code === "state-action-module-phase-not-admitted"));
+});
+
+test("P4.2c scenario health actions have canonical owners and cross-file retirement proofs", () => {
+  const expectedOwners = new Map([
+    ["setScenarioHydrationHealthGateState", "js/core/state/actions/scenario_health_actions.js"],
+    ["restoreScenarioHydrationHealthGateState", "js/core/state/actions/scenario_health_actions.js"],
+    ["setScenarioDataHealthState", "js/core/state/actions/scenario_health_actions.js"],
+    ["restoreScenarioDataHealthState", "js/core/state/actions/scenario_health_actions.js"],
+    ["setActiveScenarioPerformanceHintsState", "js/core/state/actions/scenario_presentation_actions.js"],
+  ]);
+  for (const [exportName, modulePath] of expectedOwners) {
+    const entries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+      (entry) => entry.exportName === exportName,
+    );
+    assert.equal(entries.length, 1, `${exportName} must have one registered owner`);
+    assert.equal(entries[0].modulePath, modulePath);
+    assert.equal(entries[0].introducedInPhase, "P4.2c");
+  }
+
+  const healthRetirementProofs = STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT
+    .filter(({ key }) => [
+      "scenarioDataHealth",
+      "scenarioHydrationHealthGate",
+    ].includes(key));
+  assert.deepEqual(
+    healthRetirementProofs.map(({ key, actionExportName }) => ({
+      key,
+      actionExportName,
+    })),
+    [
+      {
+        key: "scenarioDataHealth",
+        actionExportName: "setScenarioDataHealthState",
+      },
+      {
+        key: "scenarioHydrationHealthGate",
+        actionExportName: "setScenarioHydrationHealthGateState",
+      },
+    ],
+  );
+});
+
+test("P4.2c scenario health cross-file proofs match one live caller edge", async () => {
+  const healthRetirementProofs = STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT
+    .filter(({ key }) => [
+      "scenarioDataHealth",
+      "scenarioHydrationHealthGate",
+    ].includes(key));
+
+  for (const proof of healthRetirementProofs) {
+    const source = fs.readFileSync(proof.replacementCallerPath, "utf8");
+    const inventory = await discoverStateWriterBindingsForSource(
+      proof.replacementCallerPath,
+      source,
+      "production",
+      { scanAllParameters: true, includeInventories: true },
+    );
+    const edges = normalizeStateActionDelegations(
+      inventory.bindingInventories.flatMap(
+        ({ actionDelegations = [] }) => actionDelegations,
+      ),
+    );
+    const matches = edges.filter((edge) => (
+      edge.callerPath === proof.replacementCallerPath
+      && edge.callerBindingIdentity
+        === proof.replacementCallerBindingIdentity
+      && edge.enclosingFunctionIdentity
+        === proof.replacementEnclosingFunctionIdentity
+      && edge.actionModulePath === proof.actionModulePath
+      && edge.actionExportName === proof.actionExportName
+      && edge.targetArgumentIndex === proof.targetArgumentIndex
+      && edge.sourceFingerprint
+        === proof.replacementActionSourceFingerprint
+    ));
+    assert.equal(matches.length, 1, `${proof.key} must have one exact live replacement edge`);
+  }
 });
 
 test("compatibility API returns findings plus canonical named action delegation edges", () => {
@@ -562,6 +640,22 @@ test("rollback supplemental capture is a registered read-only state action expor
   const inventory = scan(source);
   assert.deepEqual(inventory.findings, []);
   assert.deepEqual(inventory.actionDelegations, []);
+});
+
+test("a read-only-only action module remains valid only through its explicit export catalog", () => {
+  const modulePath = "js/core/state/actions/scenario_transaction_rollback_actions.js";
+  const source = fs.readFileSync(modulePath, "utf8");
+
+  assert.deepEqual(
+    validateStateActionModuleSource(source, { filePath: modulePath }),
+    [],
+  );
+  assert.ok(
+    validateStateActionModuleSource(
+      `${source}\nexport function unregisteredRollbackReader() { return null; }\n`,
+      { filePath: modulePath },
+    ).some(({ code }) => code === "state-action-direct-export-unregistered"),
+  );
 });
 
 test("scenario chunk continuation capture is a registered read-only state action export", () => {

@@ -5,7 +5,10 @@ import { readFile } from "node:fs/promises";
 import { createScenarioLifecycleRuntime } from "../js/core/scenario/lifecycle_runtime.js";
 import { createScenarioApplyPipeline } from "../js/core/scenario_apply_pipeline.js";
 import { createScenarioOceanFillRestoreRuntime } from "../js/core/scenario/presentation_ocean_fill_restore.js";
-import { evaluateScenarioDataHealth } from "../js/core/scenario_data_health.js";
+import {
+  evaluateScenarioDataHealth,
+  refreshScenarioDataHealth,
+} from "../js/core/scenario_data_health.js";
 import {
   captureScenarioApplyRollbackSnapshot,
   restoreScenarioApplyRollbackSnapshot,
@@ -17,6 +20,9 @@ import {
 import {
   publishScenarioPaletteAndToolbarState,
 } from "../js/core/scenario_post_apply_effects.js";
+import {
+  createDefaultScenarioHydrationHealthGate,
+} from "../js/core/state/scenario_runtime_state.js";
 import {
   createPoliticalRasterWorkerIdentity,
   isPoliticalRasterWorkerResultCurrent,
@@ -2109,6 +2115,48 @@ test("clearActiveScenario keeps composite mode when baseline detail topology is 
   assert.equal(runtimeState.detailPromotionCompleted, true);
 });
 
+test("clearActiveScenario restores exact health defaults before display restore and post-clear effects", () => {
+  const targetState = createBaseState({
+    scenarioHydrationHealthGate: { status: "stale", checkedAt: 99 },
+    scenarioDataHealth: { expectedFeatureCount: 12, minRatio: 0.75 },
+    activeScenarioPerformanceHints: { renderProfileDefault: "performance" },
+  });
+  const observed = [];
+  const runtime = createLifecycleRuntime(targetState, {
+    restoreScenarioDisplaySettingsAfterExit: () => {
+      observed.push({
+        phase: "display",
+        gate: targetState.scenarioHydrationHealthGate,
+        dataHealth: targetState.scenarioDataHealth,
+      });
+      targetState.activeScenarioPerformanceHints = null;
+    },
+    runPostScenarioClearEffects: () => {
+      observed.push({
+        phase: "post-clear",
+        hints: targetState.activeScenarioPerformanceHints,
+      });
+    },
+  });
+
+  runtime.clearActiveScenario({ renderNow: false, markDirtyReason: "" });
+
+  assert.equal(targetState.scenarioHydrationHealthGate.checkedAt, 0);
+  assert.deepEqual(observed.map(({ phase }) => phase), ["display", "post-clear"]);
+  assert.equal(observed[0].gate.status, "idle");
+  assert.equal(observed[0].gate.checkedAt, 0);
+  assert.deepEqual(observed[0].dataHealth, {
+    expectedFeatureCount: 0,
+    runtimeFeatureCount: 0,
+    ratio: 1,
+    minRatio: 0.75,
+    generatedColorTags: [],
+    warning: "",
+    severity: "",
+  });
+  assert.equal(observed[1].hints, null);
+});
+
 test("resetToScenarioBaseline restores ownership before UI refresh side effects", () => {
   const runtimeState = createBaseState({
     sovereigntyByFeatureId: { A: "DE", B: "DE" },
@@ -2239,6 +2287,93 @@ test("scenario rollback restores visible political data and advances scene data 
   assert.equal(isPoliticalRasterWorkerResultCurrent(failedIdentity, restoredIdentity), false);
 }));
 
+test("scenario rollback round trip deeply isolates health and performance state", () => withAppStateRestored(() => {
+  const originalGate = {
+    status: "healthy",
+    checkedAt: 73,
+    diagnostics: { overlap: { matched: 9, expected: 10 } },
+  };
+  const originalDataHealth = {
+    expectedFeatureCount: 10,
+    runtimeFeatureCount: 9,
+    ratio: 0.9,
+    minRatio: 0.75,
+    generatedColorTags: ["AA"],
+    warning: "",
+    severity: "",
+    diagnostics: { source: { id: "before-health" } },
+  };
+  const originalPerformanceHints = {
+    renderProfileDefault: "performance",
+    renderBudgetHints: { contextLayers: ["cities", "roads"] },
+  };
+  const expectedGate = structuredClone(originalGate);
+  const expectedDataHealth = structuredClone(originalDataHealth);
+  const expectedPerformanceHints = structuredClone(originalPerformanceHints);
+
+  applyAppStatePatch({
+    scenarioHydrationHealthGate: originalGate,
+    scenarioDataHealth: originalDataHealth,
+    activeScenarioPerformanceHints: originalPerformanceHints,
+  });
+  const rollbackSnapshot = captureScenarioApplyRollbackSnapshot();
+
+  originalGate.diagnostics.overlap.matched = 0;
+  originalDataHealth.diagnostics.source.id = "mutated-after-capture";
+  originalPerformanceHints.renderBudgetHints.contextLayers.push("ports");
+  applyAppStatePatch({
+    scenarioHydrationHealthGate: { status: "failed", checkedAt: 999 },
+    scenarioDataHealth: { warning: "failed" },
+    activeScenarioPerformanceHints: { renderProfileDefault: "quality" },
+  });
+
+  restoreScenarioApplyRollbackSnapshot(rollbackSnapshot);
+
+  assert.deepEqual(
+    readAppStateValue("scenarioHydrationHealthGate"),
+    expectedGate,
+  );
+  assert.deepEqual(
+    readAppStateValue("scenarioDataHealth"),
+    expectedDataHealth,
+  );
+  assert.deepEqual(
+    readAppStateValue("activeScenarioPerformanceHints"),
+    expectedPerformanceHints,
+  );
+  assert.notEqual(readAppStateValue("scenarioHydrationHealthGate"), originalGate);
+  assert.notEqual(readAppStateValue("scenarioDataHealth"), originalDataHealth);
+  assert.notEqual(
+    readAppStateValue("activeScenarioPerformanceHints"),
+    originalPerformanceHints,
+  );
+}));
+
+test("scenario rollback keeps required health and performance keys explicit when capture inputs are absent", () => withAppStateRestored(() => {
+  const requiredKeys = [
+    "scenarioHydrationHealthGate",
+    "scenarioDataHealth",
+    "activeScenarioPerformanceHints",
+  ];
+  deleteAppStateKeys(requiredKeys);
+  const rollbackSnapshot = captureScenarioApplyRollbackSnapshot();
+
+  applyAppStatePatch({
+    scenarioHydrationHealthGate: { status: "failed" },
+    scenarioDataHealth: { warning: "failed" },
+    activeScenarioPerformanceHints: { renderProfileDefault: "quality" },
+  });
+  restoreScenarioApplyRollbackSnapshot(rollbackSnapshot);
+
+  requiredKeys.forEach((key) => assert.equal(hasAppStateKey(key), true));
+  assert.deepEqual(
+    readAppStateValue("scenarioHydrationHealthGate"),
+    createDefaultScenarioHydrationHealthGate(),
+  );
+  assert.equal(readAppStateValue("scenarioDataHealth"), undefined);
+  assert.equal(readAppStateValue("activeScenarioPerformanceHints"), undefined);
+}));
+
 function assertScenarioRollbackRestoresSentinels({
   beforeValues,
   failedValues,
@@ -2283,6 +2418,36 @@ test("scenario rollback restores activation seed and Atlantropa sentinels", () =
     },
   });
 });
+
+test("scenario data health is committed before its warning toast is published", () => withAppStateRestored(() => {
+  applyAppStatePatch({
+    activeScenarioId: "large_scenario",
+    activeScenarioManifest: { summary: { feature_count: 2500 } },
+    landData: { type: "FeatureCollection", features: [{ id: "coarse" }] },
+    landDataFull: null,
+    runtimePoliticalTopology: null,
+    scenarioGeneratedColorTags: ["AA"],
+    scenarioDataHealth: null,
+  });
+  let toastCount = 0;
+  let observedCommittedHealth = false;
+  appState.showToastFn = () => {
+    toastCount += 1;
+    observedCommittedHealth = (
+      appState.scenarioDataHealth?.severity === "error"
+      && appState.scenarioDataHealth?.expectedFeatureCount === 2500
+    );
+  };
+  try {
+    const health = refreshScenarioDataHealth({ showWarningToast: true });
+    assert.equal(toastCount, 1);
+    assert.equal(observedCommittedHealth, true);
+    assert.equal(health.severity, "error");
+    assert.equal(health.expectedFeatureCount, 2500);
+  } finally {
+    appState.showToastFn = null;
+  }
+}));
 
 test("scenario rollback restores detail readiness sentinels", () => {
   assertScenarioRollbackRestoresSentinels({

@@ -30,6 +30,14 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
         presentation_content = SCENARIO_PRESENTATION_ACTIONS.read_text(
             encoding="utf-8"
         )
+        health_content = (
+            REPO_ROOT
+            / "js"
+            / "core"
+            / "state"
+            / "actions"
+            / "scenario_health_actions.js"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("function captureScenarioRuntimeSnapshot()", content)
         self.assertIn("function captureScenarioPresentationSnapshot()", content)
@@ -73,11 +81,14 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
             presentation_content,
         )
         for export_name in (
-            "restoreScenarioTransactionSupplementBeforeAuditState",
-            "restoreScenarioTransactionSupplementBeforeColorDirtyState",
-            "restoreScenarioTransactionSupplementAfterColorDirtyState",
+            "restoreScenarioHydrationHealthGateState",
+            "restoreScenarioDataHealthState",
         ):
-            self.assertIn(f"export function {export_name}(", action_content)
+            self.assertIn(f"export function {export_name}(", health_content)
+        self.assertIn(
+            "export function setActiveScenarioPerformanceHintsState(",
+            presentation_content,
+        )
         self.assertIn("export function captureScenarioApplyRollbackSnapshot()", content)
         self.assertIn("export function restoreScenarioApplyRollbackSnapshot(", content)
         self.assertIn("const ROLLBACK_REQUIRED_KEYS = Object.freeze([", content)
@@ -160,15 +171,15 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
             'callRuntimeHook(runtimeState, "cancelScenarioChunkPromotionCommitFn", "rolled-back");',
             "restoreScenarioActivationBeforeAuditState(",
             "setDefaultRuntimePoliticalTopologyState(",
-            "restoreScenarioTransactionSupplementBeforeAuditState(",
+            "restoreScenarioHydrationHealthGateState(",
             "restoreScenarioTransactionPresentationBeforeAuditState(",
             "setScenarioAuditUiState(",
             "restoreScenarioActivationBeforeColorDirtyState(",
             "restoreScenarioReadinessState(",
-            "restoreScenarioTransactionSupplementBeforeColorDirtyState(",
+            "restoreScenarioDataHealthState(",
             "markLegacyColorStateDirty();",
             "restoreScenarioActivationAfterColorDirtyState(",
-            "restoreScenarioTransactionSupplementAfterColorDirtyState(",
+            "setActiveScenarioPerformanceHintsState(",
             "setScenarioPoliticalChunkPayloadState(",
             "replaceScenarioChunkRuntimeState(",
             "setScenarioChunkRuntimeHooksState(",

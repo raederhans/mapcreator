@@ -4,6 +4,10 @@ import {
 } from "../state/scenario_runtime_state.js";
 import { setScenarioChunkRuntimeHooksState } from "../state/actions/scenario_chunk_runtime_actions.js";
 import { setScenarioPoliticalChunkPayloadState } from "../state/actions/scenario_chunk_promotion_actions.js";
+import {
+  restoreScenarioDataHealthState,
+  restoreScenarioHydrationHealthGateState,
+} from "../state/actions/scenario_health_actions.js";
 
 function createScenarioLifecycleRuntime({
   state = null,
@@ -247,8 +251,14 @@ function createScenarioLifecycleRuntime({
     runtimeState.scenarioAutoShellOwnerByFeatureId = {};
     runtimeState.scenarioBaselineCoresByFeatureId = {};
     runtimeState.scenarioShellOverlayRevision = (Number(runtimeState.scenarioShellOverlayRevision) || 0) + 1;
-    runtimeState.scenarioHydrationHealthGate = createDefaultScenarioHydrationHealthGate();
-    runtimeState.scenarioDataHealth = createDefaultScenarioDataHealth(scenarioDetailMinRatioStrict);
+    restoreScenarioHydrationHealthGateState(
+      runtimeState,
+      createDefaultScenarioHydrationHealthGate(),
+    );
+    restoreScenarioDataHealthState(
+      runtimeState,
+      createDefaultScenarioDataHealth(scenarioDetailMinRatioStrict),
+    );
     runtimeState.countryNames = { ...countryNames };
     runtimeState.selectedWaterRegionId = "";
     runtimeState.selectedSpecialRegionId = "";

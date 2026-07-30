@@ -56,10 +56,25 @@ test("P4.2b plan keeps scenario chunk actions, complete policy suite, and route 
   );
 });
 
+test("P4.2c plan keeps scenario health actions, complete policy suite, and route commands exact", () => {
+  const plan = buildP4PhaseVerificationPlan({ phase: "P4.2c" });
+  assert.deepEqual(plan.commands, [
+    "npm run test:node:p4:p4-2c",
+    "npm run test:python:p4:p4-2c-boundary",
+    "npm run test:node:p4:state-writer-policy",
+    "node tools/check_state_writer_policy.mjs --phase P4.2c --require-clean",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.2c --history-base HEAD^",
+  ]);
+  assert.equal(
+    plan.reportPath.replaceAll("\\", "/"),
+    ".runtime/reports/generated/p4-state-actions/P4.2c/phase-verification.json",
+  );
+});
+
 test("unsupported future phase plans fail closed", () => {
   assert.throws(
-    () => buildP4PhaseVerificationPlan({ phase: "P4.2c" }),
-    /no executable plan/,
+    () => buildP4PhaseVerificationPlan({ phase: "P4.3" }),
+    /Unknown P4 state-action phase|no executable plan/,
   );
 });
 

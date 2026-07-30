@@ -37,6 +37,7 @@ ACTION_MODULE_EXPORTS = {
         "restoreScenarioTransactionPresentationBeforeAuditState",
         "restoreScenarioTransactionPresentationState",
         "finalizeScenarioChunkCityExternalEffectState",
+        "setActiveScenarioPerformanceHintsState",
     ),
     "scenario_apply_request_actions.js": (
         "setLatestScenarioApplyRequestState",
@@ -46,11 +47,6 @@ ACTION_MODULE_EXPORTS = {
     "scenario_palette_actions.js": (
         "commitScenarioPaletteState",
         "restoreScenarioPaletteState",
-    ),
-    "scenario_transaction_rollback_actions.js": (
-        "restoreScenarioTransactionSupplementBeforeAuditState",
-        "restoreScenarioTransactionSupplementBeforeColorDirtyState",
-        "restoreScenarioTransactionSupplementAfterColorDirtyState",
     ),
 }
 
@@ -215,9 +211,9 @@ class ScenarioStateActionsBoundaryContractTest(unittest.TestCase):
             "restoreScenarioTransactionPresentationBeforeAuditState",
             "restoreScenarioTransactionPresentationState",
             "restoreScenarioPaletteState",
-            "restoreScenarioTransactionSupplementBeforeAuditState",
-            "restoreScenarioTransactionSupplementBeforeColorDirtyState",
-            "restoreScenarioTransactionSupplementAfterColorDirtyState",
+            "restoreScenarioHydrationHealthGateState",
+            "restoreScenarioDataHealthState",
+            "setActiveScenarioPerformanceHintsState",
         ):
             self.assertRegex(content, rf"\b{action_name}\(\s*runtimeState")
         for sentinel_key in (
@@ -280,9 +276,9 @@ class ScenarioStateActionsBoundaryContractTest(unittest.TestCase):
             "restoreScenarioActivationAfterColorDirtyState",
             "restoreScenarioTransactionPresentationState",
             "restoreScenarioTransactionPresentationBeforeAuditState",
-            "restoreScenarioTransactionSupplementBeforeAuditState",
-            "restoreScenarioTransactionSupplementBeforeColorDirtyState",
-            "restoreScenarioTransactionSupplementAfterColorDirtyState",
+            "restoreScenarioHydrationHealthGateState",
+            "restoreScenarioDataHealthState",
+            "setActiveScenarioPerformanceHintsState",
         ):
             self.assertIn(f'"{action_name}"', content)
 

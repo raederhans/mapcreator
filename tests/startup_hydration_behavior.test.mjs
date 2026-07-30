@@ -708,11 +708,12 @@ test("startup hydration keeps political promotion safe when refresh plan factory
 });
 
 test("startup hydration overlay mismatch degrades overlays and keeps startup readonly off", async () => {
+  const effectOrder = [];
   const flushCalls = [];
   const scenarioUiCalls = [];
   const countryUiCalls = [];
   const toastCalls = [];
-  const state = {
+  const targetState = {
     activeScenarioId: "tno_1962",
     landData: {
       type: "FeatureCollection",
@@ -730,11 +731,11 @@ test("startup hydration overlay mismatch degrades overlays and keeps startup rea
     startupReadonlyReason: "scenario-health-gate",
     startupReadonlyUnlockInFlight: true,
     startupReadonlySince: 9876,
-    scenarioHydrationHealthGate: null,
+    scenarioHydrationHealthGate: { status: "old", checkedAt: 12 },
   };
 
   const { enforceScenarioHydrationHealthGate } = createScenarioStartupHydrationController({
-    state,
+    state: targetState,
     normalizeScenarioId: (value) => String(value || "").trim(),
     normalizeScenarioRuntimeTopologyPayload: (value) => value,
     normalizeScenarioGeoLocalePatchPayload: (value) => value,
@@ -751,9 +752,11 @@ test("startup hydration overlay mismatch degrades overlays and keeps startup rea
     getLoadScenarioBundle: () => async () => null,
     syncScenarioLocalizationState: () => {},
     syncCountryUi: (options) => {
+      effectOrder.push(["country-ui", targetState.scenarioHydrationHealthGate.status]);
       countryUiCalls.push(options);
     },
     syncScenarioUi: () => {
+      effectOrder.push(["scenario-ui", targetState.scenarioHydrationHealthGate.status]);
       scenarioUiCalls.push("sync");
     },
     setScenarioAuditUiState: () => {},
@@ -766,44 +769,149 @@ test("startup hydration overlay mismatch degrades overlays and keeps startup rea
     refreshMapDataForScenarioChunkPromotion: () => {},
     refreshScenarioOpeningOwnerBorders: () => false,
     flushRenderBoundary: (reason) => {
+      effectOrder.push(["flush", targetState.scenarioHydrationHealthGate.status]);
       flushCalls.push(reason);
     },
     enterScenarioFatalRecovery: () => {},
     consumeScenarioTestHook: (name) => name === "forceHydrationHealthGateMaskMismatchOnce",
     t: (value) => value,
     showToast: (...args) => {
+      effectOrder.push(["toast", targetState.scenarioHydrationHealthGate.status]);
       toastCalls.push(args);
     },
   });
 
   const result = await enforceScenarioHydrationHealthGate({
-    renderNow: false,
+    renderNow: true,
     reason: "test-mask-mismatch",
     autoRetry: false,
   });
 
   assert.equal(result.ok, false);
   assert.equal(result.degradedWaterOverlay, true);
-  assert.equal(state.startupReadonly, false);
-  assert.equal(state.startupReadonlyReason, "");
-  assert.equal(state.startupReadonlyUnlockInFlight, false);
-  assert.equal(state.startupReadonlySince, 9876);
-  assert.deepEqual(state.scenarioHydrationHealthGate, {
+  assert.equal(targetState.startupReadonly, false);
+  assert.equal(targetState.startupReadonlyReason, "");
+  assert.equal(targetState.startupReadonlyUnlockInFlight, false);
+  assert.equal(targetState.startupReadonlySince, 9876);
+  assert.deepEqual(targetState.scenarioHydrationHealthGate, {
     status: "degraded",
     reason: "runtime-overlay-context-land-mask-version-mismatch",
-    checkedAt: state.scenarioHydrationHealthGate.checkedAt,
+    checkedAt: targetState.scenarioHydrationHealthGate.checkedAt,
     attemptedRetry: false,
     ownerFeatureOverlapRatio: 0,
     ownerFeatureOverlapCount: 0,
     ownerFeatureRenderedCount: 1,
     degradedWaterOverlay: true,
   });
-  assert.equal(state.scenarioWaterRegionsData, null);
-  assert.equal(state.scenarioLandMaskData, null);
-  assert.equal(state.scenarioContextLandMaskData, null);
-  assert.equal(flushCalls.length, 0);
+  assert.equal(targetState.scenarioWaterRegionsData, null);
+  assert.equal(targetState.scenarioLandMaskData, null);
+  assert.equal(targetState.scenarioContextLandMaskData, null);
+  assert.deepEqual(effectOrder, [
+    ["toast", "old"],
+    ["scenario-ui", "degraded"],
+    ["country-ui", "degraded"],
+    ["flush", "degraded"],
+  ]);
+  assert.deepEqual(flushCalls, ["scenario-health-gate-fallback"]);
   assert.equal(scenarioUiCalls.length, 1);
   assert.equal(countryUiCalls.length, 1);
   assert.equal(countryUiCalls[0]?.renderNow, false);
   assert.equal(toastCalls.length, 1);
+});
+
+test("startup hydration retry recovers before readonly clear, gate publish, and UI sync", async () => {
+  const order = [];
+  let forceMismatch = true;
+  const targetState = {
+    activeScenarioId: "tno_1962",
+    landData: {
+      type: "FeatureCollection",
+      features: [{ properties: { id: "feature-1" } }],
+    },
+    sovereigntyByFeatureId: { "feature-1": "AA" },
+    scenarioRuntimeTopologyVersionTag: "runtime-v1",
+    startupReadonly: true,
+    startupReadonlyReason: "scenario-health-gate",
+    startupReadonlyUnlockInFlight: true,
+    startupReadonlySince: 10,
+    scenarioHydrationHealthGate: { status: "old" },
+  };
+  const controller = createMinimalHydrationController(targetState, {
+    ownerFeatureCoverageMinFeatures: 1,
+    consumeScenarioTestHook: (name) => {
+      if (name !== "forceHydrationHealthGateOwnerMismatchOnce" || !forceMismatch) {
+        return false;
+      }
+      forceMismatch = false;
+      return true;
+    },
+    getLoadScenarioBundle: () => async (_scenarioId, options) => {
+      order.push(["force-reload", options.forceReload]);
+      return null;
+    },
+    flushRenderBoundary: (reason) => {
+      order.push(["flush", reason, targetState.startupReadonlyReason]);
+    },
+    syncScenarioUi: () => {
+      order.push([
+        "scenario-ui",
+        targetState.startupReadonlyReason,
+        targetState.scenarioHydrationHealthGate.status,
+      ]);
+    },
+    syncCountryUi: () => {
+      order.push([
+        "country-ui",
+        targetState.startupReadonlyReason,
+        targetState.scenarioHydrationHealthGate.status,
+      ]);
+    },
+  });
+
+  const result = await controller.enforceScenarioHydrationHealthGate();
+
+  assert.equal(result.ok, true);
+  assert.equal(result.attemptedRetry, true);
+  assert.deepEqual(order, [
+    ["force-reload", true],
+    ["flush", "scenario-health-gate-retry-recovered", "scenario-health-gate"],
+    ["scenario-ui", "", "ok"],
+    ["country-ui", "", "ok"],
+  ]);
+  assert.equal(targetState.scenarioHydrationHealthGate.reason, "retry-recovered");
+});
+
+test("startup hydration retry failure preserves attemptedRetry in the committed gate", async () => {
+  const targetState = {
+    activeScenarioId: "tno_1962",
+    landData: {
+      type: "FeatureCollection",
+      features: [{ properties: { id: "feature-1" } }],
+    },
+    sovereigntyByFeatureId: { "feature-1": "AA" },
+    scenarioRuntimeTopologyVersionTag: "runtime-v1",
+    startupReadonly: true,
+    startupReadonlyReason: "scenario-health-gate",
+    scenarioHydrationHealthGate: { status: "old" },
+  };
+  const controller = createMinimalHydrationController(targetState, {
+    ownerFeatureCoverageMinFeatures: 1,
+    consumeScenarioTestHook: (name) =>
+      name === "forceHydrationHealthGateOwnerMismatchOnce",
+    getLoadScenarioBundle: () => async () => {
+      throw new Error("retry failed");
+    },
+  });
+
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    const result = await controller.enforceScenarioHydrationHealthGate();
+    assert.equal(result.ok, false);
+    assert.equal(result.attemptedRetry, true);
+    assert.equal(targetState.scenarioHydrationHealthGate.attemptedRetry, true);
+    assert.equal(targetState.scenarioHydrationHealthGate.status, "degraded");
+  } finally {
+    console.warn = originalWarn;
+  }
 });

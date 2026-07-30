@@ -46337,7 +46337,7 @@
     },
     {
       "path": "app/js/core/scenario/lifecycle_runtime.js",
-      "size_bytes": 13539,
+      "size_bytes": 13741,
       "source_kind": "dist"
     },
     {
@@ -46347,7 +46347,7 @@
     },
     {
       "path": "app/js/core/scenario/presentation_display_restore.js",
-      "size_bytes": 4307,
+      "size_bytes": 4434,
       "source_kind": "dist"
     },
     {
@@ -46382,7 +46382,7 @@
     },
     {
       "path": "app/js/core/scenario/startup_hydration.js",
-      "size_bytes": 35554,
+      "size_bytes": 35877,
       "source_kind": "dist"
     },
     {
@@ -46407,7 +46407,7 @@
     },
     {
       "path": "app/js/core/scenario_data_health.js",
-      "size_bytes": 5032,
+      "size_bytes": 5137,
       "source_kind": "dist"
     },
     {
@@ -46452,7 +46452,7 @@
     },
     {
       "path": "app/js/core/scenario_rollback.js",
-      "size_bytes": 24828,
+      "size_bytes": 25481,
       "source_kind": "dist"
     },
     {
@@ -46526,13 +46526,18 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/state/actions/scenario_health_actions.js",
+      "size_bytes": 1350,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/state/actions/scenario_palette_actions.js",
       "size_bytes": 6896,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/state/actions/scenario_presentation_actions.js",
-      "size_bytes": 15937,
+      "size_bytes": 16359,
       "source_kind": "dist"
     },
     {
@@ -46542,7 +46547,7 @@
     },
     {
       "path": "app/js/core/state/actions/scenario_transaction_rollback_actions.js",
-      "size_bytes": 8319,
+      "size_bytes": 6961,
       "source_kind": "dist"
     },
     {
@@ -46607,7 +46612,7 @@
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
-      "size_bytes": 19987,
+      "size_bytes": 19632,
       "source_kind": "dist"
     },
     {
@@ -47482,7 +47487,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1469443,
+      "size_bytes": 1469580,
       "source_kind": "dist"
     },
     {
@@ -47612,9 +47617,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9436,
+      "file_count": 9437,
       "path": "app",
-      "size_bytes": 965808771
+      "size_bytes": 965810240
     },
     {
       "file_count": 57,
@@ -47624,7 +47629,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1469443
+      "size_bytes": 1469580
     },
     {
       "file_count": 1,
@@ -47647,5 +47652,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972376575
+  "total_bytes": 972378181
 }

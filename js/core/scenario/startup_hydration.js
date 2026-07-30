@@ -16,11 +16,14 @@ import {
 } from "../state/boot_state.js";
 import {
   SCENARIO_HYDRATION_HEALTH_REASONS,
+  normalizeScenarioHydrationHealthGateState,
   resetScenarioHydrationOverlayState,
   setHydratedScenarioRuntimeTopologyState,
-  setScenarioHydrationHealthGateState,
   setScenarioRuntimeOptionalLayerState,
 } from "../state/scenario_runtime_state.js";
+import {
+  setScenarioHydrationHealthGateState,
+} from "../state/actions/scenario_health_actions.js";
 import {
   hydrateScenarioReleasableCatalogState,
   setScenarioAuditState,
@@ -306,7 +309,7 @@ function createScenarioStartupHydrationController({
       // 这里先用 runtime topology 定住“壳层真相”，再决定各类 overlay 是否复用缓存、是否需要刷新版本标签。
       // 顺序不能反过来，否则 water / land mask 这类派生层会拿到和当前 runtime 壳层不一致的身份标记。
       if (mapSemanticMode !== "blank" && !hasRenderableScenarioPoliticalTopology(runtimeTopologyPayload)) {
-        setScenarioHydrationHealthGateState(state, {
+        setScenarioHydrationHealthGateState(state, normalizeScenarioHydrationHealthGateState({
           status: "fatal",
           reason: SCENARIO_HYDRATION_HEALTH_REASONS.runtimeTopologyUnrenderable,
           checkedAt: Date.now(),
@@ -315,7 +318,7 @@ function createScenarioStartupHydrationController({
           ownerFeatureOverlapCount: 0,
           ownerFeatureRenderedCount: 0,
           degradedWaterOverlay: false,
-        });
+        }));
         const handled = callRuntimeHook(state, "setStartupReadonlyStateFn", true, {
           reason: "scenario-health-gate",
           unlockInFlight: false,
@@ -702,7 +705,7 @@ function createScenarioStartupHydrationController({
     if (report.healthy) {
       const ok = waterConsistency.healthy;
       if (ok) {
-        setScenarioHydrationHealthGateState(state, {
+        setScenarioHydrationHealthGateState(state, normalizeScenarioHydrationHealthGateState({
           status: "ok",
           reason: SCENARIO_HYDRATION_HEALTH_REASONS.ok,
           checkedAt: Date.now(),
@@ -711,7 +714,7 @@ function createScenarioStartupHydrationController({
           ownerFeatureOverlapCount: report.overlapCount,
           ownerFeatureRenderedCount: report.renderedFeatureCount,
           degradedWaterOverlay: false,
-        });
+        }));
       }
       if (ok) {
         return { ok: true, attemptedRetry: false, degradedWaterOverlay: false, report, waterConsistency };
@@ -740,7 +743,7 @@ function createScenarioStartupHydrationController({
         flushRenderBoundary("scenario-health-gate-retry-recovered");
       }
       clearScenarioHealthGateReadonlyState();
-      setScenarioHydrationHealthGateState(state, {
+      setScenarioHydrationHealthGateState(state, normalizeScenarioHydrationHealthGateState({
         status: "ok",
         reason: attemptedRetry ? "retry-recovered" : "ok",
         checkedAt: Date.now(),
@@ -749,7 +752,7 @@ function createScenarioStartupHydrationController({
         ownerFeatureOverlapCount: report.overlapCount,
         ownerFeatureRenderedCount: report.renderedFeatureCount,
         degradedWaterOverlay: false,
-      });
+      }));
       syncScenarioUi();
       syncCountryUi({ renderNow: false });
       return { ok: true, attemptedRetry, degradedWaterOverlay: false, report, waterConsistency };
@@ -761,7 +764,7 @@ function createScenarioStartupHydrationController({
       if (waterConsistency?.reason && waterConsistency.reason !== "ok") {
         problemParts.push(`Overlay consistency also failed: ${waterConsistency.reason}.`);
       }
-      setScenarioHydrationHealthGateState(state, {
+      setScenarioHydrationHealthGateState(state, normalizeScenarioHydrationHealthGateState({
         status: "degraded",
         reason: SCENARIO_HYDRATION_HEALTH_REASONS.ownerFeatureMismatch,
         checkedAt: Date.now(),
@@ -770,7 +773,7 @@ function createScenarioStartupHydrationController({
         ownerFeatureOverlapCount: report.overlapCount,
         ownerFeatureRenderedCount: report.renderedFeatureCount,
         degradedWaterOverlay: false,
-      });
+      }));
       clearScenarioHealthGateReadonlyState();
       enterScenarioFatalRecovery({
         phase: "hydration-health-gate",
@@ -810,7 +813,7 @@ function createScenarioStartupHydrationController({
     console.warn(
       `[scenario] Hydration health gate triggered fallback for "${scenarioId}". reason=${reason}, overlap=${report.overlapCount}/${report.renderedFeatureCount}, ratio=${report.overlapRatio.toFixed(3)}, waterConsistency=${waterConsistency.reason}.`
     );
-    setScenarioHydrationHealthGateState(state, {
+    setScenarioHydrationHealthGateState(state, normalizeScenarioHydrationHealthGateState({
       status: "degraded",
       reason: !report.healthy
         ? SCENARIO_HYDRATION_HEALTH_REASONS.ownerFeatureMismatch
@@ -821,7 +824,7 @@ function createScenarioStartupHydrationController({
       ownerFeatureOverlapCount: report.overlapCount,
       ownerFeatureRenderedCount: report.renderedFeatureCount,
       degradedWaterOverlay: hadScenarioOverlay,
-    });
+    }));
     syncScenarioUi();
     syncCountryUi({ renderNow: false });
     if (renderNow) {

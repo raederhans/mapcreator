@@ -84,10 +84,7 @@ export function createDefaultScenarioDataHealth(minRatio = 0.7) {
   };
 }
 
-export function setScenarioDataHealthState(target, nextState = {}, fallbackMinRatio = 0.7) {
-  if (!target || typeof target !== "object") {
-    return createDefaultScenarioDataHealth(fallbackMinRatio);
-  }
+export function normalizeScenarioDataHealthState(nextState = {}, fallbackMinRatio = 0.7) {
   const health = {
     ...createDefaultScenarioDataHealth(fallbackMinRatio),
     ...(
@@ -105,8 +102,7 @@ export function setScenarioDataHealthState(target, nextState = {}, fallbackMinRa
     : [];
   health.warning = String(health.warning || "");
   health.severity = String(health.severity || "");
-  target.scenarioDataHealth = health;
-  return target.scenarioDataHealth;
+  return health;
 }
 
 export function createDefaultScenarioHydrationHealthGate() {
@@ -346,10 +342,7 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
   return target;
 }
 
-export function setScenarioHydrationHealthGateState(target, nextState = {}) {
-  if (!target || typeof target !== "object") {
-    return createDefaultScenarioHydrationHealthGate();
-  }
+export function normalizeScenarioHydrationHealthGateState(nextState = {}) {
   const gateState = {
     ...createDefaultScenarioHydrationHealthGate(),
     ...(
@@ -375,8 +368,7 @@ export function setScenarioHydrationHealthGateState(target, nextState = {}) {
     ? gateState.ownerFeatureRenderedCount
     : 0;
   gateState.degradedWaterOverlay = !!gateState.degradedWaterOverlay;
-  target.scenarioHydrationHealthGate = gateState;
-  return target.scenarioHydrationHealthGate;
+  return gateState;
 }
 
 export function resetScenarioHydrationOverlayState(target) {

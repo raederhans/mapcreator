@@ -14,6 +14,9 @@ P4_POLICY_BUILDER = REPO_ROOT / "tools" / "build_state_writer_policy.mjs"
 P4_POLICY_CHECKER = REPO_ROOT / "tools" / "check_state_writer_policy.mjs"
 P4_INVENTORY = REPO_ROOT / "tools" / "state_writer_inventory.mjs"
 P4_ACTIONS_DIR = REPO_ROOT / "js" / "core" / "state" / "actions"
+P4_READ_ONLY_ACTION_MODULES = {
+    "js/core/state/actions/scenario_transaction_rollback_actions.js",
+}
 PACKAGE_JSON = REPO_ROOT / "package.json"
 
 
@@ -81,7 +84,7 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             self.fail(details or "P4 state writer policy check failed")
         self.assertIn("P4 state writer policy pass:", result.stdout)
 
-    def test_p4_production_action_modules_match_current_policy(self):
+    def test_p4_mutating_action_modules_match_current_policy(self):
         action_modules = (
             sorted(P4_ACTIONS_DIR.glob("*.js"))
             if P4_ACTIONS_DIR.exists()
@@ -96,9 +99,25 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
                 "js/core/state/actions/"
             )
         )
+        self.assertTrue(
+            P4_READ_ONLY_ACTION_MODULES.isdisjoint(expected_action_modules)
+        )
         self.assertEqual(
-            [path.relative_to(REPO_ROOT).as_posix() for path in action_modules],
+            [
+                path.relative_to(REPO_ROOT).as_posix()
+                for path in action_modules
+                if path.relative_to(REPO_ROOT).as_posix()
+                not in P4_READ_ONLY_ACTION_MODULES
+            ],
             expected_action_modules,
+        )
+        self.assertTrue(
+            P4_READ_ONLY_ACTION_MODULES.issubset(
+                {
+                    path.relative_to(REPO_ROOT).as_posix()
+                    for path in action_modules
+                }
+            )
         )
 
     def test_allowlist_script_matches_current_workspace(self):

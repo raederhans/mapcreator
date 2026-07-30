@@ -6,6 +6,9 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_RUNTIME_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "scenario_runtime_state.js"
 CHUNK_RUNTIME_JS = REPO_ROOT / "js" / "core" / "scenario" / "chunk_runtime.js"
+CHUNK_RUNTIME_ACTIONS_JS = (
+    REPO_ROOT / "js" / "core" / "state" / "actions" / "scenario_chunk_runtime_actions.js"
+)
 LIFECYCLE_RUNTIME_JS = REPO_ROOT / "js" / "core" / "scenario" / "lifecycle_runtime.js"
 SCENARIO_ROLLBACK_JS = REPO_ROOT / "js" / "core" / "scenario_rollback.js"
 SCENARIO_DATA_HEALTH_JS = REPO_ROOT / "js" / "core" / "scenario_data_health.js"
@@ -23,13 +26,15 @@ class ScenarioRuntimeStateBoundaryContractTest(unittest.TestCase):
 
     def test_scenario_runtime_consumers_reuse_owner_factories(self):
         chunk_content = CHUNK_RUNTIME_JS.read_text(encoding="utf-8")
+        chunk_actions_content = CHUNK_RUNTIME_ACTIONS_JS.read_text(encoding="utf-8")
         lifecycle_content = LIFECYCLE_RUNTIME_JS.read_text(encoding="utf-8")
         rollback_content = SCENARIO_ROLLBACK_JS.read_text(encoding="utf-8")
         health_content = SCENARIO_DATA_HEALTH_JS.read_text(encoding="utf-8")
 
-        self.assertIn("../state/scenario_runtime_state.js", chunk_content)
-        self.assertIn("createDefaultActiveScenarioChunksState()", chunk_content)
-        self.assertIn("createDefaultRuntimeChunkLoadState({", chunk_content)
+        self.assertIn("../state/actions/scenario_chunk_runtime_actions.js", chunk_content)
+        self.assertIn("../scenario_runtime_state.js", chunk_actions_content)
+        self.assertIn("createDefaultActiveScenarioChunksState(", chunk_actions_content)
+        self.assertIn("createDefaultRuntimeChunkLoadState({", chunk_actions_content)
         self.assertIsNone(re.search(r"state\.runtimeChunkLoadState\s*=\s*\{\s*shellStatus:\s*\"idle\"", chunk_content))
         self.assertIn("../state/scenario_runtime_state.js", lifecycle_content)
         self.assertIn("createDefaultScenarioHydrationHealthGate()", lifecycle_content)

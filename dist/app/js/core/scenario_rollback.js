@@ -24,9 +24,6 @@ import {
 import {
   captureScenarioTransactionRollbackOptionalState,
   captureScenarioTransactionRollbackSupplementalState,
-  restoreScenarioTransactionSupplementAfterColorDirtyState,
-  restoreScenarioTransactionSupplementBeforeAuditState,
-  restoreScenarioTransactionSupplementBeforeColorDirtyState,
   SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS,
   SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
   validateScenarioTransactionRollbackSupplementalStatePatch,
@@ -43,11 +40,18 @@ import {
   SCENARIO_READINESS_STATE_KEYS,
 } from "./state/actions/scenario_readiness_actions.js";
 import {
+  captureActiveScenarioPerformanceHintsState,
   captureScenarioPresentationState,
   restoreScenarioTransactionPresentationBeforeAuditState,
   restoreScenarioTransactionPresentationState,
+  setActiveScenarioPerformanceHintsState,
   SCENARIO_PRESENTATION_STATE_KEYS,
 } from "./state/actions/scenario_presentation_actions.js";
+import {
+  captureScenarioHealthState,
+  restoreScenarioDataHealthState,
+  restoreScenarioHydrationHealthGateState,
+} from "./state/actions/scenario_health_actions.js";
 import {
   captureScenarioPaletteState,
   restoreScenarioPaletteState,
@@ -244,9 +248,17 @@ function captureScenarioRuntimeSnapshot() {
           awaitInitialScenarioChunkVisualPromotion,
       },
     ).values;
+  const scenarioHealthValues = cloneScenarioRollbackCaptureValues(
+    captureScenarioHealthState(runtimeState),
+  );
+  const scenarioPerformanceHintValues = cloneScenarioRollbackCaptureValues(
+    captureActiveScenarioPerformanceHintsState(runtimeState),
+  );
   return {
     ...activationValues,
     ...supplementalValues,
+    ...scenarioHealthValues,
+    ...scenarioPerformanceHintValues,
   };
 }
 
@@ -543,6 +555,12 @@ function buildScenarioTransactionRollbackStatePatch(snapshot) {
         ]),
       ),
     },
+    scenarioHealth: {
+      scenarioHydrationHealthGate: values.scenarioHydrationHealthGate,
+      scenarioDataHealth: values.scenarioDataHealth,
+    },
+    activeScenarioPerformanceHints:
+      values.activeScenarioPerformanceHints,
   };
 }
 
@@ -588,9 +606,9 @@ export function restoreScenarioApplyRollbackSnapshot(
     runtimeState,
     rollbackStatePatch.supplemental.values.defaultRuntimePoliticalTopology,
   );
-  restoreScenarioTransactionSupplementBeforeAuditState(
+  restoreScenarioHydrationHealthGateState(
     runtimeState,
-    rollbackStatePatch.supplemental,
+    rollbackStatePatch.scenarioHealth.scenarioHydrationHealthGate,
   );
   restoreScenarioTransactionPresentationBeforeAuditState(
     runtimeState,
@@ -607,18 +625,18 @@ export function restoreScenarioApplyRollbackSnapshot(
     runtimeState,
     rollbackStatePatch.readiness,
   );
-  restoreScenarioTransactionSupplementBeforeColorDirtyState(
+  restoreScenarioDataHealthState(
     runtimeState,
-    rollbackStatePatch.supplemental,
+    rollbackStatePatch.scenarioHealth.scenarioDataHealth,
   );
   markLegacyColorStateDirty();
   restoreScenarioActivationAfterColorDirtyState(
     runtimeState,
     rollbackStatePatch.activation,
   );
-  restoreScenarioTransactionSupplementAfterColorDirtyState(
+  setActiveScenarioPerformanceHintsState(
     runtimeState,
-    rollbackStatePatch.supplemental,
+    rollbackStatePatch.activeScenarioPerformanceHints,
   );
   setScenarioPoliticalChunkPayloadState(runtimeState, {
     payload: rollbackStatePatch.supplemental.values.scenarioPoliticalChunkData,

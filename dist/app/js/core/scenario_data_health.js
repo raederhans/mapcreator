@@ -1,8 +1,11 @@
 import { state as runtimeState } from "./state.js";
 import {
   createDefaultScenarioDataHealth,
-  setScenarioDataHealthState,
+  normalizeScenarioDataHealthState,
 } from "./state/scenario_runtime_state.js";
+import {
+  setScenarioDataHealthState,
+} from "./state/actions/scenario_health_actions.js";
 import { t } from "./i18n.js";
 import { callRuntimeHook } from "./state/index.js";
 const state = runtimeState;
@@ -109,11 +112,13 @@ function refreshScenarioDataHealth({
     return setScenarioDataHealthState(
       runtimeState,
       createDefaultScenarioDataHealth(SCENARIO_DETAIL_MIN_RATIO_STRICT),
-      SCENARIO_DETAIL_MIN_RATIO_STRICT,
     );
   }
   const health = evaluateScenarioDataHealth(runtimeState.activeScenarioManifest, { minRatio });
-  setScenarioDataHealthState(runtimeState, health, minRatio);
+  setScenarioDataHealthState(
+    runtimeState,
+    normalizeScenarioDataHealthState(health, minRatio),
+  );
   const shouldToast = health.warning && (showErrorToast || showWarningToast);
   if (shouldToast) {
     const errorLevel = showErrorToast || health.severity === "error";

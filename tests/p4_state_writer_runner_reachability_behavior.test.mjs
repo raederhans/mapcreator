@@ -73,6 +73,22 @@ test("exact P4.2b gates reach chunk action and boundary regressions", () => {
   );
 });
 
+test("exact P4.2c gates reach Scenario health action and boundary regressions", () => {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const nodeCommand = packageJson.scripts["test:node:p4:p4-2c"];
+  const pythonCommand = packageJson.scripts["test:python:p4:p4-2c-boundary"];
+
+  assert.ok(nodeCommand.split(/\s+/).includes("tests/scenario_health_actions_behavior.test.mjs"));
+  assert.ok(nodeCommand.split(/\s+/).includes("tests/startup_hydration_behavior.test.mjs"));
+  assert.ok(!nodeCommand.includes("--test-force-exit"), nodeCommand);
+  assert.match(pythonCommand, /tests\.test_scenario_health_actions_boundary_contract/);
+  assert.ok(
+    buildP4PhaseVerificationPlan({ phase: "P4.2c" }).commands.includes(
+      "npm run test:node:p4:state-writer-policy",
+    ),
+  );
+});
+
 test("node route discovery keeps wrapper-based named gates reachable", () => {
   const route = buildNodeRoutes().find(
     ({ commandRef }) => commandRef === "test:node:p4:state-writer-policy",

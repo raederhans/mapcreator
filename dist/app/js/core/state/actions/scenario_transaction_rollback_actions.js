@@ -2,7 +2,6 @@
 // Canonical activation, readiness, presentation, and palette keys restore through
 // their domain action modules. This temporary supplement has an explicit handoff:
 // P4.2b -> topology/chunk runtime and hook keys.
-// P4.2c -> hydration/data-health and performance-hint keys.
 
 export const SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS = Object.freeze([
   "runtimePoliticalMetaSeed",
@@ -25,9 +24,6 @@ export const SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY =
   Object.freeze({
     defaultRuntimePoliticalTopology: "P4.2b",
     scenarioPoliticalChunkData: "P4.2b",
-    scenarioHydrationHealthGate: "P4.2c",
-    scenarioDataHealth: "P4.2c",
-    activeScenarioPerformanceHints: "P4.2c",
     scenarioPoliticalVisibleChunkData: "P4.2b",
     activeScenarioChunks: "P4.2b",
     runtimeChunkLoadState: "P4.2b",
@@ -162,18 +158,6 @@ export function captureScenarioTransactionRollbackSupplementalState(
         target.scenarioPoliticalChunkData,
         cloneValue,
       ),
-    scenarioHydrationHealthGate:
-      cloneRollbackStateValue(
-        target.scenarioHydrationHealthGate,
-        cloneValue,
-      ),
-    scenarioDataHealth:
-      cloneRollbackStateValue(target.scenarioDataHealth, cloneValue),
-    activeScenarioPerformanceHints:
-      cloneRollbackStateValue(
-        target.activeScenarioPerformanceHints,
-        cloneValue,
-      ),
     scenarioPoliticalVisibleChunkData:
       cloneRollbackStateValue(
         target.scenarioPoliticalVisibleChunkData,
@@ -232,37 +216,5 @@ export function validateScenarioTransactionRollbackSupplementalStatePatch(
   patch,
 ) {
   validateSupplementalPatch(patch);
-  return true;
-}
-
-export function restoreScenarioTransactionSupplementBeforeAuditState(
-  target,
-  patch,
-) {
-  assertStateTarget(target);
-  const values = validateSupplementalPatch(patch);
-  target.scenarioHydrationHealthGate =
-    values.scenarioHydrationHealthGate;
-  return true;
-}
-
-export function restoreScenarioTransactionSupplementBeforeColorDirtyState(
-  target,
-  patch,
-) {
-  assertStateTarget(target);
-  const values = validateSupplementalPatch(patch);
-  target.scenarioDataHealth = values.scenarioDataHealth;
-  return true;
-}
-
-export function restoreScenarioTransactionSupplementAfterColorDirtyState(
-  target,
-  patch,
-) {
-  assertStateTarget(target);
-  const values = validateSupplementalPatch(patch);
-  target.activeScenarioPerformanceHints =
-    values.activeScenarioPerformanceHints;
   return true;
 }

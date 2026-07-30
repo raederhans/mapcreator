@@ -192,7 +192,7 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
     def test_commit_scenario_activation_runtime_state_stays_pure_state_commit(self):
         state_content = SCENARIO_RUNTIME_STATE.read_text(encoding="utf-8")
         start = state_content.index("export function commitScenarioActivationRuntimeState(target, nextState = {}) {")
-        end = state_content.index("\nexport function setScenarioHydrationHealthGateState", start)
+        end = state_content.index("\nexport function normalizeScenarioHydrationHealthGateState", start)
         body = state_content[start:end]
         side_effect_calls = [
             "syncScenarioLocalizationState",
