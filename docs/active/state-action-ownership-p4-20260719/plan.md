@@ -9,7 +9,8 @@
 - P4.0：建立 binding-scoped writer/key/alias policy、fail-closed mutation scanner、基线分母和验证路由。
 - P4.1：迁移 boot/startup mutations。
 - P4.2a：迁移 scenario readiness/activation/rollback mutations，锁定 `prepare → commit → publish → rollback`。
-- P4.2b/P4.2c：迁移 scenario chunk、promotion、generation、error mutations。
+- P4.2b：迁移 scenario chunk、promotion、generation、error mutations，并锁定跨 apply ownership 的 continuation fencing。
+- P4.2c：迁移 scenario hydration/data-health/performance-hint mutations。
 - P4.3：迁移 renderer phase、interaction、cache、diagnostics mutations。
 - P4.4：在 appearance/transport 平台化前置验收后，串行迁移 UI、appearance、transport、strategic mutations。
 - P4.5a/P4.5b：先锁定 hook oracle，再实现 multi-subscriber notification、single-owner handler 与 legacy single-slot 兼容。
@@ -28,7 +29,8 @@
 - [x] P4.0 Writer policy foundation
 - [x] P4.1 Boot/startup actions
 - [x] P4.2a Scenario readiness and atomic activation actions
-- [ ] P4.2b/P4.2c Scenario chunk and promotion actions
+- [x] P4.2b Scenario chunk and promotion actions
+- [ ] P4.2c Scenario health and presentation-hint actions
 - [ ] P4.3 Renderer actions
 - [ ] P4.4 UI/appearance/transport/strategic actions
 - [ ] P4.5 Hook semantics

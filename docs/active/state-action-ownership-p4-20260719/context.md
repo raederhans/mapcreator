@@ -4,11 +4,11 @@
 
 - Execution worktree: `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719`
 - Branch: `codex/state-action-ownership-p4-20260719`
-- Initial base: `origin/main@68a62e540104025e1b3e976f77589f8b3eff2f36`; P4.2a integration point: exact-A `662d3dffa7982b1938617e0ea41ac9c012a05946` plus this docs-only sync descendant.
+- Initial base: `origin/main@68a62e540104025e1b3e976f77589f8b3eff2f36`; P4.2a integration point: exact-A `662d3dffa7982b1938617e0ea41ac9c012a05946`; P4.2b functional checkpoint: `2e4808127030823169875059d7d649dc1a782788`; current branch includes `origin/main@f4e0b338a184e12fc76f745e2a9523607ae15fb3` through merge `06d8850fedf6d2de0b824e4b5c7de9871d42715b`.
 - Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
-- Parent status recaptured on 2026-07-21: local `main@68a62e54` remains pinned with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; remote integration and every P4 edit stay in the isolated worktree.
+- Parent status recaptured on 2026-07-30: local `main@68a62e54` remains pinned with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; remote integration and every P4 edit stay in the isolated worktree.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.2b implementation and deterministic working-tree gates are green on audited remote base `ecb36d45f1a556ee67bcd1ecc01049869bc561b7`; serialized live/dist/core verification and exact clean checkpoint evidence are active.
+- Current phase: P4.2b is implementation- and acceptance-complete. Its exact clean checkpoint, Pages/dist parity, full non-browser core lane and focused Scenario resilience lane are green; P4.2c is the next production phase.
 
 ## Decisions and deviations
 
@@ -58,20 +58,23 @@
 | 2026-07-21 | Root-facade compatibility remains fixed while the generation fence needs durable state | The generation scalar is nested under the existing runtime chunk-load container; the default-state probe remains `402 → 488`, with 488 actual facade keys and zero ownership defects. |
 | 2026-07-21 | Final review reproduced stale registry completion crossing a reset generation and a broad frozen fallback swallowing setter failures | Registry settlement now carries the captured generation through a canonical conditional action; replacement uses property descriptors and propagates unexpected setter errors. Three focused regressions lock both repairs. |
 | 2026-07-21 | P4.2b deterministic gates are green on the working tree | Node 202/202, Python 76/76, policy 202 writers, route 46/38/0/0 and adaptive dry-run 46 changed / 238 selected / 215 child-safe / 23 main-thread complete before serialized live and exact checks. |
+| 2026-07-30 | P4.2b functional checkpoint `2e4808127030823169875059d7d649dc1a782788`, tree `d852c53cf54bf63b74fe8f6a073622005a5ab6bf`, completed its exact clean gate | Five phase commands pass; Node 224/224, Python 76/76 and policy 301/301 are green. The route report covers 12 changed files, 7 P4-owned paths, zero unmatched files and zero route gaps. The live unsupported-site count is 4,075 while the immutable P4.2b checkpoint remains 4,079. |
+| 2026-07-30 | Full acceptance exposed two source-format-sensitive boundary tests after production behavior was already green | Test-only commits `1ddd424b` and `6d517955` make the Scenario refresh named-import contract formatting-insensitive and allow the canonical target-first Scenario action import in startup handoff. The focused regressions and the complete core lane pass. |
+| 2026-07-30 | Serialized acceptance completed | `verify:pages-dist` and `verify:dist-drift` pass at 927.33 MiB; `verify:core` passes 84/84; `test:e2e:scenario-resilience` passes 3/3; no shared ports or task-owned live processes remain. |
+| 2026-07-30 | `origin/main@f4e0b338` added comment-only performance evidence guidance | Merge `06d8850f` preserves the exact P4.2b checkpoint as an ancestor. Relevant post-merge checks pass: Node perf-governance 23/23, Python perf contract 25/25, adaptive dry-run 12 commands and diff check. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
 
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
-| Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/scenario-resilience/` | exact-A Scenario resilience passes 3/3; lane released for P4.2b |
+| Browser / Playwright / dev server | main integration owner | command evidence for `npm run test:e2e:scenario-resilience` | P4.2b Scenario resilience passes 3/3; lane released and owned ports are clear |
 | P4 policy suite and generated reports | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/` | exact-A Node 91/91, Python 58/58 and route 4/4/0/0 pass; lane released for P4.2b |
 | Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/` | exact-A Pages/dist passes at 927.27 MiB under serial ownership; lane released for P4.2b |
 | P4 audit exact validation | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/f05b715567036474c5522145f814012f4c6c49e7/` | complete; exact gate, standalone policy and governance checks pass; lane released before integration |
 | Policy performance probe | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/performance/` | complete; snapshot output byte-identical and checker 1.86x faster |
-| P4.2b child-safe policy and adaptive checks | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2b/` | complete on the working tree: Node 202/202, Python 76/76, policy green, route 46/38/0/0 and adaptive dry-run green; lane released |
-| P4.2b Scenario chunk browser/dev runtime | `/root` main integration owner | `.runtime/tests/playwright/p4/P4.2b/working/scenario-resilience/` | reserved for one serialized Scenario resilience run after final review |
-| P4.2b Pages/dist builder | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2b/working/dist/` | reserved for serialized dist and core verification after Scenario resilience |
+| P4.2b exact phase verification | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2b/phase-verification.json` | complete at exact SHA `2e480812`; 5/5 commands pass; lane released |
+| P4.2b non-browser core | `/root` main integration owner | `.runtime/reports/generated/verify-core.json` | complete; 84/84 commands pass; dist lane released |
 
 ## Handoff
 
@@ -79,4 +82,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Complete rebase semantic checks, then run the exact clean P4.2b gate plus serialized Scenario resilience and dist/core lanes before attestation and remote integration.
+Publish the P4.2b acceptance record and continuation branch, integrate the verified lineage into `main`, then begin P4.2c Scenario health and presentation-hint action ownership in the same isolated worktree.

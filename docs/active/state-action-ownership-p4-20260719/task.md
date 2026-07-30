@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.2b verification in progress` — canonical Scenario chunk runtime and promotion actions, caller migration, generation fencing and policy progression are implemented in the isolated P4 worktree. Deterministic working-tree gates are green; serialized Scenario resilience, dist/core verification and exact clean checkpoint evidence remain.
+`P4.2b complete / P4.2c next` — canonical Scenario chunk runtime and promotion actions, caller migration, generation/apply-ownership fencing and policy progression are implemented and accepted in the isolated P4 worktree. Exact checkpoint, Pages/dist, full core and focused Scenario resilience evidence are green.
 
 ## Checklist
 
@@ -19,8 +19,8 @@
 - [x] Add P4.2 admission caller-to-action edge scanner, ledger schema and P4.1 backfill contracts.
 - [x] Complete P4.2a scenario readiness/activation/presentation/request actions and atomic apply/rollback wiring.
 - [x] Publish the P4.0–P4.2a milestone to `origin/main` and synchronize the P4 continuation branch.
-- [ ] Complete P4.2b Scenario chunk/promotion/generation/error action ownership and exact checkpoint evidence.
-- [ ] Execute P4.2c–P4.5 in order.
+- [x] Complete P4.2b Scenario chunk/promotion/generation/error action ownership and exact checkpoint evidence.
+- [ ] Execute P4.2c–P4.5 in order; P4.2c Scenario health and presentation-hint actions are next.
 - [ ] Complete the remaining phase reviews, UltraQA, full P4 acceptance, final integration and safe cleanup.
 
 ## Validation evidence
@@ -180,23 +180,28 @@
 - Scenario rollback authority discovery now normalizes CRLF/LF source text and has an explicit line-ending equivalence regression, allowing the P4.2a Node gate to remain portable in fresh Windows worktrees.
 - Audit checkpoint `f05b715567036474c5522145f814012f4c6c49e7`, tree `abc16ac376e24994d66cb945789e1e8136e64391`, passes the four-command exact gate. Persistent phase report SHA256 is `c453cb0704d43a1924f2e3dd9cb244a4fdf6726be8ad7efc107a5520d4fb3feb`; policy report SHA256 is `e5f4a7275a47b131dd1fd51daa5edba77f8ee60bda4526d226093d74bc34e5fe`; adaptive route SHA256 is `db3b17dc0daf7fcbac0f616037b8ad32dee57e5b9932ee51c26a655cfe1f8db8`.
 
-### P4.2b working-tree evidence
+### P4.2b exact checkpoint and acceptance evidence
 
 - Canonical action ownership now lives in `scenario_chunk_runtime_actions.js` and `scenario_chunk_promotion_actions.js`; Scenario composition roots retain side-effect ordering and delegate state mutation through target-first actions.
 - Async chunk loads use a nested generation fence in `runtimeChunkLoadState.generation`. Late success, late failure, shared in-flight reuse, synchronous loaders and frozen-state rollback have focused regression coverage. The compatibility facade remains fixed at 488 keys with `pre=402`, `post=488`, zero unowned keys, zero missing keys and zero collisions.
-- Policy progression is green at `P4.2b`: 202 registered writers, 75 production plus 43 test legacy-direct files, 1,011 production legacy memberships, 176 caller-ledger entries, 183 proofs and zero missing proofs.
-- `npm run test:node:p4:p4-2b`: PASS 202/202; persistent log: `.runtime/reports/generated/p4-state-actions/P4.2b/working/node.log`.
+- Policy progression is green at `P4.2b`: 75 production plus 43 test legacy-direct files. The live unsupported-site count is 4,075; the immutable P4.2b phase checkpoint remains 4,079 so same-phase follow-up fixes cannot rewrite historical evidence.
+- `npm run test:node:p4:p4-2b`: PASS 224/224 with natural Node process exit.
 - `npm run test:python:p4:p4-2b-boundary`: PASS 76/76.
-- Independent final review reproduced stale registry completion crossing a reset generation and a broad frozen fallback swallowing setter failures. Generation-conditional registry settlement and descriptor-gated replacement close both defects; the focused rerun returns `APPROVE` with blocker 0 and major 0.
-- `npm run verify:p4:routes -- --phase P4.2b`: PASS; 46 changed files, 38 P4-owned files, zero unmatched files and zero route gaps. Report: `.runtime/reports/generated/p4-state-actions/P4.2b/adaptive-selection.json`.
-- `npm run test:adaptive`: PASS in dry-run mode; 46 changed files select 238 commands, 215 child-safe commands and 23 main-thread commands with zero unmatched files. Report: `.runtime/reports/generated/test-adaptive-selection.json`.
-- Exact clean checkpoint evidence will be recorded after functional commit, serialized live/dist/core verification and final review.
+- `npm run test:node:p4:state-writer-policy`: PASS 301/301.
+- `npm run verify:p4:p4-2b`: PASS 5/5 at exact functional SHA `2e4808127030823169875059d7d649dc1a782788`, tree `d852c53cf54bf63b74fe8f6a073622005a5ab6bf`, `trackedClean=true`. Report: `.runtime/reports/generated/p4-state-actions/P4.2b/phase-verification.json`, SHA256 `e541a56f76c8a500cac7a89d065042c3b2c218ce7ab99c651cab8ec4ba1d4f49`.
+- Exact route verification covers 12 changed files, 7 P4-owned files, zero unmatched files and zero route gaps.
+- `npm run verify:pages-dist`: PASS; Pages dist is 927.33 MiB. `npm run verify:dist-drift`: PASS.
+- `npm run verify:core`: PASS 84/84. Report: `.runtime/reports/generated/verify-core.json`, SHA256 `ee9a973bb42fd62129fda459cde7078e3ab2022f1fea246e28caa4b854b2ecd7`.
+- `npm run test:e2e:scenario-resilience`: PASS 3/3 under one Playwright worker; page errors and unhandled console errors are empty in the palette-failure case.
+- Test-only contract fixes `1ddd424b` and `6d517955` preserve the accepted product tree while making named-import matching formatting-insensitive and allowing the canonical target-first Scenario action import in startup handoff. Their focused regressions pass inside the 84-command core lane.
+- Independent final review returns `APPROVE` with blocker 0 and major 0. Actual Node 18 execution remains untested; current Node 22.23.0 and static syntax/compatibility checks are green.
+- Remote merge `06d8850f` brings comment-only performance evidence guidance from `origin/main@f4e0b338`; relevant post-merge Node 23/23 and Python 25/25 perf contracts pass.
 
 ## Open risks and remaining work
 
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - Action-proof helper traversal remains the dominant local policy-tooling cost: `map_renderer.js` measures about 60.75 seconds and `scenario/chunk_runtime.js` about 7.4 seconds. Exact-context memoization requires a dedicated follow-up because helper output depends on alias state, parameter classifications, reachability and enclosing identity.
-- P4.2b begins from the synchronized P4.2a milestone; the active task directory remains the control surface through exact checkpoint publication and the remaining P4 phases.
+- P4.2b is complete; the active task directory remains the control surface for P4.2c and later P4 phases.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
 - Main-thread browser/performance/heavy-geo lanes outside the Scenario resilience acceptance case remain deferred to their owning phases.
