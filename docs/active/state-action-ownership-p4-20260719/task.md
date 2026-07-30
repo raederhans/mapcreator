@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.2b complete / P4.2c next` — canonical Scenario chunk runtime and promotion actions, caller migration, generation/apply-ownership fencing and policy progression are implemented and accepted in the isolated P4 worktree. Exact checkpoint, Pages/dist, full core and focused Scenario resilience evidence are green.
+`P4.2c complete / P4.3 admission next` — canonical Scenario health, hydration-gate and presentation-hint actions are implemented and accepted at exact functional checkpoint `784885f6`. Exact phase, Pages/dist, full core and focused browser recovery evidence are green. P4.3 begins after closeout publication/integration and fresh renderer browser, `verify:core:main-thread` and standard perf admission.
 
 ## Checklist
 
@@ -20,7 +20,8 @@
 - [x] Complete P4.2a scenario readiness/activation/presentation/request actions and atomic apply/rollback wiring.
 - [x] Publish the P4.0–P4.2a milestone to `origin/main` and synchronize the P4 continuation branch.
 - [x] Complete P4.2b Scenario chunk/promotion/generation/error action ownership and exact checkpoint evidence.
-- [ ] Execute P4.2c–P4.5 in order; P4.2c Scenario health and presentation-hint actions are next.
+- [x] Complete P4.2c Scenario health, hydration-gate and presentation-hint action ownership and exact checkpoint evidence.
+- [ ] Execute P4.3–P4.5 in order; P4.3 renderer phase/interaction/cache/diagnostics actions are next.
 - [ ] Complete the remaining phase reviews, UltraQA, full P4 acceptance, final integration and safe cleanup.
 
 ## Validation evidence
@@ -197,11 +198,32 @@
 - Independent final review returns `APPROVE` with blocker 0 and major 0. Actual Node 18 execution remains untested; current Node 22.23.0 and static syntax/compatibility checks are green.
 - Remote merge `06d8850f` brings comment-only performance evidence guidance from `origin/main@f4e0b338`; relevant post-merge Node 23/23 and Python 25/25 perf contracts pass.
 
+### P4.2c exact checkpoint and acceptance evidence
+
+- Functional SHA: `784885f68ad7ba1c71fc31aaf00ba29403498265`; verification tree: `d6dbbdf245809079619a64c7223e0b845dc006d2`.
+- `scenarioHydrationHealthGate` and `scenarioDataHealth` now commit through `js/core/state/actions/scenario_health_actions.js`; `activeScenarioPerformanceHints` commits through the canonical presentation action module. Defaults, normalization and read models remain in `scenario_runtime_state.js`; rollback supplemental capture remains read-only-only.
+- Rollback composes canonical health and presentation restores around the existing audit/color-dirty effects. Deep-clone round trips, `checkedAt`, source-mutation isolation and exact missing-key semantics have regression coverage.
+- Policy progression is green at `P4.2c`: 75 production plus 43 test legacy-direct files; 1,006 legacy memberships, 138 dynamic sites, 218 alias sites, 619 ambiguous sites and 4,066 unsupported sites. No allowlist, public facade or `RendererRuntimeContext` expansion occurred.
+- `npm run verify:p4:p4-2c`: PASS 5/5 at the exact functional identity with `trackedClean=true`; Node 122/122, Python 43/43 and full state-policy 306/306 pass.
+- Exact route verification covers 42 changed files, 23 P4-owned files, zero unmatched files and zero route gaps.
+- `npm run verify:pages-dist`: PASS at 927.33 MiB; startup shell 47/47, landing 18/18 and sample contracts 18/18 pass. `npm run verify:dist-drift`: PASS.
+- `npm run verify:core`: PASS 86/86 with zero nonzero results.
+- Focused browser acceptance under one serial owner: startup bundle recovery 3/3, TNO ready-state 5/5 and Scenario resilience 3/3.
+- Independent architecture and code review both return CLEAR; blocker, high, medium and low actionable findings are all zero.
+- Persistent report SHA256:
+  - phase verification: `d48b3cd20f64493cf446ef5f11f75cf3450a3b87e42b1d2131b3168a43bd647a`
+  - policy report: `ac688ff5753ceee332e4c394cde1633aadaadc6c4569473a8cf5a7e631059006`
+  - adaptive route report: `948e4ada39a001255993ab325139083c513992ff34d48ca05a350ddc2866322d`
+  - verify-core report: `4043fee1167b6841fc258973d0da27c851c83083b3e7a8a8bba43e42abcd8dc8`
+  - Pages dist manifest: `9c0888caa6641e5a0d984d14ca5db9f1a67ea9be1699ebad7a5984c819cad581`
+  - Playwright last-run status: `91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903`
+- Explicitly deferred from this Scenario-focused phase: `verify:core:main-thread`, the wider browser matrix, standard perf, scenario-data and heavy-geo lanes. P4.3 directly changes renderer state ownership and must acquire fresh renderer browser/main-thread/perf evidence.
+
 ## Open risks and remaining work
 
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - Action-proof helper traversal remains the dominant local policy-tooling cost: `map_renderer.js` measures about 60.75 seconds and `scenario/chunk_runtime.js` about 7.4 seconds. Exact-context memoization requires a dedicated follow-up because helper output depends on alias state, parameter classifications, reachability and enclosing identity.
-- P4.2b is complete; the active task directory remains the control surface for P4.2c and later P4 phases.
+- P4.2c is complete; the active task directory remains the control surface for P4.3 and later P4 phases.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
-- Main-thread browser/performance/heavy-geo lanes outside the Scenario resilience acceptance case remain deferred to their owning phases.
+- Main-thread, wider browser, performance, scenario-data and heavy-geo lanes outside the three focused P4.2c browser suites remain deferred to their owning phases.

@@ -30,7 +30,7 @@
 - [x] P4.1 Boot/startup actions
 - [x] P4.2a Scenario readiness and atomic activation actions
 - [x] P4.2b Scenario chunk and promotion actions
-- [ ] P4.2c Scenario health and presentation-hint actions
+- [x] P4.2c Scenario health and presentation-hint actions
 - [ ] P4.3 Renderer actions
 - [ ] P4.4 UI/appearance/transport/strategic actions
 - [ ] P4.5 Hook semantics
