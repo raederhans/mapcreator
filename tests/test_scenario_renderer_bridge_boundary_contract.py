@@ -51,9 +51,14 @@ class ScenarioRendererBridgeBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("../map_renderer.js", refresh_plan_content)
         self.assertNotIn("runtimeState", refresh_plan_content)
         self.assertNotIn("render()", refresh_plan_content)
-        self.assertIn("resolveScenarioChunkPromotionRendererRefreshDescriptor,", refresh_runtime_content)
-        self.assertIn("normalizeRendererRefreshPlan,", refresh_runtime_content)
-        self.assertIn("from \"./scenario_refresh_plans.js\";", refresh_runtime_content)
+        self.assertRegex(
+            refresh_runtime_content,
+            r'import\s*\{[^}]*\bnormalizeRendererRefreshPlan\b[^}]*\bresolveScenarioChunkPromotionRendererRefreshDescriptor\b[^}]*\}\s*from\s*"\./scenario_refresh_plans\.js";',
+        )
+        self.assertRegex(
+            refresh_runtime_content,
+            r"\bresolveScenarioChunkPromotionRendererRefreshDescriptor\s*\(\{",
+        )
         self.assertIn("createScenarioRefreshRuntime", renderer_content)
         self.assertIn("from \"./map_renderer/scenario_refresh_runtime.js\";", renderer_content)
         self.assertNotIn("function createScenarioApplyRefreshPlan(", bridge_content)
