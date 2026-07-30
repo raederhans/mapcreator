@@ -17,7 +17,7 @@ import {
 } from "./render_sample_role_policy.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const DEFAULT_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
+const SUPPORTED_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
 const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];
 const NODE_PLATFORM_IDS = new Set(["aix", "android", "darwin", "freebsd", "linux", "openbsd", "sunos", "win32"]);
 const PERF_BASELINE_DATE = "2026-07-14";
@@ -62,7 +62,7 @@ const GATE_METRICS = Object.freeze([
   { key: "renderSampleMedianMs", label: "renderSampleMedianMs", threshold: 1.25 },
 ]);
 const SCENARIO_MANIFEST_MAP = Object.fromEntries(
-  DEFAULT_SCENARIOS.map((scenarioId) => [
+  SUPPORTED_SCENARIOS.map((scenarioId) => [
     scenarioId,
     path.join(REPO_ROOT, "data", "scenarios", scenarioId, "manifest.json"),
   ]),
@@ -71,7 +71,7 @@ const SCENARIO_MANIFEST_MAP = Object.fromEntries(
 function parseArgs(argv) {
   const options = {
     mode: "baseline",
-    scenarios: [...DEFAULT_SCENARIOS],
+    scenarios: [...DEFAULT_GATE_SCENARIOS],
     runs: 5,
     warmups: DEFAULT_WARMUPS,
     threshold: 1.15,
@@ -121,6 +121,40 @@ function parseArgs(argv) {
     }
   }
   return options;
+}
+
+export function getBaselineArtifactDate(baselineJsonPath) {
+  const artifactName = path.basename(String(baselineJsonPath || ""));
+  const match = /^baseline_(\d{4}-\d{2}-\d{2})\.json$/i.exec(artifactName);
+  return match?.[1] || PERF_BASELINE_DATE;
+}
+
+export function validateBaselineOutputSelection(options = {}) {
+  if (options.mode !== "baseline") {
+    return;
+  }
+
+  const scenarios = Array.isArray(options.scenarios)
+    ? options.scenarios.map((scenarioId) => String(scenarioId || "").trim())
+    : [];
+  const usesCanonicalScenarioSequence =
+    scenarios.length === DEFAULT_GATE_SCENARIOS.length
+    && scenarios.every(
+      (scenarioId, index) => scenarioId === DEFAULT_GATE_SCENARIOS[index]
+    );
+  if (usesCanonicalScenarioSequence) {
+    return;
+  }
+
+  const usesCanonicalJsonPath = normalizeMetadataPath(options.baselineJson) === normalizeMetadataPath(DEFAULT_BASELINE_JSON);
+  const usesCanonicalMarkdownPath = options.writeMarkdown !== false
+    && normalizeMetadataPath(options.baselineMd) === normalizeMetadataPath(DEFAULT_BASELINE_MD);
+  const usesCanonicalRawPath = normalizeMetadataPath(options.rawDir) === normalizeMetadataPath(DEFAULT_RAW_DIR);
+  if (usesCanonicalJsonPath || usesCanonicalMarkdownPath || usesCanonicalRawPath) {
+    throw new Error(
+      "[perf-baseline] custom scenarios require custom output paths for JSON, Markdown, and raw measurements."
+    );
+  }
 }
 
 export function normalizePerfRegressionMode(value) {
@@ -1065,12 +1099,17 @@ function formatCountRow(label, value) {
 }
 
 function buildMarkdown(report) {
-  const gateScenarios = DEFAULT_GATE_SCENARIOS.join(", ");
-  const observationScenarios = DEFAULT_SCENARIOS
+  const configuredScenarios = Array.isArray(report?.config?.scenarios)
+    ? report.config.scenarios.map((scenarioId) => String(scenarioId || "").trim()).filter(Boolean)
+    : [];
+  const gateScenarios = configuredScenarios
+    .filter((scenarioId) => DEFAULT_GATE_SCENARIOS.includes(scenarioId))
+    .join(", ") || "none";
+  const observationScenarios = configuredScenarios
     .filter((scenarioId) => !DEFAULT_GATE_SCENARIOS.includes(scenarioId))
-    .join(", ");
+    .join(", ") || "none";
   const lines = [
-    `# Perf baseline ${PERF_BASELINE_DATE}`,
+    `# Perf baseline ${report.baselineDate || PERF_BASELINE_DATE}`,
     "",
     "## Environment",
     `- Generated at: ${report.generatedAt}`,
@@ -1140,6 +1179,9 @@ function buildMarkdown(report) {
     lines.push(`- canonical render sample role: ${String(roleSummary.canonicalRoleId || CANONICAL_RENDER_SAMPLE_ROLE_ID)}`);
     lines.push(`- canonical render sample: ${finiteNumber(summary.canonicalRenderSampleMs).toFixed(1)} ms median / ${finiteNumber(roleSummary.matchedRunCount).toFixed(0)} matched runs / ${finiteNumber(roleSummary.mismatchCount).toFixed(0)} mismatches`);
     lines.push("");
+  }
+  if (lines.at(-1) === "") {
+    lines.pop();
   }
   return `${lines.join("\n")}\n`;
 }
@@ -1466,7 +1508,7 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     && baselineScenarioValues.every((scenarioId) => typeof scenarioId === "string")
     && baselineScenarios.every(Boolean)
     && new Set(baselineScenarios).size === baselineScenarios.length
-    && baselineScenarios.every((scenarioId) => DEFAULT_SCENARIOS.includes(scenarioId));
+    && baselineScenarios.every((scenarioId) => SUPPORTED_SCENARIOS.includes(scenarioId));
   const currentScenariosValid = Array.isArray(currentScenarioValues)
     && currentScenarioValues.length > 0
     && currentScenarioValues.every((scenarioId) => typeof scenarioId === "string")
@@ -1529,6 +1571,7 @@ async function main() {
   if (options.mode === "gate") {
     validateGateScenarioSelection(options.scenarios);
   }
+  validateBaselineOutputSelection(options);
   await ensureDir(options.rawDir);
   const gitHead = await resolveGitHead();
   let baselineReportForGate = null;
@@ -1553,6 +1596,7 @@ async function main() {
     },
     generatedAt: new Date().toISOString(),
     gitHead,
+    baselineDate: getBaselineArtifactDate(options.baselineJson),
     mode: options.mode,
     regressionMode: options.regressionMode,
     baseUrl: measurement.baseUrl,

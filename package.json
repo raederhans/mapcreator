@@ -96,7 +96,7 @@
     "build:hgo-scenario": "npm run python -- tools/build_hgo_scenario.py",
     "verify:scenario-contracts:hgo": "npm run python -- tools/check_scenario_contracts.py --strict --scenario-dir data/scenarios/hgo_1936 --report-path .runtime/reports/generated/hgo_1936.strict_contract_report.json",
     "test:py:tno-water-repair-contracts": "npm run python -- -m unittest tests.test_tno_water_owners_consistency tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_run_changed_domain_plan_for_water_repairs_contract_outputs_after_chunks tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_external_publish_checkpoint_validation_uses_tno_profile_and_hard_fails_final_files tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_prechunk_publish_checkpoint_validation_only_allows_missing_build_snapshot tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_write_bundle_stage_blocks_publish_when_strict_checkpoint_validation_fails -q",
-    "perf:baseline": "node tools/perf/run_baseline.mjs --mode baseline --warmups 3",
+    "perf:baseline": "node tools/perf/run_baseline.mjs --mode baseline --scenarios tno_1962,hoi4_1939 --runs 5 --warmups 3",
     "perf:gate": "node tools/perf/run_baseline.mjs --mode gate --scenarios tno_1962,hoi4_1939 --runs 5 --warmups 3 --threshold 1.15 --write-markdown false",
     "perf:analyze-render-sample-roles": "node tools/perf/analyze_render_sample_roles.mjs",
     "test:node:render-sample-role-policy": "node --test tests/render_sample_role_policy_behavior.test.mjs tests/perf_role_governed_report_behavior.test.mjs",

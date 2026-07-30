@@ -1,8 +1,8 @@
-from pathlib import Path
 import importlib.util
 import json
 import re
 import unittest
+from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -36,11 +36,16 @@ class PerfGateContractTest(unittest.TestCase):
             package_payload["scripts"].get("bench:editor-performance"),
             "npm run python -- ops/browser-mcp/editor-performance-benchmark.py --out .runtime/output/perf/editor-performance-benchmark.json --screenshot-dir .runtime/browser/mcp-artifacts/perf",
         )
-        self.assertIn("--warmups 3", perf_baseline_script)
-        self.assertIn("--scenarios tno_1962,hoi4_1939", perf_gate_script)
-        self.assertIn("--runs 5", perf_gate_script)
-        self.assertIn("--warmups 3", perf_gate_script)
-        self.assertNotIn("blank_base", perf_gate_script)
+        baseline_scenarios = re.search(r"--scenarios\s+(\S+)", perf_baseline_script)
+        gate_scenarios = re.search(r"--scenarios\s+(\S+)", perf_gate_script)
+        self.assertIsNotNone(baseline_scenarios)
+        self.assertIsNotNone(gate_scenarios)
+        self.assertEqual(baseline_scenarios.group(1), "tno_1962,hoi4_1939")
+        self.assertEqual(gate_scenarios.group(1), baseline_scenarios.group(1))
+        for command in (perf_baseline_script, perf_gate_script):
+            self.assertIn("--runs 5", command)
+            self.assertIn("--warmups 3", command)
+            self.assertNotIn("blank_base", command)
 
     def test_workflow_matches_checked_in_baseline_environment(self):
         workflow_content = WORKFLOW_FILE.read_text(encoding="utf-8")

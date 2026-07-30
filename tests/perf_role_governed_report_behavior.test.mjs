@@ -16,12 +16,14 @@ import {
 import {
   annotatePerfErrorWithDiagnostics,
   collectBaselineContractMismatches,
+  getBaselineArtifactDate,
   isTransientPerfNetworkFailure,
   normalizePerfRegressionMode,
   runWithTransientPerfNetworkRetry,
   shouldBlockOnPerfRegressions,
   summarizeSnapshot,
   validateGateBaselineReport,
+  validateBaselineOutputSelection,
   validateGateCurrentReport,
   validateGateScenarioSelection,
 } from "../tools/perf/run_baseline.mjs";
@@ -479,6 +481,64 @@ test("baseline identity comparison accepts observation-only scenario supersets",
   current.config.scenarios = ["tno_1962", "hoi4_1939"];
   baseline.config.scenarios = ["blank_base", "tno_1962", "tno_1962", "hoi4_1939"];
   assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
+});
+
+test("custom baseline scenarios cannot overwrite canonical output paths", () => {
+  const canonicalOptions = {
+    mode: "baseline",
+    scenarios: ["tno_1962", "hoi4_1939"],
+    baselineJson: path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-14.json"),
+    baselineMd: path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-14.md"),
+    rawDir: path.join(REPO_ROOT, ".runtime", "output", "perf", "baseline_2026-07-14"),
+    writeMarkdown: true,
+  };
+  assert.doesNotThrow(() => validateBaselineOutputSelection(canonicalOptions));
+  assert.throws(
+    () => validateBaselineOutputSelection({ ...canonicalOptions, scenarios: ["blank_base"] }),
+    /custom scenarios require custom output paths/,
+  );
+  assert.doesNotThrow(() => validateBaselineOutputSelection({
+    ...canonicalOptions,
+    scenarios: ["blank_base"],
+    baselineJson: path.join(REPO_ROOT, ".runtime", "output", "perf", "blank.json"),
+    baselineMd: path.join(REPO_ROOT, ".runtime", "output", "perf", "blank.md"),
+    rawDir: path.join(REPO_ROOT, ".runtime", "output", "perf", "blank"),
+  }));
+
+  const customOptions = {
+    ...canonicalOptions,
+    scenarios: ["blank_base"],
+    baselineJson: path.join(REPO_ROOT, ".runtime", "output", "perf", "blank.json"),
+    baselineMd: path.join(REPO_ROOT, ".runtime", "output", "perf", "blank.md"),
+    rawDir: path.join(REPO_ROOT, ".runtime", "output", "perf", "blank"),
+  };
+  for (const [field, canonicalPath] of [
+    ["baselineJson", canonicalOptions.baselineJson],
+    ["baselineMd", canonicalOptions.baselineMd],
+    ["rawDir", canonicalOptions.rawDir],
+  ]) {
+    const caseVariantOptions = {
+      ...customOptions,
+      [field]: canonicalPath.toUpperCase(),
+    };
+    if (process.platform === "win32") {
+      assert.throws(
+        () => validateBaselineOutputSelection(caseVariantOptions),
+        /custom scenarios require custom output paths/,
+        `${field} must use Windows case-insensitive canonical path comparison`,
+      );
+    } else {
+      assert.doesNotThrow(() => validateBaselineOutputSelection(caseVariantOptions));
+    }
+  }
+});
+
+test("baseline artifact date follows the selected oracle filename", () => {
+  assert.equal(
+    getBaselineArtifactDate(path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.json")),
+    "2026-07-30",
+  );
+  assert.equal(getBaselineArtifactDate(path.join(REPO_ROOT, "custom.json")), "2026-07-14");
 });
 
 test("baseline identity comparison rejects an incomplete canonical gate scenario set", () => {
