@@ -7,10 +7,13 @@ import {
 } from "./actions/renderer_phase_actions.js";
 import {
   commitProjectedBoundsCacheState,
-  ensureRenderPassCacheState as ensureRenderPassCacheActionState,
-  setSphericalFeatureDiagnosticsCacheState,
+  commitRenderPassCacheState,
 } from "./actions/renderer_cache_actions.js";
 import {
+  normalizeRenderPassCacheState,
+} from "../renderer/render_pass_cache_state_normalizer.js";
+import {
+  captureExactAfterSettleControllerState as captureExactAfterSettleControllerActionState,
   ensureExactAfterSettleControllerState as ensureExactAfterSettleControllerActionState,
   isExactAfterSettleControllerActiveState as isExactAfterSettleControllerActiveActionState,
   isExactAfterSettleGenerationCurrentState as isExactAfterSettleGenerationCurrentActionState,
@@ -63,38 +66,6 @@ export function createDefaultExactAfterSettleControllerState() {
     pendingPlan: null,
     reason: "init",
   };
-}
-
-export function ensureExactAfterSettleControllerState(target) {
-  if (!target || typeof target !== "object") {
-    return createDefaultExactAfterSettleControllerState();
-  }
-  ensureExactAfterSettleControllerActionState(target);
-  return target.exactAfterSettleController;
-}
-
-export function resetExactAfterSettleControllerState(target, { reason = "reset", generation = null } = {}) {
-  if (!target || typeof target !== "object") {
-    const controller = createDefaultExactAfterSettleControllerState();
-    if (generation !== null && Number(controller.generation || 0) !== Number(generation || 0)) {
-      return false;
-    }
-    return true;
-  }
-  return resetExactAfterSettleControllerActionState(target, {
-    reason,
-    generation,
-  });
-}
-
-export function isExactAfterSettleGenerationCurrentState(target, generation, phase = "") {
-  if (!target || typeof target !== "object") return false;
-  return isExactAfterSettleGenerationCurrentActionState(target, generation, phase);
-}
-
-export function isExactAfterSettleControllerActiveState(target) {
-  if (!target || typeof target !== "object") return false;
-  return isExactAfterSettleControllerActiveActionState(target);
 }
 
 export function ensureSceneSnapshotState(target) {
@@ -402,11 +373,47 @@ export function ensureRenderPassCacheState(
 ) {
   const defaults = createDefaultRenderPassCacheState();
   if (!target || typeof target !== "object") return defaults;
-  return ensureRenderPassCacheActionState(target, {
+  const renderPassCache = normalizeRenderPassCacheState(target.renderPassCache, {
     defaults,
     cloneZoomTransform,
     renderPassNames,
   });
+  if (renderPassCache !== target.renderPassCache) {
+    commitRenderPassCacheState(target, renderPassCache);
+  }
+  return renderPassCache;
+}
+
+export function ensureExactAfterSettleControllerState(target) {
+  if (!target || typeof target !== "object") {
+    return createDefaultExactAfterSettleControllerState();
+  }
+  ensureExactAfterSettleControllerActionState(target);
+  return captureExactAfterSettleControllerActionState(target);
+}
+
+export function resetExactAfterSettleControllerState(target, { reason = "reset", generation = null } = {}) {
+  if (!target || typeof target !== "object") {
+    const controller = createDefaultExactAfterSettleControllerState();
+    if (generation !== null && Number(controller.generation || 0) !== Number(generation || 0)) {
+      return false;
+    }
+    return true;
+  }
+  return resetExactAfterSettleControllerActionState(target, {
+    reason,
+    generation,
+  });
+}
+
+export function isExactAfterSettleGenerationCurrentState(target, generation, phase = "") {
+  if (!target || typeof target !== "object") return false;
+  return isExactAfterSettleGenerationCurrentActionState(target, generation, phase);
+}
+
+export function isExactAfterSettleControllerActiveState(target) {
+  if (!target || typeof target !== "object") return false;
+  return isExactAfterSettleControllerActiveActionState(target);
 }
 
 export function ensureSidebarPerfState(target) {
@@ -436,7 +443,7 @@ export function ensureProjectedBoundsCacheState(target) {
     target.projectedBoundsById instanceof Map
     && target.sphericalFeatureDiagnosticsById instanceof Map
   ) {
-    return target;
+    return true;
   }
   const defaults = createDefaultProjectedBoundsCacheState();
   commitProjectedBoundsCacheState(target, {
@@ -447,7 +454,7 @@ export function ensureProjectedBoundsCacheState(target) {
       ? target.sphericalFeatureDiagnosticsById
       : defaults.sphericalFeatureDiagnosticsById,
   });
-  return target;
+  return true;
 }
 
 export function resetProjectedBoundsCacheState(target) {
@@ -457,19 +464,6 @@ export function resetProjectedBoundsCacheState(target) {
   const defaults = createDefaultProjectedBoundsCacheState();
   commitProjectedBoundsCacheState(target, defaults);
   return defaults;
-}
-
-export function ensureSphericalFeatureDiagnosticsCache(target) {
-  if (!target || typeof target !== "object") {
-    return createDefaultProjectedBoundsCacheState().sphericalFeatureDiagnosticsById;
-  }
-  if (target.sphericalFeatureDiagnosticsById instanceof Map) {
-    return target.sphericalFeatureDiagnosticsById;
-  }
-  const diagnosticsCache =
-    createDefaultProjectedBoundsCacheState().sphericalFeatureDiagnosticsById;
-  setSphericalFeatureDiagnosticsCacheState(target, diagnosticsCache);
-  return target.sphericalFeatureDiagnosticsById;
 }
 
 // Transitional compatibility surface. Canonical mutation authority lives in

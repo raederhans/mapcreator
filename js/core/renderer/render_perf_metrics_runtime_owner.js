@@ -21,9 +21,9 @@ export function createRenderPerfMetricsRuntimeOwner({
     constants.contextBreakdownMetricNames,
     "constants.contextBreakdownMetricNames",
   );
-  const getRenderPerfMetrics = requireFunction(
-    getters.getRenderPerfMetrics,
-    "getters.getRenderPerfMetrics",
+  const getRenderPerfContextBreakdownSnapshot = requireFunction(
+    getters.getRenderPerfContextBreakdownSnapshot,
+    "getters.getRenderPerfContextBreakdownSnapshot",
   );
   const getRenderPerfMetricSequence = requireFunction(
     getters.getRenderPerfMetricSequence,
@@ -50,12 +50,11 @@ export function createRenderPerfMetricsRuntimeOwner({
   let activeContextMetricSession = null;
 
   function ensureRenderPerfMetrics() {
-    ensureRenderPerfMetricsState();
-    return getRenderPerfMetrics();
+    return ensureRenderPerfMetricsState();
   }
 
   function recordRenderPerfMetric(name, durationMs, details = {}) {
-    const metrics = ensureRenderPerfMetrics();
+    ensureRenderPerfMetrics();
     const normalizedName = String(name || "").trim();
     if (!normalizedName) return null;
     const nextSequence = Math.max(0, Number(getRenderPerfMetricSequence() || 0)) + 1;
@@ -70,7 +69,7 @@ export function createRenderPerfMetricsRuntimeOwner({
       entry: nextEntry,
       sequence: nextSequence,
     });
-    mirrorRenderPerfMetrics(metrics);
+    mirrorRenderPerfMetrics(normalizedName);
     return nextEntry;
   }
 
@@ -112,10 +111,8 @@ export function createRenderPerfMetricsRuntimeOwner({
   function endContextMetricSession() {
     const session = activeContextMetricSession;
     activeContextMetricSession = null;
-    const metrics = ensureRenderPerfMetrics();
-    const breakdown = metrics.contextBreakdown && typeof metrics.contextBreakdown === "object"
-      ? { ...metrics.contextBreakdown }
-      : {};
+    ensureRenderPerfMetrics();
+    const breakdown = getRenderPerfContextBreakdownSnapshot();
     const sessionMetrics = session?.metrics && typeof session.metrics === "object"
       ? session.metrics
       : {};
@@ -128,13 +125,13 @@ export function createRenderPerfMetricsRuntimeOwner({
       }
     });
     setRenderPerfContextBreakdownState(breakdown);
-    mirrorRenderPerfMetrics(ensureRenderPerfMetrics());
+    mirrorRenderPerfMetrics("contextBreakdown");
     return breakdown;
   }
 
   function resetContextBreakdownForExactFrame() {
     setRenderPerfContextBreakdownState({});
-    mirrorRenderPerfMetrics(ensureRenderPerfMetrics());
+    mirrorRenderPerfMetrics("contextBreakdown");
   }
 
   return Object.freeze({

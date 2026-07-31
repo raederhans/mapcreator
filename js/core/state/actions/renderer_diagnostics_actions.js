@@ -7,6 +7,83 @@ function assertStateTarget(target) {
   }
 }
 
+function cloneDiagnosticValue(value, seen = new WeakMap()) {
+  if (!value || typeof value !== "object") return value;
+  if (seen.has(value)) return seen.get(value);
+  if (Array.isArray(value)) {
+    const clone = [];
+    seen.set(value, clone);
+    value.forEach((entry) => clone.push(cloneDiagnosticValue(entry, seen)));
+    return clone;
+  }
+  if (value instanceof Map) {
+    const clone = new Map();
+    seen.set(value, clone);
+    value.forEach((entry, key) => {
+      clone.set(cloneDiagnosticValue(key, seen), cloneDiagnosticValue(entry, seen));
+    });
+    return clone;
+  }
+  if (value instanceof Set) {
+    const clone = new Set();
+    seen.set(value, clone);
+    value.forEach((entry) => clone.add(cloneDiagnosticValue(entry, seen)));
+    return clone;
+  }
+  const clone = {};
+  seen.set(value, clone);
+  Object.entries(value).forEach(([key, entry]) => {
+    clone[key] = cloneDiagnosticValue(entry, seen);
+  });
+  return clone;
+}
+
+export function captureRenderPerfMetricsState(target) {
+  assertStateTarget(target);
+  const metrics = target.renderPerfMetrics;
+  if (!metrics || typeof metrics !== "object" || Array.isArray(metrics)) {
+    return undefined;
+  }
+  return cloneDiagnosticValue(metrics);
+}
+
+export function captureRenderPerfContextBreakdownState(target) {
+  assertStateTarget(target);
+  const breakdown = target.renderPerfMetrics?.contextBreakdown;
+  if (!breakdown || typeof breakdown !== "object" || Array.isArray(breakdown)) {
+    return {};
+  }
+  return cloneDiagnosticValue(breakdown);
+}
+
+export function captureRenderPerfMetricEntryState(target, name) {
+  assertStateTarget(target);
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) {
+    throw new TypeError("[renderer_diagnostics_actions] name must be a non-empty string");
+  }
+  const entry = target.renderPerfMetrics?.[normalizedName];
+  if (entry === undefined) return undefined;
+  return cloneDiagnosticValue(entry);
+}
+
+export function captureProjectedBoundsDiagnosticsState(target) {
+  assertStateTarget(target);
+  const diagnostics = target.projectedBoundsDiagnostics;
+  if (
+    !diagnostics
+    || typeof diagnostics !== "object"
+    || Array.isArray(diagnostics)
+  ) {
+    return {
+      total: 0,
+      byGeometryType: {},
+      byReason: {},
+    };
+  }
+  return cloneDiagnosticValue(diagnostics);
+}
+
 export function ensureRenderPerfMetricsState(target) {
   assertStateTarget(target);
   if (

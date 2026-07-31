@@ -3,6 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createRenderPerfMetricsRuntimeOwner } from "../js/core/renderer/render_perf_metrics_runtime_owner.js";
+import {
+  captureRenderPerfContextBreakdownState,
+  captureRenderPerfMetricsState,
+  commitRenderPerfMetricState,
+  ensureRenderPerfMetricsState,
+  setRenderPerfContextBreakdownState,
+} from "../js/core/state/actions/renderer_diagnostics_actions.js";
 
 const OWNER_URL = new URL(
   "../js/core/renderer/render_perf_metrics_runtime_owner.js",
@@ -13,7 +20,7 @@ const BREAKDOWN_NAMES = new Set(["drawRoadsLayer", "drawRiversLayer"]);
 
 const DEPENDENCIES = Object.freeze({
   getters: Object.freeze([
-    "getRenderPerfMetrics",
+    "getRenderPerfContextBreakdownSnapshot",
     "getRenderPerfMetricSequence",
     "nowMs",
   ]),
@@ -25,11 +32,15 @@ const DEPENDENCIES = Object.freeze({
   ]),
 });
 
-function createHarness({ nowValues = [100, 110, 120, 130, 140, 150] } = {}) {
+function createHarness({
+  initialMetrics = null,
+  initialSequence = 0,
+  nowValues = [100, 110, 120, 130, 140, 150],
+} = {}) {
   const events = [];
   const state = {
-    renderPerfMetrics: null,
-    renderPerfMetricSequence: 0,
+    renderPerfMetrics: initialMetrics,
+    renderPerfMetricSequence: initialSequence,
   };
   let nowIndex = 0;
   const dependencies = {
@@ -37,9 +48,9 @@ function createHarness({ nowValues = [100, 110, 120, 130, 140, 150] } = {}) {
       contextBreakdownMetricNames: BREAKDOWN_NAMES,
     },
     getters: {
-      getRenderPerfMetrics() {
-        events.push("get-metrics");
-        return state.renderPerfMetrics;
+      getRenderPerfContextBreakdownSnapshot() {
+        events.push("get-breakdown");
+        return captureRenderPerfContextBreakdownState(state);
       },
       getRenderPerfMetricSequence() {
         events.push("get-sequence");
@@ -54,21 +65,18 @@ function createHarness({ nowValues = [100, 110, 120, 130, 140, 150] } = {}) {
     effects: {
       ensureRenderPerfMetricsState() {
         events.push("ensure-metrics");
-        if (!state.renderPerfMetrics || typeof state.renderPerfMetrics !== "object") {
-          state.renderPerfMetrics = {};
-        }
+        return ensureRenderPerfMetricsState(state);
       },
       commitRenderPerfMetricState({ name, entry, sequence }) {
         events.push(["commit-entry", name, entry, sequence]);
-        state.renderPerfMetrics[name] = entry;
-        state.renderPerfMetricSequence = sequence;
+        commitRenderPerfMetricState(state, { name, entry, sequence });
       },
       setRenderPerfContextBreakdownState(breakdown) {
         events.push(["set-breakdown", breakdown]);
-        state.renderPerfMetrics.contextBreakdown = breakdown;
+        setRenderPerfContextBreakdownState(state, breakdown);
       },
-      mirrorRenderPerfMetrics(metrics) {
-        events.push(["mirror-metrics", metrics]);
+      mirrorRenderPerfMetrics(name) {
+        events.push(["mirror-metrics", name, captureRenderPerfMetricsState(state)]);
       },
     },
   };
@@ -110,13 +118,12 @@ test("factory validates dependencies and freezes the exact runtime API", () => {
   ]);
 });
 
-test("ensure and record preserve state ordering, sequence, detail overrides, and mirror identity", () => {
-  const { events, owner, state } = createHarness();
-  assert.equal(owner.ensureRenderPerfMetrics(), state.renderPerfMetrics);
-  assert.deepEqual(events, ["ensure-metrics", "get-metrics"]);
+test("ensure and record preserve state ordering, sequence, detail overrides, and detached mirrors", () => {
+  const { events, owner, state } = createHarness({ initialSequence: 4 });
+  assert.equal(owner.ensureRenderPerfMetrics(), true);
+  assert.deepEqual(events, ["ensure-metrics"]);
 
   events.length = 0;
-  state.renderPerfMetricSequence = 4;
   const entry = owner.recordRenderPerfMetric("  drawFrame  ", -9, {
     durationMs: 17,
     recordedAt: 77,
@@ -133,16 +140,16 @@ test("ensure and record preserve state ordering, sequence, detail overrides, and
   assert.equal(state.renderPerfMetricSequence, 5);
   assert.deepEqual(events, [
     "ensure-metrics",
-    "get-metrics",
     "get-sequence",
     ["now", 100],
     ["commit-entry", "drawFrame", entry, 5],
-    ["mirror-metrics", state.renderPerfMetrics],
+    ["mirror-metrics", "drawFrame", state.renderPerfMetrics],
   ]);
+  assert.notEqual(events.at(-1)[2], state.renderPerfMetrics);
 
   events.length = 0;
   assert.equal(owner.recordRenderPerfMetric("  ", 1), null);
-  assert.deepEqual(events, ["ensure-metrics", "get-metrics"]);
+  assert.deepEqual(events, ["ensure-metrics"]);
 });
 
 test("collect outside a session falls back to record and retains the second sampling boundary", () => {
@@ -158,11 +165,10 @@ test("collect outside a session falls back to record and retains the second samp
   assert.deepEqual(events, [
     ["now", 100],
     "ensure-metrics",
-    "get-metrics",
     "get-sequence",
     ["now", 110],
     ["commit-entry", "drawRoadsLayer", entry, 1],
-    ["mirror-metrics", state.renderPerfMetrics],
+    ["mirror-metrics", "drawRoadsLayer", state.renderPerfMetrics],
   ]);
 });
 
@@ -208,12 +214,15 @@ test("session collection aggregates duration, latest details, timestamp, and cal
 });
 
 test("ending a session records insertion order while preserving the metrics root", () => {
-  const { events, owner, state } = createHarness({ nowValues: [10, 20, 30, 40, 50] });
-  state.renderPerfMetrics = {
+  const initialMetrics = {
     contextBreakdown: {
       priorMetric: { durationMs: 1, sequence: 0 },
     },
   };
+  const { events, owner, state } = createHarness({
+    initialMetrics,
+    nowValues: [10, 20, 30, 40, 50],
+  });
   const metricsRoot = state.renderPerfMetrics;
   owner.beginContextMetricSession();
   owner.collectContextMetric("drawRoadsLayer", 3, { featureCount: 2 });
@@ -252,7 +261,13 @@ test("ending a session records insertion order while preserving the metrics root
     events.some((event) => Array.isArray(event) && event[0] === "set-breakdown"),
     true,
   );
-  assert.deepEqual(events.at(-1), ["mirror-metrics", state.renderPerfMetrics]);
+  assert.equal(events.includes("get-breakdown"), true);
+  assert.deepEqual(events.at(-1), [
+    "mirror-metrics",
+    "contextBreakdown",
+    state.renderPerfMetrics,
+  ]);
+  assert.notEqual(events.at(-1)[2], state.renderPerfMetrics);
 
   events.length = 0;
   const fallback = owner.collectContextMetric("afterSession", 1);
@@ -281,14 +296,21 @@ test("begin replaces an unfinished session and end without a session still commi
     events.some((event) => Array.isArray(event) && event[0] === "set-breakdown"),
     true,
   );
-  assert.deepEqual(events.at(-1), ["mirror-metrics", state.renderPerfMetrics]);
+  assert.equal(events.includes("get-breakdown"), true);
+  assert.deepEqual(events.at(-1), [
+    "mirror-metrics",
+    "contextBreakdown",
+    state.renderPerfMetrics,
+  ]);
+  assert.notEqual(events.at(-1)[2], state.renderPerfMetrics);
 });
 
 test("reset preserves other metrics and publishes a fresh empty breakdown", () => {
-  const { events, owner, state } = createHarness();
   const drawFrame = { durationMs: 9, sequence: 2 };
   const oldBreakdown = { drawRoadsLayer: { durationMs: 2 } };
-  state.renderPerfMetrics = { drawFrame, contextBreakdown: oldBreakdown };
+  const { events, owner, state } = createHarness({
+    initialMetrics: { drawFrame, contextBreakdown: oldBreakdown },
+  });
   const metricsRoot = state.renderPerfMetrics;
   assert.equal(owner.resetContextBreakdownForExactFrame(), undefined);
   assert.equal(state.renderPerfMetrics.drawFrame, drawFrame);
@@ -299,7 +321,12 @@ test("reset preserves other metrics and publishes a fresh empty breakdown", () =
     events.some((event) => Array.isArray(event) && event[0] === "set-breakdown"),
     true,
   );
-  assert.deepEqual(events.at(-1), ["mirror-metrics", state.renderPerfMetrics]);
+  assert.deepEqual(events.at(-1), [
+    "mirror-metrics",
+    "contextBreakdown",
+    state.renderPerfMetrics,
+  ]);
+  assert.notEqual(events.at(-1)[2], state.renderPerfMetrics);
 });
 
 test("owner source stays import-free and free of global state, DOM, and direct clocks", async () => {

@@ -323,6 +323,81 @@ test("production candidate discovery scans all parameter candidates once per fil
   );
 });
 
+test("historical discovery cannot borrow current detached-capture authority", async () => {
+  const relativePath = "js/core/map_renderer.js";
+  const source = [
+    'import { state as runtimeState } from "./state.js";',
+    'import { captureRenderPerfMetricsState as capture } from "./state/actions/renderer_diagnostics_actions.js";',
+    "const snapshot = capture(runtimeState);",
+    "globalThis.snapshot = snapshot;",
+    "",
+  ].join("\n");
+
+  const current = await discoverStateWriterBindingsForSource(
+    relativePath,
+    source,
+    "production",
+    {
+      scanAllParameters: true,
+      includeInventories: true,
+    },
+  );
+  assert.deepEqual(
+    current.bindingInventories.flatMap(({ findings }) => findings),
+    [],
+  );
+
+  const historical = await discoverStateWriterBindingsForSource(
+    relativePath,
+    source,
+    "production",
+    {
+      scanAllParameters: true,
+      enforceCurrentContracts: false,
+      includeInventories: true,
+    },
+  );
+  assert.ok(
+    historical.bindingInventories
+      .flatMap(({ findings }) => findings)
+      .some(({ reason }) => reason === "state-alias-escape"),
+    "accepted historical source must fail closed when its own contract view is unavailable",
+  );
+});
+
+test("validated detached-capture implementations stay outside writer diagnostics", async () => {
+  const relativePath =
+    "js/core/state/actions/renderer_diagnostics_actions.js";
+  const source = await readFile(
+    new URL(`../${relativePath}`, import.meta.url),
+    "utf8",
+  );
+  const discovery = await discoverStateWriterBindingsForSource(
+    relativePath,
+    source,
+    "production",
+    {
+      scanAllParameters: true,
+      includeInventories: true,
+    },
+  );
+
+  assert.equal(
+    discovery.bindings.some(
+      ({ functionName }) => functionName === "captureRenderPerfMetricsState",
+    ),
+    false,
+  );
+  assert.equal(
+    discovery.bindingInventories.some(
+      ({ binding, findings }) =>
+        binding.functionName === "captureRenderPerfMetricsState"
+        && findings.some(({ reason }) => reason === "state-alias-escape"),
+    ),
+    false,
+  );
+});
+
 test("immutable exact refresh plans require no scanner exclusion", async () => {
   const relativePath =
     "js/core/map_renderer/exact_after_settle_scheduler.js";
@@ -331,7 +406,7 @@ test("immutable exact refresh plans require no scanner exclusion", async () => {
     "",
     "function applyExactAfterSettleRefreshPlan(plan) {",
     "  plan.exactTargetPasses = [];",
-    '  runtimeState.renderPhase = "idle";',
+    '  runtime' + 'State.renderPhase = "idle";',
     "}",
     "",
     "function applyScheduledExactAfterSettleRefreshPlan(generation, plan) {",

@@ -3,11 +3,16 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  clearSphericalFeatureDiagnosticsCacheState,
   commitProjectedBoundsCacheState,
   commitRenderPassCacheState,
-  ensureRenderPassCacheState,
-  setSphericalFeatureDiagnosticsCacheState,
+  getSphericalFeatureDiagnosticsCacheEntryState,
+  setSphericalFeatureDiagnosticsCacheEntryState,
 } from "../js/core/state/actions/renderer_cache_actions.js";
+import {
+  createDefaultRenderPassCacheState,
+  ensureRenderPassCacheState,
+} from "../js/core/state/renderer_runtime_state.js";
 
 test("renderer cache actions stay import-free with target-first exports", async () => {
   const source = await readFile(
@@ -17,12 +22,14 @@ test("renderer cache actions stay import-free with target-first exports", async 
   assert.doesNotMatch(source, /^\s*import\s/m);
   for (const name of [
     "commitRenderPassCacheState",
-    "ensureRenderPassCacheState",
     "commitProjectedBoundsCacheState",
-    "setSphericalFeatureDiagnosticsCacheState",
+    "clearSphericalFeatureDiagnosticsCacheState",
+    "getSphericalFeatureDiagnosticsCacheEntryState",
+    "setSphericalFeatureDiagnosticsCacheEntryState",
   ]) {
     assert.match(source, new RegExp(`export function ${name}\\(\\s*target[,)]`));
   }
+  assert.doesNotMatch(source, /ensureRenderPassCacheState/);
 });
 
 test("cache actions reject invalid targets", () => {
@@ -32,7 +39,9 @@ test("cache actions reject invalid targets", () => {
       projectedBoundsById: new Map(),
       sphericalFeatureDiagnosticsById: new Map(),
     }), /target must be an object/);
-    assert.throws(() => setSphericalFeatureDiagnosticsCacheState(target, new Map()), /target must be an object/);
+    assert.throws(() => clearSphericalFeatureDiagnosticsCacheState(target), /target must be an object/);
+    assert.throws(() => getSphericalFeatureDiagnosticsCacheEntryState(target, "A"), /target must be an object/);
+    assert.throws(() => setSphericalFeatureDiagnosticsCacheEntryState(target, "A", {}), /target must be an object/);
   }
 });
 
@@ -43,99 +52,13 @@ test("render pass cache commit preserves the prepared holder identity", () => {
   assert.equal(target.renderPassCache, cache);
 });
 
-test("render pass cache repair prepares a detached holder before one atomic commit", () => {
-  const defaults = {
-    canvases: {},
-    layouts: {},
-    signatures: {},
-    referenceTransforms: {},
-    fullReferenceTransforms: {},
-    contextScenarioLayerCache: {},
-    compositeBuffer: { canvas: null },
-    borderSnapshot: {
-      canvas: null,
-      layout: null,
-      referenceTransform: null,
-      valid: false,
-      reason: "init",
-    },
-    lastGoodFrame: { capturedAt: 0 },
-    interactionComposite: { capturedAt: 0 },
-    partialPoliticalDirtyIds: new Set(),
-    pendingPoliticalColorEditIds: new Set(),
-    pendingPoliticalColorEditRevision: -1,
-    pendingPoliticalColorEditScenarioId: "",
-    pendingPoliticalColorEditReason: "",
-    pendingPoliticalColorEditStartedAt: 0,
-    pendingPoliticalColorEditInputLabel: "",
-    pendingPoliticalColorEditFirstPixelRecorded: false,
-    pendingPoliticalColorEditFirstPixelPaintSource: "",
-    pendingPoliticalPatchOverlayTransformSignature: "",
-    politicalPassSceneGeneration: 0,
-    politicalPassScenarioDataGeneration: 0,
-    politicalPassDataStage: "unknown",
-    politicalPassFullReady: false,
-    politicalPassFineCacheReady: false,
-    politicalPathCache: new Map(),
-    politicalPathCacheSignature: "",
-    politicalPathCacheTransform: null,
-    politicalPathWarmupQueue: [],
-    politicalPathWarmupHandle: null,
-    politicalPathWarmupSignature: "",
-    politicalPathWarmupReason: "",
-    contextScenarioReasonMismatchSignature: "",
-    dirty: { background: true },
-    reasons: { background: "init" },
-    counters: { frames: 0 },
-    lastFrame: null,
-    lastAction: "",
-    lastActionDurationMs: 0,
-    lastActionAt: 0,
-    perfOverlayEnabled: false,
-    overlayElement: null,
-  };
-  const original = {
-    dirty: {},
-    reasons: {},
-    counters: { frames: "3" },
-    politicalPathCacheTransform: { x: 4, y: 5, k: 2 },
-  };
-  const target = { renderPassCache: original };
-
-  const repaired = ensureRenderPassCacheState(target, {
-    defaults,
-    renderPassNames: ["background"],
-    cloneZoomTransform: (transform) => ({ ...transform }),
-  });
-
-  assert.notEqual(repaired, original);
-  assert.equal(target.renderPassCache, repaired);
-  assert.equal(original.counters.frames, "3");
-  assert.equal("background" in original.dirty, false);
-  assert.equal(repaired.counters.frames, 3);
-  assert.equal(repaired.dirty.background, true);
-  assert.deepEqual(repaired.politicalPathCacheTransform, { x: 4, y: 5, k: 2 });
-});
-
-test("render pass cache repair leaves the original holder installed when preparation throws", () => {
-  const defaults = {
-    dirty: {},
-    reasons: {},
-    counters: {},
-    politicalPathCacheTransform: null,
-    politicalPathWarmupHandle: null,
-  };
-  const original = {
-    dirty: {},
-    reasons: {},
-    counters: {},
-    politicalPathCacheTransform: { x: 1, y: 2, k: 3 },
-    politicalPathWarmupHandle: null,
-  };
+test("runtime compatibility helper prepares before committing", () => {
+  const original = createDefaultRenderPassCacheState();
+  original.politicalPathCacheTransform = { x: 1, y: 2, k: 3 };
+  delete original.dirty.background;
   const target = { renderPassCache: original };
 
   assert.throws(() => ensureRenderPassCacheState(target, {
-    defaults,
     renderPassNames: ["background"],
     cloneZoomTransform() {
       throw new Error("clone failed");
@@ -143,35 +66,7 @@ test("render pass cache repair leaves the original holder installed when prepara
   }), /clone failed/);
   assert.equal(target.renderPassCache, original);
   assert.deepEqual(original.politicalPathCacheTransform, { x: 1, y: 2, k: 3 });
-});
-
-test("render pass cache initialization does not mutate the supplied defaults snapshot", () => {
-  const defaults = {
-    dirty: {},
-    reasons: {},
-    counters: { frames: 0 },
-    politicalPathCacheTransform: null,
-    politicalPathWarmupHandle: null,
-  };
-  const target = {};
-
-  const initialized = ensureRenderPassCacheState(target, {
-    defaults,
-    renderPassNames: ["background"],
-  });
-
-  assert.equal(target.renderPassCache, initialized);
-  assert.notEqual(initialized, defaults);
-  assert.notEqual(initialized.dirty, defaults.dirty);
-  assert.notEqual(initialized.reasons, defaults.reasons);
-  assert.notEqual(initialized.counters, defaults.counters);
-  assert.deepEqual(defaults, {
-    dirty: {},
-    reasons: {},
-    counters: { frames: 0 },
-    politicalPathCacheTransform: null,
-    politicalPathWarmupHandle: null,
-  });
+  assert.equal("background" in original.dirty, false);
 });
 
 test("projected bounds cache commit installs both exact Map identities", () => {
@@ -186,11 +81,70 @@ test("projected bounds cache commit installs both exact Map identities", () => {
   assert.equal(target.sphericalFeatureDiagnosticsById, sphericalFeatureDiagnosticsById);
 });
 
-test("spherical diagnostics cache setter preserves the exact Map identity", () => {
+test("spherical diagnostics cache actions keep mutable state private", () => {
   const target = { sphericalFeatureDiagnosticsById: new Map() };
-  const cache = new Map([["B", { reason: "non-finite" }]]);
-  assert.equal(setSphericalFeatureDiagnosticsCacheState(target, cache), true);
-  assert.equal(target.sphericalFeatureDiagnosticsById, cache);
+  const diagnostics = {
+    area: 7,
+    bounds: [[-10, -5], [10, 5]],
+    invalid: false,
+  };
+
+  assert.equal(
+    setSphericalFeatureDiagnosticsCacheEntryState(target, "B", diagnostics),
+    true,
+  );
+  diagnostics.bounds[0][0] = 999;
+
+  const firstRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "B");
+  assert.deepEqual(firstRead, {
+    area: 7,
+    bounds: [[-10, -5], [10, 5]],
+    invalid: false,
+  });
+  firstRead.bounds[1][1] = 999;
+  assert.deepEqual(getSphericalFeatureDiagnosticsCacheEntryState(target, "B"), {
+    area: 7,
+    bounds: [[-10, -5], [10, 5]],
+    invalid: false,
+  });
+  assert.equal(getSphericalFeatureDiagnosticsCacheEntryState(target, "missing"), null);
+
+  assert.equal(clearSphericalFeatureDiagnosticsCacheState(target), true);
+  assert.equal(target.sphericalFeatureDiagnosticsById.size, 0);
+});
+
+test("spherical diagnostics cache keys use stable string semantics", () => {
+  const target = { sphericalFeatureDiagnosticsById: new Map() };
+
+  setSphericalFeatureDiagnosticsCacheEntryState(target, 7, { label: "numeric" });
+  setSphericalFeatureDiagnosticsCacheEntryState(target, "", { label: "empty" });
+  setSphericalFeatureDiagnosticsCacheEntryState(target, null, { label: "null" });
+
+  assert.deepEqual(getSphericalFeatureDiagnosticsCacheEntryState(target, "7"), { label: "numeric" });
+  assert.deepEqual(getSphericalFeatureDiagnosticsCacheEntryState(target, ""), { label: "empty" });
+  assert.deepEqual(getSphericalFeatureDiagnosticsCacheEntryState(target, null), { label: "null" });
+});
+
+test("spherical diagnostics cache preserves structured clone values", () => {
+  const target = { sphericalFeatureDiagnosticsById: new Map() };
+  const diagnostics = {
+    reasons: new Map([["unsafe", { count: 1 }]]),
+    tags: new Set(["world-bounds"]),
+  };
+  diagnostics.self = diagnostics;
+
+  setSphericalFeatureDiagnosticsCacheEntryState(target, "cyclic", diagnostics);
+  diagnostics.reasons.get("unsafe").count = 99;
+  diagnostics.tags.add("mutated");
+
+  const firstRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "cyclic");
+  assert.equal(firstRead.self, firstRead);
+  assert.deepEqual(firstRead.reasons, new Map([["unsafe", { count: 1 }]]));
+  assert.deepEqual(firstRead.tags, new Set(["world-bounds"]));
+
+  firstRead.reasons.get("unsafe").count = 77;
+  const secondRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "cyclic");
+  assert.equal(secondRead.reasons.get("unsafe").count, 1);
 });
 
 test("cache actions reject malformed prepared holders", () => {
@@ -202,5 +156,7 @@ test("cache actions reject malformed prepared holders", () => {
     projectedBoundsById: {},
     sphericalFeatureDiagnosticsById: new Map(),
   }), /projectedBoundsById must be a Map/);
-  assert.throws(() => setSphericalFeatureDiagnosticsCacheState(target, {}), /sphericalFeatureDiagnosticsById must be a Map/);
+  assert.throws(() => clearSphericalFeatureDiagnosticsCacheState(target), /sphericalFeatureDiagnosticsById must be a Map/);
+  assert.throws(() => getSphericalFeatureDiagnosticsCacheEntryState(target, "A"), /sphericalFeatureDiagnosticsById must be a Map/);
+  assert.throws(() => setSphericalFeatureDiagnosticsCacheEntryState(target, "A", {}), /sphericalFeatureDiagnosticsById must be a Map/);
 });

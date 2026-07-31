@@ -38,7 +38,7 @@ function createHarness() {
     zoomBucket: 4,
     referenceZoomBucket: 4,
   };
-  const runtimeState = {
+  const schedulerRuntime = {
     activeScenarioId: "scenario-a",
     adaptiveSettleProfile: profile,
     colorRevision: 3,
@@ -80,7 +80,7 @@ function createHarness() {
   };
 
   const scheduler = createExactAfterSettleScheduler({
-    runtimeState,
+    runtimeState: schedulerRuntime,
     renderPassNames: definitions.map(([passName]) => passName),
     renderPhaseIdle: "idle",
     exactContextRefreshDelayMs: 0,
@@ -150,7 +150,7 @@ function createHarness() {
     flushPendingScenarioChunkRefreshAfterExact: () => events.push("flush-scenario-chunks"),
   });
 
-  function runTimer(id = runtimeState.exactAfterSettleHandle?.id) {
+  function runTimer(id = schedulerRuntime.exactAfterSettleHandle?.id) {
     assert.ok(id, "an exact-after-settle timer id must exist");
     assert.equal(cancelledTimerIds.has(id), false, `timer ${id} must remain active`);
     const timer = timers.get(id);
@@ -170,16 +170,16 @@ function createHarness() {
 
   function driveToAwaitingPaint() {
     scheduler.scheduleExactAfterSettleRefresh(profile);
-    const generation = runtimeState.exactAfterSettleController.generation;
-    assert.equal(runtimeState.exactAfterSettleController.phase, "scheduled");
+    const generation = schedulerRuntime.exactAfterSettleController.generation;
+    assert.equal(schedulerRuntime.exactAfterSettleController.phase, "scheduled");
     runTimer();
     runNextFrame("exact-after-settle-Prepare");
     runNextFrame("exact-after-settle-Apply");
-    assert.equal(runtimeState.exactAfterSettleController.phase, "applying");
+    assert.equal(schedulerRuntime.exactAfterSettleController.phase, "applying");
     runNextFrame("exact-after-settle-pass-political");
     runNextFrame("exact-after-settle-pass-borders");
-    assert.equal(runtimeState.exactAfterSettleController.phase, "awaiting-paint");
-    assert.equal(runtimeState.exactAfterSettleController.generation, generation);
+    assert.equal(schedulerRuntime.exactAfterSettleController.phase, "awaiting-paint");
+    assert.equal(schedulerRuntime.exactAfterSettleController.generation, generation);
     return generation;
   }
 
@@ -197,8 +197,11 @@ function createHarness() {
     reuseDecision,
     runNextFrame,
     runTimer,
-    runtimeState,
+    runtimeState: schedulerRuntime,
     scheduler,
+    setTopologyRevision(value) {
+      schedulerRuntime.topologyRevision = Number(value || 0);
+    },
     timers,
   };
 }
@@ -327,7 +330,7 @@ test("identity mismatch aborts and rearms an exact refresh with recovery orderin
     harness.scheduler.scheduleExactAfterSettleRefresh(harness.profile);
     const firstGeneration = harness.runtimeState.exactAfterSettleController.generation;
     harness.runTimer();
-    harness.runtimeState.topologyRevision += 1;
+    harness.setTopologyRevision(harness.runtimeState.topologyRevision + 1);
     harness.runNextFrame("exact-after-settle-Prepare");
 
     assert.equal(harness.runtimeState.exactAfterSettleController.phase, "scheduled");

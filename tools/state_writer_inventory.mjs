@@ -6,6 +6,9 @@ import * as walk from "acorn-walk";
 
 import {
   findStateActionDelegationContractEntry,
+  findStateImportedPureNormalizerContractEntry,
+  findStateDetachedCaptureContractEntry,
+  findStateMutationDelegatingOwnerFactoryContractEntry,
   findStateActionReadOnlyContractEntry,
 } from "./state_action_delegation_contract.mjs";
 
@@ -16,6 +19,7 @@ const DEFAULT_PARAMETER_NAMES = Object.freeze([
   "appState",
   "targetState",
 ]);
+export const STATE_WRITER_PARAMETER_NAMES = DEFAULT_PARAMETER_NAMES;
 
 export const DERIVED_ALIAS_TAINT_MODES = Object.freeze({
   STRICT: "strict",
@@ -1528,6 +1532,7 @@ function analyzeBindingMutations(
       DERIVED_ALIAS_TAINT_MODES.STRICT,
     analysisTraversalMode = "auto",
     analysisInstrumentation = null,
+    recognizeCurrentContracts = true,
   } = {},
 ) {
   const normalizedDerivedAliasTaintMode =
@@ -1948,6 +1953,9 @@ function analyzeBindingMutations(
     if (!node) {
       return { status: "none", reference: null };
     }
+    if (isSanctionedMutationDelegatingOwnerBindingRead(node)) {
+      return { status: "none", reference: null };
+    }
     if (node.type === "AwaitExpression") {
       return referenceClassification(node.argument, aliasRecords);
     }
@@ -1968,6 +1976,33 @@ function analyzeBindingMutations(
     }
     if (node.type === "AssignmentExpression") {
       return referenceClassification(node.right, aliasRecords);
+    }
+    if (node.type === "CallExpression") {
+      const importedDelegation = importedTargetDelegation(node);
+      const detachedCaptureContract =
+        importedDelegation?.detachedCaptureContract;
+      const targetArgument = detachedCaptureContract
+        ? node.arguments?.[detachedCaptureContract.targetArgumentIndex]
+        : null;
+      if (targetArgument) {
+        const targetClassification = referenceClassification(
+          targetArgument,
+          aliasRecords,
+        );
+        if (isSanctionedImportedStateActionTargetArgument(
+          targetArgument,
+          targetClassification,
+          aliasRecords,
+        )) {
+          return { status: "none", reference: null };
+        }
+      }
+      if (isSanctionedMutationDelegatingOwnerFactoryCall(node)) {
+        return { status: "none", reference: null };
+      }
+      if (isSanctionedMutationDelegatingOwnerGetterCall(node)) {
+        return { status: "none", reference: null };
+      }
     }
     if (
       strictDerivedAliasTaint
@@ -3015,6 +3050,9 @@ function analyzeBindingMutations(
   }
 
   function importedTargetDelegation(callNode) {
+    if (!recognizeCurrentContracts) {
+      return null;
+    }
     const callee = unwrapChain(callNode?.callee);
     if (
       callee?.type !== "Identifier"
@@ -3043,6 +3081,18 @@ function analyzeBindingMutations(
         actionContract,
       };
     }
+    const detachedCaptureContract =
+      findStateDetachedCaptureContractEntry(
+        source,
+        record.importedName,
+      );
+    if (detachedCaptureContract) {
+      return {
+        targetArgumentIndex: detachedCaptureContract.targetArgumentIndex,
+        actionContract: null,
+        detachedCaptureContract,
+      };
+    }
     const readOnlyContract =
       findStateActionReadOnlyContractEntry(
         source,
@@ -3052,6 +3102,19 @@ function analyzeBindingMutations(
       return {
         targetArgumentIndex: readOnlyContract.targetArgumentIndex,
         actionContract: null,
+      };
+    }
+    const pureNormalizerContract =
+      findStateImportedPureNormalizerContractEntry(
+        source,
+        record.importedName,
+      );
+    if (pureNormalizerContract) {
+      return {
+        targetArgumentIndex:
+          pureNormalizerContract.targetArgumentIndex,
+        actionContract: null,
+        pureNormalizerContract,
       };
     }
     if (source === "js/core/state/index.js") {
@@ -3079,13 +3142,20 @@ function analyzeBindingMutations(
       const importedTargetIndex = importedDelegation.targetArgumentIndex;
       const targetClassification =
         argumentClassifications[importedTargetIndex];
-      if (
-        importedTargetIndex < node.arguments.length
-        && isSanctionedImportedStateActionTargetArgument(
+      const sanctionedTarget = importedDelegation.pureNormalizerContract
+        ? isSanctionedImportedPureNormalizerTargetArgument(
+          node.arguments[importedTargetIndex],
+          targetClassification,
+          importedDelegation.pureNormalizerContract,
+        )
+        : isSanctionedImportedStateActionTargetArgument(
           node.arguments[importedTargetIndex],
           targetClassification,
           aliasRecords,
-        )
+        );
+      if (
+        importedTargetIndex < node.arguments.length
+        && sanctionedTarget
       ) {
         delegatedArgumentIndexes.add(importedTargetIndex);
         if (importedDelegation.actionContract) {
@@ -3316,6 +3386,109 @@ function analyzeBindingMutations(
     return Boolean(
       defaultClassification.status === "exact"
       && defaultClassification.reference?.segments?.length === 0,
+    );
+  }
+
+  function isSanctionedMutationDelegatingOwnerFactoryCall(callNode) {
+    if (!recognizeCurrentContracts) return false;
+    const callee = unwrapChain(callNode?.callee);
+    if (callee?.type !== "Identifier" || callNode.optional === true) return false;
+    const record = analysis.resolveIdentifier(callee);
+    if (
+      record?.kind !== "import"
+      || record.importKind !== "ImportSpecifier"
+      || identityTransitionRecords.has(record)
+    ) return false;
+    const contract = findStateMutationDelegatingOwnerFactoryContractEntry(
+      resolveProjectLocalImportPath(record.importSource),
+      record.importedName,
+    );
+    const ownerFunction = currentExecutionFunction();
+    if (
+      !contract
+      || String(filePath || "").replaceAll("\\", "/").replace(/^\.\//, "")
+        !== contract.compositionModulePath
+      || ownerFunction?.id?.name !== contract.compositionExportName
+    ) return false;
+    const ownerSource = String(source || "")
+      .slice(ownerFunction.start, ownerFunction.end)
+      .trim();
+    return createHash("sha256").update(ownerSource).digest("hex")
+      === contract.compositionSourceFingerprint;
+  }
+
+  function mutationDelegatingOwnerContractForCurrentModule() {
+    if (!recognizeCurrentContracts) return null;
+    return findStateMutationDelegatingOwnerFactoryContractEntry(
+      "js/core/renderer/render_perf_metrics_runtime_owner.js",
+      "createRenderPerfMetricsRuntimeOwner",
+    );
+  }
+
+  function hasExactMutationDelegatingOwnerCompositionFunction(
+    contract,
+    functionNode,
+  ) {
+    if (
+      !contract
+      || String(filePath || "").replaceAll("\\", "/").replace(/^\.\//, "")
+        !== contract.compositionModulePath
+      || functionNode?.id?.name !== contract.compositionExportName
+    ) return false;
+    return createHash("sha256")
+      .update(String(source || "").slice(functionNode.start, functionNode.end).trim())
+      .digest("hex") === contract.compositionSourceFingerprint;
+  }
+
+  function isSanctionedMutationDelegatingOwnerBindingRead(node) {
+    if (node?.type !== "Identifier") return false;
+    const contract = mutationDelegatingOwnerContractForCurrentModule();
+    return Boolean(
+      node.name === contract?.ownerBindingName
+      && hasExactMutationDelegatingOwnerCompositionFunction(
+        contract,
+        currentExecutionFunction(),
+      )
+    );
+  }
+
+  function isSanctionedMutationDelegatingOwnerGetterCall(node) {
+    if (node?.type !== "CallExpression" || node.callee?.type !== "Identifier") {
+      return false;
+    }
+    const contract = mutationDelegatingOwnerContractForCurrentModule();
+    if (!contract?.methods.includes(currentExecutionFunction()?.id?.name)) {
+      return false;
+    }
+    return hasExactMutationDelegatingOwnerCompositionFunction(
+      contract,
+      directImmutableLocalHelperNode(node),
+    );
+  }
+
+  function isSanctionedImportedPureNormalizerTargetArgument(
+    argument,
+    classification,
+    contractEntry,
+  ) {
+    const node = unwrapChain(argument);
+    if (
+      node?.type !== "MemberExpression"
+      || classification?.status !== "exact"
+    ) {
+      return false;
+    }
+    const segments = classification.reference?.segments || [];
+    const expectedKeys = String(
+      contractEntry?.targetArgumentStaticPath || "",
+    ).split(".").filter(Boolean);
+    return Boolean(
+      expectedKeys.length
+      && segments.length === expectedKeys.length
+      && segments.every(
+        (segment, index) =>
+          !segment.dynamic && segment.key === expectedKeys[index],
+      )
     );
   }
 
@@ -5131,6 +5304,7 @@ export function scanStateMutationInventory(
       DERIVED_ALIAS_TAINT_MODES.STRICT,
     analysisTraversalMode = "auto",
     analysisInstrumentation = null,
+    recognizeCurrentContracts = true,
   } = {},
 ) {
   const normalizedSource = normalizeJavaScriptSource(source);
@@ -5163,6 +5337,7 @@ export function scanStateMutationInventory(
             normalizedDerivedAliasTaintMode,
           analysisTraversalMode,
           analysisInstrumentation,
+          recognizeCurrentContracts,
         },
       );
     });

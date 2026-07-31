@@ -12,15 +12,18 @@ import {
   normalizeDerivedAliasTaintMode,
   scanStateMutationInventory,
   scanStateMutations,
+  STATE_WRITER_PARAMETER_NAMES,
 } from "./state_writer_inventory.mjs";
 import {
   expandStateActionMembershipsWithLegacyReplacements,
   findStateActionCrossFileMigrationContractEntry,
   getStateTargetPureReaderContractEntriesForModule,
   getStateActionDelegationContractEntriesForModule,
+  inspectStateDetachedCaptureSource,
   inspectStateTargetPureReaderFunctionSource,
   STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
   STATE_ACTION_DELEGATION_CONTRACT,
+  STATE_DETACHED_CAPTURE_CONTRACT,
   STATE_TARGET_PURE_READER_CONTRACT,
   validateStateActionCrossFileMigrationContract,
   validateStateActionDelegationContract,
@@ -532,6 +535,13 @@ const DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS = Object.freeze([
   "unsupportedSites",
 ]);
 
+const DERIVED_ALIAS_TAINT_TRANSITION_SEMANTIC_SECTIONS =
+  LEGACY_SEMANTIC_SECTIONS;
+const ALLOW_UNKNOWN_UNSUPPORTED_AUTHORITY = true;
+const STATE_WRITER_PARAMETER_NAME_SET = new Set(
+  STATE_WRITER_PARAMETER_NAMES,
+);
+
 export const DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION = 1;
 
 function subtractSignatureMultiset(observed = [], allowed = []) {
@@ -603,6 +613,21 @@ export function buildIncrementalDerivedAliasTaintBaseline({
         ),
       ]),
     ),
+    ...(currentBaseline.transitionSemanticDelta
+      ? {
+        transitionSemanticDelta: Object.fromEntries(
+          DERIVED_ALIAS_TAINT_TRANSITION_SEMANTIC_SECTIONS.map(
+            (section) => [
+              section,
+              subtractSignatureMultiset(
+                currentBaseline.transitionSemanticDelta[section],
+                previousBaseline?.transitionSemanticDelta?.[section],
+              ),
+            ],
+          ),
+        ),
+      }
+      : {}),
   };
 }
 
@@ -625,6 +650,21 @@ export function composeLegacySemanticBaseline({
         derivedAliasTaint?.diagnosticDelta?.[section],
       )
         ? derivedAliasTaint.diagnosticDelta[section]
+        : []),
+    ].map(String).sort();
+  }
+  for (const section of [
+    "bindings",
+    "memberships",
+    "aliasSites",
+    "dynamicSites",
+  ]) {
+    composed[section] = [
+      ...composed[section],
+      ...(Array.isArray(
+        derivedAliasTaint?.transitionSemanticDelta?.[section],
+      )
+        ? derivedAliasTaint.transitionSemanticDelta[section]
         : []),
     ].map(String).sort();
   }
@@ -736,6 +776,42 @@ function validateDerivedAliasTaintBaseline(
       });
     }
   }
+  if (baseline.transitionSemanticDelta !== undefined) {
+    const transitionSemanticDelta = baseline.transitionSemanticDelta;
+    if (
+      !transitionSemanticDelta
+      || typeof transitionSemanticDelta !== "object"
+      || Array.isArray(transitionSemanticDelta)
+      || JSON.stringify(Object.keys(transitionSemanticDelta))
+        !== JSON.stringify(
+          DERIVED_ALIAS_TAINT_TRANSITION_SEMANTIC_SECTIONS,
+        )
+    ) {
+      violations.push({
+        code: "derived-alias-taint-transition-semantic-shape-invalid",
+      });
+    } else {
+      for (
+        const section of
+        DERIVED_ALIAS_TAINT_TRANSITION_SEMANTIC_SECTIONS
+      ) {
+        const signatures = transitionSemanticDelta[section];
+        if (
+          !Array.isArray(signatures)
+          || signatures.some(
+            (signature) => typeof signature !== "string" || !signature,
+          )
+          || JSON.stringify(signatures)
+            !== JSON.stringify([...signatures].sort())
+        ) {
+          violations.push({
+            code: "derived-alias-taint-transition-semantic-invalid",
+            section,
+          });
+        }
+      }
+    }
+  }
   return violations;
 }
 
@@ -814,6 +890,26 @@ function buildFrozenBaselineWritersByPath(
       ],
     ),
   );
+}
+
+function isTransitionSemanticBinding(binding, previousWriter = null) {
+  const previousBindings = Array.isArray(previousWriter?.bindings)
+    ? previousWriter.bindings
+    : [];
+  if (previousBindings.length) {
+    const previousBindingIdentities = new Set(
+      previousBindings.map(buildStableStateBindingIdentity),
+    );
+    return previousBindingIdentities.has(
+      buildStableStateBindingIdentity(binding),
+    );
+  }
+  if (binding?.kind === "function-parameter") {
+    return STATE_WRITER_PARAMETER_NAME_SET.has(
+      String(binding?.parameterName || binding?.name || ""),
+    );
+  }
+  return true;
 }
 
 export async function buildFrozenDerivedAliasTaintBaseline({
@@ -942,6 +1038,7 @@ export async function buildFrozenDerivedAliasTaintBaseline({
     throw error;
   }
   const strictHistoricalWriters = [];
+  const transitionHistoricalWriters = [];
   const frozenBaselineWritersByPath =
     buildFrozenBaselineWritersByPath(legacySemanticBaseline);
   for (const relativePath of pendingPaths) {
@@ -1002,6 +1099,46 @@ export async function buildFrozenDerivedAliasTaintBaseline({
         bindings,
       });
     }
+    if (
+      transitionSourceShaByPath.has(relativePath)
+      || (
+        acceptedCheckpointPaths.includes(relativePath)
+        && normalizedAcceptedPolicyCheckpoint
+      )
+    ) {
+      const previousWriter =
+        frozenBaselineWritersByPath.get(relativePath) || null;
+      const transitionBindings = bindingInventories
+        .filter(({ binding, findings }) =>
+          findings.length
+          && isTransitionSemanticBinding(binding, previousWriter)
+        )
+        .map(({ binding, findings }) => ({
+          ...binding,
+          authority: bindingAuthority(
+            relativePath,
+            "production",
+            binding,
+          ),
+          grants: buildStateWriterBindingGrants(
+            findings,
+            relativePath,
+            stateKeyAuthorityIndex,
+            "production",
+            {
+              allowUnknownUnsupportedAuthority:
+                ALLOW_UNKNOWN_UNSUPPORTED_AUTHORITY,
+            },
+          ),
+        }));
+      if (transitionBindings.length) {
+        transitionHistoricalWriters.push({
+          path: relativePath,
+          surface: "production",
+          bindings: transitionBindings,
+        });
+      }
+    }
   }
   const strictSemanticAuthority =
     buildLegacyStateWriterSemanticAuthority(
@@ -1011,6 +1148,19 @@ export async function buildFrozenDerivedAliasTaintBaseline({
     legacySemanticBaseline,
     strictSemanticAuthority,
   });
+  const transitionSemanticAuthority =
+    buildLegacyStateWriterSemanticAuthority(
+      transitionHistoricalWriters,
+    );
+  const pendingTransitionSemanticDelta = Object.fromEntries(
+    DERIVED_ALIAS_TAINT_TRANSITION_SEMANTIC_SECTIONS.map((section) => [
+      section,
+      subtractSignatureMultiset(
+        transitionSemanticAuthority[section],
+        legacySemanticBaseline?.[section],
+      ),
+    ]),
+  );
   const nextTransitionCheckpoints = [
     ...replayedTransitionCheckpoints,
     ...(acceptedCheckpointPaths.length && normalizedAcceptedPolicyCheckpoint
@@ -1034,6 +1184,22 @@ export async function buildFrozenDerivedAliasTaintBaseline({
         ].sort(),
       ]),
     ),
+    ...(nextTransitionCheckpoints.length
+      ? {
+        transitionSemanticDelta: Object.fromEntries(
+          DERIVED_ALIAS_TAINT_TRANSITION_SEMANTIC_SECTIONS.map(
+            (section) => [
+              section,
+              [
+                ...(previousBaseline.transitionSemanticDelta?.[section]
+                  || []),
+                ...pendingTransitionSemanticDelta[section],
+              ].sort(),
+            ],
+          ),
+        ),
+      }
+      : {}),
     ...(nextTransitionCheckpoints.length
       ? { transitionCheckpoints: nextTransitionCheckpoints }
       : {}),
@@ -3131,6 +3297,53 @@ function stateTargetPureReaderCandidateIdentity(candidate = {}) {
   ].join("|");
 }
 
+function buildStateDetachedCaptureCandidateIdentities({
+  relativePath,
+  source,
+  allParameterDiscovery,
+}) {
+  const normalizedPath = normalizeRelativePath(relativePath);
+  const entries = STATE_DETACHED_CAPTURE_CONTRACT.filter(
+    (entry) => normalizeRelativePath(entry.modulePath) === normalizedPath,
+  );
+  if (!entries.length) {
+    return new Set();
+  }
+  const violations = [];
+  const identities = new Set();
+  for (const entry of entries) {
+    violations.push(
+      ...inspectStateDetachedCaptureSource(source, entry).violations,
+    );
+    const candidates = allParameterDiscovery.bindings.filter(
+      (candidate) =>
+        candidate.functionName === entry.exportName
+        && candidate.parameterIndex === entry.targetArgumentIndex
+        && candidate.parameterPath === "$",
+    );
+    if (candidates.length !== 1) {
+      violations.push({
+        code: "state-detached-capture-target-binding-missing",
+        modulePath: normalizedPath,
+        exportName: entry.exportName,
+        targetArgumentIndex: entry.targetArgumentIndex,
+        count: candidates.length,
+      });
+      continue;
+    }
+    identities.add(stateTargetPureReaderCandidateIdentity(candidates[0]));
+  }
+  if (violations.length) {
+    const error = new Error(
+      `State detached-capture contract violated: ${normalizedPath}`,
+    );
+    error.code = "state-detached-capture-contract-violation";
+    error.violations = violations;
+    throw error;
+  }
+  return identities;
+}
+
 function stateTargetPureReaderConservativeFindingIdentity(
   finding = {},
 ) {
@@ -3459,12 +3672,26 @@ export async function discoverStateWriterBindingsForSource(
         relativePath,
         diagnosticBindings,
         normalizedDerivedAliasTaintMode,
-        { scanner },
+        {
+          scanner,
+          recognizeCurrentContracts: enforceCurrentContracts,
+        },
       );
     return includeInventories
       ? { bindings: diagnosticBindings, bindingInventories }
       : diagnosticBindings;
   }
+  const allParameterDiscovery = discoverFunctionParameterBindings(
+    source,
+    { parameterNames: null },
+  );
+  const detachedCaptureCandidateIdentities = enforceCurrentContracts
+    ? buildStateDetachedCaptureCandidateIdentities({
+      relativePath,
+      source,
+      allParameterDiscovery,
+    })
+    : new Set();
   if (isActionPath(relativePath) && enforceCurrentContracts) {
     const nonTargetParameterMutationViolations =
       await validateStateActionNonTargetParameterMutations(
@@ -3479,10 +3706,6 @@ export async function discoverStateWriterBindingsForSource(
       error.violations = nonTargetParameterMutationViolations;
       throw error;
     }
-    const allParameterDiscovery = discoverFunctionParameterBindings(
-      source,
-      { parameterNames: null },
-    );
     for (
       const entry of
       getStateActionDelegationContractEntriesForModule(relativePath)
@@ -3497,23 +3720,27 @@ export async function discoverStateWriterBindingsForSource(
         bindings.push(createParameterBinding(candidates[0]));
       }
     }
-    const actionBindings = dedupeBindings(bindings);
+    const actionBindings = dedupeBindings(bindings.filter((binding) => (
+      binding.kind !== "function-parameter"
+      || !detachedCaptureCandidateIdentities.has(
+        stateTargetPureReaderCandidateIdentity(binding),
+      )
+    )));
     const bindingInventories =
       scanStateWriterBindingInventoriesBatch(
         source,
         relativePath,
         actionBindings,
         normalizedDerivedAliasTaintMode,
-        { scanner },
+        {
+          scanner,
+          recognizeCurrentContracts: true,
+        },
       );
     return includeInventories
       ? { bindings: actionBindings, bindingInventories }
       : actionBindings;
   }
-  const allParameterDiscovery = discoverFunctionParameterBindings(
-    source,
-    { parameterNames: null },
-  );
   const pureReaderCandidateIdentities = enforceCurrentContracts
     ? buildStateTargetPureReaderCandidateIdentities({
       relativePath,
@@ -3524,6 +3751,9 @@ export async function discoverStateWriterBindingsForSource(
   for (const candidate of discovery.bindings) {
     if (
       pureReaderCandidateIdentities.has(
+        stateTargetPureReaderCandidateIdentity(candidate),
+      )
+      || detachedCaptureCandidateIdentities.has(
         stateTargetPureReaderCandidateIdentity(candidate),
       )
     ) {
@@ -3556,6 +3786,9 @@ export async function discoverStateWriterBindingsForSource(
   for (const candidate of allParameterDiscovery.bindings) {
     if (
       pureReaderCandidateIdentities.has(
+        stateTargetPureReaderCandidateIdentity(candidate),
+      )
+      || detachedCaptureCandidateIdentities.has(
         stateTargetPureReaderCandidateIdentity(candidate),
       )
     ) {
@@ -3598,7 +3831,10 @@ export async function discoverStateWriterBindingsForSource(
       relativePath,
       scannedBindings,
       normalizedDerivedAliasTaintMode,
-      { scanner },
+      {
+        scanner,
+        recognizeCurrentContracts: enforceCurrentContracts,
+      },
     ).map((inventory) => ({
       ...inventory,
       findings: applyStateWriterBindingFindingContracts({
@@ -3803,6 +4039,7 @@ export function scanStateWriterBindingInventoriesBatch(
     DERIVED_ALIAS_TAINT_MODES.STRICT,
   {
     scanner = scanStateMutationInventory,
+    recognizeCurrentContracts = true,
   } = {},
 ) {
   const normalizedDerivedAliasTaintMode =
@@ -3834,6 +4071,7 @@ export function scanStateWriterBindingInventoriesBatch(
       bindings: scannableBindings.map(toScannerBinding),
       derivedAliasTaintMode:
         normalizedDerivedAliasTaintMode,
+      recognizeCurrentContracts,
     });
     if (isBatchJavaScriptParseFailure(inventory)) {
       const parseFailure = inventory.findings[0];

@@ -2,6 +2,7 @@ import {
   beginExactAfterSettleControllerApplyState,
   beginExactAfterSettleControllerFinalizeState,
   beginExactAfterSettleControllerScheduleState,
+  captureExactAfterSettleControllerState,
   completeExactAfterSettleControllerApplyState,
   ensureExactAfterSettleControllerState,
   isExactAfterSettleControllerActiveState,
@@ -59,58 +60,7 @@ function createExactAfterSettleScheduler({
 
   function getExactAfterSettleControllerState() {
     ensureExactAfterSettleControllerState(runtimeState);
-    const controller = runtimeState.exactAfterSettleController;
-    const pendingPlan = controller?.pendingPlan;
-    const reuseDecision = pendingPlan?.reuseDecision;
-    return {
-      generation: Number(controller?.generation || 0),
-      phase: String(controller?.phase || "idle"),
-      startedAt: Number(controller?.startedAt || 0),
-      scheduledAt: Number(controller?.scheduledAt || 0),
-      applyStartedAt: Number(controller?.applyStartedAt || 0),
-      applyFinishedAt: Number(controller?.applyFinishedAt || 0),
-      scenarioId: String(controller?.scenarioId || ""),
-      selectionVersion: Number(controller?.selectionVersion || 0),
-      topologyRevision: Number(controller?.topologyRevision || 0),
-      dpr: Number(controller?.dpr || 1),
-      pixelWidth: Number(controller?.pixelWidth || 0),
-      pixelHeight: Number(controller?.pixelHeight || 0),
-      colorRevision: Number(controller?.colorRevision || 0),
-      contextFlagSignature: String(controller?.contextFlagSignature || ""),
-      zoomToken: Number(controller?.zoomToken || 0),
-      transformBucket: String(controller?.transformBucket || ""),
-      pendingPlan: pendingPlan && typeof pendingPlan === "object"
-        ? {
-            ...pendingPlan,
-            resolvedProfile: pendingPlan.resolvedProfile && typeof pendingPlan.resolvedProfile === "object"
-              ? { ...pendingPlan.resolvedProfile }
-              : pendingPlan.resolvedProfile,
-            reuseDecision: reuseDecision && typeof reuseDecision === "object"
-              ? {
-                  ...reuseDecision,
-                  referenceTransform: reuseDecision.referenceTransform && typeof reuseDecision.referenceTransform === "object"
-                    ? { ...reuseDecision.referenceTransform }
-                    : reuseDecision.referenceTransform,
-                  currentTransform: reuseDecision.currentTransform && typeof reuseDecision.currentTransform === "object"
-                    ? { ...reuseDecision.currentTransform }
-                    : reuseDecision.currentTransform,
-                }
-              : reuseDecision,
-            exactTargetPasses: Array.isArray(pendingPlan.exactTargetPasses)
-              ? [...pendingPlan.exactTargetPasses]
-              : pendingPlan.exactTargetPasses,
-            deferredExactTargetPasses: Array.isArray(pendingPlan.deferredExactTargetPasses)
-              ? [...pendingPlan.deferredExactTargetPasses]
-              : pendingPlan.deferredExactTargetPasses,
-            deferredExactContextIdentity:
-              pendingPlan.deferredExactContextIdentity
-              && typeof pendingPlan.deferredExactContextIdentity === "object"
-                ? { ...pendingPlan.deferredExactContextIdentity }
-                : pendingPlan.deferredExactContextIdentity,
-          }
-        : null,
-      reason: String(controller?.reason || "init"),
-    };
+    return captureExactAfterSettleControllerState(runtimeState);
   }
 
   function getTransformBucketSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
@@ -258,10 +208,9 @@ function createExactAfterSettleScheduler({
       return abortInterruptedExactAfterSettleRefresh("pass-start-identity-mismatch", generation);
     }
     const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-    let activePlan = plan;
     const definitions = filterExactAfterSettleIdleRenderPassDefinitions(
       getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(),
-      activePlan.exactTargetPasses,
+      plan.exactTargetPasses,
     );
     const timings = {};
     const cache = getRenderPassCacheState();
@@ -270,7 +219,7 @@ function createExactAfterSettleScheduler({
       rebuildResolvedColors();
     }
 
-    const enqueueNextPass = (index) => {
+    const enqueueNextPass = (index, activePlan) => {
       if (index >= definitions.length) {
         completeScheduledExactAfterSettleRefreshPlan(generation, activePlan, passStartedAt);
         return;
@@ -288,19 +237,19 @@ function createExactAfterSettleScheduler({
           abortInterruptedExactAfterSettleRefresh(`${passName}-identity-mismatch`, generation);
           return;
         }
-        if (passName === "political") {
-          activePlan = invalidateExactAfterSettlePoliticalPass(generation, activePlan);
-        }
+        const nextPlan = passName === "political"
+          ? invalidateExactAfterSettlePoliticalPass(generation, activePlan)
+          : activePlan;
         getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
         recordRenderPerfMetric("settleExactRefreshPass", Math.max(0, nowMs() - passStart), {
           activeScenarioId: String(runtimeState.activeScenarioId || ""),
           generation,
           passName,
           index,
-          targetPasses: Array.isArray(activePlan.exactTargetPasses) ? activePlan.exactTargetPasses : [],
+          targetPasses: Array.isArray(nextPlan.exactTargetPasses) ? nextPlan.exactTargetPasses : [],
           passCount: definitions.length,
         });
-        enqueueNextPass(index + 1);
+        enqueueNextPass(index + 1, nextPlan);
       }, {
         priority: "high",
         label: `exact-after-settle-pass-${passName}`,
@@ -310,7 +259,7 @@ function createExactAfterSettleScheduler({
       });
     };
 
-    enqueueNextPass(0);
+    enqueueNextPass(0, plan);
     return true;
   }
 

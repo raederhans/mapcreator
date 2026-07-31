@@ -8,21 +8,22 @@ import {
   createDefaultSidebarPerfState,
   bumpScenarioDataGenerationState,
   bumpSceneGenerationState,
-  ensureExactAfterSettleControllerState,
   ensureProjectedBoundsCacheState,
   ensureRenderPassCacheState,
   ensureSceneSnapshotState,
   ensureSidebarPerfState,
-  isExactAfterSettleControllerActiveState,
-  isExactAfterSettleGenerationCurrentState,
-  resetExactAfterSettleControllerState,
-  ensureSphericalFeatureDiagnosticsCache,
   resetProjectedBoundsCacheState,
   setInteractionInfrastructureStateFields,
   commitRendererDprStageState,
   setFirstVisibleFramePaintedState,
   commitProjectedBoundsDiagnosticsState,
 } from "../js/core/state/renderer_runtime_state.js";
+import {
+  ensureExactAfterSettleControllerState,
+  isExactAfterSettleControllerActiveState,
+  isExactAfterSettleGenerationCurrentState,
+  resetExactAfterSettleControllerState,
+} from "../js/core/state/actions/renderer_exact_refresh_actions.js";
 import {
   createDefaultUiState,
   normalizeOpenOceanLayerVisibility,
@@ -198,7 +199,8 @@ test("scene snapshot helpers normalize and bump explicit generations", () => {
 
 test("exact-after-settle controller ignores stale generations", () => {
   const state = createDefaultRendererTransientRuntimeState();
-  const controller = ensureExactAfterSettleControllerState(state);
+  assert.equal(ensureExactAfterSettleControllerState(state), true);
+  const controller = state.exactAfterSettleController;
 
   controller.generation = 1;
   controller.phase = "awaiting-paint";
@@ -241,13 +243,12 @@ test("renderer runtime accessors normalize cache holders in place", () => {
     renderPassNames: ["background", "political"],
   });
   const sidebarPerf = ensureSidebarPerfState(state);
-  const projectedBoundsState = ensureProjectedBoundsCacheState(state);
-  const projectedBoundsById = projectedBoundsState.projectedBoundsById;
+  assert.equal(ensureProjectedBoundsCacheState(state), true);
+  const projectedBoundsById = state.projectedBoundsById;
   const projectedDefaults = resetProjectedBoundsCacheState(state);
-  const diagnostics = ensureSphericalFeatureDiagnosticsCache(state);
 
   assert.equal(renderPassCache.counters.frames, 3);
-  assert.notEqual(renderPassCache, incompleteRenderPassCache);
+  assert.equal(renderPassCache === incompleteRenderPassCache, false);
   assert.equal("compositeBuffer" in incompleteRenderPassCache, false);
   assert.equal(renderPassCache.compositeBuffer.canvas, null);
   assert.deepEqual(renderPassCache.fullReferenceTransforms, {});
@@ -259,12 +260,11 @@ test("renderer runtime accessors normalize cache holders in place", () => {
   assert.equal(renderPassCache.dirty.background, true);
   assert.equal(renderPassCache.reasons.political, "init");
   assert.equal(sidebarPerf.counters.legendRenders, 0);
-  assert.equal(projectedBoundsState, state);
   assert.ok(projectedBoundsById instanceof Map);
   assert.equal(projectedDefaults.projectedBoundsById, state.projectedBoundsById);
-  assert.equal(projectedDefaults.sphericalFeatureDiagnosticsById, diagnostics);
+  assert.equal(projectedDefaults.sphericalFeatureDiagnosticsById, state.sphericalFeatureDiagnosticsById);
   assert.equal(state.projectedBoundsById.size, 0);
-  assert.equal(diagnostics.size, 0);
+  assert.equal(state.sphericalFeatureDiagnosticsById.size, 0);
 });
 
 test("renderer callback mutation bridges preserve canonical action semantics", () => {
@@ -293,10 +293,10 @@ test("renderer callback mutation bridges preserve canonical action semantics", (
 test("renderer runtime cache wrapper preserves a fully normalized holder identity", () => {
   const renderPassCache = createDefaultRenderPassCacheState();
   renderPassCache.politicalPathCacheTransform = { x: 4, y: 5, k: 1.5 };
-  const state = { renderPassCache };
+  const cacheFixture = { renderPassCache };
 
-  assert.equal(ensureRenderPassCacheState(state), renderPassCache);
-  assert.equal(state.renderPassCache, renderPassCache);
+  assert.equal(ensureRenderPassCacheState(cacheFixture), renderPassCache);
+  assert.equal(cacheFixture.renderPassCache, renderPassCache);
   assert.deepEqual(renderPassCache.politicalPathCacheTransform, { x: 4, y: 5, k: 1.5 });
 });
 
@@ -326,8 +326,8 @@ test("renderer runtime cache repair rejects malformed border snapshots once", ()
     } else {
       renderPassCache.borderSnapshot = malformed;
     }
-    const state = { renderPassCache };
-    const repaired = ensureRenderPassCacheState(state);
+    const cacheFixture = { renderPassCache };
+    const repaired = ensureRenderPassCacheState(cacheFixture);
     assert.notEqual(repaired, renderPassCache);
     assert.deepEqual(repaired.borderSnapshot, {
       canvas: null,
@@ -336,7 +336,7 @@ test("renderer runtime cache repair rejects malformed border snapshots once", ()
       valid: false,
       reason: "init",
     });
-    assert.equal(ensureRenderPassCacheState(state), repaired);
+    assert.equal(ensureRenderPassCacheState(cacheFixture), repaired);
   }
 });
 
@@ -358,7 +358,6 @@ test("renderer runtime cache wrappers preserve legacy invalid-target fallbacks",
   assert.ok(ensureRenderPassCacheState(null).politicalPathCache instanceof Map);
   assert.ok(ensureProjectedBoundsCacheState(null).projectedBoundsById instanceof Map);
   assert.ok(resetProjectedBoundsCacheState(null).projectedBoundsById instanceof Map);
-  assert.ok(ensureSphericalFeatureDiagnosticsCache(null) instanceof Map);
   assert.equal(setInteractionInfrastructureStateFields(null, "ready"), "idle");
   assert.equal(setInteractionInfrastructureStateFields(undefined, "ready"), "idle");
 });

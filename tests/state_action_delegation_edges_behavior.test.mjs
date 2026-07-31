@@ -3,13 +3,24 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import test from "node:test";
 
+import { parse } from "acorn";
+
 import {
   STATE_ACTION_DELEGATION_CONTRACT,
   STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
   STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT,
+  STATE_DETACHED_CAPTURE_CONTRACT,
+  STATE_MUTATION_DELEGATING_OWNER_CONTRACT,
+  STATE_IMPORTED_PURE_NORMALIZER_CONTRACT,
   STATE_TARGET_PURE_READER_CONTRACT,
+  inspectStateImportedPureNormalizerSource,
+  inspectStateDetachedCaptureSource,
+  inspectStateMutationDelegatingOwnerSources,
   validateStateActionModuleSource,
   validateStateActionModulePhaseAdmissions,
+  validateStateImportedPureNormalizerContract,
+  validateStateDetachedCaptureContract,
+  validateStateMutationDelegatingOwnerContract,
   validateStateTargetPureReaderContract,
 } from "../tools/state_action_delegation_contract.mjs";
 import {
@@ -22,6 +33,326 @@ import {
   scanStateMutationInventory,
   scanStateMutations,
 } from "../tools/state_writer_inventory.mjs";
+
+function fingerprintDirectExportedFunction(source, exportName) {
+  const normalizedSource = String(source || "").replaceAll("\r\n", "\n");
+  const ast = parse(normalizedSource, {
+    ecmaVersion: "latest",
+    locations: true,
+    sourceType: "module",
+  });
+  const statement = ast.body.find((candidate) => (
+    candidate.type === "ExportNamedDeclaration"
+    && candidate.declaration?.type === "FunctionDeclaration"
+    && candidate.declaration.id?.name === exportName
+  ));
+  assert.ok(statement, exportName);
+  return createHash("sha256")
+    .update(normalizedSource.slice(
+      statement.declaration.start,
+      statement.declaration.end,
+    ).trim())
+    .digest("hex");
+}
+
+test("source-bound detached captures return fresh values and fail closed on alias escape", () => {
+  assert.deepEqual(validateStateDetachedCaptureContract(), []);
+  assert.deepEqual(
+    STATE_DETACHED_CAPTURE_CONTRACT.map(({ modulePath, exportName, targetArgumentIndex }) => ({
+      modulePath,
+      exportName,
+      targetArgumentIndex,
+    })),
+    [
+      ["captureRenderPerfMetricsState", "js/core/state/actions/renderer_diagnostics_actions.js"],
+      ["captureRenderPerfContextBreakdownState", "js/core/state/actions/renderer_diagnostics_actions.js"],
+      ["captureRenderPerfMetricEntryState", "js/core/state/actions/renderer_diagnostics_actions.js"],
+      ["captureProjectedBoundsDiagnosticsState", "js/core/state/actions/renderer_diagnostics_actions.js"],
+      ["captureExactAfterSettleControllerState", "js/core/state/actions/renderer_exact_refresh_actions.js"],
+    ].map(([exportName, modulePath]) => ({ modulePath, exportName, targetArgumentIndex: 0 })),
+  );
+
+  for (const entry of STATE_DETACHED_CAPTURE_CONTRACT) {
+    const source = fs.readFileSync(entry.modulePath, "utf8");
+    assert.deepEqual(
+      inspectStateDetachedCaptureSource(source, entry).violations,
+      [],
+      entry.exportName,
+    );
+  }
+
+  const source = [
+    'import { state as runtimeState } from "../core/state.js";',
+    'import { captureRenderPerfMetricsState as capture } from "../core/state/actions/renderer_diagnostics_actions.js";',
+    "const snapshot = capture(runtimeState);",
+    "globalThis.snapshot = snapshot;",
+    "",
+  ].join("\n");
+  assert.deepEqual(scan(source).findings, []);
+  assert.deepEqual(scan(source).actionDelegations, []);
+
+  const unknownSource = source.replace(
+    "captureRenderPerfMetricsState as capture",
+    "captureUnknownState as capture",
+  );
+  assert.ok(scan(unknownSource).findings.some(({ reason }) => (
+    reason === "state-alias-escape"
+  )));
+
+  const entry = STATE_DETACHED_CAPTURE_CONTRACT.find(({ exportName }) => (
+    exportName === "captureRenderPerfMetricsState"
+  ));
+  const registeredSource = fs.readFileSync(entry.modulePath, "utf8");
+  const escapedSource = registeredSource.replace(
+    "return cloneDiagnosticValue(metrics);",
+    "return metrics;",
+  );
+  const escapedEntry = {
+    ...entry,
+    sourceFingerprint: createHash("sha256")
+      .update(escapedSource.match(/export function captureRenderPerfMetricsState[\s\S]*?\n}/)[0])
+      .digest("hex"),
+  };
+  assert.ok(inspectStateDetachedCaptureSource(escapedSource, escapedEntry)
+    .violations.some(({ code }) => code === "state-detached-capture-alias-escape"));
+
+  const helperEscapeSource = registeredSource.replace(
+    "return cloneDiagnosticValue(metrics);",
+    "return leakDiagnosticValue(metrics);",
+  ).replace(
+    "function cloneDiagnosticValue(value, seen = new WeakMap()) {",
+    "function leakDiagnosticValue(value) { return value; }\n\nfunction cloneDiagnosticValue(value, seen = new WeakMap()) {",
+  );
+  const helperEntry = {
+    ...entry,
+    sourceFingerprint: createHash("sha256")
+      .update(helperEscapeSource.match(/export function captureRenderPerfMetricsState[\s\S]*?\n}/)[0])
+      .digest("hex"),
+  };
+  assert.ok(inspectStateDetachedCaptureSource(helperEscapeSource, helperEntry)
+    .violations.some(({ code }) => code === "state-detached-capture-alias-escape"));
+  assert.ok(inspectStateDetachedCaptureSource(`${registeredSource}\n// drift`, entry)
+    .violations.every(({ code }) => code !== "state-detached-capture-source-drift"));
+  assert.ok(inspectStateDetachedCaptureSource(
+    registeredSource.replace("return cloneDiagnosticValue(metrics);", "return cloneDiagnosticValue(metrics, new WeakMap());"),
+    entry,
+  ).violations.some(({ code }) => code === "state-detached-capture-source-drift"));
+
+  const semanticBypasses = [
+    "globalThis.detachedCaptureLeak = metrics;",
+    "runtimeState.detachedCaptureLeak = metrics;",
+    "consumeUnknownCapture(metrics);",
+    "const captureAlias = metrics; captureAlias.entries.set('leak', {});",
+    "globalThis.readDetachedCapture = () => metrics;",
+    "routeDetachedCaptureLeak(metrics);",
+  ];
+  for (const injectedStatement of semanticBypasses) {
+    let bypassSource = registeredSource.replace(
+      "return cloneDiagnosticValue(metrics);",
+      `${injectedStatement}\n  return cloneDiagnosticValue(metrics);`,
+    );
+    if (injectedStatement.startsWith("routeDetachedCaptureLeak")) {
+      bypassSource = bypassSource.replace(
+        "function cloneDiagnosticValue(value, seen = new WeakMap()) {",
+        [
+          "function routeDetachedCaptureLeak(value) {",
+          "  globalThis.detachedCaptureLeak = value;",
+          "}",
+          "",
+          "function cloneDiagnosticValue(value, seen = new WeakMap()) {",
+        ].join("\n"),
+      );
+    }
+    const refreshedEntry = {
+      ...entry,
+      sourceFingerprint: fingerprintDirectExportedFunction(
+        bypassSource,
+        entry.exportName,
+      ),
+    };
+    const inspection = inspectStateDetachedCaptureSource(
+      bypassSource,
+      refreshedEntry,
+    );
+    assert.equal(
+      inspection.violations.some(
+        ({ code }) => code === "state-detached-capture-source-drift",
+      ),
+      false,
+      injectedStatement,
+    );
+    assert.ok(
+      inspection.violations.some(
+        ({ code }) => code === "state-detached-capture-alias-escape",
+      ),
+      injectedStatement,
+    );
+  }
+});
+
+test("source-bound render perf owner proves factory composition and registered action effects", () => {
+  assert.deepEqual(validateStateMutationDelegatingOwnerContract(), []);
+  const [entry] = STATE_MUTATION_DELEGATING_OWNER_CONTRACT;
+  assert.deepEqual(entry.methods, [
+    "recordRenderPerfMetric",
+    "beginContextMetricSession",
+    "collectContextMetric",
+    "endContextMetricSession",
+    "resetContextBreakdownForExactFrame",
+  ]);
+  assert.deepEqual(entry.actionExports, [
+    "commitRenderPerfMetricState",
+    "ensureRenderPerfMetricsState",
+    "setRenderPerfContextBreakdownState",
+  ]);
+  const compositionSource = fs.readFileSync(entry.compositionModulePath, "utf8");
+  const factorySource = fs.readFileSync(entry.factoryModulePath, "utf8");
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource,
+    factorySource,
+    entry,
+  }).violations, []);
+
+  const binding = {
+    id: "module:runtimeState",
+    kind: "module",
+    name: "runtimeState",
+    importSource: "./state.js",
+    importedName: "state",
+  };
+  const ownerSlice = compositionSource.match(
+    /function getRenderPerfMetricsRuntimeOwner\(\)[\s\S]*?function resetContextBreakdownForExactFrame\(\) \{[^\n]+\}/,
+  )[0];
+  const scannerFixture = [
+    'import { state as runtimeState } from "./state.js";',
+    'import { createRenderPerfMetricsRuntimeOwner } from "./renderer/render_perf_metrics_runtime_owner.js";',
+    'import { captureRenderPerfContextBreakdownState, commitRenderPerfMetricState, ensureRenderPerfMetricsState, setRenderPerfContextBreakdownState } from "./state/actions/renderer_diagnostics_actions.js";',
+    "const CONTEXT_BREAKDOWN_METRIC_NAMES = new Set();",
+    "let renderPerfMetricsRuntimeOwner = null;",
+    "function mirrorRenderPerfMetricSnapshot() {}",
+    ownerSlice,
+    "",
+  ].join("\n");
+  const inventory = scanStateMutationInventory(scannerFixture, {
+    filePath: entry.compositionModulePath,
+    bindings: [binding],
+  });
+  const retiredFingerprints = new Set([
+    "c3d6a456", "59ffd434", "6394c5b6", "d256fc01", "7e4b9540", "51a3c50e",
+  ]);
+  assert.deepEqual(inventory.findings.filter(({ sourceFingerprint = "" }) => (
+    retiredFingerprints.has(sourceFingerprint.slice(0, 8))
+  )), []);
+  const ownerFalsePositiveIdentities = new Set([
+    '{"kind":"function","ancestry":[{"name":"getRenderPerfMetricsRuntimeOwner","ordinal":0}]}',
+    ...entry.methods.map((name) => (
+      `{"kind":"function","ancestry":[{"name":"${name}","ordinal":0}]}`
+    )),
+  ]);
+  assert.deepEqual(inventory.findings.filter(({ enclosingFunctionIdentity }) => (
+    ownerFalsePositiveIdentities.has(enclosingFunctionIdentity)
+  )), []);
+  const unknownOwnerInventory = scanStateMutationInventory(
+    scannerFixture.replace(
+      "createRenderPerfMetricsRuntimeOwner } from",
+      "createUnknownRuntimeOwner as createRenderPerfMetricsRuntimeOwner } from",
+    ),
+    { filePath: entry.compositionModulePath, bindings: [binding] },
+  );
+  assert.ok(unknownOwnerInventory.findings.length > 0);
+
+  const driftedComposition = compositionSource.replace(
+    "mirrorRenderPerfMetrics: mirrorRenderPerfMetricSnapshot,",
+    "mirrorRenderPerfMetrics: unknownMirror,",
+  );
+  assert.ok(inspectStateMutationDelegatingOwnerSources({
+    compositionSource: driftedComposition,
+    factorySource,
+    entry,
+  }).violations.some(({ code }) => code === "state-mutation-owner-composition-source-drift"));
+
+  const mutatedFactory = factorySource.replace(
+    "function recordRenderPerfMetric(name, durationMs, details = {}) {",
+    "function recordRenderPerfMetric(name, durationMs, details = {}) {\n    getters.getRenderPerfMetrics().leak = details;",
+  );
+  assert.ok(inspectStateMutationDelegatingOwnerSources({
+    compositionSource,
+    factorySource: mutatedFactory,
+    entry,
+  }).violations.some(({ code }) => (
+    code === "state-mutation-owner-factory-source-drift"
+    || code === "state-mutation-owner-direct-mutation"
+  )));
+
+  for (const injectedStatement of [
+    "const metricsAlias = getters.getRenderPerfMetrics(); metricsAlias.leak = details;",
+    "Object.assign(getters.getRenderPerfMetrics(), { leak: details });",
+  ]) {
+    const bypassFactory = factorySource.replace(
+      "function recordRenderPerfMetric(name, durationMs, details = {}) {",
+      `function recordRenderPerfMetric(name, durationMs, details = {}) {\n    ${injectedStatement}`,
+    );
+    const refreshedEntry = {
+      ...entry,
+      factorySourceFingerprint: fingerprintDirectExportedFunction(
+        bypassFactory,
+        entry.factoryExportName,
+      ),
+    };
+    const inspection = inspectStateMutationDelegatingOwnerSources({
+      compositionSource,
+      factorySource: bypassFactory,
+      entry: refreshedEntry,
+    });
+    assert.equal(
+      inspection.violations.some(
+        ({ code }) => code === "state-mutation-owner-factory-source-drift",
+      ),
+      false,
+      injectedStatement,
+    );
+    assert.ok(
+      inspection.violations.some(
+        ({ code }) => code === "state-mutation-owner-direct-mutation",
+      ),
+      injectedStatement,
+    );
+  }
+});
+
+test("spherical diagnostics cache exposes detached entry reads and rejects raw Map access", () => {
+  const modulePath = "js/core/state/actions/renderer_cache_actions.js";
+  const source = fs.readFileSync(modulePath, "utf8");
+  assert.deepEqual(
+    validateStateActionModuleSource(source, { filePath: modulePath }),
+    [],
+  );
+
+  const writerExports = STATE_ACTION_DELEGATION_CONTRACT
+    .filter((entry) => entry.modulePath === modulePath)
+    .map((entry) => entry.exportName)
+    .sort();
+  assert.ok(writerExports.includes("clearSphericalFeatureDiagnosticsCacheState"));
+  assert.ok(writerExports.includes("setSphericalFeatureDiagnosticsCacheEntryState"));
+  assert.equal(writerExports.includes("setSphericalFeatureDiagnosticsCacheState"), false);
+
+  const rawAccessorSource = `${source}\nexport function getSphericalFeatureDiagnosticsCacheState(target) {\n  return target.sphericalFeatureDiagnosticsById;\n}\n`;
+  assert.ok(validateStateActionModuleSource(
+    rawAccessorSource,
+    { filePath: modulePath },
+  ).some(({ code }) => code === "state-action-direct-export-unregistered"));
+
+  const rawAccessorCaller = [
+    'import { state as runtimeState } from "../core/state.js";',
+    'import { getSphericalFeatureDiagnosticsCacheState } from "../core/state/actions/renderer_cache_actions.js";',
+    "const cache = getSphericalFeatureDiagnosticsCacheState(runtimeState);",
+    "cache.set('leak', {});",
+    "",
+  ].join("\n");
+  assert.ok(scan(rawAccessorCaller).findings.some(({ reason }) => (
+    reason === "state-alias-escape"
+  )));
+});
 
 const FILE_PATH = "js/bootstrap/state_action_edge_fixture.js";
 const MODULE_BINDING = Object.freeze({
@@ -173,6 +504,7 @@ test("P4.3 renderer cross-boundary proofs lock retired evidence and exact replac
       ["js/core/map_renderer.js", "renderPerfMetricSequence", "commitRenderPerfMetricState", 1],
       ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "ensureExactAfterSettleControllerState", 2],
       ["js/core/state/renderer_runtime_state.js", "renderPassCache", "commitRenderPassCacheState", 49],
+      ["js/core/state/renderer_runtime_state.js", "sphericalFeatureDiagnosticsById", "commitProjectedBoundsCacheState", 1],
       ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "resetExactAfterSettleControllerState", 2],
     ],
   );
@@ -1039,6 +1371,188 @@ test("registered pure-reader target stays out of writer policy and fails closed 
           === "state-target-pure-reader-conservative-finding-unregistered",
       ),
   );
+});
+
+test("source-bound pure imported normalizer accepts only its registered static state path", () => {
+  const normalizerPath =
+    "js/core/renderer/render_pass_cache_state_normalizer.js";
+  const registeredSource = [
+    `import { normalizeRenderPassCacheState as normalizeCache } from "../renderer/render_pass_cache_state_normalizer.js";`,
+    "export function ensureCache(target) {",
+    "  return normalizeCache(target.renderPassCache, {});",
+    "}",
+    "",
+  ].join("\n");
+  const binding = {
+    id: "function:ensureCache:target",
+    kind: "function-parameter",
+    functionName: "ensureCache",
+    parameterName: "target",
+    parameterIndex: 0,
+    parameterPath: "$",
+  };
+  const findingsFor = (source) => scanStateMutationInventory(source, {
+    filePath: "js/core/state/normalizer_scanner_fixture.js",
+    bindings: [binding],
+  }).findings;
+
+  assert.deepEqual(findingsFor(registeredSource), []);
+  for (const source of [
+    registeredSource.replace(
+      "normalizeRenderPassCacheState as normalizeCache",
+      "normalizeRenderPassCacheStateSibling as normalizeCache",
+    ),
+    registeredSource.replace(
+      "../renderer/render_pass_cache_state_normalizer.js",
+      "../renderer/other_normalizer.js",
+    ),
+    registeredSource.replace(
+      "target.renderPassCache",
+      "target.renderPassCacheSibling",
+    ),
+  ]) {
+    assert.ok(findingsFor(source).some((finding) => (
+      finding.reason === "state-alias-escape"
+      && finding.key.startsWith("renderPassCache")
+    )));
+  }
+
+  const [entry] = STATE_IMPORTED_PURE_NORMALIZER_CONTRACT;
+  assert.deepEqual(validateStateImportedPureNormalizerContract(), []);
+  assert.deepEqual(entry, {
+    modulePath: normalizerPath,
+    exportName: "normalizeRenderPassCacheState",
+    targetArgumentIndex: 0,
+    targetArgumentStaticPath: "renderPassCache",
+    sourceFingerprint:
+      "8e2afdd9d282a486fb4f870db242b4aa401a590906e37805326049a65abf2b26",
+  });
+
+  const normalizerSource = fs.readFileSync(normalizerPath, "utf8");
+  assert.deepEqual(
+    inspectStateImportedPureNormalizerSource(normalizerSource, entry)
+      .violations,
+    [],
+  );
+  const runtimeStateSource = fs.readFileSync(
+    "js/core/state/renderer_runtime_state.js",
+    "utf8",
+  );
+  assert.deepEqual(
+    scanStateMutationInventory(runtimeStateSource, {
+      filePath: "js/core/state/renderer_runtime_state.js",
+      bindings: [{
+        id: "function:ensureRenderPassCacheState:target",
+        kind: "function-parameter",
+        functionName: "ensureRenderPassCacheState",
+        parameterName: "target",
+        parameterIndex: 0,
+        parameterPath: "$",
+      }],
+    }).findings,
+    [],
+  );
+  assert.ok(
+    inspectStateImportedPureNormalizerSource(
+      `import "./side_effect.js";\n${normalizerSource}`,
+      entry,
+    ).violations.some(({ code }) =>
+      code
+      === "state-imported-pure-normalizer-import-free-proof-failed"
+    ),
+  );
+  const helperMutationSource = normalizerSource
+    .replace(
+      "function isObjectHolder(value) {",
+      [
+        "function mutateCurrentCache(value) {",
+        "  const derivedAlias = value;",
+        "  derivedAlias.dirty = {};",
+        "}",
+        "",
+        "function routeCurrentCache(value) {",
+        "  mutateCurrentCache(value);",
+        "}",
+        "",
+        "function isObjectHolder(value) {",
+      ].join("\n"),
+    )
+    .replace(
+      "  if (!isObjectHolder(defaults)) {",
+      "  routeCurrentCache(currentCache);\n  if (!isObjectHolder(defaults)) {",
+    );
+  const helperMutationEntry = {
+    ...entry,
+    sourceFingerprint: createHash("sha256")
+      .update(helperMutationSource.replaceAll("\r\n", "\n"))
+      .digest("hex"),
+  };
+  const helperMutationInspection =
+    inspectStateImportedPureNormalizerSource(
+      helperMutationSource,
+      helperMutationEntry,
+    );
+  assert.equal(
+    helperMutationInspection.violations.some(
+      ({ code }) => code === "state-imported-pure-normalizer-source-drift",
+    ),
+    false,
+  );
+  assert.ok(helperMutationInspection.violations.some(({ code }) =>
+    code
+    === "state-imported-pure-normalizer-target-mutation-proof-failed"
+  ));
+
+  const semanticBypasses = [
+    "globalThis.normalizerLeak = currentCache;",
+    "normalizerLeakHolder.cache = currentCache;",
+    "consumeUnknownNormalizerTarget(currentCache);",
+    "const cacheAlias = currentCache; cacheAlias.entries.set('leak', {});",
+    "globalThis.readNormalizerTarget = () => currentCache;",
+    "routeNormalizerLeak(currentCache);",
+  ];
+  for (const injectedStatement of semanticBypasses) {
+    let bypassSource = normalizerSource.replace(
+      "  if (!isObjectHolder(defaults)) {",
+      `  ${injectedStatement}\n  if (!isObjectHolder(defaults)) {`,
+    );
+    if (injectedStatement.startsWith("routeNormalizerLeak")) {
+      bypassSource = bypassSource.replace(
+        "function isObjectHolder(value) {",
+        [
+          "function routeNormalizerLeak(value) {",
+          "  globalThis.normalizerLeak = value;",
+          "}",
+          "",
+          "function isObjectHolder(value) {",
+        ].join("\n"),
+      );
+    }
+    const refreshedEntry = {
+      ...entry,
+      sourceFingerprint: createHash("sha256")
+        .update(bypassSource.replaceAll("\r\n", "\n"))
+        .digest("hex"),
+    };
+    const inspection = inspectStateImportedPureNormalizerSource(
+      bypassSource,
+      refreshedEntry,
+    );
+    assert.equal(
+      inspection.violations.some(
+        ({ code }) => code === "state-imported-pure-normalizer-source-drift",
+      ),
+      false,
+      injectedStatement,
+    );
+    assert.ok(
+      inspection.violations.some(
+        ({ code }) => (
+          code === "state-imported-pure-normalizer-target-mutation-proof-failed"
+        )),
+      injectedStatement,
+    );
+  }
 });
 
 test("rollback snapshot composition has no state-alias escape from returned capture containers", async () => {

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import path from "node:path";
 
 import { parse } from "acorn";
 
@@ -176,11 +177,13 @@ const RENDERER_EXACT_REFRESH_ACTION_EXPORT_NAMES = Object.freeze([
 const RENDERER_CACHE_ACTION_EXPORT_NAMES = Object.freeze([
   "commitRenderPassCacheState",
   "commitProjectedBoundsCacheState",
-  "setSphericalFeatureDiagnosticsCacheState",
+  "clearSphericalFeatureDiagnosticsCacheState",
+  "setSphericalFeatureDiagnosticsCacheEntryState",
 ]);
 
 const RENDERER_DIAGNOSTICS_ACTION_EXPORT_NAMES = Object.freeze([
   "ensureRenderPerfMetricsState",
+  "replaceRenderPerfMetricsState",
   "setRenderPerfMetricEntryState",
   "setRenderPerfContextBreakdownState",
   "commitRenderPerfMetricState",
@@ -280,8 +283,24 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
 
 const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
   [
+    RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
+    new Set([
+      "captureRenderPerfContextBreakdownState",
+      "captureRenderPerfMetricEntryState",
+      "captureRenderPerfMetricsState",
+      "captureProjectedBoundsDiagnosticsState",
+    ]),
+  ],
+  [
+    RENDERER_CACHE_ACTION_MODULE_PATH,
+    new Set([
+      "getSphericalFeatureDiagnosticsCacheEntryState",
+    ]),
+  ],
+  [
     RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH,
     new Set([
+      "captureExactAfterSettleControllerState",
       "isExactAfterSettleGenerationCurrentState",
       "isExactAfterSettleControllerActiveState",
     ]),
@@ -552,6 +571,1253 @@ export const STATE_TARGET_PURE_READER_CONTRACT = Object.freeze([
     ],
   }),
 ]);
+
+function freezeStateImportedPureNormalizerEntry({
+  modulePath,
+  exportName,
+  targetArgumentIndex = 0,
+  targetArgumentStaticPath,
+  sourceFingerprint,
+} = {}) {
+  return Object.freeze({
+    modulePath: normalizeModulePath(modulePath),
+    exportName: String(exportName || ""),
+    targetArgumentIndex: Number(targetArgumentIndex),
+    targetArgumentStaticPath: String(targetArgumentStaticPath || ""),
+    sourceFingerprint: String(sourceFingerprint || ""),
+  });
+}
+
+export const STATE_IMPORTED_PURE_NORMALIZER_CONTRACT = Object.freeze([
+  freezeStateImportedPureNormalizerEntry({
+    modulePath:
+      "js/core/renderer/render_pass_cache_state_normalizer.js",
+    exportName: "normalizeRenderPassCacheState",
+    targetArgumentIndex: 0,
+    targetArgumentStaticPath: "renderPassCache",
+    sourceFingerprint:
+      "8e2afdd9d282a486fb4f870db242b4aa401a590906e37805326049a65abf2b26",
+  }),
+]);
+
+const IMPORTED_PURE_NORMALIZER_ENTRY_BY_EXPORT = new Map(
+  STATE_IMPORTED_PURE_NORMALIZER_CONTRACT.map((entry) => [
+    `${entry.modulePath}#${entry.exportName}`,
+    entry,
+  ]),
+);
+
+export function findStateImportedPureNormalizerContractEntry(
+  modulePath,
+  exportName,
+) {
+  return IMPORTED_PURE_NORMALIZER_ENTRY_BY_EXPORT.get(
+    `${normalizeModulePath(modulePath)}#${String(exportName || "")}`,
+  ) || null;
+}
+
+export function validateStateImportedPureNormalizerContract(
+  contractEntries = STATE_IMPORTED_PURE_NORMALIZER_CONTRACT,
+) {
+  const violations = [];
+  const seenEntries = new Set();
+  for (
+    const [index, entry] of
+    (Array.isArray(contractEntries) ? contractEntries : []).entries()
+  ) {
+    const entryId = [
+      normalizeModulePath(entry?.modulePath),
+      String(entry?.exportName || ""),
+    ].join("#");
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      violations.push(createViolation(
+        "state-imported-pure-normalizer-entry-invalid",
+        { index },
+      ));
+      continue;
+    }
+    if (seenEntries.has(entryId)) {
+      violations.push(createViolation(
+        "state-imported-pure-normalizer-entry-duplicate",
+        { index, entryId },
+      ));
+    }
+    seenEntries.add(entryId);
+    if (
+      !/^js\/[^/].*\.js$/.test(normalizeModulePath(entry.modulePath))
+      || !isValidExportName(entry.exportName)
+      || !Number.isInteger(entry.targetArgumentIndex)
+      || entry.targetArgumentIndex < 0
+      || !/^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(
+        String(entry.targetArgumentStaticPath || ""),
+      )
+      || !/^[a-f0-9]{64}$/.test(String(entry.sourceFingerprint || ""))
+    ) {
+      violations.push(createViolation(
+        "state-imported-pure-normalizer-entry-shape-invalid",
+        { index, entryId },
+      ));
+    }
+  }
+  return violations;
+}
+
+function freezeStateDetachedCaptureEntry({
+  modulePath,
+  exportName,
+  targetArgumentIndex = 0,
+  sourceFingerprint,
+  cloneHelperFingerprints = {},
+} = {}) {
+  return Object.freeze({
+    modulePath: normalizeModulePath(modulePath),
+    exportName: String(exportName || ""),
+    targetArgumentIndex: Number(targetArgumentIndex),
+    sourceFingerprint: String(sourceFingerprint || ""),
+    cloneHelperFingerprints: Object.freeze({ ...cloneHelperFingerprints }),
+  });
+}
+
+const RENDERER_DIAGNOSTICS_DETACHED_CLONE_HELPERS = Object.freeze({
+  cloneDiagnosticValue:
+    "1f7da7c52713959924d2a70b1292792ac817077cea5cc098cbb3ac905b049f09",
+});
+const RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS = Object.freeze({
+  cloneExactAfterSettlePendingPlan:
+    "b9489b346935a1e0aee1a10326837eaa58dd731bf8433c25ce173f7dff5e147d",
+  cloneExactAfterSettleValue:
+    "ca872828fa16a380cef3eee73cc1c3bc1dbe6c645f69c07be08b37a0de097c0f",
+});
+
+export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
+  ["captureRenderPerfMetricsState", "a72cc5307ca3e9e31f30cf8e43eb00cfd47dfd3a471078f071ca921c8dee6798"],
+  ["captureRenderPerfContextBreakdownState", "a0a312840630b881e417cc6865dd3e47ecb13100f1dc029cea269f499ba75934"],
+  ["captureRenderPerfMetricEntryState", "812e23f274c4379a067e961e00bb77020b0c1230c65f7dd178a82a1f9c52c6f1"],
+  ["captureProjectedBoundsDiagnosticsState", "000d4aaea1539d937598cb15502a8c62f2733007d569bef72dcb4191507f91e1"],
+].map(([exportName, sourceFingerprint]) =>
+  freezeStateDetachedCaptureEntry({
+    modulePath: "js/core/state/actions/renderer_diagnostics_actions.js",
+    exportName,
+    targetArgumentIndex: 0,
+    sourceFingerprint,
+    cloneHelperFingerprints: RENDERER_DIAGNOSTICS_DETACHED_CLONE_HELPERS,
+  })
+).concat([
+  freezeStateDetachedCaptureEntry({
+    modulePath: "js/core/state/actions/renderer_exact_refresh_actions.js",
+    exportName: "captureExactAfterSettleControllerState",
+    targetArgumentIndex: 0,
+    sourceFingerprint:
+      "1f6ea078d4e9d5827bc4af91777f2132a03d49657d77fcca6ba6fce9cf6dabb0",
+    cloneHelperFingerprints: RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS,
+  }),
+]));
+
+const DETACHED_CAPTURE_ENTRY_BY_EXPORT = new Map(
+  STATE_DETACHED_CAPTURE_CONTRACT.map((entry) => [
+    `${entry.modulePath}#${entry.exportName}`,
+    entry,
+  ]),
+);
+
+export function findStateDetachedCaptureContractEntry(modulePath, exportName) {
+  return DETACHED_CAPTURE_ENTRY_BY_EXPORT.get(
+    `${normalizeModulePath(modulePath)}#${String(exportName || "")}`,
+  ) || null;
+}
+
+export function validateStateDetachedCaptureContract(
+  entries = STATE_DETACHED_CAPTURE_CONTRACT,
+) {
+  const violations = [];
+  const seen = new Set();
+  for (const [index, entry] of (Array.isArray(entries) ? entries : []).entries()) {
+    const id = `${normalizeModulePath(entry?.modulePath)}#${String(entry?.exportName || "")}`;
+    if (seen.has(id)) {
+      violations.push(createViolation("state-detached-capture-entry-duplicate", { index, id }));
+    }
+    seen.add(id);
+    if (
+      !entry
+      || typeof entry !== "object"
+      || !/^js\/[^/].*\.js$/.test(normalizeModulePath(entry.modulePath))
+      || !isValidExportName(entry.exportName)
+      || !Number.isInteger(entry.targetArgumentIndex)
+      || entry.targetArgumentIndex < 0
+      || !/^[a-f0-9]{64}$/.test(String(entry.sourceFingerprint || ""))
+      || !Object.entries(entry.cloneHelperFingerprints || {}).every(
+        ([name, fingerprint]) => isValidExportName(name) && /^[a-f0-9]{64}$/.test(fingerprint),
+      )
+    ) {
+      violations.push(createViolation("state-detached-capture-entry-shape-invalid", { index, id }));
+    }
+  }
+  return violations;
+}
+
+function freezeMutationDelegatingOwnerEntry(entry = {}) {
+  return Object.freeze({
+    compositionModulePath: normalizeModulePath(entry.compositionModulePath),
+    compositionExportName: String(entry.compositionExportName || ""),
+    compositionSourceFingerprint: String(entry.compositionSourceFingerprint || ""),
+    factoryModulePath: normalizeModulePath(entry.factoryModulePath),
+    factoryExportName: String(entry.factoryExportName || ""),
+    factorySourceFingerprint: String(entry.factorySourceFingerprint || ""),
+    ownerBindingName: String(entry.ownerBindingName || ""),
+    methods: Object.freeze([...(entry.methods || [])].map(String)),
+    actionModulePath: normalizeModulePath(entry.actionModulePath),
+    actionExports: Object.freeze([...(entry.actionExports || [])].map(String)),
+  });
+}
+
+export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getRenderPerfMetricsRuntimeOwner",
+    compositionSourceFingerprint:
+      "4e3401e84dd7da7edc08bfe2e96569841933349e59ec090050e21e059cd1bdde",
+    factoryModulePath: "js/core/renderer/render_perf_metrics_runtime_owner.js",
+    factoryExportName: "createRenderPerfMetricsRuntimeOwner",
+    factorySourceFingerprint:
+      "7744ea30c7d1224cc642642fc77abd0700a29a318b425c3085608c19595096ef",
+    ownerBindingName: "renderPerfMetricsRuntimeOwner",
+    methods: [
+      "recordRenderPerfMetric",
+      "beginContextMetricSession",
+      "collectContextMetric",
+      "endContextMetricSession",
+      "resetContextBreakdownForExactFrame",
+    ],
+    actionModulePath: "js/core/state/actions/renderer_diagnostics_actions.js",
+    actionExports: [
+      "commitRenderPerfMetricState",
+      "ensureRenderPerfMetricsState",
+      "setRenderPerfContextBreakdownState",
+    ],
+  }),
+]);
+
+export function validateStateMutationDelegatingOwnerContract(
+  entries = STATE_MUTATION_DELEGATING_OWNER_CONTRACT,
+) {
+  const violations = [];
+  for (const [index, entry] of (Array.isArray(entries) ? entries : []).entries()) {
+    if (
+      !entry
+      || !/^js\/[^/].*\.js$/.test(entry.compositionModulePath)
+      || !isValidExportName(entry.compositionExportName)
+      || !/^[a-f0-9]{64}$/.test(entry.compositionSourceFingerprint)
+      || !/^js\/[^/].*\.js$/.test(entry.factoryModulePath)
+      || !isValidExportName(entry.factoryExportName)
+      || !/^[a-f0-9]{64}$/.test(entry.factorySourceFingerprint)
+      || !isValidExportName(entry.ownerBindingName)
+      || !entry.methods?.length
+      || !entry.methods.every(isValidExportName)
+      || new Set(entry.methods).size !== entry.methods.length
+      || !entry.actionExports?.length
+      || !entry.actionExports.every(isValidExportName)
+      || new Set(entry.actionExports).size !== entry.actionExports.length
+      || !entry.actionExports.every((exportName) => (
+        Boolean(findStateActionDelegationContractEntry(
+          entry.actionModulePath,
+          exportName,
+        ))
+      ))
+    ) {
+      violations.push(createViolation("state-mutation-owner-entry-shape-invalid", { index }));
+    }
+  }
+  return violations;
+}
+
+export function findStateMutationDelegatingOwnerFactoryContractEntry(
+  modulePath,
+  exportName,
+) {
+  return STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find((entry) => (
+    entry.factoryModulePath === normalizeModulePath(modulePath)
+    && entry.factoryExportName === String(exportName || "")
+  )) || null;
+}
+
+function walkSyntaxTree(node, visit) {
+  if (!node || typeof node !== "object") return;
+  if (typeof node.type === "string") visit(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "loc" || key === "start" || key === "end") continue;
+    if (Array.isArray(value)) {
+      for (const child of value) walkSyntaxTree(child, visit);
+    } else if (value && typeof value === "object") {
+      walkSyntaxTree(value, visit);
+    }
+  }
+}
+
+function walkFunctionBody(node, visit) {
+  if (!node || typeof node !== "object") return;
+  if (
+    node.type === "FunctionDeclaration"
+    || node.type === "FunctionExpression"
+    || node.type === "ArrowFunctionExpression"
+  ) {
+    return;
+  }
+  if (typeof node.type === "string") visit(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "loc" || key === "start" || key === "end") continue;
+    if (Array.isArray(value)) {
+      for (const child of value) walkFunctionBody(child, visit);
+    } else if (value && typeof value === "object") {
+      walkFunctionBody(value, visit);
+    }
+  }
+}
+
+function collectPatternIdentifierNames(pattern, names = []) {
+  if (!pattern) return names;
+  if (pattern.type === "Identifier") {
+    names.push(pattern.name);
+  } else if (pattern.type === "AssignmentPattern") {
+    collectPatternIdentifierNames(pattern.left, names);
+  } else if (pattern.type === "RestElement") {
+    collectPatternIdentifierNames(pattern.argument, names);
+  } else if (pattern.type === "ArrayPattern") {
+    for (const element of pattern.elements || []) {
+      collectPatternIdentifierNames(element, names);
+    }
+  } else if (pattern.type === "ObjectPattern") {
+    for (const property of pattern.properties || []) {
+      collectPatternIdentifierNames(
+        property.type === "RestElement" ? property.argument : property.value,
+        names,
+      );
+    }
+  }
+  return names;
+}
+
+function expressionReferencesTaintedInput(node, taintedNames) {
+  if (!node) return false;
+  if (node.type === "Identifier") return taintedNames.has(node.name);
+  if (node.type === "MemberExpression") {
+    return expressionReferencesTaintedInput(node.object, taintedNames);
+  }
+  if (node.type === "ChainExpression") {
+    return expressionReferencesTaintedInput(node.expression, taintedNames);
+  }
+  if (node.type === "ConditionalExpression") {
+    return expressionReferencesTaintedInput(node.consequent, taintedNames)
+      || expressionReferencesTaintedInput(node.alternate, taintedNames);
+  }
+  if (node.type === "LogicalExpression") {
+    return expressionReferencesTaintedInput(node.left, taintedNames)
+      || expressionReferencesTaintedInput(node.right, taintedNames);
+  }
+  if (node.type === "SequenceExpression") {
+    return expressionReferencesTaintedInput(
+      node.expressions?.at(-1),
+      taintedNames,
+    );
+  }
+  if (node.type === "AssignmentExpression") {
+    return expressionReferencesTaintedInput(node.right, taintedNames);
+  }
+  if (node.type === "AwaitExpression") {
+    return expressionReferencesTaintedInput(node.argument, taintedNames);
+  }
+  return false;
+}
+
+function expressionContainsTaintedReference(node, taintedNames) {
+  if (!node || typeof node !== "object") return false;
+  if (node.type === "Identifier") return taintedNames.has(node.name);
+  return Object.entries(node).some(([key, value]) => {
+    if (["loc", "start", "end"].includes(key)) return false;
+    if (Array.isArray(value)) {
+      return value.some((child) => (
+        child
+        && typeof child === "object"
+        && expressionContainsTaintedReference(child, taintedNames)
+      ));
+    }
+    return Boolean(
+      value
+      && typeof value === "object"
+      && expressionContainsTaintedReference(value, taintedNames),
+    );
+  });
+}
+
+function expressionContainsTaintSource(node, predicate) {
+  if (!node || typeof node !== "object") return false;
+  if (predicate(node)) return true;
+  return Object.entries(node).some(([key, value]) => {
+    if (["loc", "start", "end"].includes(key)) return false;
+    if (Array.isArray(value)) {
+      return value.some((child) => (
+        child
+        && typeof child === "object"
+        && expressionContainsTaintSource(child, predicate)
+      ));
+    }
+    return Boolean(
+      value
+      && typeof value === "object"
+      && expressionContainsTaintSource(value, predicate),
+    );
+  });
+}
+
+function directFunctionDeclarations(functionNode) {
+  return new Map((functionNode?.body?.body || []).map((statement) => (
+    statement?.type === "FunctionDeclaration" && statement.id?.name
+      ? [statement.id.name, statement]
+      : null
+  )).filter(Boolean));
+}
+
+const READ_ONLY_TAINT_CALLS = new Set([
+  "Array.isArray",
+  "Boolean",
+  "Number",
+  "Object.entries",
+  "Object.keys",
+  "Object.values",
+  "String",
+]);
+const READ_ONLY_TAINT_MEMBER_CALLS = new Set(["every"]);
+
+function memberRootIdentifierName(node) {
+  let current = node;
+  while (current?.type === "MemberExpression") current = current.object;
+  return current?.type === "Identifier" ? current.name : "";
+}
+
+function staticCallName(callNode) {
+  const callee = callNode?.callee;
+  if (callee?.type === "Identifier") return callee.name;
+  if (
+    callee?.type === "MemberExpression"
+    && !callee.computed
+    && callee.object?.type === "Identifier"
+    && callee.property?.type === "Identifier"
+  ) {
+    return `${callee.object.name}.${callee.property.name}`;
+  }
+  return "";
+}
+
+function collectReachableTaintedHazardSites({
+  ast,
+  rootFunction,
+  taintedParameterIndexes = [],
+  taintSourcePredicate = () => false,
+  safeHelperNames = new Set(),
+  localFunctions = null,
+} = {}) {
+  const functions = localFunctions || topLevelFunctionDeclarations(ast);
+  const queue = [{
+    functionNode: rootFunction,
+    taintedParameterIndexes,
+    taintedSourceNames: [],
+  }];
+  const visitedContexts = new Set();
+  const hazardSites = new Map();
+  while (queue.length) {
+    const {
+      functionNode,
+      taintedParameterIndexes: parameterIndexes,
+      taintedSourceNames,
+    } = queue.shift();
+    const contextId = [
+      functionNode.id?.name || `<anonymous:${functionNode.start}>`,
+      [...parameterIndexes].sort((left, right) => left - right).join(","),
+      [...taintedSourceNames].sort().join(","),
+    ].join("#");
+    if (visitedContexts.has(contextId)) continue;
+    visitedContexts.add(contextId);
+    const taintedNames = new Set(taintedSourceNames);
+    const localNames = new Set();
+    walkFunctionBody(functionNode.body, (node) => {
+      if (node.type !== "VariableDeclarator") return;
+      for (const name of collectPatternIdentifierNames(node.id)) {
+        localNames.add(name);
+      }
+    });
+    const expressionIsTainted = (node) => (
+      expressionContainsTaintedReference(node, taintedNames)
+      || expressionContainsTaintSource(node, taintSourcePredicate)
+    );
+    for (const parameterIndex of parameterIndexes) {
+      for (const name of collectPatternIdentifierNames(
+        functionNode.params?.[parameterIndex],
+      )) {
+        taintedNames.add(name);
+      }
+    }
+
+    let aliasAdded = true;
+    while (aliasAdded) {
+      aliasAdded = false;
+      walkFunctionBody(functionNode.body, (node) => {
+        const sourceExpression = node.type === "VariableDeclarator"
+          ? node.init
+          : node.type === "AssignmentExpression" && node.operator === "="
+            ? node.right
+            : null;
+        const targetPattern = node.type === "VariableDeclarator"
+          ? node.id
+          : node.type === "AssignmentExpression" && node.operator === "="
+            ? node.left
+            : null;
+        if (
+          !targetPattern
+          || !(
+            expressionReferencesTaintedInput(sourceExpression, taintedNames)
+            || expressionContainsTaintSource(
+              sourceExpression,
+              taintSourcePredicate,
+            )
+          )
+        ) return;
+        for (const name of collectPatternIdentifierNames(targetPattern)) {
+          if (!taintedNames.has(name)) {
+            taintedNames.add(name);
+            aliasAdded = true;
+          }
+        }
+      });
+    }
+
+    walkFunctionBody(functionNode.body, (node) => {
+      if (node.type === "AssignmentExpression") {
+        const targetIsTainted = node.left?.type === "MemberExpression"
+          && expressionReferencesTaintedInput(node.left.object, taintedNames);
+        const targetRootName = node.left?.type === "MemberExpression"
+          ? memberRootIdentifierName(node.left)
+          : "";
+        const taintedValueEscapes = node.left?.type === "MemberExpression"
+          && expressionIsTainted(node.right)
+          && !(localNames.has(targetRootName) && !taintedNames.has(targetRootName));
+        if (targetIsTainted || taintedValueEscapes) {
+          hazardSites.set(`${node.start}:${node.end}`, node);
+        }
+        return;
+      }
+      if (
+        (node.type === "UpdateExpression"
+          || (node.type === "UnaryExpression" && node.operator === "delete"))
+        && node.argument?.type === "MemberExpression"
+        && expressionReferencesTaintedInput(node.argument.object, taintedNames)
+      ) {
+        hazardSites.set(`${node.start}:${node.end}`, node);
+        return;
+      }
+      if (node.type !== "CallExpression") return;
+      const callName = staticCallName(node);
+      const memberCallName = node.callee?.type === "MemberExpression"
+        ? String(node.callee.property?.name || node.callee.property?.value || "")
+        : "";
+      const taintedArgumentIndexes = (node.arguments || [])
+        .map((argument, index) => (
+          expressionIsTainted(argument)
+            ? index
+            : -1
+        ))
+        .filter((index) => index >= 0);
+      const calleeObjectIsTainted = node.callee?.type === "MemberExpression"
+        && expressionReferencesTaintedInput(node.callee.object, taintedNames);
+      if (calleeObjectIsTainted) {
+        hazardSites.set(`${node.start}:${node.end}`, node);
+        return;
+      }
+      const localFunction = node.callee?.type === "Identifier"
+        ? functions.get(node.callee.name)
+        : null;
+      if (safeHelperNames.has(callName)) return;
+      if (localFunction && taintedArgumentIndexes.length) {
+        queue.push({
+          functionNode: localFunction,
+          taintedParameterIndexes: taintedArgumentIndexes,
+          taintedSourceNames: [],
+        });
+        return;
+      }
+      if (
+        taintedArgumentIndexes.length
+        && !READ_ONLY_TAINT_CALLS.has(callName)
+        && !READ_ONLY_TAINT_MEMBER_CALLS.has(memberCallName)
+      ) {
+        hazardSites.set(`${node.start}:${node.end}`, node);
+      }
+    });
+  }
+  return [...hazardSites.values()];
+}
+
+function collectReachableTargetMutationSites(
+  ast,
+  exportedFunction,
+  targetArgumentIndex,
+) {
+  const localFunctions = new Map();
+  for (const statement of ast.body || []) {
+    const declaration = statement.type === "ExportNamedDeclaration"
+      ? statement.declaration
+      : statement;
+    if (
+      declaration?.type === "FunctionDeclaration"
+      && declaration.id?.name
+    ) {
+      localFunctions.set(declaration.id.name, declaration);
+    }
+  }
+  const queue = [{
+    functionNode: exportedFunction,
+    taintedParameterIndexes: [targetArgumentIndex],
+  }];
+  const visitedContexts = new Set();
+  const mutationSites = new Map();
+  while (queue.length) {
+    const { functionNode, taintedParameterIndexes } = queue.shift();
+    const contextId = [
+      functionNode.id?.name || `<anonymous:${functionNode.start}>`,
+      [...taintedParameterIndexes].sort((left, right) => left - right).join(","),
+    ].join("#");
+    if (visitedContexts.has(contextId)) continue;
+    visitedContexts.add(contextId);
+    const taintedNames = new Set();
+    for (const parameterIndex of taintedParameterIndexes) {
+      for (
+        const name of collectPatternIdentifierNames(
+          functionNode.params?.[parameterIndex],
+        )
+      ) {
+        taintedNames.add(name);
+      }
+    }
+    let aliasAdded = true;
+    while (aliasAdded) {
+      aliasAdded = false;
+      walkFunctionBody(functionNode.body, (node) => {
+        const sourceExpression = node.type === "VariableDeclarator"
+          ? node.init
+          : node.type === "AssignmentExpression" && node.operator === "="
+            ? node.right
+            : null;
+        const targetPattern = node.type === "VariableDeclarator"
+          ? node.id
+          : node.type === "AssignmentExpression" && node.operator === "="
+            ? node.left
+            : null;
+        if (
+          !targetPattern
+          || !expressionReferencesTaintedInput(
+            sourceExpression,
+            taintedNames,
+          )
+        ) {
+          return;
+        }
+        for (const name of collectPatternIdentifierNames(targetPattern)) {
+          if (!taintedNames.has(name)) {
+            taintedNames.add(name);
+            aliasAdded = true;
+          }
+        }
+      });
+    }
+    walkFunctionBody(functionNode.body, (node) => {
+      const mutationTarget = node.type === "AssignmentExpression"
+        ? node.left
+        : node.type === "UpdateExpression"
+          ? node.argument
+          : node.type === "UnaryExpression" && node.operator === "delete"
+            ? node.argument
+            : null;
+      if (
+        mutationTarget?.type === "MemberExpression"
+        && expressionReferencesTaintedInput(
+          mutationTarget.object,
+          taintedNames,
+        )
+      ) {
+        mutationSites.set(`${node.start}:${node.end}`, node);
+      }
+      if (node.type !== "CallExpression") return;
+      if (
+        node.callee?.type === "MemberExpression"
+        && expressionReferencesTaintedInput(
+          node.callee.object,
+          taintedNames,
+        )
+      ) {
+        mutationSites.set(`${node.start}:${node.end}`, node);
+      }
+      if (
+        node.callee?.type === "MemberExpression"
+        && node.callee.object?.type === "Identifier"
+        && ["Object", "Reflect"].includes(node.callee.object.name)
+        && ["assign", "defineProperty", "deleteProperty", "set"].includes(
+          String(node.callee.property?.name || node.callee.property?.value || ""),
+        )
+        && expressionReferencesTaintedInput(
+          node.arguments?.[0],
+          taintedNames,
+        )
+      ) {
+        mutationSites.set(`${node.start}:${node.end}`, node);
+      }
+      if (node.callee?.type !== "Identifier") return;
+      const localFunction = localFunctions.get(node.callee.name);
+      if (!localFunction) return;
+      const propagatedIndexes = (node.arguments || [])
+        .map((argument, index) => (
+          expressionReferencesTaintedInput(argument, taintedNames)
+            ? index
+            : -1
+        ))
+        .filter((index) => index >= 0);
+      if (propagatedIndexes.length) {
+        queue.push({
+          functionNode: localFunction,
+          taintedParameterIndexes: propagatedIndexes,
+        });
+      }
+    });
+  }
+  return [...mutationSites.values()];
+}
+
+export function inspectStateImportedPureNormalizerSource(source, entry) {
+  const violations = validateStateImportedPureNormalizerContract([entry]);
+  if (violations.length) {
+    return { violations, sourceFingerprint: "" };
+  }
+  const normalizedSource = String(source || "").replaceAll("\r\n", "\n");
+  let ast;
+  try {
+    ast = parseModuleSource(normalizedSource);
+  } catch (error) {
+    return {
+      violations: [createViolation(
+        "state-imported-pure-normalizer-source-parse-failed",
+        {
+          modulePath: normalizeModulePath(entry.modulePath),
+          exportName: String(entry.exportName || ""),
+          message: String(error?.message || ""),
+        },
+      )],
+      sourceFingerprint: "",
+    };
+  }
+  const sourceFingerprint = createHash("sha256")
+    .update(normalizedSource)
+    .digest("hex");
+  if (sourceFingerprint !== entry.sourceFingerprint) {
+    violations.push(createViolation(
+      "state-imported-pure-normalizer-source-drift",
+      {
+        modulePath: normalizeModulePath(entry.modulePath),
+        exportName: String(entry.exportName || ""),
+        expectedSourceFingerprint: String(entry.sourceFingerprint || ""),
+        actualSourceFingerprint: sourceFingerprint,
+      },
+    ));
+  }
+  const importSites = [];
+  walkSyntaxTree(ast, (node) => {
+    if (
+      node.type === "ImportDeclaration"
+      || node.type === "ImportExpression"
+      || (
+        (node.type === "ExportNamedDeclaration"
+          || node.type === "ExportAllDeclaration")
+        && node.source
+      )
+    ) {
+      importSites.push(node);
+    }
+  });
+  if (importSites.length) {
+    violations.push(createViolation(
+      "state-imported-pure-normalizer-import-free-proof-failed",
+      {
+        modulePath: normalizeModulePath(entry.modulePath),
+        exportName: String(entry.exportName || ""),
+        count: importSites.length,
+      },
+    ));
+  }
+  const exportedFunctions = (ast.body || []).filter((statement) => (
+    statement.type === "ExportNamedDeclaration"
+    && statement.declaration?.type === "FunctionDeclaration"
+    && statement.declaration.id?.name === entry.exportName
+  )).map((statement) => statement.declaration);
+  if (exportedFunctions.length !== 1) {
+    violations.push(createViolation(
+      "state-imported-pure-normalizer-direct-export-invalid",
+      {
+        modulePath: normalizeModulePath(entry.modulePath),
+        exportName: String(entry.exportName || ""),
+        count: exportedFunctions.length,
+      },
+    ));
+  } else {
+    const [functionNode] = exportedFunctions;
+    const targetParameter =
+      functionNode.params?.[entry.targetArgumentIndex];
+    if (targetParameter?.type !== "Identifier") {
+      violations.push(createViolation(
+        "state-imported-pure-normalizer-target-parameter-invalid",
+        {
+          modulePath: normalizeModulePath(entry.modulePath),
+          exportName: String(entry.exportName || ""),
+          targetArgumentIndex: entry.targetArgumentIndex,
+        },
+      ));
+    } else {
+      const mutationSites = collectReachableTaintedHazardSites({
+        ast,
+        rootFunction: functionNode,
+        taintedParameterIndexes: [entry.targetArgumentIndex],
+      });
+      if (mutationSites.length) {
+        violations.push(createViolation(
+          "state-imported-pure-normalizer-target-mutation-proof-failed",
+          {
+            modulePath: normalizeModulePath(entry.modulePath),
+            exportName: String(entry.exportName || ""),
+            count: mutationSites.length,
+            lines: mutationSites.map(
+              (node) => Number(node.loc?.start?.line || 1),
+            ),
+          },
+        ));
+      }
+    }
+  }
+  return { violations, sourceFingerprint };
+}
+
+function fingerprintFunctionSource(source, node) {
+  return createHash("sha256")
+    .update(String(source || "").slice(node.start, node.end).trim())
+    .digest("hex");
+}
+
+function topLevelFunctionDeclarations(ast) {
+  return new Map((ast?.body || []).map((statement) => {
+    const declaration = statement.type === "ExportNamedDeclaration"
+      ? statement.declaration
+      : statement;
+    return declaration?.type === "FunctionDeclaration" && declaration.id?.name
+      ? [declaration.id.name, declaration]
+      : null;
+  }).filter(Boolean));
+}
+
+function expressionContainsDetachedCaptureAlias(
+  node,
+  aliases,
+  safeCloneHelperNames,
+) {
+  if (!node) return false;
+  if (node.type === "Identifier") return aliases.has(node.name);
+  if (node.type === "ChainExpression") {
+    return expressionContainsDetachedCaptureAlias(
+      node.expression,
+      aliases,
+      safeCloneHelperNames,
+    );
+  }
+  if (node.type === "MemberExpression") {
+    return expressionContainsDetachedCaptureAlias(
+      node.object,
+      aliases,
+      safeCloneHelperNames,
+    ) || (
+      node.computed
+      && expressionContainsDetachedCaptureAlias(
+        node.property,
+        aliases,
+        safeCloneHelperNames,
+      )
+    );
+  }
+  if (node.type === "ConditionalExpression") {
+    return expressionContainsDetachedCaptureAlias(
+      node.consequent,
+      aliases,
+      safeCloneHelperNames,
+    ) || expressionContainsDetachedCaptureAlias(
+      node.alternate,
+      aliases,
+      safeCloneHelperNames,
+    );
+  }
+  if (node.type === "ObjectExpression") {
+    return (node.properties || []).some((property) => (
+      property.type === "SpreadElement"
+        ? expressionContainsDetachedCaptureAlias(
+          property.argument,
+          aliases,
+          safeCloneHelperNames,
+        )
+        : (
+          (property.computed && expressionContainsDetachedCaptureAlias(
+            property.key,
+            aliases,
+            safeCloneHelperNames,
+          ))
+          || expressionContainsDetachedCaptureAlias(
+            property.value,
+            aliases,
+            safeCloneHelperNames,
+          )
+        )
+    ));
+  }
+  if (node.type === "ArrayExpression") {
+    return (node.elements || []).some((element) => (
+      expressionContainsDetachedCaptureAlias(
+        element?.type === "SpreadElement" ? element.argument : element,
+        aliases,
+        safeCloneHelperNames,
+      )
+    ));
+  }
+  if (node.type === "CallExpression") {
+    if (
+      node.callee?.type === "Identifier"
+      && (
+        safeCloneHelperNames.has(node.callee.name)
+        || ["Boolean", "Number", "String"].includes(node.callee.name)
+      )
+    ) {
+      return false;
+    }
+  }
+  if (
+    node.type === "FunctionExpression"
+    || node.type === "ArrowFunctionExpression"
+    || node.type === "FunctionDeclaration"
+  ) {
+    return false;
+  }
+  return Object.entries(node).some(([key, value]) => {
+    if (["loc", "start", "end"].includes(key)) return false;
+    if (Array.isArray(value)) {
+      return value.some((child) => child && typeof child === "object"
+        && expressionContainsDetachedCaptureAlias(
+          child,
+          aliases,
+          safeCloneHelperNames,
+        ));
+    }
+    return value && typeof value === "object"
+      ? expressionContainsDetachedCaptureAlias(
+        value,
+        aliases,
+        safeCloneHelperNames,
+      )
+      : false;
+  });
+}
+
+export function inspectStateDetachedCaptureSource(source, entry) {
+  const violations = validateStateDetachedCaptureContract([entry]);
+  if (violations.length) return { violations, sourceFingerprint: "" };
+  const normalizedSource = String(source || "").replaceAll("\r\n", "\n");
+  let ast;
+  try {
+    ast = parseModuleSource(normalizedSource);
+  } catch (error) {
+    return {
+      violations: [createViolation("state-detached-capture-source-parse-failed", {
+        modulePath: entry.modulePath,
+        exportName: entry.exportName,
+        message: String(error?.message || ""),
+      })],
+      sourceFingerprint: "",
+    };
+  }
+  const functions = topLevelFunctionDeclarations(ast);
+  const capture = functions.get(entry.exportName);
+  if (!capture || !((ast.body || []).some((statement) => (
+    statement.type === "ExportNamedDeclaration"
+    && statement.declaration === capture
+  )))) {
+    violations.push(createViolation("state-detached-capture-direct-export-invalid", {
+      modulePath: entry.modulePath,
+      exportName: entry.exportName,
+    }));
+    return { violations, sourceFingerprint: "" };
+  }
+  const sourceFingerprint = fingerprintFunctionSource(normalizedSource, capture);
+  if (sourceFingerprint !== entry.sourceFingerprint) {
+    violations.push(createViolation("state-detached-capture-source-drift", {
+      modulePath: entry.modulePath,
+      exportName: entry.exportName,
+      expectedSourceFingerprint: entry.sourceFingerprint,
+      actualSourceFingerprint: sourceFingerprint,
+    }));
+  }
+  if (capture.params?.[entry.targetArgumentIndex]?.type !== "Identifier") {
+    violations.push(createViolation("state-detached-capture-target-parameter-invalid", {
+      modulePath: entry.modulePath,
+      exportName: entry.exportName,
+      targetArgumentIndex: entry.targetArgumentIndex,
+    }));
+    return { violations, sourceFingerprint };
+  }
+  const safeCloneHelperNames = new Set();
+  for (const [helperName, expectedFingerprint] of Object.entries(
+    entry.cloneHelperFingerprints || {},
+  )) {
+    const helper = functions.get(helperName);
+    const actualFingerprint = helper
+      ? fingerprintFunctionSource(normalizedSource, helper)
+      : "";
+    if (actualFingerprint !== expectedFingerprint) {
+      violations.push(createViolation("state-detached-capture-clone-helper-source-drift", {
+        modulePath: entry.modulePath,
+        exportName: entry.exportName,
+        helperName,
+        expectedSourceFingerprint: expectedFingerprint,
+        actualSourceFingerprint: actualFingerprint,
+      }));
+    } else {
+      safeCloneHelperNames.add(helperName);
+    }
+  }
+  const targetName = capture.params[entry.targetArgumentIndex].name;
+  const aliases = new Set([targetName]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    walkFunctionBody(capture.body, (node) => {
+      if (
+        node.type === "VariableDeclarator"
+        && node.id?.type === "Identifier"
+        && expressionContainsDetachedCaptureAlias(
+          node.init,
+          aliases,
+          new Set(),
+        )
+        && !aliases.has(node.id.name)
+      ) {
+        aliases.add(node.id.name);
+        changed = true;
+      }
+    });
+  }
+  const aliasReturns = [];
+  const aliasReturnKeys = [];
+  walkFunctionBody(capture.body, (node) => {
+    if (
+      node.type === "ReturnStatement"
+      && expressionContainsDetachedCaptureAlias(
+        node.argument,
+        aliases,
+        safeCloneHelperNames,
+      )
+    ) {
+      aliasReturns.push(node);
+      if (node.argument?.type === "ObjectExpression") {
+        aliasReturnKeys.push(...(node.argument.properties || [])
+          .filter((property) => expressionContainsDetachedCaptureAlias(
+            property.value,
+            aliases,
+            safeCloneHelperNames,
+          ))
+          .map((property) => String(property.key?.name || property.key?.value || "*")));
+      }
+    }
+  });
+  if (aliasReturns.length) {
+    violations.push(createViolation("state-detached-capture-alias-escape", {
+      modulePath: entry.modulePath,
+      exportName: entry.exportName,
+      count: aliasReturns.length,
+      lines: aliasReturns.map((node) => Number(node.loc?.start?.line || 1)),
+      keys: [...new Set(aliasReturnKeys)].sort(),
+    }));
+  }
+  const hazardSites = collectReachableTaintedHazardSites({
+    ast,
+    rootFunction: capture,
+    taintedParameterIndexes: [entry.targetArgumentIndex],
+    safeHelperNames: safeCloneHelperNames,
+  });
+  if (hazardSites.length) {
+    violations.push(createViolation("state-detached-capture-alias-escape", {
+      modulePath: entry.modulePath,
+      exportName: entry.exportName,
+      count: hazardSites.length,
+      lines: hazardSites.map((node) => Number(node.loc?.start?.line || 1)),
+      keys: [],
+    }));
+  }
+  return { violations, sourceFingerprint };
+}
+
+function rootIdentifierName(node) {
+  let current = node;
+  while (current?.type === "MemberExpression") current = current.object;
+  if (current?.type === "CallExpression") return rootIdentifierName(current.callee);
+  return current?.type === "Identifier" ? current.name : "";
+}
+
+export function inspectStateMutationDelegatingOwnerSources({
+  compositionSource,
+  factorySource,
+  entry,
+} = {}) {
+  const violations = validateStateMutationDelegatingOwnerContract([entry]);
+  if (violations.length) return { violations };
+  let compositionAst;
+  let factoryAst;
+  try {
+    compositionAst = parseModuleSource(String(compositionSource || "").replaceAll("\r\n", "\n"));
+    factoryAst = parseModuleSource(String(factorySource || "").replaceAll("\r\n", "\n"));
+  } catch (error) {
+    return { violations: [createViolation("state-mutation-owner-source-parse-failed", {
+      message: String(error?.message || ""),
+    })] };
+  }
+  const normalizedComposition = String(compositionSource || "").replaceAll("\r\n", "\n");
+  const normalizedFactory = String(factorySource || "").replaceAll("\r\n", "\n");
+  const compositionFunctions = topLevelFunctionDeclarations(compositionAst);
+  const factoryFunctions = topLevelFunctionDeclarations(factoryAst);
+  const composition = compositionFunctions.get(entry.compositionExportName);
+  const factory = factoryFunctions.get(entry.factoryExportName);
+  if (!composition || fingerprintFunctionSource(normalizedComposition, composition)
+    !== entry.compositionSourceFingerprint) {
+    violations.push(createViolation("state-mutation-owner-composition-source-drift", {
+      modulePath: entry.compositionModulePath,
+      functionName: entry.compositionExportName,
+      actualSourceFingerprint: composition
+        ? fingerprintFunctionSource(normalizedComposition, composition)
+        : "",
+    }));
+  }
+  if (!factory || fingerprintFunctionSource(normalizedFactory, factory)
+    !== entry.factorySourceFingerprint) {
+    violations.push(createViolation("state-mutation-owner-factory-source-drift", {
+      modulePath: entry.factoryModulePath,
+      exportName: entry.factoryExportName,
+      actualSourceFingerprint: factory
+        ? fingerprintFunctionSource(normalizedFactory, factory)
+        : "",
+    }));
+  }
+  if (!composition || !factory) return { violations };
+
+  const imports = new Map();
+  for (const statement of compositionAst.body || []) {
+    if (statement.type !== "ImportDeclaration") continue;
+    for (const specifier of statement.specifiers || []) {
+      if (specifier.type === "ImportSpecifier") {
+        imports.set(specifier.local.name, {
+          source: normalizeModulePath(path.posix.normalize(path.posix.join(
+            path.posix.dirname(entry.compositionModulePath),
+            String(statement.source.value || ""),
+          ))),
+          importedName: specifier.imported.name,
+        });
+      }
+    }
+  }
+  const factoryLocalName = [...imports].find(([, imported]) => (
+    imported.source === entry.factoryModulePath
+    && imported.importedName === entry.factoryExportName
+  ))?.[0] || "";
+  const factoryCalls = [];
+  walkFunctionBody(composition.body, (node) => {
+    if (node.type === "CallExpression" && node.callee?.name === factoryLocalName) {
+      factoryCalls.push(node);
+    }
+  });
+  if (factoryCalls.length !== 1) {
+    violations.push(createViolation("state-mutation-owner-factory-composition-invalid", {
+      count: factoryCalls.length,
+    }));
+  } else {
+    const options = factoryCalls[0].arguments?.[0];
+    const effects = options?.type === "ObjectExpression"
+      ? options.properties.find((property) => property.key?.name === "effects")?.value
+      : null;
+    for (const actionExportName of entry.actionExports) {
+      const matches = [];
+      walkSyntaxTree(effects, (node) => {
+        if (node.type !== "CallExpression" || node.callee?.type !== "Identifier") return;
+        const imported = imports.get(node.callee.name);
+        if (
+          imported?.source === entry.actionModulePath
+          && imported.importedName === actionExportName
+          && node.arguments?.[0]?.type === "Identifier"
+          && node.arguments[0].name === "runtimeState"
+        ) matches.push(node);
+      });
+      if (matches.length !== 1) {
+        violations.push(createViolation("state-mutation-owner-action-effect-edge-invalid", {
+          actionExportName,
+          count: matches.length,
+        }));
+      }
+    }
+  }
+
+  const returnedMethodNames = new Set();
+  walkFunctionBody(factory.body, (node) => {
+    if (node.type === "ReturnStatement" && node.argument?.type === "CallExpression"
+      && node.argument.callee?.type === "MemberExpression"
+      && node.argument.callee.object?.name === "Object"
+      && node.argument.callee.property?.name === "freeze"
+      && node.argument.arguments?.[0]?.type === "ObjectExpression") {
+      for (const property of node.argument.arguments[0].properties || []) {
+        if (property.key?.name) returnedMethodNames.add(property.key.name);
+      }
+    }
+    if (
+      node.type === "AssignmentExpression"
+      && node.left?.type === "MemberExpression"
+      && ["getters", "runtimeState", "state", "target"].includes(
+        rootIdentifierName(node.left.object),
+      )
+    ) {
+      violations.push(createViolation("state-mutation-owner-direct-mutation", {
+        line: Number(node.loc?.start?.line || 1),
+      }));
+    }
+  });
+  for (const method of entry.methods) {
+    if (!returnedMethodNames.has(method)) {
+      violations.push(createViolation("state-mutation-owner-method-missing", { method }));
+    }
+  }
+  const factoryLocalFunctions = directFunctionDeclarations(factory);
+  for (const methodName of entry.methods) {
+    const methodNode = factoryLocalFunctions.get(methodName);
+    if (!methodNode) continue;
+    const mutationSites = collectReachableTaintedHazardSites({
+      ast: factoryAst,
+      rootFunction: methodNode,
+      taintSourcePredicate: (node) => (
+        node?.type === "CallExpression"
+        && rootIdentifierName(node.callee) === "getters"
+      ),
+      localFunctions: factoryLocalFunctions,
+    });
+    for (const node of mutationSites) {
+      violations.push(createViolation("state-mutation-owner-direct-mutation", {
+        line: Number(node.loc?.start?.line || 1),
+      }));
+    }
+  }
+  return { violations };
+}
 
 const PURE_READER_ENTRY_BY_ID = new Map(
   STATE_TARGET_PURE_READER_CONTRACT.map((entry) => [
@@ -1524,7 +2790,40 @@ export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
       actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
       actionExportName: "commitRenderPassCacheState",
       replacementActionSourceFingerprint:
-        "0ef1b15cc6878c2338e2f44a560521900a69a1567c0c237e3f9a92fcc016e5a4",
+        "cf8361ca52fccc613ada80db4fdf20c6f95e3df60842b71b4e9f287f0b34ce7d",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      retiredCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "ensureSphericalFeatureDiagnosticsCache",
+        ),
+      key: "sphericalFeatureDiagnosticsById",
+      retiredMutationSites:
+        createRendererRetiredMutationSites([{
+          enclosingFunctionIdentity:
+            createRendererFunctionIdentity(
+              "ensureSphericalFeatureDiagnosticsCache",
+            ),
+          sourceFingerprints: [
+            "664e9f747682e1c18bcfb2b9a74be297b01f2aa1a829b1abf28430dc3fbedb45",
+          ],
+        }]),
+      replacementCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      replacementCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "ensureProjectedBoundsCacheState",
+        ),
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "ensureProjectedBoundsCacheState",
+        ),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
+      actionExportName: "commitProjectedBoundsCacheState",
+      replacementActionSourceFingerprint:
+        "4771dd38da2cc4f07d703927a374b0ab209db4d88ac87ee3423ecca3e4e34b85",
     }),
     createRendererCrossBoundaryMigrationEntry({
       retiredCallerPath: "js/core/map_renderer.js",

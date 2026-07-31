@@ -13,6 +13,10 @@ test("renderer diagnostics actions stay import-free with target-first exports", 
   const source = await readFile(SOURCE_URL, "utf8");
   assert.doesNotMatch(source, /^\s*import\s/m);
   for (const name of [
+    "captureRenderPerfMetricsState",
+    "captureRenderPerfContextBreakdownState",
+    "captureRenderPerfMetricEntryState",
+    "captureProjectedBoundsDiagnosticsState",
     "ensureRenderPerfMetricsState",
     "replaceRenderPerfMetricsState",
     "setRenderPerfMetricEntryState",
@@ -30,6 +34,10 @@ test("renderer diagnostics actions stay import-free with target-first exports", 
 test("renderer diagnostics actions reject invalid targets", async () => {
   const actions = await loadActions();
   for (const target of [null, undefined, [], "state"]) {
+    assert.throws(() => actions.captureRenderPerfMetricsState(target), /target must be an object/);
+    assert.throws(() => actions.captureRenderPerfContextBreakdownState(target), /target must be an object/);
+    assert.throws(() => actions.captureRenderPerfMetricEntryState(target, "frame"), /target must be an object/);
+    assert.throws(() => actions.captureProjectedBoundsDiagnosticsState(target), /target must be an object/);
     assert.throws(() => actions.ensureRenderPerfMetricsState(target), /target must be an object/);
     assert.throws(() => actions.replaceRenderPerfMetricsState(target, {}), /target must be an object/);
     assert.throws(() => actions.setRenderPerfMetricEntryState(target, { name: "frame", entry: {} }), /target must be an object/);
@@ -40,6 +48,59 @@ test("renderer diagnostics actions reject invalid targets", async () => {
     assert.throws(() => actions.setProjectedBoundsDiagnosticsState(target, {}), /target must be an object/);
     assert.throws(() => actions.setDebugCountryCoverageState(target, null), /target must be an object/);
   }
+});
+
+test("render perf captures detach nested diagnostics from the mutable state root", async () => {
+  const {
+    captureRenderPerfContextBreakdownState,
+    captureRenderPerfMetricEntryState,
+    captureRenderPerfMetricsState,
+  } = await loadActions();
+  const target = {
+    renderPerfMetrics: {
+      contextBreakdown: {
+        drawRoadsLayer: {
+          durationMs: 4,
+          detail: { source: "roads" },
+        },
+      },
+      recentFrames: [{ durationMs: 7 }],
+    },
+  };
+
+  const metrics = captureRenderPerfMetricsState(target);
+  const breakdown = captureRenderPerfContextBreakdownState(target);
+  const frame = captureRenderPerfMetricEntryState(target, "recentFrames");
+  assert.deepEqual(metrics, target.renderPerfMetrics);
+  assert.deepEqual(breakdown, target.renderPerfMetrics.contextBreakdown);
+  assert.notEqual(metrics, target.renderPerfMetrics);
+  assert.notEqual(metrics.contextBreakdown, target.renderPerfMetrics.contextBreakdown);
+  assert.notEqual(metrics.recentFrames, target.renderPerfMetrics.recentFrames);
+  assert.notEqual(breakdown, target.renderPerfMetrics.contextBreakdown);
+  assert.deepEqual(frame, target.renderPerfMetrics.recentFrames);
+  assert.notEqual(frame, target.renderPerfMetrics.recentFrames);
+
+  metrics.contextBreakdown.drawRoadsLayer.detail.source = "changed";
+  metrics.recentFrames[0].durationMs = 99;
+  breakdown.drawRoadsLayer.durationMs = 88;
+  frame[0].durationMs = 66;
+  assert.equal(
+    target.renderPerfMetrics.contextBreakdown.drawRoadsLayer.detail.source,
+    "roads",
+  );
+  assert.equal(target.renderPerfMetrics.recentFrames[0].durationMs, 7);
+  assert.equal(
+    target.renderPerfMetrics.contextBreakdown.drawRoadsLayer.durationMs,
+    4,
+  );
+
+  assert.equal(captureRenderPerfMetricsState({ renderPerfMetrics: null }), undefined);
+  assert.deepEqual(captureRenderPerfContextBreakdownState({ renderPerfMetrics: null }), {});
+  assert.equal(captureRenderPerfMetricEntryState({ renderPerfMetrics: null }, "frame"), undefined);
+  assert.throws(
+    () => captureRenderPerfMetricEntryState(target, " "),
+    /name must be a non-empty string/,
+  );
 });
 
 test("render perf holder actions commit caller-built state exactly", async () => {
@@ -99,6 +160,37 @@ test("diagnostic holder actions preserve caller-provided object identity", async
   };
   assert.equal(setProjectedBoundsDiagnosticsState(target, next), true);
   assert.equal(target.projectedBoundsDiagnostics, next);
+});
+
+test("projected-bounds capture detaches nested counters from the mutable state root", async () => {
+  const { captureProjectedBoundsDiagnosticsState } = await loadActions();
+  const target = {
+    projectedBoundsDiagnostics: {
+      total: 3,
+      byGeometryType: { Polygon: 2 },
+      byReason: { "missing-bounds": 1 },
+    },
+  };
+
+  const snapshot = captureProjectedBoundsDiagnosticsState(target);
+  assert.deepEqual(snapshot, target.projectedBoundsDiagnostics);
+  assert.notEqual(snapshot, target.projectedBoundsDiagnostics);
+  assert.notEqual(
+    snapshot.byGeometryType,
+    target.projectedBoundsDiagnostics.byGeometryType,
+  );
+  assert.notEqual(snapshot.byReason, target.projectedBoundsDiagnostics.byReason);
+
+  snapshot.byGeometryType.Polygon = 99;
+  snapshot.byReason["missing-bounds"] = 88;
+  assert.equal(target.projectedBoundsDiagnostics.byGeometryType.Polygon, 2);
+  assert.equal(target.projectedBoundsDiagnostics.byReason["missing-bounds"], 1);
+
+  assert.deepEqual(captureProjectedBoundsDiagnosticsState({}), {
+    total: 0,
+    byGeometryType: {},
+    byReason: {},
+  });
 });
 
 test("first-visible and country-coverage actions retain scalar/reference semantics", async () => {

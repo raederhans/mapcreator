@@ -583,6 +583,35 @@ export function validateDerivedAliasTaintBaselineTransition({
       }
     }
   }
+  for (const section of [
+    "bindings",
+    "memberships",
+    "aliasSites",
+    "dynamicSites",
+    "ambiguousSites",
+    "unsupportedSites",
+  ]) {
+    const currentCounts = stringMultisetCounts(
+      currentBaseline?.transitionSemanticDelta?.[section],
+    );
+    for (
+      const [signature, previousCount] of
+        stringMultisetCounts(
+          previousBaseline?.transitionSemanticDelta?.[section],
+        )
+    ) {
+      const currentCount = currentCounts.get(signature) || 0;
+      if (currentCount < previousCount) {
+        violations.push({
+          code: "derived-alias-taint-transition-semantic-regressed",
+          section,
+          signature,
+          previousCount,
+          currentCount,
+        });
+      }
+    }
+  }
   return violations;
 }
 

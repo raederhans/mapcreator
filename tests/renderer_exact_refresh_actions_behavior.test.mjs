@@ -37,6 +37,7 @@ test("renderer exact refresh actions are import-free and expose target-first sta
     .map((match) => [match[1], match[2]]);
   assert.deepEqual(exportNames, [
     ["ensureExactAfterSettleControllerState", "target"],
+    ["captureExactAfterSettleControllerState", "target"],
     ["resetExactAfterSettleControllerState", "target"],
     ["isExactAfterSettleGenerationCurrentState", "target"],
     ["isExactAfterSettleControllerActiveState", "target"],
@@ -50,6 +51,61 @@ test("renderer exact refresh actions are import-free and expose target-first sta
     ["setPendingExactPoliticalFastFrameState", "target"],
     ["setExactAfterSettleHandleState", "target"],
   ]);
+});
+
+test("controller capture returns a detached normalized snapshot", async () => {
+  const {
+    beginExactAfterSettleControllerApplyState,
+    beginExactAfterSettleControllerScheduleState,
+    captureExactAfterSettleControllerState,
+  } = await loadActions();
+  const target = {};
+  const identity = createIdentity();
+  const plan = {
+    exactTargetPasses: ["political"],
+    resolvedProfile: { settleDurationMs: 40 },
+    reuseDecision: {
+      referenceTransform: { x: 1, y: 2, k: 3 },
+      currentTransform: { x: 4, y: 5, k: 6 },
+    },
+    futurePlannerMetadata: {
+      groups: [{ passNames: ["political", "borders"] }],
+    },
+  };
+  const generation = beginExactAfterSettleControllerScheduleState(target, {
+    scheduleStartedAt: 10,
+    identity,
+  });
+  beginExactAfterSettleControllerApplyState(target, {
+    generation,
+    plan,
+    applyStartedAt: 20,
+    identity,
+  });
+
+  const snapshot = captureExactAfterSettleControllerState(target);
+  assert.notEqual(snapshot, target.exactAfterSettleController);
+  assert.notEqual(snapshot.pendingPlan, target.exactAfterSettleController.pendingPlan);
+  assert.notEqual(
+    snapshot.pendingPlan.reuseDecision.referenceTransform,
+    target.exactAfterSettleController.pendingPlan.reuseDecision.referenceTransform,
+  );
+  assert.notEqual(
+    snapshot.pendingPlan.futurePlannerMetadata.groups[0],
+    target.exactAfterSettleController.pendingPlan.futurePlannerMetadata.groups[0],
+  );
+  snapshot.phase = "caller-mutated";
+  snapshot.pendingPlan.reuseDecision.reason = "caller-mutated";
+  snapshot.pendingPlan.futurePlannerMetadata.groups[0].passNames.push("labels");
+  assert.equal(target.exactAfterSettleController.phase, "applying");
+  assert.notEqual(
+    target.exactAfterSettleController.pendingPlan.reuseDecision.reason,
+    "caller-mutated",
+  );
+  assert.deepEqual(
+    target.exactAfterSettleController.pendingPlan.futurePlannerMetadata.groups[0].passNames,
+    ["political", "borders"],
+  );
 });
 
 test("renderer exact refresh actions reject invalid targets", async () => {

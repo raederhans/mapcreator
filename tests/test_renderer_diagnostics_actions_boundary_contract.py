@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ACTION_MODULE = REPO_ROOT / "js/core/state/actions/renderer_diagnostics_actions.js"
 PERF_METRICS_OWNER = REPO_ROOT / "js/core/renderer/render_perf_metrics_runtime_owner.js"
 MAP_RENDERER = REPO_ROOT / "js/core/map_renderer.js"
+RUNTIME_STATE = REPO_ROOT / "js/core/state/renderer_runtime_state.js"
 STARTUP_SUPPORT = REPO_ROOT / "js/bootstrap/startup_bootstrap_support.js"
 SCENARIO_CHUNK_RUNTIME = REPO_ROOT / "js/core/scenario/chunk_runtime.js"
 RUNTIME_CONTEXT = REPO_ROOT / "js/core/map_renderer/renderer_runtime_context.js"
@@ -24,6 +25,7 @@ DIAGNOSTICS_KEYS = {
 }
 ACTION_NAMES = {
     "ensureRenderPerfMetricsState",
+    "replaceRenderPerfMetricsState",
     "setRenderPerfMetricEntryState",
     "setRenderPerfContextBreakdownState",
     "commitRenderPerfMetricState",
@@ -31,6 +33,24 @@ ACTION_NAMES = {
     "resetProjectedBoundsDiagnosticsState",
     "setProjectedBoundsDiagnosticsState",
     "setDebugCountryCoverageState",
+}
+READ_ONLY_ACTION_NAMES = {
+    "captureProjectedBoundsDiagnosticsState",
+    "captureRenderPerfMetricsState",
+    "captureRenderPerfContextBreakdownState",
+    "captureRenderPerfMetricEntryState",
+}
+MAP_RENDERER_DIRECT_ACTION_NAMES = {
+    *READ_ONLY_ACTION_NAMES,
+    "ensureRenderPerfMetricsState",
+    "setRenderPerfMetricEntryState",
+    "setRenderPerfContextBreakdownState",
+    "commitRenderPerfMetricState",
+    "setDebugCountryCoverageState",
+}
+MAP_RENDERER_COMPATIBILITY_ACTION_NAMES = {
+    "setFirstVisibleFramePaintedState",
+    "commitProjectedBoundsDiagnosticsState",
 }
 
 
@@ -44,6 +64,24 @@ def direct_runtime_writes(source):
         rf"\b(?:runtimeState|state|appState)\.(?:{key_pattern})\s*(?:=(?!=)|\+=|-=|\+\+|--)",
         source,
     )
+
+
+def imported_bindings_from(source, module_path):
+    match = re.search(
+        rf'import\s*\{{(?P<names>[^{{}}]*?)\}}\s*from\s*"{re.escape(module_path)}"\s*;',
+        source,
+        re.DOTALL,
+    )
+    if not match:
+        raise AssertionError(f"missing import block for {module_path}")
+    bindings = set()
+    for token in match.group("names").split(","):
+        token = token.strip()
+        if not token:
+            continue
+        parts = re.split(r"\s+as\s+", token, maxsplit=1)
+        bindings.add((parts[0], parts[-1]))
+    return bindings
 
 
 def function_body(source, function_name):
@@ -83,13 +121,14 @@ class RendererDiagnosticsActionsBoundaryContractTest(unittest.TestCase):
         cls.actions = ACTION_MODULE.read_text(encoding="utf-8")
         cls.perf_metrics_owner = PERF_METRICS_OWNER.read_text(encoding="utf-8")
         cls.map_renderer = MAP_RENDERER.read_text(encoding="utf-8")
+        cls.runtime_state = RUNTIME_STATE.read_text(encoding="utf-8")
         cls.startup_support = STARTUP_SUPPORT.read_text(encoding="utf-8")
         cls.scenario_chunk_runtime = SCENARIO_CHUNK_RUNTIME.read_text(encoding="utf-8")
 
     def test_canonical_action_module_is_import_free_target_first_and_key_bounded(self):
         self.assertFalse(re.search(r"^\s*import\s", self.actions, re.MULTILINE))
         self.assertEqual(assigned_target_keys(self.actions), DIAGNOSTICS_KEYS)
-        for action_name in ACTION_NAMES:
+        for action_name in ACTION_NAMES | READ_ONLY_ACTION_NAMES:
             self.assertRegex(
                 self.actions,
                 rf"export function {re.escape(action_name)}\(\s*target(?:\s*,|\s*\))",
@@ -106,12 +145,42 @@ class RendererDiagnosticsActionsBoundaryContractTest(unittest.TestCase):
             self.assertNotIn(forbidden_token, self.actions)
 
     def test_map_renderer_delegates_diagnostics_root_writes_to_actions(self):
-        self.assertIn(
-            'from "./state/actions/renderer_diagnostics_actions.js";',
+        direct_action_imports = imported_bindings_from(
             self.map_renderer,
+            "./state/actions/renderer_diagnostics_actions.js",
         )
-        for action_name in ACTION_NAMES:
-            self.assertIn(action_name, self.map_renderer)
+        compatibility_imports = imported_bindings_from(
+            self.map_renderer,
+            "./state/renderer_runtime_state.js",
+        )
+        self.assertEqual(
+            direct_action_imports,
+            {(name, name) for name in MAP_RENDERER_DIRECT_ACTION_NAMES},
+        )
+        self.assertEqual(
+            {
+                binding
+                for binding in compatibility_imports
+                if binding[0] in MAP_RENDERER_COMPATIBILITY_ACTION_NAMES
+            },
+            {(name, name) for name in MAP_RENDERER_COMPATIBILITY_ACTION_NAMES},
+        )
+        self.assertEqual(
+            imported_bindings_from(
+                self.runtime_state,
+                "./actions/renderer_diagnostics_actions.js",
+            ),
+            {
+                (
+                    "setFirstVisibleFramePaintedState",
+                    "setFirstVisibleFramePaintedActionState",
+                ),
+                (
+                    "setProjectedBoundsDiagnosticsState",
+                    "setProjectedBoundsDiagnosticsActionState",
+                ),
+            },
+        )
         self.assertEqual(direct_runtime_writes(self.map_renderer), [])
 
     def test_map_renderer_wires_perf_metrics_owner_factory_and_thin_wrappers(self):
@@ -122,18 +191,22 @@ class RendererDiagnosticsActionsBoundaryContractTest(unittest.TestCase):
         factory_body = function_body(self.map_renderer, "getRenderPerfMetricsRuntimeOwner")
         for dependency in (
             "contextBreakdownMetricNames: CONTEXT_BREAKDOWN_METRIC_NAMES",
-            "getRenderPerfMetrics: () => runtimeState.renderPerfMetrics",
+            "getRenderPerfContextBreakdownSnapshot: () => (",
+            "captureRenderPerfContextBreakdownState(runtimeState)",
             "getRenderPerfMetricSequence: () => runtimeState.renderPerfMetricSequence",
             "nowMs: () => Date.now()",
             "ensureRenderPerfMetricsState(runtimeState)",
             "commitRenderPerfMetricState(runtimeState, payload)",
             "setRenderPerfContextBreakdownState(runtimeState, breakdown)",
-            "globalThis.__renderPerfMetrics = metrics",
+            "mirrorRenderPerfMetrics: mirrorRenderPerfMetricSnapshot",
         ):
             self.assertIn(dependency, factory_body)
+        self.assertNotIn(
+            "getRenderPerfMetrics: () => runtimeState.renderPerfMetrics",
+            factory_body,
+        )
 
         for wrapper_name in (
-            "ensureRenderPerfMetrics",
             "recordRenderPerfMetric",
             "beginContextMetricSession",
             "collectContextMetric",
@@ -147,6 +220,34 @@ class RendererDiagnosticsActionsBoundaryContractTest(unittest.TestCase):
             )
             self.assertEqual(body.count("return "), 1, wrapper_name)
             self.assertNotRegex(body, r"\b(?:if|for|while|switch|try)\b")
+
+        mirror_body = function_body(self.map_renderer, "mirrorRenderPerfMetricSnapshot")
+        self.assertIn(
+            "renderPerfMetricsMirrorRuntime.snapshot = captureRenderPerfMetricsState(runtimeState) || {}",
+            mirror_body,
+        )
+        self.assertNotIn("runtimeState.renderPerfMetrics", mirror_body)
+        self.assertIn(
+            "captureRenderPerfMetricEntryState(runtimeState, normalizedName)",
+            mirror_body,
+        )
+        self.assertIn(
+            "globalThis.__renderPerfMetrics = renderPerfMetricsMirrorRuntime.snapshot",
+            mirror_body,
+        )
+
+        projected_bounds_body = function_body(
+            self.map_renderer,
+            "recordProjectedBoundsDiagnosticsState",
+        )
+        self.assertIn(
+            "captureProjectedBoundsDiagnosticsState(runtimeState)",
+            projected_bounds_body,
+        )
+        self.assertNotIn(
+            "runtimeState.projectedBoundsDiagnostics",
+            projected_bounds_body,
+        )
 
     def test_startup_and_scenario_chunk_metrics_delegate_without_losing_mirrors(self):
         for source, import_path in (
@@ -170,7 +271,8 @@ class RendererDiagnosticsActionsBoundaryContractTest(unittest.TestCase):
             "const nextEntry = {",
             "name: normalizedName",
             "entry: nextEntry",
-            "mirrorRenderPerfMetrics(metrics)",
+            "mirrorRenderPerfMetrics(normalizedName)",
+            'mirrorRenderPerfMetrics("contextBreakdown")',
         ):
             self.assertIn(owner_token, self.perf_metrics_owner)
         for action_name in ACTION_NAMES:

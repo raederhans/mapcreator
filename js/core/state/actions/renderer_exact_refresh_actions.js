@@ -37,48 +37,20 @@ function createDefaultExactAfterSettleControllerState() {
   };
 }
 
+function cloneExactAfterSettleValue(value) {
+  if (!value || typeof value !== "object") return value;
+  const clone = Array.isArray(value) ? [] : {};
+  Object.entries(value).forEach(([key, entry]) => {
+    clone[key] = cloneExactAfterSettleValue(entry);
+  });
+  return clone;
+}
+
 function cloneExactAfterSettlePendingPlan(plan) {
   if (!plan || typeof plan !== "object" || Array.isArray(plan)) {
     throw new TypeError("[renderer_exact_refresh_actions] plan must be an object");
   }
-  const clone = { ...plan };
-  if (plan.resolvedProfile && typeof plan.resolvedProfile === "object") {
-    clone.resolvedProfile = { ...plan.resolvedProfile };
-  }
-  if (plan.reuseDecision && typeof plan.reuseDecision === "object") {
-    clone.reuseDecision = { ...plan.reuseDecision };
-    if (
-      plan.reuseDecision.referenceTransform
-      && typeof plan.reuseDecision.referenceTransform === "object"
-    ) {
-      clone.reuseDecision.referenceTransform = {
-        ...plan.reuseDecision.referenceTransform,
-      };
-    }
-    if (
-      plan.reuseDecision.currentTransform
-      && typeof plan.reuseDecision.currentTransform === "object"
-    ) {
-      clone.reuseDecision.currentTransform = {
-        ...plan.reuseDecision.currentTransform,
-      };
-    }
-  }
-  if (Array.isArray(plan.exactTargetPasses)) {
-    clone.exactTargetPasses = [...plan.exactTargetPasses];
-  }
-  if (Array.isArray(plan.deferredExactTargetPasses)) {
-    clone.deferredExactTargetPasses = [...plan.deferredExactTargetPasses];
-  }
-  if (
-    plan.deferredExactContextIdentity
-    && typeof plan.deferredExactContextIdentity === "object"
-  ) {
-    clone.deferredExactContextIdentity = {
-      ...plan.deferredExactContextIdentity,
-    };
-  }
-  return clone;
+  return cloneExactAfterSettleValue(plan);
 }
 
 export function ensureExactAfterSettleControllerState(target) {
@@ -109,6 +81,34 @@ export function ensureExactAfterSettleControllerState(target) {
   if (!("pendingPlan" in target.exactAfterSettleController)) target.exactAfterSettleController.pendingPlan = null;
   if (!("reason" in target.exactAfterSettleController)) target.exactAfterSettleController.reason = "init";
   return true;
+}
+
+export function captureExactAfterSettleControllerState(target) {
+  assertStateTarget(target);
+  const controller = target.exactAfterSettleController;
+  const pendingPlan = controller?.pendingPlan;
+  return {
+    generation: Number(controller?.generation || 0),
+    phase: String(controller?.phase || "idle"),
+    startedAt: Number(controller?.startedAt || 0),
+    scheduledAt: Number(controller?.scheduledAt || 0),
+    applyStartedAt: Number(controller?.applyStartedAt || 0),
+    applyFinishedAt: Number(controller?.applyFinishedAt || 0),
+    scenarioId: String(controller?.scenarioId || ""),
+    selectionVersion: Number(controller?.selectionVersion || 0),
+    topologyRevision: Number(controller?.topologyRevision || 0),
+    dpr: Number(controller?.dpr || 1),
+    pixelWidth: Number(controller?.pixelWidth || 0),
+    pixelHeight: Number(controller?.pixelHeight || 0),
+    colorRevision: Number(controller?.colorRevision || 0),
+    contextFlagSignature: String(controller?.contextFlagSignature || ""),
+    zoomToken: Number(controller?.zoomToken || 0),
+    transformBucket: String(controller?.transformBucket || ""),
+    pendingPlan: pendingPlan && typeof pendingPlan === "object"
+      ? cloneExactAfterSettlePendingPlan(pendingPlan)
+      : null,
+    reason: String(controller?.reason || "init"),
+  };
 }
 
 export function resetExactAfterSettleControllerState(

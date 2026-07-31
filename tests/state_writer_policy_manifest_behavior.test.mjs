@@ -186,8 +186,8 @@ function createEmptyLegacySemanticAuthority() {
 async function buildFixtureLegacyWritersForSource(
   source,
   derivedAliasTaintMode,
+  relativePath = "js/fixture.js",
 ) {
-  const relativePath = "js/fixture.js";
   const { bindingInventories } =
     await discoverStateWriterBindingsForSource(
       relativePath,
@@ -2017,7 +2017,11 @@ test("policy generation validates registered action source shape and generated a
   );
   assert.match(
     source,
-    /export async function buildFrozenDerivedAliasTaintBaseline[\s\S]*const diagnosticFindings = findings\.filter[\s\S]*allowUnknownUnsupportedAuthority:\s*true[\s\S]*export function subtractLegacyStateWriterSemanticAuthority/,
+    /function isTransitionSemanticBinding[\s\S]*STATE_WRITER_PARAMETER_NAME_SET\.has[\s\S]*export async function buildFrozenDerivedAliasTaintBaseline/,
+  );
+  assert.match(
+    source,
+    /export async function buildFrozenDerivedAliasTaintBaseline[\s\S]*const diagnosticFindings = findings\.filter[\s\S]*isTransitionSemanticBinding\(binding, previousWriter\)[\s\S]*allowUnknownUnsupportedAuthority:\s*\n\s*ALLOW_UNKNOWN_UNSUPPORTED_AUTHORITY[\s\S]*export function subtractLegacyStateWriterSemanticAuthority/,
   );
 });
 
@@ -3075,21 +3079,28 @@ test("policy schema validates exact derived transition provenance", () => {
 
 test("new strict paths freeze at the previous accepted policy checkpoint", async () => {
   const frozenSource = `
-    export function update(model) {
-      model.bootPhase = "ready";
+    export function update(target, key, enabled, fallback) {
+      target.bootPhase = "ready";
     }
   `;
   const acceptedSource = `
-    export function update(model) {
-      model.bootPhase = "ready";
-      consumeUnknown(model.renderPerfMetrics);
+    export function update(target, key, enabled, fallback) {
+      target.bootPhase = "ready";
+      consumeUnknown(target.renderPerfMetrics);
+      let alias = target;
+      alias.bootPhase = "accepted";
+      target.bootPhase[key] = true;
+      alias = enabled ? fallback : target;
+      alias.bootPhase = "maybe";
+      consumeUnknown(target.postReadyTaskDiagnostics);
     }
   `;
   const currentSource = `
-    export function update(model) {
-      model.bootPhase = "ready";
-      consumeUnknown(model.renderPerfMetrics);
-      consumeUnknown(model.postReadyTaskDiagnostics);
+    export function update(target, key, enabled, fallback) {
+      target.bootPhase = "ready";
+      consumeUnknown(target.renderPerfMetrics);
+      consumeUnknown(target.postReadyTaskDiagnostics);
+      consumeUnknown(target.canvasLayers);
     }
   `;
   const frozenSha = "1".repeat(40);
@@ -3156,6 +3167,34 @@ test("new strict paths freeze at the previous accepted policy checkpoint", async
     paths: ["js/fixture.js"],
   }]);
   assert.deepEqual(
+    Object.keys(derivedAliasTaint.transitionSemanticDelta),
+    [
+      "bindings",
+      "memberships",
+      "aliasSites",
+      "dynamicSites",
+      "ambiguousSites",
+      "unsupportedSites",
+    ],
+  );
+  assert.deepEqual(
+    derivedAliasTaint.transitionSemanticDelta.bindings,
+    [],
+  );
+  assert.deepEqual(
+    derivedAliasTaint.transitionSemanticDelta.memberships,
+    [],
+  );
+  assert.ok([
+    "aliasSites",
+    "dynamicSites",
+    "ambiguousSites",
+    "unsupportedSites",
+  ].every(
+    (section) =>
+      derivedAliasTaint.transitionSemanticDelta[section].length > 0,
+  ));
+  assert.deepEqual(
     validateLegacyStateWriterSemanticAuthority({
       baseline: effectiveBaseline,
       writers: acceptedWriters,
@@ -3183,6 +3222,131 @@ test("new strict paths freeze at the previous accepted policy checkpoint", async
   });
   assert.deepEqual(replayReads, [[acceptedSourceSha, "js/fixture.js"]]);
   assert.deepEqual(replayed, derivedAliasTaint);
+});
+
+test("accepted checkpoint transition semantics are append-only multisets", () => {
+  const sourceBaseSha = "1".repeat(40);
+  const semanticSections = [
+    "bindings",
+    "memberships",
+    "aliasSites",
+    "dynamicSites",
+    "ambiguousSites",
+    "unsupportedSites",
+  ];
+  const previousBaseline = {
+    algorithmVersion: 1,
+    sourceBaseSha,
+    paths: ["js/first.js"],
+    diagnosticDelta: {
+      ambiguousSites: [],
+      unsupportedSites: [],
+    },
+    transitionSemanticDelta: Object.fromEntries(
+      semanticSections.map((section) => [
+        section,
+        [`accepted-${section}`],
+      ]),
+    ),
+  };
+  const currentBaseline = structuredClone(previousBaseline);
+  currentBaseline.paths.push("js/second.js");
+  for (const section of semanticSections) {
+    currentBaseline.transitionSemanticDelta[section].push(
+      `accepted-${section}-2`,
+    );
+  }
+  currentBaseline.transitionCheckpoints = [{
+    sourceSha: "2".repeat(40),
+    policyBlobSha256: "3".repeat(64),
+    paths: ["js/second.js"],
+  }];
+
+  assert.deepEqual(validateDerivedAliasTaintBaselineTransition({
+    previousSchemaVersion: 2,
+    currentSchemaVersion: 2,
+    previousPhase: "P4.2c",
+    currentPhase: "P4.3",
+    previousBaseline,
+    currentBaseline,
+    expectedBaseline: currentBaseline,
+  }), []);
+
+  for (const section of semanticSections) {
+    const regressed = structuredClone(currentBaseline);
+    regressed.transitionSemanticDelta[section] = [];
+    assert.deepEqual(
+      validateDerivedAliasTaintBaselineTransition({
+        previousSchemaVersion: 2,
+        currentSchemaVersion: 2,
+        previousPhase: "P4.2c",
+        currentPhase: "P4.3",
+        previousBaseline,
+        currentBaseline: regressed,
+        expectedBaseline: regressed,
+      }).map(({
+        code,
+        section: violationSection,
+        signature,
+        previousCount,
+        currentCount,
+      }) => ({
+        code,
+        section: violationSection,
+        signature,
+        previousCount,
+        currentCount,
+      })),
+      [{
+        code: "derived-alias-taint-transition-semantic-regressed",
+        section,
+        signature: `accepted-${section}`,
+        previousCount: 1,
+        currentCount: 0,
+      }],
+      section,
+    );
+  }
+
+  const duplicatePreviousBaseline = structuredClone(previousBaseline);
+  duplicatePreviousBaseline.transitionSemanticDelta.memberships = [
+    "duplicate-membership",
+    "duplicate-membership",
+  ];
+  const duplicateCurrentBaseline = structuredClone(currentBaseline);
+  duplicateCurrentBaseline.transitionSemanticDelta.memberships = [
+    "duplicate-membership",
+  ];
+  assert.deepEqual(
+    validateDerivedAliasTaintBaselineTransition({
+      previousSchemaVersion: 2,
+      currentSchemaVersion: 2,
+      previousPhase: "P4.2c",
+      currentPhase: "P4.3",
+      previousBaseline: duplicatePreviousBaseline,
+      currentBaseline: duplicateCurrentBaseline,
+      expectedBaseline: duplicateCurrentBaseline,
+    }).map(({
+      code,
+      section,
+      signature,
+      previousCount,
+      currentCount,
+    }) => ({
+      code,
+      section,
+      signature,
+      previousCount,
+      currentCount,
+    })),
+    [{
+      code: "derived-alias-taint-transition-semantic-regressed",
+      section: "memberships",
+      signature: "duplicate-membership",
+      previousCount: 2,
+      currentCount: 1,
+    }],
+  );
 });
 
 test("derived alias diagnostic baseline classifies unknown historical plan fields with path fallback authority", async () => {
@@ -3220,6 +3384,59 @@ test("derived alias diagnostic baseline classifies unknown historical plan field
   assert.match(
     derivedAliasTaint.diagnosticDelta.unsupportedSites[0],
     /forceExactContextBaseRefresh/,
+  );
+});
+
+test("accepted transition semantics exclude non-state plan parameters", async () => {
+  const frozenSha = "1".repeat(40);
+  const acceptedSourceSha = "2".repeat(40);
+  const policyBlobSha256 = "3".repeat(64);
+  const legacySource = `
+    export function createScheduler({ runtimeState }) {
+      runtimeState.bootPhase = "ready";
+    }
+  `;
+  const acceptedSource = `
+    export function createScheduler({ runtimeState }) {
+      runtimeState.bootPhase = "ready";
+    }
+    export function inspectPlan(plan) {
+      plan.deferredExactTargetPasses = [];
+    }
+  `;
+  const relativePath =
+    "js/core/map_renderer/exact_after_settle_scheduler.js";
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    legacySource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+    relativePath,
+  );
+  const legacyBaseline =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+
+  const derivedAliasTaint = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha: frozenSha,
+    relativePaths: [relativePath],
+    legacySemanticBaseline: legacyBaseline,
+    existingBaseline: {
+      algorithmVersion: 1,
+      sourceBaseSha: frozenSha,
+      paths: [],
+      diagnosticDelta: {
+        ambiguousSites: [],
+        unsupportedSites: [],
+      },
+    },
+    acceptedPolicyCheckpoint: {
+      sourceSha: acceptedSourceSha,
+      policyBlobSha256,
+    },
+    readSourceAtRevision: async () => acceptedSource,
+  });
+
+  assert.deepEqual(
+    derivedAliasTaint.transitionSemanticDelta.memberships,
+    [],
   );
 });
 

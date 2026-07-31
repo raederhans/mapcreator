@@ -40,7 +40,6 @@ import {
   ensureRenderPassCacheState,
   ensureSceneSnapshotState,
   ensureSidebarPerfState,
-  ensureSphericalFeatureDiagnosticsCache as ensureSphericalFeatureDiagnosticsCacheState,
   bumpSceneGenerationState,
   resetProjectedBoundsCacheState as resetProjectedBoundsRuntimeCacheState,
   commitRendererDprStageState,
@@ -70,6 +69,15 @@ import {
   setPendingExactPoliticalFastFrameState,
 } from "./state/actions/renderer_exact_refresh_actions.js";
 import {
+  clearSphericalFeatureDiagnosticsCacheState,
+  getSphericalFeatureDiagnosticsCacheEntryState,
+  setSphericalFeatureDiagnosticsCacheEntryState,
+} from "./state/actions/renderer_cache_actions.js";
+import {
+  captureProjectedBoundsDiagnosticsState,
+  captureRenderPerfContextBreakdownState,
+  captureRenderPerfMetricEntryState,
+  captureRenderPerfMetricsState,
   commitRenderPerfMetricState,
   ensureRenderPerfMetricsState,
   setDebugCountryCoverageState,
@@ -1029,6 +1037,7 @@ let cachedPassCompositorOwner = null;
 let transformedFrameCompositorOwner = null;
 let rendererRuntimeContext = null;
 let renderPerfMetricsRuntimeOwner = null;
+const renderPerfMetricsMirrorRuntime = { snapshot: null };
 let renderPassCacheHostOwner = null;
 let renderPassCommitAccountingOwner = null;
 let drawCanvasOrchestrationOwner = null;
@@ -1571,7 +1580,8 @@ function getSetMapDataTransactionOwner() {
         };
       },
       clearSphericalFeatureDiagnosticsCache: () => {
-        ensureSphericalFeatureDiagnosticsCache().clear();
+        ensureProjectedBoundsCacheState(runtimeState);
+        clearSphericalFeatureDiagnosticsCacheState(runtimeState);
       },
       buildIndex,
       ensureSovereigntyState,
@@ -3566,16 +3576,14 @@ function resetProjectedBoundsCacheState() {
   resetProjectedBoundsRuntimeCacheState(state);
 }
 
-function ensureSphericalFeatureDiagnosticsCache() {
-  return ensureSphericalFeatureDiagnosticsCacheState(state);
-}
-
 function getRenderPerfMetricsRuntimeOwner() {
   if (renderPerfMetricsRuntimeOwner) return renderPerfMetricsRuntimeOwner;
   renderPerfMetricsRuntimeOwner = createRenderPerfMetricsRuntimeOwner({
     constants: { contextBreakdownMetricNames: CONTEXT_BREAKDOWN_METRIC_NAMES },
     getters: {
-      getRenderPerfMetrics: () => runtimeState.renderPerfMetrics,
+      getRenderPerfContextBreakdownSnapshot: () => (
+        captureRenderPerfContextBreakdownState(runtimeState)
+      ),
       getRenderPerfMetricSequence: () => runtimeState.renderPerfMetricSequence,
       nowMs: () => Date.now(),
     },
@@ -3583,15 +3591,11 @@ function getRenderPerfMetricsRuntimeOwner() {
       ensureRenderPerfMetricsState: () => ensureRenderPerfMetricsState(runtimeState),
       commitRenderPerfMetricState: (payload) => commitRenderPerfMetricState(runtimeState, payload),
       setRenderPerfContextBreakdownState: (breakdown) => setRenderPerfContextBreakdownState(runtimeState, breakdown),
-      mirrorRenderPerfMetrics: (metrics) => {
-        globalThis.__renderPerfMetrics = metrics;
-      },
+      mirrorRenderPerfMetrics: mirrorRenderPerfMetricSnapshot,
     },
   });
   return renderPerfMetricsRuntimeOwner;
 }
-
-function ensureRenderPerfMetrics() { return getRenderPerfMetricsRuntimeOwner().ensureRenderPerfMetrics(); }
 
 function recordRenderPerfMetric(name, durationMs, details = {}) { return getRenderPerfMetricsRuntimeOwner().recordRenderPerfMetric(name, durationMs, details); }
 
@@ -3602,6 +3606,23 @@ function collectContextMetric(name, durationMs, details = {}) { return getRender
 function endContextMetricSession() { return getRenderPerfMetricsRuntimeOwner().endContextMetricSession(); }
 
 function resetContextBreakdownForExactFrame() { return getRenderPerfMetricsRuntimeOwner().resetContextBreakdownForExactFrame(); }
+
+function mirrorRenderPerfMetricSnapshot(name) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return false;
+  if (
+    !renderPerfMetricsMirrorRuntime.snapshot
+    || globalThis.__renderPerfMetrics !== renderPerfMetricsMirrorRuntime.snapshot
+  ) {
+    renderPerfMetricsMirrorRuntime.snapshot = captureRenderPerfMetricsState(runtimeState) || {};
+  } else {
+    const entry = captureRenderPerfMetricEntryState(runtimeState, normalizedName);
+    if (entry === undefined) delete renderPerfMetricsMirrorRuntime.snapshot[normalizedName];
+    else renderPerfMetricsMirrorRuntime.snapshot[normalizedName] = entry;
+  }
+  globalThis.__renderPerfMetrics = renderPerfMetricsMirrorRuntime.snapshot;
+  return true;
+}
 
 function incrementPerfCounter(counterName, amount = 1) {
   const cache = getRenderPassCacheState();
@@ -3689,8 +3710,10 @@ function detectContextScenarioReasonMismatch({
 function resetScenarioWaterCacheAdaptiveState(reason = "water-adaptive-state-reset") {
   lastScenarioWaterRenderedCount = 0;
   incrementPerfCounter("waterAdaptiveStateResetCount");
-  const metrics = ensureRenderPerfMetrics();
-  const previousCount = Math.max(0, Number(metrics.waterAdaptiveStateResetCount?.count || 0));
+  const previousCount = Math.max(
+    0,
+    Number(runtimeState.renderPerfMetrics?.waterAdaptiveStateResetCount?.count || 0),
+  );
   setRenderPerfMetricEntryState(runtimeState, {
     name: "waterAdaptiveStateResetCount",
     entry: {
@@ -3699,7 +3722,7 @@ function resetScenarioWaterCacheAdaptiveState(reason = "water-adaptive-state-res
       recordedAt: Date.now(),
     },
   });
-  globalThis.__renderPerfMetrics = metrics;
+  mirrorRenderPerfMetricSnapshot("waterAdaptiveStateResetCount");
 }
 
 function stableJson(value) {
@@ -4205,11 +4228,15 @@ function noteBlackFrame(reason = "unknown") {
   incrementPerfCounter("blackFrameCount");
   const cache = getRenderPassCacheState();
   const count = Number(cache.counters.blackFrameCount || 0);
-  ensureRenderPerfMetrics().blackFrameCount = {
-    count,
-    reason: String(reason || "unknown"),
-    recordedAt: Date.now(),
-  };
+  setRenderPerfMetricEntryState(runtimeState, {
+    name: "blackFrameCount",
+    entry: {
+      count,
+      reason: String(reason || "unknown"),
+      recordedAt: Date.now(),
+    },
+  });
+  mirrorRenderPerfMetricSnapshot("blackFrameCount");
   recordVisibleFrameTransactionMetric("missing", {
     reason: String(reason || "unknown"),
     paintSource: "black-frame",
@@ -6525,9 +6552,7 @@ function isLineGeometryType(geometryType) {
 
 function recordProjectedBoundsDiagnosticsState(feature, reason = "unknown") {
   const geometryType = String(feature?.geometry?.type || "").trim() || "Unknown";
-  const currentDiagnostics = runtimeState.projectedBoundsDiagnostics && typeof runtimeState.projectedBoundsDiagnostics === "object"
-    ? runtimeState.projectedBoundsDiagnostics
-    : { total: 0, byGeometryType: {}, byReason: {} };
+  const currentDiagnostics = captureProjectedBoundsDiagnosticsState(runtimeState);
   const currentByGeometryType = currentDiagnostics.byGeometryType
     && typeof currentDiagnostics.byGeometryType === "object"
     ? currentDiagnostics.byGeometryType
@@ -6970,9 +6995,12 @@ function isWorldBounds(bounds) {
 
 function getSphericalFeatureDiagnostics(feature, { featureId = null, allowCompute = true } = {}) {
   const resolvedFeatureId = featureId || getFeatureId(feature);
-  const diagnosticsCache = ensureSphericalFeatureDiagnosticsCache();
-  if (resolvedFeatureId && diagnosticsCache.has(resolvedFeatureId)) {
-    return diagnosticsCache.get(resolvedFeatureId) || null;
+  ensureProjectedBoundsCacheState(runtimeState);
+  const cachedDiagnostics = resolvedFeatureId
+    ? getSphericalFeatureDiagnosticsCacheEntryState(runtimeState, resolvedFeatureId)
+    : null;
+  if (cachedDiagnostics) {
+    return cachedDiagnostics;
   }
   if (!allowCompute || !globalThis.d3?.geoArea || !globalThis.d3?.geoBounds || !feature?.geometry) {
     return null;
@@ -6980,7 +7008,7 @@ function getSphericalFeatureDiagnostics(feature, { featureId = null, allowComput
 
   const diagnostics = getSphericalGeometryDiagnostics(feature);
   if (resolvedFeatureId && diagnostics) {
-    ensureSphericalFeatureDiagnosticsCache().set(resolvedFeatureId, diagnostics);
+    setSphericalFeatureDiagnosticsCacheEntryState(runtimeState, resolvedFeatureId, diagnostics);
   }
   return diagnostics;
 }

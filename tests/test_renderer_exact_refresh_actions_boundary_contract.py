@@ -23,6 +23,7 @@ class RendererExactRefreshActionsBoundaryContractTest(unittest.TestCase):
             "beginExactAfterSettleControllerApplyState",
             "beginExactAfterSettleControllerFinalizeState",
             "beginExactAfterSettleControllerScheduleState",
+            "captureExactAfterSettleControllerState",
             "replaceExactAfterSettlePendingPlanState",
             "completeExactAfterSettleControllerApplyState",
             "ensureExactAfterSettleControllerState",
@@ -72,9 +73,9 @@ class RendererExactRefreshActionsBoundaryContractTest(unittest.TestCase):
         controller_reader = self.scheduler_source.split(
             "function getExactAfterSettleControllerState()", 1
         )[1].split("function getTransformBucketSignature", 1)[0]
-        self.assertIn("const controller = runtimeState.exactAfterSettleController;", controller_reader)
-        self.assertIn("pendingPlan: pendingPlan && typeof pendingPlan === \"object\"", controller_reader)
-        self.assertIn("? [...pendingPlan.exactTargetPasses]", controller_reader)
+        self.assertIn("ensureExactAfterSettleControllerState(runtimeState);", controller_reader)
+        self.assertIn("return captureExactAfterSettleControllerState(runtimeState);", controller_reader)
+        self.assertNotIn("const controller = runtimeState.exactAfterSettleController;", controller_reader)
         self.assertNotIn("return runtimeState.exactAfterSettleController", controller_reader)
 
         schedule_bridge = self.scheduler_source.split(
