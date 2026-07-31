@@ -1,10 +1,18 @@
 import {
-  createDefaultExactAfterSettleControllerState,
+  beginExactAfterSettleControllerApplyState,
+  beginExactAfterSettleControllerFinalizeState,
+  beginExactAfterSettleControllerScheduleState,
+  completeExactAfterSettleControllerApplyState,
   ensureExactAfterSettleControllerState,
   isExactAfterSettleControllerActiveState,
   isExactAfterSettleGenerationCurrentState,
+  refreshExactAfterSettleControllerIdentityState,
+  replaceExactAfterSettlePendingPlanState,
   resetExactAfterSettleControllerState,
-} from "../state/renderer_runtime_state.js";
+  setDeferExactAfterSettleState,
+  setExactAfterSettleHandleState,
+  setPendingExactPoliticalFastFrameState,
+} from "../state/actions/renderer_exact_refresh_actions.js";
 import {
   createExactAfterSettleRefreshPlan,
   filterExactAfterSettleIdleRenderPassDefinitions,
@@ -50,7 +58,8 @@ function createExactAfterSettleScheduler({
   const deferredExactContextRefreshTaskHandles = new Set();
 
   function getExactAfterSettleControllerState() {
-    return ensureExactAfterSettleControllerState(runtimeState);
+    ensureExactAfterSettleControllerState(runtimeState);
+    return runtimeState.exactAfterSettleController;
   }
 
   function getTransformBucketSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
@@ -80,16 +89,8 @@ function createExactAfterSettleScheduler({
   }
 
   function assignExactAfterSettleIdentity(controller, identity = getExactAfterSettleIdentity()) {
-    controller.scenarioId = identity.scenarioId;
-    controller.selectionVersion = identity.selectionVersion;
-    controller.topologyRevision = identity.topologyRevision;
-    controller.dpr = identity.dpr;
-    controller.pixelWidth = identity.pixelWidth;
-    controller.pixelHeight = identity.pixelHeight;
-    controller.colorRevision = identity.colorRevision;
-    controller.contextFlagSignature = identity.contextFlagSignature;
-    controller.zoomToken = identity.zoomToken;
-    controller.transformBucket = identity.transformBucket;
+    refreshExactAfterSettleControllerIdentityState(runtimeState, identity);
+    return controller;
   }
 
   function isExactAfterSettleIdentityCurrent(controller) {
@@ -123,8 +124,8 @@ function createExactAfterSettleScheduler({
       deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
     });
     resetExactAfterSettleController(`abort-${normalizedReason}`, generation);
-    runtimeState.deferExactAfterSettle = shouldRearmExactRefresh;
-    runtimeState.pendingExactPoliticalFastFrame = shouldRearmExactRefresh;
+    setDeferExactAfterSettleState(runtimeState, shouldRearmExactRefresh);
+    setPendingExactPoliticalFastFrameState(runtimeState, shouldRearmExactRefresh);
     invalidateRenderPasses("political", "exact-after-settle-abort");
     if (shouldRearmExactRefresh) {
       scheduleExactAfterSettleRefresh(runtimeState.adaptiveSettleProfile || getAdaptiveSettleProfile());
@@ -139,17 +140,11 @@ function createExactAfterSettleScheduler({
   }
 
   function beginExactAfterSettleControllerSchedule(scheduleStartedAt) {
-    const controller = getExactAfterSettleControllerState();
-    const nextGeneration = Number(controller.generation || 0) + 1;
-    Object.assign(controller, createDefaultExactAfterSettleControllerState(), {
-      generation: nextGeneration,
-      phase: "scheduled",
-      startedAt: scheduleStartedAt,
-      scheduledAt: scheduleStartedAt,
-      reason: "scheduled",
+    beginExactAfterSettleControllerScheduleState(runtimeState, {
+      scheduleStartedAt,
+      identity: getExactAfterSettleIdentity(),
     });
-    assignExactAfterSettleIdentity(controller);
-    return controller;
+    return getExactAfterSettleControllerState();
   }
 
   function isExactAfterSettleGenerationCurrent(generation, phase = "") {
@@ -160,14 +155,21 @@ function createExactAfterSettleScheduler({
     return isExactAfterSettleControllerActiveState(runtimeState);
   }
 
-  function invalidateExactAfterSettlePoliticalPass(plan) {
-    if (!plan || typeof plan !== "object") return false;
-    if (String(plan.politicalInvalidationReason || "") === "exact-after-settle-political") return false;
+  function invalidateExactAfterSettlePoliticalPass(generation, plan) {
+    if (!plan || typeof plan !== "object") return plan;
+    if (String(plan.politicalInvalidationReason || "") === "exact-after-settle-political") return plan;
     const politicalInvalidatedAt = Date.now();
     invalidateRenderPasses("political", "exact-after-settle-political");
-    plan.politicalInvalidationReason = "exact-after-settle-political";
-    plan.politicalInvalidatedAt = politicalInvalidatedAt;
-    return true;
+    const nextPlan = {
+      ...plan,
+      politicalInvalidationReason: "exact-after-settle-political",
+      politicalInvalidatedAt,
+    };
+    replaceExactAfterSettlePendingPlanState(runtimeState, {
+      generation,
+      plan: nextPlan,
+    });
+    return nextPlan;
   }
 
   function completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStartedAt) {
@@ -179,10 +181,9 @@ function createExactAfterSettleScheduler({
       return abortInterruptedExactAfterSettleRefresh("pass-complete-identity-mismatch", generation);
     }
     const applyFinishedAt = nowMs();
-    Object.assign(controller, {
-      phase: "awaiting-paint",
+    completeExactAfterSettleControllerApplyState(runtimeState, {
+      generation,
       applyFinishedAt,
-      reason: "awaiting-paint",
     });
     recordRenderPerfMetric("settleExactRefreshPasses", Math.max(0, applyFinishedAt - passStartedAt), {
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
@@ -208,9 +209,10 @@ function createExactAfterSettleScheduler({
       return abortInterruptedExactAfterSettleRefresh("pass-start-identity-mismatch", generation);
     }
     const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
+    let activePlan = plan;
     const definitions = filterExactAfterSettleIdleRenderPassDefinitions(
       getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(),
-      plan.exactTargetPasses,
+      activePlan.exactTargetPasses,
     );
     const timings = {};
     const cache = getRenderPassCacheState();
@@ -221,7 +223,7 @@ function createExactAfterSettleScheduler({
 
     const enqueueNextPass = (index) => {
       if (index >= definitions.length) {
-        completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStartedAt);
+        completeScheduledExactAfterSettleRefreshPlan(generation, activePlan, passStartedAt);
         return;
       }
       const [passName, drawFn] = definitions[index];
@@ -238,7 +240,7 @@ function createExactAfterSettleScheduler({
           return;
         }
         if (passName === "political") {
-          invalidateExactAfterSettlePoliticalPass(plan);
+          activePlan = invalidateExactAfterSettlePoliticalPass(generation, activePlan);
         }
         getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
         recordRenderPerfMetric("settleExactRefreshPass", Math.max(0, nowMs() - passStart), {
@@ -246,7 +248,7 @@ function createExactAfterSettleScheduler({
           generation,
           passName,
           index,
-          targetPasses: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : [],
+          targetPasses: Array.isArray(activePlan.exactTargetPasses) ? activePlan.exactTargetPasses : [],
           passCount: definitions.length,
         });
         enqueueNextPass(index + 1);
@@ -287,7 +289,7 @@ function createExactAfterSettleScheduler({
       targetPassesOnResize: exactAfterSettleDprPasses,
       targetPassesOnCanvasResize: exactAfterSettleDprPasses,
     });
-    runtimeState.deferExactAfterSettle = false;
+    setDeferExactAfterSettleState(runtimeState, false);
     cancelDeferredContextBaseEnhancement();
     if (plan.forceExactContextBaseRefresh) {
       invalidateRenderPasses(["physicalBase", "contextBase"], "physical-visible-exact");
@@ -324,7 +326,6 @@ function createExactAfterSettleScheduler({
       plan.forceExactContextBaseRefresh,
     );
     setDeferContextBaseEnhancements(deferContextBaseEnhancements);
-    plan.deferContextBaseEnhancements = deferContextBaseEnhancements;
     const cache = getRenderPassCacheState();
     const idleRenderPassNames = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
       .map(([passName]) => passName);
@@ -336,31 +337,40 @@ function createExactAfterSettleScheduler({
       forceExactContextBaseRefresh: plan.forceExactContextBaseRefresh,
       exactRefreshApplied: plan.exactRefreshApplied,
     });
-    plan.deferredExactTargetPasses = targetPassPlan.deferredExactTargetPasses;
-    plan.exactTargetPasses = targetPassPlan.exactTargetPasses;
+    return {
+      ...plan,
+      deferContextBaseEnhancements,
+      deferredExactTargetPasses: targetPassPlan.deferredExactTargetPasses,
+      exactTargetPasses: targetPassPlan.exactTargetPasses,
+    };
   }
 
   function applyScheduledExactAfterSettleRefreshPlan(generation, plan) {
     if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) {
       return false;
     }
-    const controller = getExactAfterSettleControllerState();
     const applyStartedAt = nowMs();
-    Object.assign(controller, {
-      phase: "applying",
-      pendingPlan: plan,
+    const scheduledPlan = {
+      ...plan,
+      controllerGeneration: generation,
+    };
+    beginExactAfterSettleControllerApplyState(runtimeState, {
+      generation,
+      plan: scheduledPlan,
       applyStartedAt,
-      reason: "applying",
+      identity: getExactAfterSettleIdentity(),
     });
-    assignExactAfterSettleIdentity(controller);
-    plan.controllerGeneration = generation;
-    applyExactAfterSettleRefreshPlan(plan);
+    const appliedPlan = applyExactAfterSettleRefreshPlan(scheduledPlan);
+    replaceExactAfterSettlePendingPlanState(runtimeState, {
+      generation,
+      plan: appliedPlan,
+    });
     recordRenderPerfMetric("settleExactRefreshApply", Math.max(0, nowMs() - applyStartedAt), {
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
       generation,
-      contextBaseRefreshed: !!plan.exactRefreshApplied,
+      contextBaseRefreshed: !!appliedPlan.exactRefreshApplied,
     });
-    return prepareExactAfterSettlePassesInSlices(generation, plan);
+    return prepareExactAfterSettlePassesInSlices(generation, appliedPlan);
   }
 
   function recordSettleExactRefreshPhaseBreakdown(plan, durationMs) {
@@ -440,8 +450,7 @@ function createExactAfterSettleScheduler({
       return abortInterruptedExactAfterSettleRefresh("missing-plan", generation);
     }
     const finalizeStartedAt = nowMs();
-    controller.phase = "finalizing";
-    controller.reason = "finalizing";
+    beginExactAfterSettleControllerFinalizeState(runtimeState, generation);
     recordRenderPerfMetric("settleExactRefreshWaitForPaint", Math.max(0, finalizeStartedAt - Number(controller.applyFinishedAt || controller.applyStartedAt || controller.startedAt || finalizeStartedAt)), {
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
       generation,
@@ -470,8 +479,8 @@ function createExactAfterSettleScheduler({
       deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
     });
     resetExactAfterSettleController(`abort-${reason}`, generation);
-    runtimeState.deferExactAfterSettle = false;
-    runtimeState.pendingExactPoliticalFastFrame = false;
+    setDeferExactAfterSettleState(runtimeState, false);
+    setPendingExactPoliticalFastFrameState(runtimeState, false);
     invalidateRenderPasses("political", "exact-after-settle-abort");
     requestRendererRender("exact-after-settle-abort-recover", {
       flush: false,
@@ -581,19 +590,22 @@ function createExactAfterSettleScheduler({
     if (!targetPasses.length) return false;
     cancelDeferredExactContextRefresh();
     const refreshVersion = Number(deferredExactContextRefreshVersion || 0);
-    if (!plan.deferredExactContextIdentity) {
-      plan.deferredExactContextIdentity = getExactAfterSettleIdentity();
-    }
+    const scheduledPlan = plan.deferredExactContextIdentity
+      ? plan
+      : {
+          ...plan,
+          deferredExactContextIdentity: getExactAfterSettleIdentity(),
+        };
     deferredExactContextRefreshHandle = scheduleDeferredWork(() => {
       deferredExactContextRefreshHandle = null;
-      if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
+      if (!isDeferredExactContextRefreshCurrent(refreshVersion, scheduledPlan)) return;
       if (runtimeState.renderPhase !== renderPhaseIdle || runtimeState.deferExactAfterSettle) {
-        if (isDeferredExactContextRefreshCurrent(refreshVersion, plan)) {
-          scheduleDeferredExactContextRefresh(plan);
+        if (isDeferredExactContextRefreshCurrent(refreshVersion, scheduledPlan)) {
+          scheduleDeferredExactContextRefresh(scheduledPlan);
         }
         return;
       }
-      prepareDeferredExactContextPassesInSlices(targetPasses, plan, refreshVersion);
+      prepareDeferredExactContextPassesInSlices(targetPasses, scheduledPlan, refreshVersion);
     }, {
       timeout: exactContextRefreshDelayMs,
     });
@@ -601,7 +613,7 @@ function createExactAfterSettleScheduler({
       activeScenarioId: String(runtimeState.activeScenarioId || ""),
       targetPasses,
       passCount: targetPasses.length,
-      sourceGeneration: Number(plan.controllerGeneration || 0),
+      sourceGeneration: Number(scheduledPlan.controllerGeneration || 0),
     });
     return true;
   }
@@ -609,11 +621,11 @@ function createExactAfterSettleScheduler({
   function cancelExactAfterSettleRefresh({ clearDefer = true } = {}) {
     cancelDeferredExactContextRefresh();
     cancelDeferredWork(runtimeState.exactAfterSettleHandle);
-    runtimeState.exactAfterSettleHandle = null;
+    setExactAfterSettleHandleState(runtimeState, null);
     resetExactAfterSettleController(clearDefer ? "cancel" : "reschedule");
     if (clearDefer) {
-      runtimeState.deferExactAfterSettle = false;
-      runtimeState.pendingExactPoliticalFastFrame = false;
+      setDeferExactAfterSettleState(runtimeState, false);
+      setPendingExactPoliticalFastFrameState(runtimeState, false);
     }
   }
 
@@ -650,10 +662,10 @@ function createExactAfterSettleScheduler({
     const controller = beginExactAfterSettleControllerSchedule(scheduleStartedAt);
     const generation = Number(controller.generation || 0);
     const resolvedProfile = profile || getAdaptiveSettleProfile();
-    runtimeState.exactAfterSettleHandle = {
+    setExactAfterSettleHandleState(runtimeState, {
       type: "timeout",
       id: globalThis.setTimeout(() => {
-        runtimeState.exactAfterSettleHandle = null;
+        setExactAfterSettleHandleState(runtimeState, null);
         if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) return;
         if (!runtimeState.deferExactAfterSettle) {
           resetExactAfterSettleController("defer-cleared", generation);
@@ -675,7 +687,7 @@ function createExactAfterSettleScheduler({
           });
         });
       }, resolvedProfile.exactQuietWindowMs),
-    };
+    });
   }
 
   return {

@@ -2009,6 +2009,14 @@ test("policy generation validates registered action source shape and generated a
     source,
     /state-action-delegation-policy-invalid/,
   );
+  assert.equal(
+    source.match(/allowUnknownUnsupportedAuthority:\s*true/g)?.length || 0,
+    1,
+  );
+  assert.match(
+    source,
+    /export async function buildFrozenDerivedAliasTaintBaseline[\s\S]*const diagnosticFindings = findings\.filter[\s\S]*allowUnknownUnsupportedAuthority:\s*true[\s\S]*export function subtractLegacyStateWriterSemanticAuthority/,
+  );
 });
 
 test("policy verification identity includes the state action delegation contract", async () => {
@@ -2972,6 +2980,44 @@ test("derived alias diagnostic baseline admits frozen strict diagnostics only", 
   );
 });
 
+test("derived alias diagnostic baseline classifies unknown historical plan fields with path fallback authority", async () => {
+  const legacySource = `
+    export function inspectPlan(plan) {
+      plan.bootPhase = "ready";
+    }
+  `;
+  const frozenSource = `
+    export function inspectPlan(plan) {
+      plan.bootPhase = "ready";
+      plan.deferredExactTargetPasses = [];
+      consumeUnknown(plan.forceExactContextBaseRefresh);
+    }
+  `;
+  const frozenSha = "1".repeat(40);
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    legacySource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+  );
+  const legacyBaseline =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+
+  const derivedAliasTaint = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha: frozenSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline: legacyBaseline,
+    readSourceAtRevision: async () => frozenSource,
+  });
+
+  assert.equal(
+    derivedAliasTaint.diagnosticDelta.unsupportedSites.length,
+    1,
+  );
+  assert.match(
+    derivedAliasTaint.diagnosticDelta.unsupportedSites[0],
+    /forceExactContextBaseRefresh/,
+  );
+});
+
 test("checker recomputes derived alias diagnostics from frozen source", async () => {
   const sourceBaseSha = "1".repeat(40);
   const frozenSource = `
@@ -3616,6 +3662,158 @@ test("same-phase policy rebuild refreshes live caller evidence", () => {
   assert.equal(
     ledger.entries[0].recordedInPhase,
     entry.recordedInPhase,
+  );
+});
+
+test("state action policy bindings admit only explicitly registered dynamic state paths", () => {
+  const modulePath = "js/core/state/actions/renderer_diagnostics_actions.js";
+  const dynamicSite = {
+    line: 35,
+    column: 3,
+    operation: "assign",
+    key: "renderPerfMetrics",
+    pathPattern: "renderPerfMetrics.*",
+    sourceFingerprint: "a".repeat(64),
+  };
+  const createEntry = (allowedDynamicSites = []) => ({
+    modulePath,
+    exportName: "setRenderPerfMetricEntryState",
+    targetArgumentIndex: 0,
+    introducedInPhase: "P4.3",
+    allowedDynamicSites,
+  });
+  const createWriter = (site = dynamicSite) => ({
+    path: modulePath,
+    authority: "domain-action",
+    bindings: [{
+      id: "parameter:setRenderPerfMetricEntryState:0:fixture",
+      kind: "function-parameter",
+      functionName: "setRenderPerfMetricEntryState",
+      parameterName: "target",
+      parameterIndex: 0,
+      parameterPath: "$",
+      authority: "domain-action",
+      grants: [{
+        aliasSites: [],
+        dynamicSites: [site],
+        ambiguousSites: [],
+        unsupportedSites: [],
+      }],
+    }],
+  });
+  const validate = ({ entry, writer = createWriter() }) =>
+    validateStateActionPolicyBindings([writer], {
+      contractEntries: [entry],
+      modulePaths: [modulePath],
+    }).map(({ code }) => code);
+
+  assert.deepEqual(
+    validate({
+      entry: createEntry([{
+        operation: "assign",
+        key: "renderPerfMetrics",
+        pathPattern: "renderPerfMetrics.*",
+      }]),
+    }),
+    [],
+  );
+  assert.deepEqual(
+    validate({ entry: createEntry() }),
+    ["state-action-policy-binding-diagnostics-invalid"],
+  );
+  assert.deepEqual(
+    validate({
+      entry: createEntry([{
+        operation: "assign",
+        key: "renderPerfMetrics",
+        pathPattern: "renderPerfMetrics.contextBreakdown.*",
+      }]),
+    }),
+    ["state-action-policy-binding-diagnostics-invalid"],
+  );
+});
+
+test("renderer diagnostics action source admits only its two registered metric dictionary writes", async () => {
+  const modulePath = "js/core/state/actions/renderer_diagnostics_actions.js";
+  const source = fs.readFileSync(modulePath, "utf8");
+  const { bindingInventories } = await discoverStateWriterBindingsForSource(
+    modulePath,
+    source,
+    "production",
+    { includeInventories: true },
+  );
+  const stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex();
+  const writer = {
+    path: modulePath,
+    authority: "domain-action",
+    bindings: bindingInventories.map(({ binding, findings }) => ({
+      ...binding,
+      authority: "domain-action",
+      grants: buildStateWriterBindingGrants(
+        findings,
+        modulePath,
+        stateKeyAuthorityIndex,
+        "production",
+      ),
+    })),
+  };
+  const contractEntries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+    ({ modulePath: entryModulePath }) => entryModulePath === modulePath,
+  );
+  const metricBindings = writer.bindings.filter(({ functionName }) =>
+    [
+      "setRenderPerfMetricEntryState",
+      "commitRenderPerfMetricState",
+    ].includes(functionName)
+  );
+
+  assert.equal(metricBindings.length, 2);
+  assert.deepEqual(
+    metricBindings.flatMap(({ grants }) =>
+      grants.flatMap(({ dynamicSites }) => dynamicSites)
+    ).map(({ operation, key, pathPattern }) => ({
+      operation,
+      key,
+      pathPattern,
+    })),
+    [
+      {
+        operation: "assign",
+        key: "renderPerfMetrics",
+        pathPattern: "renderPerfMetrics.*",
+      },
+      {
+        operation: "assign",
+        key: "renderPerfMetrics",
+        pathPattern: "renderPerfMetrics.*",
+      },
+    ],
+  );
+  assert.deepEqual(
+    validateStateActionPolicyBindings([writer], {
+      contractEntries,
+      modulePaths: [modulePath],
+    }),
+    [],
+  );
+  assert.deepEqual(
+    validateStateActionPolicyBindings([writer], {
+      contractEntries: contractEntries.map((entry) => ({
+        ...entry,
+        allowedDynamicSites: [],
+      })),
+      modulePaths: [modulePath],
+    }).map(({ code, exportName }) => ({ code, exportName })),
+    [
+      {
+        code: "state-action-policy-binding-diagnostics-invalid",
+        exportName: "setRenderPerfMetricEntryState",
+      },
+      {
+        code: "state-action-policy-binding-diagnostics-invalid",
+        exportName: "commitRenderPerfMetricState",
+      },
+    ],
   );
 });
 
@@ -4981,6 +5179,173 @@ test("caller-to-action ledger accepts only an exact explicit cross-file migratio
   );
 });
 
+test("P4.3 renderer cross-boundary contracts exactly match the frozen retired mutation sites", () => {
+  const frozenPolicy = JSON.parse(
+    fs.readFileSync("tools/state_writer_policy.json", "utf8"),
+  );
+  const rendererContracts =
+    STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT.filter(
+      ({ domain, migrationPhase }) =>
+        domain === "renderer"
+        && migrationPhase === "P4.3",
+    );
+  assert.equal(rendererContracts.length, 12);
+  for (const contract of rendererContracts) {
+    const writer = frozenPolicy.writers.find(
+      ({ path }) => path === contract.retiredCallerPath,
+    );
+    const binding = writer?.bindings?.find(
+      (candidate) =>
+        buildStableStateBindingIdentity(candidate)
+          === contract.retiredCallerBindingIdentity,
+    );
+    const grant = binding?.grants?.find(
+      ({ domain, migrationPhase }) =>
+        domain === contract.domain
+        && migrationPhase === contract.migrationPhase,
+    );
+    const membership = grant?.memberships?.find(
+      ({ operation, key }) =>
+        operation === contract.operation
+        && key === contract.key,
+    );
+    assert.deepEqual(
+      membership?.mutationSites,
+      contract.retiredMutationSites,
+      contract.retiredMembershipIdentity,
+    );
+  }
+});
+
+test("caller-to-action ledger accepts one exact cross-file edge for multiple retired enclosing functions", () => {
+  const fixture = createCrossFileMigrationFixture();
+  const secondRetiredEnclosingFunctionIdentity = JSON.stringify({
+    kind: "function",
+    ancestry: [{
+      name: "resetLegacyBoot",
+      ordinal: 0,
+    }],
+  });
+  const secondRetiredMutationSite = {
+    enclosingFunctionIdentity:
+      secondRetiredEnclosingFunctionIdentity,
+    sourceFingerprint: "c".repeat(64),
+    occurrenceIndex: 0,
+  };
+  const originalMutationSite = structuredClone(
+    fixture.contract.retiredMutationSites[0],
+  );
+  const retiredMutationSites = [
+    originalMutationSite,
+    secondRetiredMutationSite,
+  ].sort(
+    (left, right) =>
+      left.enclosingFunctionIdentity.localeCompare(
+        right.enclosingFunctionIdentity,
+      ),
+  );
+  fixture.previousWriter.bindings[0].grants[0]
+    .memberships[0].mutationSites = structuredClone(
+      retiredMutationSites,
+    );
+  const rawContract = {
+    ...structuredClone(fixture.contract),
+    retiredMutationSites,
+  };
+  delete rawContract.contractIdentity;
+  const contract = {
+    ...rawContract,
+    contractIdentity:
+      buildStateActionCrossFileMigrationContractIdentity(
+        rawContract,
+      ),
+  };
+  const ledger = buildCallerToActionLedger({
+    phase: "P4.2b",
+    previousPolicy: fixture.previousPolicy,
+    writers: [fixture.actionWriter],
+    retiredLegacySemanticAuthority:
+      fixture.retiredLegacySemanticAuthority,
+    actionDelegations: [fixture.actionDelegation],
+    crossFileMigrationContract: [contract],
+  });
+  assert.deepEqual(
+    validateStateActionCrossFileMigrationContract([contract]),
+    [],
+  );
+  const [entry] = ledger.entries;
+  const expectedRetiredFunctionIdentities = [
+    ...new Set(
+      retiredMutationSites.map(
+        ({ enclosingFunctionIdentity }) =>
+          enclosingFunctionIdentity,
+      ),
+    ),
+  ];
+  assert.deepEqual(
+    {
+      schemaVersion: ledger.schemaVersion,
+      callerPath: entry.callerPath,
+      callerBindingIdentity:
+        entry.callerBindingIdentity,
+      enclosingFunctionIdentity:
+        entry.enclosingFunctionIdentity,
+      retiredEnclosingFunctionIdentity:
+        entry.retiredEnclosingFunctionIdentity,
+      retiredEnclosingFunctionIdentities:
+        entry.retiredEnclosingFunctionIdentities,
+      retiredMutationSiteCount:
+        entry.retiredMutationSiteCount,
+      retiredMutationFunctionCount:
+        entry.retiredMutationFunctionCount,
+      proofPrecision: entry.proofPrecision,
+      sourceFingerprint: entry.sourceFingerprint,
+      crossFileMigrationContractIdentity:
+        entry.crossFileMigrationContractIdentity,
+    },
+    {
+      schemaVersion: 2,
+      callerPath: contract.replacementCallerPath,
+      callerBindingIdentity:
+        contract.replacementCallerBindingIdentity,
+      enclosingFunctionIdentity:
+        contract.replacementEnclosingFunctionIdentity,
+      retiredEnclosingFunctionIdentity: undefined,
+      retiredEnclosingFunctionIdentities:
+        expectedRetiredFunctionIdentities,
+      retiredMutationSiteCount: 2,
+      retiredMutationFunctionCount: 2,
+      proofPrecision:
+        "explicit-cross-file-multi-function",
+      sourceFingerprint:
+        contract.replacementActionSourceFingerprint,
+      crossFileMigrationContractIdentity:
+        contract.contractIdentity,
+    },
+  );
+  const staleContract = structuredClone(contract);
+  staleContract.retiredMutationSites.pop();
+  staleContract.contractIdentity =
+    buildStateActionCrossFileMigrationContractIdentity(
+      staleContract,
+    );
+  assert.throws(
+    () => buildCallerToActionLedger({
+      phase: "P4.2b",
+      previousPolicy: fixture.previousPolicy,
+      writers: [fixture.actionWriter],
+      retiredLegacySemanticAuthority:
+        fixture.retiredLegacySemanticAuthority,
+      actionDelegations: [fixture.actionDelegation],
+      crossFileMigrationContract: [staleContract],
+    }),
+    (error) =>
+      error?.code === "caller-action-ledger-proof-missing"
+      && error.violations?.[0]?.reason
+        === "cross-file-retired-mutation-sites-do-not-match-policy",
+  );
+});
+
 test("domain-action membership authority is unique across action modules", () => {
   const policy = createCallerActionLedgerPolicy([]);
   policy.progress.latestPhase = "P4.1";
@@ -5557,6 +5922,21 @@ test("builder freezes exact diagnostic sites only for production bindings", () =
     line: 10,
     column: 3,
   });
+  const unknownUnsupportedFinding = createFinding({
+    operation: "unsupported",
+    key: "forceExactContextBaseRefresh",
+    unsupported: true,
+    reason: "state-alias-escape",
+    line: 11,
+    column: 3,
+  });
+  const unknownConcreteFinding = createFinding({
+    operation: "assign",
+    key: "forceExactContextBaseRefresh",
+    unsupported: false,
+    line: 12,
+    column: 3,
+  });
   const productionGrants = buildStateWriterBindingGrants(
     [unsupportedFinding],
     "js/bootstrap/fixture.js",
@@ -5597,6 +5977,57 @@ test("builder freezes exact diagnostic sites only for production bindings", () =
       "test",
     ),
     [],
+  );
+  assert.throws(
+    () => buildStateWriterBindingGrants(
+      [unknownUnsupportedFinding],
+      "js/bootstrap/fixture.js",
+      buildCanonicalStateKeyAuthorityIndex(),
+      "production",
+    ),
+    { code: "unknown-state-key-authority" },
+  );
+  assert.throws(
+    () => buildStateWriterBindingGrants(
+      [unknownConcreteFinding],
+      "js/bootstrap/fixture.js",
+      buildCanonicalStateKeyAuthorityIndex(),
+      "production",
+    ),
+    { code: "unknown-state-key-authority" },
+  );
+  const conservativeBaselineGrants = buildStateWriterBindingGrants(
+    [unknownUnsupportedFinding],
+    "js/bootstrap/fixture.js",
+    buildCanonicalStateKeyAuthorityIndex(),
+    "production",
+    { allowUnknownUnsupportedAuthority: true },
+  );
+  assert.equal(conservativeBaselineGrants.length, 1);
+  assert.equal(conservativeBaselineGrants[0].domain, "boot");
+  assert.equal(
+    conservativeBaselineGrants[0].migrationPhase,
+    "P4.1",
+  );
+  assert.deepEqual(
+    conservativeBaselineGrants[0].unsupportedSites,
+    [{
+      line: 11,
+      column: 3,
+      reason: "state-alias-escape",
+      operation: "unsupported",
+      key: "forceExactContextBaseRefresh",
+    }],
+  );
+  assert.throws(
+    () => buildStateWriterBindingGrants(
+      [unknownConcreteFinding],
+      "js/bootstrap/fixture.js",
+      buildCanonicalStateKeyAuthorityIndex(),
+      "production",
+      { allowUnknownUnsupportedAuthority: true },
+    ),
+    { code: "unknown-state-key-authority" },
   );
 });
 

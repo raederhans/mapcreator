@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import test from "node:test";
 
@@ -143,6 +144,108 @@ test("P4.2c scenario health cross-file proofs match one live caller edge", async
         === proof.replacementActionSourceFingerprint
     ));
     assert.equal(matches.length, 1, `${proof.key} must have one exact live replacement edge`);
+  }
+});
+
+test("P4.3 renderer cross-boundary proofs lock retired evidence and exact replacement calls", async () => {
+  const rendererProofs =
+    STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT
+      .filter(({ domain, migrationPhase }) =>
+        domain === "renderer"
+        && migrationPhase === "P4.3"
+      );
+  assert.deepEqual(
+    rendererProofs.map((proof) => [
+      proof.retiredCallerPath,
+      proof.key,
+      proof.actionExportName,
+      proof.retiredMutationSites.length,
+    ]),
+    [
+      ["js/core/map_renderer.js", "deferExactAfterSettle", "setDeferExactAfterSettleState", 3],
+      ["js/core/map_renderer.js", "dprLastStageSwitchAt", "commitRendererDprStageState", 1],
+      ["js/core/map_renderer.js", "dprStage", "commitRendererDprStageState", 1],
+      ["js/core/map_renderer.js", "firstVisibleFramePainted", "setFirstVisibleFramePaintedState", 1],
+      ["js/core/map_renderer.js", "pendingExactPoliticalFastFrame", "setPendingExactPoliticalFastFrameState", 2],
+      ["js/core/map_renderer.js", "projectedBoundsById", "commitProjectedBoundsCacheState", 1],
+      ["js/core/map_renderer.js", "projectedBoundsDiagnostics", "setProjectedBoundsDiagnosticsState", 2],
+      ["js/core/map_renderer.js", "renderPerfMetrics", "ensureRenderPerfMetricsState", 1],
+      ["js/core/map_renderer.js", "renderPerfMetricSequence", "commitRenderPerfMetricState", 1],
+      ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "ensureExactAfterSettleControllerState", 2],
+      ["js/core/state/renderer_runtime_state.js", "renderPassCache", "commitRenderPassCacheState", 49],
+      ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "resetExactAfterSettleControllerState", 2],
+    ],
+  );
+
+  const runtimeStateProofs = rendererProofs.filter(
+    ({ replacementCallerPath }) =>
+      replacementCallerPath
+        === "js/core/state/renderer_runtime_state.js",
+  );
+  const runtimeStatePath =
+    "js/core/state/renderer_runtime_state.js";
+  const runtimeStateSource = fs.readFileSync(
+    runtimeStatePath,
+    "utf8",
+  );
+  const runtimeStateInventory =
+    await discoverStateWriterBindingsForSource(
+      runtimeStatePath,
+      runtimeStateSource,
+      "production",
+      { scanAllParameters: true, includeInventories: true },
+    );
+  const runtimeStateEdges = normalizeStateActionDelegations(
+    runtimeStateInventory.bindingInventories.flatMap(
+      ({ actionDelegations = [] }) => actionDelegations,
+    ),
+  );
+  for (const proof of runtimeStateProofs) {
+    const matches = runtimeStateEdges.filter((edge) => (
+      edge.callerPath === proof.replacementCallerPath
+      && edge.callerBindingIdentity
+        === proof.replacementCallerBindingIdentity
+      && edge.enclosingFunctionIdentity
+        === proof.replacementEnclosingFunctionIdentity
+      && edge.actionModulePath === proof.actionModulePath
+      && edge.actionExportName === proof.actionExportName
+      && edge.targetArgumentIndex === proof.targetArgumentIndex
+      && edge.sourceFingerprint
+        === proof.replacementActionSourceFingerprint
+    ));
+    assert.equal(
+      matches.length,
+      1,
+      `${proof.key} must have one exact live renderer-state replacement edge`,
+    );
+  }
+
+  const mapRendererSource = fs.readFileSync(
+    "js/core/map_renderer.js",
+    "utf8",
+  );
+  for (const [actionCall, actionExportName] of [
+    [
+      "ensureRenderPerfMetricsState(runtimeState)",
+      "ensureRenderPerfMetricsState",
+    ],
+    [
+      "commitRenderPerfMetricState(runtimeState, payload)",
+      "commitRenderPerfMetricState",
+    ],
+  ]) {
+    const proof = rendererProofs.find(
+      (entry) => entry.actionExportName === actionExportName,
+    );
+    assert.equal(
+      mapRendererSource.split(actionCall).length - 1,
+      1,
+      `${actionExportName} must have one exact call source`,
+    );
+    assert.equal(
+      createHash("sha256").update(actionCall).digest("hex"),
+      proof.replacementActionSourceFingerprint,
+    );
   }
 });
 

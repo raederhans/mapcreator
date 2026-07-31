@@ -21,6 +21,8 @@ const SHARED_RENDERER_DIST_MIRROR_PATH = "dist/app/js/core/map_renderer.js";
 const P43_OWNER_DIST_MIRROR_PATHS = Object.freeze([
   "dist/app/js/core/map_renderer/render_phase_lifecycle_owner.js",
 ]);
+const PHASE_ACTION_PATH = "js/core/state/actions/renderer_phase_actions.js";
+const INTERACTION_ACTION_PATH = "js/core/state/actions/renderer_interaction_actions.js";
 
 function readProjectFile(relativePath) {
   return fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
@@ -95,6 +97,8 @@ test("P43 owner owns render phase and timer lifecycle only", () => {
 test("map_renderer delegates phase lifecycle wrappers while keeping render anchors", () => {
   const rendererSource = readProjectFile(RENDERER_PATH);
   for (const token of [
+    "from \"./state/actions/renderer_phase_actions.js\";",
+    "from \"./state/actions/renderer_interaction_actions.js\";",
     "from \"./map_renderer/render_phase_lifecycle_owner.js\";",
     "let renderPhaseLifecycleOwner = null;",
     "function getRenderPhaseLifecycleOwner()",
@@ -106,16 +110,22 @@ test("map_renderer delegates phase lifecycle wrappers while keeping render ancho
     "clearTimeout: (timerId) => globalThis.clearTimeout(timerId)",
     "setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs)",
     "setRenderPhaseTimerId: (timerId) => {",
+    "setRenderPhaseTimerIdState(runtimeState, timerId);",
     "setRenderPhaseValue: (phase) => {",
+    "setRenderPhaseValueState(runtimeState, phase);",
     "setPhaseEnteredAt: (enteredAtMs) => {",
+    "setPhaseEnteredAtState(runtimeState, enteredAtMs);",
     "setIsInteracting: (isInteracting) => {",
+    "setRendererIsInteractingState(runtimeState, isInteracting);",
     "cancelPoliticalPathWarmup",
     "setHoverOverlayDirty: (dirty) => {",
     "setPendingDayNightRefresh: (pending) => {",
+    "setPendingDayNightRefreshState(runtimeState, pending);",
     "invalidateRenderPasses",
     "updateDprStage",
     "setCanvasSize",
     "setAdaptiveSettleProfile: (settleProfile) => {",
+    "setAdaptiveSettleProfileState(runtimeState, settleProfile);",
     "scheduleScenarioChunkRefresh: (options) => (",
     "setDeferExactAfterSettle: (deferred) => {",
     "render,",
@@ -126,6 +136,37 @@ test("map_renderer delegates phase lifecycle wrappers while keeping render ancho
     "getRenderPhaseLifecycleOwner().scheduleRenderPhaseIdle();",
   ]) {
     assert.equal(rendererSource.includes(token), true, `${RENDERER_PATH} must keep ${token}`);
+  }
+
+  for (const key of [
+    "renderPhaseTimerId",
+    "renderPhase",
+    "phaseEnteredAt",
+    "isInteracting",
+    "pendingDayNightRefresh",
+    "adaptiveSettleProfile",
+    "dprStage",
+    "dprLastStageSwitchAt",
+    "zoomGestureStartTransform",
+    "zoomGestureScaleDelta",
+    "pendingZoomTransform",
+    "zoomRenderScheduled",
+    "zoomGestureEndedAt",
+    "activeInteractionRecoveryTaskKey",
+    "activeInteractionRecoveryTaskStartedAt",
+  ]) {
+    assert.equal(
+      new RegExp(`\\bruntimeState\\.${key}\\s*=(?!=)`).test(rendererSource),
+      false,
+      `${RENDERER_PATH} must delegate direct write for ${key}`,
+    );
+  }
+
+  for (const actionPath of [PHASE_ACTION_PATH, INTERACTION_ACTION_PATH]) {
+    const actionSource = readProjectFile(actionPath);
+    for (const forbidden of ["from ", "runtimeState", "document", "window", "globalThis", "Date.now"]) {
+      assert.equal(actionSource.includes(forbidden), false, `${actionPath} must avoid ${forbidden}`);
+    }
   }
 
   for (const token of [

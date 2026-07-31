@@ -194,12 +194,33 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
       entry.commandRef === exactPhaseEntry.commandRef
     ));
     const currentCommand = report.recommendedCommands.find((entry) => (
-      entry.commandRef === "verify:p4:p4-2c"
+      entry.commandRef === "verify:p4:p4-3"
     ));
     assert.equal(staleCommand, undefined, `${sourceRef} should not select the stale P4.1 exact phase command`);
-    assert.ok(currentCommand, `${sourceRef} should select the current P4.2c exact phase command`);
+    assert.ok(currentCommand, `${sourceRef} should select the current P4.3 exact phase command`);
     assert.ok(currentCommand.domains.includes("state-ownership"));
   }
+});
+
+test("P4.3 routes include the render perf owner and its behavior contract", () => {
+  const routeIds = [
+    "verify-core:p4:p4-3-renderer-actions",
+    "verify-core:p4:p4-3-renderer-boundary",
+    "p4:p4-3-exact-phase",
+  ];
+  for (const routeId of routeIds) {
+    const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === routeId);
+    assert.ok(entry, routeId);
+    assert.ok(entry.sourceRefs.includes("js/core/renderer/render_perf_metrics_runtime_owner.js"));
+    assert.ok(entry.sourceRefs.includes("tests/render_perf_metrics_runtime_owner_behavior.test.mjs"));
+  }
+
+  const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");
+  assert.ok(
+    exactEntry.sourceRefs.includes(
+      "tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs",
+    ),
+  );
 });
 
 test("shared P4 control files select only the policy current exact phase gate", () => {
@@ -212,13 +233,13 @@ test("shared P4 control files select only the policy current exact phase gate", 
     .map((entry) => entry.commandRef)
     .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
 
-  assert.deepEqual(exactPhaseCommands, ["verify:p4:p4-2c"]);
+  assert.deepEqual(exactPhaseCommands, ["verify:p4:p4-3"]);
   assert.throws(
     () => buildRecommendation(
       changedFiles,
-      buildRouteIndex().filter((route) => route.id !== "p4:p4-2c-exact-phase"),
+      buildRouteIndex().filter((route) => route.id !== "p4:p4-3-exact-phase"),
     ),
-    /No exact verification route is registered for current P4 phase P4\.2c/,
+    /No exact verification route is registered for current P4 phase P4\.3/,
   );
 
   const renamedHistoricalRoutes = buildRouteIndex().map((route) => (
@@ -231,7 +252,7 @@ test("shared P4 control files select only the policy current exact phase gate", 
     const renamedExactCommands = renamedReport.recommendedCommands
       .map((entry) => entry.commandRef)
       .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
-    assert.deepEqual(renamedExactCommands, ["verify:p4:p4-2c"]);
+    assert.deepEqual(renamedExactCommands, ["verify:p4:p4-3"]);
   }
 });
 
@@ -272,9 +293,9 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
     const report = buildRecommendation([sourceRef]);
     assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
     const command = report.recommendedCommands.find((entry) => (
-      entry.commandRef === "verify:p4:p4-2c"
+      entry.commandRef === "verify:p4:p4-3"
     ));
-    assert.ok(command, `${sourceRef} should select the current P4.2c exact phase command`);
+    assert.ok(command, `${sourceRef} should select the current P4.3 exact phase command`);
     assert.ok(command.domains.includes("state-ownership"));
     assert.equal(command.domains.includes("renderer-runtime"), false);
   }

@@ -1,4 +1,25 @@
 // Renderer runtime state defaults.
+import {
+  setInteractionInfrastructureStateFields as setInteractionInfrastructureActionStateFields,
+} from "./actions/renderer_interaction_actions.js";
+import {
+  commitRendererDprStageState as commitRendererDprStageActionState,
+} from "./actions/renderer_phase_actions.js";
+import {
+  commitProjectedBoundsCacheState,
+  commitRenderPassCacheState,
+  setSphericalFeatureDiagnosticsCacheState,
+} from "./actions/renderer_cache_actions.js";
+import {
+  ensureExactAfterSettleControllerState as ensureExactAfterSettleControllerActionState,
+  isExactAfterSettleControllerActiveState as isExactAfterSettleControllerActiveActionState,
+  isExactAfterSettleGenerationCurrentState as isExactAfterSettleGenerationCurrentActionState,
+  resetExactAfterSettleControllerState as resetExactAfterSettleControllerActionState,
+} from "./actions/renderer_exact_refresh_actions.js";
+import {
+  setFirstVisibleFramePaintedState as setFirstVisibleFramePaintedActionState,
+  setProjectedBoundsDiagnosticsState as setProjectedBoundsDiagnosticsActionState,
+} from "./actions/renderer_diagnostics_actions.js";
 // 这里收口 map_renderer / sidebar 共享的运行时默认 shape，
 // 避免 defer 标记、pass cache、诊断缓存和交互基础设施状态再次漂移。
 
@@ -48,42 +69,32 @@ export function ensureExactAfterSettleControllerState(target) {
   if (!target || typeof target !== "object") {
     return createDefaultExactAfterSettleControllerState();
   }
-  if (!target.exactAfterSettleController || typeof target.exactAfterSettleController !== "object") {
-    target.exactAfterSettleController = createDefaultExactAfterSettleControllerState();
-  }
-  const controller = target.exactAfterSettleController;
-  const defaults = createDefaultExactAfterSettleControllerState();
-  Object.entries(defaults).forEach(([fieldName, initialValue]) => {
-    if (!(fieldName in controller)) {
-      controller[fieldName] = initialValue;
-    }
-  });
-  return controller;
+  ensureExactAfterSettleControllerActionState(target);
+  return target.exactAfterSettleController;
 }
 
 export function resetExactAfterSettleControllerState(target, { reason = "reset", generation = null } = {}) {
-  const controller = ensureExactAfterSettleControllerState(target);
-  if (generation !== null && Number(controller.generation || 0) !== Number(generation || 0)) {
-    return false;
+  if (!target || typeof target !== "object") {
+    const controller = createDefaultExactAfterSettleControllerState();
+    if (generation !== null && Number(controller.generation || 0) !== Number(generation || 0)) {
+      return false;
+    }
+    return true;
   }
-  const nextGeneration = Number(controller.generation || 0) + 1;
-  Object.assign(controller, createDefaultExactAfterSettleControllerState(), {
-    generation: nextGeneration,
-    reason: String(reason || "reset"),
+  return resetExactAfterSettleControllerActionState(target, {
+    reason,
+    generation,
   });
-  return true;
 }
 
 export function isExactAfterSettleGenerationCurrentState(target, generation, phase = "") {
-  const controller = target?.exactAfterSettleController;
-  return !!controller
-    && Number(controller.generation || 0) === Number(generation || 0)
-    && (!phase || String(controller.phase || "") === phase);
+  if (!target || typeof target !== "object") return false;
+  return isExactAfterSettleGenerationCurrentActionState(target, generation, phase);
 }
 
 export function isExactAfterSettleControllerActiveState(target) {
-  const phase = String(target?.exactAfterSettleController?.phase || "idle");
-  return ["scheduled", "applying", "awaiting-paint", "finalizing"].includes(phase);
+  if (!target || typeof target !== "object") return false;
+  return isExactAfterSettleControllerActiveActionState(target);
 }
 
 export function ensureSceneSnapshotState(target) {
@@ -382,6 +393,74 @@ export function applyRendererSurfaceBridgeState(target, handles = {}) {
   return target;
 }
 
+function matchesRenderPassCacheDefaultShape(value, defaultValue) {
+  if (defaultValue instanceof Map) return value instanceof Map;
+  if (defaultValue instanceof Set) return value instanceof Set;
+  if (Array.isArray(defaultValue)) return Array.isArray(value);
+  if (defaultValue === null) return true;
+  if (typeof defaultValue === "number") {
+    return typeof value === "number" && Number.isFinite(value);
+  }
+  if (typeof defaultValue !== "object") return typeof value === typeof defaultValue;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.entries(defaultValue).every(([fieldName, nestedDefault]) => (
+    fieldName in value
+    && matchesRenderPassCacheDefaultShape(value[fieldName], nestedDefault)
+  ));
+}
+
+function normalizeRenderPassCacheDefaultShape(value, defaultValue) {
+  if (defaultValue instanceof Map) {
+    return value instanceof Map ? value : new Map(defaultValue);
+  }
+  if (defaultValue instanceof Set) {
+    return value instanceof Set ? value : new Set(defaultValue);
+  }
+  if (Array.isArray(defaultValue)) {
+    return Array.isArray(value) ? value : [...defaultValue];
+  }
+  if (defaultValue === null) return value ?? null;
+  if (typeof defaultValue === "number") {
+    const normalized = Number(value);
+    return Number.isFinite(normalized) ? normalized : defaultValue;
+  }
+  if (typeof defaultValue !== "object") {
+    return typeof value === typeof defaultValue ? value : defaultValue;
+  }
+  const source = value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+  const normalized = { ...source };
+  Object.entries(defaultValue).forEach(([fieldName, nestedDefault]) => {
+    normalized[fieldName] = normalizeRenderPassCacheDefaultShape(
+      source[fieldName],
+      nestedDefault,
+    );
+  });
+  return normalized;
+}
+
+function isNullableObjectState(value) {
+  return value === null
+    || (typeof value === "object" && !Array.isArray(value));
+}
+
+function isRenderPassCacheStateNormalized(cache, defaults, renderPassNames) {
+  if (!cache || typeof cache !== "object" || Array.isArray(cache)) return false;
+  if (!cache.dirty || typeof cache.dirty !== "object") return false;
+  if (!cache.reasons || typeof cache.reasons !== "object") return false;
+  if (!renderPassNames.every((passName) => (
+    passName in cache.dirty
+    && passName in cache.reasons
+  ))) return false;
+  if (!isNullableObjectState(cache.politicalPathCacheTransform)) return false;
+  if (!isNullableObjectState(cache.politicalPathWarmupHandle)) return false;
+  return Object.entries(defaults).every(([fieldName, defaultValue]) => {
+    if (!(fieldName in cache)) return false;
+    return matchesRenderPassCacheDefaultShape(cache[fieldName], defaultValue);
+  });
+}
+
 export function ensureRenderPassCacheState(
   target,
   {
@@ -392,11 +471,36 @@ export function ensureRenderPassCacheState(
   if (!target || typeof target !== "object") {
     return createDefaultRenderPassCacheState();
   }
-  if (!target.renderPassCache || typeof target.renderPassCache !== "object") {
-    target.renderPassCache = createDefaultRenderPassCacheState();
-  }
-  const cache = target.renderPassCache;
   const defaults = createDefaultRenderPassCacheState();
+  const currentCache = target.renderPassCache && typeof target.renderPassCache === "object"
+    ? target.renderPassCache
+    : null;
+  if (currentCache && isRenderPassCacheStateNormalized(currentCache, defaults, renderPassNames)) {
+    return currentCache;
+  }
+  const cache = !currentCache
+    ? defaults
+    : {
+        ...currentCache,
+        compositeBuffer: currentCache.compositeBuffer && typeof currentCache.compositeBuffer === "object"
+          ? { ...currentCache.compositeBuffer }
+          : currentCache.compositeBuffer,
+        lastGoodFrame: currentCache.lastGoodFrame && typeof currentCache.lastGoodFrame === "object"
+          ? { ...currentCache.lastGoodFrame }
+          : currentCache.lastGoodFrame,
+        interactionComposite: currentCache.interactionComposite && typeof currentCache.interactionComposite === "object"
+          ? { ...currentCache.interactionComposite }
+          : currentCache.interactionComposite,
+        dirty: currentCache.dirty && typeof currentCache.dirty === "object"
+          ? { ...currentCache.dirty }
+          : currentCache.dirty,
+        reasons: currentCache.reasons && typeof currentCache.reasons === "object"
+          ? { ...currentCache.reasons }
+          : currentCache.reasons,
+        counters: currentCache.counters && typeof currentCache.counters === "object"
+          ? { ...currentCache.counters }
+          : currentCache.counters,
+      };
   cache.canvases = cache.canvases && typeof cache.canvases === "object" ? cache.canvases : defaults.canvases;
   cache.layouts = cache.layouts && typeof cache.layouts === "object" ? cache.layouts : defaults.layouts;
   cache.signatures = cache.signatures && typeof cache.signatures === "object" ? cache.signatures : defaults.signatures;
@@ -409,33 +513,22 @@ export function ensureRenderPassCacheState(
   cache.contextScenarioLayerCache = cache.contextScenarioLayerCache && typeof cache.contextScenarioLayerCache === "object"
     ? cache.contextScenarioLayerCache
     : defaults.contextScenarioLayerCache;
-  cache.compositeBuffer = cache.compositeBuffer && typeof cache.compositeBuffer === "object"
-    ? cache.compositeBuffer
-    : { ...defaults.compositeBuffer };
-  Object.entries(defaults.compositeBuffer).forEach(([fieldName, initialValue]) => {
-    if (!(fieldName in cache.compositeBuffer)) {
-      cache.compositeBuffer[fieldName] = initialValue;
-    }
-  });
-  cache.borderSnapshot = cache.borderSnapshot && typeof cache.borderSnapshot === "object"
-    ? cache.borderSnapshot
-    : { ...defaults.borderSnapshot };
-  cache.lastGoodFrame = cache.lastGoodFrame && typeof cache.lastGoodFrame === "object"
-    ? cache.lastGoodFrame
-    : { ...defaults.lastGoodFrame };
-  Object.entries(defaults.lastGoodFrame).forEach(([fieldName, initialValue]) => {
-    if (!(fieldName in cache.lastGoodFrame)) {
-      cache.lastGoodFrame[fieldName] = initialValue;
-    }
-  });
-  cache.interactionComposite = cache.interactionComposite && typeof cache.interactionComposite === "object"
-    ? cache.interactionComposite
-    : { ...defaults.interactionComposite };
-  Object.entries(defaults.interactionComposite).forEach(([fieldName, initialValue]) => {
-    if (!(fieldName in cache.interactionComposite)) {
-      cache.interactionComposite[fieldName] = initialValue;
-    }
-  });
+  cache.compositeBuffer = normalizeRenderPassCacheDefaultShape(
+    cache.compositeBuffer,
+    defaults.compositeBuffer,
+  );
+  cache.borderSnapshot = normalizeRenderPassCacheDefaultShape(
+    cache.borderSnapshot,
+    defaults.borderSnapshot,
+  );
+  cache.lastGoodFrame = normalizeRenderPassCacheDefaultShape(
+    cache.lastGoodFrame,
+    defaults.lastGoodFrame,
+  );
+  cache.interactionComposite = normalizeRenderPassCacheDefaultShape(
+    cache.interactionComposite,
+    defaults.interactionComposite,
+  );
   cache.partialPoliticalDirtyIds = cache.partialPoliticalDirtyIds instanceof Set
     ? cache.partialPoliticalDirtyIds
     : defaults.partialPoliticalDirtyIds;
@@ -487,16 +580,18 @@ export function ensureRenderPassCacheState(
   cache.politicalPathCacheSignature = typeof cache.politicalPathCacheSignature === "string"
     ? cache.politicalPathCacheSignature
     : defaults.politicalPathCacheSignature;
-  cache.politicalPathCacheTransform = cache.politicalPathCacheTransform
+  cache.politicalPathCacheTransform = isNullableObjectState(cache.politicalPathCacheTransform)
+    && cache.politicalPathCacheTransform
     ? cloneZoomTransform(cache.politicalPathCacheTransform)
     : defaults.politicalPathCacheTransform;
   cache.politicalPathWarmupQueue = Array.isArray(cache.politicalPathWarmupQueue)
     ? cache.politicalPathWarmupQueue
     : defaults.politicalPathWarmupQueue;
-  cache.politicalPathWarmupHandle = cache.politicalPathWarmupHandle && typeof cache.politicalPathWarmupHandle === "object"
+  cache.politicalPathWarmupHandle = isNullableObjectState(cache.politicalPathWarmupHandle)
+    && cache.politicalPathWarmupHandle
     ? cache.politicalPathWarmupHandle
     : defaults.politicalPathWarmupHandle;
-    cache.politicalPathWarmupSignature = typeof cache.politicalPathWarmupSignature === "string"
+  cache.politicalPathWarmupSignature = typeof cache.politicalPathWarmupSignature === "string"
     ? cache.politicalPathWarmupSignature
     : defaults.politicalPathWarmupSignature;
   cache.politicalPathWarmupReason = typeof cache.politicalPathWarmupReason === "string"
@@ -509,36 +604,28 @@ export function ensureRenderPassCacheState(
   cache.reasons = cache.reasons && typeof cache.reasons === "object" ? cache.reasons : {};
   cache.counters = cache.counters && typeof cache.counters === "object" ? cache.counters : {};
   renderPassNames.forEach((passName) => {
-    if (!(passName in cache.dirty)) {
-      cache.dirty[passName] = true;
-    }
-    if (!(passName in cache.reasons)) {
-      cache.reasons[passName] = "init";
-    }
+    if (!(passName in cache.dirty)) cache.dirty[passName] = true;
+    if (!(passName in cache.reasons)) cache.reasons[passName] = "init";
   });
   Object.entries(defaults.counters).forEach(([counterName, initialValue]) => {
-    if (!Number.isFinite(Number(cache.counters[counterName]))) {
-      cache.counters[counterName] = initialValue;
-    }
+    const normalized = Number(cache.counters[counterName]);
+    cache.counters[counterName] = Number.isFinite(normalized)
+      ? normalized
+      : initialValue;
   });
-  if (!("lastFrame" in cache)) {
-    cache.lastFrame = defaults.lastFrame;
-  }
-  if (typeof cache.lastAction !== "string") {
-    cache.lastAction = defaults.lastAction;
-  }
-  if (!Number.isFinite(Number(cache.lastActionDurationMs))) {
-    cache.lastActionDurationMs = defaults.lastActionDurationMs;
-  }
-  if (!Number.isFinite(Number(cache.lastActionAt))) {
-    cache.lastActionAt = defaults.lastActionAt;
-  }
+  if (!("lastFrame" in cache)) cache.lastFrame = defaults.lastFrame;
+  if (typeof cache.lastAction !== "string") cache.lastAction = defaults.lastAction;
+  cache.lastActionDurationMs = Number.isFinite(Number(cache.lastActionDurationMs))
+    ? Number(cache.lastActionDurationMs)
+    : defaults.lastActionDurationMs;
+  cache.lastActionAt = Number.isFinite(Number(cache.lastActionAt))
+    ? Number(cache.lastActionAt)
+    : defaults.lastActionAt;
   if (typeof cache.perfOverlayEnabled !== "boolean") {
     cache.perfOverlayEnabled = defaults.perfOverlayEnabled;
   }
-  if (!("overlayElement" in cache)) {
-    cache.overlayElement = defaults.overlayElement;
-  }
+  if (!("overlayElement" in cache)) cache.overlayElement = defaults.overlayElement;
+  commitRenderPassCacheState(target, cache);
   return cache;
 }
 
@@ -561,13 +648,34 @@ export function ensureSidebarPerfState(target) {
   return target.sidebarPerf;
 }
 
+export function ensureProjectedBoundsCacheState(target) {
+  if (!target || typeof target !== "object") {
+    return createDefaultProjectedBoundsCacheState();
+  }
+  if (
+    target.projectedBoundsById instanceof Map
+    && target.sphericalFeatureDiagnosticsById instanceof Map
+  ) {
+    return target;
+  }
+  const defaults = createDefaultProjectedBoundsCacheState();
+  commitProjectedBoundsCacheState(target, {
+    projectedBoundsById: target.projectedBoundsById instanceof Map
+      ? target.projectedBoundsById
+      : defaults.projectedBoundsById,
+    sphericalFeatureDiagnosticsById: target.sphericalFeatureDiagnosticsById instanceof Map
+      ? target.sphericalFeatureDiagnosticsById
+      : defaults.sphericalFeatureDiagnosticsById,
+  });
+  return target;
+}
+
 export function resetProjectedBoundsCacheState(target) {
   if (!target || typeof target !== "object") {
     return createDefaultProjectedBoundsCacheState();
   }
   const defaults = createDefaultProjectedBoundsCacheState();
-  target.projectedBoundsById = defaults.projectedBoundsById;
-  target.sphericalFeatureDiagnosticsById = defaults.sphericalFeatureDiagnosticsById;
+  commitProjectedBoundsCacheState(target, defaults);
   return defaults;
 }
 
@@ -575,29 +683,36 @@ export function ensureSphericalFeatureDiagnosticsCache(target) {
   if (!target || typeof target !== "object") {
     return createDefaultProjectedBoundsCacheState().sphericalFeatureDiagnosticsById;
   }
-  if (!(target.sphericalFeatureDiagnosticsById instanceof Map)) {
-    target.sphericalFeatureDiagnosticsById = createDefaultProjectedBoundsCacheState().sphericalFeatureDiagnosticsById;
+  if (target.sphericalFeatureDiagnosticsById instanceof Map) {
+    return target.sphericalFeatureDiagnosticsById;
   }
+  const diagnosticsCache =
+    createDefaultProjectedBoundsCacheState().sphericalFeatureDiagnosticsById;
+  setSphericalFeatureDiagnosticsCacheState(target, diagnosticsCache);
   return target.sphericalFeatureDiagnosticsById;
 }
 
-export function setInteractionInfrastructureStateFields(
-  target,
-  stage,
-  {
-    ready = null,
-    inFlight = null,
-  } = {},
-) {
-  if (!target || typeof target !== "object") {
+// Transitional compatibility surface. Canonical mutation authority lives in
+// renderer_interaction_actions.js; new callers import that module directly.
+export function setInteractionInfrastructureStateFields(target, stage, options) {
+  if (!target || typeof target !== "object" || Array.isArray(target)) {
     return "idle";
   }
-  target.interactionInfrastructureStage = String(stage || "idle").trim() || "idle";
-  if (ready != null) {
-    target.interactionInfrastructureReady = !!ready;
-  }
-  if (inFlight != null) {
-    target.interactionInfrastructureBuildInFlight = !!inFlight;
-  }
-  return target.interactionInfrastructureStage;
+  return setInteractionInfrastructureActionStateFields(target, stage, options);
+}
+
+// Transitional compatibility surface for renderer callbacks that are handed
+// across owner factories. These named functions keep mutation authority
+// explicit and statically reachable while the composition root remains the
+// runtime-effects owner.
+export function commitRendererDprStageState(target, update) {
+  return commitRendererDprStageActionState(target, update);
+}
+
+export function setFirstVisibleFramePaintedState(target, painted) {
+  return setFirstVisibleFramePaintedActionState(target, painted);
+}
+
+export function commitProjectedBoundsDiagnosticsState(target, diagnostics) {
+  return setProjectedBoundsDiagnosticsActionState(target, diagnostics);
 }

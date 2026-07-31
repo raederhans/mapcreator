@@ -75,3 +75,87 @@ test("long animation frame observer keeps the previous state when observe throws
     restoreGlobalProperty("PerformanceObserver", hadObserverApi, originalObserverApi);
   }
 });
+
+test("long animation frame observer commits a complete metrics snapshot and mirrors that identity", () => {
+  const hadObserverApi = Object.hasOwn(globalThis, "PerformanceObserver");
+  const originalObserverApi = globalThis.PerformanceObserver;
+  const hadMetricsMirror = Object.hasOwn(globalThis, "__renderPerfMetrics");
+  const originalMetricsMirror = globalThis.__renderPerfMetrics;
+  const originalStateObserver = runtimeState.longAnimationFrameObserver;
+  const originalMetrics = runtimeState.renderPerfMetrics;
+  const previousMetrics = {
+    interactionRecoveryTaskMs: {
+      taskKey: "rebuild-spatial-index",
+      durationMs: 12,
+    },
+    interactionRecoveryWindowMs: {
+      durationMs: 18,
+    },
+  };
+  let observerInstance = null;
+
+  class RecordingPerformanceObserver {
+    constructor(callback) {
+      this.callback = callback;
+      observerInstance = this;
+    }
+
+    observe() {}
+  }
+
+  try {
+    globalThis.PerformanceObserver = RecordingPerformanceObserver;
+    setLongAnimationFrameObserver(runtimeState, null);
+    runtimeState.renderPerfMetrics = previousMetrics;
+
+    initLongAnimationFrameObserver();
+    observerInstance.callback({
+      getEntries: () => [{
+        duration: 31,
+        blockingDuration: 17,
+        startTime: 7,
+        renderStart: 11,
+        firstUIEventTimestamp: 13,
+      }],
+    });
+
+    assert.equal(runtimeState.renderPerfMetrics, previousMetrics);
+    assert.equal(
+      previousMetrics.longAnimationFrameBlockingDuration,
+      runtimeState.renderPerfMetrics.longAnimationFrameBlockingDuration,
+    );
+    assert.equal(runtimeState.renderPerfMetrics.interactionRecoveryTaskMs, previousMetrics.interactionRecoveryTaskMs);
+    assert.deepEqual(runtimeState.renderPerfMetrics.longAnimationFrameBlockingDuration, {
+      durationMs: 31,
+      blockingDuration: 17,
+      startTime: 7,
+      renderStart: 11,
+      firstUIEventTimestamp: 13,
+      bootPhase: String(runtimeState.bootPhase || ""),
+      renderPhase: String(runtimeState.renderPhase || ""),
+      startupReadonly: !!runtimeState.startupReadonly,
+      activePostReadyTaskKey: String(runtimeState.activePostReadyTaskKey || ""),
+      activePostReadyTaskStartedAt: Math.max(0, Number(runtimeState.activePostReadyTaskStartedAt || 0)),
+      activePostReadyTaskAgeMs: runtimeState.activePostReadyTaskStartedAt
+        ? Math.max(0, Number(runtimeState.renderPerfMetrics.longAnimationFrameBlockingDuration.activePostReadyTaskAgeMs || 0))
+        : 0,
+      pendingPostReadyTaskCount: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.pendingTaskCount || 0)),
+      pendingPostReadyTaskKeys: Array.isArray(runtimeState.postReadyTaskDiagnostics?.pendingTaskKeys)
+        ? [...runtimeState.postReadyTaskDiagnostics.pendingTaskKeys]
+        : [],
+      postReadyMaxPendingAgeMs: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.maxPendingAgeMs || 0)),
+      postReadyMaxRetryCount: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.maxRetryCount || 0)),
+      interactionRecoveryTaskKey: "rebuild-spatial-index",
+      activeInteractionRecoveryTaskKey: String(runtimeState.activeInteractionRecoveryTaskKey || ""),
+      interactionRecoveryTaskMs: 12,
+      interactionRecoveryWindowMs: 18,
+      recordedAt: runtimeState.renderPerfMetrics.longAnimationFrameBlockingDuration.recordedAt,
+    });
+    assert.equal(globalThis.__renderPerfMetrics, runtimeState.renderPerfMetrics);
+  } finally {
+    runtimeState.renderPerfMetrics = originalMetrics;
+    setLongAnimationFrameObserver(runtimeState, originalStateObserver);
+    restoreGlobalProperty("PerformanceObserver", hadObserverApi, originalObserverApi);
+    restoreGlobalProperty("__renderPerfMetrics", hadMetricsMirror, originalMetricsMirror);
+  }
+});

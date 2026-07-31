@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -319,6 +320,79 @@ test("production candidate discovery scans all parameter candidates once per fil
         functionName === "applyBootFields"
         && parameterName === "target",
     ),
+  );
+});
+
+test("immutable exact refresh plans require no scanner exclusion", async () => {
+  const relativePath =
+    "js/core/map_renderer/exact_after_settle_scheduler.js";
+  const source = [
+    'import { state as runtimeState } from "../state.js";',
+    "",
+    "function applyExactAfterSettleRefreshPlan(plan) {",
+    "  plan.exactTargetPasses = [];",
+    '  runtimeState.renderPhase = "idle";',
+    "}",
+    "",
+    "function applyScheduledExactAfterSettleRefreshPlan(generation, plan) {",
+    "  plan.controllerGeneration = generation;",
+    "  applyExactAfterSettleRefreshPlan(plan);",
+    "}",
+    "",
+    "function unrelatedStateMutation(plan) {",
+    '  plan.bootPhase = "ready";',
+    "}",
+    "",
+  ].join("\n");
+
+  const bindings = await discoverStateWriterBindingsForSource(
+    relativePath,
+    source,
+    "production",
+    { scanAllParameters: true },
+  );
+
+  assert.ok(bindings.some(({ name }) => name === "runtimeState"));
+  assert.equal(
+    bindings.some(
+      ({ functionName, parameterName }) =>
+        functionName === "applyExactAfterSettleRefreshPlan"
+        && parameterName === "plan",
+    ),
+    false,
+  );
+  assert.equal(
+    bindings.some(
+      ({ functionName, parameterName }) =>
+        functionName === "applyScheduledExactAfterSettleRefreshPlan"
+        && parameterName === "plan",
+    ),
+    false,
+  );
+  assert.ok(
+    bindings.some(
+      ({ functionName, parameterName }) =>
+        functionName === "unrelatedStateMutation"
+        && parameterName === "plan",
+    ),
+    "unrelated plan parameters must remain visible too",
+  );
+  const builderSource = await readFile(
+    new URL("../tools/build_state_writer_policy.mjs", import.meta.url),
+    "utf8",
+  );
+  const schedulerSource = await readFile(
+    new URL("../js/core/map_renderer/exact_after_settle_scheduler.js", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    builderSource,
+    /exact_after_settle_scheduler\.js#(?:applyExactAfterSettleRefreshPlan|applyScheduledExactAfterSettleRefreshPlan)#plan/,
+  );
+  assert.doesNotMatch(
+    schedulerSource,
+    /\bplan\.[A-Za-z_$][\w$]*\s*=(?!=)/,
+    "exact refresh plan parameters must remain immutable",
   );
 });
 

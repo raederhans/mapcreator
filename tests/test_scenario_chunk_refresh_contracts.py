@@ -852,6 +852,23 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         )
         self.assertIn("finalizeScenarioChunkCityExternalEffectState(", restore_slice)
 
+    def test_chunk_runtime_commits_complete_render_metrics_through_diagnostics_action(self):
+        self.assertIn(
+            'import { setRenderPerfMetricEntryState } from "../state/actions/renderer_diagnostics_actions.js";',
+            self.scenario_chunk_runtime_source,
+        )
+        metric_writer = self._slice_between(
+            self.scenario_chunk_runtime_source,
+            "  function recordScenarioRenderMetric(",
+            "\n  function shouldRecordScenarioChunkRuntimeMetric(",
+        )
+        self.assertIn("setRenderPerfMetricEntryState(runtimeState, {", metric_writer)
+        self.assertIn("name,", metric_writer)
+        self.assertIn("entry: {", metric_writer)
+        self.assertIn("globalThis.__renderPerfMetrics = runtimeState.renderPerfMetrics;", metric_writer)
+        self.assertNotRegex(metric_writer, r"(?m)^\s*runtimeState\.renderPerfMetrics\s*=")
+        self.assertNotRegex(metric_writer, r"runtimeState\.renderPerfMetrics\[[^\]]+\]\s*=")
+
     def test_chunk_promotion_infra_does_not_rebuild_static_meshes(self):
         start = self.scenario_refresh_runtime_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
         end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
