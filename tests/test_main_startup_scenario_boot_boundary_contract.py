@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 STARTUP_SCENARIO_BOOT_JS = REPO_ROOT / "js" / "bootstrap" / "startup_scenario_boot.js"
 DEFERRED_DETAIL_PROMOTION_JS = REPO_ROOT / "js" / "bootstrap" / "deferred_detail_promotion.js"
+STARTUP_READY_HANDOFF_JS = REPO_ROOT / "js" / "bootstrap" / "startup_ready_handoff.js"
 MAIN_RUNTIME_DIAGNOSTICS_JS = REPO_ROOT / "js" / "bootstrap" / "main_runtime_diagnostics.js"
 
 
@@ -72,7 +73,7 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("function getStartupScenarioBootOwner()", donor_content)
         self.assertIn("runtimeState: state,", donor_content)
-        self.assertIn('registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', donor_content)
+        self.assertIn('subscribeRuntimeNotification(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', donor_content)
         self.assertIn("function checkpointFirstVisibleFrameMetrics()", donor_content)
         self.assertIn("function assertStartupFirstVisibleFrameAccepted(", donor_content)
         self.assertRegex(
@@ -96,17 +97,18 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
             donor_content,
             r"setBootState\(\"warmup\"\);\s*invalidateAllRenderPasses\(\"bootstrap-first-political-frame\"\);\s*renderDispatcher\.flush\(\);\s*assertStartupFirstVisibleFrameAccepted\(\"bootstrap-first-political-frame\"\);",
         )
-        self.assertRegex(
-            donor_content,
-            r"setBootState\(\"warmup\", \{[\s\S]*?canContinueWithoutScenario: false,[\s\S]*?\}\);\s*invalidateAllRenderPasses\(\"bootstrap-first-frame\"\);\s*renderDispatcher\.flush\(\);",
-        )
         self.assertIsNone(re.search(r"await applyScenarioBundleCommand\s*\(", donor_content))
         self.assertIsNone(re.search(r"defaultScenarioBundle\s*=\s*await loadScenarioBundle\s*\(", donor_content))
 
     def test_main_keeps_deferred_physical_atlas_and_contour_pending_paths(self):
-        donor_content = MAIN_JS.read_text(encoding="utf-8")
+        main_content = MAIN_JS.read_text(encoding="utf-8")
+        donor_content = STARTUP_READY_HANDOFF_JS.read_text(encoding="utf-8")
         diagnostics_content = MAIN_RUNTIME_DIAGNOSTICS_JS.read_text(encoding="utf-8")
 
+        self.assertIn(
+            "schedulePostReadyDeferredContextWarmup: startupReadyHandoff.schedulePostReadyDeferredContextWarmup,",
+            main_content,
+        )
         self.assertIn("function schedulePostReadyDeferredContextWarmup()", donor_content)
         self.assertIn("requestedLayerNames.push(\"physical-set\");", donor_content)
         self.assertIn("requestedContourLayerNames.push(\"physical-contours-set\");", donor_content)

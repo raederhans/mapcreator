@@ -2493,17 +2493,17 @@ test("policy snapshot admits only exact registered ambiguous alias sites", () =>
   );
 });
 
-test("default state ownership locks the 16 plus 9 and 402 plus 488 baselines", async () => {
+test("default state ownership locks the 16 plus 9 and 402 plus 489 baselines", async () => {
   const report = await buildDefaultStateOwnershipReport();
 
   assert.equal(report.factoryGroups.length, 16);
   assert.equal(report.explicitKeys.length, 9);
   assert.equal(report.preCompatKeyCount, 402);
-  assert.equal(report.compatibilityHookCount, 86);
-  assert.equal(report.postCompatKeyCount, 488);
+  assert.equal(report.compatibilityHookCount, 87);
+  assert.equal(report.postCompatKeyCount, 489);
   assert.ok(report.authorityOnlyLazyKeys.includes("scenarioAtlantropaRevision"));
   assert.deepEqual(report.collisions, []);
-  assert.equal(report.actualFacadeKeyCount, 488);
+  assert.equal(report.actualFacadeKeyCount, 489);
   assert.deepEqual(report.unownedActualFacadeKeys, []);
   assert.deepEqual(report.registeredKeysMissingFromFacade, []);
 });
@@ -2569,7 +2569,7 @@ test("checked-in repository policy is a closed binding-scoped snapshot", async (
   assert.equal(policy.baselines.defaultState.factoryGroups, 16);
   assert.equal(policy.baselines.defaultState.explicitKeys, 9);
   assert.equal(policy.baselines.defaultState.preCompatKeys, 402);
-  assert.equal(policy.baselines.defaultState.postCompatKeys, 488);
+  assert.equal(policy.baselines.defaultState.postCompatKeys, 489);
   assert.equal(policy.baselines.defaultState.collisions, 0);
   assert.deepEqual(policy.baselines.bindingScopedMemberships.production, {
     legacyDirect: 475,
@@ -5593,7 +5593,7 @@ test("repository checker reports a passing closed-world policy and default-state
       "baselines.bindingScopedMemberships.production.legacyCombined",
   });
   assert.equal(report.defaultState.actual.preCompatKeys, 402);
-  assert.equal(report.defaultState.actual.postCompatKeys, 488);
+  assert.equal(report.defaultState.actual.postCompatKeys, 489);
   assert.equal(report.defaultState.actual.collisions, 0);
 });
 
@@ -6598,5 +6598,5 @@ test("default-state key shape is hermetic across child-process global variations
 
   assert.deepEqual(varied, baseline);
   assert.equal(baseline.preCompatKeyCount, 402);
-  assert.equal(baseline.postCompatKeyCount, 488);
+  assert.equal(baseline.postCompatKeyCount, 489);
 });

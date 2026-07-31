@@ -48,6 +48,7 @@ const STATE_BUS_EVENT_BY_HOOK_NAME = Object.freeze({
   refreshColorStateFn: "render:refresh-color-state",
   recomputeDynamicBordersNowFn: "render:recompute-dynamic-borders",
   renderNowFn: "render:flush-now",
+  noteFirstVisibleFramePaintedFn: "render:first-visible-frame-painted",
   showToastFn: "app:show-toast",
 });
 
@@ -98,6 +99,7 @@ const STATE_BUS_EVENT_ALIASES = Object.freeze({
   REFRESH_COLOR_STATE: STATE_BUS_EVENT_BY_HOOK_NAME.refreshColorStateFn,
   RECOMPUTE_DYNAMIC_BORDERS_NOW: STATE_BUS_EVENT_BY_HOOK_NAME.recomputeDynamicBordersNowFn,
   RENDER_NOW: STATE_BUS_EVENT_BY_HOOK_NAME.renderNowFn,
+  NOTE_FIRST_VISIBLE_FRAME_PAINTED: STATE_BUS_EVENT_BY_HOOK_NAME.noteFirstVisibleFramePaintedFn,
   SHOW_TOAST: STATE_BUS_EVENT_BY_HOOK_NAME.showToastFn,
 });
 

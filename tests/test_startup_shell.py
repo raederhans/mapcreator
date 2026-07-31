@@ -74,7 +74,7 @@ class StartupShellTest(unittest.TestCase):
         self.assertIn('"first-visible-scenario"', main_js)
         self.assertIn('"bootstrap-first-political-frame"', main_js)
         self.assertIn("function checkpointFirstVisibleFrameMetrics()", main_js)
-        self.assertIn('registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', main_js)
+        self.assertIn('subscribeRuntimeNotification(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', main_js)
         self.assertIn("export function isUiShellDebugMode({ globalScope = globalThis } = {})", ui_shell_boot_js)
         self.assertIn('params.get("ui_shell") || params.get("startup_mode")', ui_shell_boot_js)
         self.assertIn('globalScope.__mapcreatorUiShellDebug = {', ui_shell_boot_js)

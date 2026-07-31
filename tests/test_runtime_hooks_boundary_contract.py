@@ -27,6 +27,23 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn("export function callRuntimeHooks(target, hookNames, ...args) {", content)
         self.assertIn("export function bindStateCompatSurface(target) {", content)
         self.assertIn("export function registerRuntimeHookBusListener(target, hookName, listener) {", content)
+        self.assertIn("export function subscribeRuntimeNotification(target, hookName, listener) {", content)
+        self.assertIn("export function registerRuntimeHandler(target, hookName, handler) {", content)
+
+    def test_main_subscribes_to_first_visible_notification_explicitly(self):
+        main_content = MAIN_JS.read_text(encoding="utf-8")
+        config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")
+
+        self.assertIn('noteFirstVisibleFramePaintedFn: "render:first-visible-frame-painted"', config_content)
+        self.assertIn("callRuntimeHook, registerRuntimeHook, subscribeRuntimeNotification", main_content)
+        self.assertIn(
+            'subscribeRuntimeNotification(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);',
+            main_content,
+        )
+        self.assertNotIn(
+            'registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);',
+            main_content,
+        )
 
     def test_main_toolbar_sidebar_and_dev_workspace_keep_hook_wiring(self):
         main_content = MAIN_JS.read_text(encoding="utf-8")

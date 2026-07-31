@@ -37,7 +37,7 @@ import {
   setMapData,
 } from "./core/map_renderer/public.js";
 import { flushRenderBoundary, requestRender } from "./core/render_boundary.js";
-import { callRuntimeHook, registerRuntimeHook } from "./core/state/index.js";
+import { callRuntimeHook, registerRuntimeHook, subscribeRuntimeNotification } from "./core/state/index.js";
 import { runPostScenarioUiReplay } from "./core/scenario_post_apply_effects.js";
 import { t } from "./core/i18n.js";
 import {
@@ -108,7 +108,7 @@ function assertStartupFirstVisibleFrameAccepted(reason = "startup-first-visible"
   throw new Error(`[boot] First visible frame was not accepted after ${reason}: ${blockReason}`);
 }
 
-registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);
+subscribeRuntimeNotification(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);
 
 /**
  * Startup owner boundaries:

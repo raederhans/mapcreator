@@ -16,9 +16,9 @@ export * from "./ui_state.js";
 
 const notificationHookNames = new Set(STATE_NOTIFICATION_HOOK_NAMES);
 const handlerHookNames = new Set(STATE_HANDLER_HOOK_NAMES);
-const notificationListenersByHookName = new Map();
+const legacyNotificationSlotsByHookName = new Map();
 const notificationDispatchersByHookName = new Map();
-const handlerFnsByHookName = new Map();
+const handlerEntriesByHookName = new Map();
 const handlerDispatchersByHookName = new Map();
 const compatTargets = new WeakSet();
 
@@ -78,7 +78,7 @@ export function readRuntimeHookBusDispatcher(_target, hookName) {
   if (!isRuntimeHookBusEventName(hookName)) {
     return null;
   }
-  return notificationListenersByHookName.has(hookName)
+  return legacyNotificationSlotsByHookName.has(hookName)
     ? getNotificationDispatcher(hookName)
     : null;
 }
@@ -90,19 +90,49 @@ export function registerRuntimeHookBusListener(target, hookName, listener) {
   }
   bindStateCompatSurface(target);
   const eventName = STATE_BUS_EVENTS[normalizedHookName];
-  const previousListener = notificationListenersByHookName.get(normalizedHookName);
-  if (previousListener) {
-    off(eventName, previousListener);
-    notificationListenersByHookName.delete(normalizedHookName);
+  const previousSlot = legacyNotificationSlotsByHookName.get(normalizedHookName);
+  if (previousSlot) {
+    off(eventName, previousSlot.wrapped);
+    legacyNotificationSlotsByHookName.delete(normalizedHookName);
   }
   const normalizedListener = normalizeRuntimeHook(listener);
   if (!normalizedListener) {
     return null;
   }
+  const token = Symbol(normalizedHookName);
   const wrappedListener = (payload) => normalizedListener(...unpackRuntimeHookArgs(payload));
-  notificationListenersByHookName.set(normalizedHookName, wrappedListener);
+  legacyNotificationSlotsByHookName.set(normalizedHookName, Object.freeze({
+    source: normalizedListener,
+    wrapped: wrappedListener,
+    token,
+  }));
   on(eventName, wrappedListener);
   return wrappedListener;
+}
+
+export function subscribeRuntimeNotification(target, hookName, listener) {
+  const normalizedHookName = String(hookName || "").trim();
+  if (!isRuntimeHookBusEventName(normalizedHookName)) {
+    throw new TypeError(`Unknown runtime notification hook: ${normalizedHookName || "<empty>"}`);
+  }
+  const normalizedListener = normalizeRuntimeHook(listener);
+  if (!normalizedListener) {
+    throw new TypeError(`Runtime notification listener must be a function: ${normalizedHookName}`);
+  }
+  bindStateCompatSurface(target);
+  const eventName = STATE_BUS_EVENTS[normalizedHookName];
+  const wrappedListener = (payload) => normalizedListener(...unpackRuntimeHookArgs(payload));
+  on(eventName, wrappedListener);
+  let active = true;
+  return Object.freeze({
+    dispatcher: getNotificationDispatcher(normalizedHookName),
+    dispose() {
+      if (!active) return false;
+      active = false;
+      off(eventName, wrappedListener);
+      return true;
+    },
+  });
 }
 
 export function emitRuntimeHookBusEvent(_target, hookName, ...args) {
@@ -134,7 +164,7 @@ export function readRuntimeHook(target, hookName) {
   if (isRuntimeHookBusEventName(normalizedHookName)) {
     return readRuntimeHookBusDispatcher(target, normalizedHookName);
   }
-  if (isRuntimeHookHandlerName(normalizedHookName) && handlerFnsByHookName.has(normalizedHookName)) {
+  if (isRuntimeHookHandlerName(normalizedHookName) && handlerEntriesByHookName.has(normalizedHookName)) {
     return getHandlerDispatcher(normalizedHookName);
   }
   return null;
@@ -147,12 +177,38 @@ export function readRegisteredRuntimeHookSource(target, hookName) {
   }
   bindStateCompatSurface(target);
   if (isRuntimeHookBusEventName(normalizedHookName)) {
-    return notificationListenersByHookName.get(normalizedHookName) || null;
+    return legacyNotificationSlotsByHookName.get(normalizedHookName)?.source || null;
   }
   if (isRuntimeHookHandlerName(normalizedHookName)) {
-    return handlerFnsByHookName.get(normalizedHookName) || null;
+    return handlerEntriesByHookName.get(normalizedHookName)?.source || null;
   }
   return null;
+}
+
+export function registerRuntimeHandler(target, hookName, handler) {
+  const normalizedHookName = String(hookName || "").trim();
+  if (!isRuntimeHookHandlerName(normalizedHookName)) {
+    throw new TypeError(`Unknown runtime handler hook: ${normalizedHookName || "<empty>"}`);
+  }
+  const normalizedHandler = normalizeRuntimeHook(handler);
+  if (!normalizedHandler) {
+    throw new TypeError(`Runtime handler must be a function: ${normalizedHookName}`);
+  }
+  bindStateCompatSurface(target);
+  const token = Symbol(normalizedHookName);
+  handlerEntriesByHookName.set(normalizedHookName, Object.freeze({
+    source: normalizedHandler,
+    token,
+  }));
+  return Object.freeze({
+    dispatcher: getHandlerDispatcher(normalizedHookName),
+    dispose() {
+      const currentEntry = handlerEntriesByHookName.get(normalizedHookName);
+      if (!currentEntry || currentEntry.token !== token) return false;
+      handlerEntriesByHookName.delete(normalizedHookName);
+      return true;
+    },
+  });
 }
 
 export function registerRuntimeHook(target, hookName, hook) {
@@ -171,10 +227,13 @@ export function registerRuntimeHook(target, hookName, hook) {
   }
   const normalizedHook = normalizeRuntimeHook(hook);
   if (!normalizedHook) {
-    handlerFnsByHookName.delete(normalizedHookName);
+    handlerEntriesByHookName.delete(normalizedHookName);
     return null;
   }
-  handlerFnsByHookName.set(normalizedHookName, normalizedHook);
+  handlerEntriesByHookName.set(normalizedHookName, Object.freeze({
+    source: normalizedHook,
+    token: Symbol(normalizedHookName),
+  }));
   return getHandlerDispatcher(normalizedHookName);
 }
 
@@ -187,7 +246,7 @@ export function callRuntimeHook(target, hookName, ...args) {
   if (isRuntimeHookBusEventName(normalizedHookName)) {
     return emitRuntimeHookBusEvent(target, normalizedHookName, ...args);
   }
-  const hook = handlerFnsByHookName.get(normalizedHookName) || null;
+  const hook = handlerEntriesByHookName.get(normalizedHookName)?.source || null;
   if (!hook) {
     return undefined;
   }
@@ -224,7 +283,7 @@ export function bindStateCompatSurface(target) {
       configurable: true,
       enumerable: true,
       get() {
-        return handlerFnsByHookName.has(hookName)
+        return handlerEntriesByHookName.has(hookName)
           ? getHandlerDispatcher(hookName)
           : null;
       },

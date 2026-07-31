@@ -32,7 +32,28 @@ export function off(eventName, listener = null) {
 export function emit(eventName, payload) {
   const listeners = listenersByEvent.get(eventName);
   if (!listeners || !listeners.size) return [];
-  return Array.from(listeners).map((listener) => listener(payload));
+  const snapshot = Array.from(listeners);
+  const results = [];
+  const errors = [];
+  snapshot.forEach((listener) => {
+    try {
+      results.push(listener(payload));
+    } catch (error) {
+      errors.push(error);
+    }
+  });
+  if (errors.length === 1) {
+    throw errors[0];
+  }
+  if (errors.length) {
+    const aggregateError = new AggregateError(
+      errors,
+      `State bus event "${eventName}" failed in ${errors.length} listener(s).`,
+      { cause: errors[0] },
+    );
+    throw aggregateError;
+  }
+  return results;
 }
 
 export function once(eventName, listener) {
