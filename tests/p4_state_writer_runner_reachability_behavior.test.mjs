@@ -89,6 +89,34 @@ test("exact P4.2c gates reach Scenario health action and boundary regressions", 
   );
 });
 
+test("exact P4.3 gates reach renderer state action and boundary regressions", () => {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const nodeCommand = packageJson.scripts["test:node:p4:p4-3"];
+  const pythonCommand = packageJson.scripts["test:python:p4:p4-3-boundary"];
+
+  for (const testFile of [
+    "tests/renderer_phase_actions_behavior.test.mjs",
+    "tests/renderer_interaction_actions_behavior.test.mjs",
+    "tests/renderer_exact_refresh_actions_behavior.test.mjs",
+    "tests/renderer_cache_actions_behavior.test.mjs",
+    "tests/renderer_diagnostics_actions_behavior.test.mjs",
+    "tests/render_perf_metrics_runtime_owner_behavior.test.mjs",
+    "tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs",
+  ]) {
+    assert.ok(nodeCommand.split(/\s+/).includes(testFile), testFile);
+  }
+  assert.ok(!nodeCommand.includes("--test-force-exit"), nodeCommand);
+  assert.match(pythonCommand, /tests\.test_renderer_control_actions_boundary_contract/);
+  assert.match(pythonCommand, /tests\.test_renderer_exact_refresh_actions_boundary_contract/);
+  assert.match(pythonCommand, /tests\.test_renderer_cache_actions_boundary_contract/);
+  assert.match(pythonCommand, /tests\.test_renderer_diagnostics_actions_boundary_contract/);
+  assert.ok(
+    buildP4PhaseVerificationPlan({ phase: "P4.3" }).commands.includes(
+      "npm run test:node:p4:state-writer-policy",
+    ),
+  );
+});
+
 test("node route discovery keeps wrapper-based named gates reachable", () => {
   const route = buildNodeRoutes().find(
     ({ commandRef }) => commandRef === "test:node:p4:state-writer-policy",

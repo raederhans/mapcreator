@@ -1310,6 +1310,13 @@ function validateCallerToActionLedgerSchema(policy = {}) {
     const retiredEnclosingFunctionIdentity = String(
       entry?.retiredEnclosingFunctionIdentity || "",
     );
+    const retiredEnclosingFunctionIdentities = Array.isArray(
+      entry?.retiredEnclosingFunctionIdentities,
+    )
+      ? entry.retiredEnclosingFunctionIdentities.map(
+        (identity) => String(identity || ""),
+      )
+      : null;
     const retiredMutationSiteFingerprint = String(
       entry?.retiredMutationSiteFingerprint || "",
     );
@@ -1339,6 +1346,11 @@ function validateCallerToActionLedgerSchema(policy = {}) {
       crossFileRetiredEnclosingFunctionIdentities.size === 1
         ? [...crossFileRetiredEnclosingFunctionIdentities][0]
         : "";
+    const crossFileRetiredEnclosingFunctionIdentityList = [
+      ...crossFileRetiredEnclosingFunctionIdentities,
+    ].sort((left, right) => left.localeCompare(right));
+    const crossFileHasMultipleRetiredFunctions =
+      crossFileRetiredEnclosingFunctionIdentityList.length > 1;
     const crossFileMutationSiteFingerprint =
       crossFileMutationSites.length
         ? createHash("sha256")
@@ -1358,8 +1370,26 @@ function validateCallerToActionLedgerSchema(policy = {}) {
         && enclosingFunctionIdentity
           === crossFileMigration
             .replacementEnclosingFunctionIdentity
-        && retiredEnclosingFunctionIdentity
-          === crossFileRetiredEnclosingFunctionIdentity
+        && (
+          crossFileHasMultipleRetiredFunctions
+            ? (
+              !retiredEnclosingFunctionIdentity
+              && JSON.stringify(
+                retiredEnclosingFunctionIdentities,
+              ) === JSON.stringify(
+                crossFileRetiredEnclosingFunctionIdentityList,
+              )
+              && Number(entry?.retiredMutationFunctionCount)
+                === crossFileRetiredEnclosingFunctionIdentityList
+                  .length
+            )
+            : (
+              retiredEnclosingFunctionIdentity
+                === crossFileRetiredEnclosingFunctionIdentity
+              && retiredEnclosingFunctionIdentities === null
+              && entry?.retiredMutationFunctionCount === undefined
+            )
+        )
         && actionModulePath
           === crossFileMigration.actionModulePath
         && actionExportName
@@ -1379,13 +1409,21 @@ function validateCallerToActionLedgerSchema(policy = {}) {
           === crossFileMutationSiteFingerprint
         && retiredMutationSiteCount
           === crossFileMutationSites.length
-        && proofPrecision === "explicit-cross-file"
+        && proofPrecision === (
+          crossFileHasMultipleRetiredFunctions
+            ? "explicit-cross-file-multi-function"
+            : "explicit-cross-file"
+        )
       )
       : (
         !entry?.retiredCallerPath
         && !entry?.retiredCallerBindingIdentity
+        && retiredEnclosingFunctionIdentities === null
         && !crossFileMigrationContractIdentity
-        && proofPrecision !== "explicit-cross-file"
+        && ![
+          "explicit-cross-file",
+          "explicit-cross-file-multi-function",
+        ].includes(proofPrecision)
       );
     const retiredInPhase = String(entry?.retiredInPhase || "");
     const recordedInPhase = String(entry?.recordedInPhase || "");

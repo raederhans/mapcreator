@@ -27,6 +27,16 @@ const SCENARIO_CHUNK_RUNTIME_ACTION_MODULE_PATH =
   "js/core/state/actions/scenario_chunk_runtime_actions.js";
 const SCENARIO_CHUNK_PROMOTION_ACTION_MODULE_PATH =
   "js/core/state/actions/scenario_chunk_promotion_actions.js";
+const RENDERER_PHASE_ACTION_MODULE_PATH =
+  "js/core/state/actions/renderer_phase_actions.js";
+const RENDERER_INTERACTION_ACTION_MODULE_PATH =
+  "js/core/state/actions/renderer_interaction_actions.js";
+const RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH =
+  "js/core/state/actions/renderer_exact_refresh_actions.js";
+const RENDERER_CACHE_ACTION_MODULE_PATH =
+  "js/core/state/actions/renderer_cache_actions.js";
+const RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH =
+  "js/core/state/actions/renderer_diagnostics_actions.js";
 
 const BOOT_ACTION_EXPORT_NAMES = Object.freeze([
   "setStartupInteractionMode",
@@ -128,6 +138,58 @@ const SCENARIO_CHUNK_PROMOTION_ACTION_EXPORT_NAMES = Object.freeze([
   "restoreScenarioChunkPromotionRootState",
 ]);
 
+const RENDERER_PHASE_ACTION_EXPORT_NAMES = Object.freeze([
+  "setRenderPhaseTimerIdState",
+  "setRenderPhaseValueState",
+  "setPhaseEnteredAtState",
+  "setRendererIsInteractingState",
+  "setPendingDayNightRefreshState",
+  "setAdaptiveSettleProfileState",
+  "commitRendererDprStageState",
+]);
+
+const RENDERER_INTERACTION_ACTION_EXPORT_NAMES = Object.freeze([
+  "setZoomGestureStartTransformState",
+  "setZoomGestureScaleDeltaState",
+  "setPendingZoomTransformState",
+  "setZoomRenderScheduledState",
+  "setZoomGestureEndedAtState",
+  "beginInteractionRecoveryTaskState",
+  "endInteractionRecoveryTaskState",
+  "setInteractionInfrastructureStateFields",
+]);
+
+const RENDERER_EXACT_REFRESH_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureExactAfterSettleControllerState",
+  "resetExactAfterSettleControllerState",
+  "refreshExactAfterSettleControllerIdentityState",
+  "beginExactAfterSettleControllerScheduleState",
+  "beginExactAfterSettleControllerApplyState",
+  "replaceExactAfterSettlePendingPlanState",
+  "completeExactAfterSettleControllerApplyState",
+  "beginExactAfterSettleControllerFinalizeState",
+  "setDeferExactAfterSettleState",
+  "setPendingExactPoliticalFastFrameState",
+  "setExactAfterSettleHandleState",
+]);
+
+const RENDERER_CACHE_ACTION_EXPORT_NAMES = Object.freeze([
+  "commitRenderPassCacheState",
+  "commitProjectedBoundsCacheState",
+  "setSphericalFeatureDiagnosticsCacheState",
+]);
+
+const RENDERER_DIAGNOSTICS_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureRenderPerfMetricsState",
+  "setRenderPerfMetricEntryState",
+  "setRenderPerfContextBreakdownState",
+  "commitRenderPerfMetricState",
+  "setFirstVisibleFramePaintedState",
+  "resetProjectedBoundsDiagnosticsState",
+  "setProjectedBoundsDiagnosticsState",
+  "setDebugCountryCoverageState",
+]);
+
 const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
   Object.freeze({
     modulePath: BOOT_ACTION_MODULE_PATH,
@@ -189,9 +251,41 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
     exportNames: SCENARIO_PRESENTATION_HEALTH_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.2c",
   }),
+  Object.freeze({
+    modulePath: RENDERER_PHASE_ACTION_MODULE_PATH,
+    exportNames: RENDERER_PHASE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    exportNames: RENDERER_INTERACTION_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH,
+    exportNames: RENDERER_EXACT_REFRESH_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
+    exportNames: RENDERER_CACHE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
+    exportNames: RENDERER_DIAGNOSTICS_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
 ]);
 
 const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
+  [
+    RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH,
+    new Set([
+      "isExactAfterSettleGenerationCurrentState",
+      "isExactAfterSettleControllerActiveState",
+    ]),
+  ],
   [
     SCENARIO_READINESS_ACTION_MODULE_PATH,
     new Set([
@@ -484,6 +578,35 @@ const STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID = new Map([
   ],
 ]);
 
+function freezeAllowedDynamicSite({
+  operation,
+  key,
+  pathPattern,
+}) {
+  return Object.freeze({
+    operation: String(operation || ""),
+    key: String(key || ""),
+    pathPattern: String(pathPattern || ""),
+  });
+}
+
+const RENDER_PERF_METRIC_DYNAMIC_SITE = freezeAllowedDynamicSite({
+  operation: "assign",
+  key: "renderPerfMetrics",
+  pathPattern: "renderPerfMetrics.*",
+});
+
+const STATE_ACTION_ALLOWED_DYNAMIC_SITES_BY_ID = new Map([
+  [
+    `${RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH}#setRenderPerfMetricEntryState`,
+    Object.freeze([RENDER_PERF_METRIC_DYNAMIC_SITE]),
+  ],
+  [
+    `${RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH}#commitRenderPerfMetricState`,
+    Object.freeze([RENDER_PERF_METRIC_DYNAMIC_SITE]),
+  ],
+]);
+
 function freezeDelegationEntry({
   modulePath,
   exportName,
@@ -498,6 +621,10 @@ function freezeDelegationEntry({
     targetArgumentIndex: Number(targetArgumentIndex),
     readOnlyArgumentIndexes:
       STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID.get(
+        `${normalizedModulePath}#${normalizedExportName}`,
+      ) || Object.freeze([]),
+    allowedDynamicSites:
+      STATE_ACTION_ALLOWED_DYNAMIC_SITES_BY_ID.get(
         `${normalizedModulePath}#${normalizedExportName}`,
       ) || Object.freeze([]),
     introducedInPhase: String(introducedInPhase || ""),
@@ -940,6 +1067,313 @@ function createScenarioHealthCrossFileMigrationEntry({
   });
 }
 
+function createRendererFunctionParameterBindingIdentity(
+  functionName,
+) {
+  return JSON.stringify({
+    kind: "function-parameter",
+    name: "",
+    functionName,
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath: "$",
+    importSource: "",
+    importedName: "",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+}
+
+const MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY =
+  JSON.stringify({
+    kind: "module",
+    name: "runtimeState",
+    functionName: "",
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath: "",
+    importSource: "./state.js",
+    importedName: "state",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+
+function createRendererFunctionIdentity(...names) {
+  return JSON.stringify({
+    kind: "function",
+    ancestry: names.map((name) => ({ name, ordinal: 0 })),
+  });
+}
+
+function createRendererRetiredMutationSites(groups = []) {
+  return groups.flatMap(({
+    enclosingFunctionIdentity,
+    sourceFingerprints,
+  }) => sourceFingerprints.map((sourceFingerprint) => ({
+    enclosingFunctionIdentity,
+    sourceFingerprint,
+    occurrenceIndex: 0,
+  }))).sort(
+    (left, right) =>
+      left.enclosingFunctionIdentity.localeCompare(
+        right.enclosingFunctionIdentity,
+      )
+      || left.sourceFingerprint.localeCompare(
+        right.sourceFingerprint,
+      ),
+  );
+}
+
+const EXACT_AFTER_SETTLE_CONTROLLER_RETIRED_MUTATION_SITES =
+  Object.freeze(createRendererRetiredMutationSites([
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "ensureExactAfterSettleControllerState",
+        "<anonymous>",
+      ),
+      sourceFingerprints: [
+        "ecd12a01aa31911f3c6082039d223ecf60f56f36f8aa2825fdd0c490aa06bbf0",
+      ],
+    },
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "ensureExactAfterSettleControllerState",
+      ),
+      sourceFingerprints: [
+        "21627ab6f02dc575201be312d541f4a277c78747d2fd6e3f3d316b2dc0f7cfb2",
+      ],
+    },
+  ]));
+
+const RENDER_PASS_CACHE_RETIRED_MUTATION_SITES = Object.freeze(
+  createRendererRetiredMutationSites([
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "ensureRenderPassCacheState",
+        "<anonymous>",
+      ),
+      sourceFingerprints: [
+        "44ca29993fc85d66a21939cb8bf753c1cc96cfaaabbbb968b2346a3d17762f27",
+      ],
+    },
+    ...[
+      [1, "cd1abaa5108a63e7c17d8fe8b4d83872acbaa549c2016e9e80a865878bf2318f"],
+      [2, "476b066c5e31d502bc996aefc85073bcc6596616fc9a0daec86cb1f30205c7e1"],
+      [4, "b9820c5b6fdaeb7390d44dc6ccd15e79e75d8425b421da3a2b2fece9d7112ac0"],
+    ].map(([ordinal, sourceFingerprint]) => ({
+      enclosingFunctionIdentity: JSON.stringify({
+        kind: "function",
+        ancestry: [
+          { name: "ensureRenderPassCacheState", ordinal: 0 },
+          { name: "<anonymous>", ordinal },
+        ],
+      }),
+      sourceFingerprints: [sourceFingerprint],
+    })),
+    {
+      enclosingFunctionIdentity: JSON.stringify({
+        kind: "function",
+        ancestry: [
+          { name: "ensureRenderPassCacheState", ordinal: 0 },
+          { name: "<anonymous>", ordinal: 3 },
+        ],
+      }),
+      sourceFingerprints: [
+        "008ed9c4c1e3ad46d2e9e3c64a646f0f3319185673bf36ee176bf0c491acc67d",
+        "8d54559dc85a9bd6f8d8538a540a0b858cfb63820c6d9ebbb0418ae3e8805847",
+      ],
+    },
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "ensureRenderPassCacheState",
+      ),
+      sourceFingerprints: [
+        "03d0c938c444e28b1813a83bd8fb2571aa38827a415e0d65b61d05ff8c23a973",
+        "0754f9554515f190f7d87022c4de61c23525cfb8c19a92c3cad5443732c29c75",
+        "13fd4fc86b948d29ab856a1115da007ef0f24272a8fd806a7cb12998291971eb",
+        "17850a44244266dd8aa99f6052dd947d0df32b335615a0b978cbf0b2ebcfd1d2",
+        "1cfd233b956e559f38bd4d686707ec665a134d806f6e6772658afaf36a567857",
+        "2384709e3a5df1515cf96944e9f68865c34e30d80c47274070bd710b85cb38ef",
+        "29deb067b7a626962bf2da1fc258b766c8f9fce537808dcd1fcfaece3153e85f",
+        "3041f1dbdb697ee99822161e55545ab2ded43f5d3fefa0db55740989ee941d38",
+        "3e66913a315cfcc7851192223ed27cabf4ce9ea5723f5458440cebbd16af53c0",
+        "3ece7657943e658ee04c96649c67d3ddecf1af76c7d551b570c2620d4a51490f",
+        "4118b14b806a4c1b12d4ec0985843754e3c769a7053416052077eaf277a5436c",
+        "4249feb0fe4467d48b62b1a180b33fcdff8901204594e8096b4b821d219e36e8",
+        "47a5dd0470a1ea0fedfef4f32e97bc02f5cba3723c89fb2520a167020c6ed01d",
+        "503bd4f1235cc0e7ae97776ad1f7d16c0f9960f4cfc7def896ed76cd587ab100",
+        "5a3072e238e6461034f3fcd30cdf17c9a5c409932c15d45f6e0f33e1355f416c",
+        "5efca238399122cb725b7ffba96976884f434f36b4e1f9ddc58ceed97acb06c1",
+        "641d9d27e0736b67b93def8e9523ceec2bc9080fc9341f1e046988b54cb44d7d",
+        "647f8a1580069d96f1f7b5d2c89a7ee017eaf42d7ca3a1a5e12cd1ea78e333a7",
+        "7298e324ede3fd03e0013021de579b066be5971aa4b0897c1772f069703674e4",
+        "757b4d2cd8dc6c0f7ffaa6d58c8ae60c4df2fb6abed5d75e12ede1022a692620",
+        "7c63293c4fd51cbd218007ed62bb0f3a6cf1844beb1b5cd5ab4ee95801167570",
+        "80fb2cf43b5e6f4b3cb1b5c2852922d972e9e4a8349edf6e9de99cfbd2560cde",
+        "8638c1d95937421e59b28862e5aa66480b752f45586384499fea9bec1e20591f",
+        "8cb39709b6884a7e1d67dd54ba9c83feb6c05fb21e028de3afb6157d5948f087",
+        "921631f6e4a683e7bc55559abfe056b05d9ddbb978f8756a5eadfb424cc3bc23",
+        "992866807a6f64dd5bf8f15d9ac89fc5c81b3d232e08dc9305963d6a7f795b7f",
+        "9a657fc21f69683436e3ec24addc30ccf3d0dc8e6cdd31dc6bc27d250bf4e0fc",
+        "9de6dbc3332dda7f3e04454b6065d4cab422956664db919ac3c6b02c676e590d",
+        "a1175ae752a4d057321ea09a72243e8aa8a2f9495db3ae5725ec725ac67268b1",
+        "a20490f006c7dc57b2f79e7e96ed0ba76bace2196a059873fb2ac6b99590b42f",
+        "bd12a7a64539d83647b1517cd48d5588088da7e87fae0d7559c02a5cde1416e2",
+        "c9b7b04f5b7c6362432a58467d9e7de65053f23f021d3b3d74e982a56b656d28",
+        "cc5fd28f13610363df7159976a8e3a22e2d2359fc1ccd204dc4400bdb03adb5c",
+        "d0ff886b05d696aa829a40f72e31afe7e535ca4f77a45b173c64843c11fda27b",
+        "d5d26d456da0adcd2d691ad440ea9a7346bccfa6a3fec59e8cb1b93adc201371",
+        "e0ab65ae9e8b34bc0644e6ac86c0a92efd3c6aa3077d0efc5a06bb7b80b745eb",
+        "ed563fbfefbddd5e99382fdaccfa8326e1550372ec8390015250a36d84eb64b6",
+        "f48a948c1f36dc661c135d131649ce8ac3c99d4e7c11a9f09c28daa80648b72e",
+        "f53725d56dde213c9831868c87656b703386a7d379c679c9094c0beb1ac2978a",
+        "f93682c9fde61d3f9d0d555bdec22c8f4e692cbbd29e5c45068c25b037084bf8",
+        "fae85cb5302e188628d3dd48df7621858c79af5fbe660a90f506896c4eae716b",
+        "ff8bc6ec88611ee286a028d4e5c8bf6cf2309dc43b92359d91717c8cdec70ab2",
+        "ffb56eaf06215f4eb8775f64108a1ce2cf7c07479cc35481f59dd10973fa9822",
+      ],
+    },
+  ]),
+);
+
+const MAP_RENDERER_DEFER_EXACT_RETIRED_MUTATION_SITES = Object.freeze(
+  createRendererRetiredMutationSites([
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "getRendererStartupTransactionOwner",
+        "resetDeferredRenderFlags",
+      ),
+      sourceFingerprints: [
+        "8be8ff5d1e5e3387ffe359256e797603d09c1eb4713f24a3af377cc1228b3e8d",
+      ],
+    },
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "getRendererTransactionResetOwner",
+        "setDeferExactAfterSettle",
+      ),
+      sourceFingerprints: [
+        "8be8ff5d1e5e3387ffe359256e797603d09c1eb4713f24a3af377cc1228b3e8d",
+      ],
+    },
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "getRenderPhaseLifecycleOwner",
+        "setDeferExactAfterSettle",
+      ),
+      sourceFingerprints: [
+        "8be8ff5d1e5e3387ffe359256e797603d09c1eb4713f24a3af377cc1228b3e8d",
+      ],
+    },
+  ]),
+);
+
+const MAP_RENDERER_DPR_STAGE_RETIRED_MUTATION_SITES = Object.freeze(
+  createRendererRetiredMutationSites([{
+    enclosingFunctionIdentity: createRendererFunctionIdentity(
+      "updateDprStage",
+    ),
+    sourceFingerprints: [
+      "ea96a221ef127a50a1cbd2e81c11a6addf93a6e5133db8e41e704fd71931f517",
+    ],
+  }]),
+);
+
+const MAP_RENDERER_DPR_SWITCH_RETIRED_MUTATION_SITES = Object.freeze(
+  createRendererRetiredMutationSites([{
+    enclosingFunctionIdentity: createRendererFunctionIdentity(
+      "updateDprStage",
+    ),
+    sourceFingerprints: [
+      "79c955ae4348f78c75bf574ef2a4881dd8ff8ce62b45255a4561123849a363e1",
+    ],
+  }]),
+);
+
+const MAP_RENDERER_FIRST_VISIBLE_RETIRED_MUTATION_SITES = Object.freeze(
+  createRendererRetiredMutationSites([{
+    enclosingFunctionIdentity: createRendererFunctionIdentity(
+      "getVisibleFrameDiagnosticsOwner",
+      "setFirstVisibleFramePainted",
+    ),
+    sourceFingerprints: [
+      "3638cdf234c11513c7a2bca4239238da3ce29a9f0369f44c9ffb2358a0c2c3d8",
+    ],
+  }]),
+);
+
+const MAP_RENDERER_PENDING_EXACT_POLITICAL_RETIRED_MUTATION_SITES =
+  Object.freeze(createRendererRetiredMutationSites([
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "getTransformedFrameCompositorOwner",
+        "setPendingExactPoliticalFastFrame",
+      ),
+      sourceFingerprints: [
+        "843031e48909bfc035daced288222631f154f017a1f7a8ff457ee2ee110911e7",
+      ],
+    },
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "getZoomInteractionLifecycleOwner",
+        "setPendingExactPoliticalFastFrame",
+      ),
+      sourceFingerprints: [
+        "843031e48909bfc035daced288222631f154f017a1f7a8ff457ee2ee110911e7",
+      ],
+    },
+  ]));
+
+const MAP_RENDERER_PROJECTED_DIAGNOSTICS_RETIRED_MUTATION_SITES =
+  Object.freeze(createRendererRetiredMutationSites([
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "recordProjectedBoundsDiagnosticsState",
+      ),
+      sourceFingerprints: [
+        "ceedd15522ac76aeb424c44e2deae29883b230bcdcf854e42e8ee5d6a28562ff",
+      ],
+    },
+    {
+      enclosingFunctionIdentity: createRendererFunctionIdentity(
+        "resetRenderDiagnostics",
+      ),
+      sourceFingerprints: [
+        "ceedd15522ac76aeb424c44e2deae29883b230bcdcf854e42e8ee5d6a28562ff",
+      ],
+    },
+  ]));
+
+function createRendererCrossBoundaryMigrationEntry({
+  retiredCallerPath,
+  retiredCallerBindingIdentity,
+  key,
+  retiredMutationSites,
+  replacementCallerPath,
+  replacementCallerBindingIdentity,
+  replacementEnclosingFunctionIdentity,
+  actionModulePath,
+  actionExportName,
+  replacementActionSourceFingerprint,
+}) {
+  return freezeCrossFileMigrationEntry({
+    retiredCallerPath,
+    retiredCallerBindingIdentity,
+    domain: "renderer",
+    migrationPhase: "P4.3",
+    operation: "assign",
+    key,
+    retiredMutationSites,
+    replacementCallerPath,
+    replacementCallerBindingIdentity,
+    replacementEnclosingFunctionIdentity,
+    actionModulePath,
+    actionExportName,
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint,
+  });
+}
+
 export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
   Object.freeze([
     ...[
@@ -1012,6 +1446,295 @@ export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
       actionExportName: "setScenarioHydrationHealthGateState",
       replacementActionSourceFingerprint:
         "cc4831af773186e73e4d9dc6b705d379fdc5b384fe574bacef03b89ed3bfbc75",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      retiredCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "ensureExactAfterSettleControllerState",
+        ),
+      key: "exactAfterSettleController",
+      retiredMutationSites:
+        EXACT_AFTER_SETTLE_CONTROLLER_RETIRED_MUTATION_SITES,
+      replacementCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      replacementCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "ensureExactAfterSettleControllerState",
+        ),
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "ensureExactAfterSettleControllerState",
+        ),
+      actionModulePath:
+        RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH,
+      actionExportName:
+        "ensureExactAfterSettleControllerState",
+      replacementActionSourceFingerprint:
+        "fb16bc84699298a90657913ea0c1a6b9f1dc4d3e5090c04129ddd66cf9167d68",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      retiredCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "resetExactAfterSettleControllerState",
+        ),
+      key: "exactAfterSettleController",
+      retiredMutationSites:
+        EXACT_AFTER_SETTLE_CONTROLLER_RETIRED_MUTATION_SITES,
+      replacementCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      replacementCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "resetExactAfterSettleControllerState",
+        ),
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "resetExactAfterSettleControllerState",
+        ),
+      actionModulePath:
+        RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH,
+      actionExportName:
+        "resetExactAfterSettleControllerState",
+      replacementActionSourceFingerprint:
+        "1ca8726fe37dda5e19d368a379d570683a1f6aff461894f22c52e12f1bfe7523",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      retiredCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "ensureRenderPassCacheState",
+        ),
+      key: "renderPassCache",
+      retiredMutationSites:
+        RENDER_PASS_CACHE_RETIRED_MUTATION_SITES,
+      replacementCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      replacementCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "ensureRenderPassCacheState",
+        ),
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "ensureRenderPassCacheState",
+        ),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
+      actionExportName: "commitRenderPassCacheState",
+      replacementActionSourceFingerprint:
+        "0ef1b15cc6878c2338e2f44a560521900a69a1567c0c237e3f9a92fcc016e5a4",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "projectedBoundsById",
+      retiredMutationSites:
+        createRendererRetiredMutationSites([{
+          enclosingFunctionIdentity:
+            createRendererFunctionIdentity(
+              "ensureProjectedBoundsCache",
+            ),
+          sourceFingerprints: [
+            "91b4bf1c5f0523fba4dd4d225589c1816701d8f68414c6cb9bdbf7e79515a92c",
+          ],
+        }]),
+      replacementCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      replacementCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "ensureProjectedBoundsCacheState",
+        ),
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "ensureProjectedBoundsCacheState",
+        ),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
+      actionExportName: "commitProjectedBoundsCacheState",
+      replacementActionSourceFingerprint:
+        "4771dd38da2cc4f07d703927a374b0ab209db4d88ac87ee3423ecca3e4e34b85",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "deferExactAfterSettle",
+      retiredMutationSites:
+        MAP_RENDERER_DEFER_EXACT_RETIRED_MUTATION_SITES,
+      replacementCallerPath: "js/core/map_renderer.js",
+      replacementCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "getRendererStartupTransactionOwner",
+          "resetDeferredRenderFlags",
+        ),
+      actionModulePath:
+        RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH,
+      actionExportName: "setDeferExactAfterSettleState",
+      replacementActionSourceFingerprint:
+        "7e7ef84a5382566d17cb8a9715c0a42581da7ecf5a9e5c425a17f3b595fdb425",
+    }),
+    ...[
+      [
+        "dprLastStageSwitchAt",
+        MAP_RENDERER_DPR_SWITCH_RETIRED_MUTATION_SITES,
+      ],
+      [
+        "dprStage",
+        MAP_RENDERER_DPR_STAGE_RETIRED_MUTATION_SITES,
+      ],
+    ].map(([key, retiredMutationSites]) =>
+      createRendererCrossBoundaryMigrationEntry({
+        retiredCallerPath: "js/core/map_renderer.js",
+        retiredCallerBindingIdentity:
+          MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+        key,
+        retiredMutationSites,
+        replacementCallerPath:
+          "js/core/state/renderer_runtime_state.js",
+        replacementCallerBindingIdentity:
+          createRendererFunctionParameterBindingIdentity(
+            "commitRendererDprStageState",
+          ),
+        replacementEnclosingFunctionIdentity:
+          createRendererFunctionIdentity(
+            "commitRendererDprStageState",
+          ),
+        actionModulePath: RENDERER_PHASE_ACTION_MODULE_PATH,
+        actionExportName: "commitRendererDprStageState",
+        replacementActionSourceFingerprint:
+          "21b13184a45c45e2cde7bb66273ecffdb190ca3250cc5c0ce7fdd6ff43816f15",
+      })
+    ),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "firstVisibleFramePainted",
+      retiredMutationSites:
+        MAP_RENDERER_FIRST_VISIBLE_RETIRED_MUTATION_SITES,
+      replacementCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      replacementCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "setFirstVisibleFramePaintedState",
+        ),
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "setFirstVisibleFramePaintedState",
+        ),
+      actionModulePath:
+        RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
+      actionExportName: "setFirstVisibleFramePaintedState",
+      replacementActionSourceFingerprint:
+        "4b37f18717c2ef312c44b44062011dc84feb3a63b103f7beffd88cd4a5ed1556",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "pendingExactPoliticalFastFrame",
+      retiredMutationSites:
+        MAP_RENDERER_PENDING_EXACT_POLITICAL_RETIRED_MUTATION_SITES,
+      replacementCallerPath: "js/core/map_renderer.js",
+      replacementCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "getZoomInteractionLifecycleOwner",
+          "setPendingExactPoliticalFastFrame",
+        ),
+      actionModulePath:
+        RENDERER_EXACT_REFRESH_ACTION_MODULE_PATH,
+      actionExportName:
+        "setPendingExactPoliticalFastFrameState",
+      replacementActionSourceFingerprint:
+        "260a1ac89f08877a13c7aa58338a968fdbd0b29a683ca45784c3e5d5b7240a9e",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "projectedBoundsDiagnostics",
+      retiredMutationSites:
+        MAP_RENDERER_PROJECTED_DIAGNOSTICS_RETIRED_MUTATION_SITES,
+      replacementCallerPath:
+        "js/core/state/renderer_runtime_state.js",
+      replacementCallerBindingIdentity:
+        createRendererFunctionParameterBindingIdentity(
+          "commitProjectedBoundsDiagnosticsState",
+        ),
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "commitProjectedBoundsDiagnosticsState",
+        ),
+      actionModulePath:
+        RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
+      actionExportName:
+        "setProjectedBoundsDiagnosticsState",
+      replacementActionSourceFingerprint:
+        "232b0cecc793ce7c8dc1ba2fd403de9ab9d7b5879f130bd9d871ccd657a4fd01",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "renderPerfMetrics",
+      retiredMutationSites:
+        createRendererRetiredMutationSites([{
+          enclosingFunctionIdentity:
+            createRendererFunctionIdentity(
+              "ensureRenderPerfMetrics",
+            ),
+          sourceFingerprints: [
+            "9a7604c8ab3b78b1711f6084a93deae01daef5ca893aa376ac3df478b01f69e4",
+          ],
+        }]),
+      replacementCallerPath: "js/core/map_renderer.js",
+      replacementCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "getRenderPerfMetricsRuntimeOwner",
+          "ensureRenderPerfMetricsState",
+        ),
+      actionModulePath:
+        RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
+      actionExportName: "ensureRenderPerfMetricsState",
+      replacementActionSourceFingerprint:
+        "b78cb0e2c76abeb52dc862526b28953c24e2f5b877fdaa3b1fe2902da57de0c3",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "renderPerfMetricSequence",
+      retiredMutationSites:
+        createRendererRetiredMutationSites([{
+          enclosingFunctionIdentity:
+            createRendererFunctionIdentity(
+              "recordRenderPerfMetric",
+            ),
+          sourceFingerprints: [
+            "c0cc051ae64a3b19eaed969c87860b175c88c86f35a495699c8302e807b9c536",
+          ],
+        }]),
+      replacementCallerPath: "js/core/map_renderer.js",
+      replacementCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "getRenderPerfMetricsRuntimeOwner",
+          "commitRenderPerfMetricState",
+        ),
+      actionModulePath:
+        RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
+      actionExportName: "commitRenderPerfMetricState",
+      replacementActionSourceFingerprint:
+        "8470f9be0dd1dbd3b4ab18f62a375c02ea859a03913957e730ec322383d90c5a",
     }),
   ].sort(
     (left, right) =>
@@ -1127,6 +1850,8 @@ export function validateStateActionCrossFileMigrationContract(
         normalized.replacementEnclosingFunctionIdentity,
       ),
     );
+    const multiFunctionRetirement =
+      retiredEnclosingFunctionIdentities.size > 1;
     let retiredCallerBindingIdentityValid = false;
     let replacementCallerBindingIdentityValid = false;
     try {
@@ -1154,9 +1879,11 @@ export function validateStateActionCrossFileMigrationContract(
       && mutationSitesValid
       && mutationSitesUnique
       && mutationSitesSorted
-      && retiredEnclosingFunctionIdentities.size === 1
       && normalized.replacementCallerPath
-      && replacementBoundaryDistinct
+      && (
+        replacementBoundaryDistinct
+        || multiFunctionRetirement
+      )
       && normalized.replacementCallerBindingIdentity
       && replacementCallerBindingIdentityValid
       && normalized.replacementEnclosingFunctionIdentity
@@ -2302,7 +3029,16 @@ function isSafeDomainActionTargetHelperAliasSite(
   );
 }
 
-function bindingDiagnosticCount(binding = {}) {
+function isAllowedDomainActionDynamicSite(entry = {}, site = {}) {
+  return (entry.allowedDynamicSites || []).some(
+    (allowedSite) =>
+      String(site.operation || "") === String(allowedSite.operation || "")
+      && String(site.key || "") === String(allowedSite.key || "")
+      && String(site.pathPattern || "") === String(allowedSite.pathPattern || ""),
+  );
+}
+
+function bindingDiagnosticCount(binding = {}, entry = {}) {
   return (binding.grants || []).reduce(
     (count, grant) =>
       count
@@ -2310,7 +3046,9 @@ function bindingDiagnosticCount(binding = {}) {
         (site) =>
           !isSafeDomainActionTargetHelperAliasSite(binding, site),
       ).length
-      + (grant.dynamicSites || []).length
+      + (grant.dynamicSites || []).filter(
+        (site) => !isAllowedDomainActionDynamicSite(entry, site),
+      ).length
       + (grant.ambiguousSites || []).length
       + (grant.unsupportedSites || []).length,
     0,
@@ -2439,7 +3177,7 @@ export function validateStateActionPolicyBindings(
             }),
           );
         }
-        const diagnosticCount = bindingDiagnosticCount(binding);
+        const diagnosticCount = bindingDiagnosticCount(binding, entry);
         if (diagnosticCount > 0) {
           violations.push(
             createViolation(

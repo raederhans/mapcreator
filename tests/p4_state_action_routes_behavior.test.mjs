@@ -194,7 +194,7 @@ test("historical owner routes stay direct while the selector upgrades execution 
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation([changedFile], routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.2c",
+    phase: "P4.3",
     changedFiles: [changedFile],
     recommendation,
     routes,
@@ -202,16 +202,16 @@ test("historical owner routes stay direct while the selector upgrades execution 
 
   assert.equal(report.verdict, "pass");
   assert.ok(report.files[0].directStateOwnershipRecommendations.length > 0);
-  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-2c"]);
+  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-3"]);
   assert.equal(
     report.files[0].directStateOwnershipRecommendations.some((route) => (
-      route.commandRef === "verify:p4:p4-2c"
+      route.commandRef === "verify:p4:p4-3"
     )),
     false,
   );
 });
 
-test("the current selector control plane has zero P4.2c route gaps", () => {
+test("the current selector control plane has zero P4.3 route gaps", () => {
   const changedFiles = [
     "tools/select_verification_targets.mjs",
     "tools/check_p4_state_action_routes.mjs",
@@ -227,7 +227,7 @@ test("the current selector control plane has zero P4.2c route gaps", () => {
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation(changedFiles, routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.2c",
+    phase: "P4.3",
     changedFiles,
     recommendation,
     routes,

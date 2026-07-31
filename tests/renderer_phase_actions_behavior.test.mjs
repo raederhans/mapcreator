@@ -1,0 +1,107 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+const MODULE_PATH = "../js/core/state/actions/renderer_phase_actions.js";
+
+async function loadActions() {
+  try {
+    return await import(MODULE_PATH);
+  } catch (error) {
+    assert.fail(`renderer phase actions must exist: ${error?.message || error}`);
+  }
+}
+
+test("renderer phase actions reject invalid targets", async () => {
+  const {
+    commitRendererDprStageState,
+    setAdaptiveSettleProfileState,
+    setPendingDayNightRefreshState,
+    setPhaseEnteredAtState,
+    setRendererIsInteractingState,
+    setRenderPhaseValueState,
+    setRenderPhaseTimerIdState,
+  } = await loadActions();
+
+  for (const target of [null, undefined, [], "state"]) {
+    assert.throws(() => setRenderPhaseTimerIdState(target, null), /target must be an object/);
+    assert.throws(() => setRenderPhaseValueState(target, "idle"), /target must be an object/);
+    assert.throws(() => setPhaseEnteredAtState(target, 0), /target must be an object/);
+    assert.throws(() => setRendererIsInteractingState(target, false), /target must be an object/);
+    assert.throws(() => setPendingDayNightRefreshState(target, true), /target must be an object/);
+    assert.throws(() => setAdaptiveSettleProfileState(target, null), /target must be an object/);
+    assert.throws(() => commitRendererDprStageState(target, {}), /target must be an object/);
+  }
+});
+
+test("renderer phase timer and settle profile preserve exact identity including null", async () => {
+  const {
+    setAdaptiveSettleProfileState,
+    setRenderPhaseTimerIdState,
+  } = await loadActions();
+  const target = { sentinel: "preserved" };
+  const timerId = { id: "timer" };
+  const profile = { delayMs: 120, source: "zoom" };
+
+  assert.equal(setRenderPhaseTimerIdState(target, timerId), timerId);
+  assert.equal(target.renderPhaseTimerId, timerId);
+  assert.equal(setRenderPhaseTimerIdState(target, null), null);
+  assert.equal(target.renderPhaseTimerId, null);
+  assert.equal(setAdaptiveSettleProfileState(target, profile), profile);
+  assert.equal(target.adaptiveSettleProfile, profile);
+  assert.equal(setAdaptiveSettleProfileState(target, null), null);
+  assert.equal(target.adaptiveSettleProfile, null);
+  assert.equal(target.sentinel, "preserved");
+});
+
+test("renderer phase setters own only their production fields", async () => {
+  const {
+    setPhaseEnteredAtState,
+    setRendererIsInteractingState,
+    setRenderPhaseValueState,
+  } = await loadActions();
+  const target = {
+    renderPhase: "idle",
+    phaseEnteredAt: 1,
+    isInteracting: false,
+    sentinel: "preserved",
+  };
+
+  const phase = { id: "settling" };
+  assert.equal(setRenderPhaseValueState(target, phase), phase);
+  assert.equal(setPhaseEnteredAtState(target, 42.5), 42.5);
+  assert.equal(setRendererIsInteractingState(target, 1), true);
+  assert.equal(target.renderPhase, phase);
+  assert.equal(target.phaseEnteredAt, 42.5);
+  assert.equal(target.isInteracting, true);
+  assert.equal(target.sentinel, "preserved");
+});
+
+test("pending day-night refresh normalizes to a boolean", async () => {
+  const { setPendingDayNightRefreshState } = await loadActions();
+  const target = {};
+
+  assert.equal(setPendingDayNightRefreshState(target, "queued"), true);
+  assert.equal(target.pendingDayNightRefresh, true);
+  assert.equal(setPendingDayNightRefreshState(target, 0), false);
+  assert.equal(target.pendingDayNightRefresh, false);
+});
+
+test("DPR stage and switch timestamp commit as one exact pair", async () => {
+  const { commitRendererDprStageState } = await loadActions();
+  const target = {
+    dprStage: "idle",
+    dprLastStageSwitchAt: 10,
+    sentinel: "preserved",
+  };
+
+  assert.equal(
+    commitRendererDprStageState(target, {
+      stage: "interactive",
+      switchedAt: 123.75,
+    }),
+    "interactive",
+  );
+  assert.equal(target.dprStage, "interactive");
+  assert.equal(target.dprLastStageSwitchAt, 123.75);
+  assert.equal(target.sentinel, "preserved");
+});

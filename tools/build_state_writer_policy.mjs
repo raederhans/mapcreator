@@ -970,22 +970,31 @@ export async function buildFrozenDerivedAliasTaintBaseline({
           includeInventories: true,
         },
       );
-    const bindings = bindingInventories
-      .filter(({ findings }) => findings.length)
-      .map(({ binding, findings }) => ({
-        ...binding,
-        authority: bindingAuthority(
-          relativePath,
-          "production",
-          binding,
-        ),
-        grants: buildStateWriterBindingGrants(
-          findings,
-          relativePath,
-          stateKeyAuthorityIndex,
-          "production",
-        ),
-      }));
+    const bindings = bindingInventories.flatMap(
+      ({ binding, findings }) => {
+        const diagnosticFindings = findings.filter(
+          ({ unsupported }) => unsupported,
+        );
+        if (!diagnosticFindings.length) {
+          return [];
+        }
+        return [{
+          ...binding,
+          authority: bindingAuthority(
+            relativePath,
+            "production",
+            binding,
+          ),
+          grants: buildStateWriterBindingGrants(
+            diagnosticFindings,
+            relativePath,
+            stateKeyAuthorityIndex,
+            "production",
+            { allowUnknownUnsupportedAuthority: true },
+          ),
+        }];
+      },
+    );
     if (bindings.length) {
       strictHistoricalWriters.push({
         path: relativePath,
@@ -1476,8 +1485,20 @@ function buildCallerToActionLedgerEntry({
     callerBindingId: edge.callerBindingId,
     callerBindingIdentity: edge.callerBindingIdentity,
     enclosingFunctionIdentity: edge.enclosingFunctionIdentity,
-    retiredEnclosingFunctionIdentity:
-      retiredMutationEvidence.enclosingFunctionIdentity,
+    ...(Array.isArray(
+      retiredMutationEvidence.retiredEnclosingFunctionIdentities,
+    )
+      ? {
+        retiredEnclosingFunctionIdentities:
+          retiredMutationEvidence
+            .retiredEnclosingFunctionIdentities,
+        retiredMutationFunctionCount:
+          retiredMutationEvidence.functionCount,
+      }
+      : {
+        retiredEnclosingFunctionIdentity:
+          retiredMutationEvidence.enclosingFunctionIdentity,
+      }),
     retiredMutationSiteFingerprint:
       retiredMutationEvidence.siteFingerprint,
     retiredMutationSiteCount:
@@ -1713,19 +1734,25 @@ function buildRetiredMutationEvidence({
         ),
       ),
     ];
-    if (functionIdentities.length !== 1) {
-      return {
-        error:
-          "cross-file-retired-membership-spans-multiple-enclosing-functions",
-      };
-    }
+    const multipleRetiredFunctions =
+      functionIdentities.length > 1;
     return {
-      enclosingFunctionIdentity: functionIdentities[0],
+      ...(multipleRetiredFunctions
+        ? {
+          retiredEnclosingFunctionIdentities:
+            functionIdentities,
+          functionCount: functionIdentities.length,
+        }
+        : {
+          enclosingFunctionIdentity: functionIdentities[0],
+        }),
       siteFingerprint: createHash("sha256")
         .update(JSON.stringify(contractedMutationSites))
         .digest("hex"),
       siteCount: contractedMutationSites.length,
-      proofPrecision: "explicit-cross-file",
+      proofPrecision: multipleRetiredFunctions
+        ? "explicit-cross-file-multi-function"
+        : "explicit-cross-file",
     };
   }
   if (mutationSites.length) {
@@ -2317,7 +2344,11 @@ export function buildCallerToActionLedger({
   return {
     schemaVersion:
       Number(previousLedger?.schemaVersion) === 2
-      || entries.some((entry) => Array.isArray(entry.functionProofs))
+      || entries.some((entry) =>
+        Array.isArray(entry.functionProofs)
+        || entry.proofPrecision
+          === "explicit-cross-file-multi-function"
+      )
         ? 2
         : 1,
     entries,
@@ -4422,6 +4453,7 @@ export function buildStateWriterBindingGrants(
   relativePath,
   stateKeyAuthorityIndex,
   surface,
+  { allowUnknownUnsupportedAuthority = false } = {},
 ) {
   const grantsByKey = new Map();
   for (const finding of findings) {
@@ -4434,7 +4466,9 @@ export function buildStateWriterBindingGrants(
       stateKeyAuthorityIndex,
     );
     if (authority.unknown) {
-      if (surface === "production") {
+      const canUseConservativeFallback =
+        allowUnknownUnsupportedAuthority && finding.unsupported;
+      if (surface === "production" && !canUseConservativeFallback) {
         const error = new Error(
           `Unknown state key authority for ${finding.key} in ${relativePath}.`,
         );

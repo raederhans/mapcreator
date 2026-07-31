@@ -1,0 +1,88 @@
+from pathlib import Path
+import re
+import unittest
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+PHASE_ACTIONS_JS = REPO_ROOT / "js" / "core" / "state" / "actions" / "renderer_phase_actions.js"
+INTERACTION_ACTIONS_JS = REPO_ROOT / "js" / "core" / "state" / "actions" / "renderer_interaction_actions.js"
+RUNTIME_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "renderer_runtime_state.js"
+RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
+PUBLIC_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
+
+
+PHASE_KEYS = {
+    "renderPhaseTimerId",
+    "renderPhase",
+    "phaseEnteredAt",
+    "isInteracting",
+    "pendingDayNightRefresh",
+    "adaptiveSettleProfile",
+    "dprStage",
+    "dprLastStageSwitchAt",
+}
+
+INTERACTION_KEYS = {
+    "zoomGestureStartTransform",
+    "zoomGestureScaleDelta",
+    "pendingZoomTransform",
+    "zoomRenderScheduled",
+    "zoomGestureEndedAt",
+    "activeInteractionRecoveryTaskKey",
+    "activeInteractionRecoveryTaskStartedAt",
+    "interactionInfrastructureStage",
+    "interactionInfrastructureReady",
+    "interactionInfrastructureBuildInFlight",
+}
+
+
+def assigned_keys(source):
+    return set(re.findall(r"target\.([A-Za-z_$][\w$]*)\s*=", source))
+
+
+class RendererControlActionsBoundaryContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.renderer = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        cls.phase_actions = PHASE_ACTIONS_JS.read_text(encoding="utf-8")
+        cls.interaction_actions = INTERACTION_ACTIONS_JS.read_text(encoding="utf-8")
+
+    def test_action_modules_own_exact_approved_keys(self):
+        self.assertEqual(assigned_keys(self.phase_actions), PHASE_KEYS)
+        self.assertEqual(assigned_keys(self.interaction_actions), INTERACTION_KEYS)
+
+    def test_action_modules_remain_import_free_state_only_surfaces(self):
+        for source in [self.phase_actions, self.interaction_actions]:
+            self.assertNotRegex(source, r"^\s*import\s", re.MULTILINE)
+            for token in ["runtimeState", "globalThis", "document", "window", "Date.now", "requestAnimationFrame"]:
+                self.assertNotIn(token, source)
+
+    def test_map_renderer_delegates_all_approved_writes(self):
+        for import_path in [
+            "./state/actions/renderer_phase_actions.js",
+            "./state/actions/renderer_interaction_actions.js",
+        ]:
+            self.assertIn(import_path, self.renderer)
+        renderer_owned_interaction_keys = INTERACTION_KEYS - {
+            "interactionInfrastructureStage",
+            "interactionInfrastructureReady",
+            "interactionInfrastructureBuildInFlight",
+        }
+        for key in PHASE_KEYS | renderer_owned_interaction_keys:
+            self.assertNotRegex(self.renderer, rf"\bruntimeState\.{re.escape(key)}\s*=(?!=)")
+        runtime_state = RUNTIME_STATE_JS.read_text(encoding="utf-8")
+        for key in INTERACTION_KEYS - renderer_owned_interaction_keys:
+            self.assertNotRegex(runtime_state, rf"\btarget\.{re.escape(key)}\s*=(?!=)")
+        self.assertIn("setInteractionInfrastructureActionStateFields(target, stage, options)", runtime_state)
+
+    def test_protected_boundaries_remain_read_only_and_private(self):
+        runtime_context = RUNTIME_CONTEXT_JS.read_text(encoding="utf-8")
+        public_facade = PUBLIC_FACADE_JS.read_text(encoding="utf-8")
+        for token in ["renderer_phase_actions", "renderer_interaction_actions"]:
+            self.assertNotIn(token, runtime_context)
+            self.assertNotIn(token, public_facade)
+
+
+if __name__ == "__main__":
+    unittest.main()

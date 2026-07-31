@@ -33,6 +33,7 @@ const FILES = Object.freeze({
   setMapDataTransactionOwner: "js/core/map_renderer/set_map_data_transaction_owner.js",
   renderRequestBoundaryOwner: "js/core/map_renderer/render_request_boundary_owner.js",
   renderPhaseLifecycleOwner: "js/core/map_renderer/render_phase_lifecycle_owner.js",
+  renderPerfMetricsRuntimeOwner: "js/core/renderer/render_perf_metrics_runtime_owner.js",
   visibleFrameDiagnosticsOwner: "js/core/renderer/visible_frame_diagnostics_owner.js",
   rendererRenderLifecycleOwner: "js/core/renderer/renderer_render_lifecycle_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
@@ -153,7 +154,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 23156,
+  [FILES.renderer]: 23154,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -171,6 +172,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.setMapDataTransactionOwner]: 260,
   [FILES.renderRequestBoundaryOwner]: 160,
   [FILES.renderPhaseLifecycleOwner]: 260,
+  [FILES.renderPerfMetricsRuntimeOwner]: 200,
   [FILES.renderPassCacheHostOwner]: 260,
   [FILES.renderPassCommitAccountingOwner]: 260,
   [FILES.drawCanvasOrchestrationOwner]: 320,
@@ -436,6 +438,7 @@ function collectFailures() {
   const rendererSetMapDataTransactionInventoryTest = readProjectFile(FILES.rendererSetMapDataTransactionInventoryTest);
   const renderRequestBoundaryOwner = readProjectFile(FILES.renderRequestBoundaryOwner);
   const renderPhaseLifecycleOwner = readProjectFile(FILES.renderPhaseLifecycleOwner);
+  const renderPerfMetricsRuntimeOwner = readProjectFile(FILES.renderPerfMetricsRuntimeOwner);
   const visibleFrameDiagnosticsOwner = readProjectFile(FILES.visibleFrameDiagnosticsOwner);
   const rendererTransactionResetHardeningPreflightDoc = readProjectFile(
     FILES.rendererTransactionResetHardeningPreflightDoc,
@@ -586,6 +589,7 @@ function collectFailures() {
     [FILES.rendererSetMapDataTransactionInventoryTest]: rendererSetMapDataTransactionInventoryTest,
     [FILES.renderRequestBoundaryOwner]: renderRequestBoundaryOwner,
     [FILES.renderPhaseLifecycleOwner]: renderPhaseLifecycleOwner,
+    [FILES.renderPerfMetricsRuntimeOwner]: renderPerfMetricsRuntimeOwner,
     [FILES.visibleFrameDiagnosticsOwner]: visibleFrameDiagnosticsOwner,
     [FILES.rendererTransactionResetHardeningPreflightDoc]: rendererTransactionResetHardeningPreflightDoc,
     [FILES.rendererTransactionResetOwnerDoc]: rendererTransactionResetOwnerDoc,
@@ -648,6 +652,44 @@ function collectFailures() {
     const count = lineCount(sources[relativePath]);
     if (count > budget) {
       failures.push(`${relativePath} has ${count} lines; budget is ${budget}. Move focused behavior into an owner.`);
+    }
+  }
+
+  for (const token of [
+    "export function createRenderPerfMetricsRuntimeOwner(",
+    "function recordRenderPerfMetric(",
+    "function beginContextMetricSession(",
+    "function collectContextMetric(",
+    "function endContextMetricSession(",
+    "function resetContextBreakdownForExactFrame(",
+    "return Object.freeze({",
+  ]) {
+    if (!renderPerfMetricsRuntimeOwner.includes(token)) {
+      failures.push(`${FILES.renderPerfMetricsRuntimeOwner} must own token: ${token}`);
+    }
+  }
+  for (const token of [
+    "import ",
+    "map_renderer.js",
+    "runtimeState",
+    "globalThis",
+    "window",
+    "document",
+    "Date.now(",
+    "performance.now(",
+  ]) {
+    if (renderPerfMetricsRuntimeOwner.includes(token)) {
+      failures.push(`${FILES.renderPerfMetricsRuntimeOwner} must not contain token: ${token}`);
+    }
+  }
+  for (const token of [
+    "createRenderPerfMetricsRuntimeOwner({",
+    "getRenderPerfMetrics: () => runtimeState.renderPerfMetrics",
+    "commitRenderPerfMetricState: (payload) => commitRenderPerfMetricState(runtimeState, payload)",
+    "setRenderPerfContextBreakdownState: (breakdown) => setRenderPerfContextBreakdownState(runtimeState, breakdown)",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep render perf owner composition token: ${token}`);
     }
   }
 
@@ -2129,7 +2171,7 @@ function collectFailures() {
     "pendingSecondarySpatialBuildReasons.clear()",
     "runtimeState.deferContextBasePass = false",
     "runtimeState.deferHitCanvasBuild = false",
-    "runtimeState.deferExactAfterSettle = false",
+    "setDeferExactAfterSettleState(runtimeState, false)",
     "layerResolverCache.primaryRef = null",
     "layerResolverCache.detailRef = null",
     "layerResolverCache.bundleMode = null",
