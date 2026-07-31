@@ -1,3 +1,5 @@
+import { patchStrategicOverlayEditorState } from "../../../core/state/actions/strategic_overlay_actions.js";
+
 function normalizeCatalogSource(value) {
   return String(value || "internal").trim().toLowerCase() === "hoi4"
     ? "hoi4"
@@ -30,13 +32,15 @@ export function applyUnitCounterPresetSelection({
   const fallbackToken = nextRenderer === "milstd"
     ? String(nextPreset.baseSidc || "").trim().toUpperCase()
     : String(nextPreset.shortCode || "").trim().toUpperCase();
-  state.unitCounterEditor.presetId = normalizedPresetId;
-  state.unitCounterEditor.iconId = String(nextPreset.iconId || "").trim().toLowerCase();
-  state.unitCounterEditor.unitType = String(nextPreset.unitType || nextPreset.id || "").trim().toUpperCase();
-  state.unitCounterEditor.renderer = nextRenderer;
-  state.unitCounterEditor.echelon = String(nextPreset.defaultEchelon || "").trim().toUpperCase();
-  state.unitCounterEditor.sidc = fallbackToken;
-  state.unitCounterEditor.symbolCode = fallbackToken;
+  patchStrategicOverlayEditorState(state, "unitCounterEditor", {
+    presetId: normalizedPresetId,
+    iconId: String(nextPreset.iconId || "").trim().toLowerCase(),
+    unitType: String(nextPreset.unitType || nextPreset.id || "").trim().toUpperCase(),
+    renderer: nextRenderer,
+    echelon: String(nextPreset.defaultEchelon || "").trim().toUpperCase(),
+    sidc: fallbackToken,
+    symbolCode: fallbackToken,
+  });
   if (commitSelected && !state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
     mapRenderer.updateSelectedUnitCounter({
       presetId: normalizedPresetId,
@@ -60,10 +64,10 @@ export function setUnitCounterCatalogQuery({
   ensureStrategicOverlayUiState();
   const nextQuery = String(rawValue || "");
   if (normalizeCatalogSource(state.strategicOverlayUi.counterCatalogSource) === "hoi4") {
-    state.strategicOverlayUi.hoi4CounterQuery = nextQuery;
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", { hoi4CounterQuery: nextQuery });
     return;
   }
-  state.strategicOverlayUi.counterCatalogQuery = nextQuery;
+  patchStrategicOverlayEditorState(state, "strategicOverlayUi", { counterCatalogQuery: nextQuery });
 }
 
 export function setUnitCounterCatalogCategory({
@@ -74,10 +78,10 @@ export function setUnitCounterCatalogCategory({
   ensureStrategicOverlayUiState();
   const normalizedCategory = normalizeCatalogCategory(nextCategory);
   if (normalizeCatalogSource(state.strategicOverlayUi.counterCatalogSource) === "hoi4") {
-    state.strategicOverlayUi.hoi4CounterCategory = normalizedCategory;
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", { hoi4CounterCategory: normalizedCategory });
     return;
   }
-  state.strategicOverlayUi.counterCatalogCategory = normalizedCategory;
+  patchStrategicOverlayEditorState(state, "strategicOverlayUi", { counterCatalogCategory: normalizedCategory });
 }
 
 export function setUnitCounterCatalogSource({
@@ -90,7 +94,7 @@ export function setUnitCounterCatalogSource({
   if (state.strategicOverlayUi.counterCatalogSource === normalizedSource) {
     return false;
   }
-  state.strategicOverlayUi.counterCatalogSource = normalizedSource;
+  patchStrategicOverlayEditorState(state, "strategicOverlayUi", { counterCatalogSource: normalizedSource });
   return true;
 }
 
@@ -100,7 +104,9 @@ export function setUnitCounterLibraryVariant({
   nextVariant,
 }) {
   ensureStrategicOverlayUiState();
-  state.strategicOverlayUi.hoi4CounterVariant = normalizeCatalogVariant(nextVariant);
+  patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
+    hoi4CounterVariant: normalizeCatalogVariant(nextVariant),
+  });
 }
 
 export function applyUnitCounterCatalogReviewAction({

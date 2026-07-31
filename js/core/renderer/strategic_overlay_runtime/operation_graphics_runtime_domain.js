@@ -1,4 +1,11 @@
 // Operation graphic runtime mutations.
+import {
+  commitStrategicOverlayCollectionsState,
+  patchStrategicOverlayEntityState,
+  patchStrategicOverlayEditorState,
+  setStrategicOverlayDirtyState,
+} from "../../state/actions/strategic_overlay_actions.js";
+
 export function createOperationGraphicsRuntimeDomain({
   state,
   defaultOperationGraphicKind,
@@ -34,6 +41,9 @@ export function createOperationGraphicsRuntimeDomain({
     vertexDragSession.moved = false;
   }
 
+  const patchEditor = (patch) => patchStrategicOverlayEditorState(state, "operationGraphicsEditor", patch);
+  const markOverlayDirty = () => setStrategicOverlayDirtyState(state, "operationGraphicsDirty", true);
+
   function getSelectedOperationGraphicForVertex(vertexIndex = -1) {
     ensureOperationGraphicsEditorState();
     const selectedId = String(state.operationGraphicsEditor.selectedId || "").trim();
@@ -48,8 +58,8 @@ export function createOperationGraphicsRuntimeDomain({
     ensureOperationGraphicsEditorState();
     const coord = getMapLonLatFromEvent(event);
     if (!coord) return false;
-    state.operationGraphicsEditor.points.push(coord);
-    state.operationGraphicsDirty = true;
+    patchEditor({ points: [...state.operationGraphicsEditor.points, coord] });
+    markOverlayDirty();
     updateStrategicOverlayUi();
     renderOperationGraphicsIfNeeded({ force: true });
     return true;
@@ -64,18 +74,20 @@ export function createOperationGraphicsRuntimeDomain({
     width = 0,
   } = {}) {
     ensureOperationGraphicsEditorState();
-    state.operationGraphicsEditor.active = true;
-    state.operationGraphicsEditor.mode = "draw";
-    state.operationGraphicsEditor.points = [];
-    state.operationGraphicsEditor.kind = String(kind || defaultOperationGraphicKind);
-    state.operationGraphicsEditor.label = String(label || "");
-    state.operationGraphicsEditor.stylePreset = normalizeOperationGraphicStylePreset(stylePreset, kind);
-    state.operationGraphicsEditor.stroke = normalizeOperationGraphicStroke(stroke);
-    state.operationGraphicsEditor.width = normalizeOperationGraphicWidth(width);
-    state.operationGraphicsEditor.opacity = normalizeOperationGraphicOpacity(opacity);
-    state.operationGraphicsEditor.selectedId = null;
-    state.operationGraphicsEditor.selectedVertexIndex = -1;
-    state.operationGraphicsDirty = true;
+    patchEditor({
+      active: true,
+      mode: "draw",
+      points: [],
+      kind: String(kind || defaultOperationGraphicKind),
+      label: String(label || ""),
+      stylePreset: normalizeOperationGraphicStylePreset(stylePreset, kind),
+      stroke: normalizeOperationGraphicStroke(stroke),
+      width: normalizeOperationGraphicWidth(width),
+      opacity: normalizeOperationGraphicOpacity(opacity),
+      selectedId: null,
+      selectedVertexIndex: -1,
+    });
+    markOverlayDirty();
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -83,19 +95,21 @@ export function createOperationGraphicsRuntimeDomain({
   function undoOperationGraphicVertex() {
     ensureOperationGraphicsEditorState();
     if (!state.operationGraphicsEditor.active || !state.operationGraphicsEditor.points.length) return;
-    state.operationGraphicsEditor.points.pop();
-    state.operationGraphicsDirty = true;
+    patchEditor({ points: state.operationGraphicsEditor.points.slice(0, -1) });
+    markOverlayDirty();
     updateStrategicOverlayUi();
     renderNow();
   }
 
   function cancelOperationGraphicDraw() {
     ensureOperationGraphicsEditorState();
-    state.operationGraphicsEditor.active = false;
-    state.operationGraphicsEditor.mode = state.operationGraphicsEditor.selectedId ? "edit" : "idle";
-    state.operationGraphicsEditor.points = [];
-    state.operationGraphicsEditor.selectedVertexIndex = -1;
-    state.operationGraphicsDirty = true;
+    patchEditor({
+      active: false,
+      mode: state.operationGraphicsEditor.selectedId ? "edit" : "idle",
+      points: [],
+      selectedVertexIndex: -1,
+    });
+    markOverlayDirty();
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -112,7 +126,7 @@ export function createOperationGraphicsRuntimeDomain({
     ensureOperationGraphicCounter();
     const before = captureHistoryState({ strategicOverlay: true });
     const id = `opg_${state.operationGraphicsEditor.counter}`;
-    state.operationGraphics.push({
+    const nextGraphics = [...state.operationGraphics, {
       id,
       kind,
       label: String(state.operationGraphicsEditor.label || "").trim(),
@@ -121,14 +135,16 @@ export function createOperationGraphicsRuntimeDomain({
       stroke: normalizeOperationGraphicStroke(state.operationGraphicsEditor.stroke) || null,
       width: normalizeOperationGraphicWidth(state.operationGraphicsEditor.width),
       opacity: normalizeOperationGraphicOpacity(state.operationGraphicsEditor.opacity),
+    }];
+    commitStrategicOverlayCollectionsState(state, { operationGraphics: nextGraphics });
+    patchEditor({
+      counter: state.operationGraphicsEditor.counter + 1,
+      selectedId: id,
+      active: false,
+      mode: "edit",
+      points: [...points],
+      selectedVertexIndex: -1,
     });
-    state.operationGraphicsEditor.counter += 1;
-    state.operationGraphicsEditor.selectedId = id;
-    state.operationGraphicsEditor.active = false;
-    state.operationGraphicsEditor.mode = "edit";
-    state.operationGraphicsEditor.points = [...points];
-    state.operationGraphicsEditor.selectedVertexIndex = -1;
-    state.operationGraphicsDirty = true;
     commitHistoryEntry({
       kind: "finish-operation-graphic",
       before,
@@ -144,22 +160,23 @@ export function createOperationGraphicsRuntimeDomain({
     ensureOperationGraphicsEditorState();
     const selectedId = String(id || "").trim();
     const graphic = getOperationGraphicById(selectedId);
-    state.operationGraphicsEditor.selectedId = selectedId || null;
-    state.operationGraphicsEditor.selectedVertexIndex = -1;
+    const editorPatch = { selectedId: selectedId || null, selectedVertexIndex: -1 };
     if (graphic) {
-      state.operationGraphicsEditor.kind = String(graphic.kind || defaultOperationGraphicKind);
-      state.operationGraphicsEditor.label = String(graphic.label || "");
-      state.operationGraphicsEditor.stylePreset = normalizeOperationGraphicStylePreset(graphic.stylePreset, graphic.kind);
-      state.operationGraphicsEditor.stroke = normalizeOperationGraphicStroke(graphic.stroke);
-      state.operationGraphicsEditor.width = normalizeOperationGraphicWidth(graphic.width);
-      state.operationGraphicsEditor.opacity = normalizeOperationGraphicOpacity(graphic.opacity);
-      state.operationGraphicsEditor.points = Array.isArray(graphic.points) ? [...graphic.points] : [];
-      state.operationGraphicsEditor.mode = "edit";
+      Object.assign(editorPatch, {
+        kind: String(graphic.kind || defaultOperationGraphicKind),
+        label: String(graphic.label || ""),
+        stylePreset: normalizeOperationGraphicStylePreset(graphic.stylePreset, graphic.kind),
+        stroke: normalizeOperationGraphicStroke(graphic.stroke),
+        width: normalizeOperationGraphicWidth(graphic.width),
+        opacity: normalizeOperationGraphicOpacity(graphic.opacity),
+        points: Array.isArray(graphic.points) ? [...graphic.points] : [],
+        mode: "edit",
+      });
     } else {
-      state.operationGraphicsEditor.points = [];
-      state.operationGraphicsEditor.mode = "idle";
+      Object.assign(editorPatch, { points: [], mode: "idle" });
     }
-    state.operationGraphicsDirty = true;
+    patchEditor(editorPatch);
+    markOverlayDirty();
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -171,12 +188,8 @@ export function createOperationGraphicsRuntimeDomain({
     const before = captureHistoryState({ strategicOverlay: true });
     const nextGraphics = (state.operationGraphics || []).filter((entry) => String(entry?.id || "") !== selectedId);
     if (nextGraphics.length === (state.operationGraphics || []).length) return false;
-    state.operationGraphics = nextGraphics;
-    state.operationGraphicsEditor.selectedId = null;
-    state.operationGraphicsEditor.points = [];
-    state.operationGraphicsEditor.selectedVertexIndex = -1;
-    state.operationGraphicsEditor.mode = "idle";
-    state.operationGraphicsDirty = true;
+    commitStrategicOverlayCollectionsState(state, { operationGraphics: nextGraphics });
+    patchEditor({ selectedId: null, points: [], selectedVertexIndex: -1, mode: "idle" });
     commitHistoryEntry({
       kind: "delete-operation-graphic",
       before,
@@ -203,15 +216,18 @@ export function createOperationGraphicsRuntimeDomain({
       return false;
     }
     const before = captureHistoryState({ strategicOverlay: true });
-    if (partial.kind) target.kind = nextKind;
-    if (partial.label !== undefined) target.label = String(partial.label || "");
-    if (partial.stylePreset !== undefined) target.stylePreset = normalizeOperationGraphicStylePreset(partial.stylePreset, target.kind);
-    if (partial.stroke !== undefined) target.stroke = normalizeOperationGraphicStroke(partial.stroke) || null;
-    if (partial.width !== undefined) target.width = normalizeOperationGraphicWidth(partial.width);
-    if (partial.opacity !== undefined) target.opacity = normalizeOperationGraphicOpacity(partial.opacity);
-    state.operationGraphicsEditor.points = Array.isArray(target.points) ? [...target.points] : [];
+    const entityPatch = {};
+    if (partial.kind) entityPatch.kind = nextKind;
+    if (partial.label !== undefined) entityPatch.label = String(partial.label || "");
+    if (partial.stylePreset !== undefined) {
+      entityPatch.stylePreset = normalizeOperationGraphicStylePreset(partial.stylePreset, nextKind);
+    }
+    if (partial.stroke !== undefined) entityPatch.stroke = normalizeOperationGraphicStroke(partial.stroke) || null;
+    if (partial.width !== undefined) entityPatch.width = normalizeOperationGraphicWidth(partial.width);
+    if (partial.opacity !== undefined) entityPatch.opacity = normalizeOperationGraphicOpacity(partial.opacity);
+    patchStrategicOverlayEntityState(state, "operationGraphics", selectedId, entityPatch);
     selectOperationGraphicById(selectedId);
-    state.operationGraphicsDirty = true;
+    markOverlayDirty();
     commitHistoryEntry({
       kind: "update-operation-graphic",
       before,
@@ -231,10 +247,16 @@ export function createOperationGraphicsRuntimeDomain({
     const minPoints = getOperationGraphicMinPoints(graphic.kind);
     if (!Array.isArray(graphic.points) || graphic.points.length <= minPoints) return false;
     const before = captureHistoryState({ strategicOverlay: true });
-    graphic.points.splice(vertexIndex, 1);
-    state.operationGraphicsEditor.points = Array.isArray(graphic.points) ? [...graphic.points] : [];
-    state.operationGraphicsEditor.selectedVertexIndex = Math.min(vertexIndex, graphic.points.length - 1);
-    state.operationGraphicsDirty = true;
+    const nextPoints = graphic.points.slice();
+    nextPoints.splice(vertexIndex, 1);
+    patchStrategicOverlayEntityState(state, "operationGraphics", String(graphic.id || ""), {
+      points: nextPoints,
+    });
+    patchEditor({
+      points: nextPoints,
+      selectedVertexIndex: Math.min(vertexIndex, nextPoints.length - 1),
+    });
+    markOverlayDirty();
     commitHistoryEntry({
       kind: "delete-operation-graphic-vertex",
       before,
@@ -258,10 +280,16 @@ export function createOperationGraphicsRuntimeDomain({
     const lat = Number(coord[1]);
     if (!Number.isFinite(lon) || !Number.isFinite(lat)) return false;
     const before = captureHistoryState({ strategicOverlay: true });
-    graphic.points.splice(normalizedIndex, 0, [lon, lat]);
-    state.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
-    state.operationGraphicsEditor.selectedVertexIndex = normalizedIndex;
-    state.operationGraphicsDirty = true;
+    const nextPoints = graphic.points.slice();
+    nextPoints.splice(normalizedIndex, 0, [lon, lat]);
+    patchStrategicOverlayEntityState(state, "operationGraphics", selectedId, {
+      points: nextPoints,
+    });
+    patchEditor({
+      points: nextPoints,
+      selectedVertexIndex: normalizedIndex,
+    });
+    markOverlayDirty();
     commitHistoryEntry({
       kind: "insert-operation-graphic-vertex",
       before,
@@ -283,8 +311,8 @@ export function createOperationGraphicsRuntimeDomain({
     vertexDragSession.selectedId = target.selectedId;
     vertexDragSession.vertexIndex = target.normalizedIndex;
     vertexDragSession.moved = false;
-    state.operationGraphicsEditor.selectedVertexIndex = target.normalizedIndex;
-    state.operationGraphicsDirty = true;
+    patchEditor({ selectedVertexIndex: target.normalizedIndex });
+    markOverlayDirty();
     updateStrategicOverlayUi();
     renderOperationGraphicsIfNeeded({ force: true });
     return true;
@@ -303,9 +331,11 @@ export function createOperationGraphicsRuntimeDomain({
       return false;
     }
     target.graphic.points[target.normalizedIndex] = [lon, lat];
-    state.operationGraphicsEditor.points = Array.isArray(target.graphic.points) ? target.graphic.points : [];
-    state.operationGraphicsEditor.selectedVertexIndex = target.normalizedIndex;
-    state.operationGraphicsDirty = true;
+    patchEditor({
+      points: Array.isArray(target.graphic.points) ? target.graphic.points : [],
+      selectedVertexIndex: target.normalizedIndex,
+    });
+    markOverlayDirty();
     vertexDragSession.moved = true;
     renderOperationGraphicsIfNeeded({ force: true });
     return true;
@@ -324,7 +354,7 @@ export function createOperationGraphicsRuntimeDomain({
         after: captureHistoryState({ strategicOverlay: true }),
       });
       markDirty("move-operation-graphic-vertex");
-      state.operationGraphicsDirty = true;
+      markOverlayDirty();
     }
     resetVertexDragSession();
     updateStrategicOverlayUi();
