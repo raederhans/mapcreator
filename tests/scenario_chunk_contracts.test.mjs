@@ -3004,6 +3004,14 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
   const scenarioRefreshRuntimeSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_runtime.js");
   const interactionHitCandidateSource = readRepoFile("js", "core", "map_renderer", "interaction_hit_candidates.js");
   const colorCoverageE2eSource = readRepoFile("tests", "e2e", "dev", "scenario_chunk_exact_after_settle_regression.dev.spec.js");
+  const beforeZoomProbeSource = colorCoverageE2eSource.slice(
+    colorCoverageE2eSource.indexOf("const beforeZoom = await page.evaluate"),
+    colorCoverageE2eSource.indexOf("expect(beforeZoom.activeScenarioId)"),
+  );
+  const afterZoomProbeSource = colorCoverageE2eSource.slice(
+    colorCoverageE2eSource.indexOf("const afterZoom = await page.evaluate"),
+    colorCoverageE2eSource.indexOf("expect(afterZoom.activeScenarioId)"),
+  );
   const pixelProbeSource = readRepoFile("tests", "e2e", "support", "political-pixel-probe.js");
   const visualRenderableBody = rendererSource.match(/function isPoliticalVisualRenderableFeature\(feature, featureId = null\) \{[\s\S]*?\n\}/)?.[0] || "";
 
@@ -3082,6 +3090,13 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && /shellCandidate\.startsWith\("RU_ARCTIC_FB_"\)[\s\S]*?props\.name[\s\S]*?shell fallback/.test(pixelProbeSource)
       && /const displayOwnerCode = getDisplayOwnerCode\(matchedFeature, featureId, countryCode\);/.test(pixelProbeSource)
       && /state\.sovereignBaseColors\?\.\[displayOwnerCode\][\s\S]*?state\.countryBaseColors\?\.\[displayOwnerCode\]/.test(pixelProbeSource),
+    pixelProbeResolvesColorsFromFullVisualFeatures:
+      /const colorFeatures = Array\.isArray\(state\.landDataFull\?\.features\) && state\.landDataFull\.features\.length[\s\S]*?\? state\.landDataFull\.features[\s\S]*?: \(Array\.isArray\(state\.landData\?\.features\) \? state\.landData\.features : \[\]\);/.test(pixelProbeSource)
+      && /for \(const feature of colorFeatures\)/.test(pixelProbeSource),
+    zoomRegressionResolvesColorsFromFullVisualFeatures:
+      /const features = Array\.isArray\(state\.landDataFull\?\.features\) && state\.landDataFull\.features\.length[\s\S]*?\? state\.landDataFull\.features[\s\S]*?: \(Array\.isArray\(state\.landData\?\.features\) \? state\.landData\.features : \[\]\);/.test(beforeZoomProbeSource)
+      && /const features = Array\.isArray\(state\.landDataFull\?\.features\) && state\.landDataFull\.features\.length[\s\S]*?\? state\.landDataFull\.features[\s\S]*?: \(Array\.isArray\(state\.landData\?\.features\) \? state\.landData\.features : \[\]\);/.test(afterZoomProbeSource)
+      && /await waitForFullPoliticalColorCoverage\(page\);[\s\S]*?const beforeZoom = await page\.evaluate/.test(colorCoverageE2eSource),
     scenarioBackgroundMergeUsesVisualLandCollection:
       /function getScenarioPoliticalBackgroundLandCollection\(\) \{[\s\S]*?return runtimeState\.landDataFull \|\| runtimeState\.landData;[\s\S]*?\}/.test(rendererSource)
       && /function shouldUseScenarioPoliticalBackgroundMerge\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?runtimeState\.activeScenarioId[\s\S]*?landCollection\.features\.length/.test(rendererSource)

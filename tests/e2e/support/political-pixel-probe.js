@@ -102,11 +102,13 @@ async function samplePoliticalFeaturePixels(page, probes, { radius = 5 } = {}) {
     projection.fitExtent([[padding, padding], [x1, y1]], state.landData);
     const transform = state.zoomTransform || d3.zoomIdentity || { x: 0, y: 0, k: 1 };
     const dpr = Number(state.dpr || globalThis.devicePixelRatio || 1);
-    const features = Array.isArray(state.landData?.features) ? state.landData.features : [];
+    const colorFeatures = Array.isArray(state.landDataFull?.features) && state.landDataFull.features.length
+      ? state.landDataFull.features
+      : (Array.isArray(state.landData?.features) ? state.landData.features : []);
 
     return sampleProbes.map((probe) => {
       let matchedFeature = null;
-      for (const feature of features) {
+      for (const feature of colorFeatures) {
         try {
           if (feature?.geometry && d3.geoContains(feature, [probe.lon, probe.lat])) {
             matchedFeature = feature;

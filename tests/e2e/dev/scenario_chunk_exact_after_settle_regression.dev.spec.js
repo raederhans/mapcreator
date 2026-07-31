@@ -378,7 +378,6 @@ async function waitForPostEditPoliticalPaint(page, {
         && !state?.exactAfterSettleHandle
         && !loadState.pendingPromotion
         && !loadState.pendingVisualPromotion
-        && !loadState.pendingInfraPromotion
         && !loadState.promotionScheduled
         && !loadState.refreshScheduled
         && !loadState.promotionCommitInFlight
@@ -788,6 +787,7 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
   await waitForAppInteractive(page);
   await ensureScenario(page, "tno_1962", "TNO 1962");
   await waitForStableExactRender(page);
+  await waitForFullPoliticalColorCoverage(page);
 
   const beforeZoom = await page.evaluate(async (probes) => {
     const { state } = await import("/js/core/state.js");
@@ -795,7 +795,9 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
       ? state.renderPerfMetrics
       : (globalThis.__renderPerfMetrics || {});
     const d3 = globalThis.d3;
-    const features = Array.isArray(state.landData?.features) ? state.landData.features : [];
+    const features = Array.isArray(state.landDataFull?.features) && state.landDataFull.features.length
+      ? state.landDataFull.features
+      : (Array.isArray(state.landData?.features) ? state.landData.features : []);
     const getFeatureId = (feature) => {
       const props = feature?.properties || {};
       return String(props.id || props.NUTS_ID || feature?.id || "").trim();
@@ -879,7 +881,9 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
       ? state.renderPerfMetrics
       : (globalThis.__renderPerfMetrics || {});
     const d3 = globalThis.d3;
-    const features = Array.isArray(state.landData?.features) ? state.landData.features : [];
+    const features = Array.isArray(state.landDataFull?.features) && state.landDataFull.features.length
+      ? state.landDataFull.features
+      : (Array.isArray(state.landData?.features) ? state.landData.features : []);
     const requiredChunkIds = Array.isArray(state.runtimeChunkLoadState?.lastSelection?.requiredChunkIds)
       ? state.runtimeChunkLoadState.lastSelection.requiredChunkIds.map((chunkId) => String(chunkId || ""))
       : [];

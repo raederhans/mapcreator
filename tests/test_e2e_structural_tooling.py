@@ -89,10 +89,15 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
             scenario_source.index("async function waitForFullPoliticalColorCoverage"):
             scenario_source.index("async function collectPostEditPoliticalSnapshot")
         ]
+        post_edit_paint_wait = scenario_source[
+            scenario_source.index("async function waitForPostEditPoliticalPaint"):
+            scenario_source.index("async function startChunkPromotionProbe")
+        ]
 
         self.assertIn("requireInfra = true", shared_chunk_idle)
         self.assertIn("&& (!requiresInfra || !loadState.pendingInfraPromotion)", shared_chunk_idle)
         self.assertNotIn("&& !loadState.pendingInfraPromotion", political_color_wait)
+        self.assertNotIn("&& !loadState.pendingInfraPromotion", post_edit_paint_wait)
         self.assertIn("pendingInfraPromotion: !!loadState.pendingInfraPromotion", political_color_wait)
 
         fixtures_source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
