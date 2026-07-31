@@ -3,6 +3,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 import {
   DERIVED_ALIAS_TAINT_MODES,
@@ -672,6 +673,52 @@ function validateDerivedAliasTaintBaseline(
       code: "derived-alias-taint-baseline-paths-invalid",
     });
   }
+  const transitionCheckpoints = baseline.transitionCheckpoints;
+  if (transitionCheckpoints !== undefined) {
+    const recordedTransitionPaths = new Set();
+    if (!Array.isArray(transitionCheckpoints)) {
+      violations.push({
+        code: "derived-alias-taint-transition-checkpoints-invalid",
+      });
+    } else {
+      for (const checkpoint of transitionCheckpoints) {
+        const checkpointPaths = normalizeCandidatePathList(
+          checkpoint?.paths,
+        );
+        if (
+          !checkpoint
+          || typeof checkpoint !== "object"
+          || Array.isArray(checkpoint)
+          || !/^[0-9a-f]{40}$/i.test(
+            String(checkpoint.sourceSha || ""),
+          )
+          || !/^[0-9a-f]{64}$/i.test(
+            String(checkpoint.policyBlobSha256 || ""),
+          )
+          || JSON.stringify(checkpointPaths)
+            !== JSON.stringify(checkpoint.paths || [])
+          || !checkpointPaths.length
+        ) {
+          violations.push({
+            code: "derived-alias-taint-transition-checkpoint-invalid",
+          });
+          continue;
+        }
+        for (const relativePath of checkpointPaths) {
+          if (
+            !paths.includes(relativePath)
+            || recordedTransitionPaths.has(relativePath)
+          ) {
+            violations.push({
+              code: "derived-alias-taint-transition-path-invalid",
+              path: relativePath,
+            });
+          }
+          recordedTransitionPaths.add(relativePath);
+        }
+      }
+    }
+  }
   for (const section of DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS) {
     const signatures = Array.isArray(
       baseline?.diagnosticDelta?.[section],
@@ -774,6 +821,8 @@ export async function buildFrozenDerivedAliasTaintBaseline({
   relativePaths = [],
   legacySemanticBaseline = {},
   existingBaseline = null,
+  acceptedPolicyCheckpoint = null,
+  transitionCheckpoints = null,
   readSourceAtRevision = defaultReadSourceAtRevision,
   stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex(),
 } = {}) {
@@ -814,12 +863,93 @@ export async function buildFrozenDerivedAliasTaintBaseline({
   const pendingPaths = normalizedPaths.filter(
     (relativePath) => !recordedPaths.has(relativePath),
   );
+  const replayedTransitionCheckpoints = (
+    transitionCheckpoints === null
+      ? previousBaseline.transitionCheckpoints || []
+      : transitionCheckpoints
+  ).map((checkpoint) => ({
+    sourceSha: String(checkpoint?.sourceSha || "").trim().toLowerCase(),
+    policyBlobSha256: String(
+      checkpoint?.policyBlobSha256 || "",
+    ).trim().toLowerCase(),
+    paths: normalizeCandidatePathList(checkpoint?.paths),
+  }));
+  const replayValidation = validateDerivedAliasTaintBaseline({
+    ...previousBaseline,
+    paths: stableUnique([
+      ...previousBaseline.paths,
+      ...normalizedPaths,
+    ]),
+    ...(replayedTransitionCheckpoints.length
+      ? { transitionCheckpoints: replayedTransitionCheckpoints }
+      : {}),
+  }, { sourceBaseSha: normalizedSourceBaseSha });
+  if (replayValidation.length) {
+    const error = new Error(
+      "Derived alias taint transition checkpoints are invalid.",
+    );
+    error.code = "derived-alias-taint-transition-checkpoints-invalid";
+    error.violations = replayValidation;
+    throw error;
+  }
+  const transitionSourceShaByPath = new Map();
+  for (const checkpoint of replayedTransitionCheckpoints) {
+    for (const relativePath of checkpoint.paths) {
+      transitionSourceShaByPath.set(relativePath, checkpoint.sourceSha);
+    }
+  }
+  const acceptedCheckpointPaths = pendingPaths.filter(
+    (relativePath) => !transitionSourceShaByPath.has(relativePath),
+  );
+  const normalizedAcceptedPolicyCheckpoint = acceptedPolicyCheckpoint
+    ? {
+      sourceSha: String(
+        acceptedPolicyCheckpoint.sourceSha || "",
+      ).trim().toLowerCase(),
+      policyBlobSha256: String(
+        acceptedPolicyCheckpoint.policyBlobSha256 || "",
+      ).trim().toLowerCase(),
+      paths: acceptedCheckpointPaths,
+    }
+    : null;
+  if (
+    existingBaseline
+    && acceptedCheckpointPaths.length
+    && !normalizedAcceptedPolicyCheckpoint
+  ) {
+    const error = new Error(
+      "Derived alias taint transition requires an accepted-policy checkpoint.",
+    );
+    error.code = "derived-alias-taint-transition-checkpoint-required";
+    throw error;
+  }
+  if (
+    acceptedCheckpointPaths.length
+    && normalizedAcceptedPolicyCheckpoint
+    && (
+      !/^[0-9a-f]{40}$/.test(
+        normalizedAcceptedPolicyCheckpoint.sourceSha,
+      )
+      || !/^[0-9a-f]{64}$/.test(
+        normalizedAcceptedPolicyCheckpoint.policyBlobSha256,
+      )
+    )
+  ) {
+    const error = new Error(
+      "Derived alias taint transition requires exact accepted-policy provenance.",
+    );
+    error.code = "derived-alias-taint-transition-checkpoint-invalid";
+    throw error;
+  }
   const strictHistoricalWriters = [];
   const frozenBaselineWritersByPath =
     buildFrozenBaselineWritersByPath(legacySemanticBaseline);
   for (const relativePath of pendingPaths) {
+    const pendingSourceSha = transitionSourceShaByPath.get(relativePath)
+      || normalizedAcceptedPolicyCheckpoint?.sourceSha
+      || normalizedSourceBaseSha;
     const source = await readSourceAtRevision(
-      normalizedSourceBaseSha,
+      pendingSourceSha,
       relativePath,
     );
     if (source === null || source === undefined) {
@@ -881,6 +1011,12 @@ export async function buildFrozenDerivedAliasTaintBaseline({
     legacySemanticBaseline,
     strictSemanticAuthority,
   });
+  const nextTransitionCheckpoints = [
+    ...replayedTransitionCheckpoints,
+    ...(acceptedCheckpointPaths.length && normalizedAcceptedPolicyCheckpoint
+      ? [normalizedAcceptedPolicyCheckpoint]
+      : []),
+  ];
   return {
     algorithmVersion:
       DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION,
@@ -898,7 +1034,84 @@ export async function buildFrozenDerivedAliasTaintBaseline({
         ].sort(),
       ]),
     ),
+    ...(nextTransitionCheckpoints.length
+      ? { transitionCheckpoints: nextTransitionCheckpoints }
+      : {}),
   };
+}
+
+export function resolveAcceptedStateWriterPolicyCheckpoint({
+  policy,
+  revision = "HEAD",
+  cwd = PROJECT_ROOT,
+  runGit = (args) =>
+    execFileSync("git", args, {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 64 * 1024 * 1024,
+    }),
+} = {}) {
+  if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
+    const error = new Error(
+      "Accepted policy checkpoint requires a policy object.",
+    );
+    error.code = "accepted-policy-checkpoint-policy-invalid";
+    throw error;
+  }
+  const policyPath = normalizeRelativePath(
+    path.relative(PROJECT_ROOT, STATE_WRITER_POLICY_PATH),
+  );
+  let revisions;
+  try {
+    revisions = String(runGit([
+      "log",
+      "--format=%H",
+      String(revision || "HEAD").trim() || "HEAD",
+      "--",
+      policyPath,
+    ]) || "")
+      .split(/\r?\n/)
+      .map((entry) => entry.trim().toLowerCase())
+      .filter((entry) => /^[0-9a-f]{40}$/.test(entry));
+  } catch (cause) {
+    const error = new Error(
+      "Unable to enumerate accepted state-writer policy checkpoints.",
+      { cause },
+    );
+    error.code = "accepted-policy-checkpoint-history-unavailable";
+    throw error;
+  }
+  for (const sourceSha of revisions) {
+    let source;
+    try {
+      source = String(
+        runGit(["show", `${sourceSha}:${policyPath}`]) || "",
+      );
+    } catch {
+      continue;
+    }
+    let candidatePolicy;
+    try {
+      candidatePolicy = JSON.parse(source);
+    } catch {
+      continue;
+    }
+    if (!isDeepStrictEqual(candidatePolicy, policy)) {
+      continue;
+    }
+    return {
+      sourceSha,
+      policyBlobSha256: createHash("sha256")
+        .update(source)
+        .digest("hex"),
+    };
+  }
+  const error = new Error(
+    "The previous state-writer policy has no exact accepted Git checkpoint.",
+  );
+  error.code = "accepted-policy-checkpoint-not-found";
+  throw error;
 }
 
 export function subtractLegacyStateWriterSemanticAuthority(
@@ -2363,6 +2576,28 @@ function validateProgressionMetricSet(metrics, scope) {
   return violations;
 }
 
+function validateProgressCheckpointAcceptedPolicyProvenance(
+  checkpoint,
+  phase,
+) {
+  const sourceSha = checkpoint?.previousAcceptedSourceSha;
+  const policyBlobSha256 =
+    checkpoint?.previousAcceptedPolicyBlobSha256;
+  if (sourceSha === undefined && policyBlobSha256 === undefined) {
+    return [];
+  }
+  if (
+    /^[0-9a-f]{40}$/.test(String(sourceSha || ""))
+    && /^[0-9a-f]{64}$/.test(String(policyBlobSha256 || ""))
+  ) {
+    return [];
+  }
+  return [{
+    code: "progress-accepted-policy-checkpoint-invalid",
+    phase,
+  }];
+}
+
 function latestProgressCheckpoint(policy = {}) {
   const checkpoints = Array.isArray(policy?.progress?.checkpoints)
     ? policy.progress.checkpoints
@@ -2423,6 +2658,12 @@ export function validateStateWriterPolicyProgression({
       `checkpoint:${checkpointPhase}`,
     );
     violations.push(...checkpointMetricViolations);
+    violations.push(
+      ...validateProgressCheckpointAcceptedPolicyProvenance(
+        checkpoint,
+        checkpointPhase,
+      ),
+    );
     if (seenPhases.has(checkpointPhase)) {
       violations.push({
         code: "duplicate-progress-checkpoint",
@@ -2525,7 +2766,7 @@ function createProgressCheckpoint(phase, {
   productionLegacyAliasSites,
   productionLegacyAmbiguousSites,
   productionLegacyUnsupportedSites,
-}) {
+}, acceptedPolicyCheckpoint = null) {
   const metrics = {
     productionLegacyDirectFiles,
     productionLegacyMemberships,
@@ -2545,10 +2786,34 @@ function createProgressCheckpoint(phase, {
     error.violations = violations;
     throw error;
   }
-  return {
+  const checkpoint = {
     phase: normalizeP4StateActionPhase(phase),
     ...normalizeProgressionMetrics(metrics),
   };
+  if (acceptedPolicyCheckpoint) {
+    const previousAcceptedSourceSha = String(
+      acceptedPolicyCheckpoint.sourceSha || "",
+    ).trim().toLowerCase();
+    const previousAcceptedPolicyBlobSha256 = String(
+      acceptedPolicyCheckpoint.policyBlobSha256 || "",
+    ).trim().toLowerCase();
+    if (
+      !/^[0-9a-f]{40}$/.test(previousAcceptedSourceSha)
+      || !/^[0-9a-f]{64}$/.test(
+        previousAcceptedPolicyBlobSha256,
+      )
+    ) {
+      const error = new Error(
+        "Progress checkpoint requires exact accepted-policy provenance.",
+      );
+      error.code = "progress-accepted-policy-checkpoint-invalid";
+      throw error;
+    }
+    checkpoint.previousAcceptedSourceSha = previousAcceptedSourceSha;
+    checkpoint.previousAcceptedPolicyBlobSha256 =
+      previousAcceptedPolicyBlobSha256;
+  }
+  return checkpoint;
 }
 
 export function buildProgressState({
@@ -2558,8 +2823,13 @@ export function buildProgressState({
   refreshP4Baseline,
   retiredLegacySemanticAuthority,
   callerToActionLedger,
+  acceptedPolicyCheckpoint = null,
 }) {
-  const checkpoint = createProgressCheckpoint(phase, currentMetrics);
+  const checkpoint = createProgressCheckpoint(
+    phase,
+    currentMetrics,
+    acceptedPolicyCheckpoint,
+  );
   const previousCheckpoints =
     previousPolicy && !refreshP4Baseline
       ? cloneJsonValue(previousPolicy?.progress?.checkpoints || [])
@@ -4438,6 +4708,7 @@ export async function buildStateWriterPolicySnapshot({
   previousPolicy = null,
   callerToActionBootstrapSeed = [],
   refreshP4Baseline = false,
+  acceptedPolicyCheckpoint = null,
 } = {}) {
   const normalizedPhase = normalizeP4StateActionPhase(phase);
   if (refreshP4Baseline && normalizedPhase !== "P4.0") {
@@ -4714,6 +4985,7 @@ export async function buildStateWriterPolicySnapshot({
         previousPolicy.baselines.legacySemanticAuthority,
       existingBaseline:
         previousPolicy.baselines.derivedAliasTaint || null,
+      acceptedPolicyCheckpoint,
       stateKeyAuthorityIndex,
     })
     : null;
@@ -4869,6 +5141,7 @@ export async function buildStateWriterPolicySnapshot({
       refreshP4Baseline,
       retiredLegacySemanticAuthority,
       callerToActionLedger,
+      acceptedPolicyCheckpoint,
     }),
   };
 }
@@ -5022,6 +5295,11 @@ async function main() {
     previousPolicy,
     callerToActionBootstrapSeed,
     refreshP4Baseline: args.refreshP4Baseline,
+    acceptedPolicyCheckpoint: previousPolicy
+      ? resolveAcceptedStateWriterPolicyCheckpoint({
+        policy: previousPolicy,
+      })
+      : null,
   });
   const serialized = `${JSON.stringify(policy, null, 2)}\n`;
   if (args.write) {
