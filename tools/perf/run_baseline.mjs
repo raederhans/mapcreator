@@ -15,6 +15,18 @@ import {
   analyzeRenderSampleRole,
   summarizeRenderSampleRoleAnalyses,
 } from "./render_sample_role_policy.mjs";
+import {
+  PerfEnvironmentAdmissionError,
+  PerfGenerationFenceError,
+  STANDARD_PERF_ADMISSION_EXIT_CODES,
+  STANDARD_PERF_ADMISSION_POLICY,
+  STANDARD_PERF_GENERATION_FENCE_POLICY_ID,
+  collectStandardPerfAdmissionEvidence,
+  collectStandardPerfStabilityEvidence,
+  evaluateStandardPerfAdmission,
+  evaluateStandardPerfGenerationFence,
+  validateStandardPerfAdmissionDecision,
+} from "./standard_perf_admission.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SUPPORTED_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
@@ -37,7 +49,7 @@ const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
 );
 const MIN_GATE_WARMUPS = 3;
 const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;
-const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;
+const CURRENT_PERF_REPORT_SCHEMA_VERSION = 3;
 const PERF_REGRESSION_MODES = new Set(["enforce", "diagnostic"]);
 // 这里只收录已从 Chromium requestfailed 证据确认的瞬时网络错误；命中后最多重跑一次，第二次失败原样上抛。
 const TRANSIENT_PERF_NETWORK_FAILURE_CODES = Object.freeze([
@@ -231,20 +243,6 @@ async function readJson(filePath, fallback = null) {
     return JSON.parse(await fs.readFile(filePath, "utf8"));
   } catch (_error) {
     return fallback;
-  }
-}
-
-async function readJsonStrict(filePath, label = "json payload") {
-  let rawText = "";
-  try {
-    rawText = await fs.readFile(filePath, "utf8");
-  } catch (error) {
-    throw new Error(`[perf-baseline] Unable to read ${label}: ${filePath}. ${String(error?.message || error)}`);
-  }
-  try {
-    return JSON.parse(rawText);
-  } catch (error) {
-    throw new Error(`[perf-baseline] Unable to parse ${label}: ${filePath}. ${String(error?.message || error)}`);
   }
 }
 
@@ -1186,17 +1184,83 @@ function buildMarkdown(report) {
   return `${lines.join("\n")}\n`;
 }
 
-async function resolveGitHead() {
+export async function readJsonAndSha256Strict(
+  filePath,
+  label = "json payload",
+  { readFile = fs.readFile } = {},
+) {
+  let rawBytes;
   try {
-    const { execFile } = await import("node:child_process");
-    return await new Promise((resolve) => {
-      execFile("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT }, (error, stdout) => {
-        resolve(error ? "" : String(stdout || "").trim());
-      });
-    });
-  } catch (_error) {
-    return "";
+    rawBytes = await readFile(filePath);
+  } catch (error) {
+    throw new Error(`[perf-baseline] Unable to read ${label}: ${filePath}. ${String(error?.message || error)}`);
   }
+  const bytes = Buffer.isBuffer(rawBytes) ? rawBytes : Buffer.from(rawBytes);
+  let payload;
+  try {
+    payload = JSON.parse(bytes.toString("utf8"));
+  } catch (error) {
+    throw new Error(`[perf-baseline] Unable to parse ${label}: ${filePath}. ${String(error?.message || error)}`);
+  }
+  return {
+    payload,
+    sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
+  };
+}
+
+function readEnvironmentAdmissionIdentity(report) {
+  const admission = report?.environmentAdmission;
+  if (!admission || typeof admission !== "object" || Array.isArray(admission)) return null;
+  const reportPlatform = readCanonicalNodePlatform(report?.environment?.platform);
+  const validation = validateStandardPerfAdmissionDecision(admission, {
+    expectedPlatform: reportPlatform,
+    expectedGitHead: report?.gitHead,
+  });
+  return validation.valid ? validation.identity : null;
+}
+
+function readGenerationFenceIdentity(report) {
+  const fence = report?.generationFence;
+  if (!fence || typeof fence !== "object" || Array.isArray(fence)) return null;
+  const failures = Array.isArray(fence.failures) ? fence.failures : null;
+  const gitHead = String(fence.git?.head || "").trim().toLowerCase();
+  const reportHead = String(report?.gitHead || "").trim().toLowerCase();
+  const gitEvidenceValid = fence.git?.status === "available"
+    && /^[0-9a-f]{40,64}$/.test(gitHead)
+    && gitHead === reportHead
+    && Array.isArray(fence.git?.runtimePaths)
+    && fence.git.runtimePaths.length === 0
+    && Array.isArray(fence.git?.harnessPaths)
+    && fence.git.harnessPaths.length === 0
+    && Array.isArray(fence.git?.invalidPaths)
+    && fence.git.invalidPaths.length === 0;
+  const beforeOracleSha = String(fence.baselineOracle?.beforeSha256 || "").trim().toLowerCase();
+  const afterOracleSha = String(fence.baselineOracle?.afterSha256 || "").trim().toLowerCase();
+  const reportMode = String(report?.mode || "").trim().toLowerCase();
+  const oracleEvidenceValid = reportMode === "gate"
+    ? /^[0-9a-f]{64}$/.test(beforeOracleSha) && beforeOracleSha === afterOracleSha
+    : reportMode === "baseline" && !beforeOracleSha && !afterOracleSha;
+  const reportPlatform = readCanonicalNodePlatform(report?.environment?.platform);
+  const admissionPowerSchemeGuid = String(report?.environmentAdmission?.power?.activeSchemeGuid || "").trim().toLowerCase();
+  const powerStatus = String(fence.power?.status || "").trim();
+  const powerSchemeGuid = String(fence.power?.activeSchemeGuid || "").trim().toLowerCase();
+  const powerEvidenceValid = reportPlatform === "win32"
+    ? powerStatus === "available"
+      && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(powerSchemeGuid)
+      && powerSchemeGuid === admissionPowerSchemeGuid
+      && fence.power?.acLineStatus === 1
+    : powerStatus === "not-applicable" || powerStatus === "available";
+  if (
+    fence.schemaVersion !== 1
+    || fence.policyId !== STANDARD_PERF_GENERATION_FENCE_POLICY_ID
+    || fence.status !== "stable"
+    || fence.exitCode !== STANDARD_PERF_ADMISSION_EXIT_CODES.accepted
+    || failures?.length !== 0
+    || !gitEvidenceValid
+    || !oracleEvidenceValid
+    || !powerEvidenceValid
+  ) return null;
+  return { gitHead, powerSchemeGuid, beforeOracleSha, afterOracleSha };
 }
 
 async function sha256File(filePath) {
@@ -1222,6 +1286,56 @@ async function runMeasurements(options) {
   }
 }
 
+async function sha256FileOrNull(filePath) {
+  try {
+    return await sha256File(filePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+export async function runStandardPerfAdmission(
+  options,
+  { collectEvidence = collectStandardPerfAdmissionEvidence } = {},
+) {
+  const evidence = await collectEvidence({ cwd: REPO_ROOT });
+  const decision = evaluateStandardPerfAdmission(evidence);
+  const artifactPath = path.join(options.rawDir, "perf-admission.json");
+  await writeJson(artifactPath, decision);
+  if (decision.status !== "admitted") {
+    throw new PerfEnvironmentAdmissionError(decision);
+  }
+  return decision;
+}
+
+export async function runStandardPerfGenerationFence(
+  options,
+  environmentAdmission,
+  {
+    baselineOracleBeforeSha256 = null,
+    collectStabilityEvidence = collectStandardPerfStabilityEvidence,
+    readBaselineOracleSha256 = sha256FileOrNull,
+  } = {},
+) {
+  const evidence = await collectStabilityEvidence({ cwd: REPO_ROOT });
+  let baselineOracleAfterSha256 = null;
+  if (options.mode === "gate") {
+    try {
+      baselineOracleAfterSha256 = await readBaselineOracleSha256(options.baselineJson);
+    } catch (_error) {
+      baselineOracleAfterSha256 = null;
+    }
+  }
+  const decision = evaluateStandardPerfGenerationFence(environmentAdmission, evidence, {
+    baselineOracleBeforeSha256,
+    baselineOracleAfterSha256,
+  });
+  await writeJson(path.join(options.rawDir, "perf-generation-fence.json"), decision);
+  if (decision.status !== "stable") throw new PerfGenerationFenceError(decision);
+  return decision;
+}
+
 async function writeBaselineArtifacts(options, report) {
   await writeJson(options.baselineJson, report);
   if (options.writeMarkdown) {
@@ -1241,6 +1355,12 @@ function getPerfReportContractMismatches(report, label = "report") {
     .map(({ key, expected }) => `${label}.${key} expected=${JSON.stringify(expected)} actual=${JSON.stringify(report?.[key])}`);
   if (report?.schemaVersion !== CURRENT_PERF_REPORT_SCHEMA_VERSION) {
     mismatches.unshift(`${label}.schemaVersion expected=${CURRENT_PERF_REPORT_SCHEMA_VERSION} actual=${JSON.stringify(report?.schemaVersion)}`);
+  }
+  if (!readEnvironmentAdmissionIdentity(report)) {
+    mismatches.push(`${label}.environmentAdmission must be admitted under ${STANDARD_PERF_ADMISSION_POLICY.policyId}`);
+  }
+  if (!readGenerationFenceIdentity(report)) {
+    mismatches.push(`${label}.generationFence must be stable under ${STANDARD_PERF_GENERATION_FENCE_POLICY_ID}`);
   }
   return mismatches;
 }
@@ -1561,6 +1681,27 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     }
   }
 
+  const baselineAdmission = readEnvironmentAdmissionIdentity(baselineReport);
+  const currentAdmission = readEnvironmentAdmissionIdentity(currentReport);
+  const powerIdentityAvailable = baselineAdmission?.powerStatus === "available"
+    && currentAdmission?.powerStatus === "available";
+  if (baselineAdmission && currentAdmission && baselinePlatform === "win32" && powerIdentityAvailable) {
+    if (
+      !baselineAdmission.powerSchemeGuid
+      || !currentAdmission.powerSchemeGuid
+      || baselineAdmission.powerSchemeGuid !== currentAdmission.powerSchemeGuid
+    ) {
+      mismatches.push(
+        `power scheme mismatch: baseline=${baselineAdmission.powerSchemeGuid || "<missing>"} current=${currentAdmission.powerSchemeGuid || "<missing>"}`
+      );
+    }
+    if (baselineAdmission.acLineStatus !== 1 || currentAdmission.acLineStatus !== 1) {
+      mismatches.push(
+        `AC power mismatch: baseline=${baselineAdmission.acLineStatus} current=${currentAdmission.acLineStatus}`
+      );
+    }
+  }
+
   return mismatches;
 }
 
@@ -1591,19 +1732,29 @@ async function main() {
   if (options.mode === "gate") {
     validateGateScenarioSelection(options.scenarios);
   }
+
   validateBaselineOutputSelection(options);
   await ensureDir(options.rawDir);
-  const gitHead = await resolveGitHead();
   let baselineReportForGate = null;
+  let baselineOracleBeforeSha256 = null;
   if (options.mode === "gate") {
     if (!(await pathExists(options.baselineJson))) {
       throw new Error(`[perf-baseline] Baseline report file does not exist: ${options.baselineJson}`);
     }
-    baselineReportForGate = await readJsonStrict(options.baselineJson, "baseline report");
+    const baselineOracle = await readJsonAndSha256Strict(options.baselineJson, "baseline report");
+    baselineReportForGate = baselineOracle.payload;
     validateGateBaselineReport(baselineReportForGate, options.scenarios, options.baselineJson);
+    baselineOracleBeforeSha256 = baselineOracle.sha256;
   }
+  const environmentAdmission = await runStandardPerfAdmission(options);
+  const gitHead = environmentAdmission.git.head;
 
   const measurement = await runMeasurements(options);
+  const generationFence = await runStandardPerfGenerationFence(
+    options,
+    environmentAdmission,
+    { baselineOracleBeforeSha256 },
+  );
   const packageLockSha256 = await sha256File(path.join(REPO_ROOT, "package-lock.json"));
   const report = {
     schemaVersion: CURRENT_PERF_REPORT_SCHEMA_VERSION,
@@ -1631,6 +1782,8 @@ async function main() {
       browserVersion: measurement.browserVersion,
       packageLockSha256,
     }),
+    environmentAdmission,
+    generationFence,
     workloadIdentity: buildReportWorkloadIdentity(options, measurement),
     scenarios: measurement.scenarios,
   };
@@ -1689,6 +1842,8 @@ const directEntryPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
 if (directEntryPath && pathToFileURL(directEntryPath).href === import.meta.url) {
   main().catch((error) => {
     console.error(error?.stack || error?.message || error);
-    process.exit(1);
+    process.exit(Number.isInteger(error?.exitCode)
+      ? error.exitCode
+      : STANDARD_PERF_ADMISSION_EXIT_CODES.gateFailure);
   });
 }

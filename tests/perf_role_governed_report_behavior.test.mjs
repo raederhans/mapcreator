@@ -19,6 +19,9 @@ import {
   getBaselineArtifactDate,
   isTransientPerfNetworkFailure,
   normalizePerfRegressionMode,
+  readJsonAndSha256Strict,
+  runStandardPerfAdmission,
+  runStandardPerfGenerationFence,
   runWithTransientPerfNetworkRetry,
   shouldBlockOnPerfRegressions,
   summarizeSnapshot,
@@ -27,8 +30,22 @@ import {
   validateGateCurrentReport,
   validateGateScenarioSelection,
 } from "../tools/perf/run_baseline.mjs";
+import {
+  PerfEnvironmentAdmissionError,
+  PerfGenerationFenceError,
+  STANDARD_PERF_ADMISSION_EXIT_CODES,
+  STANDARD_PERF_ADMISSION_POLICY,
+  classifyPerfDirtyPaths,
+  collectStandardPerfAdmissionEvidence,
+  evaluateStandardPerfAdmission,
+  evaluateStandardPerfGenerationFence,
+  parseGitPorcelainZ,
+  summarizePerfAdmissionCpu,
+  validateStandardPerfAdmissionDecision,
+} from "../tools/perf/standard_perf_admission.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const FIXTURE_GIT_HEAD = "f".repeat(40);
 const BLOCK_SEQUENCE = Object.freeze(["A1", "B1", "B2", "A2"]);
 const SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 const CANONICAL_RENDER_MS = Object.freeze({
@@ -93,6 +110,606 @@ function buildSourceReport() {
     pooledRegressions: [],
   };
 }
+
+function makeStandardPerfAdmissionEvidence(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    platform: "win32",
+    cpuSamples: [8, 10, 12, 9, 11, 10, 13],
+    topProcesses: [
+      { pid: 100, name: "background.exe", singleCorePercent: 4 },
+    ],
+    memoryAvailableMiB: 32_768,
+    power: {
+      status: "available",
+      activeSchemeGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+      activeSchemeName: "Balanced",
+      acLineStatus: 1,
+    },
+    git: {
+      status: "available",
+      head: FIXTURE_GIT_HEAD,
+      entries: [],
+    },
+    degradedCapabilities: [],
+    ...overrides,
+  };
+}
+
+function makeAdmittedEnvironmentAdmission() {
+  return {
+    schemaVersion: 1,
+    policyId: STANDARD_PERF_ADMISSION_POLICY.policyId,
+    status: "admitted",
+    exitCode: STANDARD_PERF_ADMISSION_EXIT_CODES.accepted,
+    failures: [],
+    thresholds: { ...STANDARD_PERF_ADMISSION_POLICY },
+    cpu: {
+      valid: true,
+      sampleCount: STANDARD_PERF_ADMISSION_POLICY.sampleCount,
+      samples: [8, 10, 12, 9, 11, 10, 13],
+      averagePercent: 10.4,
+      peakPercent: 13,
+    },
+    topProcesses: [
+      { pid: 100, name: "background.exe", singleCorePercent: 4 },
+    ],
+    platform: "win32",
+    memoryAvailableMiB: 32_768,
+    degradedCapabilities: [],
+    git: {
+      status: "available",
+      head: FIXTURE_GIT_HEAD,
+      runtimePaths: [],
+      harnessPaths: [],
+      allowedPaths: [],
+      invalidPaths: [],
+    },
+    power: {
+      status: "available",
+      activeSchemeGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+      acLineStatus: 1,
+    },
+  };
+}
+
+function makeStableGenerationFence({
+  baselineOracleBeforeSha256 = null,
+  baselineOracleAfterSha256 = null,
+} = {}) {
+  return {
+    schemaVersion: 1,
+    policyId: "standard-perf-generation-fence-v1",
+    status: "stable",
+    exitCode: STANDARD_PERF_ADMISSION_EXIT_CODES.accepted,
+    failures: [],
+    git: {
+      status: "available",
+      head: FIXTURE_GIT_HEAD,
+      runtimePaths: [],
+      harnessPaths: [],
+      allowedPaths: [],
+      invalidPaths: [],
+    },
+    power: {
+      status: "available",
+      activeSchemeGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+      acLineStatus: 1,
+    },
+    baselineOracle: {
+      beforeSha256: baselineOracleBeforeSha256,
+      afterSha256: baselineOracleAfterSha256,
+    },
+  };
+}
+
+test("standard perf admission accepts a clean quiet AC-powered window", () => {
+  const decision = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence());
+
+  assert.equal(decision.policyId, "standard-perf-admission-v1");
+  assert.equal(decision.status, "admitted");
+  assert.equal(decision.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.accepted);
+  assert.deepEqual(decision.failures, []);
+  assert.equal(decision.cpu.averagePercent, 10.4);
+  assert.equal(decision.cpu.peakPercent, 13);
+  assert.equal(Object.isFrozen(decision), true);
+  assert.doesNotThrow(() => JSON.stringify(decision));
+});
+
+test("standard perf admission rejects invalid and overloaded CPU evidence with stable reasons", () => {
+  const overloaded = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    cpuSamples: [10, 15, 18, 22, 28, 40, 45],
+    topProcesses: [{ pid: 200, name: "busy.exe", singleCorePercent: 125 }],
+  }));
+
+  assert.equal(overloaded.status, "rejected");
+  assert.equal(overloaded.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected);
+  assert.deepEqual(overloaded.failures.map((entry) => entry.code), [
+    "cpu-average-high",
+    "cpu-peak-high",
+    "top-process-high",
+  ]);
+
+  const invalid = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    cpuSamples: [10, Number.NaN],
+  }));
+  assert.deepEqual(invalid.failures.map((entry) => entry.code), ["cpu-samples-invalid"]);
+
+  const coerced = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    cpuSamples: [8, 10, 12, 9, 11, 10, "13"],
+    topProcesses: [{ pid: 200, name: "busy.exe", singleCorePercent: "125" }],
+    memoryAvailableMiB: "32768",
+  }));
+  assert.deepEqual(coerced.failures.map((entry) => entry.code), [
+    "cpu-samples-invalid",
+    "top-process-evidence-invalid",
+    "memory-available-invalid",
+  ]);
+});
+
+test("standard perf admission rejects unavailable Windows power evidence and known battery use", () => {
+  const degraded = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    power: { status: "collection-error", activeSchemeGuid: "", activeSchemeName: "", acLineStatus: 255 },
+    degradedCapabilities: ["windows-power"],
+  }));
+  assert.equal(degraded.status, "rejected");
+  assert.deepEqual(degraded.failures.map((entry) => entry.code), ["windows-power-evidence-unavailable"]);
+  assert.deepEqual(degraded.degradedCapabilities, ["windows-power"]);
+
+  const onBattery = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    power: {
+      status: "available",
+      activeSchemeGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+      activeSchemeName: "Balanced",
+      acLineStatus: 0,
+    },
+    memoryAvailableMiB: 1024,
+  }));
+  assert.deepEqual(onBattery.failures.map((entry) => entry.code), [
+    "memory-available-low",
+    "ac-power-required",
+  ]);
+
+  const malformed = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    power: { status: "available", activeSchemeGuid: "", activeSchemeName: "", acLineStatus: 255 },
+  }));
+  assert.deepEqual(malformed.failures.map((entry) => entry.code), [
+    "power-scheme-invalid",
+    "ac-power-evidence-invalid",
+  ]);
+});
+
+test("standard perf admission rejects unavailable Windows process evidence", () => {
+  const decision = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    topProcesses: [],
+    degradedCapabilities: ["windows-processes"],
+  }));
+
+  assert.deepEqual(decision.failures.map((entry) => entry.code), [
+    "windows-process-evidence-unavailable",
+  ]);
+  assert.equal(decision.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected);
+});
+
+test("standard perf dirty parser classifies runtime and harness paths without blocking evidence-only files", () => {
+  const entries = parseGitPorcelainZ(
+    " M js/core/map_renderer.js\0?? docs/perf/note.md\0R  JS/core/new.js\0js/core/old.js\0?? tests/e2e/support/local-helper.js\0?? dist/app.js\0",
+    { platform: "win32" },
+  );
+  const classified = classifyPerfDirtyPaths(entries, { platform: "win32" });
+
+  assert.deepEqual(classified.runtimePaths, [
+    "JS/core/new.js",
+    "js/core/map_renderer.js",
+    "js/core/old.js",
+  ]);
+  assert.deepEqual(classified.harnessPaths, ["tests/e2e/support/local-helper.js"]);
+  assert.deepEqual(classified.allowedPaths, ["dist/app.js", "docs/perf/note.md"]);
+  assert.deepEqual(classified.invalidPaths, []);
+});
+
+test("standard perf dirty parser rejects truncated pairs and repository-escape paths", () => {
+  const truncated = classifyPerfDirtyPaths(
+    parseGitPorcelainZ("R  docs/new.md\0", { platform: "win32" }),
+    { platform: "win32" },
+  );
+  assert.deepEqual(truncated.invalidPaths, ["docs/new.md"]);
+
+  const entries = parseGitPorcelainZ(
+    "?? ../escape.js\0?? C:outside.txt\0?? /absolute.txt\0",
+    { platform: "win32" },
+  );
+  const classified = classifyPerfDirtyPaths(entries, { platform: "win32" });
+
+  assert.deepEqual(classified.allowedPaths, []);
+  assert.deepEqual(classified.invalidPaths, [
+    "../escape.js",
+    "/absolute.txt",
+    "C:outside.txt",
+  ]);
+});
+
+test("standard perf dirty parser preserves both copy endpoints", () => {
+  const entries = parseGitPorcelainZ(
+    "C  docs/copied.md\0tools/perf/source.mjs\0",
+    { platform: "win32" },
+  );
+  const classified = classifyPerfDirtyPaths(entries, { platform: "win32" });
+
+  assert.deepEqual(classified.harnessPaths, ["tools/perf/source.mjs"]);
+  assert.deepEqual(classified.allowedPaths, ["docs/copied.md"]);
+  assert.deepEqual(classified.invalidPaths, []);
+});
+
+test("standard perf dirty parser treats the checked-in baseline oracle as measurement harness", () => {
+  const entries = parseGitPorcelainZ(
+    " M docs/perf/baseline_2026-07-30.json\0?? docs/perf/note.md\0",
+    { platform: "win32" },
+  );
+  const classified = classifyPerfDirtyPaths(entries, { platform: "win32" });
+
+  assert.deepEqual(classified.harnessPaths, ["docs/perf/baseline_2026-07-30.json"]);
+  assert.deepEqual(classified.allowedPaths, ["docs/perf/note.md"]);
+});
+
+test("standard perf admission rejects dirty measured sources and exposes typed exit three", () => {
+  const entries = parseGitPorcelainZ("M  package.json\0?? tests/ordinary.test.mjs\0", { platform: "win32" });
+  const decision = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    git: { status: "available", head: FIXTURE_GIT_HEAD, entries },
+  }));
+
+  assert.deepEqual(decision.failures.map((entry) => entry.code), ["dirty-measurement-harness"]);
+  const error = new PerfEnvironmentAdmissionError(decision);
+  assert.equal(error.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected);
+  assert.match(error.message, /environment admission rejected/i);
+});
+
+test("standard perf admission preserves exact policy threshold edges", () => {
+  const samples = [10, 15, 15, 20, 20, 25, 35];
+  const summary = summarizePerfAdmissionCpu(samples);
+  assert.equal(summary.peakPercent, 35);
+  assert.equal(summary.averagePercent, 20);
+  assert.equal(summary.sampleCount, STANDARD_PERF_ADMISSION_POLICY.sampleCount);
+  assert.equal(summary.valid, true);
+
+  const decision = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    cpuSamples: samples,
+    topProcesses: [{ pid: 100, name: "boundary.exe", singleCorePercent: 25 }],
+    memoryAvailableMiB: 4096,
+  }));
+  assert.equal(decision.status, "admitted");
+});
+
+test("standard perf admission writes its artifact before returning or rejecting", async (t) => {
+  const tempRoot = path.join(REPO_ROOT, ".runtime", "tmp");
+  await fs.mkdir(tempRoot, { recursive: true });
+  const admittedDir = await fs.mkdtemp(path.join(tempRoot, "perf-admission-admitted-"));
+  const rejectedDir = await fs.mkdtemp(path.join(tempRoot, "perf-admission-rejected-"));
+  t.after(async () => {
+    await fs.rm(admittedDir, { recursive: true, force: true });
+    await fs.rm(rejectedDir, { recursive: true, force: true });
+  });
+
+  const admitted = await runStandardPerfAdmission(
+    { rawDir: admittedDir },
+    { collectEvidence: async () => makeStandardPerfAdmissionEvidence() },
+  );
+  assert.deepEqual(
+    JSON.parse(await fs.readFile(path.join(admittedDir, "perf-admission.json"), "utf8")),
+    admitted,
+  );
+
+  await assert.rejects(
+    runStandardPerfAdmission(
+      { rawDir: rejectedDir },
+      { collectEvidence: async () => makeStandardPerfAdmissionEvidence({ cpuSamples: [50, 50, 50, 50, 50, 50, 50] }) },
+    ),
+    (error) => error instanceof PerfEnvironmentAdmissionError
+      && error.exitCode === STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected,
+  );
+  const rejected = JSON.parse(await fs.readFile(path.join(rejectedDir, "perf-admission.json"), "utf8"));
+  assert.equal(rejected.status, "rejected");
+  assert.equal(rejected.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected);
+});
+
+test("standard perf admission collector converts command failures into structured evidence", async () => {
+  let cpuTick = 0;
+  const fakeOs = {
+    cpus() {
+      cpuTick += 1;
+      return [{ times: { idle: cpuTick * 90, user: cpuTick * 10, nice: 0, sys: 0, irq: 0 } }];
+    },
+    freemem() {
+      return 16 * 1024 ** 3;
+    },
+  };
+  const evidence = await collectStandardPerfAdmissionEvidence({
+    cwd: REPO_ROOT,
+    platform: "win32",
+    osModule: fakeOs,
+    spawnSyncFn(command) {
+      if (command === "git") throw new Error("git unavailable");
+      return { status: 1, stdout: "", stderr: "fixture unavailable", error: null };
+    },
+    sleep: async () => {},
+    policy: { ...STANDARD_PERF_ADMISSION_POLICY, sampleCount: 1, sampleIntervalMs: 0 },
+  });
+
+  assert.deepEqual(evidence.degradedCapabilities, ["windows-power", "windows-processes"]);
+  assert.equal(evidence.git.status, "collection-error");
+  const decision = evaluateStandardPerfAdmission(evidence, {
+    ...STANDARD_PERF_ADMISSION_POLICY,
+    sampleCount: 1,
+    sampleIntervalMs: 0,
+  });
+  assert.deepEqual(decision.failures.map((entry) => entry.code), [
+    "windows-process-evidence-unavailable",
+    "windows-power-evidence-unavailable",
+    "git-status-unavailable",
+  ]);
+  assert.equal(decision.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected);
+});
+
+test("standard perf admission collector rejects a high-CPU process that starts inside the sample window", async () => {
+  let cpuTick = 0;
+  let processSnapshotIndex = 0;
+  let nowMs = 10_000;
+  const fakeOs = {
+    cpus() {
+      cpuTick += 1;
+      return [{ times: { idle: cpuTick * 90, user: cpuTick * 10, nice: 0, sys: 0, irq: 0 } }];
+    },
+    freemem() {
+      return 16 * 1024 ** 3;
+    },
+  };
+  const evidence = await collectStandardPerfAdmissionEvidence({
+    cwd: REPO_ROOT,
+    platform: "win32",
+    osModule: fakeOs,
+    sleep: async () => {},
+    now: () => nowMs,
+    collectProcessSnapshot: () => {
+      processSnapshotIndex += 1;
+      if (processSnapshotIndex === 1) return [{ Id: 10, ProcessName: "base", CPU: 1 }];
+      nowMs += 1_000;
+      return [
+        { Id: 10, ProcessName: "base", CPU: 1 },
+        { Id: 20, ProcessName: "new-busy", CPU: 0.3 },
+      ];
+    },
+    collectStabilityEvidence: () => ({
+      platform: "win32",
+      power: {
+        status: "available",
+        activeSchemeGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+        activeSchemeName: "Balanced",
+        acLineStatus: 1,
+      },
+      git: { status: "available", head: FIXTURE_GIT_HEAD, entries: [] },
+      degradedCapabilities: [],
+    }),
+    policy: { ...STANDARD_PERF_ADMISSION_POLICY, sampleCount: 1, sampleIntervalMs: 0 },
+  });
+
+  assert.deepEqual(evidence.topProcesses, [
+    { pid: 20, name: "new-busy", singleCorePercent: 30 },
+  ]);
+  const decision = evaluateStandardPerfAdmission(evidence, {
+    ...STANDARD_PERF_ADMISSION_POLICY,
+    sampleCount: 1,
+    sampleIntervalMs: 0,
+  });
+  assert.deepEqual(decision.failures.map((entry) => entry.code), ["top-process-high"]);
+});
+
+test("standard perf admission collector rejects empty Windows process snapshots", async () => {
+  let cpuTick = 0;
+  const evidence = await collectStandardPerfAdmissionEvidence({
+    cwd: REPO_ROOT,
+    platform: "win32",
+    osModule: {
+      cpus() {
+        cpuTick += 1;
+        return [{ times: { idle: cpuTick * 90, user: cpuTick * 10, nice: 0, sys: 0, irq: 0 } }];
+      },
+      freemem() {
+        return 16 * 1024 ** 3;
+      },
+    },
+    sleep: async () => {},
+    collectProcessSnapshot: () => [],
+    collectStabilityEvidence: () => ({
+      platform: "win32",
+      power: {
+        status: "available",
+        activeSchemeGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+        activeSchemeName: "Balanced",
+        acLineStatus: 1,
+      },
+      git: { status: "available", head: FIXTURE_GIT_HEAD, entries: [] },
+      degradedCapabilities: [],
+    }),
+    policy: { ...STANDARD_PERF_ADMISSION_POLICY, sampleCount: 1, sampleIntervalMs: 0 },
+  });
+
+  assert.deepEqual(evidence.degradedCapabilities, ["windows-processes"]);
+  assert.deepEqual(
+    evaluateStandardPerfAdmission(evidence, {
+      ...STANDARD_PERF_ADMISSION_POLICY,
+      sampleCount: 1,
+      sampleIntervalMs: 0,
+    }).failures.map((entry) => entry.code),
+    ["windows-process-evidence-unavailable"],
+  );
+});
+
+test("standard perf generation fence binds head clean sources power and baseline oracle", () => {
+  const admission = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence());
+  const stableEvidence = {
+    platform: "win32",
+    collectedAt: "2026-07-31T00:00:00.000Z",
+    git: { status: "available", head: FIXTURE_GIT_HEAD, entries: [] },
+    power: {
+      status: "available",
+      activeSchemeGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+      acLineStatus: 1,
+    },
+    degradedCapabilities: [],
+  };
+  const oracleSha = "a".repeat(64);
+  const stable = evaluateStandardPerfGenerationFence(admission, stableEvidence, {
+    baselineOracleBeforeSha256: oracleSha,
+    baselineOracleAfterSha256: oracleSha,
+  });
+  assert.equal(stable.status, "stable");
+  assert.deepEqual(stable.failures, []);
+
+  const rejected = evaluateStandardPerfGenerationFence(admission, {
+    ...stableEvidence,
+    git: {
+      status: "available",
+      head: "e".repeat(40),
+      entries: parseGitPorcelainZ(" M js/main.js\0", { platform: "win32" }),
+    },
+    power: {
+      status: "available",
+      activeSchemeGuid: "a1841308-3541-4fab-bc81-f71556f20b4a",
+      acLineStatus: 1,
+    },
+  }, {
+    baselineOracleBeforeSha256: oracleSha,
+    baselineOracleAfterSha256: "b".repeat(64),
+  });
+  assert.deepEqual(rejected.failures.map((entry) => entry.code), [
+    "git-head-changed",
+    "dirty-runtime-source",
+    "power-scheme-changed",
+    "baseline-oracle-changed",
+  ]);
+  assert.equal(rejected.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected);
+});
+
+test("standard perf generation fence writes its artifact before rejecting", async (t) => {
+  const tempRoot = path.join(REPO_ROOT, ".runtime", "tmp");
+  await fs.mkdir(tempRoot, { recursive: true });
+  const rawDir = await fs.mkdtemp(path.join(tempRoot, "perf-generation-fence-"));
+  t.after(async () => {
+    await fs.rm(rawDir, { recursive: true, force: true });
+  });
+  const admission = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence());
+
+  await assert.rejects(
+    runStandardPerfGenerationFence(
+      { mode: "gate", rawDir, baselineJson: "fixture.json" },
+      admission,
+      {
+        baselineOracleBeforeSha256: "a".repeat(64),
+        collectStabilityEvidence: async () => ({
+          platform: "win32",
+          git: { status: "available", head: "e".repeat(40), entries: [] },
+          power: admission.power,
+          degradedCapabilities: [],
+        }),
+        readBaselineOracleSha256: async () => "a".repeat(64),
+      },
+    ),
+    (error) => error instanceof PerfGenerationFenceError
+      && error.exitCode === STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected,
+  );
+  const rejected = JSON.parse(await fs.readFile(path.join(rawDir, "perf-generation-fence.json"), "utf8"));
+  assert.equal(rejected.status, "rejected");
+  assert.deepEqual(rejected.failures.map((entry) => entry.code), ["git-head-changed"]);
+});
+
+test("standard perf generation fence writes a rejection artifact when the gate oracle becomes unreadable", async (t) => {
+  const tempRoot = path.join(REPO_ROOT, ".runtime", "tmp");
+  await fs.mkdir(tempRoot, { recursive: true });
+  const rawDir = await fs.mkdtemp(path.join(tempRoot, "perf-generation-fence-oracle-read-"));
+  t.after(async () => {
+    await fs.rm(rawDir, { recursive: true, force: true });
+  });
+  const admission = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence());
+
+  await assert.rejects(
+    runStandardPerfGenerationFence(
+      { mode: "gate", rawDir, baselineJson: "fixture.json" },
+      admission,
+      {
+        baselineOracleBeforeSha256: "a".repeat(64),
+        collectStabilityEvidence: async () => ({
+          platform: "win32",
+          git: { status: "available", head: FIXTURE_GIT_HEAD, entries: [] },
+          power: admission.power,
+          degradedCapabilities: [],
+        }),
+        readBaselineOracleSha256: async () => {
+          const error = new Error("oracle locked");
+          error.code = "EBUSY";
+          throw error;
+        },
+      },
+    ),
+    (error) => error instanceof PerfGenerationFenceError
+      && error.exitCode === STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected,
+  );
+  const rejected = JSON.parse(await fs.readFile(path.join(rawDir, "perf-generation-fence.json"), "utf8"));
+  assert.equal(rejected.status, "rejected");
+  assert.deepEqual(rejected.failures.map((entry) => entry.code), ["baseline-oracle-changed"]);
+  assert.equal(rejected.baselineOracle.afterSha256, null);
+});
+
+test("standard perf admission oracle validator recomputes raw evidence", () => {
+  const admitted = makeAdmittedEnvironmentAdmission();
+  assert.equal(validateStandardPerfAdmissionDecision(admitted, {
+    expectedPlatform: "win32",
+    expectedGitHead: FIXTURE_GIT_HEAD,
+  }).valid, true);
+
+  const forgedCpu = structuredClone(admitted);
+  forgedCpu.cpu.samples = Array(7).fill(100);
+  assert.deepEqual(
+    validateStandardPerfAdmissionDecision(forgedCpu, { expectedPlatform: "win32", expectedGitHead: FIXTURE_GIT_HEAD }).reasons,
+    ["cpu-evidence-invalid"],
+  );
+
+  const forgedProcess = structuredClone(admitted);
+  forgedProcess.topProcesses[0].singleCorePercent = 999;
+  assert.deepEqual(
+    validateStandardPerfAdmissionDecision(forgedProcess, { expectedPlatform: "win32", expectedGitHead: FIXTURE_GIT_HEAD }).reasons,
+    ["top-process-evidence-invalid"],
+  );
+
+  const forgedMemory = structuredClone(admitted);
+  forgedMemory.memoryAvailableMiB = 1;
+  assert.deepEqual(
+    validateStandardPerfAdmissionDecision(forgedMemory, { expectedPlatform: "win32", expectedGitHead: FIXTURE_GIT_HEAD }).reasons,
+    ["memory-evidence-invalid"],
+  );
+
+  const forgedPlatform = structuredClone(admitted);
+  forgedPlatform.platform = "linux";
+  assert.deepEqual(
+    validateStandardPerfAdmissionDecision(forgedPlatform, { expectedPlatform: "win32", expectedGitHead: FIXTURE_GIT_HEAD }).reasons,
+    ["platform-evidence-invalid"],
+  );
+});
+
+test("gate baseline JSON and oracle hash come from one byte read", async () => {
+  const originalBytes = Buffer.from('{"schemaVersion":3,"marker":"original"}\n', "utf8");
+  const replacementBytes = Buffer.from('{"schemaVersion":3,"marker":"replacement"}\n', "utf8");
+  let readCount = 0;
+  const result = await readJsonAndSha256Strict("fixture.json", "baseline report", {
+    readFile: async () => {
+      readCount += 1;
+      return readCount === 1 ? originalBytes : replacementBytes;
+    },
+  });
+
+  assert.equal(readCount, 1);
+  assert.equal(result.payload.marker, "original");
+  assert.equal(result.sha256, crypto.createHash("sha256").update(originalBytes).digest("hex"));
+});
 
 function buildRawRun({ scenarioId, side, sideScenarioIndex, firstSampleHasScenario }) {
   const canonicalRenderSampleMs = CANONICAL_RENDER_MS[scenarioId][side]
@@ -271,9 +888,14 @@ test("baseline admission rejects coerced gate metrics before comparison", () => 
   };
   for (const invalidValue of [true, [100], "100"]) {
     const report = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       benchmarkMetricsSchemaVersion: "3.3",
       probeSchema: "mc_perf_snapshot",
+      environmentAdmission: makeAdmittedEnvironmentAdmission(),
+      generationFence: makeStableGenerationFence(),
+      gitHead: FIXTURE_GIT_HEAD,
+      mode: "baseline",
+      environment: { platform: "win32" },
       config: { scenarios: ["tno_1962"] },
       scenarios: { tno_1962: { summary: { ...validSummary, totalStartupMs: invalidValue } } },
     };
@@ -282,7 +904,7 @@ test("baseline admission rejects coerced gate metrics before comparison", () => 
   }
 });
 
-test("baseline admission requires the current schema-2 oracle", () => {
+test("baseline admission rejects predecessor schemas and requires the current schema-3 oracle", () => {
   const validSummary = {
     totalStartupMs: 100,
     scenarioAppliedMs: 100,
@@ -290,20 +912,22 @@ test("baseline admission requires the current schema-2 oracle", () => {
     refreshScenarioApplyMs: 100,
     renderSampleMedianMs: 100,
   };
-  const legacyReport = {
-    schemaVersion: 1,
-    benchmarkMetricsSchemaVersion: "3.3",
-    probeSchema: "mc_perf_snapshot",
-    scenarios: { tno_1962: { summary: validSummary } },
-  };
-  assert.throws(
-    () => validateGateBaselineReport(legacyReport, ["tno_1962"], "legacy.json"),
-    /schema mismatch/,
-  );
+  for (const schemaVersion of [1, 2]) {
+    const legacyReport = {
+      schemaVersion,
+      benchmarkMetricsSchemaVersion: "3.3",
+      probeSchema: "mc_perf_snapshot",
+      scenarios: { tno_1962: { summary: validSummary } },
+    };
+    assert.throws(
+      () => validateGateBaselineReport(legacyReport, ["tno_1962"], `schema-${schemaVersion}.json`),
+      /schema mismatch/,
+    );
+  }
 });
 
 test("baseline admission requires the exact gate scenario sequence", () => {
-  const report = makeSchema2IdentityReport();
+  const report = makeSchema3IdentityReport();
   report.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
 
   assert.throws(
@@ -391,11 +1015,15 @@ test("network retry stays bounded and ordinary boot failures remain fail-closed"
   assert.equal(ordinaryAttempts, 1);
 });
 
-function makeSchema2IdentityReport() {
+function makeSchema3IdentityReport() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     benchmarkMetricsSchemaVersion: "3.3",
     probeSchema: "mc_perf_snapshot",
+    environmentAdmission: makeAdmittedEnvironmentAdmission(),
+    generationFence: makeStableGenerationFence(),
+    gitHead: FIXTURE_GIT_HEAD,
+    mode: "baseline",
     environment: {
       os: "win32 10.0.26200",
       platform: "win32",
@@ -439,7 +1067,26 @@ function makeSchema2IdentityReport() {
   };
 }
 
-test("baseline identity comparison rejects each schema-2 workload drift independently", () => {
+test("schema-3 generation fence binds oracle hashes to report mode", () => {
+  const gateWithEmptyOracle = makeSchema3IdentityReport();
+  gateWithEmptyOracle.mode = "gate";
+  assert.throws(
+    () => validateGateBaselineReport(gateWithEmptyOracle, [], "gate fixture"),
+    /generationFence/,
+  );
+
+  const baselineWithGateOracle = makeSchema3IdentityReport();
+  baselineWithGateOracle.generationFence = makeStableGenerationFence({
+    baselineOracleBeforeSha256: "a".repeat(64),
+    baselineOracleAfterSha256: "a".repeat(64),
+  });
+  assert.throws(
+    () => validateGateBaselineReport(baselineWithGateOracle, [], "baseline fixture"),
+    /generationFence/,
+  );
+});
+
+test("baseline identity comparison rejects each schema-3 workload drift independently", () => {
   const cases = [
     ["browserVersion", (report) => { report.environment.browserVersion = "146.0.0.0"; }, /browser version mismatch/],
     ["packageLockSha256", (report) => { report.environment.packageLockSha256 = "c".repeat(64); }, /package lock mismatch/],
@@ -449,8 +1096,8 @@ test("baseline identity comparison rejects each schema-2 workload drift independ
   ];
 
   for (const [label, mutate, expected] of cases) {
-    const baseline = makeSchema2IdentityReport();
-    const current = makeSchema2IdentityReport();
+    const baseline = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport();
     mutate(current);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
@@ -459,8 +1106,8 @@ test("baseline identity comparison rejects each schema-2 workload drift independ
 });
 
 test("baseline identity comparison requires the exact canonical scenario sequence", () => {
-  const baseline = makeSchema2IdentityReport();
-  const current = makeSchema2IdentityReport();
+  const baseline = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport();
   const hoi4Identity = {
     manifestSha256: "d".repeat(64),
     featureCount: 12602,
@@ -496,6 +1143,80 @@ test("baseline identity comparison requires the exact canonical scenario sequenc
   current.config.scenarios = ["tno_1962", "hoi4_1939"];
   baseline.config.scenarios = ["tno_1962", "tno_1962", "hoi4_1939"];
   assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
+});
+
+test("baseline identity comparison requires admitted windows on the same Windows power scheme", () => {
+  const baseline = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport();
+  const currentPowerSchemeGuid = "a1841308-3541-4fab-bc81-f71556f20b4a";
+  current.environmentAdmission.power.activeSchemeGuid = currentPowerSchemeGuid;
+  current.generationFence.power.activeSchemeGuid = currentPowerSchemeGuid;
+
+  assert.match(collectBaselineContractMismatches(current, baseline)[0], /power scheme mismatch/);
+
+  delete baseline.environmentAdmission;
+  assert.ok(
+    collectBaselineContractMismatches(current, baseline)
+      .some((entry) => /baseline\.environmentAdmission must be admitted/.test(entry)),
+  );
+});
+
+test("baseline identity comparison rejects degraded Windows power evidence", () => {
+  const baseline = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport();
+  current.environmentAdmission.power = {
+    status: "collection-error",
+    activeSchemeGuid: "",
+    acLineStatus: 255,
+  };
+
+  assert.ok(
+    collectBaselineContractMismatches(current, baseline)
+      .some((entry) => /current\.environmentAdmission must be admitted/.test(entry)),
+  );
+
+  baseline.environmentAdmission.power = {
+    status: "collection-error",
+    activeSchemeGuid: "",
+    acLineStatus: 255,
+  };
+  assert.ok(
+    collectBaselineContractMismatches(current, baseline)
+      .some((entry) => /environmentAdmission must be admitted/.test(entry)),
+  );
+});
+
+test("baseline identity comparison rejects forged admitted environment evidence", () => {
+  const baseline = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport();
+  current.environmentAdmission.exitCode = STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected;
+  current.environmentAdmission.failures = [{ code: "cpu-average-high", detail: "fixture" }];
+
+  assert.ok(
+    collectBaselineContractMismatches(current, baseline)
+      .some((entry) => /current\.environmentAdmission must be admitted/.test(entry)),
+  );
+
+  const thresholdDrift = makeSchema3IdentityReport();
+  thresholdDrift.environmentAdmission.thresholds.cpuAverageMaxPercent += 1;
+  assert.ok(
+    collectBaselineContractMismatches(thresholdDrift, baseline)
+      .some((entry) => /current\.environmentAdmission must be admitted/.test(entry)),
+  );
+
+  const admissionHeadDrift = makeSchema3IdentityReport();
+  admissionHeadDrift.environmentAdmission.git.head = "a".repeat(40);
+  assert.ok(
+    collectBaselineContractMismatches(admissionHeadDrift, baseline)
+      .some((entry) => /current\.environmentAdmission must be admitted/.test(entry)),
+  );
+
+  const fencePowerDrift = makeSchema3IdentityReport();
+  fencePowerDrift.generationFence.power.activeSchemeGuid = "a1841308-3541-4fab-bc81-f71556f20b4a";
+  assert.ok(
+    collectBaselineContractMismatches(fencePowerDrift, baseline)
+      .some((entry) => /current\.generationFence must be stable/.test(entry)),
+  );
 });
 
 test("custom baseline scenarios cannot overwrite canonical output paths", () => {
@@ -557,8 +1278,8 @@ test("baseline artifact date follows the selected oracle filename", () => {
 });
 
 test("baseline identity comparison rejects an incomplete canonical gate scenario set", () => {
-  const baseline = makeSchema2IdentityReport();
-  const current = makeSchema2IdentityReport();
+  const baseline = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport();
   baseline.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
   current.config.scenarios = ["tno_1962"];
 
@@ -569,8 +1290,8 @@ test("baseline identity comparison rejects an incomplete canonical gate scenario
 });
 
 test("baseline identity comparison reports invalid scenario collection types without throwing", () => {
-  const baseline = makeSchema2IdentityReport();
-  const current = makeSchema2IdentityReport();
+  const baseline = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport();
   current.config.scenarios = { tno_1962: true, hoi4_1939: true };
 
   const mismatches = collectBaselineContractMismatches(current, baseline);
@@ -578,7 +1299,7 @@ test("baseline identity comparison reports invalid scenario collection types wit
   assert.match(mismatches[0], /scenarios mismatch/);
 });
 
-const missingSchema2IdentityCases = [
+const missingSchema3IdentityCases = [
   ["platform", (report) => { delete report.environment.platform; }, /os platform mismatch/],
   ["release", (report) => { delete report.environment.release; }, /os release mismatch/],
   ["arch", (report) => { delete report.environment.arch; }, /architecture mismatch/],
@@ -596,12 +1317,12 @@ const missingSchema2IdentityCases = [
   ["urlQuery", (report) => { delete report.config.urlQuery; }, /urlQuery mismatch/],
 ];
 
-test("baseline identity comparison rejects missing schema-2 workload fields", () => {
-  const cases = missingSchema2IdentityCases;
+test("baseline identity comparison rejects missing schema-3 workload fields", () => {
+  const cases = missingSchema3IdentityCases;
 
   for (const [label, mutate, expected] of cases) {
-    const baseline = makeSchema2IdentityReport();
-    const current = makeSchema2IdentityReport();
+    const baseline = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport();
     mutate(baseline);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
@@ -609,10 +1330,10 @@ test("baseline identity comparison rejects missing schema-2 workload fields", ()
   }
 });
 
-test("baseline identity comparison rejects current-side and bilateral schema-2 identity gaps", () => {
-  for (const [label, mutate, expected] of missingSchema2IdentityCases) {
-    const baseline = makeSchema2IdentityReport();
-    const current = makeSchema2IdentityReport();
+test("baseline identity comparison rejects current-side and bilateral schema-3 identity gaps", () => {
+  for (const [label, mutate, expected] of missingSchema3IdentityCases) {
+    const baseline = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport();
     mutate(current);
     let mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} current-side gap should produce one focused mismatch`);
@@ -633,15 +1354,15 @@ test("baseline identity comparison rejects malformed exact platform and node ide
   ];
 
   for (const [label, mutate, expected] of cases) {
-    let baseline = makeSchema2IdentityReport();
-    let current = makeSchema2IdentityReport();
+    let baseline = makeSchema3IdentityReport();
+    let current = makeSchema3IdentityReport();
     mutate(baseline);
     let mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} baseline-side drift should produce one focused mismatch`);
     assert.match(mismatches[0], expected);
 
-    baseline = makeSchema2IdentityReport();
-    current = makeSchema2IdentityReport();
+    baseline = makeSchema3IdentityReport();
+    current = makeSchema3IdentityReport();
     mutate(current);
     mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} current-side drift should produce one focused mismatch`);
@@ -665,8 +1386,8 @@ test("baseline identity comparison rejects machine and runner drift", () => {
   ];
 
   for (const [label, mutate, expected] of cases) {
-    const baseline = makeSchema2IdentityReport();
-    const current = makeSchema2IdentityReport();
+    const baseline = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport();
     mutate(current);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
@@ -681,15 +1402,15 @@ test("baseline identity comparison rejects missing scenario workload identity on
   ];
 
   for (const [label, mutate, expected] of cases) {
-    let baseline = makeSchema2IdentityReport();
-    let current = makeSchema2IdentityReport();
+    let baseline = makeSchema3IdentityReport();
+    let current = makeSchema3IdentityReport();
     mutate(baseline);
     let mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} baseline-side gap should produce one focused mismatch`);
     assert.match(mismatches[0], expected);
 
-    baseline = makeSchema2IdentityReport();
-    current = makeSchema2IdentityReport();
+    baseline = makeSchema3IdentityReport();
+    current = makeSchema3IdentityReport();
     mutate(current);
     mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} current-side gap should produce one focused mismatch`);

@@ -14,6 +14,7 @@ BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.md"
 BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.json"
 BASELINE_SOURCE_GIT_HEAD = "f2d264b77913a7a5cba2c333bf5c4ce5f2ed3246"
 PERF_SCRIPT = REPO_ROOT / "tools" / "perf" / "run_baseline.mjs"
+STANDARD_PERF_ADMISSION = REPO_ROOT / "tools" / "perf" / "standard_perf_admission.mjs"
 RENDER_SAMPLE_ROLE_POLICY = REPO_ROOT / "tools" / "perf" / "render_sample_role_policy.mjs"
 RENDER_SAMPLE_ROLE_ANALYZER = REPO_ROOT / "tools" / "perf" / "analyze_render_sample_roles.mjs"
 EDITOR_BENCHMARK_SCRIPT = REPO_ROOT / "ops" / "browser-mcp" / "editor-performance-benchmark.py"
@@ -215,7 +216,7 @@ class PerfGateContractTest(unittest.TestCase):
         )
         self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline")', script)
         self.assertIn('getPerfReportContractMismatches(currentReport, "current")', script)
-        self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;", script)
+        self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 3;", script)
         self.assertNotIn("const LEGACY_PERF_REPORT_SCHEMA_VERSION", script)
         self.assertIn('from "./render_sample_role_policy.mjs";', script)
         self.assertIn("canonicalRenderSampleMs", script)
@@ -338,6 +339,51 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("workerDecodeMs", script)
         self.assertIn("workerMetaBuildMs", script)
         self.assertIn("Perf gate baseline contract mismatch.", script)
+
+    def test_standard_perf_admission_precedes_browser_measurement_and_stays_independent_from_williams(self):
+        runner = PERF_SCRIPT.read_text(encoding="utf-8")
+        admission = STANDARD_PERF_ADMISSION.read_text(encoding="utf-8")
+
+        self.assertIn('from "./standard_perf_admission.mjs";', runner)
+        self.assertIn('path.join(options.rawDir, "perf-admission.json")', runner)
+        self.assertLess(
+            runner.index('const baselineOracle = await readJsonAndSha256Strict(options.baselineJson, "baseline report");'),
+            runner.index("validateGateBaselineReport(baselineReportForGate, options.scenarios, options.baselineJson);"),
+        )
+        self.assertLess(
+            runner.index("validateGateBaselineReport(baselineReportForGate, options.scenarios, options.baselineJson);"),
+            runner.index("const environmentAdmission = await runStandardPerfAdmission(options);"),
+        )
+        self.assertIn("baselineReportForGate = baselineOracle.payload;", runner)
+        self.assertIn("baselineOracleBeforeSha256 = baselineOracle.sha256;", runner)
+        self.assertLess(
+            runner.index("const environmentAdmission = await runStandardPerfAdmission(options);"),
+            runner.index("const measurement = await runMeasurements(options);"),
+        )
+        self.assertLess(
+            runner.index("const measurement = await runMeasurements(options);"),
+            runner.index("const generationFence = await runStandardPerfGenerationFence("),
+        )
+        self.assertIn("environmentAdmission,", runner)
+        self.assertIn("generationFence,", runner)
+        self.assertIn("PerfEnvironmentAdmissionError", runner)
+        self.assertIn("PerfGenerationFenceError", runner)
+        self.assertIn("Number.isInteger(error?.exitCode)", runner)
+        self.assertIn("STANDARD_PERF_ADMISSION_EXIT_CODES.gateFailure", runner)
+
+        self.assertIn('policyId: "standard-perf-admission-v1"', admission)
+        self.assertIn("sampleCount: 7", admission)
+        self.assertIn("cpuAverageMaxPercent: 20", admission)
+        self.assertIn("cpuPeakMaxPercent: 35", admission)
+        self.assertIn("topProcessSingleCoreMaxPercent: 25", admission)
+        self.assertIn('runtimePrefixes: Object.freeze(["js/", "css/", "vendor/", "data/"])', admission)
+        self.assertIn('harnessPrefixes: Object.freeze(["tools/perf/", "tests/e2e/support/", "docs/perf/baseline_"])', admission)
+        self.assertIn('spawnSyncFn("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]', admission)
+        self.assertIn('this.exitCode = STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected;', admission)
+        self.assertIn('STANDARD_PERF_GENERATION_FENCE_POLICY_ID = "standard-perf-generation-fence-v1"', admission)
+        self.assertIn('failure("git-head-changed"', admission)
+        self.assertIn('failure("baseline-oracle-changed"', admission)
+        self.assertNotIn("williams_crossover", admission)
 
     def test_render_sample_role_policy_and_governed_analyzer_are_explicit_contracts(self):
         policy = RENDER_SAMPLE_ROLE_POLICY.read_text(encoding="utf-8")
