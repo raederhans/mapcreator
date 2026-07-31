@@ -1619,6 +1619,59 @@ export function validateStateWriterPolicySchema(policy = {}) {
           ),
         );
       }
+      const transitionCheckpoints =
+        derivedAliasTaint.transitionCheckpoints;
+      if (transitionCheckpoints !== undefined) {
+        const recordedTransitionPaths = new Set();
+        if (!Array.isArray(transitionCheckpoints)) {
+          violations.push(
+            createViolation(
+              "derived-alias-taint-transition-checkpoints-invalid",
+            ),
+          );
+        } else {
+          for (const checkpoint of transitionCheckpoints) {
+            const checkpointPaths = normalizeStringList(
+              checkpoint?.paths,
+            );
+            if (
+              !checkpoint
+              || typeof checkpoint !== "object"
+              || Array.isArray(checkpoint)
+              || !/^[0-9a-f]{40}$/.test(
+                String(checkpoint.sourceSha || ""),
+              )
+              || !/^[0-9a-f]{64}$/.test(
+                String(checkpoint.policyBlobSha256 || ""),
+              )
+              || !Array.isArray(checkpoint.paths)
+              || JSON.stringify(checkpoint.paths)
+                !== JSON.stringify(checkpointPaths)
+              || !checkpointPaths.length
+            ) {
+              violations.push(
+                createViolation(
+                  "derived-alias-taint-transition-checkpoint-invalid",
+                ),
+              );
+            }
+            for (const relativePath of checkpointPaths) {
+              if (
+                !normalizedPaths.includes(relativePath)
+                || recordedTransitionPaths.has(relativePath)
+              ) {
+                violations.push(
+                  createViolation(
+                    "derived-alias-taint-transition-path-invalid",
+                    { path: relativePath },
+                  ),
+                );
+              }
+              recordedTransitionPaths.add(relativePath);
+            }
+          }
+        }
+      }
       const diagnosticDelta =
         derivedAliasTaint.diagnosticDelta;
       const diagnosticSections = [

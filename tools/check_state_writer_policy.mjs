@@ -15,6 +15,7 @@ import {
   P4_CLOSEOUT_DIRECT_FILES_TARGET,
   P4_CLOSEOUT_MEMBERSHIP_RATIO,
   readStateWriterPolicy,
+  resolveAcceptedStateWriterPolicyCheckpoint,
   resolveGitCommitSha,
   scanStateWriterPolicySnapshot,
   STATE_WRITER_POLICY_PATH,
@@ -481,11 +482,71 @@ export function validateDerivedAliasTaintBaselineTransition({
       code: "derived-alias-taint-baseline-identity-drift",
     });
   }
+  const previousTransitionCheckpoints = Array.isArray(
+    previousBaseline.transitionCheckpoints,
+  )
+    ? previousBaseline.transitionCheckpoints
+    : [];
+  const currentTransitionCheckpoints = Array.isArray(
+    currentBaseline.transitionCheckpoints,
+  )
+    ? currentBaseline.transitionCheckpoints
+    : [];
+  for (
+    let index = 0;
+    index < previousTransitionCheckpoints.length;
+    index += 1
+  ) {
+    if (
+      !isDeepStrictEqual(
+        previousTransitionCheckpoints[index],
+        currentTransitionCheckpoints[index],
+      )
+    ) {
+      violations.push({
+        code:
+          "derived-alias-taint-transition-checkpoint-history-drift",
+        index,
+        expected: previousTransitionCheckpoints[index],
+        actual: currentTransitionCheckpoints[index] ?? null,
+      });
+    }
+  }
+  const previousPaths = new Set(
+    Array.isArray(previousBaseline.paths)
+      ? previousBaseline.paths.map(String)
+      : [],
+  );
   const currentPaths = new Set(
     Array.isArray(currentBaseline.paths)
       ? currentBaseline.paths.map(String)
       : [],
   );
+  const addedTransitionPaths = new Set(
+    currentTransitionCheckpoints
+      .slice(previousTransitionCheckpoints.length)
+      .flatMap((checkpoint) =>
+        Array.isArray(checkpoint?.paths)
+          ? checkpoint.paths.map(String)
+          : []),
+  );
+  if (
+    String(previousPhase || "")
+    && String(currentPhase || "")
+    && String(previousPhase) !== String(currentPhase)
+  ) {
+    for (const relativePath of currentPaths) {
+      if (
+        !previousPaths.has(relativePath)
+        && !addedTransitionPaths.has(relativePath)
+      ) {
+        violations.push({
+          code: "derived-alias-taint-transition-path-proof-missing",
+          path: relativePath,
+        });
+      }
+    }
+  }
   for (
     const relativePath of
       Array.isArray(previousBaseline.paths)
@@ -622,6 +683,151 @@ export function validateStateWriterPolicyTransition({
   return violations;
 }
 
+export function validateDerivedAliasTaintTransitionCheckpointProof({
+  previousPolicy = null,
+  currentPolicy = {},
+  acceptedPolicyCheckpoint = null,
+  isSourceAncestor = (sourceSha) => {
+    try {
+      execFileSync(
+        "git",
+        ["merge-base", "--is-ancestor", sourceSha, "HEAD"],
+        {
+          cwd: PROJECT_ROOT,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  readPolicySourceAtRevision = (sourceSha) => {
+    const policyPath = path
+      .relative(PROJECT_ROOT, STATE_WRITER_POLICY_PATH)
+      .replaceAll("\\", "/");
+    return execFileSync(
+      "git",
+      ["show", `${sourceSha}:${policyPath}`],
+      {
+        cwd: PROJECT_ROOT,
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      },
+    );
+  },
+} = {}) {
+  if (!previousPolicy) {
+    return [];
+  }
+  const previousCheckpoints = Array.isArray(
+    previousPolicy?.baselines?.derivedAliasTaint?.transitionCheckpoints,
+  )
+    ? previousPolicy.baselines.derivedAliasTaint.transitionCheckpoints
+    : [];
+  const currentCheckpoints = Array.isArray(
+    currentPolicy?.baselines?.derivedAliasTaint?.transitionCheckpoints,
+  )
+    ? currentPolicy.baselines.derivedAliasTaint.transitionCheckpoints
+    : [];
+  const addedCheckpoints = currentCheckpoints.slice(
+    previousCheckpoints.length,
+  );
+  const violations = [];
+  if (
+    addedCheckpoints.length
+    && (
+      addedCheckpoints.length !== 1
+      || addedCheckpoints[0]?.sourceSha
+        !== acceptedPolicyCheckpoint?.sourceSha
+      || addedCheckpoints[0]?.policyBlobSha256
+        !== acceptedPolicyCheckpoint?.policyBlobSha256
+    )
+  ) {
+    violations.push({
+      code:
+        "derived-alias-taint-transition-canonical-checkpoint-mismatch",
+      expected: acceptedPolicyCheckpoint,
+      actual: addedCheckpoints.length === 1
+        ? {
+          sourceSha: addedCheckpoints[0]?.sourceSha,
+          policyBlobSha256: addedCheckpoints[0]?.policyBlobSha256,
+        }
+        : null,
+    });
+  }
+  for (const checkpoint of addedCheckpoints) {
+    if (!isSourceAncestor(checkpoint.sourceSha)) {
+      violations.push({
+        code: "derived-alias-taint-transition-source-not-ancestor",
+        sourceSha: String(checkpoint?.sourceSha || ""),
+      });
+    }
+    let source;
+    try {
+      source = String(
+        readPolicySourceAtRevision(checkpoint.sourceSha) || "",
+      );
+    } catch (error) {
+      violations.push({
+        code: "derived-alias-taint-transition-policy-blob-unavailable",
+        sourceSha: String(checkpoint?.sourceSha || ""),
+        message: String(error?.message || error),
+      });
+      continue;
+    }
+    const policyBlobSha256 = createHash("sha256")
+      .update(source)
+      .digest("hex");
+    if (policyBlobSha256 !== checkpoint.policyBlobSha256) {
+      violations.push({
+        code: "derived-alias-taint-transition-policy-blob-mismatch",
+        sourceSha: checkpoint.sourceSha,
+        expected: checkpoint.policyBlobSha256,
+        actual: policyBlobSha256,
+      });
+    }
+    let acceptedPolicy;
+    try {
+      acceptedPolicy = JSON.parse(source);
+    } catch {
+      violations.push({
+        code: "derived-alias-taint-transition-policy-blob-invalid",
+        sourceSha: checkpoint.sourceSha,
+      });
+      continue;
+    }
+    if (!isDeepStrictEqual(acceptedPolicy, previousPolicy)) {
+      violations.push({
+        code: "derived-alias-taint-transition-previous-policy-mismatch",
+        sourceSha: checkpoint.sourceSha,
+      });
+    }
+  }
+  if (addedCheckpoints.length) {
+    const latestPhase = String(
+      currentPolicy?.progress?.latestPhase || "",
+    );
+    const progressCheckpoint = (
+      currentPolicy?.progress?.checkpoints || []
+    ).find(({ phase }) => String(phase || "") === latestPhase);
+    if (
+      addedCheckpoints.length !== 1
+      || progressCheckpoint?.previousAcceptedSourceSha
+        !== addedCheckpoints[0]?.sourceSha
+      || progressCheckpoint?.previousAcceptedPolicyBlobSha256
+        !== addedCheckpoints[0]?.policyBlobSha256
+    ) {
+      violations.push({
+        code: "progress-accepted-policy-checkpoint-mismatch",
+        phase: latestPhase,
+      });
+    }
+  }
+  return violations;
+}
+
 export async function recomputeDerivedAliasTaintBaseline({
   previousPolicy = null,
   currentPolicy = {},
@@ -662,6 +868,9 @@ export async function recomputeDerivedAliasTaintBaseline({
     relativePaths: expectedPaths,
     legacySemanticBaseline:
       currentPolicy?.baselines?.legacySemanticAuthority,
+    transitionCheckpoints:
+      currentPolicy?.baselines?.derivedAliasTaint
+        ?.transitionCheckpoints || [],
     ...(readSourceAtRevision ? { readSourceAtRevision } : {}),
   });
 }
@@ -979,6 +1188,25 @@ export async function buildStateWriterPolicyReport({
       policy: previousPolicy,
       violations: [],
     };
+  let acceptedPolicyCheckpoint = null;
+  const acceptedPolicyCheckpointViolations = [];
+  if (previousPolicyState.policy) {
+    try {
+      acceptedPolicyCheckpoint =
+        resolveAcceptedStateWriterPolicyCheckpoint({
+          policy: previousPolicyState.policy,
+          revision: previousPolicyState.revision === "injected"
+            ? "HEAD"
+            : previousPolicyState.revision,
+        });
+    } catch (error) {
+      acceptedPolicyCheckpointViolations.push({
+        code: "accepted-policy-checkpoint-resolution-failed",
+        revision: previousPolicyState.revision,
+        message: String(error?.message || error),
+      });
+    }
+  }
   let expectedDerivedAliasTaintBaseline = null;
   const derivedAliasTaintProofViolations = [];
   if (Number(loadedPolicy?.schemaVersion) >= 2) {
@@ -1014,6 +1242,12 @@ export async function buildStateWriterPolicyReport({
         loadedPolicy?.baselines?.derivedAliasTaint,
       expectedBaseline: expectedDerivedAliasTaintBaseline,
     });
+  const transitionCheckpointProofViolations =
+    validateDerivedAliasTaintTransitionCheckpointProof({
+      previousPolicy: previousPolicyState.policy,
+      currentPolicy: loadedPolicy,
+      acceptedPolicyCheckpoint,
+    });
   const frozenProgressViolations = previousPolicyState.policy
     ? []
     : validateFrozenP4ProgressCheckpoint(loadedPolicy);
@@ -1039,8 +1273,10 @@ export async function buildStateWriterPolicyReport({
     ...frozenProgressViolations,
     ...identity.violations,
     ...previousPolicyState.violations,
+    ...acceptedPolicyCheckpointViolations,
     ...derivedAliasTaintProofViolations,
     ...transitionViolations,
+    ...transitionCheckpointProofViolations,
     ...validateFrozenCloseoutTargets(loadedPolicy?.baselines),
     ...validateLegacyStateWriterSemanticAuthority({
       baseline: effectiveLoadedLegacySemanticAuthority,

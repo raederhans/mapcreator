@@ -54,6 +54,7 @@ import {
   hasCanonicalStateMutationFinding,
   normalizeStateActionDelegations,
   readStateWriterPolicy,
+  resolveAcceptedStateWriterPolicyCheckpoint,
   resolveGitCommitSha,
   composeLegacySemanticBaseline,
   validateStateWriterDerivedAliasTaintModeManifest,
@@ -72,6 +73,7 @@ import {
   buildStateWriterCloseoutTargetViolations,
   buildStateWriterPolicyReport,
   recomputeDerivedAliasTaintBaseline,
+  validateDerivedAliasTaintTransitionCheckpointProof,
   validateDerivedAliasTaintBaselineTransition,
   validateFrozenCloseoutTargets,
 } from "../tools/check_state_writer_policy.mjs";
@@ -2211,6 +2213,18 @@ test("derived alias diagnostic baseline transition is append-only", () => {
     }),
     [],
   );
+  assert.deepEqual(
+    validateDerivedAliasTaintBaselineTransition({
+      previousSchemaVersion: 2,
+      currentSchemaVersion: 2,
+      previousPhase: "P4.2c",
+      currentPhase: "P4.3",
+      previousBaseline,
+      currentBaseline,
+      expectedBaseline: currentBaseline,
+    }).map(({ code }) => code),
+    ["derived-alias-taint-transition-path-proof-missing"],
+  );
 
   const regressed = structuredClone(currentBaseline);
   regressed.paths = ["js/second.js"];
@@ -2246,6 +2260,35 @@ test("derived alias diagnostic baseline transition is append-only", () => {
       expectedBaseline: currentBaseline,
     }).map(({ code }) => code),
     ["derived-alias-taint-baseline-source-proof-mismatch"],
+  );
+
+  const previousWithTransition = {
+    ...previousBaseline,
+    transitionCheckpoints: [{
+      sourceSha: "2".repeat(40),
+      policyBlobSha256: "3".repeat(64),
+      paths: ["js/first.js"],
+    }],
+  };
+  const driftedTransition = {
+    ...currentBaseline,
+    transitionCheckpoints: [{
+      ...previousWithTransition.transitionCheckpoints[0],
+      policyBlobSha256: "4".repeat(64),
+    }],
+  };
+  assert.ok(
+    validateDerivedAliasTaintBaselineTransition({
+      previousSchemaVersion: 2,
+      currentSchemaVersion: 2,
+      previousBaseline: previousWithTransition,
+      currentBaseline: driftedTransition,
+      expectedBaseline: driftedTransition,
+    }).some(
+      ({ code }) =>
+        code
+        === "derived-alias-taint-transition-checkpoint-history-drift",
+    ),
   );
 });
 
@@ -2972,6 +3015,206 @@ test("derived alias diagnostic baseline admits frozen strict diagnostics only", 
   );
 });
 
+test("policy schema validates exact derived transition provenance", () => {
+  const policy = createPolicyFixture();
+  const sourceBaseSha = "1".repeat(40);
+  policy.schemaVersion = 2;
+  policy.baseline.sourceBaseSha = sourceBaseSha;
+  policy.baselines = {
+    legacySemanticAuthority:
+      buildLegacyStateWriterSemanticAuthority(policy.writers),
+    derivedAliasTaint: {
+      algorithmVersion: 1,
+      sourceBaseSha,
+      paths: ["js/fixture.js"],
+      diagnosticDelta: {
+        ambiguousSites: [],
+        unsupportedSites: [],
+      },
+      transitionCheckpoints: [{
+        sourceSha: "2".repeat(40),
+        policyBlobSha256: "3".repeat(64),
+        paths: ["js/fixture.js"],
+      }],
+    },
+  };
+
+  assert.deepEqual(
+    validateStateWriterPolicySchema(policy).filter(
+      ({ code }) => code.startsWith("derived-alias-taint-transition-"),
+    ),
+    [],
+  );
+
+  const tampered = structuredClone(policy);
+  tampered.baselines.derivedAliasTaint.transitionCheckpoints = [{
+    sourceSha: "invalid",
+    policyBlobSha256: "invalid",
+    paths: ["js/missing.js", "js/missing.js"],
+  }];
+  assert.deepEqual(
+    validateStateWriterPolicySchema(tampered)
+      .filter(
+        ({ code }) => code.startsWith("derived-alias-taint-transition-"),
+      )
+      .map(({ code }) => code),
+    [
+      "derived-alias-taint-transition-checkpoint-invalid",
+      "derived-alias-taint-transition-path-invalid",
+    ],
+  );
+});
+
+test("new strict paths freeze at the previous accepted policy checkpoint", async () => {
+  const frozenSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+    }
+  `;
+  const acceptedSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+      consumeUnknown(model.renderPerfMetrics);
+    }
+  `;
+  const currentSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+      consumeUnknown(model.renderPerfMetrics);
+      consumeUnknown(model.postReadyTaskDiagnostics);
+    }
+  `;
+  const frozenSha = "1".repeat(40);
+  const acceptedSourceSha = "2".repeat(40);
+  const policyBlobSha256 = "3".repeat(64);
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    frozenSource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+  );
+  const legacyBaseline =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+  const reads = [];
+
+  await assert.rejects(
+    buildFrozenDerivedAliasTaintBaseline({
+      sourceBaseSha: frozenSha,
+      relativePaths: ["js/fixture.js"],
+      legacySemanticBaseline: legacyBaseline,
+      existingBaseline: {
+        algorithmVersion: 1,
+        sourceBaseSha: frozenSha,
+        paths: [],
+        diagnosticDelta: {
+          ambiguousSites: [],
+          unsupportedSites: [],
+        },
+      },
+      readSourceAtRevision: async () => frozenSource,
+    }),
+    ({ code }) =>
+      code === "derived-alias-taint-transition-checkpoint-required",
+  );
+
+  const derivedAliasTaint = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha: frozenSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline: legacyBaseline,
+    acceptedPolicyCheckpoint: {
+      sourceSha: acceptedSourceSha,
+      policyBlobSha256,
+    },
+    readSourceAtRevision: async (revision, relativePath) => {
+      reads.push([revision, relativePath]);
+      return revision === acceptedSourceSha ? acceptedSource : frozenSource;
+    },
+  });
+  const effectiveBaseline = composeLegacySemanticBaseline({
+    legacyBaseline,
+    derivedAliasTaint,
+  });
+  const acceptedWriters = await buildFixtureLegacyWritersForSource(
+    acceptedSource,
+    DERIVED_ALIAS_TAINT_MODES.STRICT,
+  );
+  const currentWriters = await buildFixtureLegacyWritersForSource(
+    currentSource,
+    DERIVED_ALIAS_TAINT_MODES.STRICT,
+  );
+
+  assert.deepEqual(reads, [[acceptedSourceSha, "js/fixture.js"]]);
+  assert.deepEqual(derivedAliasTaint.transitionCheckpoints, [{
+    sourceSha: acceptedSourceSha,
+    policyBlobSha256,
+    paths: ["js/fixture.js"],
+  }]);
+  assert.deepEqual(
+    validateLegacyStateWriterSemanticAuthority({
+      baseline: effectiveBaseline,
+      writers: acceptedWriters,
+    }).violations,
+    [],
+  );
+  assert.deepEqual(
+    validateLegacyStateWriterSemanticAuthority({
+      baseline: effectiveBaseline,
+      writers: currentWriters,
+    }).violations.map(({ code, section }) => [code, section]),
+    [["legacy-semantic-authority-added", "unsupportedSites"]],
+  );
+
+  const replayReads = [];
+  const replayed = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha: frozenSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline: legacyBaseline,
+    transitionCheckpoints: derivedAliasTaint.transitionCheckpoints,
+    readSourceAtRevision: async (revision, relativePath) => {
+      replayReads.push([revision, relativePath]);
+      return revision === acceptedSourceSha ? acceptedSource : frozenSource;
+    },
+  });
+  assert.deepEqual(replayReads, [[acceptedSourceSha, "js/fixture.js"]]);
+  assert.deepEqual(replayed, derivedAliasTaint);
+});
+
+test("derived alias diagnostic baseline classifies unknown historical plan fields with path fallback authority", async () => {
+  const legacySource = `
+    export function inspectPlan(plan) {
+      plan.bootPhase = "ready";
+    }
+  `;
+  const frozenSource = `
+    export function inspectPlan(plan) {
+      plan.bootPhase = "ready";
+      plan.deferredExactTargetPasses = [];
+      consumeUnknown(plan.forceExactContextBaseRefresh);
+    }
+  `;
+  const frozenSha = "1".repeat(40);
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    legacySource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+  );
+  const legacyBaseline =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+
+  const derivedAliasTaint = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha: frozenSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline: legacyBaseline,
+    readSourceAtRevision: async () => frozenSource,
+  });
+
+  assert.equal(
+    derivedAliasTaint.diagnosticDelta.unsupportedSites.length,
+    1,
+  );
+  assert.match(
+    derivedAliasTaint.diagnosticDelta.unsupportedSites[0],
+    /forceExactContextBaseRefresh/,
+  );
+});
+
 test("checker recomputes derived alias diagnostics from frozen source", async () => {
   const sourceBaseSha = "1".repeat(40);
   const frozenSource = `
@@ -3652,6 +3895,228 @@ test("same-phase policy rebuild preserves the committed progress checkpoint", ()
 
   assert.equal(progress.latestPhase, "P4.2b");
   assert.deepEqual(progress.checkpoints, [committedCheckpoint]);
+});
+
+test("checker replays derived alias diagnostics from accepted transition checkpoints", async () => {
+  const sourceBaseSha = "1".repeat(40);
+  const acceptedSourceSha = "2".repeat(40);
+  const policyBlobSha256 = "3".repeat(64);
+  const frozenSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+    }
+  `;
+  const acceptedSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+      consumeUnknown(model.renderPerfMetrics);
+    }
+  `;
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    frozenSource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+  );
+  const legacySemanticAuthority =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+  const derivedAliasTaint = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline: legacySemanticAuthority,
+    acceptedPolicyCheckpoint: {
+      sourceSha: acceptedSourceSha,
+      policyBlobSha256,
+    },
+    readSourceAtRevision: async () => acceptedSource,
+  });
+  const previousPolicy = {
+    schemaVersion: 2,
+    baseline: { sourceBaseSha },
+    baselines: {
+      legacySemanticAuthority,
+      derivedAliasTaint: {
+        algorithmVersion: 1,
+        sourceBaseSha,
+        paths: [],
+        diagnosticDelta: {
+          ambiguousSites: [],
+          unsupportedSites: [],
+        },
+      },
+    },
+    progress: { latestPhase: "P4.2c" },
+    writers: legacyWriters,
+  };
+  const currentPolicy = {
+    schemaVersion: 2,
+    baseline: { sourceBaseSha },
+    baselines: { legacySemanticAuthority, derivedAliasTaint },
+    progress: { latestPhase: "P4.3" },
+  };
+  const reads = [];
+  const runGit = (args) => {
+    const joined = args.join(" ");
+    if (joined === `rev-parse --verify ${sourceBaseSha}^{commit}`) {
+      return `${sourceBaseSha}\n`;
+    }
+    if (joined === `merge-base --is-ancestor ${sourceBaseSha} HEAD`) {
+      return "";
+    }
+    if (joined === `diff --name-only ${sourceBaseSha} -- js`) {
+      return "js/fixture.js\n";
+    }
+    if (joined === "ls-files --others --exclude-standard -- js") {
+      return "";
+    }
+    throw new Error(`unexpected git call: ${joined}`);
+  };
+
+  const expected = await recomputeDerivedAliasTaintBaseline({
+    previousPolicy,
+    currentPolicy,
+    candidatePaths: ["js/fixture.js"],
+    runGit,
+    readSourceAtRevision: async (revision, relativePath) => {
+      reads.push([revision, relativePath]);
+      return revision === acceptedSourceSha ? acceptedSource : frozenSource;
+    },
+  });
+
+  assert.deepEqual(reads, [[acceptedSourceSha, "js/fixture.js"]]);
+  assert.deepEqual(expected, derivedAliasTaint);
+});
+
+test("checker proves added transition provenance against the previous accepted policy blob", () => {
+  const sourceSha = "2".repeat(40);
+  const previousPolicy = {
+    schemaVersion: 2,
+    progress: { latestPhase: "P4.2c" },
+  };
+  const source = `${JSON.stringify(previousPolicy, null, 2)}\n`;
+  const policyBlobSha256 = createHash("sha256")
+    .update(source)
+    .digest("hex");
+  const currentPolicy = {
+    schemaVersion: 2,
+    baselines: {
+      derivedAliasTaint: {
+        transitionCheckpoints: [{
+          sourceSha,
+          policyBlobSha256,
+          paths: ["js/fixture.js"],
+        }],
+      },
+    },
+    progress: {
+      latestPhase: "P4.3",
+      checkpoints: [{
+        phase: "P4.3",
+        previousAcceptedSourceSha: sourceSha,
+        previousAcceptedPolicyBlobSha256: policyBlobSha256,
+      }],
+    },
+  };
+  const readPolicySourceAtRevision = (revision) => {
+    assert.equal(revision, sourceSha);
+    return source;
+  };
+
+  assert.deepEqual(
+    validateDerivedAliasTaintTransitionCheckpointProof({
+      previousPolicy,
+      currentPolicy,
+      acceptedPolicyCheckpoint: {
+        sourceSha,
+        policyBlobSha256,
+      },
+      readPolicySourceAtRevision,
+      isSourceAncestor: () => true,
+    }),
+    [],
+  );
+
+  assert.deepEqual(
+    validateDerivedAliasTaintTransitionCheckpointProof({
+      previousPolicy,
+      currentPolicy,
+      acceptedPolicyCheckpoint: {
+        sourceSha: "4".repeat(40),
+        policyBlobSha256,
+      },
+      readPolicySourceAtRevision,
+      isSourceAncestor: () => true,
+    }).map(({ code }) => code),
+    ["derived-alias-taint-transition-canonical-checkpoint-mismatch"],
+  );
+  assert.deepEqual(
+    validateDerivedAliasTaintTransitionCheckpointProof({
+      previousPolicy,
+      currentPolicy,
+      acceptedPolicyCheckpoint: {
+        sourceSha,
+        policyBlobSha256,
+      },
+      readPolicySourceAtRevision,
+      isSourceAncestor: () => false,
+    }).map(({ code }) => code),
+    ["derived-alias-taint-transition-source-not-ancestor"],
+  );
+
+  const tampered = structuredClone(currentPolicy);
+  tampered.baselines.derivedAliasTaint.transitionCheckpoints[0]
+    .policyBlobSha256 = "3".repeat(64);
+  assert.deepEqual(
+    validateDerivedAliasTaintTransitionCheckpointProof({
+      previousPolicy,
+      currentPolicy: tampered,
+      acceptedPolicyCheckpoint: {
+        sourceSha,
+        policyBlobSha256,
+      },
+      readPolicySourceAtRevision,
+      isSourceAncestor: () => true,
+    }).map(({ code }) => code),
+    [
+      "derived-alias-taint-transition-canonical-checkpoint-mismatch",
+      "derived-alias-taint-transition-policy-blob-mismatch",
+      "progress-accepted-policy-checkpoint-mismatch",
+    ],
+  );
+});
+
+test("new phase progress records the previous accepted policy checkpoint", () => {
+  const acceptedPolicyCheckpoint = {
+    sourceSha: "2".repeat(40),
+    policyBlobSha256: "3".repeat(64),
+  };
+  const metrics = {
+    productionLegacyDirectFiles: 70,
+    productionLegacyMemberships: 700,
+    productionLegacyDynamicSites: 50,
+    productionLegacyAliasSites: 80,
+    productionLegacyAmbiguousSites: 60,
+    productionLegacyUnsupportedSites: 40,
+  };
+  const progress = buildProgressState({
+    phase: "P4.3",
+    currentMetrics: metrics,
+    previousPolicy: {
+      progress: {
+        latestPhase: "P4.2c",
+        checkpoints: [{ phase: "P4.2c", ...metrics }],
+      },
+    },
+    refreshP4Baseline: false,
+    retiredLegacySemanticAuthority: {},
+    acceptedPolicyCheckpoint,
+  });
+
+  assert.deepEqual(progress.checkpoints.at(-1), {
+    phase: "P4.3",
+    ...metrics,
+    previousAcceptedSourceSha: acceptedPolicyCheckpoint.sourceSha,
+    previousAcceptedPolicyBlobSha256:
+      acceptedPolicyCheckpoint.policyBlobSha256,
+  });
 });
 
 test("next-phase policy rebuild freezes P4.2b and appends the live P4.2c checkpoint", () => {
@@ -5409,6 +5874,31 @@ test("progress checkpoints require finite non-negative integer metrics", () => {
         && scope === "checkpoint:P4.0",
     ),
   );
+
+  const invalidAcceptedPolicyCheckpoint =
+    validateStateWriterPolicyProgression({
+      previousPolicy: {
+        baseline: { phase: "P4.0" },
+        progress: {
+          latestPhase: "P4.2c",
+          checkpoints: [{
+            phase: "P4.2c",
+            ...validMetrics,
+            previousAcceptedSourceSha: "invalid",
+            previousAcceptedPolicyBlobSha256: "invalid",
+          }],
+        },
+      },
+      phase: "P4.3",
+      currentMetrics: validMetrics,
+    });
+  assert.ok(
+    invalidAcceptedPolicyCheckpoint.violations.some(
+      ({ code, phase }) =>
+        code === "progress-accepted-policy-checkpoint-invalid"
+        && phase === "P4.2c",
+    ),
+  );
 });
 
 test("policy snapshot admits exact non-ambiguous unsupported sites and rejects moved or stale sites", () => {
@@ -5873,6 +6363,57 @@ test("source base SHA resolves to a commit and rejects non-commit revisions", ()
     () => resolveGitCommitSha("refs/heads/__missing_p4_fixture__"),
     /commit/i,
   );
+});
+
+test("accepted policy checkpoint resolves the newest exact committed policy blob", () => {
+  const acceptedSha = "2".repeat(40);
+  const olderSha = "1".repeat(40);
+  const policy = {
+    schemaVersion: 2,
+    progress: { latestPhase: "P4.2c" },
+  };
+  const acceptedSource = `${JSON.stringify({
+    progress: policy.progress,
+    schemaVersion: policy.schemaVersion,
+  }, null, 2)}\n`;
+  const calls = [];
+  const checkpoint = resolveAcceptedStateWriterPolicyCheckpoint({
+    policy,
+    runGit(args) {
+      calls.push(args);
+      const joined = args.join(" ");
+      if (
+        joined
+        === "log --format=%H HEAD -- tools/state_writer_policy.json"
+      ) {
+        return `${acceptedSha}\n${olderSha}\n`;
+      }
+      if (
+        joined
+        === `show ${acceptedSha}:tools/state_writer_policy.json`
+      ) {
+        return acceptedSource;
+      }
+      if (
+        joined
+        === `show ${olderSha}:tools/state_writer_policy.json`
+      ) {
+        return "{}\n";
+      }
+      throw new Error(`unexpected git call: ${joined}`);
+    },
+  });
+
+  assert.deepEqual(checkpoint, {
+    sourceSha: acceptedSha,
+    policyBlobSha256: createHash("sha256")
+      .update(acceptedSource)
+      .digest("hex"),
+  });
+  assert.deepEqual(calls, [
+    ["log", "--format=%H", "HEAD", "--", "tools/state_writer_policy.json"],
+    ["show", `${acceptedSha}:tools/state_writer_policy.json`],
+  ]);
 });
 
 test("derived alias taint manifest makes changed production strict and preserves unchanged baseline production", () => {
