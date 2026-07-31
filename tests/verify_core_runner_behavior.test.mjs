@@ -37,6 +37,12 @@ const PACKAGE_SCRIPTS = {
   "test:python:p4:p4-2c-boundary": "npm run python -- -m unittest tests.test_scenario_health_actions_boundary_contract tests.test_startup_hydration_boundary_contract tests.test_scenario_data_health_boundary_contract tests.test_scenario_presentation_runtime_boundary_contract tests.test_scenario_lifecycle_runtime_boundary_contract tests.test_scenario_rollback_boundary_contract tests.test_scenario_runtime_state_boundary_contract tests.test_scenario_state_actions_boundary_contract tests.test_state_write_guardrail_contract -q",
   "test:node:p4:p4-3": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/state_action_delegation_edges_behavior.test.mjs tests/state_writer_policy_batch_scan_behavior.test.mjs tests/renderer_phase_actions_behavior.test.mjs tests/renderer_interaction_actions_behavior.test.mjs tests/renderer_exact_refresh_actions_behavior.test.mjs tests/renderer_cache_actions_behavior.test.mjs tests/renderer_diagnostics_actions_behavior.test.mjs tests/render_perf_metrics_runtime_owner_behavior.test.mjs tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs tests/renderer_render_phase_lifecycle_inventory.test.mjs tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs tests/zoom_interaction_lifecycle_owner_behavior.test.mjs tests/renderer_runtime_state_behavior.test.mjs tests/scenario_chunk_contracts.test.mjs",
   "test:python:p4:p4-3-boundary": "npm run python -- -m unittest tests.test_renderer_control_actions_boundary_contract tests.test_renderer_exact_refresh_actions_boundary_contract tests.test_renderer_cache_actions_boundary_contract tests.test_renderer_diagnostics_actions_boundary_contract tests.test_renderer_runtime_state_boundary_contract tests.test_map_renderer_interaction_context_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_state_write_guardrail_contract -q",
+  "test:node:p4:p4-4": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/state_action_delegation_edges_behavior.test.mjs tests/state_writer_policy_batch_scan_behavior.test.mjs tests/appearance_actions_behavior.test.mjs tests/appearance_preset_actions_behavior.test.mjs tests/appearance_preset_history.node.test.mjs tests/appearance_preset_state.node.test.mjs tests/appearance_reference_actions_behavior.test.mjs tests/appearance_selection_actions_behavior.test.mjs tests/appearance_state_action_callers_behavior.test.mjs tests/appearance_visibility_actions_behavior.test.mjs tests/intensity_field_actions_behavior.test.mjs tests/export_workbench_actions_behavior.test.mjs tests/transport_actions_behavior.test.mjs tests/ui_chrome_actions_behavior.test.mjs tests/ui_dirty_actions_behavior.test.mjs tests/ui_visibility_actions_behavior.test.mjs tests/ui_state_action_callers_behavior.test.mjs tests/strategic_overlay_actions_behavior.test.mjs tests/special_zone_actions_behavior.test.mjs tests/special_zones_workbench_controller_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs",
+  "test:python:p4:p4-4-boundary": "npm run python -- -m unittest tests.test_state_write_guardrail_contract -q",
+  "test:node:p4:p4-5a": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/state_writer_policy_batch_scan_behavior.test.mjs tests/runtime_hook_semantics_behavior.test.mjs",
+  "test:python:p4:p4-5a-boundary": "npm run python -- -m unittest tests.test_runtime_hooks_boundary_contract -q",
+  "test:node:p4:p4-5b": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/state_writer_policy_batch_scan_behavior.test.mjs tests/scenario_lifecycle_runtime_behavior.test.mjs tests/main_bootstrap_wiring_boundary.test.mjs",
+  "test:python:p4:p4-5b-boundary": "npm run python -- -m unittest tests.test_main_startup_scenario_boot_boundary_contract tests.test_startup_shell tests.test_state_write_guardrail_contract -q",
   "verify:test-console-allowlist": "node tools/check_console_allowlist_decay.mjs",
   "verify:test-timeout-guardrails": "node tools/check_test_timeout_guardrails.mjs",
   "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
@@ -175,6 +181,12 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
     "test:python:p4:p4-2c-boundary",
     "test:node:p4:p4-3",
     "test:python:p4:p4-3-boundary",
+    "test:node:p4:p4-4",
+    "test:python:p4:p4-4-boundary",
+    "test:node:p4:p4-5a",
+    "test:python:p4:p4-5a-boundary",
+    "test:node:p4:p4-5b",
+    "test:python:p4:p4-5b-boundary",
     "verify:pages-dist",
     "verify:dist-drift",
     "test:node:verification-metadata",
@@ -218,6 +230,9 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
     "test:node:hit-canvas-scheduling-owner-suite",
   ]);
   assert.equal(commandRefs(plan).includes("verify:p4:p4-1"), false);
+  assert.equal(commandRefs(plan).includes("verify:p4:p4-4"), false);
+  assert.equal(commandRefs(plan).includes("verify:p4:p4-5a"), false);
+  assert.equal(commandRefs(plan).includes("verify:p4:p4-5b"), false);
   assert.ok(commandRefs(plan).includes(
     "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q",
   ));

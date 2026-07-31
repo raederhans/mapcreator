@@ -23,6 +23,8 @@ const handlerDispatchersByHookName = new Map();
 const compatTargets = new WeakSet();
 
 // Runtime hook 分为通知型 bus 和有返回值的 handler；两类共享注册入口，但分发语义分开维护。
+// Registry 按 hookName 全局共享；target 只负责绑定 legacy compatibility properties。
+// 当前应用只有一个 canonical state。未来多实例支持需要先把 registry 实例化。
 function normalizeRuntimeHook(hook) {
   return typeof hook === "function" ? hook : null;
 }

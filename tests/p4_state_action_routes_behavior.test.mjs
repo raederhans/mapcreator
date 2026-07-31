@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 import { buildRecommendation } from "../tools/select_verification_targets.mjs";
@@ -11,6 +13,21 @@ import {
   parseArgs,
   runP4StateActionRouteCheck,
 } from "../tools/check_p4_state_action_routes.mjs";
+
+const REPO_ROOT = process.cwd();
+
+function readCurrentP4Phase() {
+  const policy = JSON.parse(
+    fs.readFileSync(path.join(REPO_ROOT, "tools", "state_writer_policy.json"), "utf8"),
+  );
+  return policy.progress.latestPhase;
+}
+
+function exactCommandForPhase(phase) {
+  const match = /^P4\.(\d+)([a-z]?)$/.exec(String(phase || ""));
+  assert.ok(match, `invalid P4 phase: ${phase}`);
+  return `verify:p4:p4-${match[1]}${match[2]}`;
+}
 
 function createRoute({
   id = "p4:policy",
@@ -81,6 +98,7 @@ test("phase command contract covers every exact P4 implementation subphase", () 
   assert.deepEqual(P4_PHASE_EXPECTED_COMMANDS["P4.2a"], ["verify:p4:p4-2a"]);
   assert.deepEqual(P4_PHASE_EXPECTED_COMMANDS["P4.2b"], ["verify:p4:p4-2b"]);
   assert.deepEqual(P4_PHASE_EXPECTED_COMMANDS["P4.2c"], ["verify:p4:p4-2c"]);
+  assert.deepEqual(P4_PHASE_EXPECTED_COMMANDS["P4.4"], ["verify:p4:p4-4"]);
   assert.deepEqual(P4_PHASE_EXPECTED_COMMANDS["P4.5a"], ["verify:p4:p4-5a"]);
   assert.deepEqual(P4_PHASE_EXPECTED_COMMANDS["P4.5b"], ["verify:p4:p4-5b"]);
 });
@@ -191,10 +209,12 @@ test("direct state-ownership route with the expected phase command passes", () =
 
 test("historical owner routes stay direct while the selector upgrades execution to the current phase", () => {
   const changedFile = "js/core/state/actions/boot_actions.js";
+  const currentPhase = readCurrentP4Phase();
+  const currentExactCommand = exactCommandForPhase(currentPhase);
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation([changedFile], routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: currentPhase,
     changedFiles: [changedFile],
     recommendation,
     routes,
@@ -202,16 +222,17 @@ test("historical owner routes stay direct while the selector upgrades execution 
 
   assert.equal(report.verdict, "pass");
   assert.ok(report.files[0].directStateOwnershipRecommendations.length > 0);
-  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-3"]);
+  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, [currentExactCommand]);
   assert.equal(
     report.files[0].directStateOwnershipRecommendations.some((route) => (
-      route.commandRef === "verify:p4:p4-3"
+      route.commandRef === currentExactCommand
     )),
     false,
   );
 });
 
-test("the current selector control plane has zero P4.3 route gaps", () => {
+test("the current selector control plane has zero route gaps at the policy phase", () => {
+  const currentPhase = readCurrentP4Phase();
   const changedFiles = [
     "tools/select_verification_targets.mjs",
     "tools/check_p4_state_action_routes.mjs",
@@ -221,13 +242,16 @@ test("the current selector control plane has zero P4.3 route gaps", () => {
     "tests/verification_metadata_behavior.test.mjs",
     "tests/p4_state_action_routes_behavior.test.mjs",
     "tests/test_e2e_structural_tooling.py",
+    "js/core/state/actions/appearance_actions.js",
+    "js/core/state/bus.js",
+    "js/main.js",
     "docs/active/state-action-ownership-p4-20260719/context.md",
     "docs/active/state-action-ownership-p4-20260719/task.md",
   ];
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation(changedFiles, routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: currentPhase,
     changedFiles,
     recommendation,
     routes,

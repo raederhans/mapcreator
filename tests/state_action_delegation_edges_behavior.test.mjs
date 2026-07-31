@@ -172,7 +172,7 @@ test("P4.3 renderer cross-boundary proofs lock retired evidence and exact replac
       ["js/core/map_renderer.js", "renderPerfMetrics", "ensureRenderPerfMetricsState", 1],
       ["js/core/map_renderer.js", "renderPerfMetricSequence", "commitRenderPerfMetricState", 1],
       ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "ensureExactAfterSettleControllerState", 2],
-      ["js/core/state/renderer_runtime_state.js", "renderPassCache", "commitRenderPassCacheState", 49],
+      ["js/core/state/renderer_runtime_state.js", "renderPassCache", "ensureRenderPassCacheState", 49],
       ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "resetExactAfterSettleControllerState", 2],
     ],
   );

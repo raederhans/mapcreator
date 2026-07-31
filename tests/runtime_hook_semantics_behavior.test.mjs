@@ -195,6 +195,51 @@ test("handler token disposal cannot clear a newer owner", () => {
   assert.equal(callRuntimeHook(target, "toggleLeftPanelFn"), undefined);
 });
 
+test("runtime hook registries are global across compatibility targets", () => {
+  const firstTarget = {};
+  const secondTarget = {};
+  const notifications = [];
+  const subscription = subscribeRuntimeNotification(
+    firstTarget,
+    "updateLegendUI",
+    (value) => notifications.push(value),
+  );
+  const firstHandler = registerRuntimeHandler(
+    firstTarget,
+    "toggleLeftPanelFn",
+    () => "first",
+  );
+  const secondHandler = registerRuntimeHandler(
+    secondTarget,
+    "toggleLeftPanelFn",
+    () => "second",
+  );
+
+  try {
+    callRuntimeHook(secondTarget, "updateLegendUI", "shared-notification");
+    assert.deepEqual(notifications, ["shared-notification"]);
+    assert.equal(callRuntimeHook(firstTarget, "toggleLeftPanelFn"), "second");
+    assert.equal(firstHandler.dispose(), false);
+  } finally {
+    subscription.dispose();
+    secondHandler.dispose();
+  }
+});
+
+test("notification fanout returns listener promises without awaiting them", async () => {
+  const eventName = "test:runtime-hook:sync-fanout";
+  const pending = Promise.resolve("settled");
+  on(eventName, () => pending);
+
+  try {
+    const results = emit(eventName, null);
+    assert.deepEqual(results, [pending]);
+    assert.equal(await results[0], "settled");
+  } finally {
+    off(eventName);
+  }
+});
+
 test("legacy handler registration still returns a stable dispatcher and replaces its source", () => {
   const target = {};
   const firstSource = () => "first";

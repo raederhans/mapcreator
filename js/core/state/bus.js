@@ -35,6 +35,9 @@ export function emit(eventName, payload) {
   const snapshot = Array.from(listeners);
   const results = [];
   const errors = [];
+  // Fanout is synchronous. Listener return values, including Promises, are
+  // returned to the caller without awaiting so async workflows stay on the
+  // single-owner handler surface.
   snapshot.forEach((listener) => {
     try {
       results.push(listener(payload));

@@ -86,10 +86,57 @@ test("P4.3 plan keeps renderer actions, complete policy suite, and route command
   );
 });
 
-test("unsupported future phase plans fail closed", () => {
+test("P4.4 plan keeps UI actions, complete policy suite, and route commands exact", () => {
+  const plan = buildP4PhaseVerificationPlan({ phase: "P4.4" });
+  assert.deepEqual(plan.commands, [
+    "npm run test:node:p4:p4-4",
+    "npm run test:python:p4:p4-4-boundary",
+    "npm run test:node:p4:state-writer-policy",
+    "node tools/check_state_writer_policy.mjs --phase P4.4 --require-clean",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.4 --history-base HEAD^",
+  ]);
+  assert.equal(
+    plan.reportPath.replaceAll("\\", "/"),
+    ".runtime/reports/generated/p4-state-actions/P4.4/phase-verification.json",
+  );
+});
+
+test("P4.5a plan keeps runtime hook semantics, complete policy suite, and route commands exact", () => {
+  const plan = buildP4PhaseVerificationPlan({ phase: "P4.5a" });
+  assert.deepEqual(plan.commands, [
+    "npm run test:node:p4:p4-5a",
+    "npm run test:python:p4:p4-5a-boundary",
+    "npm run test:node:p4:state-writer-policy",
+    "node tools/check_state_writer_policy.mjs --phase P4.5a --require-clean",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.5a --history-base HEAD^",
+  ]);
+  assert.equal(
+    plan.reportPath.replaceAll("\\", "/"),
+    ".runtime/reports/generated/p4-state-actions/P4.5a/phase-verification.json",
+  );
+});
+
+test("P4.5b plan replays hook semantics before integration and closeout gates", () => {
+  const plan = buildP4PhaseVerificationPlan({ phase: "P4.5b" });
+  assert.deepEqual(plan.commands, [
+    "npm run test:node:p4:p4-5a",
+    "npm run test:python:p4:p4-5a-boundary",
+    "npm run test:node:p4:p4-5b",
+    "npm run test:python:p4:p4-5b-boundary",
+    "npm run test:node:p4:state-writer-policy",
+    "node tools/check_state_writer_policy.mjs --phase P4.5b --require-clean",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.5b --history-base HEAD^",
+  ]);
+  assert.equal(
+    plan.reportPath.replaceAll("\\", "/"),
+    ".runtime/reports/generated/p4-state-actions/P4.5b/phase-verification.json",
+  );
+});
+
+test("P4.0 has no implementation phase plan", () => {
   assert.throws(
-    () => buildP4PhaseVerificationPlan({ phase: "P4.4" }),
-    /Unknown P4 state-action phase|no executable plan/,
+    () => buildP4PhaseVerificationPlan({ phase: "P4.0" }),
+    /no executable plan/,
   );
 });
 
