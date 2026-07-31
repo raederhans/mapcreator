@@ -20,7 +20,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const SUPPORTED_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
 const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];
 const NODE_PLATFORM_IDS = new Set(["aix", "android", "darwin", "freebsd", "linux", "openbsd", "sunos", "win32"]);
-const PERF_BASELINE_DATE = "2026-07-14";
+const PERF_BASELINE_DATE = "2026-07-30";
 const DEFAULT_BASELINE_JSON = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.json`);
 const DEFAULT_BASELINE_MD = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.md`);
 const DEFAULT_RAW_DIR = path.join(REPO_ROOT, ".runtime", "output", "perf", `baseline_${PERF_BASELINE_DATE}`);
@@ -1291,6 +1291,29 @@ export function validateGateBaselineReport(baselineReport, scenarioIds, baseline
       `[perf-baseline] Baseline report schema mismatch: ${baselinePath}\n${baselineContractMismatches.map((item) => `- ${item}`).join("\n")}`
     );
   }
+  const expectedScenarioIds = Array.isArray(scenarioIds)
+    ? scenarioIds.map((scenarioId) => String(scenarioId || "").trim())
+    : [];
+  const baselineScenarioValues = baselineReport?.config?.scenarios;
+  const baselineScenarioIds = Array.isArray(baselineScenarioValues)
+    ? baselineScenarioValues.map((scenarioId) => (
+      typeof scenarioId === "string" ? scenarioId.trim() : ""
+    ))
+    : [];
+  const baselineScenarioSequenceValid =
+    Array.isArray(baselineScenarioValues)
+    && baselineScenarioValues.length > 0
+    && baselineScenarioValues.every((scenarioId) => typeof scenarioId === "string")
+    && baselineScenarioIds.every(Boolean)
+    && new Set(baselineScenarioIds).size === baselineScenarioIds.length;
+  if (
+    !baselineScenarioSequenceValid
+    || JSON.stringify(baselineScenarioIds) !== JSON.stringify(expectedScenarioIds)
+  ) {
+    throw new Error(
+      `[perf-baseline] Baseline report scenario sequence mismatch: expected=${JSON.stringify(expectedScenarioIds)} actual=${JSON.stringify(baselineScenarioIds)} path=${baselinePath}`
+    );
+  }
   const baselineScenarios = baselineReport.scenarios;
   if (!baselineScenarios || typeof baselineScenarios !== "object") {
     throw new Error(`[perf-baseline] Baseline report misses scenarios map: ${baselinePath}`);
@@ -1514,13 +1537,10 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     && currentScenarioValues.every((scenarioId) => typeof scenarioId === "string")
     && currentScenarios.every(Boolean)
     && new Set(currentScenarios).size === currentScenarios.length;
-  const baselineGateScenarios = baselineScenariosValid
-    ? baselineScenarios.filter((scenarioId) => DEFAULT_GATE_SCENARIOS.includes(scenarioId))
-    : [];
   if (
     !baselineScenariosValid
     || !currentScenariosValid
-    || JSON.stringify(baselineGateScenarios) !== JSON.stringify(DEFAULT_GATE_SCENARIOS)
+    || JSON.stringify(baselineScenarios) !== JSON.stringify(DEFAULT_GATE_SCENARIOS)
     || JSON.stringify(currentScenarios) !== JSON.stringify(DEFAULT_GATE_SCENARIOS)
   ) {
     mismatches.push(`scenarios mismatch: baseline=${JSON.stringify(baselineScenarios)} current=${JSON.stringify(currentScenarios)}`);

@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import re
 import unittest
@@ -7,9 +8,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_JSON = REPO_ROOT / "package.json"
+PACKAGE_LOCK = REPO_ROOT / "package-lock.json"
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "perf-pr-gate.yml"
-BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-14.md"
-BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-14.json"
+BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.md"
+BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.json"
+BASELINE_SOURCE_GIT_HEAD = "f2d264b77913a7a5cba2c333bf5c4ce5f2ed3246"
 PERF_SCRIPT = REPO_ROOT / "tools" / "perf" / "run_baseline.mjs"
 RENDER_SAMPLE_ROLE_POLICY = REPO_ROOT / "tools" / "perf" / "render_sample_role_policy.mjs"
 RENDER_SAMPLE_ROLE_ANALYZER = REPO_ROOT / "tools" / "perf" / "analyze_render_sample_roles.mjs"
@@ -190,10 +193,12 @@ class PerfGateContractTest(unittest.TestCase):
             markdown,
         )
         self.assertIn("- Gate scenarios: tno_1962, hoi4_1939", markdown)
-        self.assertIn("- Observation samples: blank_base", markdown)
-        self.assertRegex(markdown, r"## Scenario: blank_base\s+- sample_role: observation")
+        self.assertIn("- Observation samples: none", markdown)
+        self.assertNotIn("## Scenario: blank_base", markdown)
         self.assertRegex(markdown, r"## Scenario: tno_1962\s+- sample_role: gate")
         self.assertRegex(markdown, r"## Scenario: hoi4_1939\s+- sample_role: gate")
+        self.assertTrue(markdown.endswith("\n"))
+        self.assertFalse(markdown.endswith("\n\n"))
 
     def test_perf_script_locks_hardening_contract(self):
         script = PERF_SCRIPT.read_text(encoding="utf-8")
@@ -378,16 +383,26 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertEqual(baseline_payload.get("schemaVersion"), 2)
         self.assertEqual(baseline_payload.get("benchmarkMetricsSchemaVersion"), "3.3")
         self.assertEqual(baseline_payload.get("probeSchema"), "mc_perf_snapshot")
-        self.assertRegex(str(baseline_payload.get("gitHead", "")), r"^[0-9a-f]{40}$")
+        self.assertEqual(baseline_payload.get("baselineDate"), "2026-07-30")
+        self.assertEqual(baseline_payload.get("gitHead"), BASELINE_SOURCE_GIT_HEAD)
+        self.assertEqual(baseline_payload.get("config", {}).get("scenarios"), ["tno_1962", "hoi4_1939"])
         self.assertEqual(baseline_payload.get("config", {}).get("runs"), 5)
         self.assertEqual(baseline_payload.get("config", {}).get("warmups"), 3)
+        self.assertEqual(set(baseline_payload.get("scenarios", {})), {"tno_1962", "hoi4_1939"})
+        self.assertEqual(
+            set(baseline_payload.get("workloadIdentity", {}).get("scenarios", {})),
+            {"tno_1962", "hoi4_1939"},
+        )
         environment = baseline_payload.get("environment", {})
         self.assertEqual(environment.get("arch"), "x64")
         self.assertEqual(environment.get("cpuCount"), 24)
         self.assertEqual(environment.get("memoryGiB"), 64)
         self.assertEqual(environment.get("runnerIdentity", {}).get("provider"), "local")
         self.assertRegex(str(environment.get("browserVersion", "")), r"\d+")
-        self.assertRegex(str(environment.get("packageLockSha256", "")), r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            environment.get("packageLockSha256"),
+            hashlib.sha256(PACKAGE_LOCK.read_bytes()).hexdigest(),
+        )
         role_policy = baseline_payload.get("renderSampleRolePolicy", {})
         self.assertEqual(role_policy.get("policyId"), "render-sample-role-v2")
         self.assertEqual(role_policy.get("canonicalRoleId"), "last-post-promotion-idle-scenario-frame-v1")

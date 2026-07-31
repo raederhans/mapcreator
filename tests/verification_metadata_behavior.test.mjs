@@ -1239,6 +1239,8 @@ test("dated schema-2 baseline artifacts route to the perf contract", () => {
   for (const sourceRef of [
     "docs/perf/baseline_2026-07-14.json",
     "docs/perf/baseline_2026-07-14.md",
+    "docs/perf/baseline_2026-07-30.json",
+    "docs/perf/baseline_2026-07-30.md",
   ]) {
     assert.ok(entry.sourceRefs.includes(sourceRef), `${sourceRef} must be declared by the perf contract`);
     const report = buildRecommendation([sourceRef]);

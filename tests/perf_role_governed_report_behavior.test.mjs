@@ -274,6 +274,7 @@ test("baseline admission rejects coerced gate metrics before comparison", () => 
       schemaVersion: 2,
       benchmarkMetricsSchemaVersion: "3.3",
       probeSchema: "mc_perf_snapshot",
+      config: { scenarios: ["tno_1962"] },
       scenarios: { tno_1962: { summary: { ...validSummary, totalStartupMs: invalidValue } } },
     };
     assert.throws(() => validateGateBaselineReport(report, ["tno_1962"], "fixture.json"), /invalid gate metrics/);
@@ -298,6 +299,16 @@ test("baseline admission requires the current schema-2 oracle", () => {
   assert.throws(
     () => validateGateBaselineReport(legacyReport, ["tno_1962"], "legacy.json"),
     /schema mismatch/,
+  );
+});
+
+test("baseline admission requires the exact gate scenario sequence", () => {
+  const report = makeSchema2IdentityReport();
+  report.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
+
+  assert.throws(
+    () => validateGateBaselineReport(report, ["tno_1962", "hoi4_1939"], "fixture.json"),
+    /scenario sequence mismatch/,
   );
 });
 
@@ -447,7 +458,7 @@ test("baseline identity comparison rejects each schema-2 workload drift independ
   }
 });
 
-test("baseline identity comparison accepts observation-only scenario supersets", () => {
+test("baseline identity comparison requires the exact canonical scenario sequence", () => {
   const baseline = makeSchema2IdentityReport();
   const current = makeSchema2IdentityReport();
   const hoi4Identity = {
@@ -463,6 +474,10 @@ test("baseline identity comparison accepts observation-only scenario supersets",
   baseline.workloadIdentity.scenarios.hoi4_1939 = { ...hoi4Identity };
   current.workloadIdentity.scenarios.hoi4_1939 = { ...hoi4Identity };
 
+  assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
+
+  baseline.config.scenarios = ["tno_1962", "hoi4_1939"];
+  delete baseline.workloadIdentity.scenarios.blank_base;
   assert.deepEqual(collectBaselineContractMismatches(current, baseline), []);
 
   baseline.config.scenarios = ["blank_base", "tno_1962"];
@@ -471,7 +486,7 @@ test("baseline identity comparison accepts observation-only scenario supersets",
     ['scenarios mismatch: baseline=["blank_base","tno_1962"] current=["tno_1962","hoi4_1939"]'],
   );
 
-  baseline.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
+  baseline.config.scenarios = ["tno_1962", "hoi4_1939"];
   current.config.scenarios = ["hoi4_1939", "tno_1962"];
   assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
 
@@ -479,7 +494,7 @@ test("baseline identity comparison accepts observation-only scenario supersets",
   assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
 
   current.config.scenarios = ["tno_1962", "hoi4_1939"];
-  baseline.config.scenarios = ["blank_base", "tno_1962", "tno_1962", "hoi4_1939"];
+  baseline.config.scenarios = ["tno_1962", "tno_1962", "hoi4_1939"];
   assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
 });
 
@@ -487,9 +502,9 @@ test("custom baseline scenarios cannot overwrite canonical output paths", () => 
   const canonicalOptions = {
     mode: "baseline",
     scenarios: ["tno_1962", "hoi4_1939"],
-    baselineJson: path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-14.json"),
-    baselineMd: path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-14.md"),
-    rawDir: path.join(REPO_ROOT, ".runtime", "output", "perf", "baseline_2026-07-14"),
+    baselineJson: path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.json"),
+    baselineMd: path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.md"),
+    rawDir: path.join(REPO_ROOT, ".runtime", "output", "perf", "baseline_2026-07-30"),
     writeMarkdown: true,
   };
   assert.doesNotThrow(() => validateBaselineOutputSelection(canonicalOptions));
@@ -538,7 +553,7 @@ test("baseline artifact date follows the selected oracle filename", () => {
     getBaselineArtifactDate(path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.json")),
     "2026-07-30",
   );
-  assert.equal(getBaselineArtifactDate(path.join(REPO_ROOT, "custom.json")), "2026-07-14");
+  assert.equal(getBaselineArtifactDate(path.join(REPO_ROOT, "custom.json")), "2026-07-30");
 });
 
 test("baseline identity comparison rejects an incomplete canonical gate scenario set", () => {

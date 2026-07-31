@@ -241,6 +241,8 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tests/test_perf_gate_contract.py",
       "docs/perf/baseline_2026-07-14.json",
       "docs/perf/baseline_2026-07-14.md",
+      "docs/perf/baseline_2026-07-30.json",
+      "docs/perf/baseline_2026-07-30.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/context.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/task.md",
