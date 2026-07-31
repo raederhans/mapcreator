@@ -278,6 +278,33 @@ test("pending plans are cloned at scheduler action boundaries", () => {
   }
 });
 
+test("public controller reads return detached snapshots", () => {
+  const harness = createHarness();
+  try {
+    harness.driveToAwaitingPaint();
+    const snapshot = harness.scheduler.getExactAfterSettleControllerState();
+    assert.notEqual(snapshot, harness.runtimeState.exactAfterSettleController);
+    assert.notEqual(
+      snapshot.pendingPlan,
+      harness.runtimeState.exactAfterSettleController.pendingPlan,
+    );
+    assert.notEqual(
+      snapshot.pendingPlan.reuseDecision,
+      harness.runtimeState.exactAfterSettleController.pendingPlan.reuseDecision,
+    );
+
+    snapshot.phase = "caller-mutated";
+    snapshot.pendingPlan.reuseDecision.reason = "caller-mutated";
+    assert.equal(harness.runtimeState.exactAfterSettleController.phase, "awaiting-paint");
+    assert.equal(
+      harness.runtimeState.exactAfterSettleController.pendingPlan.reuseDecision.reason,
+      "stable-cache",
+    );
+  } finally {
+    harness.restore();
+  }
+});
+
 test("generation mismatch fences queued scheduler segments", () => {
   const harness = createHarness();
   try {

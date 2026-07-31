@@ -68,6 +68,27 @@ class RendererExactRefreshActionsBoundaryContractTest(unittest.TestCase):
             r"\bplan\.[A-Za-z_$][\w$]*\s*=(?!=)",
         )
 
+    def test_scheduler_returns_detached_controller_snapshots_and_scalar_schedule_generation(self):
+        controller_reader = self.scheduler_source.split(
+            "function getExactAfterSettleControllerState()", 1
+        )[1].split("function getTransformBucketSignature", 1)[0]
+        self.assertIn("const controller = runtimeState.exactAfterSettleController;", controller_reader)
+        self.assertIn("pendingPlan: pendingPlan && typeof pendingPlan === \"object\"", controller_reader)
+        self.assertIn("? [...pendingPlan.exactTargetPasses]", controller_reader)
+        self.assertNotIn("return runtimeState.exactAfterSettleController", controller_reader)
+
+        schedule_bridge = self.scheduler_source.split(
+            "function beginExactAfterSettleControllerSchedule(scheduleStartedAt)", 1
+        )[1].split("function isExactAfterSettleGenerationCurrent", 1)[0]
+        self.assertIn("return beginExactAfterSettleControllerScheduleState(", schedule_bridge)
+        self.assertNotIn("return getExactAfterSettleControllerState()", schedule_bridge)
+
+        identity_bridge = self.scheduler_source.split(
+            "function assignExactAfterSettleIdentity(", 1
+        )[1].split("function isExactAfterSettleIdentityCurrent", 1)[0]
+        self.assertNotIn("controller", identity_bridge.split(") {", 1)[0])
+        self.assertIn("return refreshExactAfterSettleControllerIdentityState(", identity_bridge)
+
 
 if __name__ == "__main__":
     unittest.main()

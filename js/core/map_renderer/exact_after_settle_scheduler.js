@@ -59,7 +59,58 @@ function createExactAfterSettleScheduler({
 
   function getExactAfterSettleControllerState() {
     ensureExactAfterSettleControllerState(runtimeState);
-    return runtimeState.exactAfterSettleController;
+    const controller = runtimeState.exactAfterSettleController;
+    const pendingPlan = controller?.pendingPlan;
+    const reuseDecision = pendingPlan?.reuseDecision;
+    return {
+      generation: Number(controller?.generation || 0),
+      phase: String(controller?.phase || "idle"),
+      startedAt: Number(controller?.startedAt || 0),
+      scheduledAt: Number(controller?.scheduledAt || 0),
+      applyStartedAt: Number(controller?.applyStartedAt || 0),
+      applyFinishedAt: Number(controller?.applyFinishedAt || 0),
+      scenarioId: String(controller?.scenarioId || ""),
+      selectionVersion: Number(controller?.selectionVersion || 0),
+      topologyRevision: Number(controller?.topologyRevision || 0),
+      dpr: Number(controller?.dpr || 1),
+      pixelWidth: Number(controller?.pixelWidth || 0),
+      pixelHeight: Number(controller?.pixelHeight || 0),
+      colorRevision: Number(controller?.colorRevision || 0),
+      contextFlagSignature: String(controller?.contextFlagSignature || ""),
+      zoomToken: Number(controller?.zoomToken || 0),
+      transformBucket: String(controller?.transformBucket || ""),
+      pendingPlan: pendingPlan && typeof pendingPlan === "object"
+        ? {
+            ...pendingPlan,
+            resolvedProfile: pendingPlan.resolvedProfile && typeof pendingPlan.resolvedProfile === "object"
+              ? { ...pendingPlan.resolvedProfile }
+              : pendingPlan.resolvedProfile,
+            reuseDecision: reuseDecision && typeof reuseDecision === "object"
+              ? {
+                  ...reuseDecision,
+                  referenceTransform: reuseDecision.referenceTransform && typeof reuseDecision.referenceTransform === "object"
+                    ? { ...reuseDecision.referenceTransform }
+                    : reuseDecision.referenceTransform,
+                  currentTransform: reuseDecision.currentTransform && typeof reuseDecision.currentTransform === "object"
+                    ? { ...reuseDecision.currentTransform }
+                    : reuseDecision.currentTransform,
+                }
+              : reuseDecision,
+            exactTargetPasses: Array.isArray(pendingPlan.exactTargetPasses)
+              ? [...pendingPlan.exactTargetPasses]
+              : pendingPlan.exactTargetPasses,
+            deferredExactTargetPasses: Array.isArray(pendingPlan.deferredExactTargetPasses)
+              ? [...pendingPlan.deferredExactTargetPasses]
+              : pendingPlan.deferredExactTargetPasses,
+            deferredExactContextIdentity:
+              pendingPlan.deferredExactContextIdentity
+              && typeof pendingPlan.deferredExactContextIdentity === "object"
+                ? { ...pendingPlan.deferredExactContextIdentity }
+                : pendingPlan.deferredExactContextIdentity,
+          }
+        : null,
+      reason: String(controller?.reason || "init"),
+    };
   }
 
   function getTransformBucketSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
@@ -88,9 +139,8 @@ function createExactAfterSettleScheduler({
     };
   }
 
-  function assignExactAfterSettleIdentity(controller, identity = getExactAfterSettleIdentity()) {
-    refreshExactAfterSettleControllerIdentityState(runtimeState, identity);
-    return controller;
+  function assignExactAfterSettleIdentity(identity = getExactAfterSettleIdentity()) {
+    return refreshExactAfterSettleControllerIdentityState(runtimeState, identity);
   }
 
   function isExactAfterSettleIdentityCurrent(controller) {
@@ -140,11 +190,10 @@ function createExactAfterSettleScheduler({
   }
 
   function beginExactAfterSettleControllerSchedule(scheduleStartedAt) {
-    beginExactAfterSettleControllerScheduleState(runtimeState, {
+    return beginExactAfterSettleControllerScheduleState(runtimeState, {
       scheduleStartedAt,
       identity: getExactAfterSettleIdentity(),
     });
-    return getExactAfterSettleControllerState();
   }
 
   function isExactAfterSettleGenerationCurrent(generation, phase = "") {
@@ -437,7 +486,7 @@ function createExactAfterSettleScheduler({
   }
 
   function finalizePendingExactAfterSettleRefreshAfterPaint() {
-    const controller = runtimeState.exactAfterSettleController;
+    const controller = getExactAfterSettleControllerState();
     if (!controller || typeof controller !== "object" || String(controller.phase || "") !== "awaiting-paint") {
       return false;
     }
@@ -466,7 +515,7 @@ function createExactAfterSettleScheduler({
   }
 
   function abortPendingExactAfterSettleRefreshAfterPaint(reason = "exact-compose-failed") {
-    const controller = runtimeState.exactAfterSettleController;
+    const controller = getExactAfterSettleControllerState();
     if (!controller || typeof controller !== "object" || String(controller.phase || "") !== "awaiting-paint") {
       return false;
     }
@@ -659,8 +708,7 @@ function createExactAfterSettleScheduler({
   function scheduleExactAfterSettleRefresh(profile = runtimeState.adaptiveSettleProfile || getAdaptiveSettleProfile()) {
     cancelExactAfterSettleRefresh({ clearDefer: false });
     const scheduleStartedAt = nowMs();
-    const controller = beginExactAfterSettleControllerSchedule(scheduleStartedAt);
-    const generation = Number(controller.generation || 0);
+    const generation = Number(beginExactAfterSettleControllerSchedule(scheduleStartedAt) || 0);
     const resolvedProfile = profile || getAdaptiveSettleProfile();
     setExactAfterSettleHandleState(runtimeState, {
       type: "timeout",
@@ -675,7 +723,7 @@ function createExactAfterSettleScheduler({
           scheduleExactAfterSettleRefresh(resolvedProfile);
           return;
         }
-        assignExactAfterSettleIdentity(getExactAfterSettleControllerState());
+        assignExactAfterSettleIdentity();
         enqueueExactAfterSettleSegment(generation, "Prepare", () => {
           const plan = buildExactAfterSettleRefreshPlan({
             profile: resolvedProfile,
