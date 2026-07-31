@@ -1,5 +1,10 @@
 import { normalizeCityLayerStyleConfig } from "../../core/state.js";
 import {
+  patchAppearanceStyleGroupState,
+  setAppearanceStyleGroupState,
+} from "../../core/state/actions/appearance_actions.js";
+import { setAppearanceVisibilityState } from "../../core/state/actions/appearance_visibility_actions.js";
+import {
   STRATEGIC_CHOROPLETH_METRIC_IDS,
   isStrategicChoroplethMetric,
 } from "../../core/renderer/strategic_choropleth.js";
@@ -17,19 +22,22 @@ function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function applyCityPointsThemeStyle(cityPointsConfig, themeStyle, clamp) {
-  cityPointsConfig.color = themeStyle.color;
-  cityPointsConfig.capitalColor = themeStyle.capitalColor;
+function buildCityPointsThemePatch(themeStyle, clamp) {
+  const patch = {
+    color: themeStyle.color,
+    capitalColor: themeStyle.capitalColor,
+  };
   const markerScale = Number(themeStyle.markerScale);
   const markerDensity = Number(themeStyle.markerDensity);
   const opacity = Number(themeStyle.opacity);
   const labelSize = Number(themeStyle.labelSize);
   const labelDensity = String(themeStyle.labelDensity || "").trim().toLowerCase();
-  if (Number.isFinite(markerScale)) cityPointsConfig.markerScale = clamp(markerScale, 0.75, 2.5);
-  if (Number.isFinite(markerDensity)) cityPointsConfig.markerDensity = clamp(markerDensity, 0.5, 2);
-  if (Number.isFinite(opacity)) cityPointsConfig.opacity = clamp(opacity, 0, 1);
-  if (["sparse", "balanced", "dense"].includes(labelDensity)) cityPointsConfig.labelDensity = labelDensity;
-  if (Number.isFinite(labelSize)) cityPointsConfig.labelSize = clamp(Math.round(labelSize), 8, 24);
+  if (Number.isFinite(markerScale)) patch.markerScale = clamp(markerScale, 0.75, 2.5);
+  if (Number.isFinite(markerDensity)) patch.markerDensity = clamp(markerDensity, 0.5, 2);
+  if (Number.isFinite(opacity)) patch.opacity = clamp(opacity, 0, 1);
+  if (["sparse", "balanced", "dense"].includes(labelDensity)) patch.labelDensity = labelDensity;
+  if (Number.isFinite(labelSize)) patch.labelSize = clamp(Math.round(labelSize), 8, 24);
+  return patch;
 }
 
 function collectCityPointsNodes(documentRef) {
@@ -88,8 +96,11 @@ export function createAppearanceCityPointsOwner({
   };
 
   const syncCityPointsConfig = () => {
-    runtimeState.styleConfig.cityPoints = normalizeCityLayerStyleConfig(runtimeState.styleConfig.cityPoints);
-    return runtimeState.styleConfig.cityPoints;
+    return setAppearanceStyleGroupState(
+      runtimeState,
+      "cityPoints",
+      normalizeCityLayerStyleConfig(runtimeState.styleConfig.cityPoints),
+    );
   };
 
   const ensureCityPointsThemeOptions = () => {
@@ -203,8 +214,11 @@ export function createAppearanceCityPointsOwner({
     events.forEach((eventName) => {
       element.addEventListener(eventName, (event) => {
         const cfg = syncCityPointsConfig();
-        mutate(cfg, event);
-        afterMutate(cfg);
+        const patch = mutate(cfg, event);
+        const nextConfig = patch && typeof patch === "object"
+          ? patchAppearanceStyleGroupState(runtimeState, "cityPoints", patch)
+          : cfg;
+        afterMutate(nextConfig);
         persistCityViewSettings();
         renderDirty(reason);
       });
@@ -222,7 +236,7 @@ export function createAppearanceCityPointsOwner({
     if (nodes.toggleCityPoints && nodes.toggleCityPoints.dataset.bound !== "true") {
       nodes.toggleCityPoints.checked = !!runtimeState.showCityPoints;
       nodes.toggleCityPoints.addEventListener("change", (event) => {
-        runtimeState.showCityPoints = !!event.target.checked;
+        setAppearanceVisibilityState(runtimeState, "showCityPoints", event.target.checked);
         if (runtimeState.showCityPoints) {
           // 城市点开关同时触发基础城市数据和 scenario optional layer；
           // 前者给普通城市标记，后者给剧本覆盖和首都提示。
@@ -240,7 +254,7 @@ export function createAppearanceCityPointsOwner({
     if (nodes.toggleStrategicResourceMarkers && nodes.toggleStrategicResourceMarkers.dataset.bound !== "true") {
       nodes.toggleStrategicResourceMarkers.checked = !!runtimeState.showStrategicResourceMarkers;
       nodes.toggleStrategicResourceMarkers.addEventListener("change", (event) => {
-        runtimeState.showStrategicResourceMarkers = !!event.target.checked;
+        setAppearanceVisibilityState(runtimeState, "showStrategicResourceMarkers", event.target.checked);
         if (runtimeState.showStrategicResourceMarkers) {
           void ensureActiveScenarioOptionalLayerLoaded("strategicvalues", {
             reason: "toolbar-toggle",
@@ -255,7 +269,11 @@ export function createAppearanceCityPointsOwner({
 
     bindCityPointsChange(nodes.strategicChoroplethMetric, (_cfg, event) => {
       const metricId = String(event.target.value || "").trim();
-      runtimeState.strategicChoroplethMetric = isStrategicChoroplethMetric(metricId) ? metricId : "";
+      setAppearanceVisibilityState(
+        runtimeState,
+        "strategicChoroplethMetric",
+        isStrategicChoroplethMetric(metricId) ? metricId : "",
+      );
       if (runtimeState.strategicChoroplethMetric) {
         void ensureActiveScenarioOptionalLayerLoaded("strategicvalues", {
           reason: "toolbar-strategic-choropleth",
@@ -264,61 +282,65 @@ export function createAppearanceCityPointsOwner({
       }
     }, "strategic-choropleth-metric");
 
-    bindCityPointsInput(nodes.cityPointsColor, (cfg, event) => {
-      cfg.color = normalizeOceanFillColor(event.target.value);
-    }, "city-points-color");
+    bindCityPointsInput(nodes.cityPointsColor, (_cfg, event) => ({
+      color: normalizeOceanFillColor(event.target.value),
+    }), "city-points-color");
 
     bindCityPointsChange(nodes.cityPointsTheme, (cfg, event) => {
-      cfg.theme = getCityPointsThemeMeta(event.target.value || "classic_graphite").value;
-      const themeStyle = getCityPointsThemeStyle(cfg.theme);
+      const theme = getCityPointsThemeMeta(event.target.value || "classic_graphite").value;
+      const themeStyle = getCityPointsThemeStyle(theme);
       // theme 只是一组可继续编辑的起点；应用后仍写入 cityPointsConfig，
       // 保证保存/撤销/后续滑杆调整都读同一个 runtimeState.styleConfig。
-      applyCityPointsThemeStyle(cfg, themeStyle, clamp);
-      renderCityPointsUi();
-    }, "city-points-theme");
+      return { theme, ...buildCityPointsThemePatch(themeStyle, clamp) };
+    }, "city-points-theme", () => renderCityPointsUi());
 
-    bindCityPointsInput(nodes.cityPointsMarkerScale, (cfg, event) => {
+    bindCityPointsInput(nodes.cityPointsMarkerScale, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.markerScale = clamp(Number.isFinite(value) ? value : 1, 0.75, 2.5);
-      if (nodes.cityPointsMarkerScaleValue) nodes.cityPointsMarkerScaleValue.textContent = `${Number(cfg.markerScale).toFixed(2)}x`;
+      const markerScale = clamp(Number.isFinite(value) ? value : 1, 0.75, 2.5);
+      if (nodes.cityPointsMarkerScaleValue) nodes.cityPointsMarkerScaleValue.textContent = `${Number(markerScale).toFixed(2)}x`;
+      return { markerScale };
     }, "city-points-marker-scale");
 
-    bindCityPointsControl(nodes.cityPointsMarkerDensity, (cfg, event) => {
+    bindCityPointsControl(nodes.cityPointsMarkerDensity, (_cfg, event) => {
         const value = Number(event.target.value);
-        cfg.markerDensity = clamp(Number.isFinite(value) ? value : 1, 0.5, 2);
-        if (nodes.cityPointsMarkerDensityValue) nodes.cityPointsMarkerDensityValue.textContent = formatCityPointsDensityValue(cfg.markerDensity);
+        const markerDensity = clamp(Number.isFinite(value) ? value : 1, 0.5, 2);
+        if (nodes.cityPointsMarkerDensityValue) nodes.cityPointsMarkerDensityValue.textContent = formatCityPointsDensityValue(markerDensity);
+        return { markerDensity };
     }, "city-points-marker-density", { events: ["input", "change"] });
 
-    bindCityPointsChange(nodes.cityPointsLabelDensity, (cfg, event) => {
-      cfg.labelDensity = String(event.target.value || "balanced");
+    bindCityPointsChange(nodes.cityPointsLabelDensity, (_cfg, event) => {
+      const labelDensity = String(event.target.value || "balanced");
       if (nodes.cityPointsLabelDensityHint) {
-        nodes.cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(cfg.labelDensity, runtimeState.currentLanguage);
+        nodes.cityPointsLabelDensityHint.textContent = getCityPointsLabelDensityHint(labelDensity, runtimeState.currentLanguage);
       }
+      return { labelDensity };
     }, "city-points-label-density");
 
-    bindCityPointsInput(nodes.cityPointsCapitalColor, (cfg, event) => {
-      cfg.capitalColor = normalizeOceanFillColor(event.target.value);
-    }, "city-points-capital-color");
+    bindCityPointsInput(nodes.cityPointsCapitalColor, (_cfg, event) => ({
+      capitalColor: normalizeOceanFillColor(event.target.value),
+    }), "city-points-capital-color");
 
-    bindCityPointsInput(nodes.cityPointsOpacity, (cfg, event) => {
+    bindCityPointsInput(nodes.cityPointsOpacity, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.92, 0, 1);
-      if (nodes.cityPointsOpacityValue) nodes.cityPointsOpacityValue.textContent = `${Math.round(cfg.opacity * 100)}%`;
+      const opacity = clamp(Number.isFinite(value) ? value / 100 : 0.92, 0, 1);
+      if (nodes.cityPointsOpacityValue) nodes.cityPointsOpacityValue.textContent = `${Math.round(opacity * 100)}%`;
+      return { opacity };
     }, "city-points-opacity");
 
-    bindCityPointsChange(nodes.cityPointLabelsEnabled, (cfg, event) => {
-      cfg.showLabels = !!event.target.checked;
-    }, "city-points-labels-toggle");
+    bindCityPointsChange(nodes.cityPointLabelsEnabled, (_cfg, event) => ({
+      showLabels: !!event.target.checked,
+    }), "city-points-labels-toggle");
 
-    bindCityPointsInput(nodes.cityPointsLabelSize, (cfg, event) => {
+    bindCityPointsInput(nodes.cityPointsLabelSize, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.labelSize = clamp(Math.round(Number.isFinite(value) ? value : 12), 8, 24);
-      if (nodes.cityPointsLabelSizeValue) nodes.cityPointsLabelSizeValue.textContent = `${Math.round(cfg.labelSize)}px`;
+      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : 12), 8, 24);
+      if (nodes.cityPointsLabelSizeValue) nodes.cityPointsLabelSizeValue.textContent = `${Math.round(labelSize)}px`;
+      return { labelSize };
     }, "city-points-label-size");
 
-    bindCityPointsChange(nodes.cityCapitalOverlayEnabled, (cfg, event) => {
-      cfg.showCapitalOverlay = !!event.target.checked;
-    }, "city-points-capital-overlay");
+    bindCityPointsChange(nodes.cityCapitalOverlayEnabled, (_cfg, event) => ({
+      showCapitalOverlay: !!event.target.checked,
+    }), "city-points-capital-overlay");
   };
 
   return {

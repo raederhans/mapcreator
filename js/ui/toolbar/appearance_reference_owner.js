@@ -1,4 +1,5 @@
 import { normalizeReferenceImageState } from "../../core/state.js";
+import { setReferenceImageState, setReferenceImageUrlState } from "../../core/state/actions/appearance_reference_actions.js";
 
 function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -39,8 +40,7 @@ export function createAppearanceReferenceOwner({
   const nodes = collectReferenceNodes(documentRef);
 
   const syncReferenceState = () => {
-    runtimeState.referenceImageState = normalizeReferenceImageState(runtimeState.referenceImageState, { clamp });
-    return runtimeState.referenceImageState;
+    return setReferenceImageState(runtimeState, runtimeState.referenceImageState, { clamp });
   };
 
   const applyReferenceStyles = ({ force = false } = {}) => {
@@ -76,7 +76,7 @@ export function createAppearanceReferenceOwner({
     if (runtimeState.referenceImageUrl && typeof urlApi?.revokeObjectURL === "function") {
       urlApi.revokeObjectURL(runtimeState.referenceImageUrl);
     }
-    runtimeState.referenceImageUrl = null;
+    setReferenceImageUrlState(runtimeState, null);
   };
 
   const clearReferenceImage = ({ markDirty: shouldMarkDirty = true } = {}) => {
@@ -120,9 +120,9 @@ export function createAppearanceReferenceOwner({
           return;
         }
         revokeReferenceUrl();
-        runtimeState.referenceImageUrl = typeof urlApi?.createObjectURL === "function"
+        setReferenceImageUrlState(runtimeState, typeof urlApi?.createObjectURL === "function"
           ? urlApi.createObjectURL(file)
-          : "";
+          : "");
         nodes.image.src = runtimeState.referenceImageUrl;
         applyReferenceStyles({ force: true });
         markDirty("reference-image-file");
