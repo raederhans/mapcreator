@@ -15,7 +15,7 @@ class RendererCacheActionsBoundaryContractTest(unittest.TestCase):
         action_content = RENDERER_CACHE_ACTIONS_JS.read_text(encoding="utf-8")
 
         self.assertIn('./actions/renderer_cache_actions.js', runtime_content)
-        self.assertIn("commitRenderPassCacheState(target, cache);", runtime_content)
+        self.assertIn("ensureRenderPassCacheActionState(target, {", runtime_content)
         self.assertIn("commitProjectedBoundsCacheState(target, {", runtime_content)
         self.assertIn("commitProjectedBoundsCacheState(target, defaults);", runtime_content)
         self.assertIn(
@@ -24,6 +24,7 @@ class RendererCacheActionsBoundaryContractTest(unittest.TestCase):
         )
 
         self.assertIn("export function commitRenderPassCacheState(", action_content)
+        self.assertIn("export function ensureRenderPassCacheState(", action_content)
         self.assertIn("export function commitProjectedBoundsCacheState(", action_content)
         self.assertIn(
             "export function setSphericalFeatureDiagnosticsCacheState(",
@@ -34,6 +35,8 @@ class RendererCacheActionsBoundaryContractTest(unittest.TestCase):
             "export function ensureRenderPassCacheState(", 1
         )[1].split("export function ensureSidebarPerfState", 1)[0]
         self.assertNotRegex(render_wrapper, r"target\.renderPassCache\s*=(?!=)")
+        self.assertNotIn("cache.canvases =", render_wrapper)
+        self.assertNotIn("normalizeRenderPassCacheDefaultShape", render_wrapper)
 
         projected_wrapper = runtime_content.split(
             "export function ensureProjectedBoundsCacheState(", 1

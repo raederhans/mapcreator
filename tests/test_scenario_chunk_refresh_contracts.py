@@ -263,7 +263,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.exact_after_settle_scheduler_source,
             re.compile(
-                r'beginExactAfterSettleControllerSchedule\(scheduleStartedAt\);.*?'
+                r'const generation = Number\(beginExactAfterSettleControllerSchedule\(scheduleStartedAt\) \|\| 0\);.*?'
                 r'isExactAfterSettleGenerationCurrent\(generation, "scheduled"\).*?'
                 r'if \(!runtimeState\.deferExactAfterSettle\) \{.*?'
                 r'resetExactAfterSettleController\("defer-cleared", generation\);.*?'

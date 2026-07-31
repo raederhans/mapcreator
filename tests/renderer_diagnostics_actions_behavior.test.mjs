@@ -14,6 +14,7 @@ test("renderer diagnostics actions stay import-free with target-first exports", 
   assert.doesNotMatch(source, /^\s*import\s/m);
   for (const name of [
     "ensureRenderPerfMetricsState",
+    "replaceRenderPerfMetricsState",
     "setRenderPerfMetricEntryState",
     "setRenderPerfContextBreakdownState",
     "commitRenderPerfMetricState",
@@ -30,6 +31,7 @@ test("renderer diagnostics actions reject invalid targets", async () => {
   const actions = await loadActions();
   for (const target of [null, undefined, [], "state"]) {
     assert.throws(() => actions.ensureRenderPerfMetricsState(target), /target must be an object/);
+    assert.throws(() => actions.replaceRenderPerfMetricsState(target, {}), /target must be an object/);
     assert.throws(() => actions.setRenderPerfMetricEntryState(target, { name: "frame", entry: {} }), /target must be an object/);
     assert.throws(() => actions.setRenderPerfContextBreakdownState(target, {}), /target must be an object/);
     assert.throws(() => actions.commitRenderPerfMetricState(target, { name: "frame", entry: {}, sequence: 1 }), /target must be an object/);
@@ -44,12 +46,16 @@ test("render perf holder actions commit caller-built state exactly", async () =>
   const {
     commitRenderPerfMetricState,
     ensureRenderPerfMetricsState,
+    replaceRenderPerfMetricsState,
     setRenderPerfContextBreakdownState,
     setRenderPerfMetricEntryState,
   } = await loadActions();
   const target = { renderPerfMetrics: null, renderPerfMetricSequence: 4 };
+  const replacement = { seeded: true };
+  assert.equal(replaceRenderPerfMetricsState(target, replacement), replacement);
+  assert.equal(target.renderPerfMetrics, replacement);
   assert.equal(ensureRenderPerfMetricsState(target), true);
-  assert.deepEqual(target.renderPerfMetrics, {});
+  assert.equal(target.renderPerfMetrics, replacement);
 
   const metrics = target.renderPerfMetrics;
   const entry = { durationMs: 7, sequence: 5 };
@@ -117,9 +123,11 @@ test("holder actions validate replacement payloads", async () => {
     setProjectedBoundsDiagnosticsState,
     setRenderPerfContextBreakdownState,
     setRenderPerfMetricEntryState,
+    replaceRenderPerfMetricsState,
   } = await loadActions();
   const target = {};
   for (const invalid of [null, [], "value"]) {
+    assert.throws(() => replaceRenderPerfMetricsState(target, invalid), /metrics must be an object or undefined/);
     assert.throws(() => commitRenderPerfMetricState(target, {
       name: "frame",
       entry: invalid,
@@ -132,6 +140,8 @@ test("holder actions validate replacement payloads", async () => {
     assert.throws(() => resetProjectedBoundsDiagnosticsState(target, invalid), /diagnostics must be an object/);
     assert.throws(() => setProjectedBoundsDiagnosticsState(target, invalid), /diagnostics must be an object/);
   }
+  assert.equal(replaceRenderPerfMetricsState(target, undefined), undefined);
+  assert.equal(target.renderPerfMetrics, undefined);
   assert.throws(() => commitRenderPerfMetricState(target, {
     name: " ",
     entry: {},

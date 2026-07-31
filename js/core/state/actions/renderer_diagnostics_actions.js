@@ -19,6 +19,22 @@ export function ensureRenderPerfMetricsState(target) {
   return true;
 }
 
+export function replaceRenderPerfMetricsState(target, metrics) {
+  assertStateTarget(target);
+  if (
+    metrics !== undefined
+    && (
+      !metrics
+      || typeof metrics !== "object"
+      || Array.isArray(metrics)
+    )
+  ) {
+    throw new TypeError("[renderer_diagnostics_actions] metrics must be an object or undefined");
+  }
+  target.renderPerfMetrics = metrics;
+  return metrics;
+}
+
 export function setRenderPerfMetricEntryState(
   target,
   { name, entry } = {},

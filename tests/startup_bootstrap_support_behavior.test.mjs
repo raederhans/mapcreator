@@ -6,6 +6,9 @@ import { state as runtimeState } from "../js/core/state.js";
 import {
   setLongAnimationFrameObserver,
 } from "../js/core/state/actions/boot_actions.js";
+import {
+  replaceRenderPerfMetricsState,
+} from "../js/core/state/actions/renderer_diagnostics_actions.js";
 
 function restoreGlobalProperty(name, hadProperty, value) {
   if (hadProperty) {
@@ -106,7 +109,7 @@ test("long animation frame observer commits a complete metrics snapshot and mirr
   try {
     globalThis.PerformanceObserver = RecordingPerformanceObserver;
     setLongAnimationFrameObserver(runtimeState, null);
-    runtimeState.renderPerfMetrics = previousMetrics;
+    replaceRenderPerfMetricsState(runtimeState, previousMetrics);
 
     initLongAnimationFrameObserver();
     observerInstance.callback({
@@ -153,7 +156,7 @@ test("long animation frame observer commits a complete metrics snapshot and mirr
     });
     assert.equal(globalThis.__renderPerfMetrics, runtimeState.renderPerfMetrics);
   } finally {
-    runtimeState.renderPerfMetrics = originalMetrics;
+    replaceRenderPerfMetricsState(runtimeState, originalMetrics);
     setLongAnimationFrameObserver(runtimeState, originalStateObserver);
     restoreGlobalProperty("PerformanceObserver", hadObserverApi, originalObserverApi);
     restoreGlobalProperty("__renderPerfMetrics", hadMetricsMirror, originalMetricsMirror);
