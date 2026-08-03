@@ -81,7 +81,7 @@ test("projected bounds cache commit installs both exact Map identities", () => {
   assert.equal(target.sphericalFeatureDiagnosticsById, sphericalFeatureDiagnosticsById);
 });
 
-test("spherical diagnostics cache actions keep mutable state private", () => {
+test("plain spherical diagnostics cache entries are immutable and reuse one hot-path reference", () => {
   const target = { sphericalFeatureDiagnosticsById: new Map() };
   const diagnostics = {
     area: 7,
@@ -101,16 +101,38 @@ test("spherical diagnostics cache actions keep mutable state private", () => {
     bounds: [[-10, -5], [10, 5]],
     invalid: false,
   });
-  firstRead.bounds[1][1] = 999;
-  assert.deepEqual(getSphericalFeatureDiagnosticsCacheEntryState(target, "B"), {
-    area: 7,
-    bounds: [[-10, -5], [10, 5]],
-    invalid: false,
-  });
+  assert.equal(Object.isFrozen(firstRead), true);
+  assert.equal(Object.isFrozen(firstRead.bounds), true);
+  assert.equal(Object.isFrozen(firstRead.bounds[0]), true);
+  assert.throws(() => {
+    firstRead.bounds[1][1] = 999;
+  }, TypeError);
+  assert.equal(
+    getSphericalFeatureDiagnosticsCacheEntryState(target, "B"),
+    firstRead,
+  );
   assert.equal(getSphericalFeatureDiagnosticsCacheEntryState(target, "missing"), null);
 
   assert.equal(clearSphericalFeatureDiagnosticsCacheState(target), true);
   assert.equal(target.sphericalFeatureDiagnosticsById.size, 0);
+});
+
+test("plain cyclic diagnostics freeze recursively and keep cycle identity", () => {
+  const target = { sphericalFeatureDiagnosticsById: new Map() };
+  const diagnostics = { nested: { count: 1 } };
+  diagnostics.self = diagnostics;
+
+  setSphericalFeatureDiagnosticsCacheEntryState(target, "cycle", diagnostics);
+  const firstRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "cycle");
+  const secondRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "cycle");
+
+  assert.equal(firstRead, secondRead);
+  assert.equal(firstRead.self, firstRead);
+  assert.equal(Object.isFrozen(firstRead), true);
+  assert.equal(Object.isFrozen(firstRead.nested), true);
+  assert.throws(() => {
+    firstRead.nested.count = 2;
+  }, TypeError);
 });
 
 test("spherical diagnostics cache keys use stable string semantics", () => {
@@ -125,7 +147,7 @@ test("spherical diagnostics cache keys use stable string semantics", () => {
   assert.deepEqual(getSphericalFeatureDiagnosticsCacheEntryState(target, null), { label: "null" });
 });
 
-test("spherical diagnostics cache preserves structured clone values", () => {
+test("spherical diagnostics cache keeps rich mutable collections detached", () => {
   const target = { sphericalFeatureDiagnosticsById: new Map() };
   const diagnostics = {
     reasons: new Map([["unsafe", { count: 1 }]]),
@@ -145,6 +167,75 @@ test("spherical diagnostics cache preserves structured clone values", () => {
   firstRead.reasons.get("unsafe").count = 77;
   const secondRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "cyclic");
   assert.equal(secondRead.reasons.get("unsafe").count, 1);
+});
+
+test("typed arrays and array buffers stay detached on every cache read", () => {
+  const target = { sphericalFeatureDiagnosticsById: new Map() };
+  setSphericalFeatureDiagnosticsCacheEntryState(target, "typed", {
+    bytes: new Uint8Array([1, 2, 3]),
+    buffer: new Uint8Array([4, 5, 6]).buffer,
+  });
+
+  const firstRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "typed");
+  const secondRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "typed");
+  assert.notEqual(firstRead, secondRead);
+  assert.notEqual(firstRead.bytes, secondRead.bytes);
+  assert.notEqual(firstRead.buffer, secondRead.buffer);
+
+  firstRead.bytes[0] = 99;
+  new Uint8Array(firstRead.buffer)[0] = 88;
+  const thirdRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "typed");
+  assert.deepEqual([...thirdRead.bytes], [1, 2, 3]);
+  assert.deepEqual([...new Uint8Array(thirdRead.buffer)], [4, 5, 6]);
+});
+
+test("custom prototype values and independent writes never inherit shareable trust", () => {
+  class DiagnosticRecord {
+    constructor(value) {
+      this.value = value;
+    }
+  }
+
+  const firstTarget = { sphericalFeatureDiagnosticsById: new Map() };
+  const secondTarget = { sphericalFeatureDiagnosticsById: new Map() };
+  const diagnostics = { record: new DiagnosticRecord(7), nested: { count: 1 } };
+  setSphericalFeatureDiagnosticsCacheEntryState(firstTarget, "custom", diagnostics);
+  setSphericalFeatureDiagnosticsCacheEntryState(secondTarget, "custom", diagnostics);
+
+  diagnostics.nested.count = 99;
+  const firstRead = getSphericalFeatureDiagnosticsCacheEntryState(firstTarget, "custom");
+  const firstReadAgain = getSphericalFeatureDiagnosticsCacheEntryState(firstTarget, "custom");
+  const secondRead = getSphericalFeatureDiagnosticsCacheEntryState(secondTarget, "custom");
+  assert.notEqual(firstRead, firstReadAgain);
+  assert.notEqual(firstRead, secondRead);
+  assert.equal(firstRead.nested.count, 1);
+  assert.equal(secondRead.nested.count, 1);
+});
+
+test("accessor shape changes cannot mark a rich detached clone as shareable", () => {
+  const target = { sphericalFeatureDiagnosticsById: new Map() };
+  let reads = 0;
+  const diagnostics = {};
+  Object.defineProperty(diagnostics, "payload", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return reads === 1
+        ? { count: 1 }
+        : new Map([["count", 1]]);
+    },
+  });
+
+  setSphericalFeatureDiagnosticsCacheEntryState(target, "accessor", diagnostics);
+  const firstRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "accessor");
+  const secondRead = getSphericalFeatureDiagnosticsCacheEntryState(target, "accessor");
+  assert.notEqual(firstRead, secondRead);
+  assert.equal(firstRead.payload instanceof Map, true);
+  firstRead.payload.set("count", 99);
+  assert.equal(
+    getSphericalFeatureDiagnosticsCacheEntryState(target, "accessor").payload.get("count"),
+    1,
+  );
 });
 
 test("cache actions reject malformed prepared holders", () => {

@@ -13,6 +13,33 @@ function assertMap(value, label) {
   }
 }
 
+const immutableDiagnosticValues = new WeakSet();
+
+function isShareableDiagnosticValue(value, seen = new WeakSet()) {
+  if (!value || typeof value !== "object") return true;
+  if (seen.has(value)) return true;
+  if (
+    value instanceof Map
+    || value instanceof Set
+    || ArrayBuffer.isView(value)
+    || value instanceof ArrayBuffer
+    || (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype)
+  ) {
+    return false;
+  }
+  seen.add(value);
+  return Object.values(value).every((entry) => (
+    isShareableDiagnosticValue(entry, seen)
+  ));
+}
+
+function freezeDiagnosticValue(value, seen = new WeakSet()) {
+  if (!value || typeof value !== "object" || seen.has(value)) return;
+  seen.add(value);
+  Object.values(value).forEach((entry) => freezeDiagnosticValue(entry, seen));
+  Object.freeze(value);
+}
+
 export function commitRenderPassCacheState(target, renderPassCache) {
   assertStateTarget(target);
   if (!renderPassCache || typeof renderPassCache !== "object" || Array.isArray(renderPassCache)) {
@@ -49,7 +76,9 @@ export function getSphericalFeatureDiagnosticsCacheEntryState(target, featureId)
     return null;
   }
   const cachedDiagnostics = target.sphericalFeatureDiagnosticsById.get(normalizedFeatureId);
-  return structuredClone(cachedDiagnostics);
+  return immutableDiagnosticValues.has(cachedDiagnostics)
+    ? cachedDiagnostics
+    : structuredClone(cachedDiagnostics);
 }
 
 export function setSphericalFeatureDiagnosticsCacheEntryState(
@@ -60,7 +89,14 @@ export function setSphericalFeatureDiagnosticsCacheEntryState(
   assertStateTarget(target);
   assertMap(target.sphericalFeatureDiagnosticsById, "sphericalFeatureDiagnosticsById");
   const normalizedFeatureId = String(featureId);
+  const shareable = isShareableDiagnosticValue(diagnostics);
   const detachedDiagnostics = structuredClone(diagnostics);
+  if (shareable && detachedDiagnostics && typeof detachedDiagnostics === "object") {
+    if (isShareableDiagnosticValue(detachedDiagnostics)) {
+      freezeDiagnosticValue(detachedDiagnostics);
+      immutableDiagnosticValues.add(detachedDiagnostics);
+    }
+  }
   target.sphericalFeatureDiagnosticsById.set(
     normalizedFeatureId,
     detachedDiagnostics,

@@ -320,7 +320,7 @@ test("source-bound render perf owner proves factory composition and registered a
   }
 });
 
-test("spherical diagnostics cache exposes detached entry reads and rejects raw Map access", () => {
+test("spherical diagnostics cache exposes immutable or detached entry reads and rejects raw Map access", () => {
   const modulePath = "js/core/state/actions/renderer_cache_actions.js";
   const source = fs.readFileSync(modulePath, "utf8");
   assert.deepEqual(
