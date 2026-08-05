@@ -1425,7 +1425,7 @@ test("source-bound pure imported normalizer accepts only its registered static s
     targetArgumentIndex: 0,
     targetArgumentStaticPath: "renderPassCache",
     sourceFingerprint:
-      "8e2afdd9d282a486fb4f870db242b4aa401a590906e37805326049a65abf2b26",
+      "03f4cad1217469c4a5d980ebb0e54793f2bd0f86fa4e557f0b68f11d8af9d70c",
   });
 
   const normalizerSource = fs.readFileSync(normalizerPath, "utf8");
@@ -1499,6 +1499,37 @@ test("source-bound pure imported normalizer accepts only its registered static s
     false,
   );
   assert.ok(helperMutationInspection.violations.some(({ code }) =>
+    code
+    === "state-imported-pure-normalizer-target-mutation-proof-failed"
+  ));
+
+  const shadowedIntrinsicSource = normalizerSource.replace(
+    "  return Object.hasOwn(value, fieldName);",
+    [
+      "  const Object = {",
+      "    hasOwn(target) { target.dirty = {}; return true; },",
+      "  };",
+      "  return Object.hasOwn(value, fieldName);",
+    ].join("\n"),
+  );
+  const shadowedIntrinsicEntry = {
+    ...entry,
+    sourceFingerprint: createHash("sha256")
+      .update(shadowedIntrinsicSource.replaceAll("\r\n", "\n"))
+      .digest("hex"),
+  };
+  const shadowedIntrinsicInspection =
+    inspectStateImportedPureNormalizerSource(
+      shadowedIntrinsicSource,
+      shadowedIntrinsicEntry,
+    );
+  assert.equal(
+    shadowedIntrinsicInspection.violations.some(
+      ({ code }) => code === "state-imported-pure-normalizer-source-drift",
+    ),
+    false,
+  );
+  assert.ok(shadowedIntrinsicInspection.violations.some(({ code }) =>
     code
     === "state-imported-pure-normalizer-target-mutation-proof-failed"
   ));

@@ -156,6 +156,36 @@ test("initialization detaches mutable defaults", () => {
   assert.notEqual(initialized.politicalPathWarmupQueue, defaults.politicalPathWarmupQueue);
 });
 
+test("inherited cache fields are repaired into isolated own state", () => {
+  const defaults = createDefaults();
+  const inherited = createDefaults();
+  inherited.dirty.background = false;
+  inherited.reasons.background = "shared-prototype";
+  inherited.politicalPathCache.set("shared", 1);
+  const cache = Object.create(inherited);
+
+  const repaired = normalizeRenderPassCacheState(cache, {
+    defaults,
+    renderPassNames: ["background"],
+  });
+
+  assert.notEqual(repaired, cache);
+  assert.equal(Object.hasOwn(repaired, "dirty"), true);
+  assert.equal(Object.hasOwn(repaired, "reasons"), true);
+  assert.equal(Object.hasOwn(repaired, "politicalPathCache"), true);
+  assert.notEqual(repaired.dirty, inherited.dirty);
+  assert.notEqual(repaired.reasons, inherited.reasons);
+  assert.notEqual(repaired.politicalPathCache, inherited.politicalPathCache);
+  assert.equal(repaired.dirty.background, true);
+  assert.equal(repaired.reasons.background, "init");
+  assert.equal(repaired.politicalPathCache.size, 0);
+
+  repaired.dirty.background = false;
+  repaired.politicalPathCache.set("isolated", 2);
+  assert.equal(inherited.dirty.background, false);
+  assert.deepEqual([...inherited.politicalPathCache], [["shared", 1]]);
+});
+
 test("normalizer validates preparation options", () => {
   assert.throws(
     () => normalizeRenderPassCacheState({}, { defaults: [] }),

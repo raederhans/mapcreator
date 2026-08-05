@@ -9,6 +9,10 @@ function isNullableObjectHolder(value) {
   return value === null || isObjectHolder(value);
 }
 
+function hasOwnField(value, fieldName) {
+  return Object.hasOwn(value, fieldName);
+}
+
 function matchesDefaultShape(value, defaultValue) {
   if (defaultValue instanceof Map) return value instanceof Map;
   if (defaultValue instanceof Set) return value instanceof Set;
@@ -22,21 +26,32 @@ function matchesDefaultShape(value, defaultValue) {
   }
   if (!isObjectHolder(value)) return false;
   return Object.entries(defaultValue).every(([fieldName, nestedDefault]) => (
-    fieldName in value
+    hasOwnField(value, fieldName)
     && matchesDefaultShape(value[fieldName], nestedDefault)
   ));
 }
 
 function isNormalizedRenderPassCache(cache, defaults, renderPassNames) {
   if (!isObjectHolder(cache)) return false;
-  if (!isObjectHolder(cache.dirty) || !isObjectHolder(cache.reasons)) return false;
+  if (
+    !hasOwnField(cache, "dirty")
+    || !hasOwnField(cache, "reasons")
+    || !isObjectHolder(cache.dirty)
+    || !isObjectHolder(cache.reasons)
+  ) return false;
   for (const passName of renderPassNames) {
-    if (!(passName in cache.dirty) || !(passName in cache.reasons)) return false;
+    if (!hasOwnField(cache.dirty, passName) || !hasOwnField(cache.reasons, passName)) return false;
   }
-  if (!isNullableObjectHolder(cache.politicalPathCacheTransform)) return false;
-  if (!isNullableObjectHolder(cache.politicalPathWarmupHandle)) return false;
+  if (
+    !hasOwnField(cache, "politicalPathCacheTransform")
+    || !isNullableObjectHolder(cache.politicalPathCacheTransform)
+  ) return false;
+  if (
+    !hasOwnField(cache, "politicalPathWarmupHandle")
+    || !isNullableObjectHolder(cache.politicalPathWarmupHandle)
+  ) return false;
   return Object.entries(defaults).every(([fieldName, defaultValue]) => (
-    fieldName in cache && matchesDefaultShape(cache[fieldName], defaultValue)
+    hasOwnField(cache, fieldName) && matchesDefaultShape(cache[fieldName], defaultValue)
   ));
 }
 
@@ -61,7 +76,8 @@ function normalizeDefaultShape(value, defaultValue) {
   const source = isObjectHolder(value) ? value : {};
   const normalized = { ...source };
   for (const [fieldName, nestedDefault] of Object.entries(defaultValue)) {
-    normalized[fieldName] = normalizeDefaultShape(source[fieldName], nestedDefault);
+    const sourceValue = hasOwnField(source, fieldName) ? source[fieldName] : undefined;
+    normalized[fieldName] = normalizeDefaultShape(sourceValue, nestedDefault);
   }
   return normalized;
 }
@@ -104,8 +120,8 @@ export function normalizeRenderPassCacheState(
   cache.dirty = isObjectHolder(cache.dirty) ? cache.dirty : {};
   cache.reasons = isObjectHolder(cache.reasons) ? cache.reasons : {};
   for (const passName of renderPassNames) {
-    if (!(passName in cache.dirty)) cache.dirty[passName] = true;
-    if (!(passName in cache.reasons)) cache.reasons[passName] = "init";
+    if (!hasOwnField(cache.dirty, passName)) cache.dirty[passName] = true;
+    if (!hasOwnField(cache.reasons, passName)) cache.reasons[passName] = "init";
   }
   return cache;
 }

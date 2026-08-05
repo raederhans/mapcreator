@@ -596,7 +596,7 @@ export const STATE_IMPORTED_PURE_NORMALIZER_CONTRACT = Object.freeze([
     targetArgumentIndex: 0,
     targetArgumentStaticPath: "renderPassCache",
     sourceFingerprint:
-      "8e2afdd9d282a486fb4f870db242b4aa401a590906e37805326049a65abf2b26",
+      "03f4cad1217469c4a5d980ebb0e54793f2bd0f86fa4e557f0b68f11d8af9d70c",
   }),
 ]);
 
@@ -981,6 +981,7 @@ const READ_ONLY_TAINT_CALLS = new Set([
   "Boolean",
   "Number",
   "Object.entries",
+  "Object.hasOwn",
   "Object.keys",
   "Object.values",
   "String",
@@ -1005,6 +1006,88 @@ function staticCallName(callNode) {
     return `${callee.object.name}.${callee.property.name}`;
   }
   return "";
+}
+
+function collectModuleBindingNames(ast) {
+  const names = new Set();
+  for (const statement of ast?.body || []) {
+    if (statement.type === "ImportDeclaration") {
+      for (const specifier of statement.specifiers || []) {
+        if (specifier.local?.name) names.add(specifier.local.name);
+      }
+      continue;
+    }
+    const declaration = (
+      statement.type === "ExportNamedDeclaration"
+      || statement.type === "ExportDefaultDeclaration"
+    )
+      ? statement.declaration
+      : statement;
+    if (declaration?.type === "VariableDeclaration") {
+      for (const declarator of declaration.declarations || []) {
+        for (const name of collectPatternIdentifierNames(declarator.id)) {
+          names.add(name);
+        }
+      }
+    } else if (
+      (declaration?.type === "FunctionDeclaration"
+        || declaration?.type === "ClassDeclaration")
+      && declaration.id?.name
+    ) {
+      names.add(declaration.id.name);
+    }
+  }
+  return names;
+}
+
+function collectFunctionBindingNames(ast, functionNode) {
+  const names = collectModuleBindingNames(ast);
+  if (functionNode.id?.name) names.add(functionNode.id.name);
+  for (const parameter of functionNode.params || []) {
+    for (const name of collectPatternIdentifierNames(parameter)) {
+      names.add(name);
+    }
+  }
+  const visit = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (
+      node.type === "FunctionDeclaration"
+      || node.type === "FunctionExpression"
+      || node.type === "ArrowFunctionExpression"
+    ) {
+      if (node.type === "FunctionDeclaration" && node.id?.name) {
+        names.add(node.id.name);
+      }
+      return;
+    }
+    if (node.type === "VariableDeclarator") {
+      for (const name of collectPatternIdentifierNames(node.id)) {
+        names.add(name);
+      }
+    } else if (node.type === "ClassDeclaration" && node.id?.name) {
+      names.add(node.id.name);
+    } else if (node.type === "CatchClause") {
+      for (const name of collectPatternIdentifierNames(node.param)) {
+        names.add(name);
+      }
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (key === "loc" || key === "start" || key === "end") continue;
+      if (Array.isArray(value)) {
+        for (const child of value) visit(child);
+      } else if (value && typeof value === "object") {
+        visit(value);
+      }
+    }
+  };
+  visit(functionNode.body);
+  return names;
+}
+
+function isUnshadowedReadOnlyTaintCall(callName, bindingNames) {
+  if (!READ_ONLY_TAINT_CALLS.has(callName)) return false;
+  const rootName = callName.split(".", 1)[0];
+  return !bindingNames.has(rootName);
 }
 
 function collectReachableTaintedHazardSites({
@@ -1036,6 +1119,7 @@ function collectReachableTaintedHazardSites({
     ].join("#");
     if (visitedContexts.has(contextId)) continue;
     visitedContexts.add(contextId);
+    const bindingNames = collectFunctionBindingNames(ast, functionNode);
     const taintedNames = new Set(taintedSourceNames);
     const localNames = new Set();
     walkFunctionBody(functionNode.body, (node) => {
@@ -1145,7 +1229,7 @@ function collectReachableTaintedHazardSites({
       }
       if (
         taintedArgumentIndexes.length
-        && !READ_ONLY_TAINT_CALLS.has(callName)
+        && !isUnshadowedReadOnlyTaintCall(callName, bindingNames)
         && !READ_ONLY_TAINT_MEMBER_CALLS.has(memberCallName)
       ) {
         hazardSites.set(`${node.start}:${node.end}`, node);

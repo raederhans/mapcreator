@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.2c complete / P4.3 admission next` — canonical Scenario health, hydration-gate and presentation-hint actions are implemented and accepted at exact functional checkpoint `784885f6`. Exact phase, Pages/dist, full core and focused browser recovery evidence are green. P4.3 begins after closeout publication/integration and fresh renderer browser, `verify:core:main-thread` and standard perf admission.
+`P4.3 implementation present / acceptance blocked` — the curated recovery branch contains the nine-commit P4.3 renderer/performance window through `acc8de2d` plus the 2026-08-05 cache-isolation audit repair. Main integration remains blocked until a schema-3 canonical performance baseline and a checked-in P4.3 state-writer policy checkpoint exist, followed by fresh exact-phase, Pages/dist, main-thread, browser and standard performance evidence.
 
 ## Checklist
 
@@ -227,3 +227,13 @@
 - P4.2c is complete; the active task directory remains the control surface for P4.3 and later P4 phases.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
 - Main-thread, wider browser, performance, scenario-data and heavy-geo lanes outside the three focused P4.2c browser suites remain deferred to their owning phases.
+
+### 2026-08-05 P4.3 audit repair evidence
+
+- Audited functional window: `origin/main@5461c24a..acc8de2d`, nine related non-merge commits.
+- Reproduced cache isolation defect: a render-pass cache with required fields on its prototype passed the normalized fast path and reused inherited mutable `dirty`, `reasons` and cache holders.
+- Repair: required cache/default/pass fields must be own properties; repaired state rebuilds inherited fields into isolated own Map/Set/object holders. The source-bound fingerprint and the delegation scanner's exact `Object.hasOwn` pure-read contract were synchronized, including fail-closed handling when lexical bindings shadow the intrinsic.
+- Fresh targeted validation: normalizer plus delegation tests pass 36/36; four changed JS/MJS files pass `node --check`; `git diff --check` passes. The initial unchanged P4.3 Node suite passed 241/241. The first post-repair full P4.3 Node run exposed the missing `Object.hasOwn` pure-read registration at 241/242; the focused repair rerun is green and the full suite was not run a third time under the automation retry cap.
+- SF-ATS dry-run for the four code/test/tool files reports zero unmatched paths; `verify:pages-dist` remains the one main-thread route with `.runtime-output` and `dist` locks.
+- Branch-wide blockers remain: `docs/perf/baseline_2026-07-30.json` is schema 2 while the active gate requires schema 3 admission/generation-fence evidence; `tools/state_writer_policy.json#progress.latestPhase` remains `P4.2c`.
+- Dynamic gaps: Python P4.3 boundary, exact policy/route phase, Pages/dist, browser, `verify:core:main-thread` and standard perf remain unverified. Main integration is withheld.

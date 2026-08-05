@@ -87,3 +87,14 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 ## Next step
 
 Publish and integrate the P4.2c acceptance record, retain both the active continuation worktree and the independent audit/recovery worktree, obtain fresh renderer browser, `verify:core:main-thread` and standard perf admission, then begin P4.3 renderer action ownership.
+
+## 2026-08-05 audit handoff
+
+- Runtime gate passed on AC power with 0.2 seconds of user idle time. No persistent goal was created.
+- Current audit owner/worktree: `/root` in `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-curated-20260731`; target integration branch remains `origin/main@5461c24a`, while the parent checkout's archive deletions and `lessons learned.md` WIP remain untouched.
+- Selected window: the nine related functional commits `f2d264b7..acc8de2d` covering performance admission, P4.3 renderer actions and the earlier diagnostic hot-path repair.
+- Static review verdict for the branch is `REQUEST CHANGES / BLOCK`: canonical performance baseline schema/admission evidence and the P4.3 checked-in policy checkpoint are both missing.
+- Audit repair owns four code/test/tool files: the render-pass cache normalizer, its behavior test, the state-action delegation contract and its behavior test. It prevents prototype-inherited mutable cache holders from crossing renderer state instances and keeps the `Object.hasOwn` read exemption fail-closed under lexical shadowing.
+- Live-test ownership incident: the combined Node/Python/perf command exceeded the short-test estimate. `/root` became the unique owner, accepted Node 241/241 evidence, waited once for 60 seconds, then stopped the exact process tree rooted at PID `60656`. Two overlapping read-only review scans were interrupted and their four exact P4.3 policy processes were stopped; final P4.3 policy process count was zero.
+- Fresh focused repair evidence is green: 36/36 Node tests, syntax checks, diff check and SF-ATS zero unmatched paths. Full phase, Pages/dist, browser, main-thread and standard perf evidence remains pending behind the two canonical blockers.
+- Safe next step: commit and push the narrow audit repair to the curated recovery branch after patch review; retain the worktree and withhold `origin/main` integration until the canonical baseline and policy checkpoint are produced under single-owner verification.
