@@ -24,6 +24,18 @@
 - [ ] Execute P4.3–P4.5 in order; P4.3 renderer phase/interaction/cache/diagnostics actions are next.
 - [ ] Complete the remaining phase reviews, UltraQA, full P4 acceptance, final integration and safe cleanup.
 
+## 2026-08-06 audit repair
+
+- [x] Audit the P4.4/P4.5 functional reference window `6e6d3e06..ebff805c` with `f7d1fba1` as the policy prerequisite.
+- [x] Reproduce the Workbench Apply ownership bypass and arbitrary visibility-field write on the legacy path.
+- [x] Route the real Apply bridge through `state/actions/transport_actions.js` and remove the duplicate `ui_state.js` writer.
+- [x] Add caller/import ownership regression coverage.
+- [x] Pass targeted Node 6/6, transport manifest/runtime Python 20/20, JS syntax and diff checks.
+- [x] Run SF-ATS dry-run for three files: 25 recommendations, zero unmatched files and zero route gaps.
+- [x] Pass selector schema, transport manifest and P4.4 Node 137/137 under one live-test owner.
+- [ ] Re-run `test:python:p4:p4-4-boundary`; the current policy scan stalled at the P4.2c checker and was stopped after three unchanged 60-second observations.
+- [ ] Run the remaining selected appearance/annotation/layer/renderer child-safe entries and formal P4.4 browser/heavy-geo/main-thread admission in the curated phase branch.
+
 ## Validation evidence
 
 | Command or check | Result |

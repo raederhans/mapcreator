@@ -24,6 +24,8 @@ test("export and transport owners delegate canonical state writes", () => {
   const exportOwner = read("js/ui/toolbar/export_workbench_controller.js");
   const transportStateOwner = read("js/ui/toolbar/transport_workbench_state_owner.js");
   const transportAppearance = read("js/ui/toolbar/transport_appearance_controller.js");
+  const transportApplyBridge = read("js/ui/toolbar/transport_workbench_apply_bridge_owner.js");
+  const legacyUiState = read("js/core/state/ui_state.js");
 
   assert.match(exportOwner, /state\/actions\/export_workbench_actions\.js/);
   assert.doesNotMatch(exportOwner, /replaceExportWorkbenchUiState/);
@@ -33,6 +35,15 @@ test("export and transport owners delegate canonical state writes", () => {
   assert.match(transportAppearance, /setTransportMasterVisibilityState\(runtimeState,/);
   assert.match(transportAppearance, /setTransportFamilyVisibilityState\(runtimeState,/);
   assert.doesNotMatch(transportAppearance, /runtimeState\.(?:showTransport|showAirports|showPorts|showRail|showRoad)\s*=/);
+  assert.match(
+    transportApplyBridge,
+    /from\s+["']\.\.\/\.\.\/core\/state\/actions\/transport_actions\.js["']/,
+  );
+  assert.doesNotMatch(
+    transportApplyBridge,
+    /import\s*\{[^}]*applyTransportWorkbenchOverviewState[^}]*\}\s*from\s*["']\.\.\/\.\.\/core\/state\.js["']/s,
+  );
+  assert.doesNotMatch(legacyUiState, /function\s+applyTransportWorkbenchOverviewState\s*\(/);
 });
 
 test("file manager routes project visibility snapshots through the finite action surface", () => {

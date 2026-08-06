@@ -87,3 +87,17 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 ## Next step
 
 Publish and integrate the P4.2c acceptance record, retain both the active continuation worktree and the independent audit/recovery worktree, obtain fresh renderer browser, `verify:core:main-thread` and standard perf admission, then begin P4.3 renderer action ownership.
+
+## 2026-08-06 audit live-test ownership
+
+- Owner: `/root` main integration owner.
+- Scope: post-fix P4.4 child-safe verification for the canonical transport Apply bridge repair.
+- Command: selector check, transport manifest contract, P4.4 Node suite, P4.4 Python boundary, appearance preset, annotation productization, layer panel/status and renderer runtime-state suites, executed serially from `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719`.
+- Shared resources: `.runtime/reports/generated/`; no browser, dev-server, Playwright, heavy-geo, dist builder or `.runtime-output` lane is started.
+- Logs: `.runtime/tests/audit-20260806-transport-action-child-safe.stdout.log`, `.runtime/tests/audit-20260806-transport-action-child-safe.stderr.log`, plus `.runtime/tests/audit-20260806-transport-action-child-safe.exit`.
+- Success: every command exits zero and the final exit file records `0`.
+- Failure/stop: first nonzero command stops the sequence; three unchanged 60-second observations stop monitoring and preserve the verification gap.
+- Non-owner evidence: the stable stdout/stderr/exit files above and the SF-ATS selection report under `.runtime/reports/generated/audit-20260806-transport-action-selection.json`.
+- Final state: selector schema and transport manifest checks passed; P4.4 Node passed 137/137. The Python boundary reached `node tools/check_state_writer_policy.mjs --phase P4.2c` and produced no new output across three 60-second observations, so the owner stopped the exact 10-process tree. Zero scoped processes remained. The exit marker is `stopped-after-3-unchanged-60s-polls`; later commands in the sequence were not started.
+- Audit finding: `transport_workbench_apply_bridge_owner.js` imported `applyTransportWorkbenchOverviewState` from the legacy `core/state.js` export, leaving the canonical `transport_actions.js` implementation outside the real Apply path. The legacy writer accepted arbitrary `patch.visibilityField` keys; a runtime probe reproduced `adminToken=true` on the legacy path while the canonical action rejected it.
+- Repair: the Apply bridge now imports the canonical action directly; the duplicate `ui_state.js` writer is removed; `ui_state_action_callers_behavior.test.mjs` locks both ownership facts. Targeted Node 6/6, transport manifest/runtime Python 20/20, JS syntax and diff checks pass.
