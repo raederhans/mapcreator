@@ -373,6 +373,16 @@ export function ensureRenderPassCacheState(
 ) {
   const defaults = createDefaultRenderPassCacheState();
   if (!target || typeof target !== "object") return defaults;
+  const renderPassCacheDescriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "renderPassCache",
+  );
+  if (
+    !renderPassCacheDescriptor
+    || !Object.hasOwn(renderPassCacheDescriptor, "value")
+  ) {
+    commitRenderPassCacheState(target, defaults);
+  }
   const renderPassCache = normalizeRenderPassCacheState(target.renderPassCache, {
     defaults,
     cloneZoomTransform,
@@ -439,19 +449,35 @@ export function ensureProjectedBoundsCacheState(target) {
   if (!target || typeof target !== "object") {
     return createDefaultProjectedBoundsCacheState();
   }
+  const projectedBoundsDescriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "projectedBoundsById",
+  );
+  const sphericalDiagnosticsDescriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "sphericalFeatureDiagnosticsById",
+  );
+  const projectedBoundsById = projectedBoundsDescriptor
+    && Object.hasOwn(projectedBoundsDescriptor, "value")
+    ? projectedBoundsDescriptor.value
+    : null;
+  const sphericalFeatureDiagnosticsById = sphericalDiagnosticsDescriptor
+    && Object.hasOwn(sphericalDiagnosticsDescriptor, "value")
+    ? sphericalDiagnosticsDescriptor.value
+    : null;
   if (
-    target.projectedBoundsById instanceof Map
-    && target.sphericalFeatureDiagnosticsById instanceof Map
+    projectedBoundsById instanceof Map
+    && sphericalFeatureDiagnosticsById instanceof Map
   ) {
     return true;
   }
   const defaults = createDefaultProjectedBoundsCacheState();
   commitProjectedBoundsCacheState(target, {
-    projectedBoundsById: target.projectedBoundsById instanceof Map
-      ? target.projectedBoundsById
+    projectedBoundsById: projectedBoundsById instanceof Map
+      ? projectedBoundsById
       : defaults.projectedBoundsById,
-    sphericalFeatureDiagnosticsById: target.sphericalFeatureDiagnosticsById instanceof Map
-      ? target.sphericalFeatureDiagnosticsById
+    sphericalFeatureDiagnosticsById: sphericalFeatureDiagnosticsById instanceof Map
+      ? sphericalFeatureDiagnosticsById
       : defaults.sphericalFeatureDiagnosticsById,
   });
   return true;

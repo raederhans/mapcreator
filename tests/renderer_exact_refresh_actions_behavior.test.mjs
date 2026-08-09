@@ -175,6 +175,170 @@ test("ensure and reset preserve controller object identity and exact reset seman
   });
 });
 
+test("exact refresh actions detach prototype-owned controller state", async () => {
+  const {
+    beginExactAfterSettleControllerApplyState,
+    beginExactAfterSettleControllerScheduleState,
+    ensureExactAfterSettleControllerState,
+    isExactAfterSettleControllerActiveState,
+    resetExactAfterSettleControllerState,
+  } = await loadActions();
+  const sharedController = {
+    generation: 7,
+    phase: "scheduled",
+    pendingPlan: { owner: "prototype" },
+  };
+  const prototypeState = { exactAfterSettleController: sharedController };
+  const first = Object.create(prototypeState);
+  const second = Object.create(prototypeState);
+
+  assert.equal(ensureExactAfterSettleControllerState(first), true);
+  assert.equal(Object.hasOwn(first, "exactAfterSettleController"), true);
+  assert.notEqual(first.exactAfterSettleController, sharedController);
+  assert.equal(first.exactAfterSettleController.generation, 0);
+  assert.equal(first.exactAfterSettleController.phase, "idle");
+
+  assert.equal(resetExactAfterSettleControllerState(second, { reason: "second-reset" }), true);
+  assert.equal(Object.hasOwn(second, "exactAfterSettleController"), true);
+  assert.notEqual(second.exactAfterSettleController, sharedController);
+  assert.equal(second.exactAfterSettleController.generation, 1);
+  assert.equal(sharedController.generation, 7);
+  assert.equal(sharedController.phase, "scheduled");
+
+  const inheritedFields = Object.create(sharedController);
+  const third = { exactAfterSettleController: inheritedFields };
+  assert.equal(ensureExactAfterSettleControllerState(third), true);
+  assert.equal(Object.hasOwn(inheritedFields, "generation"), true);
+  assert.equal(Object.hasOwn(inheritedFields, "phase"), true);
+  assert.equal(inheritedFields.generation, 0);
+  assert.equal(inheritedFields.phase, "idle");
+
+  const fourth = Object.create(prototypeState);
+  assert.equal(isExactAfterSettleControllerActiveState(fourth), false);
+  assert.equal(beginExactAfterSettleControllerApplyState(fourth, {
+    generation: 7,
+    plan: { owner: "fourth" },
+    applyStartedAt: 1,
+    identity: {},
+  }), false);
+  assert.equal(Object.hasOwn(fourth, "exactAfterSettleController"), false);
+
+  const nextGeneration = beginExactAfterSettleControllerScheduleState(fourth, {
+    scheduleStartedAt: 5,
+    identity: {},
+  });
+  assert.equal(nextGeneration, 1);
+  assert.equal(Object.hasOwn(fourth, "exactAfterSettleController"), true);
+  assert.notEqual(fourth.exactAfterSettleController, sharedController);
+  assert.equal(sharedController.generation, 7);
+  assert.equal(sharedController.phase, "scheduled");
+});
+
+test("exact refresh initialization bypasses an inherited controller setter", async () => {
+  const { ensureExactAfterSettleControllerState } = await loadActions();
+  let setterCalls = 0;
+  const prototypeState = {};
+  Object.defineProperty(prototypeState, "exactAfterSettleController", {
+    configurable: true,
+    get: () => ({ generation: 9, phase: "scheduled" }),
+    set: () => { setterCalls += 1; },
+  });
+  const target = Object.create(prototypeState);
+
+  assert.equal(ensureExactAfterSettleControllerState(target), true);
+  assert.equal(setterCalls, 0);
+  assert.equal(Object.hasOwn(target, "exactAfterSettleController"), true);
+  assert.equal(target.exactAfterSettleController.generation, 0);
+  assert.equal(target.exactAfterSettleController.phase, "idle");
+});
+
+test("exact refresh initialization bypasses inherited controller field setters", async () => {
+  const { ensureExactAfterSettleControllerState } = await loadActions();
+  const setterCalls = { generation: 0, pendingPlan: 0, phase: 0 };
+  const controllerPrototype = {};
+  Object.defineProperties(controllerPrototype, {
+    generation: {
+      configurable: true,
+      get: () => 9,
+      set: () => { setterCalls.generation += 1; },
+    },
+    pendingPlan: {
+      configurable: true,
+      get: () => ({ owner: "prototype" }),
+      set: () => { setterCalls.pendingPlan += 1; },
+    },
+    phase: {
+      configurable: true,
+      get: () => "scheduled",
+      set: () => { setterCalls.phase += 1; },
+    },
+  });
+  const controller = Object.create(controllerPrototype);
+  const target = { exactAfterSettleController: controller };
+
+  assert.equal(ensureExactAfterSettleControllerState(target), true);
+  assert.deepEqual(setterCalls, { generation: 0, pendingPlan: 0, phase: 0 });
+  assert.equal(Object.hasOwn(controller, "generation"), true);
+  assert.equal(Object.hasOwn(controller, "pendingPlan"), true);
+  assert.equal(Object.hasOwn(controller, "phase"), true);
+  assert.equal(controller.generation, 0);
+  assert.equal(controller.pendingPlan, null);
+  assert.equal(controller.phase, "idle");
+});
+
+test("exact refresh initialization replaces own accessors with isolated data state", async () => {
+  const { ensureExactAfterSettleControllerState } = await loadActions();
+  const sharedController = { generation: 5, phase: "scheduled", pendingPlan: null };
+  function createAccessorTarget() {
+    const target = {};
+    Object.defineProperty(target, "exactAfterSettleController", {
+      configurable: true,
+      enumerable: true,
+      get: () => sharedController,
+    });
+    return target;
+  }
+  const first = createAccessorTarget();
+  const second = createAccessorTarget();
+
+  assert.equal(ensureExactAfterSettleControllerState(first), true);
+  assert.equal(ensureExactAfterSettleControllerState(second), true);
+  const firstDescriptor = Object.getOwnPropertyDescriptor(
+    first,
+    "exactAfterSettleController",
+  );
+  const secondDescriptor = Object.getOwnPropertyDescriptor(
+    second,
+    "exactAfterSettleController",
+  );
+  assert.equal(Object.hasOwn(firstDescriptor, "value"), true);
+  assert.equal(Object.hasOwn(secondDescriptor, "value"), true);
+  assert.notEqual(first.exactAfterSettleController, sharedController);
+  assert.notEqual(second.exactAfterSettleController, sharedController);
+  assert.notEqual(first.exactAfterSettleController, second.exactAfterSettleController);
+});
+
+test("exact refresh initialization preserves a writable own controller descriptor", async () => {
+  const { ensureExactAfterSettleControllerState } = await loadActions();
+  const target = {};
+  Object.defineProperty(target, "exactAfterSettleController", {
+    configurable: false,
+    enumerable: false,
+    value: null,
+    writable: true,
+  });
+
+  assert.equal(ensureExactAfterSettleControllerState(target), true);
+  assert.equal(typeof target.exactAfterSettleController, "object");
+  const descriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "exactAfterSettleController",
+  );
+  assert.equal(descriptor.configurable, false);
+  assert.equal(descriptor.enumerable, false);
+  assert.equal(descriptor.writable, true);
+});
+
 test("scheduled state resets stale fields, advances generation, and copies frozen identity values", async () => {
   const { beginExactAfterSettleControllerScheduleState } = await loadActions();
   const controller = {

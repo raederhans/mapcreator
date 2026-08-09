@@ -708,7 +708,7 @@ export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
     exportName: "captureExactAfterSettleControllerState",
     targetArgumentIndex: 0,
     sourceFingerprint:
-      "1f6ea078d4e9d5827bc4af91777f2132a03d49657d77fcca6ba6fce9cf6dabb0",
+      "fa0f35be1303057d2afb495edb0d96aece6e3eceba195f1b77dc52d8eca5d438",
     cloneHelperFingerprints: RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS,
   }),
 ]));
@@ -2907,7 +2907,7 @@ export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
       actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
       actionExportName: "commitProjectedBoundsCacheState",
       replacementActionSourceFingerprint:
-        "4771dd38da2cc4f07d703927a374b0ab209db4d88ac87ee3423ecca3e4e34b85",
+        "36721b91e1951ad0206875f69db5fa30cab0443caed9b96fe34c327be1f1e8b3",
     }),
     createRendererCrossBoundaryMigrationEntry({
       retiredCallerPath: "js/core/map_renderer.js",
@@ -2937,7 +2937,7 @@ export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
       actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
       actionExportName: "commitProjectedBoundsCacheState",
       replacementActionSourceFingerprint:
-        "4771dd38da2cc4f07d703927a374b0ab209db4d88ac87ee3423ecca3e4e34b85",
+        "36721b91e1951ad0206875f69db5fa30cab0443caed9b96fe34c327be1f1e8b3",
     }),
     createRendererCrossBoundaryMigrationEntry({
       retiredCallerPath: "js/core/map_renderer.js",

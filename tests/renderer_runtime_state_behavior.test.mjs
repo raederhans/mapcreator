@@ -362,6 +362,133 @@ test("renderer runtime cache wrappers preserve legacy invalid-target fallbacks",
   assert.equal(setInteractionInfrastructureStateFields(undefined, "ready"), "idle");
 });
 
+test("renderer runtime cache wrappers detach prototype-owned mutable caches", () => {
+  const sharedRenderPassCache = createDefaultRenderPassCacheState();
+  const sharedProjectedBoundsById = new Map([["shared", { x: 1 }]]);
+  const sharedSphericalDiagnosticsById = new Map([["shared", { reason: "prototype" }]]);
+  const prototypeState = {
+    renderPassCache: sharedRenderPassCache,
+    projectedBoundsById: sharedProjectedBoundsById,
+    sphericalFeatureDiagnosticsById: sharedSphericalDiagnosticsById,
+  };
+  const first = Object.create(prototypeState);
+  const second = Object.create(prototypeState);
+
+  const firstRenderPassCache = ensureRenderPassCacheState(first);
+  const secondRenderPassCache = ensureRenderPassCacheState(second);
+  assert.equal(Object.hasOwn(first, "renderPassCache"), true);
+  assert.equal(Object.hasOwn(second, "renderPassCache"), true);
+  assert.notEqual(firstRenderPassCache, sharedRenderPassCache);
+  assert.notEqual(secondRenderPassCache, sharedRenderPassCache);
+  assert.notEqual(firstRenderPassCache, secondRenderPassCache);
+
+  assert.equal(ensureProjectedBoundsCacheState(first), true);
+  assert.equal(ensureProjectedBoundsCacheState(second), true);
+  assert.equal(Object.hasOwn(first, "projectedBoundsById"), true);
+  assert.equal(Object.hasOwn(first, "sphericalFeatureDiagnosticsById"), true);
+  assert.equal(Object.hasOwn(second, "projectedBoundsById"), true);
+  assert.equal(Object.hasOwn(second, "sphericalFeatureDiagnosticsById"), true);
+  assert.notEqual(first.projectedBoundsById, sharedProjectedBoundsById);
+  assert.notEqual(first.sphericalFeatureDiagnosticsById, sharedSphericalDiagnosticsById);
+  assert.notEqual(first.projectedBoundsById, second.projectedBoundsById);
+  assert.notEqual(
+    first.sphericalFeatureDiagnosticsById,
+    second.sphericalFeatureDiagnosticsById,
+  );
+
+  firstRenderPassCache.dirty.background = false;
+  first.projectedBoundsById.set("first", { x: 2 });
+  assert.equal(secondRenderPassCache.dirty.background, true);
+  assert.equal(second.projectedBoundsById.has("first"), false);
+  assert.deepEqual([...sharedProjectedBoundsById.keys()], ["shared"]);
+});
+
+test("renderer runtime cache wrappers bypass inherited cache setters", () => {
+  let renderPassCacheSetterCalls = 0;
+  let projectedBoundsSetterCalls = 0;
+  let diagnosticsSetterCalls = 0;
+  const prototypeState = {};
+  Object.defineProperties(prototypeState, {
+    renderPassCache: {
+      configurable: true,
+      get: () => createDefaultRenderPassCacheState(),
+      set: () => { renderPassCacheSetterCalls += 1; },
+    },
+    projectedBoundsById: {
+      configurable: true,
+      get: () => new Map(),
+      set: () => { projectedBoundsSetterCalls += 1; },
+    },
+    sphericalFeatureDiagnosticsById: {
+      configurable: true,
+      get: () => new Map(),
+      set: () => { diagnosticsSetterCalls += 1; },
+    },
+  });
+  const target = Object.create(prototypeState);
+
+  ensureRenderPassCacheState(target);
+  ensureProjectedBoundsCacheState(target);
+
+  assert.equal(renderPassCacheSetterCalls, 0);
+  assert.equal(projectedBoundsSetterCalls, 0);
+  assert.equal(diagnosticsSetterCalls, 0);
+  assert.equal(Object.hasOwn(target, "renderPassCache"), true);
+  assert.equal(Object.hasOwn(target, "projectedBoundsById"), true);
+  assert.equal(Object.hasOwn(target, "sphericalFeatureDiagnosticsById"), true);
+});
+
+test("renderer runtime cache wrappers replace own accessors with isolated data state", () => {
+  const sharedRenderPassCache = createDefaultRenderPassCacheState();
+  const sharedProjectedBoundsById = new Map();
+  const sharedSphericalDiagnosticsById = new Map();
+  function createAccessorTarget() {
+    const target = {};
+    Object.defineProperties(target, {
+      renderPassCache: {
+        configurable: true,
+        enumerable: true,
+        get: () => sharedRenderPassCache,
+      },
+      projectedBoundsById: {
+        configurable: true,
+        enumerable: true,
+        get: () => sharedProjectedBoundsById,
+      },
+      sphericalFeatureDiagnosticsById: {
+        configurable: true,
+        enumerable: true,
+        get: () => sharedSphericalDiagnosticsById,
+      },
+    });
+    return target;
+  }
+  const first = createAccessorTarget();
+  const second = createAccessorTarget();
+
+  const firstRenderPassCache = ensureRenderPassCacheState(first);
+  const secondRenderPassCache = ensureRenderPassCacheState(second);
+  assert.equal(ensureProjectedBoundsCacheState(first), true);
+  assert.equal(ensureProjectedBoundsCacheState(second), true);
+
+  for (const target of [first, second]) {
+    for (const fieldName of [
+      "renderPassCache",
+      "projectedBoundsById",
+      "sphericalFeatureDiagnosticsById",
+    ]) {
+      const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+      assert.equal(Object.hasOwn(descriptor, "value"), true);
+    }
+  }
+  assert.notEqual(firstRenderPassCache, sharedRenderPassCache);
+  assert.notEqual(firstRenderPassCache, secondRenderPassCache);
+  assert.notEqual(first.projectedBoundsById, sharedProjectedBoundsById);
+  assert.notEqual(first.projectedBoundsById, second.projectedBoundsById);
+  first.projectedBoundsById.set("first", {});
+  assert.equal(second.projectedBoundsById.has("first"), false);
+});
+
 test("spatial state ops preserve snapshot shapes across reset and apply", () => {
   const state = createDefaultSpatialIndexState();
   const landIndexRef = state.landIndex;

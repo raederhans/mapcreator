@@ -37,6 +37,48 @@ function createDefaultExactAfterSettleControllerState() {
   };
 }
 
+function hasOwnedExactAfterSettleControllerState(target) {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "exactAfterSettleController",
+  );
+  const controller = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : null;
+  return !!controller
+    && typeof controller === "object"
+    && !Array.isArray(controller);
+}
+
+function installExactAfterSettleControllerState(target, controller) {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "exactAfterSettleController",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value")) {
+    target.exactAfterSettleController = controller;
+    return controller;
+  }
+  Object.defineProperty(target, "exactAfterSettleController", {
+    configurable: true,
+    enumerable: true,
+    value: controller,
+    writable: true,
+  });
+  return controller;
+}
+
+function ensureExactAfterSettleControllerField(controller, fieldName, value) {
+  const descriptor = Object.getOwnPropertyDescriptor(controller, fieldName);
+  if (descriptor && Object.hasOwn(descriptor, "value")) return;
+  Object.defineProperty(controller, fieldName, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+}
+
 function cloneExactAfterSettleValue(value) {
   if (!value || typeof value !== "object") return value;
   const clone = Array.isArray(value) ? [] : {};
@@ -55,37 +97,39 @@ function cloneExactAfterSettlePendingPlan(plan) {
 
 export function ensureExactAfterSettleControllerState(target) {
   assertStateTarget(target);
-  if (
-    !target.exactAfterSettleController
-    || typeof target.exactAfterSettleController !== "object"
-    || Array.isArray(target.exactAfterSettleController)
-  ) {
-    target.exactAfterSettleController = createDefaultExactAfterSettleControllerState();
+  if (!hasOwnedExactAfterSettleControllerState(target)) {
+    installExactAfterSettleControllerState(
+      target,
+      createDefaultExactAfterSettleControllerState(),
+    );
   }
-  if (!("generation" in target.exactAfterSettleController)) target.exactAfterSettleController.generation = 0;
-  if (!("phase" in target.exactAfterSettleController)) target.exactAfterSettleController.phase = "idle";
-  if (!("startedAt" in target.exactAfterSettleController)) target.exactAfterSettleController.startedAt = 0;
-  if (!("scheduledAt" in target.exactAfterSettleController)) target.exactAfterSettleController.scheduledAt = 0;
-  if (!("applyStartedAt" in target.exactAfterSettleController)) target.exactAfterSettleController.applyStartedAt = 0;
-  if (!("applyFinishedAt" in target.exactAfterSettleController)) target.exactAfterSettleController.applyFinishedAt = 0;
-  if (!("scenarioId" in target.exactAfterSettleController)) target.exactAfterSettleController.scenarioId = "";
-  if (!("selectionVersion" in target.exactAfterSettleController)) target.exactAfterSettleController.selectionVersion = 0;
-  if (!("topologyRevision" in target.exactAfterSettleController)) target.exactAfterSettleController.topologyRevision = 0;
-  if (!("dpr" in target.exactAfterSettleController)) target.exactAfterSettleController.dpr = 1;
-  if (!("pixelWidth" in target.exactAfterSettleController)) target.exactAfterSettleController.pixelWidth = 0;
-  if (!("pixelHeight" in target.exactAfterSettleController)) target.exactAfterSettleController.pixelHeight = 0;
-  if (!("colorRevision" in target.exactAfterSettleController)) target.exactAfterSettleController.colorRevision = 0;
-  if (!("contextFlagSignature" in target.exactAfterSettleController)) target.exactAfterSettleController.contextFlagSignature = "";
-  if (!("zoomToken" in target.exactAfterSettleController)) target.exactAfterSettleController.zoomToken = 0;
-  if (!("transformBucket" in target.exactAfterSettleController)) target.exactAfterSettleController.transformBucket = "";
-  if (!("pendingPlan" in target.exactAfterSettleController)) target.exactAfterSettleController.pendingPlan = null;
-  if (!("reason" in target.exactAfterSettleController)) target.exactAfterSettleController.reason = "init";
+  const controller = target.exactAfterSettleController;
+  ensureExactAfterSettleControllerField(controller, "generation", 0);
+  ensureExactAfterSettleControllerField(controller, "phase", "idle");
+  ensureExactAfterSettleControllerField(controller, "startedAt", 0);
+  ensureExactAfterSettleControllerField(controller, "scheduledAt", 0);
+  ensureExactAfterSettleControllerField(controller, "applyStartedAt", 0);
+  ensureExactAfterSettleControllerField(controller, "applyFinishedAt", 0);
+  ensureExactAfterSettleControllerField(controller, "scenarioId", "");
+  ensureExactAfterSettleControllerField(controller, "selectionVersion", 0);
+  ensureExactAfterSettleControllerField(controller, "topologyRevision", 0);
+  ensureExactAfterSettleControllerField(controller, "dpr", 1);
+  ensureExactAfterSettleControllerField(controller, "pixelWidth", 0);
+  ensureExactAfterSettleControllerField(controller, "pixelHeight", 0);
+  ensureExactAfterSettleControllerField(controller, "colorRevision", 0);
+  ensureExactAfterSettleControllerField(controller, "contextFlagSignature", "");
+  ensureExactAfterSettleControllerField(controller, "zoomToken", 0);
+  ensureExactAfterSettleControllerField(controller, "transformBucket", "");
+  ensureExactAfterSettleControllerField(controller, "pendingPlan", null);
+  ensureExactAfterSettleControllerField(controller, "reason", "init");
   return true;
 }
 
 export function captureExactAfterSettleControllerState(target) {
   assertStateTarget(target);
-  const controller = target.exactAfterSettleController;
+  const controller = Object.hasOwn(target, "exactAfterSettleController")
+    ? target.exactAfterSettleController
+    : null;
   const pendingPlan = controller?.pendingPlan;
   return {
     generation: Number(controller?.generation || 0),
@@ -116,13 +160,7 @@ export function resetExactAfterSettleControllerState(
   { reason = "reset", generation = null } = {},
 ) {
   assertStateTarget(target);
-  if (
-    !target.exactAfterSettleController
-    || typeof target.exactAfterSettleController !== "object"
-    || Array.isArray(target.exactAfterSettleController)
-  ) {
-    target.exactAfterSettleController = createDefaultExactAfterSettleControllerState();
-  }
+  ensureExactAfterSettleControllerState(target);
   if (
     generation !== null
     && Number(target.exactAfterSettleController.generation || 0) !== Number(generation || 0)
@@ -155,7 +193,9 @@ export function isExactAfterSettleGenerationCurrentState(
   phase = "",
 ) {
   assertStateTarget(target);
-  const controller = target.exactAfterSettleController;
+  const controller = hasOwnedExactAfterSettleControllerState(target)
+    ? target.exactAfterSettleController
+    : null;
   return Boolean(controller)
     && Number(controller.generation || 0) === Number(generation || 0)
     && (!phase || String(controller.phase || "") === phase);
@@ -163,7 +203,10 @@ export function isExactAfterSettleGenerationCurrentState(
 
 export function isExactAfterSettleControllerActiveState(target) {
   assertStateTarget(target);
-  const phase = String(target.exactAfterSettleController?.phase || "idle");
+  const controller = hasOwnedExactAfterSettleControllerState(target)
+    ? target.exactAfterSettleController
+    : null;
+  const phase = String(controller?.phase || "idle");
   return ACTIVE_EXACT_AFTER_SETTLE_PHASES.has(phase);
 }
 
@@ -172,13 +215,7 @@ export function refreshExactAfterSettleControllerIdentityState(
   identity = {},
 ) {
   assertStateTarget(target);
-  if (
-    !target.exactAfterSettleController
-    || typeof target.exactAfterSettleController !== "object"
-    || Array.isArray(target.exactAfterSettleController)
-  ) {
-    target.exactAfterSettleController = createDefaultExactAfterSettleControllerState();
-  }
+  ensureExactAfterSettleControllerState(target);
   if (!identity || typeof identity !== "object" || Array.isArray(identity)) {
     throw new TypeError("[renderer_exact_refresh_actions] identity must be an object");
   }
@@ -200,13 +237,7 @@ export function beginExactAfterSettleControllerScheduleState(
   { scheduleStartedAt, identity } = {},
 ) {
   assertStateTarget(target);
-  if (
-    !target.exactAfterSettleController
-    || typeof target.exactAfterSettleController !== "object"
-    || Array.isArray(target.exactAfterSettleController)
-  ) {
-    target.exactAfterSettleController = createDefaultExactAfterSettleControllerState();
-  }
+  ensureExactAfterSettleControllerState(target);
   const nextGeneration = Number(target.exactAfterSettleController.generation || 0) + 1;
   target.exactAfterSettleController.generation = nextGeneration;
   target.exactAfterSettleController.phase = "scheduled";
@@ -240,7 +271,7 @@ export function beginExactAfterSettleControllerApplyState(
 ) {
   assertStateTarget(target);
   if (
-    !target.exactAfterSettleController
+    !hasOwnedExactAfterSettleControllerState(target)
     || Number(target.exactAfterSettleController.generation || 0) !== Number(generation || 0)
     || String(target.exactAfterSettleController.phase || "") !== "scheduled"
   ) return false;
@@ -268,7 +299,7 @@ export function replaceExactAfterSettlePendingPlanState(
 ) {
   assertStateTarget(target);
   if (
-    !target.exactAfterSettleController
+    !hasOwnedExactAfterSettleControllerState(target)
     || Number(target.exactAfterSettleController.generation || 0) !== Number(generation || 0)
     || String(target.exactAfterSettleController.phase || "") !== "applying"
   ) return false;
@@ -283,7 +314,7 @@ export function completeExactAfterSettleControllerApplyState(
 ) {
   assertStateTarget(target);
   if (
-    !target.exactAfterSettleController
+    !hasOwnedExactAfterSettleControllerState(target)
     || Number(target.exactAfterSettleController.generation || 0) !== Number(generation || 0)
     || String(target.exactAfterSettleController.phase || "") !== "applying"
   ) return false;
@@ -296,7 +327,7 @@ export function completeExactAfterSettleControllerApplyState(
 export function beginExactAfterSettleControllerFinalizeState(target, generation) {
   assertStateTarget(target);
   if (
-    !target.exactAfterSettleController
+    !hasOwnedExactAfterSettleControllerState(target)
     || Number(target.exactAfterSettleController.generation || 0) !== Number(generation || 0)
     || String(target.exactAfterSettleController.phase || "") !== "awaiting-paint"
   ) return false;

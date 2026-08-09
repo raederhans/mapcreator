@@ -81,6 +81,55 @@ test("projected bounds cache commit installs both exact Map identities", () => {
   assert.equal(target.sphericalFeatureDiagnosticsById, sphericalFeatureDiagnosticsById);
 });
 
+test("cache commits preserve existing own property descriptors", () => {
+  const target = {};
+  const originalRenderPassCache = { original: true };
+  const originalProjectedBounds = new Map();
+  const originalDiagnostics = new Map();
+  Object.defineProperties(target, {
+    renderPassCache: {
+      configurable: false,
+      enumerable: false,
+      value: originalRenderPassCache,
+      writable: true,
+    },
+    projectedBoundsById: {
+      configurable: false,
+      enumerable: false,
+      value: originalProjectedBounds,
+      writable: true,
+    },
+    sphericalFeatureDiagnosticsById: {
+      configurable: false,
+      enumerable: false,
+      value: originalDiagnostics,
+      writable: true,
+    },
+  });
+  const nextRenderPassCache = { next: true };
+  const nextProjectedBounds = new Map([["A", {}]]);
+  const nextDiagnostics = new Map([["A", null]]);
+
+  assert.equal(commitRenderPassCacheState(target, nextRenderPassCache), true);
+  assert.equal(commitProjectedBoundsCacheState(target, {
+    projectedBoundsById: nextProjectedBounds,
+    sphericalFeatureDiagnosticsById: nextDiagnostics,
+  }), true);
+  assert.equal(target.renderPassCache, nextRenderPassCache);
+  assert.equal(target.projectedBoundsById, nextProjectedBounds);
+  assert.equal(target.sphericalFeatureDiagnosticsById, nextDiagnostics);
+  for (const fieldName of [
+    "renderPassCache",
+    "projectedBoundsById",
+    "sphericalFeatureDiagnosticsById",
+  ]) {
+    const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+    assert.equal(descriptor.configurable, false);
+    assert.equal(descriptor.enumerable, false);
+    assert.equal(descriptor.writable, true);
+  }
+});
+
 test("plain spherical diagnostics cache entries are immutable and reuse one hot-path reference", () => {
   const target = { sphericalFeatureDiagnosticsById: new Map() };
   const diagnostics = {
