@@ -19,10 +19,62 @@ function isStateTarget(target) {
   return !!target && typeof target === "object" && !Array.isArray(target);
 }
 
+function isPlainRecord(value) {
+  if (!isStateTarget(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 function cloneDetached(value) {
   if (!isStateTarget(value)) return value;
   if (typeof globalThis.structuredClone === "function") return globalThis.structuredClone(value);
   return JSON.parse(JSON.stringify(value));
+}
+
+function getInheritedDataValue(target, fieldName) {
+  for (let prototype = Object.getPrototypeOf(target); prototype; prototype = Object.getPrototypeOf(prototype)) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, fieldName);
+    if (descriptor) return Object.hasOwn(descriptor, "value") ? descriptor.value : undefined;
+  }
+  return undefined;
+}
+
+function setOwnDataValue(target, fieldName, value) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  if (descriptor && Object.hasOwn(descriptor, "value") && descriptor.writable) {
+    target[fieldName] = value;
+    return value;
+  }
+  if (descriptor && !descriptor.configurable) {
+    throw new TypeError(`[transport_actions] ${fieldName} must be writable owner state`);
+  }
+  Object.defineProperty(target, fieldName, {
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
+    value,
+    writable: true,
+  });
+  return value;
+}
+
+function getOwnPlainRecord(target, fieldName) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  return descriptor
+    && Object.hasOwn(descriptor, "value")
+    && isPlainRecord(descriptor.value)
+    ? descriptor.value
+    : null;
+}
+
+function ensureOwnPlainRecord(target, fieldName) {
+  const current = getOwnPlainRecord(target, fieldName);
+  if (current) return current;
+  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  const source = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : getInheritedDataValue(target, fieldName);
+  const next = isPlainRecord(source) ? cloneDetached(source) : {};
+  return setOwnDataValue(target, fieldName, next);
 }
 
 export function ensureTransportWorkbenchUiState(target) {
@@ -44,20 +96,18 @@ export function commitTransportWorkbenchUiState(target, nextUiState = null) {
   normalized.layerOrder = admittedLayerOrder.concat(
     TRANSPORT_WORKBENCH_FAMILY_IDS.filter((familyId) => !admittedLayerOrder.includes(familyId)),
   );
-  const current = isStateTarget(target.transportWorkbenchUi)
+  const current = getOwnPlainRecord(target, "transportWorkbenchUi")
     ? target.transportWorkbenchUi
     : normalized;
   if (current !== normalized) Object.assign(current, normalized);
   delete current.compareHeld;
-  target.transportWorkbenchUi = current;
-  return current;
+  return setOwnDataValue(target, "transportWorkbenchUi", current);
 }
 
 export function commitTransportWorkbenchPointDeltasState(target, nextDeltas = null) {
   const normalized = normalizeTransportWorkbenchPointDeltas(nextDeltas);
   if (!isStateTarget(target)) return normalized;
-  target.transportWorkbenchPointDeltas = normalized;
-  return normalized;
+  return setOwnDataValue(target, "transportWorkbenchPointDeltas", normalized);
 }
 
 export function applyTransportWorkbenchOverviewState(target, patch = {}) {
@@ -80,33 +130,35 @@ export function applyTransportWorkbenchOverviewState(target, patch = {}) {
       };
     }
   }
-  target.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(nextOverview);
+  setOwnDataValue(
+    target.styleConfig,
+    "transportOverview",
+    normalizeTransportOverviewStyleConfig(nextOverview),
+  );
   setTransportMasterVisibilityState(target, true);
   const visibilityField = String(patch.visibilityField || "");
-  if (TRANSPORT_VISIBILITY_FIELDS.has(visibilityField)) target[visibilityField] = true;
+  if (TRANSPORT_VISIBILITY_FIELDS.has(visibilityField)) {
+    setOwnDataValue(target, visibilityField, true);
+  }
   return target.styleConfig.transportOverview;
 }
 
 export function ensureTransportOverviewStyleConfigState(target) {
   if (!isStateTarget(target)) return normalizeTransportOverviewStyleConfig(null);
-  if (!isStateTarget(target.styleConfig)) target.styleConfig = {};
-  const current = isStateTarget(target.styleConfig.transportOverview)
-    ? target.styleConfig.transportOverview
-    : null;
+  const styleConfig = ensureOwnPlainRecord(target, "styleConfig");
+  const current = getOwnPlainRecord(styleConfig, "transportOverview");
   const normalized = normalizeTransportOverviewStyleConfig(current);
   if (current) {
     Object.assign(current, normalized);
-    target.styleConfig.transportOverview = current;
+    setOwnDataValue(styleConfig, "transportOverview", current);
     return current;
   }
-  target.styleConfig.transportOverview = normalized;
-  return normalized;
+  return setOwnDataValue(styleConfig, "transportOverview", normalized);
 }
 
 export function setTransportMasterVisibilityState(target, visible) {
   if (!isStateTarget(target)) return false;
-  target.showTransport = !!visible;
-  return target.showTransport;
+  return setOwnDataValue(target, "showTransport", !!visible);
 }
 
 export function setTransportFamilyVisibilityState(target, familyId, visible) {
@@ -114,7 +166,7 @@ export function setTransportFamilyVisibilityState(target, familyId, visible) {
   const field = getTransportOverviewVisibilityField(String(familyId || "").trim().toLowerCase());
   if (!field) return false;
   const nextVisible = !!visible;
-  target[field] = nextVisible;
-  if (nextVisible) target.showTransport = true;
+  setOwnDataValue(target, field, nextVisible);
+  if (nextVisible) setOwnDataValue(target, "showTransport", true);
   return nextVisible;
 }

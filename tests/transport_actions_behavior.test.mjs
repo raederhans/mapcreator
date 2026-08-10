@@ -69,3 +69,58 @@ test("transport overview and visibility actions publish only renderer-owned stat
   assert.equal(overview.activePackIdByFamily.road, "japan_road");
   assert.equal(Object.hasOwn(overview, "previewCamera"), false);
 });
+
+test("transport actions detach inherited workbench and overview containers", () => {
+  const sharedWorkbenchUi = { open: false };
+  const sharedOverview = { rail: { opacity: 0.25 } };
+  const prototypeState = {
+    styleConfig: { transportOverview: sharedOverview },
+    transportWorkbenchUi: sharedWorkbenchUi,
+  };
+  const first = Object.create(prototypeState);
+  const second = Object.create(prototypeState);
+
+  commitTransportWorkbenchUiState(first, { open: true });
+  applyTransportWorkbenchOverviewState(second, {
+    familyId: "rail",
+    familyConfig: { opacity: 0.9 },
+  });
+
+  assert.equal(Object.hasOwn(first, "transportWorkbenchUi"), true);
+  assert.notEqual(first.transportWorkbenchUi, sharedWorkbenchUi);
+  assert.equal(sharedWorkbenchUi.open, false);
+  assert.equal(Object.hasOwn(second, "styleConfig"), true);
+  assert.notEqual(second.styleConfig, prototypeState.styleConfig);
+  assert.notEqual(second.styleConfig.transportOverview, sharedOverview);
+  assert.equal(second.styleConfig.transportOverview.rail.opacity, 0.9);
+  assert.equal(sharedOverview.rail.opacity, 0.25);
+});
+
+test("transport actions bypass inherited container and visibility setters", () => {
+  const setterCalls = { showTransport: 0, styleConfig: 0 };
+  const prototypeState = {};
+  Object.defineProperties(prototypeState, {
+    showTransport: {
+      configurable: true,
+      get: () => false,
+      set: () => { setterCalls.showTransport += 1; },
+    },
+    styleConfig: {
+      configurable: true,
+      get: () => ({ transportOverview: { rail: { opacity: 0.25 } } }),
+      set: () => { setterCalls.styleConfig += 1; },
+    },
+  });
+  const target = Object.create(prototypeState);
+
+  applyTransportWorkbenchOverviewState(target, {
+    familyId: "rail",
+    familyConfig: { opacity: 0.75 },
+  });
+
+  assert.deepEqual(setterCalls, { showTransport: 0, styleConfig: 0 });
+  assert.equal(Object.hasOwn(target, "showTransport"), true);
+  assert.equal(Object.hasOwn(target, "styleConfig"), true);
+  assert.equal(target.showTransport, true);
+  assert.equal(target.styleConfig.transportOverview.rail.opacity, 0.75);
+});

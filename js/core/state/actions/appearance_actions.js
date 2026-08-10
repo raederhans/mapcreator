@@ -17,6 +17,58 @@ function assertGroup(group) {
   }
 }
 
+function isPlainRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function cloneDetached(value) {
+  if (!value || typeof value !== "object") return value;
+  if (typeof globalThis.structuredClone === "function") return globalThis.structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getInheritedDataValue(target, fieldName) {
+  for (let prototype = Object.getPrototypeOf(target); prototype; prototype = Object.getPrototypeOf(prototype)) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, fieldName);
+    if (descriptor) return Object.hasOwn(descriptor, "value") ? descriptor.value : undefined;
+  }
+  return undefined;
+}
+
+function setOwnDataValue(target, fieldName, value) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  if (descriptor && Object.hasOwn(descriptor, "value") && descriptor.writable) {
+    target[fieldName] = value;
+    return value;
+  }
+  if (descriptor && !descriptor.configurable) {
+    throw new TypeError(`[appearance_actions] ${fieldName} must be writable owner state`);
+  }
+  Object.defineProperty(target, fieldName, {
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
+    value,
+    writable: true,
+  });
+  return value;
+}
+
+function ensureOwnPlainRecord(target, fieldName) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  if (
+    descriptor
+    && Object.hasOwn(descriptor, "value")
+    && isPlainRecord(descriptor.value)
+  ) return descriptor.value;
+  const source = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : getInheritedDataValue(target, fieldName);
+  const next = isPlainRecord(source) ? cloneDetached(source) : {};
+  return setOwnDataValue(target, fieldName, next);
+}
+
 function normalizeBooleanRecord(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError(`[appearance_actions] ${label} must be an object`);
@@ -28,10 +80,7 @@ function normalizeBooleanRecord(value, label) {
 
 export function ensureAppearanceStyleConfigState(target) {
   assertTarget(target);
-  if (!target.styleConfig || typeof target.styleConfig !== "object" || Array.isArray(target.styleConfig)) {
-    target.styleConfig = {};
-  }
-  return target.styleConfig;
+  return ensureOwnPlainRecord(target, "styleConfig");
 }
 
 export function setAppearanceStyleConfigState(target, value) {
@@ -39,15 +88,13 @@ export function setAppearanceStyleConfigState(target, value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError("[appearance_actions] style config must be an object");
   }
-  target.styleConfig = value;
-  return value;
+  return setOwnDataValue(target, "styleConfig", value);
 }
 
 export function setAppearanceStyleGroupState(target, group, value) {
   assertTarget(target); assertGroup(group);
   const styleConfig = ensureAppearanceStyleConfigState(target);
-  styleConfig[group] = value;
-  return value;
+  return setOwnDataValue(styleConfig, group, value);
 }
 
 export function patchAppearanceStyleGroupState(target, group, patch) {
@@ -56,10 +103,13 @@ export function patchAppearanceStyleGroupState(target, group, patch) {
     throw new TypeError("[appearance_actions] patch must be an object");
   }
   const styleConfig = ensureAppearanceStyleConfigState(target);
-  const current = styleConfig[group] && typeof styleConfig[group] === "object" && !Array.isArray(styleConfig[group])
-    ? styleConfig[group] : {};
-  styleConfig[group] = { ...current, ...patch };
-  return styleConfig[group];
+  const descriptor = Object.getOwnPropertyDescriptor(styleConfig, group);
+  const current = descriptor
+    && Object.hasOwn(descriptor, "value")
+    && isPlainRecord(descriptor.value)
+    ? descriptor.value
+    : {};
+  return setOwnDataValue(styleConfig, group, { ...current, ...patch });
 }
 
 export function applyAppearanceStylePathPatchState(target, stylePatch) {
@@ -74,16 +124,13 @@ export function applyAppearanceStylePathPatchState(target, stylePatch) {
     let cursor = styleConfig;
     for (let index = 0; index < segments.length - 1; index += 1) {
       const segment = segments[index];
-      if (!cursor[segment] || typeof cursor[segment] !== "object") {
-        cursor[segment] = {};
-      }
-      cursor = cursor[segment];
+      cursor = ensureOwnPlainRecord(cursor, segment);
     }
     const last = segments[segments.length - 1];
     if (value === null || value === undefined) {
       delete cursor[last];
     } else {
-      cursor[last] = value;
+      setOwnDataValue(cursor, last, value);
     }
   });
   return styleConfig;
@@ -92,16 +139,16 @@ export function applyAppearanceStylePathPatchState(target, stylePatch) {
 export function setAppearanceParentBorderEnabledMapState(target, value) {
   assertTarget(target);
   const next = normalizeBooleanRecord(value, "enabled map");
-  target.parentBorderEnabledByCountry = next;
-  return next;
+  return setOwnDataValue(target, "parentBorderEnabledByCountry", next);
 }
 
 export function patchAppearanceParentBorderEnabledMapState(target, patch) {
   assertTarget(target);
-  const current = target.parentBorderEnabledByCountry
-    && typeof target.parentBorderEnabledByCountry === "object"
-    && !Array.isArray(target.parentBorderEnabledByCountry)
-    ? target.parentBorderEnabledByCountry
+  const currentDescriptor = Object.getOwnPropertyDescriptor(target, "parentBorderEnabledByCountry");
+  const current = currentDescriptor
+    && Object.hasOwn(currentDescriptor, "value")
+    && isPlainRecord(currentDescriptor.value)
+    ? currentDescriptor.value
     : {};
   const nextPatch = normalizeBooleanRecord(patch, "enabled-map patch");
   return setAppearanceParentBorderEnabledMapState(target, { ...current, ...nextPatch });

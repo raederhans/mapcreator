@@ -61,3 +61,40 @@ test("appearance actions apply history style paths while preserving style-config
     rivers: { width: 1.5 },
   });
 });
+
+test("appearance actions install owner-local style containers", () => {
+  const sharedOcean = { opacity: 0.25 };
+  const sharedStyleConfig = { ocean: sharedOcean };
+  const prototypeState = { styleConfig: sharedStyleConfig };
+  const first = Object.create(prototypeState);
+  const second = Object.create(prototypeState);
+
+  setAppearanceStyleGroupState(first, "ocean", { opacity: 0.8 });
+  applyAppearanceStylePathPatchState(second, { "ocean.opacity": 0.6 });
+
+  assert.equal(Object.hasOwn(first, "styleConfig"), true);
+  assert.equal(Object.hasOwn(second, "styleConfig"), true);
+  assert.notEqual(first.styleConfig, sharedStyleConfig);
+  assert.notEqual(second.styleConfig, sharedStyleConfig);
+  assert.notEqual(first.styleConfig, second.styleConfig);
+  assert.equal(first.styleConfig.ocean.opacity, 0.8);
+  assert.equal(second.styleConfig.ocean.opacity, 0.6);
+  assert.equal(sharedOcean.opacity, 0.25);
+});
+
+test("appearance actions bypass inherited style-container setters", () => {
+  let setterCalls = 0;
+  const prototypeState = {};
+  Object.defineProperty(prototypeState, "styleConfig", {
+    configurable: true,
+    get: () => ({ ocean: { opacity: 0.25 } }),
+    set: () => { setterCalls += 1; },
+  });
+  const target = Object.create(prototypeState);
+
+  setAppearanceStyleGroupState(target, "ocean", { opacity: 0.9 });
+
+  assert.equal(setterCalls, 0);
+  assert.equal(Object.hasOwn(target, "styleConfig"), true);
+  assert.deepEqual(target.styleConfig.ocean, { opacity: 0.9 });
+});

@@ -40,27 +40,83 @@ function isStateTarget(target) {
   return !!target && typeof target === "object" && !Array.isArray(target);
 }
 
+function isPlainRecord(value) {
+  if (!isStateTarget(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 function cloneRecord(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? { ...value } : {};
+  if (!isPlainRecord(value)) return {};
+  if (typeof globalThis.structuredClone === "function") return globalThis.structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getInheritedDataValue(target, fieldName) {
+  for (let prototype = Object.getPrototypeOf(target); prototype; prototype = Object.getPrototypeOf(prototype)) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, fieldName);
+    if (descriptor) return Object.hasOwn(descriptor, "value") ? descriptor.value : undefined;
+  }
+  return undefined;
+}
+
+function setOwnDataValue(target, fieldName, value) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  if (descriptor && Object.hasOwn(descriptor, "value") && descriptor.writable) {
+    target[fieldName] = value;
+    return value;
+  }
+  if (descriptor && !descriptor.configurable) {
+    throw new TypeError(`[ui_chrome_actions] ${fieldName} must be writable owner state`);
+  }
+  Object.defineProperty(target, fieldName, {
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
+    value,
+    writable: true,
+  });
+  return value;
+}
+
+function ensureOwnPlainRecord(target, fieldName) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  if (
+    descriptor
+    && Object.hasOwn(descriptor, "value")
+    && isPlainRecord(descriptor.value)
+  ) return descriptor.value;
+  const source = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : getInheritedDataValue(target, fieldName);
+  return setOwnDataValue(target, fieldName, cloneRecord(source));
 }
 
 export function ensureUiChromeState(target) {
   if (!isStateTarget(target)) return {};
-  if (!isStateTarget(target.ui)) target.ui = {};
-  const ui = target.ui;
+  const ui = ensureOwnPlainRecord(target, "ui");
   BOOLEAN_UI_CHROME_FIELDS.forEach((field) => {
-    ui[field] = Object.hasOwn(ui, field) ? !!ui[field] : DEFAULT_UI_CHROME_STATE[field];
+    setOwnDataValue(
+      ui,
+      field,
+      Object.hasOwn(ui, field) ? !!ui[field] : DEFAULT_UI_CHROME_STATE[field],
+    );
   });
   STRING_UI_CHROME_FIELDS.forEach((field) => {
-    ui[field] = Object.hasOwn(ui, field)
-      ? String(ui[field] || "").trim()
-      : DEFAULT_UI_CHROME_STATE[field];
+    setOwnDataValue(
+      ui,
+      field,
+      Object.hasOwn(ui, field)
+        ? String(ui[field] || "").trim()
+        : DEFAULT_UI_CHROME_STATE[field],
+    );
   });
-  if (!isStateTarget(ui.paletteLibrarySections)) ui.paletteLibrarySections = {};
+  ensureOwnPlainRecord(ui, "paletteLibrarySections");
   if (Object.hasOwn(ui, "restoredSupportSurfaceViewFromUrl")) {
-    ui.restoredSupportSurfaceViewFromUrl = String(
-      ui.restoredSupportSurfaceViewFromUrl || "",
-    ).trim().toLowerCase();
+    setOwnDataValue(
+      ui,
+      "restoredSupportSurfaceViewFromUrl",
+      String(ui.restoredSupportSurfaceViewFromUrl || "").trim().toLowerCase(),
+    );
   }
   return ui;
 }
@@ -69,13 +125,15 @@ export function patchUiChromeState(target, patch = {}) {
   const ui = ensureUiChromeState(target);
   if (!isStateTarget(target) || !isStateTarget(patch)) return ui;
   BOOLEAN_UI_CHROME_FIELDS.forEach((field) => {
-    if (Object.hasOwn(patch, field)) ui[field] = !!patch[field];
+    if (Object.hasOwn(patch, field)) setOwnDataValue(ui, field, !!patch[field]);
   });
   STRING_UI_CHROME_FIELDS.forEach((field) => {
-    if (Object.hasOwn(patch, field)) ui[field] = String(patch[field] || "").trim();
+    if (Object.hasOwn(patch, field)) {
+      setOwnDataValue(ui, field, String(patch[field] || "").trim());
+    }
   });
   if (Object.hasOwn(patch, "paletteLibrarySections")) {
-    ui.paletteLibrarySections = cloneRecord(patch.paletteLibrarySections);
+    setOwnDataValue(ui, "paletteLibrarySections", cloneRecord(patch.paletteLibrarySections));
   }
   if (Object.hasOwn(patch, "restoredSupportSurfaceViewFromUrl")) {
     setRestoredSupportSurfaceViewState(target, patch.restoredSupportSurfaceViewFromUrl);
@@ -85,13 +143,15 @@ export function patchUiChromeState(target, patch = {}) {
 
 export function setActiveDockPopoverState(target, nextKind = "") {
   if (!isStateTarget(target)) return "";
-  target.activeDockPopover = String(nextKind || "").trim();
-  return target.activeDockPopover;
+  return setOwnDataValue(target, "activeDockPopover", String(nextKind || "").trim());
 }
 
 export function setRestoredSupportSurfaceViewState(target, nextView = "") {
   if (!isStateTarget(target)) return "";
   const ui = ensureUiChromeState(target);
-  ui.restoredSupportSurfaceViewFromUrl = String(nextView || "").trim();
-  return ui.restoredSupportSurfaceViewFromUrl;
+  return setOwnDataValue(
+    ui,
+    "restoredSupportSurfaceViewFromUrl",
+    String(nextView || "").trim(),
+  );
 }
