@@ -239,3 +239,15 @@
 - P4.2c is complete; the active task directory remains the control surface for P4.3 and later P4 phases.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
 - Main-thread, wider browser, performance, scenario-data and heavy-geo lanes outside the three focused P4.2c browser suites remain deferred to their owning phases.
+
+## 2026-08-10 P4.4 owner-container audit checkpoint
+
+- [x] Passed the automation gate on AC power with 0.2 seconds of user idle time.
+- [x] Reviewed the seven related unmerged P4.4/P4.5 functional commits from `6e6d3e06` through `4a4127ed`; parent archive and lessons WIP stayed untouched.
+- [x] Reproduced cross-owner state sharing through inherited `styleConfig`, `transportWorkbenchUi`, transport overview and `ui` containers, plus inherited visibility and chrome setters.
+- [x] Installed descriptor-aware owner-local data containers in appearance, transport and UI chrome actions while preserving normal own plain-object identity.
+- [x] Added six owner-isolation and inherited-setter regressions to the existing action behavior suites; the nested `paletteLibrarySections` reference is detached as part of the same root repair.
+- [x] Targeted action tests pass 14/14; the full P4.4 Node matrix passes 143/143; three changed action modules pass `node --check`; selector schema covers 374 routes.
+- [x] SF-ATS dry-run covers six source/test files with zero unmatched files and no reported route gap; artifact: `.runtime/reports/generated/audit-20260810-p44-owner-isolation.json`.
+- [x] Functional Lore commit: `60d3df55df48ee1fcb4297ae44a0ef200ff5e7ce`.
+- [ ] Formal P4.4 admission still owns the known long Python policy boundary, heavy-geo transport checks, browser matrix, Pages/dist, main-thread core and performance gates.
