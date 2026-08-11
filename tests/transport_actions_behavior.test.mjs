@@ -124,3 +124,33 @@ test("transport actions bypass inherited container and visibility setters", () =
   assert.equal(target.showTransport, true);
   assert.equal(target.styleConfig.transportOverview.rail.opacity, 0.75);
 });
+
+test("transport workbench initialization bypasses state accessors", () => {
+  const getterCalls = { inherited: 0, own: 0 };
+  const prototypeState = {};
+  Object.defineProperty(prototypeState, "transportWorkbenchUi", {
+    configurable: true,
+    get: () => {
+      getterCalls.inherited += 1;
+      return { open: true };
+    },
+  });
+  const inheritedTarget = Object.create(prototypeState);
+  const ownTarget = {};
+  Object.defineProperty(ownTarget, "transportWorkbenchUi", {
+    configurable: true,
+    get: () => {
+      getterCalls.own += 1;
+      return { open: true };
+    },
+  });
+
+  const inheritedUi = ensureTransportWorkbenchUiState(inheritedTarget);
+  const ownUi = ensureTransportWorkbenchUiState(ownTarget);
+
+  assert.deepEqual(getterCalls, { inherited: 0, own: 0 });
+  assert.equal(Object.hasOwn(inheritedTarget, "transportWorkbenchUi"), true);
+  assert.equal(Object.hasOwn(ownTarget, "transportWorkbenchUi"), true);
+  assert.equal(inheritedUi.open, false);
+  assert.equal(ownUi.open, false);
+});

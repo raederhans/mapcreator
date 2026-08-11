@@ -79,7 +79,10 @@ function ensureOwnPlainRecord(target, fieldName) {
 
 export function ensureTransportWorkbenchUiState(target) {
   if (!isStateTarget(target)) return normalizeTransportWorkbenchUiState(null);
-  return commitTransportWorkbenchUiState(target, target.transportWorkbenchUi);
+  return commitTransportWorkbenchUiState(
+    target,
+    ensureOwnPlainRecord(target, "transportWorkbenchUi"),
+  );
 }
 
 export function commitTransportWorkbenchUiState(target, nextUiState = null) {
