@@ -114,3 +114,16 @@ Publish and integrate the P4.2c acceptance record, retain both the active contin
 - Functional Lore commit: `60d3df55df48ee1fcb4297ae44a0ef200ff5e7ce`; the branch remains a retained mixed-phase recovery lineage and stays outside direct main integration.
 - Live resources: no browser, dev server, Playwright, heavy-geo, dist builder, scenario-data or shared checkpoint process was started. The dry-run report lane is complete and released.
 - Remaining admission: the unchanged P4.2c policy checkpoint still makes `test:python:p4:p4-4-boundary` the known long/stalling path from the 2026-08-06 run. Formal P4.4 admission retains that boundary plus the selected browser/heavy-geo/main-thread/Pages/performance gates under one owner.
+
+## 2026-08-11 Transport initialization accessor audit
+
+- Owner: `/root` main integration owner; working directory `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719`.
+- Reviewed window: the unmerged P4.4 Appearance/Transport lineage through `60d3df55`; `origin/main@5461c24a` had no newer eligible functional commit after fetch.
+- Finding: `ensureTransportWorkbenchUiState` read `target.transportWorkbenchUi` directly. A short runtime probe and RED regression proved that own and inherited getters each ran once during initialization, allowing side effects outside the pure-data state owner boundary.
+- Repair boundary: initialization now acquires the workbench UI root through `ensureOwnPlainRecord` before normalization. Existing own plain records keep identity; inherited data is detached; accessors stay unread and configurable accessors are replaced with owner-local data storage.
+- Regression boundary: `tests/transport_actions_behavior.test.mjs` covers own and inherited getters, zero invocation, own-property installation and normalized closed defaults.
+- Verification: targeted Transport actions 6/6; P4.4 Node 144/144; selector schema 374; transport manifest contract; renderer pass-family inventory and political-pass orchestration preflight; syntax and diff checks all exit zero.
+- SF-ATS: `.runtime/reports/generated/audit-20260811-transport-accessor-sfats.json` and `.md`; two changed files; zero unmatched; seven child-safe and seven main-thread/heavy-resource recommendations.
+- Functional Lore commit: `d8c343918d6052c4a2610f6f8603373a5d613b9f`; the branch remains a retained mixed-phase recovery lineage and stays outside direct main integration.
+- Live resources: no browser, dev server, Playwright, heavy-geo, dist builder, scenario-data or shared checkpoint process was started.
+- Remaining admission: P4.4 Python policy, heavy-geo transport, browser, Pages/dist, `verify:core:main-thread` and standard performance gates remain pending under one main-thread owner.

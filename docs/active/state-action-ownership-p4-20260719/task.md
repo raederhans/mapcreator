@@ -251,3 +251,14 @@
 - [x] SF-ATS dry-run covers six source/test files with zero unmatched files and no reported route gap; artifact: `.runtime/reports/generated/audit-20260810-p44-owner-isolation.json`.
 - [x] Functional Lore commit: `60d3df55df48ee1fcb4297ae44a0ef200ff5e7ce`.
 - [ ] Formal P4.4 admission still owns the known long Python policy boundary, heavy-geo transport checks, browser matrix, Pages/dist, main-thread core and performance gates.
+
+## 2026-08-11 Transport initialization accessor audit checkpoint
+
+- [x] Passed the automation gate on AC power with 0.2 seconds of user idle time and preserved the parent archive/lessons WIP.
+- [x] Reviewed the unmerged Appearance/Transport P4.4 functional window after confirming that `origin/main` had no newer eligible functional commit.
+- [x] Reproduced one own/inherited accessor side effect in `ensureTransportWorkbenchUiState`; both getters ran during initialization before the repair.
+- [x] Routed initialization through the existing descriptor-aware `ensureOwnPlainRecord` helper, preserving the ordinary own plain-record identity path and normalized defaults.
+- [x] Added the accessor regression to the existing Transport action behavior suite; targeted behavior passes 6/6 and P4.4 Node passes 144/144.
+- [x] Selector schema covers 374 routes; transport manifests and two renderer child-safe checks pass; SF-ATS covers two files with zero unmatched paths.
+- [x] Functional Lore commit: `d8c343918d6052c4a2610f6f8603373a5d613b9f`.
+- [ ] Formal P4.4 admission still owns the known long Python policy boundary, heavy-geo transport checks, browser matrix, Pages/dist, main-thread core and performance gates.
