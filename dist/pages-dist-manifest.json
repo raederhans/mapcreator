@@ -46522,7 +46522,7 @@
     },
     {
       "path": "app/js/core/state/actions/renderer_diagnostics_actions.js",
-      "size_bytes": 13547,
+      "size_bytes": 13858,
       "source_kind": "dist"
     },
     {
@@ -47654,7 +47654,7 @@
     {
       "file_count": 9444,
       "path": "app",
-      "size_bytes": 965855471
+      "size_bytes": 965855782
     },
     {
       "file_count": 57,
@@ -47687,5 +47687,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972424399
+  "total_bytes": 972424710
 }

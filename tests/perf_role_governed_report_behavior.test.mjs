@@ -989,6 +989,13 @@ test("baseline admission binds five raw runs to canonical render-role evidence",
     /hoi4_1939\.renderSampleRoleSummary does not match raw run evidence/,
   );
 
+  const gateSummaryDrift = structuredClone(canonical);
+  gateSummaryDrift.scenarios.hoi4_1939.summary.canonicalRenderSampleMs += 1;
+  assert.throws(
+    () => validateGateBaselineReport(gateSummaryDrift, SCENARIOS, baselinePath),
+    /hoi4_1939\.summary\.canonicalRenderSampleMs does not match raw run evidence/,
+  );
+
   const duplicateCandidate = structuredClone(canonical);
   const renderSamples = duplicateCandidate.scenarios.tno_1962.runs[0].snapshot.renderSamples;
   renderSamples.samples.push({ ...renderSamples.samples.at(-1), sequence: renderSamples.samples.length + 1 });

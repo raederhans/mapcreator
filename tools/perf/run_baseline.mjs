@@ -1561,8 +1561,14 @@ function collectGovernedRenderSampleRoleMismatches(report, scenarioIds) {
     if (!isDeepStrictEqual(roleSummary, recomputedSummary)) {
       mismatches.push(`${scenarioId}.renderSampleRoleSummary does not match raw run evidence`);
     }
-    if (!(finiteNumber(scenario?.summary?.canonicalRenderSampleMs) > 0)) {
-      mismatches.push(`${scenarioId}.canonicalRenderSampleMs must be > 0`);
+    const storedCanonicalRenderSampleMs = scenario?.summary?.canonicalRenderSampleMs;
+    if (!isDeepStrictEqual(
+      storedCanonicalRenderSampleMs,
+      recomputedSummary.canonicalRenderSampleMs,
+    )) {
+      mismatches.push(
+        `${scenarioId}.summary.canonicalRenderSampleMs does not match raw run evidence`
+      );
     }
   }
   return mismatches;

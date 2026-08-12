@@ -40,6 +40,7 @@ import {
   resolveStateWriterFindingAuthority,
   summarizeStateWriterFindingRecords,
   validateDomainActionSourceBoundary,
+  validateStateWriterPolicySchema,
   validateTestDiagnosticBudget,
 } from "./state_writer_policy.mjs";
 import {
@@ -5576,6 +5577,13 @@ async function main() {
   });
   const serialized = `${JSON.stringify(policy, null, 2)}\n`;
   if (args.write) {
+    const schemaViolations = validateStateWriterPolicySchema(policy);
+    if (schemaViolations.length) {
+      const error = new Error("Generated state writer policy schema is invalid.");
+      error.code = "state-writer-policy-schema-invalid";
+      error.violations = schemaViolations;
+      throw error;
+    }
     await writeStateWriterPolicyAtomically(
       STATE_WRITER_POLICY_PATH,
       serialized,

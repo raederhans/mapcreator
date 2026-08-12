@@ -168,9 +168,47 @@ test("state writer policy replacement fsyncs a validated sibling before rename",
   const replacement = '{"schemaVersion":2,"progress":{"latestPhase":"P4.3"}}\n';
   fs.writeFileSync(targetPath, original, "utf8");
 
+  const writeEvents = [];
+  const orderedFs = Object.assign({}, fsPromises, {
+    open: async (...args) => {
+      writeEvents.push("open-temp-exclusive");
+      const handle = await fsPromises.open(...args);
+      return {
+        writeFile: async (...writeArgs) => {
+          writeEvents.push("write-temp");
+          return handle.writeFile(...writeArgs);
+        },
+        sync: async () => {
+          writeEvents.push("sync-temp");
+          return handle.sync();
+        },
+        close: async () => {
+          writeEvents.push("close-temp");
+          return handle.close();
+        },
+      };
+    },
+    readFile: async (...args) => {
+      writeEvents.push("readback-temp");
+      return fsPromises.readFile(...args);
+    },
+    rename: async (...args) => {
+      writeEvents.push("rename-over-target");
+      return fsPromises.rename(...args);
+    },
+  });
   await writeStateWriterPolicyAtomically(targetPath, replacement, {
+    fsImpl: orderedFs,
     tempSuffix: "success",
   });
+  assert.deepEqual(writeEvents, [
+    "open-temp-exclusive",
+    "write-temp",
+    "sync-temp",
+    "close-temp",
+    "readback-temp",
+    "rename-over-target",
+  ]);
   assert.equal(fs.readFileSync(targetPath, "utf8"), replacement);
   assert.deepEqual(fs.readdirSync(tempDirectory), ["state_writer_policy.json"]);
 

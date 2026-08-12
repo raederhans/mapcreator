@@ -347,15 +347,27 @@ export function commitRenderPerfMetricState(
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("[renderer_diagnostics_actions] entry must be an object");
   }
-  ensureRenderPerfMetricsState(target);
   const nextSequence = Math.max(0, Number(sequence || 0));
+  const existingMetrics = getOwnObjectPropertyValue(target, "renderPerfMetrics");
+  const metrics = existingMetrics || {};
+  if (!existingMetrics) {
+    assertOwnDataPropertyWritable(
+      target,
+      "renderPerfMetrics",
+      metrics,
+      "renderPerfMetrics",
+    );
+  }
   const metricDescriptor = assertOwnDataPropertyWritable(
-    target.renderPerfMetrics,
+    metrics,
     normalizedName,
     entry,
     `renderPerfMetrics.${normalizedName}`,
   );
   assertOwnDataPropertyWritable(target, "renderPerfMetricSequence", nextSequence, "renderPerfMetricSequence");
+  if (!existingMetrics) {
+    writeRenderPerfMetricsOwnDataProperty(target, metrics);
+  }
   if (!metricDescriptor || !Object.hasOwn(metricDescriptor, "value")) {
     Object.defineProperty(target.renderPerfMetrics, normalizedName, {
       configurable: metricDescriptor?.configurable ?? true,

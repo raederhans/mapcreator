@@ -355,4 +355,21 @@ test("diagnostics actions replace configurable accessors and fail closed on froz
   );
   assert.equal(sequenceSetterCalls, 0);
   assert.equal(Object.hasOwn(frozenHolder, "frame"), false);
+
+  const missingHolderTarget = {};
+  Object.defineProperty(missingHolderTarget, "renderPerfMetricSequence", {
+    configurable: false,
+    enumerable: true,
+    value: 0,
+    writable: false,
+  });
+  assert.throws(
+    () => commitRenderPerfMetricState(missingHolderTarget, {
+      name: "frame",
+      entry: { durationMs: 4 },
+      sequence: 1,
+    }),
+    /renderPerfMetricSequence must be writable/,
+  );
+  assert.equal(Object.hasOwn(missingHolderTarget, "renderPerfMetrics"), false);
 });
