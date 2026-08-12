@@ -12,7 +12,7 @@ PACKAGE_LOCK = REPO_ROOT / "package-lock.json"
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "perf-pr-gate.yml"
 BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.md"
 BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.json"
-BASELINE_SOURCE_GIT_HEAD = "f2d264b77913a7a5cba2c333bf5c4ce5f2ed3246"
+BASELINE_SOURCE_GIT_HEAD = "204d4d462ea0eeaacee1070efbd6e33edb436f9c"
 PERF_SCRIPT = REPO_ROOT / "tools" / "perf" / "run_baseline.mjs"
 STANDARD_PERF_ADMISSION = REPO_ROOT / "tools" / "perf" / "standard_perf_admission.mjs"
 RENDER_SAMPLE_ROLE_POLICY = REPO_ROOT / "tools" / "perf" / "render_sample_role_policy.mjs"
@@ -426,7 +426,7 @@ class PerfGateContractTest(unittest.TestCase):
 
     def test_checked_in_baseline_keeps_report_identity_and_worker_summary_fields(self):
         baseline_payload = json.loads(BASELINE_JSON.read_text(encoding="utf-8"))
-        self.assertEqual(baseline_payload.get("schemaVersion"), 2)
+        self.assertEqual(baseline_payload.get("schemaVersion"), 3)
         self.assertEqual(baseline_payload.get("benchmarkMetricsSchemaVersion"), "3.3")
         self.assertEqual(baseline_payload.get("probeSchema"), "mc_perf_snapshot")
         self.assertEqual(baseline_payload.get("baselineDate"), "2026-07-30")
@@ -434,6 +434,16 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertEqual(baseline_payload.get("config", {}).get("scenarios"), ["tno_1962", "hoi4_1939"])
         self.assertEqual(baseline_payload.get("config", {}).get("runs"), 5)
         self.assertEqual(baseline_payload.get("config", {}).get("warmups"), 3)
+        self.assertEqual(
+            baseline_payload.get("environmentAdmission", {}).get("policyId"),
+            "standard-perf-admission-v1",
+        )
+        self.assertEqual(baseline_payload.get("environmentAdmission", {}).get("status"), "admitted")
+        self.assertEqual(
+            baseline_payload.get("generationFence", {}).get("policyId"),
+            "standard-perf-generation-fence-v1",
+        )
+        self.assertEqual(baseline_payload.get("generationFence", {}).get("status"), "stable")
         self.assertEqual(set(baseline_payload.get("scenarios", {})), {"tno_1962", "hoi4_1939"})
         self.assertEqual(
             set(baseline_payload.get("workloadIdentity", {}).get("scenarios", {})),

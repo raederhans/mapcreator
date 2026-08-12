@@ -135,12 +135,13 @@ export function summarizePerfAdmissionCpu(samples) {
   if (!valid) {
     return deepFreeze({ valid: false, sampleCount: values.length, samples: values, averagePercent: null, peakPercent: null });
   }
-  const sorted = [...values].sort((left, right) => left - right);
+  const normalizedValues = values.map(roundOne);
+  const sorted = [...normalizedValues].sort((left, right) => left - right);
   return deepFreeze({
     valid: true,
-    sampleCount: values.length,
-    samples: values.map(roundOne),
-    averagePercent: roundOne(values.reduce((sum, value) => sum + value, 0) / values.length),
+    sampleCount: normalizedValues.length,
+    samples: normalizedValues,
+    averagePercent: roundOne(normalizedValues.reduce((sum, value) => sum + value, 0) / normalizedValues.length),
     peakPercent: roundOne(sorted.at(-1)),
   });
 }

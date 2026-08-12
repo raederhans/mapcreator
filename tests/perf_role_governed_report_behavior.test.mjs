@@ -380,6 +380,19 @@ test("standard perf admission preserves exact policy threshold edges", () => {
   assert.equal(decision.status, "admitted");
 });
 
+test("standard perf admission remains valid after JSON evidence roundtrip", () => {
+  const decision = evaluateStandardPerfAdmission(makeStandardPerfAdmissionEvidence({
+    cpuSamples: [19.36, 20.06, 11.06, 10.26, 12.76, 12.86, 8.96],
+  }));
+  const persistedDecision = JSON.parse(JSON.stringify(decision));
+
+  assert.equal(decision.status, "admitted");
+  assert.equal(validateStandardPerfAdmissionDecision(persistedDecision, {
+    expectedPlatform: "win32",
+    expectedGitHead: FIXTURE_GIT_HEAD,
+  }).valid, true);
+});
+
 test("standard perf admission writes its artifact before returning or rejecting", async (t) => {
   const tempRoot = path.join(REPO_ROOT, ".runtime", "tmp");
   await fs.mkdir(tempRoot, { recursive: true });
