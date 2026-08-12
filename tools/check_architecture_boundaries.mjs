@@ -684,7 +684,8 @@ function collectFailures() {
   }
   for (const token of [
     "createRenderPerfMetricsRuntimeOwner({",
-    "getRenderPerfMetrics: () => runtimeState.renderPerfMetrics",
+    "getRenderPerfContextBreakdownSnapshot: () => (",
+    "captureRenderPerfContextBreakdownState(runtimeState)",
     "commitRenderPerfMetricState: (payload) => commitRenderPerfMetricState(runtimeState, payload)",
     "setRenderPerfContextBreakdownState: (breakdown) => setRenderPerfContextBreakdownState(runtimeState, breakdown)",
   ]) {
@@ -1883,7 +1884,8 @@ function collectFailures() {
     "runtimeState.specialRegionOverrides = {};",
     "runtimeState.sovereigntyInitialized = false;",
     "islandNeighborsCache = {",
-    "ensureSphericalFeatureDiagnosticsCache().clear();",
+    "ensureProjectedBoundsCache();",
+    "clearSphericalFeatureDiagnosticsCacheState(runtimeState);",
     "runtimeState.deferHitCanvasBuild = Boolean(deferred);",
     "runtimeState.hitCanvasDirty = Boolean(dirty);",
   ]) {
@@ -1939,7 +1941,7 @@ function collectFailures() {
     "Composite coverage",
     "Composite country coverage detail/primary",
     "islandNeighborsCache = {",
-    "ensureSphericalFeatureDiagnosticsCache().clear()",
+    "clearSphericalFeatureDiagnosticsCacheState(runtimeState);",
     "shouldDeferInteractionInfrastructure",
     "runEffect(\"recordRenderPerfMetric\", \"setMapDataFirstPaint\"",
     "runEffect(\"recordRenderPerfMetric\", \"setMapData\"",
