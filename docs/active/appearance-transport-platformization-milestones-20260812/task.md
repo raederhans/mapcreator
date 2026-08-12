@@ -2,7 +2,7 @@
 
 ## Current status
 
-`A_READY_FOR_SUPERVISOR_VALIDATION` — source candidate `bc900b7f80901d96c22deeceda6492fdfcb14b1f`；`A_ADMITTED_SHA` pending。B、C 已建立硬依赖并等待正式准入 SHA。
+`A_SUPERVISOR_REVIEW_FIXES_COMMITTED` — review-fix source commit `21bfb35aeaa18ba1b35723f2f1972ce2e07a7f92`；新的 exact P4.3 checkpoint 与最终 live gates pending。`A_ADMITTED_SHA` pending；B、C 继续等待正式准入 SHA。
 
 ## Checklist
 
@@ -17,8 +17,10 @@
 - [x] 运行当前改动对应的 focused Node、Python、scanner、P4.3 Node 与 SF-ATS child-safe checks。
 - [x] 复核未暂存 diff、route gaps、artifacts 与剩余风险。
 - [x] 交付 `ready-for-supervisor-validation` 包。
-- [ ] 主监督生成并提交 schema 3 canonical baseline。
-- [ ] 主监督完成 browser、Pages/dist、core main-thread、standard perf 与 independent review。
+- [x] 主监督生成并提交 schema 3 canonical baseline。
+- [x] 主监督完成首轮 independent review，并关闭 raw-run binding、diagnostics own-property、policy atomic write 与 direct route findings。
+- [ ] 在 review-fix source tip 上生成并提交新的唯一 P4.3 checkpoint。
+- [ ] 主监督完成 browser、Pages/dist、core main-thread、standard perf 与最终 independent review。
 - [ ] 主监督写入 `A_ADMITTED_SHA` 并解除 B 阻塞。
 - [ ] B 完成 P4.4 replay/admission 并写入 `B_ADMITTED_SHA`。
 - [ ] C 完成用户可见 Appearance / Transport milestone。
@@ -69,12 +71,19 @@
 | generated policy short read | PASS，exit 0；schema 2、`progress.latestPhase=P4.3`、唯一 P4.3 checkpoint。 |
 | post-generator focused read contracts | PASS 3/3，exit 0；runtimeState alias fingerprint count 31、renderer cache non-target violations 0、exact/cache binding diagnostics 0。 |
 | P4.3 exact route after generator 4 | PASS，exit 0；7 owned、0 unmatched、0 route gaps；artifact `.runtime/reports/generated/p43-milestone-a-ded1/p43-route-after-generator-4.json`。 |
+| `npm run perf:baseline` | PASS，exit 0；生成 schema 3 canonical baseline，场景 `tno_1962`、`hoi4_1939`，每场景 5 runs、3 warmups，environment admission 与 generation fence 均 stable；commit `727108824362e373ee9cf6ba5abb04829aed4f04`。 |
+| baseline JSON round-trip repair | PASS；CPU evidence 以持久化精度重新计算，perf role 50/50、combined render sample policy 78/78、Python gate 26/26；commit `4ec129c8ef7e236bf73edde43bcd30ba84f45790`。 |
+| Pages/dist canonical publish | PASS；`verify:pages-dist`、Python 47/47、landing 18/18、sample 18/18；dist publish commit `0b1181e70087087f7daefa6842d498990466c25c`，architecture repair commit `7319193e72612bae9aa7c28f7f506e93d5d554e8`。 |
+| exact `7319193e` generator | PASS，exit 0；PID `468364`，duration `991.240s`，207 writers，schema 2、latestPhase P4.3、唯一 P4.3 checkpoint；checkpoint commit `b66ebeaa700054a01129783a5ba956705e152d3d`。 |
+| independent review | REQUEST CHANGES；P0 0、P1 1、P2 4；accepted fixes：baseline raw-run/role binding、diagnostics inherited/accessor isolation、atomic policy replacement、standard perf direct route、coordination drift。 |
+| review-fix focused evidence | PASS；perf contract 51/51、diagnostics behavior 11/11、diagnostics Python 6/6、delegation edges 30/30、verification metadata 29/29、architecture boundary、SF-ATS dry-run 35 commands / 0 unmatched。 |
+| review-fix source commit | PASS；`21bfb35aeaa18ba1b35723f2f1972ce2e07a7f92`，12 files，Pages source/dist/manifest 同步；提交后 `verify:dist-drift` 与 architecture boundary 均 exit 0。 |
 
 ## Open risks and remaining work
 
-- canonical baseline 仍为 schema 2；主监督的标准 perf lane 负责生成真实 schema 3 measurements。
-- state-writer policy 已推进到 P4.3；三个已知 admission failure signatures 均有 source-level repair、focused regression 与成功 generator 证据。
-- exact P4.3 route gate 为 7 owned、0 unmatched、0 gaps。
+- canonical baseline 已推进到 schema 3，并补充 raw-run 与 canonical role recomputation binding。
+- checked-in state-writer policy 已推进到 P4.3；review-fix source commit 位于其后，因此需要一次新的 exact generator checkpoint。
+- 新 checkpoint 后重跑 exact P4.3 route；目标为 owned paths 全覆盖、production unmatched 0、route gaps 0。
 - pre-edit selector 报告三个新 coordination docs unmatched；这些路径只记录状态与交接，production unmatched count 为零。
-- browser、dev server、Playwright、Pages/dist、core main-thread、standard perf、heavy-geo、scenario-data 和共享 `.runtime` locks 保留给主监督。
+- browser、dev server、Playwright、core main-thread、standard perf、heavy-geo、scenario-data 和共享 `.runtime` locks 保留给主监督；Pages source/dist 已同步，完整 Pages gate在新 checkpoint 后重跑。
 - 当前 worktree 的 index、refs、branch topology 与 remote 保持不变；最终改动将保持未暂存。

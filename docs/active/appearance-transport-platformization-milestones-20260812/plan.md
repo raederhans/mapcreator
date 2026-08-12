@@ -6,7 +6,7 @@
 
 ## Scope
 
-- A：以 `bc900b7f80901d96c22deeceda6492fdfcb14b1f` 为候选源，完成 P4.3 renderer actions 的 policy、performance、routes 与正式准入。
+- A：以 review-fix source commit `21bfb35aeaa18ba1b35723f2f1972ce2e07a7f92` 及其 coordination descendant 为候选源，完成 P4.3 renderer actions 的 policy、performance、routes 与正式准入。
 - B：以 A 的 `A_ADMITTED_SHA` 为唯一基线，从 `65335370c50279c19c9074362567f9d2284e0c39` lineage 按职责重放并准入 P4.4 Appearance、UI、Transport、Strategic 与 Special Zone actions；P4.5 notification fanout 保持独立。
 - C：以 B 的 `B_ADMITTED_SHA` 为唯一基线，交付统一操作生命周期、首个 Appearance / Transport versioned change-set，以及可恢复的 Demo 任务链。
 
@@ -18,7 +18,7 @@
 
 ## Stages
 
-- [ ] A — P4.3 Admission Pack：ready for supervisor validation，source candidate `bc900b7f80901d96c22deeceda6492fdfcb14b1f`，`A_ADMITTED_SHA` pending。
+- [ ] A — P4.3 Admission Pack：review fixes committed；new exact checkpoint 与 final live gates pending；`A_ADMITTED_SHA` pending。
 - [ ] B — P4.4 Replay and Admission Pack：blocked on `A_ADMITTED_SHA`，recovery source `65335370c50279c19c9074362567f9d2284e0c39`。
 - [ ] C — Appearance / Transport user-visible milestone：blocked on `B_ADMITTED_SHA`。
 

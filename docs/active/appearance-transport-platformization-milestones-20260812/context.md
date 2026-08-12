@@ -3,9 +3,9 @@
 ## Current truth
 
 - 2026-08-12 remote read-only check：`refs/heads/main=5461c24aa5e40c3ea184dfee84db10630a199cbc`。
-- 当前独立 worktree：`C:\Users\raede\.codex\worktrees\ded1\mapcreator`，detached `HEAD=bc900b7f80901d96c22deeceda6492fdfcb14b1f`，初始 tracked/untracked 状态 clean。
+- 当前独立 worktree：`C:\Users\raede\.codex\worktrees\ded1\mapcreator`，detached source review-fix commit `21bfb35aeaa18ba1b35723f2f1972ce2e07a7f92`，提交后 tracked/untracked 状态 clean。
 - `merge-base(HEAD, origin/main)=5461c24aa5e40c3ea184dfee84db10630a199cbc`；候选相对 `origin/main` 为 `0 behind / 12 ahead`。
-- A 的静态 blocker：`docs/perf/baseline_2026-07-30.json#schemaVersion=2`；`tools/state_writer_policy.json#progress.latestPhase=P4.2c`。
+- schema 3 baseline 已提交；checked-in policy 的 latestPhase 已为 P4.3。review-fix source 位于 checkpoint 之后，当前静态 blocker 为新的 exact generator checkpoint。
 - 主 checkout 位于 `68a62e540104025e1b3e976f77589f8b3eff2f36`；本任务保持隔离，不读取其未归属 WIP 作为候选输入。
 
 ## Decisions and deviations
@@ -19,6 +19,8 @@
 | 2026-08-12 | 一次性 delegated P4.3 policy generator fail closed 于 renderer cache diagnostics 参数遍历 | 修复范围收敛到 `isShareableDiagnosticValue` 的 read-only cycle traversal，并增加 scanner regression；后续 generator lane 等待主监督重新授权。 |
 | 2026-08-12 | 第二次 delegated generator 证明 6 个 exact-refresh/cache action binding diagnostics 无法准入 | 共同根因是有限 action 通过动态字段名 helper 写 state；改为固定 key production 表达，并增加 policy binding regression，保持所有 allowlist 与 action surface 不变。 |
 | 2026-08-12 | 第三次 delegated generator 证明 `map_renderer.js` runtime-state escape fingerprint 为 actual 34、frozen/previous allowance 31 | 当前 scanner 的 commit replay 为 `27 → 32 → 34`；修复三个 P4.3 source-owned escape 后单模块 probe 为 31，保留 canonical ensure sink 和现有 action surface。该 fingerprint 是 multiset count，无法可靠标识 32 中具体哪四处由兼容 headroom 覆盖。 |
+| 2026-08-13 | 主监督生成 schema 3 baseline，并修复 JSON round-trip 后的 CPU evidence drift | baseline 与 gate 使用同一持久化精度；raw runs、stored roles 与 recomputed role summary 由 validator 逐层绑定。 |
+| 2026-08-13 | 独立 B review 对 architecture-clean candidate 提出 1 个 P1、4 个 P2 | 主监督在 `21bfb35aeaa18ba1b35723f2f1972ce2e07a7f92` 关闭 accepted findings；Pages dist、SF-ATS route、focused contracts 与 architecture boundary 已重新验证。 |
 
 ## Live process ownership
 
@@ -29,6 +31,8 @@
 | A P4.3 policy checkpoint generator rerun 2 | 本 A task delegated owner | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；cwd `C:\Users\raede\.codex\worktrees\ded1\mapcreator`；session `64956`；PID `549824`；目标输出 `tools/state_writer_policy.json` | released；start `2026-08-12T22:10:23.7217551+08:00`；exit 1；observed elapsed `463.991s`；policy 保持 `10035935` bytes / `2026-08-12T21:30:38.0930911+08:00`。失败为 6 个 `state-action-policy-binding-diagnostics-invalid`，exact-refresh 4 个 action 各 2，cache 2 个 action 各 4。 |
 | A P4.3 policy checkpoint generator rerun 3 | 本 A task delegated owner | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；cwd `C:\Users\raede\.codex\worktrees\ded1\mapcreator`；session `7335`；PID `296772`；目标输出 `tools/state_writer_policy.json` | released；start `2026-08-12T22:28:14.6858992+08:00`；exit 1；进程最后存活与首次确认退出给出耗时区间 `778.6s–816.2s`；初始及最终 policy 均为 `10035935` bytes / `2026-08-12T21:30:38.0930911+08:00`。失败为 `legacy-semantic-authority-added`，frozen-baseline 与 previous-active 均报告 runtime-state escape actual 34、allowed 31。 |
 | A P4.3 policy checkpoint generator rerun 4 | 本 A task delegated owner | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；cwd `C:\Users\raede\.codex\worktrees\ded1\mapcreator`；session `34106`；PID `545204`；目标输出 `tools/state_writer_policy.json` | released；start `2026-08-12T23:05:30.5058206+08:00`；end `2026-08-12T23:19:09.3111791+08:00`；exit 0；elapsed `818.805s`；policy 从 `10035935` bytes / `2026-08-12T21:30:38.0930911+08:00` 更新为 `10928785` bytes / `2026-08-12T23:19:09.2651010+08:00`。写入 207 writers；短读取契约与 exact route gate 均通过。 |
+| A exact `7319193e` review checkpoint generator | 本 A task delegated owner | 同一 canonical generator command；session `82779`，PID `468364` | released；start `2026-08-13T00:12:25.1501860+08:00`；end `2026-08-13T00:28:56.3897097+08:00`；exit 0；elapsed `991.240s`；207 writers；checkpoint commit `b66ebeaa700054a01129783a5ba956705e152d3d`。 |
+| A review-fix P4.3 generator | A task delegated owner，主监督授权 | 在本 coordination commit 的 clean exact HEAD 执行 canonical generator；输出 `tools/state_writer_policy.json` | pending；单一 generator lane，成功后由主监督读取 schema/latestPhase/checkpoint 与 6 个 binding diagnostics，再提交 policy。 |
 | A canonical perf baseline generation | `/root` main supervisor | 在已提交且 clean 的 A candidate worktree 执行 `npm run perf:baseline`；输入 `tno_1962,hoi4_1939`、runs `5`、warmups `3`；输出 `docs/perf/baseline_2026-07-30.json`、`docs/perf/baseline_2026-07-30.md`、`.runtime/output/perf/baseline_2026-07-30/` | requested；成功条件：exit 0、schema 3、admitted `environmentAdmission`、stable `generationFence`、两场景均 5 个 canonical samples；生成文件由主监督审查并提交。 |
 | A standard perf gate | `/root` main supervisor | baseline 提交后在 clean exact candidate 执行 `npm run perf:gate`；读取 `docs/perf/baseline_2026-07-30.json`；输出 `.runtime/output/perf/baseline_2026-07-30/perf-gate-current.json` 与 generation/admission evidence | requested；成功条件：exit 0、baseline schema/contract 可读、环境与 workload contract 一致、enforced regression gate pass。 |
 | A browser / Playwright | `/root` main supervisor | exact command、browser profile、output path 由主监督在取得唯一 lane 后落盘 | requested；成功条件：renderer ownership 路径无 page error、未处理 console error 与 network failure，具体 matrix 绑定 exact candidate SHA。 |
@@ -43,4 +47,4 @@
 
 ## Next step
 
-P4.3 policy 已由标准 generator 写入并通过短契约验证与 exact route gate；A 进入 `ready-for-supervisor-validation`，等待 canonical schema 3 baseline、browser、Pages/dist、core main-thread、standard perf 与 independent review。
+提交本次 coordination update，在 clean exact HEAD 授权 A 执行唯一 P4.3 generator；主监督随后提交 checkpoint并执行 exact routes、core、Pages、browser、standard perf 与最终独立复核。
