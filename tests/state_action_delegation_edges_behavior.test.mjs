@@ -138,9 +138,17 @@ test("source-bound detached captures return fresh values and fail closed on alia
     entry,
   ).violations.some(({ code }) => code === "state-detached-capture-source-drift"));
 
+  const runtimeStateDetachedCaptureLeak = [
+    "runtimeState",
+    ".detachedCaptureLeak = metrics;",
+  ].join("");
+  assert.equal(
+    runtimeStateDetachedCaptureLeak,
+    "runtimeState" + ".detachedCaptureLeak = metrics;",
+  );
   const semanticBypasses = [
     "globalThis.detachedCaptureLeak = metrics;",
-    "runtimeState.detachedCaptureLeak = metrics;",
+    runtimeStateDetachedCaptureLeak,
     "consumeUnknownCapture(metrics);",
     "const captureAlias = metrics; captureAlias.entries.set('leak', {});",
     "globalThis.readDetachedCapture = () => metrics;",
@@ -150,6 +158,10 @@ test("source-bound detached captures return fresh values and fail closed on alia
     let bypassSource = registeredSource.replace(
       "return cloneDiagnosticValue(metrics);",
       `${injectedStatement}\n  return cloneDiagnosticValue(metrics);`,
+    );
+    assert.ok(
+      bypassSource.includes(injectedStatement),
+      `fixture source contains the exact semantic bypass: ${injectedStatement}`,
     );
     if (injectedStatement.startsWith("routeDetachedCaptureLeak")) {
       bypassSource = bypassSource.replace(

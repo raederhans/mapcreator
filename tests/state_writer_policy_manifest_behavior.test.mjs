@@ -4332,6 +4332,169 @@ test("renderer diagnostics action source admits only its two registered metric d
   );
 });
 
+test("existing frozen paths refresh strict diagnostics additively", async () => {
+  const sourceBaseSha = "1".repeat(40);
+  const legacySource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+    }
+  `;
+  const frozenSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+      consumeUnknown({ first: model });
+      consumeUnknown({ second: model });
+    }
+  `;
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    legacySource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+  );
+  const legacySemanticBaseline =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+  const completeBaseline = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline,
+    readSourceAtRevision: async () => frozenSource,
+  });
+  assert.equal(
+    completeBaseline.diagnosticDelta.unsupportedSites.length,
+    2,
+  );
+  const partialBaseline = structuredClone(completeBaseline);
+  partialBaseline.diagnosticDelta.unsupportedSites.pop();
+  const reads = [];
+
+  const refreshed = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline,
+    existingBaseline: partialBaseline,
+    readSourceAtRevision: async (revision, relativePath) => {
+      reads.push([revision, relativePath]);
+      return frozenSource;
+    },
+  });
+
+  assert.deepEqual(reads, [[sourceBaseSha, "js/fixture.js"]]);
+  assert.deepEqual(refreshed.diagnosticDelta, completeBaseline.diagnosticDelta);
+});
+
+test("existing frozen path diagnostic refresh rejects multiset shrink", async () => {
+  const sourceBaseSha = "1".repeat(40);
+  const legacySource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+    }
+  `;
+  const twoEscapeSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+      consumeUnknown({ first: model });
+      consumeUnknown({ second: model });
+    }
+  `;
+  const oneEscapeSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+      consumeUnknown({ first: model });
+    }
+  `;
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    legacySource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+  );
+  const legacySemanticBaseline =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+  const existingBaseline = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline,
+    readSourceAtRevision: async () => twoEscapeSource,
+  });
+
+  await assert.rejects(
+    buildFrozenDerivedAliasTaintBaseline({
+      sourceBaseSha,
+      relativePaths: ["js/fixture.js"],
+      legacySemanticBaseline,
+      existingBaseline,
+      readSourceAtRevision: async () => oneEscapeSource,
+    }),
+    (error) => {
+      assert.equal(
+        error.code,
+        "derived-alias-taint-diagnostic-proof-regressed",
+      );
+      assert.equal(error.violations.length, 1);
+      assert.equal(error.violations[0].section, "unsupportedSites");
+      assert.equal(error.violations[0].previousCount, 2);
+      assert.equal(error.violations[0].refreshedCount, 1);
+      return true;
+    },
+  );
+});
+
+test("existing frozen path refresh preserves accepted transition semantics", async () => {
+  const sourceBaseSha = "1".repeat(40);
+  const acceptedSourceSha = "2".repeat(40);
+  const policyBlobSha256 = "3".repeat(64);
+  const legacySource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+    }
+  `;
+  const acceptedSource = `
+    export function update(model) {
+      model.bootPhase = "ready";
+      consumeUnknown(model.renderPerfMetrics);
+    }
+  `;
+  const legacyWriters = await buildFixtureLegacyWritersForSource(
+    legacySource,
+    DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+  );
+  const legacySemanticBaseline =
+    buildLegacyStateWriterSemanticAuthority(legacyWriters);
+  const existingBaseline = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline,
+    acceptedPolicyCheckpoint: {
+      sourceSha: acceptedSourceSha,
+      policyBlobSha256,
+    },
+    readSourceAtRevision: async () => acceptedSource,
+  });
+  const previousTransitionSemanticDelta = structuredClone(
+    existingBaseline.transitionSemanticDelta,
+  );
+  const previousTransitionCheckpoints = structuredClone(
+    existingBaseline.transitionCheckpoints,
+  );
+
+  const refreshed = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline,
+    existingBaseline,
+    readSourceAtRevision: async (revision) => {
+      assert.equal(revision, acceptedSourceSha);
+      return acceptedSource;
+    },
+  });
+
+  assert.deepEqual(
+    refreshed.transitionSemanticDelta,
+    previousTransitionSemanticDelta,
+  );
+  assert.deepEqual(
+    refreshed.transitionCheckpoints,
+    previousTransitionCheckpoints,
+  );
+});
+
 test("P4.3 exact refresh and cache actions admit without binding diagnostics", async () => {
   const modulePaths = [
     "js/core/state/actions/renderer_exact_refresh_actions.js",

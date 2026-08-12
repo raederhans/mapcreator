@@ -995,6 +995,11 @@ export async function buildFrozenDerivedAliasTaintBaseline({
   const pendingPaths = normalizedPaths.filter(
     (relativePath) => !recordedPaths.has(relativePath),
   );
+  const frozenProofPaths = stableUnique([
+    ...previousBaseline.paths,
+    ...normalizedPaths,
+  ]);
+  const pendingPathSet = new Set(pendingPaths);
   const replayedTransitionCheckpoints = (
     transitionCheckpoints === null
       ? previousBaseline.transitionCheckpoints || []
@@ -1077,7 +1082,7 @@ export async function buildFrozenDerivedAliasTaintBaseline({
   const transitionHistoricalWriters = [];
   const frozenBaselineWritersByPath =
     buildFrozenBaselineWritersByPath(legacySemanticBaseline);
-  for (const relativePath of pendingPaths) {
+  for (const relativePath of frozenProofPaths) {
     const pendingSourceSha = transitionSourceShaByPath.get(relativePath)
       || normalizedAcceptedPolicyCheckpoint?.sourceSha
       || normalizedSourceBaseSha;
@@ -1136,10 +1141,13 @@ export async function buildFrozenDerivedAliasTaintBaseline({
       });
     }
     if (
-      transitionSourceShaByPath.has(relativePath)
-      || (
-        acceptedCheckpointPaths.includes(relativePath)
-        && normalizedAcceptedPolicyCheckpoint
+      pendingPathSet.has(relativePath)
+      && (
+        transitionSourceShaByPath.has(relativePath)
+        || (
+          acceptedCheckpointPaths.includes(relativePath)
+          && normalizedAcceptedPolicyCheckpoint
+        )
       )
     ) {
       const previousWriter =
@@ -1180,10 +1188,41 @@ export async function buildFrozenDerivedAliasTaintBaseline({
     buildLegacyStateWriterSemanticAuthority(
       strictHistoricalWriters,
     );
-  const pendingDelta = buildDerivedAliasTaintDiagnosticDelta({
+  const refreshedDiagnosticDelta = buildDerivedAliasTaintDiagnosticDelta({
     legacySemanticBaseline,
     strictSemanticAuthority,
   });
+  if (existingBaseline) {
+    const regressions = [];
+    for (const section of DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS) {
+      const previousCounts = signatureCounts(
+        previousBaseline.diagnosticDelta[section],
+      );
+      const refreshedCounts = signatureCounts(
+        refreshedDiagnosticDelta[section],
+      );
+      for (const [signature, previousCount] of previousCounts) {
+        const refreshedCount = refreshedCounts.get(signature) || 0;
+        if (refreshedCount < previousCount) {
+          regressions.push({
+            code: "derived-alias-taint-diagnostic-proof-regressed",
+            section,
+            signature,
+            previousCount,
+            refreshedCount,
+          });
+        }
+      }
+    }
+    if (regressions.length) {
+      const error = new Error(
+        "Derived alias taint diagnostic source proof regressed.",
+      );
+      error.code = "derived-alias-taint-diagnostic-proof-regressed";
+      error.violations = regressions;
+      throw error;
+    }
+  }
   const transitionSemanticAuthority =
     buildLegacyStateWriterSemanticAuthority(
       transitionHistoricalWriters,
@@ -1207,17 +1246,11 @@ export async function buildFrozenDerivedAliasTaintBaseline({
     algorithmVersion:
       DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION,
     sourceBaseSha: normalizedSourceBaseSha,
-    paths: stableUnique([
-      ...previousBaseline.paths,
-      ...normalizedPaths,
-    ]),
+    paths: frozenProofPaths,
     diagnosticDelta: Object.fromEntries(
       DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS.map((section) => [
         section,
-        [
-          ...previousBaseline.diagnosticDelta[section],
-          ...pendingDelta[section],
-        ].sort(),
+        [...refreshedDiagnosticDelta[section]].sort(),
       ]),
     ),
     ...(nextTransitionCheckpoints.length
