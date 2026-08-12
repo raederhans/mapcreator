@@ -55492,7 +55492,7 @@
       "migrationPhase": "P4.3",
       "bindings": [
         {
-          "id": "parameter:commitRenderPerfMetricState:0:09fc96082d34:145:3",
+          "id": "parameter:commitRenderPerfMetricState:0:09fc96082d34:341:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "commitRenderPerfMetricState",
@@ -55500,7 +55500,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 145,
+            "line": 341,
             "column": 3
           },
           "authority": "domain-action",
@@ -55509,7 +55509,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "renderPerfMetrics",
@@ -55523,6 +55524,14 @@
                 {
                   "operation": "assign",
                   "key": "renderPerfMetricSequence"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "renderPerfMetricSequence"
                 }
               ],
               "aliasSites": [
@@ -55531,17 +55540,58 @@
                   "aliasChain": [
                     "target"
                   ],
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics",
+                  "line": 53,
+                  "column": 5,
+                  "sourceFingerprint": "52b35e38c35a1d10c019b4ffe01a0fc6357b2af907b6d8fc2edba9be616dd7de"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
                   "operation": "assign",
                   "key": "renderPerfMetrics",
-                  "line": 94,
-                  "column": 5,
+                  "line": 60,
+                  "column": 3,
                   "sourceFingerprint": "079afe86e09829a95d7b0770eb3b8b86671674b1e9b6681c13490fdbb9b7aab7"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "renderPerfMetricSequence",
+                  "line": 75,
+                  "column": 5,
+                  "sourceFingerprint": "f7f456f6b3b3768e40bad572a25c92b1b024c62e0a16ae2b2daf2852cfbbfc3c"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "assign",
+                  "key": "renderPerfMetricSequence",
+                  "line": 82,
+                  "column": 3,
+                  "sourceFingerprint": "1beff68afd602d3fbddfffe4131a1c1373362df8630dc16950e28900038a2d9f"
                 }
               ],
               "dynamicSites": [
                 {
-                  "line": 156,
-                  "column": 3,
+                  "line": 372,
+                  "column": 5,
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics",
+                  "pathPattern": "renderPerfMetrics.*",
+                  "sourceFingerprint": "bb22e97403dfae06a28ac408c53977b95143a46fa0c432043d502e689ea57d65"
+                },
+                {
+                  "line": 384,
+                  "column": 5,
                   "operation": "assign",
                   "key": "renderPerfMetrics",
                   "pathPattern": "renderPerfMetrics.*",
@@ -55554,7 +55604,7 @@
           ]
         },
         {
-          "id": "parameter:ensureRenderPerfMetricsState:0:09fc96082d34:87:54",
+          "id": "parameter:ensureRenderPerfMetricsState:0:09fc96082d34:270:54",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "ensureRenderPerfMetricsState",
@@ -55562,7 +55612,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 87,
+            "line": 270,
             "column": 54
           },
           "authority": "domain-action",
@@ -55571,7 +55621,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "renderPerfMetrics"
@@ -55580,9 +55631,36 @@
                 {
                   "operation": "assign",
                   "key": "renderPerfMetrics"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics"
                 }
               ],
-              "aliasSites": [],
+              "aliasSites": [
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics",
+                  "line": 53,
+                  "column": 5,
+                  "sourceFingerprint": "52b35e38c35a1d10c019b4ffe01a0fc6357b2af907b6d8fc2edba9be616dd7de"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "assign",
+                  "key": "renderPerfMetrics",
+                  "line": 60,
+                  "column": 3,
+                  "sourceFingerprint": "079afe86e09829a95d7b0770eb3b8b86671674b1e9b6681c13490fdbb9b7aab7"
+                }
+              ],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": []
@@ -55590,7 +55668,7 @@
           ]
         },
         {
-          "id": "parameter:replaceRenderPerfMetricsState:0:09fc96082d34:99:64",
+          "id": "parameter:replaceRenderPerfMetricsState:0:09fc96082d34:278:64",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "replaceRenderPerfMetricsState",
@@ -55598,7 +55676,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 99,
+            "line": 278,
             "column": 64
           },
           "authority": "domain-action",
@@ -55607,7 +55685,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "renderPerfMetrics"
@@ -55616,9 +55695,36 @@
                 {
                   "operation": "assign",
                   "key": "renderPerfMetrics"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics"
                 }
               ],
-              "aliasSites": [],
+              "aliasSites": [
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics",
+                  "line": 53,
+                  "column": 5,
+                  "sourceFingerprint": "52b35e38c35a1d10c019b4ffe01a0fc6357b2af907b6d8fc2edba9be616dd7de"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "assign",
+                  "key": "renderPerfMetrics",
+                  "line": 60,
+                  "column": 3,
+                  "sourceFingerprint": "079afe86e09829a95d7b0770eb3b8b86671674b1e9b6681c13490fdbb9b7aab7"
+                }
+              ],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": []
@@ -55626,7 +55732,7 @@
           ]
         },
         {
-          "id": "parameter:resetProjectedBoundsDiagnosticsState:0:09fc96082d34:175:3",
+          "id": "parameter:resetProjectedBoundsDiagnosticsState:0:09fc96082d34:404:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "resetProjectedBoundsDiagnosticsState",
@@ -55634,7 +55740,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 175,
+            "line": 404,
             "column": 3
           },
           "authority": "domain-action",
@@ -55643,7 +55749,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "projectedBoundsDiagnostics"
@@ -55652,9 +55759,36 @@
                 {
                   "operation": "assign",
                   "key": "projectedBoundsDiagnostics"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "projectedBoundsDiagnostics"
                 }
               ],
-              "aliasSites": [],
+              "aliasSites": [
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "projectedBoundsDiagnostics",
+                  "line": 119,
+                  "column": 5,
+                  "sourceFingerprint": "40a89e693c62915d1de6586fec7e89183ea30fc3e0cef13e37e074c2aac99846"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "assign",
+                  "key": "projectedBoundsDiagnostics",
+                  "line": 126,
+                  "column": 3,
+                  "sourceFingerprint": "80a52f9eba895a22a51cd81de958ff2b30ee9c41604b40dd760d1bff00ea6fd7"
+                }
+              ],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": []
@@ -55662,7 +55796,7 @@
           ]
         },
         {
-          "id": "parameter:setDebugCountryCoverageState:0:09fc96082d34:196:71",
+          "id": "parameter:setDebugCountryCoverageState:0:09fc96082d34:425:71",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setDebugCountryCoverageState",
@@ -55670,7 +55804,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 196,
+            "line": 425,
             "column": 71
           },
           "authority": "domain-action",
@@ -55679,7 +55813,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "debugCountryCoverage"
@@ -55688,9 +55823,36 @@
                 {
                   "operation": "assign",
                   "key": "debugCountryCoverage"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "debugCountryCoverage"
                 }
               ],
-              "aliasSites": [],
+              "aliasSites": [
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "debugCountryCoverage",
+                  "line": 141,
+                  "column": 5,
+                  "sourceFingerprint": "2d93bf2e9687da9653e8e6ca904a242ef9410362964f050cbd36e12aef3d469e"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "assign",
+                  "key": "debugCountryCoverage",
+                  "line": 148,
+                  "column": 3,
+                  "sourceFingerprint": "855b785bce4b4df1375b4f9f67ddeced65caefa76574537e2a5d9b50d1128419"
+                }
+              ],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": []
@@ -55698,7 +55860,7 @@
           ]
         },
         {
-          "id": "parameter:setFirstVisibleFramePaintedState:0:09fc96082d34:161:67",
+          "id": "parameter:setFirstVisibleFramePaintedState:0:09fc96082d34:390:67",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setFirstVisibleFramePaintedState",
@@ -55706,7 +55868,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 161,
+            "line": 390,
             "column": 67
           },
           "authority": "domain-action",
@@ -55715,7 +55877,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "firstVisibleFramePainted"
@@ -55724,9 +55887,36 @@
                 {
                   "operation": "assign",
                   "key": "firstVisibleFramePainted"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "firstVisibleFramePainted"
                 }
               ],
-              "aliasSites": [],
+              "aliasSites": [
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "firstVisibleFramePainted",
+                  "line": 97,
+                  "column": 5,
+                  "sourceFingerprint": "6f00cb4278fdb1d380eacaab17a36a278079c070ae683904affa495352c44fbf"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "assign",
+                  "key": "firstVisibleFramePainted",
+                  "line": 104,
+                  "column": 3,
+                  "sourceFingerprint": "628ff421dc675f5a91268c491d7248b25fb7b65f6ba4d6147fca7fbb77a8de91"
+                }
+              ],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": []
@@ -55734,7 +55924,7 @@
           ]
         },
         {
-          "id": "parameter:setProjectedBoundsDiagnosticsState:0:09fc96082d34:187:3",
+          "id": "parameter:setProjectedBoundsDiagnosticsState:0:09fc96082d34:416:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setProjectedBoundsDiagnosticsState",
@@ -55742,7 +55932,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 187,
+            "line": 416,
             "column": 3
           },
           "authority": "domain-action",
@@ -55751,7 +55941,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "projectedBoundsDiagnostics"
@@ -55760,9 +55951,36 @@
                 {
                   "operation": "assign",
                   "key": "projectedBoundsDiagnostics"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "projectedBoundsDiagnostics"
                 }
               ],
-              "aliasSites": [],
+              "aliasSites": [
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "projectedBoundsDiagnostics",
+                  "line": 119,
+                  "column": 5,
+                  "sourceFingerprint": "40a89e693c62915d1de6586fec7e89183ea30fc3e0cef13e37e074c2aac99846"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target"
+                  ],
+                  "operation": "assign",
+                  "key": "projectedBoundsDiagnostics",
+                  "line": 126,
+                  "column": 3,
+                  "sourceFingerprint": "80a52f9eba895a22a51cd81de958ff2b30ee9c41604b40dd760d1bff00ea6fd7"
+                }
+              ],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": []
@@ -55770,7 +55988,7 @@
           ]
         },
         {
-          "id": "parameter:setRenderPerfContextBreakdownState:0:09fc96082d34:132:76",
+          "id": "parameter:setRenderPerfContextBreakdownState:0:09fc96082d34:327:76",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setRenderPerfContextBreakdownState",
@@ -55778,7 +55996,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 132,
+            "line": 327,
             "column": 76
           },
           "authority": "domain-action",
@@ -55787,7 +56005,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "renderPerfMetrics"
@@ -55796,18 +56015,35 @@
                 {
                   "operation": "assign",
                   "key": "renderPerfMetrics"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics"
                 }
               ],
               "aliasSites": [
                 {
                   "alias": "target",
                   "aliasChain": [
+                    "target",
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics",
+                  "line": 53,
+                  "column": 5,
+                  "sourceFingerprint": "52b35e38c35a1d10c019b4ffe01a0fc6357b2af907b6d8fc2edba9be616dd7de"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target",
                     "target"
                   ],
                   "operation": "assign",
                   "key": "renderPerfMetrics",
-                  "line": 94,
-                  "column": 5,
+                  "line": 60,
+                  "column": 3,
                   "sourceFingerprint": "079afe86e09829a95d7b0770eb3b8b86671674b1e9b6681c13490fdbb9b7aab7"
                 }
               ],
@@ -55818,7 +56054,7 @@
           ]
         },
         {
-          "id": "parameter:setRenderPerfMetricEntryState:0:09fc96082d34:118:3",
+          "id": "parameter:setRenderPerfMetricEntryState:0:09fc96082d34:297:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setRenderPerfMetricEntryState",
@@ -55826,7 +56062,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 118,
+            "line": 297,
             "column": 3
           },
           "authority": "domain-action",
@@ -55835,7 +56071,8 @@
               "domain": "renderer",
               "migrationPhase": "P4.3",
               "operations": [
-                "assign"
+                "assign",
+                "define-property"
               ],
               "keys": [
                 "renderPerfMetrics"
@@ -55844,25 +56081,50 @@
                 {
                   "operation": "assign",
                   "key": "renderPerfMetrics"
+                },
+                {
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics"
                 }
               ],
               "aliasSites": [
                 {
                   "alias": "target",
                   "aliasChain": [
+                    "target",
+                    "target"
+                  ],
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics",
+                  "line": 53,
+                  "column": 5,
+                  "sourceFingerprint": "52b35e38c35a1d10c019b4ffe01a0fc6357b2af907b6d8fc2edba9be616dd7de"
+                },
+                {
+                  "alias": "target",
+                  "aliasChain": [
+                    "target",
                     "target"
                   ],
                   "operation": "assign",
                   "key": "renderPerfMetrics",
-                  "line": 94,
-                  "column": 5,
+                  "line": 60,
+                  "column": 3,
                   "sourceFingerprint": "079afe86e09829a95d7b0770eb3b8b86671674b1e9b6681c13490fdbb9b7aab7"
                 }
               ],
               "dynamicSites": [
                 {
-                  "line": 128,
-                  "column": 3,
+                  "line": 314,
+                  "column": 5,
+                  "operation": "define-property",
+                  "key": "renderPerfMetrics",
+                  "pathPattern": "renderPerfMetrics.*",
+                  "sourceFingerprint": "1218cda3d9013286c12b3cbb88335b7cc8eb41a17a88dbafd18999eb79669f84"
+                },
+                {
+                  "line": 322,
+                  "column": 5,
                   "operation": "assign",
                   "key": "renderPerfMetrics",
                   "pathPattern": "renderPerfMetrics.*",
