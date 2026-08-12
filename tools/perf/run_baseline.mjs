@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import process from "node:process";
+import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 import {
@@ -48,6 +49,7 @@ const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
   Number.parseInt(process.env.PERF_DEV_SERVER_READY_TIMEOUT_MS || "45000", 10) || 45_000
 );
 const MIN_GATE_WARMUPS = 3;
+const CANONICAL_GATE_RUN_COUNT = 5;
 const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;
 const CURRENT_PERF_REPORT_SCHEMA_VERSION = 3;
 const PERF_REGRESSION_MODES = new Set(["enforce", "diagnostic"]);
@@ -1466,6 +1468,15 @@ export function validateGateBaselineReport(baselineReport, scenarioIds, baseline
       `[perf-baseline] Baseline report has invalid gate metrics for scenarios (${invalid.join("; ")}): ${baselinePath}`
     );
   }
+  const roleMismatches = collectGovernedRenderSampleRoleMismatches(
+    baselineReport,
+    scenarioIds,
+  );
+  if (roleMismatches.length) {
+    throw new Error(
+      `[perf-baseline] Baseline render sample role mismatch: ${baselinePath}\n${roleMismatches.map((item) => `- ${item}`).join("\n")}`
+    );
+  }
 }
 
 export function validateGateCurrentReport(currentReport, scenarioIds, label = "current report") {
@@ -1508,23 +1519,47 @@ export function validateGateCurrentReport(currentReport, scenarioIds, label = "c
 
 function collectGovernedRenderSampleRoleMismatches(report, scenarioIds) {
   const mismatches = [];
+  const configuredRunCount = report?.config?.runs;
+  if (configuredRunCount !== CANONICAL_GATE_RUN_COUNT) {
+    mismatches.push(
+      `config.runs expected=${CANONICAL_GATE_RUN_COUNT} actual=${JSON.stringify(configuredRunCount)}`
+    );
+  }
   for (const scenarioId of scenarioIds) {
     if (!GOVERNED_RENDER_SAMPLE_SCENARIOS.includes(scenarioId)) {
       continue;
     }
     const scenario = report?.scenarios?.[scenarioId] || {};
     const roleSummary = scenario.renderSampleRoleSummary || {};
-    const runs = Array.isArray(scenario.runs) ? scenario.runs : [];
-    if (roleSummary.policyId !== RENDER_SAMPLE_ROLE_POLICY_ID) {
-      mismatches.push(`${scenarioId}.policyId=${JSON.stringify(roleSummary.policyId)}`);
+    if (!Array.isArray(scenario.runs)) {
+      mismatches.push(`${scenarioId}.runs must be an array`);
+      continue;
     }
-    if (roleSummary.canonicalRoleId !== CANONICAL_RENDER_SAMPLE_ROLE_ID) {
-      mismatches.push(`${scenarioId}.canonicalRoleId=${JSON.stringify(roleSummary.canonicalRoleId)}`);
-    }
-    if (roleSummary.matchedRunCount !== runs.length || roleSummary.mismatchCount !== 0) {
+    const runs = scenario.runs;
+    if (runs.length !== CANONICAL_GATE_RUN_COUNT) {
       mismatches.push(
-        `${scenarioId}.roleMatches=${finiteNumber(roleSummary.matchedRunCount)}/${runs.length} mismatches=${finiteNumber(roleSummary.mismatchCount)}`
+        `${scenarioId}.runs.length expected=${CANONICAL_GATE_RUN_COUNT} actual=${runs.length}`
       );
+    }
+    const recomputedAnalyses = runs.map((run, runIndex) => {
+      const recomputed = analyzeRenderSampleRole({
+        scenarioId,
+        snapshot: run?.snapshot,
+        summary: run?.summary,
+      });
+      if (!isDeepStrictEqual(run?.renderSampleRole, recomputed)) {
+        mismatches.push(`${scenarioId}.run-${runIndex + 1}.renderSampleRole does not match raw snapshot evidence`);
+      }
+      if (!recomputed.roleMatched) {
+        mismatches.push(
+          `${scenarioId}.run-${runIndex + 1}.canonicalRole=${recomputed.roleMismatches.join(",") || "unmatched"}`
+        );
+      }
+      return recomputed;
+    });
+    const recomputedSummary = summarizeRenderSampleRoleAnalyses(recomputedAnalyses);
+    if (!isDeepStrictEqual(roleSummary, recomputedSummary)) {
+      mismatches.push(`${scenarioId}.renderSampleRoleSummary does not match raw run evidence`);
     }
     if (!(finiteNumber(scenario?.summary?.canonicalRenderSampleMs) > 0)) {
       mismatches.push(`${scenarioId}.canonicalRenderSampleMs must be > 0`);
@@ -1825,13 +1860,13 @@ async function main() {
     return;
   }
 
-  await writeBaselineArtifacts(options, report);
   const renderSampleRoleMismatches = collectGovernedRenderSampleRoleMismatches(report, options.scenarios);
   if (renderSampleRoleMismatches.length) {
     throw new Error(
       `Perf baseline render sample role mismatch.\n${renderSampleRoleMismatches.map((item) => `- ${item}`).join("\n")}`
     );
   }
+  await writeBaselineArtifacts(options, report);
   console.log(`Baseline written to ${path.relative(REPO_ROOT, options.baselineJson)}`);
   if (options.writeMarkdown) {
     console.log(`Markdown written to ${path.relative(REPO_ROOT, options.baselineMd)}`);

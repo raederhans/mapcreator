@@ -668,6 +668,7 @@ function freezeStateDetachedCaptureEntry({
   targetArgumentIndex = 0,
   sourceFingerprint,
   cloneHelperFingerprints = {},
+  readHelperFingerprints = {},
 } = {}) {
   return Object.freeze({
     modulePath: normalizeModulePath(modulePath),
@@ -675,12 +676,17 @@ function freezeStateDetachedCaptureEntry({
     targetArgumentIndex: Number(targetArgumentIndex),
     sourceFingerprint: String(sourceFingerprint || ""),
     cloneHelperFingerprints: Object.freeze({ ...cloneHelperFingerprints }),
+    readHelperFingerprints: Object.freeze({ ...readHelperFingerprints }),
   });
 }
 
 const RENDERER_DIAGNOSTICS_DETACHED_CLONE_HELPERS = Object.freeze({
   cloneDiagnosticValue:
-    "1f7da7c52713959924d2a70b1292792ac817077cea5cc098cbb3ac905b049f09",
+    "07c39f1ebbb3d2328aae5713dc6e3e8c43d74c500d8bb18aea9797f5c1e25a24",
+});
+const RENDERER_DIAGNOSTICS_DETACHED_READ_HELPERS = Object.freeze({
+  getOwnDataPropertyValue:
+    "965d43a6b29d0ac4afcc7107972507f3da7be127c9338c633e067e8623692848",
 });
 const RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS = Object.freeze({
   cloneExactAfterSettlePendingPlan:
@@ -690,10 +696,10 @@ const RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS = Object.freeze({
 });
 
 export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
-  ["captureRenderPerfMetricsState", "a72cc5307ca3e9e31f30cf8e43eb00cfd47dfd3a471078f071ca921c8dee6798"],
-  ["captureRenderPerfContextBreakdownState", "a0a312840630b881e417cc6865dd3e47ecb13100f1dc029cea269f499ba75934"],
-  ["captureRenderPerfMetricEntryState", "812e23f274c4379a067e961e00bb77020b0c1230c65f7dd178a82a1f9c52c6f1"],
-  ["captureProjectedBoundsDiagnosticsState", "000d4aaea1539d937598cb15502a8c62f2733007d569bef72dcb4191507f91e1"],
+  ["captureRenderPerfMetricsState", "799cda208851e5ae938cc1904aeb0d6ee17d5e7eb4872015f8d269e9581a894a"],
+  ["captureRenderPerfContextBreakdownState", "32ae271183ee8222ed3530bad2e1485d2d080ff78e017122b5be3ab9da35b5bb"],
+  ["captureRenderPerfMetricEntryState", "8d057da5caba32bb63f40cd8d8f09753ac38ff455260151504a1a4de408b4a7c"],
+  ["captureProjectedBoundsDiagnosticsState", "4352b61b815a7393990db64f2c3e0e355a620f5abaea8d9a8ff78445010e05ea"],
 ].map(([exportName, sourceFingerprint]) =>
   freezeStateDetachedCaptureEntry({
     modulePath: "js/core/state/actions/renderer_diagnostics_actions.js",
@@ -701,6 +707,7 @@ export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
     targetArgumentIndex: 0,
     sourceFingerprint,
     cloneHelperFingerprints: RENDERER_DIAGNOSTICS_DETACHED_CLONE_HELPERS,
+    readHelperFingerprints: RENDERER_DIAGNOSTICS_DETACHED_READ_HELPERS,
   })
 ).concat([
   freezeStateDetachedCaptureEntry({
@@ -746,6 +753,9 @@ export function validateStateDetachedCaptureContract(
       || entry.targetArgumentIndex < 0
       || !/^[a-f0-9]{64}$/.test(String(entry.sourceFingerprint || ""))
       || !Object.entries(entry.cloneHelperFingerprints || {}).every(
+        ([name, fingerprint]) => isValidExportName(name) && /^[a-f0-9]{64}$/.test(fingerprint),
+      )
+      || !Object.entries(entry.readHelperFingerprints || {}).every(
         ([name, fingerprint]) => isValidExportName(name) && /^[a-f0-9]{64}$/.test(fingerprint),
       )
     ) {
@@ -981,6 +991,7 @@ const READ_ONLY_TAINT_CALLS = new Set([
   "Boolean",
   "Number",
   "Object.entries",
+  "Object.getOwnPropertyDescriptor",
   "Object.hasOwn",
   "Object.keys",
   "Object.values",
@@ -1186,6 +1197,7 @@ function collectReachableTaintedHazardSites({
   taintedParameterIndexes = [],
   taintSourcePredicate = () => false,
   safeHelperNames = new Set(),
+  taintPreservingHelperNames = new Set(),
   localFunctions = null,
 } = {}) {
   const functions = localFunctions || topLevelFunctionDeclarations(ast);
@@ -1249,6 +1261,12 @@ function collectReachableTaintedHazardSites({
           !targetPattern
           || !(
             expressionReferencesTaintedInput(sourceExpression, taintedNames)
+            || (
+              sourceExpression?.type === "CallExpression"
+              && sourceExpression.callee?.type === "Identifier"
+              && taintPreservingHelperNames.has(sourceExpression.callee.name)
+              && (sourceExpression.arguments || []).some(expressionIsTainted)
+            )
             || expressionContainsTaintSource(
               sourceExpression,
               taintSourcePredicate,
@@ -1751,6 +1769,7 @@ export function inspectStateDetachedCaptureSource(source, entry) {
     return { violations, sourceFingerprint };
   }
   const safeCloneHelperNames = new Set();
+  const taintPreservingReadHelperNames = new Set();
   for (const [helperName, expectedFingerprint] of Object.entries(
     entry.cloneHelperFingerprints || {},
   )) {
@@ -1768,6 +1787,25 @@ export function inspectStateDetachedCaptureSource(source, entry) {
       }));
     } else {
       safeCloneHelperNames.add(helperName);
+    }
+  }
+  for (const [helperName, expectedFingerprint] of Object.entries(
+    entry.readHelperFingerprints || {},
+  )) {
+    const helper = functions.get(helperName);
+    const actualFingerprint = helper
+      ? fingerprintFunctionSource(normalizedSource, helper)
+      : "";
+    if (actualFingerprint !== expectedFingerprint) {
+      violations.push(createViolation("state-detached-capture-read-helper-source-drift", {
+        modulePath: entry.modulePath,
+        exportName: entry.exportName,
+        helperName,
+        expectedSourceFingerprint: expectedFingerprint,
+        actualSourceFingerprint: actualFingerprint,
+      }));
+    } else {
+      taintPreservingReadHelperNames.add(helperName);
     }
   }
   const targetName = capture.params[entry.targetArgumentIndex].name;
@@ -1828,6 +1866,7 @@ export function inspectStateDetachedCaptureSource(source, entry) {
     rootFunction: capture,
     taintedParameterIndexes: [entry.targetArgumentIndex],
     safeHelperNames: safeCloneHelperNames,
+    taintPreservingHelperNames: taintPreservingReadHelperNames,
   });
   if (hazardSites.length) {
     violations.push(createViolation("state-detached-capture-alias-escape", {
@@ -2035,20 +2074,27 @@ function freezeAllowedDynamicSite({
   });
 }
 
-const RENDER_PERF_METRIC_DYNAMIC_SITE = freezeAllowedDynamicSite({
-  operation: "assign",
-  key: "renderPerfMetrics",
-  pathPattern: "renderPerfMetrics.*",
-});
+const RENDER_PERF_METRIC_DYNAMIC_SITES = Object.freeze([
+  freezeAllowedDynamicSite({
+    operation: "define-property",
+    key: "renderPerfMetrics",
+    pathPattern: "renderPerfMetrics.*",
+  }),
+  freezeAllowedDynamicSite({
+    operation: "assign",
+    key: "renderPerfMetrics",
+    pathPattern: "renderPerfMetrics.*",
+  }),
+]);
 
 const STATE_ACTION_ALLOWED_DYNAMIC_SITES_BY_ID = new Map([
   [
     `${RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH}#setRenderPerfMetricEntryState`,
-    Object.freeze([RENDER_PERF_METRIC_DYNAMIC_SITE]),
+    RENDER_PERF_METRIC_DYNAMIC_SITES,
   ],
   [
     `${RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH}#commitRenderPerfMetricState`,
-    Object.freeze([RENDER_PERF_METRIC_DYNAMIC_SITE]),
+    RENDER_PERF_METRIC_DYNAMIC_SITES,
   ],
 ]);
 

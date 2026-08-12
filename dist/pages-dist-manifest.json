@@ -46522,7 +46522,7 @@
     },
     {
       "path": "app/js/core/state/actions/renderer_diagnostics_actions.js",
-      "size_bytes": 6117,
+      "size_bytes": 13547,
       "source_kind": "dist"
     },
     {
@@ -47522,7 +47522,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1470566,
+      "size_bytes": 1470567,
       "source_kind": "dist"
     },
     {
@@ -47654,7 +47654,7 @@
     {
       "file_count": 9444,
       "path": "app",
-      "size_bytes": 965848041
+      "size_bytes": 965855471
     },
     {
       "file_count": 57,
@@ -47664,7 +47664,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1470566
+      "size_bytes": 1470567
     },
     {
       "file_count": 1,
@@ -47687,5 +47687,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972416968
+  "total_bytes": 972424399
 }

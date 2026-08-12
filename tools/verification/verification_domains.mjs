@@ -236,6 +236,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tools/perf/render_sample_role_policy.mjs",
       "tools/perf/analyze_render_sample_roles.mjs",
       "tools/perf/run_baseline.mjs",
+      "tools/perf/standard_perf_admission.mjs",
       "tests/render_sample_role_policy_behavior.test.mjs",
       "tests/perf_role_governed_report_behavior.test.mjs",
       "tests/test_perf_gate_contract.py",

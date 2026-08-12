@@ -55,7 +55,14 @@ MAP_RENDERER_COMPATIBILITY_ACTION_NAMES = {
 
 
 def assigned_target_keys(source):
-    return set(re.findall(r"\btarget\.([A-Za-z_$][\w$]*)\s*=(?!=)", source))
+    keys = set(re.findall(r"\btarget\.([A-Za-z_$][\w$]*)\s*=(?!=)", source))
+    keys.update(
+        re.findall(
+            r'\bwriteOwnDataProperty\(\s*target\s*,\s*"([^"]+)"',
+            source,
+        )
+    )
+    return keys
 
 
 def direct_runtime_writes(source):

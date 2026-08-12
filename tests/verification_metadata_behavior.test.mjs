@@ -1273,6 +1273,21 @@ test("dated schema-2 baseline artifacts route to the perf contract", () => {
   }
 });
 
+test("standard perf admission routes directly to the render sample role policy", () => {
+  const sourceRef = "tools/perf/standard_perf_admission.mjs";
+  const entry = VERIFICATION_DOMAINS.find(
+    (candidate) => candidate.id === "infra:render-sample-role-policy",
+  );
+  assert.ok(entry?.sourceRefs.includes(sourceRef));
+  const report = buildRecommendation([sourceRef]);
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(
+    report.recommendedCommands.some(
+      (command) => command.commandRef === "test:node:render-sample-role-policy",
+    ),
+  );
+});
+
 test("city policy and live power preflight have named verification ownership", () => {
   const cityPolicyEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "verify-core:test:node:city-points-render-owner");
   assert.ok(cityPolicyEntry);

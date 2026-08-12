@@ -949,6 +949,56 @@ test("baseline admission requires the exact gate scenario sequence", () => {
   );
 });
 
+test("baseline admission binds five raw runs to canonical render-role evidence", async () => {
+  const baselinePath = path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.json");
+  const canonical = JSON.parse(await fs.readFile(baselinePath, "utf8"));
+  assert.doesNotThrow(() => validateGateBaselineReport(canonical, SCENARIOS, baselinePath));
+
+  const missingRuns = structuredClone(canonical);
+  delete missingRuns.scenarios.tno_1962.runs;
+  assert.throws(
+    () => validateGateBaselineReport(missingRuns, SCENARIOS, baselinePath),
+    /tno_1962\.runs must be an array/,
+  );
+
+  const shortRuns = structuredClone(canonical);
+  shortRuns.scenarios.tno_1962.runs.pop();
+  assert.throws(
+    () => validateGateBaselineReport(shortRuns, SCENARIOS, baselinePath),
+    /tno_1962\.runs\.length expected=5 actual=4/,
+  );
+
+  const configuredRunDrift = structuredClone(canonical);
+  configuredRunDrift.config.runs = 6;
+  assert.throws(
+    () => validateGateBaselineReport(configuredRunDrift, SCENARIOS, baselinePath),
+    /config\.runs expected=5 actual=6/,
+  );
+
+  const storedRoleDrift = structuredClone(canonical);
+  storedRoleDrift.scenarios.tno_1962.runs[0].renderSampleRole.roleMatched = false;
+  assert.throws(
+    () => validateGateBaselineReport(storedRoleDrift, SCENARIOS, baselinePath),
+    /run-1\.renderSampleRole does not match raw snapshot evidence/,
+  );
+
+  const aggregateDrift = structuredClone(canonical);
+  aggregateDrift.scenarios.hoi4_1939.renderSampleRoleSummary.matchedRunCount = 4;
+  assert.throws(
+    () => validateGateBaselineReport(aggregateDrift, SCENARIOS, baselinePath),
+    /hoi4_1939\.renderSampleRoleSummary does not match raw run evidence/,
+  );
+
+  const duplicateCandidate = structuredClone(canonical);
+  const renderSamples = duplicateCandidate.scenarios.tno_1962.runs[0].snapshot.renderSamples;
+  renderSamples.samples.push({ ...renderSamples.samples.at(-1), sequence: renderSamples.samples.length + 1 });
+  renderSamples.count = renderSamples.samples.length;
+  assert.throws(
+    () => validateGateBaselineReport(duplicateCandidate, SCENARIOS, baselinePath),
+    /canonicalRole=canonical-candidate-unique/,
+  );
+});
+
 test("gate scenario selection fails before measurement unless the canonical set is exact", () => {
   assert.doesNotThrow(() => validateGateScenarioSelection(["tno_1962", "hoi4_1939"]));
   for (const scenarios of [

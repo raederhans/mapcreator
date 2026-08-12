@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import fsPromises from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import {
@@ -64,6 +67,7 @@ import {
   validateLegacyStateWriterSemanticLedger,
   validateLegacyMembershipRetirementReplacements,
   validateStateWriterPolicyProgression,
+  writeStateWriterPolicyAtomically,
 } from "../tools/build_state_writer_policy.mjs";
 import {
   DERIVED_ALIAS_TAINT_MODES,
@@ -155,6 +159,47 @@ function createPolicyFixture() {
     ],
   };
 }
+
+test("state writer policy replacement fsyncs a validated sibling before rename", async (t) => {
+  const tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "state-writer-policy-"));
+  t.after(() => fs.rmSync(tempDirectory, { recursive: true, force: true }));
+  const targetPath = path.join(tempDirectory, "state_writer_policy.json");
+  const original = '{"schemaVersion":1}\n';
+  const replacement = '{"schemaVersion":2,"progress":{"latestPhase":"P4.3"}}\n';
+  fs.writeFileSync(targetPath, original, "utf8");
+
+  await writeStateWriterPolicyAtomically(targetPath, replacement, {
+    tempSuffix: "success",
+  });
+  assert.equal(fs.readFileSync(targetPath, "utf8"), replacement);
+  assert.deepEqual(fs.readdirSync(tempDirectory), ["state_writer_policy.json"]);
+
+  const renameFailure = Object.assign({}, fsPromises, {
+    rename: async () => {
+      const error = new Error("fixture rename failure");
+      error.code = "EACCES";
+      throw error;
+    },
+  });
+  await assert.rejects(
+    writeStateWriterPolicyAtomically(targetPath, original, {
+      fsImpl: renameFailure,
+      tempSuffix: "rename-failure",
+    }),
+    /fixture rename failure/,
+  );
+  assert.equal(fs.readFileSync(targetPath, "utf8"), replacement);
+  assert.deepEqual(fs.readdirSync(tempDirectory), ["state_writer_policy.json"]);
+
+  await assert.rejects(
+    writeStateWriterPolicyAtomically(targetPath, "{", {
+      tempSuffix: "invalid-json",
+    }),
+    SyntaxError,
+  );
+  assert.equal(fs.readFileSync(targetPath, "utf8"), replacement);
+  assert.deepEqual(fs.readdirSync(tempDirectory), ["state_writer_policy.json"]);
+});
 
 function createFinding(overrides = {}) {
   return {
@@ -4200,7 +4245,17 @@ test("renderer diagnostics action source admits only its two registered metric d
     })),
     [
       {
+        operation: "define-property",
+        key: "renderPerfMetrics",
+        pathPattern: "renderPerfMetrics.*",
+      },
+      {
         operation: "assign",
+        key: "renderPerfMetrics",
+        pathPattern: "renderPerfMetrics.*",
+      },
+      {
+        operation: "define-property",
         key: "renderPerfMetrics",
         pathPattern: "renderPerfMetrics.*",
       },

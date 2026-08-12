@@ -7,6 +7,177 @@ function assertStateTarget(target) {
   }
 }
 
+function getOwnDataPropertyValue(target, key) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
+  return descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : undefined;
+}
+
+function hasSameStateValue(left, right) {
+  return left === right || (left !== left && right !== right);
+}
+
+function assertOwnDataPropertyWritable(target, key, value, label) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
+  if (descriptor && Object.hasOwn(descriptor, "value")) {
+    if (!descriptor.writable && !hasSameStateValue(descriptor.value, value)) {
+      throw new TypeError(`[renderer_diagnostics_actions] ${label} must be writable`);
+    }
+    return descriptor;
+  }
+  if (descriptor && !descriptor.configurable) {
+    throw new TypeError(`[renderer_diagnostics_actions] ${label} accessor must be configurable`);
+  }
+  if (!descriptor && !Object.isExtensible(target)) {
+    throw new TypeError(`[renderer_diagnostics_actions] ${label} target must be extensible`);
+  }
+  return descriptor;
+}
+
+function writeRenderPerfMetricsOwnDataProperty(target, value) {
+  const descriptor = assertOwnDataPropertyWritable(
+    target,
+    "renderPerfMetrics",
+    value,
+    "renderPerfMetrics",
+  );
+  if (
+    descriptor
+    && Object.hasOwn(descriptor, "value")
+    && hasSameStateValue(descriptor.value, value)
+  ) {
+    return value;
+  }
+  if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+    Object.defineProperty(target, "renderPerfMetrics", {
+      configurable: descriptor?.configurable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  target.renderPerfMetrics = value;
+  return value;
+}
+
+function writeRenderPerfMetricSequenceOwnDataProperty(target, value) {
+  const descriptor = assertOwnDataPropertyWritable(
+    target,
+    "renderPerfMetricSequence",
+    value,
+    "renderPerfMetricSequence",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value") && hasSameStateValue(descriptor.value, value)) {
+    return value;
+  }
+  if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+    Object.defineProperty(target, "renderPerfMetricSequence", {
+      configurable: descriptor?.configurable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  target.renderPerfMetricSequence = value;
+  return value;
+}
+
+function writeFirstVisibleFramePaintedOwnDataProperty(target, value) {
+  const descriptor = assertOwnDataPropertyWritable(
+    target,
+    "firstVisibleFramePainted",
+    value,
+    "firstVisibleFramePainted",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value") && hasSameStateValue(descriptor.value, value)) {
+    return value;
+  }
+  if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+    Object.defineProperty(target, "firstVisibleFramePainted", {
+      configurable: descriptor?.configurable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  target.firstVisibleFramePainted = value;
+  return value;
+}
+
+function writeProjectedBoundsDiagnosticsOwnDataProperty(target, value) {
+  const descriptor = assertOwnDataPropertyWritable(
+    target,
+    "projectedBoundsDiagnostics",
+    value,
+    "projectedBoundsDiagnostics",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value") && hasSameStateValue(descriptor.value, value)) {
+    return value;
+  }
+  if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+    Object.defineProperty(target, "projectedBoundsDiagnostics", {
+      configurable: descriptor?.configurable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  target.projectedBoundsDiagnostics = value;
+  return value;
+}
+
+function writeDebugCountryCoverageOwnDataProperty(target, value) {
+  const descriptor = assertOwnDataPropertyWritable(
+    target,
+    "debugCountryCoverage",
+    value,
+    "debugCountryCoverage",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value") && hasSameStateValue(descriptor.value, value)) {
+    return value;
+  }
+  if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+    Object.defineProperty(target, "debugCountryCoverage", {
+      configurable: descriptor?.configurable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  target.debugCountryCoverage = value;
+  return value;
+}
+
+function writeRenderPerfContextBreakdownOwnDataProperty(metrics, value) {
+  const descriptor = assertOwnDataPropertyWritable(
+    metrics,
+    "contextBreakdown",
+    value,
+    "renderPerfMetrics.contextBreakdown",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value") && hasSameStateValue(descriptor.value, value)) {
+    return value;
+  }
+  if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+    Object.defineProperty(metrics, "contextBreakdown", {
+      configurable: descriptor?.configurable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  metrics.contextBreakdown = value;
+  return value;
+}
+
+function getOwnObjectPropertyValue(target, key) {
+  const value = getOwnDataPropertyValue(target, key);
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : undefined;
+}
+
 function cloneDiagnosticValue(value, seen = new WeakMap()) {
   if (!value || typeof value !== "object") return value;
   if (seen.has(value)) return seen.get(value);
@@ -32,15 +203,22 @@ function cloneDiagnosticValue(value, seen = new WeakMap()) {
   }
   const clone = {};
   seen.set(value, clone);
-  Object.entries(value).forEach(([key, entry]) => {
-    clone[key] = cloneDiagnosticValue(entry, seen);
+  Object.keys(value).forEach((key) => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !Object.hasOwn(descriptor, "value")) return;
+    Object.defineProperty(clone, key, {
+      configurable: true,
+      enumerable: true,
+      value: cloneDiagnosticValue(descriptor.value, seen),
+      writable: true,
+    });
   });
   return clone;
 }
 
 export function captureRenderPerfMetricsState(target) {
   assertStateTarget(target);
-  const metrics = target.renderPerfMetrics;
+  const metrics = getOwnDataPropertyValue(target, "renderPerfMetrics");
   if (!metrics || typeof metrics !== "object" || Array.isArray(metrics)) {
     return undefined;
   }
@@ -49,11 +227,13 @@ export function captureRenderPerfMetricsState(target) {
 
 export function captureRenderPerfContextBreakdownState(target) {
   assertStateTarget(target);
-  const breakdown = target.renderPerfMetrics?.contextBreakdown;
-  if (!breakdown || typeof breakdown !== "object" || Array.isArray(breakdown)) {
-    return {};
-  }
-  return cloneDiagnosticValue(breakdown);
+  const metrics = getOwnDataPropertyValue(target, "renderPerfMetrics");
+  const breakdown = metrics && typeof metrics === "object" && !Array.isArray(metrics)
+    ? getOwnDataPropertyValue(metrics, "contextBreakdown")
+    : undefined;
+  return breakdown && typeof breakdown === "object" && !Array.isArray(breakdown)
+    ? cloneDiagnosticValue(breakdown)
+    : {};
 }
 
 export function captureRenderPerfMetricEntryState(target, name) {
@@ -62,14 +242,17 @@ export function captureRenderPerfMetricEntryState(target, name) {
   if (!normalizedName) {
     throw new TypeError("[renderer_diagnostics_actions] name must be a non-empty string");
   }
-  const entry = target.renderPerfMetrics?.[normalizedName];
+  const metrics = getOwnDataPropertyValue(target, "renderPerfMetrics");
+  const entry = metrics && typeof metrics === "object" && !Array.isArray(metrics)
+    ? getOwnDataPropertyValue(metrics, normalizedName)
+    : undefined;
   if (entry === undefined) return undefined;
   return cloneDiagnosticValue(entry);
 }
 
 export function captureProjectedBoundsDiagnosticsState(target) {
   assertStateTarget(target);
-  const diagnostics = target.projectedBoundsDiagnostics;
+  const diagnostics = getOwnDataPropertyValue(target, "projectedBoundsDiagnostics");
   if (
     !diagnostics
     || typeof diagnostics !== "object"
@@ -86,12 +269,8 @@ export function captureProjectedBoundsDiagnosticsState(target) {
 
 export function ensureRenderPerfMetricsState(target) {
   assertStateTarget(target);
-  if (
-    !target.renderPerfMetrics
-    || typeof target.renderPerfMetrics !== "object"
-    || Array.isArray(target.renderPerfMetrics)
-  ) {
-    target.renderPerfMetrics = {};
+  if (!getOwnObjectPropertyValue(target, "renderPerfMetrics")) {
+    writeRenderPerfMetricsOwnDataProperty(target, {});
   }
   return true;
 }
@@ -108,7 +287,7 @@ export function replaceRenderPerfMetricsState(target, metrics) {
   ) {
     throw new TypeError("[renderer_diagnostics_actions] metrics must be an object or undefined");
   }
-  target.renderPerfMetrics = metrics;
+  writeRenderPerfMetricsOwnDataProperty(target, metrics);
   return metrics;
 }
 
@@ -125,7 +304,23 @@ export function setRenderPerfMetricEntryState(
     throw new TypeError("[renderer_diagnostics_actions] entry must be an object");
   }
   ensureRenderPerfMetricsState(target);
-  target.renderPerfMetrics[normalizedName] = entry;
+  const descriptor = assertOwnDataPropertyWritable(
+    target.renderPerfMetrics,
+    normalizedName,
+    entry,
+    `renderPerfMetrics.${normalizedName}`,
+  );
+  if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+    Object.defineProperty(target.renderPerfMetrics, normalizedName, {
+      configurable: descriptor?.configurable ?? true,
+      enumerable: descriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  if (!descriptor || !Object.hasOwn(descriptor, "value") || !hasSameStateValue(descriptor.value, entry)) {
+    target.renderPerfMetrics[normalizedName] = entry;
+  }
   return entry;
 }
 
@@ -135,7 +330,8 @@ export function setRenderPerfContextBreakdownState(target, breakdown = {}) {
     throw new TypeError("[renderer_diagnostics_actions] breakdown must be an object");
   }
   ensureRenderPerfMetricsState(target);
-  target.renderPerfMetrics.contextBreakdown = breakdown;
+  const metrics = getOwnObjectPropertyValue(target, "renderPerfMetrics");
+  writeRenderPerfContextBreakdownOwnDataProperty(metrics, breakdown);
   return breakdown;
 }
 
@@ -153,15 +349,36 @@ export function commitRenderPerfMetricState(
   }
   ensureRenderPerfMetricsState(target);
   const nextSequence = Math.max(0, Number(sequence || 0));
-  target.renderPerfMetrics[normalizedName] = entry;
-  target.renderPerfMetricSequence = nextSequence;
+  const metricDescriptor = assertOwnDataPropertyWritable(
+    target.renderPerfMetrics,
+    normalizedName,
+    entry,
+    `renderPerfMetrics.${normalizedName}`,
+  );
+  assertOwnDataPropertyWritable(target, "renderPerfMetricSequence", nextSequence, "renderPerfMetricSequence");
+  if (!metricDescriptor || !Object.hasOwn(metricDescriptor, "value")) {
+    Object.defineProperty(target.renderPerfMetrics, normalizedName, {
+      configurable: metricDescriptor?.configurable ?? true,
+      enumerable: metricDescriptor?.enumerable ?? true,
+      value: undefined,
+      writable: true,
+    });
+  }
+  if (
+    !metricDescriptor
+    || !Object.hasOwn(metricDescriptor, "value")
+    || !hasSameStateValue(metricDescriptor.value, entry)
+  ) {
+    target.renderPerfMetrics[normalizedName] = entry;
+  }
+  writeRenderPerfMetricSequenceOwnDataProperty(target, nextSequence);
   return nextSequence;
 }
 
 export function setFirstVisibleFramePaintedState(target, painted) {
   assertStateTarget(target);
   const nextPainted = Boolean(painted);
-  target.firstVisibleFramePainted = nextPainted;
+  writeFirstVisibleFramePaintedOwnDataProperty(target, nextPainted);
   return nextPainted;
 }
 
@@ -177,7 +394,7 @@ export function resetProjectedBoundsDiagnosticsState(
   if (!diagnostics || typeof diagnostics !== "object" || Array.isArray(diagnostics)) {
     throw new TypeError("[renderer_diagnostics_actions] diagnostics must be an object");
   }
-  target.projectedBoundsDiagnostics = diagnostics;
+  writeProjectedBoundsDiagnosticsOwnDataProperty(target, diagnostics);
   return true;
 }
 
@@ -189,12 +406,12 @@ export function setProjectedBoundsDiagnosticsState(
   if (!diagnostics || typeof diagnostics !== "object" || Array.isArray(diagnostics)) {
     throw new TypeError("[renderer_diagnostics_actions] diagnostics must be an object");
   }
-  target.projectedBoundsDiagnostics = diagnostics;
+  writeProjectedBoundsDiagnosticsOwnDataProperty(target, diagnostics);
   return true;
 }
 
 export function setDebugCountryCoverageState(target, coverage = null) {
   assertStateTarget(target);
-  target.debugCountryCoverage = coverage;
+  writeDebugCountryCoverageOwnDataProperty(target, coverage);
   return coverage;
 }

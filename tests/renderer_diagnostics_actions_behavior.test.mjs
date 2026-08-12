@@ -253,3 +253,106 @@ test("render perf ensure repairs array roots once", async () => {
   assert.equal(ensureRenderPerfMetricsState(target), true);
   assert.equal(target.renderPerfMetrics, metrics);
 });
+
+test("diagnostics actions isolate inherited holders without invoking accessors", async () => {
+  const {
+    captureRenderPerfMetricEntryState,
+    captureRenderPerfMetricsState,
+    commitRenderPerfMetricState,
+    ensureRenderPerfMetricsState,
+  } = await loadActions();
+  const inheritedMetrics = { shared: { durationMs: 1 } };
+  let getterCalls = 0;
+  let setterCalls = 0;
+  const prototype = {};
+  Object.defineProperty(prototype, "renderPerfMetrics", {
+    configurable: true,
+    get() {
+      getterCalls += 1;
+      return inheritedMetrics;
+    },
+    set() {
+      setterCalls += 1;
+    },
+  });
+  const target = Object.create(prototype);
+
+  assert.equal(captureRenderPerfMetricsState(target), undefined);
+  assert.equal(ensureRenderPerfMetricsState(target), true);
+  assert.equal(getterCalls, 0);
+  assert.equal(setterCalls, 0);
+  assert.equal(Object.hasOwn(target, "renderPerfMetrics"), true);
+  assert.notEqual(target.renderPerfMetrics, inheritedMetrics);
+
+  const entry = { durationMs: 5 };
+  assert.equal(commitRenderPerfMetricState(target, {
+    name: "shared",
+    entry,
+    sequence: 2,
+  }), 2);
+  assert.equal(captureRenderPerfMetricEntryState(target, "shared").durationMs, 5);
+  assert.equal(inheritedMetrics.shared.durationMs, 1);
+  assert.equal(getterCalls, 0);
+  assert.equal(setterCalls, 0);
+});
+
+test("diagnostics actions replace configurable accessors and fail closed on frozen descriptors", async () => {
+  const {
+    commitRenderPerfMetricState,
+    ensureRenderPerfMetricsState,
+    replaceRenderPerfMetricsState,
+  } = await loadActions();
+  let getterCalls = 0;
+  let setterCalls = 0;
+  const accessorTarget = {};
+  Object.defineProperty(accessorTarget, "renderPerfMetrics", {
+    configurable: true,
+    enumerable: false,
+    get() {
+      getterCalls += 1;
+      return { leaked: true };
+    },
+    set() {
+      setterCalls += 1;
+    },
+  });
+  ensureRenderPerfMetricsState(accessorTarget);
+  const holderDescriptor = Object.getOwnPropertyDescriptor(accessorTarget, "renderPerfMetrics");
+  assert.equal(getterCalls, 0);
+  assert.equal(setterCalls, 0);
+  assert.equal(Object.hasOwn(holderDescriptor, "value"), true);
+  assert.equal(holderDescriptor.enumerable, false);
+
+  const frozenHolderTarget = {};
+  const frozenHolder = {};
+  Object.defineProperty(frozenHolderTarget, "renderPerfMetrics", {
+    configurable: false,
+    enumerable: true,
+    value: frozenHolder,
+    writable: false,
+  });
+  assert.equal(ensureRenderPerfMetricsState(frozenHolderTarget), true);
+  assert.throws(
+    () => replaceRenderPerfMetricsState(frozenHolderTarget, {}),
+    /renderPerfMetrics must be writable/,
+  );
+  assert.equal(frozenHolderTarget.renderPerfMetrics, frozenHolder);
+
+  let sequenceSetterCalls = 0;
+  Object.defineProperty(frozenHolderTarget, "renderPerfMetricSequence", {
+    configurable: false,
+    set() {
+      sequenceSetterCalls += 1;
+    },
+  });
+  assert.throws(
+    () => commitRenderPerfMetricState(frozenHolderTarget, {
+      name: "frame",
+      entry: { durationMs: 3 },
+      sequence: 1,
+    }),
+    /renderPerfMetricSequence accessor must be configurable/,
+  );
+  assert.equal(sequenceSetterCalls, 0);
+  assert.equal(Object.hasOwn(frozenHolder, "frame"), false);
+});

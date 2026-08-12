@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
@@ -54,6 +54,41 @@ export const STATE_WRITER_POLICY_PATH = path.join(
   "tools",
   "state_writer_policy.json",
 );
+
+export async function writeStateWriterPolicyAtomically(
+  targetPath,
+  serialized,
+  {
+    fsImpl = fs,
+    tempSuffix = `${process.pid}-${randomUUID()}`,
+  } = {},
+) {
+  const resolvedTargetPath = path.resolve(String(targetPath || ""));
+  const normalizedSerialized = String(serialized || "");
+  JSON.parse(normalizedSerialized);
+  const tempPath = path.join(
+    path.dirname(resolvedTargetPath),
+    `.${path.basename(resolvedTargetPath)}.${String(tempSuffix)}.tmp`,
+  );
+  let handle = null;
+  try {
+    handle = await fsImpl.open(tempPath, "wx");
+    await handle.writeFile(normalizedSerialized, "utf8");
+    await handle.sync();
+    await handle.close();
+    handle = null;
+    JSON.parse(await fsImpl.readFile(tempPath, "utf8"));
+    await fsImpl.rename(tempPath, resolvedTargetPath);
+  } catch (error) {
+    if (handle) {
+      await handle.close().catch(() => {});
+    }
+    await fsImpl.unlink(tempPath).catch((unlinkError) => {
+      if (unlinkError?.code !== "ENOENT") throw unlinkError;
+    });
+    throw error;
+  }
+}
 const LEGACY_ALLOWLIST_PATH = path.join(
   PROJECT_ROOT,
   "tools",
@@ -5541,7 +5576,10 @@ async function main() {
   });
   const serialized = `${JSON.stringify(policy, null, 2)}\n`;
   if (args.write) {
-    await fs.writeFile(STATE_WRITER_POLICY_PATH, serialized, "utf8");
+    await writeStateWriterPolicyAtomically(
+      STATE_WRITER_POLICY_PATH,
+      serialized,
+    );
     console.log(
       `Wrote ${normalizeRelativePath(path.relative(PROJECT_ROOT, STATE_WRITER_POLICY_PATH))} with ${policy.writers.length} writers.`,
     );
