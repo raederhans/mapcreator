@@ -43,7 +43,6 @@ import {
   bumpSceneGenerationState,
   resetProjectedBoundsCacheState as resetProjectedBoundsRuntimeCacheState,
   commitRendererDprStageState,
-  setFirstVisibleFramePaintedState,
   commitProjectedBoundsDiagnosticsState,
 } from "./state/renderer_runtime_state.js";
 import {
@@ -81,6 +80,7 @@ import {
   commitRenderPerfMetricState,
   ensureRenderPerfMetricsState,
   setDebugCountryCoverageState,
+  setFirstVisibleFramePaintedState,
   setRenderPerfContextBreakdownState,
   setRenderPerfMetricEntryState,
 } from "./state/actions/renderer_diagnostics_actions.js";
@@ -1580,7 +1580,7 @@ function getSetMapDataTransactionOwner() {
         };
       },
       clearSphericalFeatureDiagnosticsCache: () => {
-        ensureProjectedBoundsCacheState(runtimeState);
+        ensureProjectedBoundsCache();
         clearSphericalFeatureDiagnosticsCacheState(runtimeState);
       },
       buildIndex,
@@ -6995,7 +6995,7 @@ function isWorldBounds(bounds) {
 
 function getSphericalFeatureDiagnostics(feature, { featureId = null, allowCompute = true } = {}) {
   const resolvedFeatureId = featureId || getFeatureId(feature);
-  ensureProjectedBoundsCacheState(runtimeState);
+  ensureProjectedBoundsCache();
   const cachedDiagnostics = resolvedFeatureId
     ? getSphericalFeatureDiagnosticsCacheEntryState(runtimeState, resolvedFeatureId)
     : null;

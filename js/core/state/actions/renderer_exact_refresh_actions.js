@@ -68,15 +68,18 @@ function installExactAfterSettleControllerState(target, controller) {
   return controller;
 }
 
-function ensureExactAfterSettleControllerField(controller, fieldName, value) {
+function hasOwnExactAfterSettleControllerField(controller, fieldName) {
   const descriptor = Object.getOwnPropertyDescriptor(controller, fieldName);
-  if (descriptor && Object.hasOwn(descriptor, "value")) return;
-  Object.defineProperty(controller, fieldName, {
+  return !!descriptor && Object.hasOwn(descriptor, "value");
+}
+
+function createExactAfterSettleControllerFieldDescriptor(value) {
+  return {
     configurable: true,
     enumerable: true,
     value,
     writable: true,
-  });
+  };
 }
 
 function cloneExactAfterSettleValue(value) {
@@ -104,24 +107,132 @@ export function ensureExactAfterSettleControllerState(target) {
     );
   }
   const controller = target.exactAfterSettleController;
-  ensureExactAfterSettleControllerField(controller, "generation", 0);
-  ensureExactAfterSettleControllerField(controller, "phase", "idle");
-  ensureExactAfterSettleControllerField(controller, "startedAt", 0);
-  ensureExactAfterSettleControllerField(controller, "scheduledAt", 0);
-  ensureExactAfterSettleControllerField(controller, "applyStartedAt", 0);
-  ensureExactAfterSettleControllerField(controller, "applyFinishedAt", 0);
-  ensureExactAfterSettleControllerField(controller, "scenarioId", "");
-  ensureExactAfterSettleControllerField(controller, "selectionVersion", 0);
-  ensureExactAfterSettleControllerField(controller, "topologyRevision", 0);
-  ensureExactAfterSettleControllerField(controller, "dpr", 1);
-  ensureExactAfterSettleControllerField(controller, "pixelWidth", 0);
-  ensureExactAfterSettleControllerField(controller, "pixelHeight", 0);
-  ensureExactAfterSettleControllerField(controller, "colorRevision", 0);
-  ensureExactAfterSettleControllerField(controller, "contextFlagSignature", "");
-  ensureExactAfterSettleControllerField(controller, "zoomToken", 0);
-  ensureExactAfterSettleControllerField(controller, "transformBucket", "");
-  ensureExactAfterSettleControllerField(controller, "pendingPlan", null);
-  ensureExactAfterSettleControllerField(controller, "reason", "init");
+  if (!hasOwnExactAfterSettleControllerField(controller, "generation")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "generation",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "phase")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "phase",
+      createExactAfterSettleControllerFieldDescriptor("idle"),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "startedAt")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "startedAt",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "scheduledAt")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "scheduledAt",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "applyStartedAt")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "applyStartedAt",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "applyFinishedAt")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "applyFinishedAt",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "scenarioId")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "scenarioId",
+      createExactAfterSettleControllerFieldDescriptor(""),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "selectionVersion")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "selectionVersion",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "topologyRevision")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "topologyRevision",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "dpr")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "dpr",
+      createExactAfterSettleControllerFieldDescriptor(1),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "pixelWidth")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "pixelWidth",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "pixelHeight")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "pixelHeight",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "colorRevision")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "colorRevision",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "contextFlagSignature")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "contextFlagSignature",
+      createExactAfterSettleControllerFieldDescriptor(""),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "zoomToken")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "zoomToken",
+      createExactAfterSettleControllerFieldDescriptor(0),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "transformBucket")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "transformBucket",
+      createExactAfterSettleControllerFieldDescriptor(""),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "pendingPlan")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "pendingPlan",
+      createExactAfterSettleControllerFieldDescriptor(null),
+    );
+  }
+  if (!hasOwnExactAfterSettleControllerField(controller, "reason")) {
+    Object.defineProperty(
+      target.exactAfterSettleController,
+      "reason",
+      createExactAfterSettleControllerFieldDescriptor("init"),
+    );
+  }
   return true;
 }
 

@@ -4239,6 +4239,98 @@ test("renderer diagnostics action source admits only its two registered metric d
   );
 });
 
+test("P4.3 exact refresh and cache actions admit without binding diagnostics", async () => {
+  const modulePaths = [
+    "js/core/state/actions/renderer_exact_refresh_actions.js",
+    "js/core/state/actions/renderer_cache_actions.js",
+  ];
+  const stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex();
+
+  for (const modulePath of modulePaths) {
+    const source = fs.readFileSync(modulePath, "utf8");
+    const { bindingInventories } = await discoverStateWriterBindingsForSource(
+      modulePath,
+      source,
+      "production",
+      { includeInventories: true },
+    );
+    const contractEntries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+      ({ modulePath: entryModulePath }) => entryModulePath === modulePath,
+    );
+    const writer = {
+      path: modulePath,
+      authority: "domain-action",
+      bindings: bindingInventories.map(({ binding, findings }) => ({
+        ...binding,
+        authority: "domain-action",
+        grants: buildStateWriterBindingGrants(
+          findings,
+          modulePath,
+          stateKeyAuthorityIndex,
+          "production",
+        ),
+      })),
+    };
+
+    assert.deepEqual(
+      contractEntries.flatMap(({ allowedDynamicSites }) => allowedDynamicSites),
+      [],
+      `${modulePath} keeps a finite static action surface`,
+    );
+    assert.deepEqual(
+      validateStateActionPolicyBindings([writer], {
+        contractEntries,
+        modulePaths: [modulePath],
+      }),
+      [],
+      `${modulePath} has no unregistered binding diagnostics`,
+    );
+  }
+});
+
+test("P4.3 renderer action calls stay within the frozen runtime-state escape budget", async () => {
+  const modulePath = "js/core/map_renderer.js";
+  const source = fs.readFileSync(modulePath, "utf8");
+  const { bindingInventories } = await discoverStateWriterBindingsForSource(
+    modulePath,
+    source,
+    "production",
+    { includeInventories: true },
+  );
+  const runtimeStateInventory = bindingInventories.find(
+    ({ binding }) => binding.id === "module:runtimeState",
+  );
+  assert.ok(runtimeStateInventory, "map renderer runtimeState binding is scanned");
+
+  const runtimeStateEscapeFingerprint =
+    "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7";
+  const runtimeStateEscapes = runtimeStateInventory.findings.filter(
+    (finding) =>
+      finding.reason === "state-alias-escape"
+      && finding.operation === "unsupported"
+      && finding.key === "*"
+      && finding.sourceFingerprint === runtimeStateEscapeFingerprint,
+  );
+  assert.equal(runtimeStateEscapes.length, 31);
+
+  const repairedFunctionIdentities = new Set([
+    '{"kind":"function","ancestry":[{"name":"getSetMapDataTransactionOwner","ordinal":0},{"name":"clearSphericalFeatureDiagnosticsCache","ordinal":0}]}',
+    '{"kind":"function","ancestry":[{"name":"getVisibleFrameDiagnosticsOwner","ordinal":0},{"name":"setFirstVisibleFramePainted","ordinal":0}]}',
+    '{"kind":"function","ancestry":[{"name":"getSphericalFeatureDiagnostics","ordinal":0}]}',
+  ]);
+  assert.deepEqual(
+    runtimeStateEscapes.filter(({ enclosingFunctionIdentity }) => (
+      repairedFunctionIdentities.has(enclosingFunctionIdentity)
+    )),
+    [],
+  );
+  assert.equal(
+    source.split("ensureProjectedBoundsCacheState(runtimeState)").length - 1,
+    1,
+    "the composition root keeps one canonical projected-bounds ensure sink",
+  );
+});
+
 test("same-phase policy rebuild preserves the committed progress checkpoint", () => {
   const committedCheckpoint = Object.freeze({
     phase: "P4.2b",

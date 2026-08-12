@@ -47,9 +47,9 @@ MAP_RENDERER_DIRECT_ACTION_NAMES = {
     "setRenderPerfContextBreakdownState",
     "commitRenderPerfMetricState",
     "setDebugCountryCoverageState",
+    "setFirstVisibleFramePaintedState",
 }
 MAP_RENDERER_COMPATIBILITY_ACTION_NAMES = {
-    "setFirstVisibleFramePaintedState",
     "commitProjectedBoundsDiagnosticsState",
 }
 

@@ -13,13 +13,44 @@ function assertMap(value, label) {
   }
 }
 
-function writeOwnStateField(target, fieldName, value) {
-  const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+function writeOwnRenderPassCacheState(target, value) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, "renderPassCache");
   if (descriptor && Object.hasOwn(descriptor, "value")) {
-    target[fieldName] = value;
+    target.renderPassCache = value;
     return;
   }
-  Object.defineProperty(target, fieldName, {
+  Object.defineProperty(target, "renderPassCache", {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+}
+
+function writeOwnProjectedBoundsCacheState(target, value) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, "projectedBoundsById");
+  if (descriptor && Object.hasOwn(descriptor, "value")) {
+    target.projectedBoundsById = value;
+    return;
+  }
+  Object.defineProperty(target, "projectedBoundsById", {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+}
+
+function writeOwnSphericalFeatureDiagnosticsCacheState(target, value) {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "sphericalFeatureDiagnosticsById",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value")) {
+    target.sphericalFeatureDiagnosticsById = value;
+    return;
+  }
+  Object.defineProperty(target, "sphericalFeatureDiagnosticsById", {
     configurable: true,
     enumerable: true,
     value,
@@ -29,21 +60,18 @@ function writeOwnStateField(target, fieldName, value) {
 
 const immutableDiagnosticValues = new WeakSet();
 
-function isShareableDiagnosticValue(value, seen = new WeakSet()) {
+function isShareableDiagnosticValue(value, ancestors = []) {
   if (!value || typeof value !== "object") return true;
-  if (seen.has(value)) return true;
-  if (
-    value instanceof Map
-    || value instanceof Set
-    || ArrayBuffer.isView(value)
-    || value instanceof ArrayBuffer
-    || (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype)
-  ) {
+  for (const ancestor of ancestors) {
+    if (ancestor === value) return true;
+  }
+  if (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) {
     return false;
   }
-  seen.add(value);
+  const nextAncestors = [...ancestors];
+  nextAncestors[nextAncestors.length] = value;
   return Object.values(value).every((entry) => (
-    isShareableDiagnosticValue(entry, seen)
+    isShareableDiagnosticValue(entry, nextAncestors)
   ));
 }
 
@@ -59,7 +87,7 @@ export function commitRenderPassCacheState(target, renderPassCache) {
   if (!renderPassCache || typeof renderPassCache !== "object" || Array.isArray(renderPassCache)) {
     throw new TypeError("[renderer_cache_actions] renderPassCache must be an object");
   }
-  writeOwnStateField(target, "renderPassCache", renderPassCache);
+  writeOwnRenderPassCacheState(target, renderPassCache);
   return true;
 }
 
@@ -70,10 +98,9 @@ export function commitProjectedBoundsCacheState(
   assertStateTarget(target);
   assertMap(projectedBoundsById, "projectedBoundsById");
   assertMap(sphericalFeatureDiagnosticsById, "sphericalFeatureDiagnosticsById");
-  writeOwnStateField(target, "projectedBoundsById", projectedBoundsById);
-  writeOwnStateField(
+  writeOwnProjectedBoundsCacheState(target, projectedBoundsById);
+  writeOwnSphericalFeatureDiagnosticsCacheState(
     target,
-    "sphericalFeatureDiagnosticsById",
     sphericalFeatureDiagnosticsById,
   );
   return true;

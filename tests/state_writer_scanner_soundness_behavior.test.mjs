@@ -1067,6 +1067,22 @@ test("scenario activation action values remain provably read-only", async () => 
   );
 });
 
+test("renderer cache diagnostics traversal keeps the non-target value read-only", async () => {
+  const modulePath = "js/core/state/actions/renderer_cache_actions.js";
+  const source = await readFile(
+    new URL(`../${modulePath}`, import.meta.url),
+    "utf8",
+  );
+
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(
+      modulePath,
+      source,
+    ),
+    [],
+  );
+});
+
 test("action binding discovery fails closed when a non-target parameter is mutated", async () => {
   await assert.rejects(
     discoverStateWriterBindingsForSource(
