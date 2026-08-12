@@ -3654,12 +3654,20 @@ test("derived alias diagnostic baseline composes additive diagnostic multiplicit
   const legacyBaseline = createEmptyLegacySemanticAuthority();
   legacyBaseline.ambiguousSites = ["a", "a"];
   legacyBaseline.unsupportedSites = ["u"];
+  legacyBaseline.bindings = ["legacy-binding"];
+  legacyBaseline.memberships = ["legacy-membership"];
+  legacyBaseline.aliasSites = ["legacy-alias"];
+  legacyBaseline.dynamicSites = ["legacy-dynamic"];
   const effectiveBaseline = composeLegacySemanticBaseline({
     legacyBaseline,
     derivedAliasTaint: {
       diagnosticDelta: {
         ambiguousSites: ["a", "a", "a", "b"],
         unsupportedSites: ["u"],
+        bindings: ["diagnostic-binding"],
+        memberships: ["diagnostic-membership"],
+        aliasSites: ["diagnostic-alias"],
+        dynamicSites: ["diagnostic-dynamic"],
       },
     },
   });
@@ -3669,6 +3677,10 @@ test("derived alias diagnostic baseline composes additive diagnostic multiplicit
     ["a", "a", "a", "a", "a", "b"],
   );
   assert.deepEqual(effectiveBaseline.unsupportedSites, ["u", "u"]);
+  assert.deepEqual(effectiveBaseline.bindings, ["legacy-binding"]);
+  assert.deepEqual(effectiveBaseline.memberships, ["legacy-membership"]);
+  assert.deepEqual(effectiveBaseline.aliasSites, ["legacy-alias"]);
+  assert.deepEqual(effectiveBaseline.dynamicSites, ["legacy-dynamic"]);
 });
 
 test("previous-active authority receives only the incremental derived baseline", () => {
@@ -4381,24 +4393,19 @@ test("existing frozen paths refresh strict diagnostics additively", async () => 
   assert.deepEqual(refreshed.diagnosticDelta, completeBaseline.diagnosticDelta);
 });
 
-test("existing frozen path diagnostic refresh rejects multiset shrink", async () => {
+test("existing frozen proof is replaced exactly by current frozen-source recompute", async () => {
   const sourceBaseSha = "1".repeat(40);
   const legacySource = `
     export function update(model) {
       model.bootPhase = "ready";
     }
   `;
-  const twoEscapeSource = `
+  const frozenSource = `
     export function update(model) {
       model.bootPhase = "ready";
-      consumeUnknown({ first: model });
-      consumeUnknown({ second: model });
-    }
-  `;
-  const oneEscapeSource = `
-    export function update(model) {
-      model.bootPhase = "ready";
-      consumeUnknown({ first: model });
+      consumeUnknown({ retained: model });
+      consumeUnknown({ added: model });
+      consumeUnknown({ additional: model });
     }
   `;
   const legacyWriters = await buildFixtureLegacyWritersForSource(
@@ -4407,32 +4414,53 @@ test("existing frozen path diagnostic refresh rejects multiset shrink", async ()
   );
   const legacySemanticBaseline =
     buildLegacyStateWriterSemanticAuthority(legacyWriters);
-  const existingBaseline = await buildFrozenDerivedAliasTaintBaseline({
+  const expectedBaseline = await buildFrozenDerivedAliasTaintBaseline({
     sourceBaseSha,
     relativePaths: ["js/fixture.js"],
     legacySemanticBaseline,
-    readSourceAtRevision: async () => twoEscapeSource,
+    readSourceAtRevision: async () => frozenSource,
+  });
+  const existingBaseline = structuredClone(expectedBaseline);
+  const expectedUnsupported =
+    expectedBaseline.diagnosticDelta.unsupportedSites;
+  assert.equal(expectedUnsupported.length, 3);
+  const currentSignature =
+    existingBaseline.diagnosticDelta.unsupportedSites.pop();
+  const staleSignature = `${currentSignature}|legacy-scanner-expression`;
+  existingBaseline.diagnosticDelta.unsupportedSites.push(staleSignature);
+  existingBaseline.diagnosticDelta.unsupportedSites.sort();
+  const previousCurrentCount =
+    existingBaseline.diagnosticDelta.unsupportedSites.filter(
+      (signature) => signature === currentSignature,
+    ).length;
+  const expectedCurrentCount = expectedUnsupported.filter(
+    (signature) => signature === currentSignature,
+  ).length;
+
+  assert.ok(
+    expectedCurrentCount > previousCurrentCount,
+  );
+  assert.ok(
+    existingBaseline.diagnosticDelta.unsupportedSites.includes(
+      staleSignature,
+    ),
+  );
+  assert.ok(!expectedUnsupported.includes(staleSignature));
+
+  const refreshed = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: ["js/fixture.js"],
+    legacySemanticBaseline,
+    existingBaseline,
+    readSourceAtRevision: async () => frozenSource,
   });
 
-  await assert.rejects(
-    buildFrozenDerivedAliasTaintBaseline({
-      sourceBaseSha,
-      relativePaths: ["js/fixture.js"],
-      legacySemanticBaseline,
-      existingBaseline,
-      readSourceAtRevision: async () => oneEscapeSource,
-    }),
-    (error) => {
-      assert.equal(
-        error.code,
-        "derived-alias-taint-diagnostic-proof-regressed",
-      );
-      assert.equal(error.violations.length, 1);
-      assert.equal(error.violations[0].section, "unsupportedSites");
-      assert.equal(error.violations[0].previousCount, 2);
-      assert.equal(error.violations[0].refreshedCount, 1);
-      return true;
-    },
+  assert.deepEqual(
+    refreshed.diagnosticDelta,
+    expectedBaseline.diagnosticDelta,
+  );
+  assert.ok(
+    !refreshed.diagnosticDelta.unsupportedSites.includes(staleSignature),
   );
 });
 

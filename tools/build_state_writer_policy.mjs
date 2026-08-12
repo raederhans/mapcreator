@@ -1192,37 +1192,6 @@ export async function buildFrozenDerivedAliasTaintBaseline({
     legacySemanticBaseline,
     strictSemanticAuthority,
   });
-  if (existingBaseline) {
-    const regressions = [];
-    for (const section of DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS) {
-      const previousCounts = signatureCounts(
-        previousBaseline.diagnosticDelta[section],
-      );
-      const refreshedCounts = signatureCounts(
-        refreshedDiagnosticDelta[section],
-      );
-      for (const [signature, previousCount] of previousCounts) {
-        const refreshedCount = refreshedCounts.get(signature) || 0;
-        if (refreshedCount < previousCount) {
-          regressions.push({
-            code: "derived-alias-taint-diagnostic-proof-regressed",
-            section,
-            signature,
-            previousCount,
-            refreshedCount,
-          });
-        }
-      }
-    }
-    if (regressions.length) {
-      const error = new Error(
-        "Derived alias taint diagnostic source proof regressed.",
-      );
-      error.code = "derived-alias-taint-diagnostic-proof-regressed";
-      error.violations = regressions;
-      throw error;
-    }
-  }
   const transitionSemanticAuthority =
     buildLegacyStateWriterSemanticAuthority(
       transitionHistoricalWriters,
