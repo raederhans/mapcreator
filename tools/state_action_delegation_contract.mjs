@@ -987,6 +987,21 @@ const READ_ONLY_TAINT_CALLS = new Set([
   "String",
 ]);
 const READ_ONLY_TAINT_MEMBER_CALLS = new Set(["every"]);
+const READ_ONLY_GLOBAL_REALM_NAMES = new Set([
+  "globalThis",
+  "self",
+  "window",
+]);
+const READ_ONLY_INTRINSIC_MUTATION_CALLS = new Set([
+  "Object.assign",
+  "Object.defineProperties",
+  "Object.defineProperty",
+  "Object.setPrototypeOf",
+  "Reflect.defineProperty",
+  "Reflect.deleteProperty",
+  "Reflect.set",
+  "Reflect.setPrototypeOf",
+]);
 
 function memberRootIdentifierName(node) {
   let current = node;
@@ -1006,6 +1021,76 @@ function staticCallName(callNode) {
     return `${callee.object.name}.${callee.property.name}`;
   }
   return "";
+}
+
+function staticMemberPath(node) {
+  if (node?.type === "Identifier") return node.name;
+  if (node?.type !== "MemberExpression") return "";
+  const objectPath = staticMemberPath(node.object);
+  const propertyName = !node.computed && node.property?.type === "Identifier"
+    ? node.property.name
+    : node.computed
+      && node.property?.type === "Literal"
+      && ["string", "number"].includes(typeof node.property.value)
+        ? String(node.property.value)
+        : "";
+  if (!objectPath || !propertyName) return "";
+  return `${objectPath}.${propertyName}`;
+}
+
+function canonicalReadOnlyIntrinsicPath(node) {
+  const segments = staticMemberPath(node).split(".").filter(Boolean);
+  if (READ_ONLY_GLOBAL_REALM_NAMES.has(segments[0])) segments.shift();
+  return segments.join(".");
+}
+
+function staticMutationPropertyName(node) {
+  if (node?.type === "Literal"
+    && ["string", "number"].includes(typeof node.value)) {
+    return String(node.value);
+  }
+  return "";
+}
+
+function collectMutatedReadOnlyIntrinsicPaths(ast) {
+  const mutatedPaths = new Set();
+  walkSyntaxTree(ast, (node) => {
+    const directTarget = node.type === "AssignmentExpression"
+      ? node.left
+      : node.type === "UpdateExpression"
+        ? node.argument
+        : node.type === "UnaryExpression" && node.operator === "delete"
+          ? node.argument
+          : null;
+    const directPath = canonicalReadOnlyIntrinsicPath(directTarget);
+    if (directPath) mutatedPaths.add(directPath);
+    if (node.type !== "CallExpression") return;
+    const mutationCallName = canonicalReadOnlyIntrinsicPath(node.callee);
+    if (!READ_ONLY_INTRINSIC_MUTATION_CALLS.has(mutationCallName)) return;
+    const targetPath = canonicalReadOnlyIntrinsicPath(node.arguments?.[0]);
+    if (!targetPath) return;
+    if ([
+      "Object.defineProperty",
+      "Reflect.defineProperty",
+      "Reflect.deleteProperty",
+      "Reflect.set",
+    ].includes(mutationCallName)) {
+      const propertyName = staticMutationPropertyName(node.arguments?.[1]);
+      mutatedPaths.add(propertyName ? `${targetPath}.${propertyName}` : targetPath);
+      return;
+    }
+    mutatedPaths.add(targetPath);
+  });
+  return mutatedPaths;
+}
+
+function hasReadOnlyIntrinsicMutation(callName, mutatedPaths) {
+  const segments = String(callName || "").split(".");
+  while (segments.length) {
+    if (mutatedPaths.has(segments.join("."))) return true;
+    segments.pop();
+  }
+  return false;
 }
 
 function collectModuleBindingNames(ast) {
@@ -1084,10 +1169,15 @@ function collectFunctionBindingNames(ast, functionNode) {
   return names;
 }
 
-function isUnshadowedReadOnlyTaintCall(callName, bindingNames) {
+function isUnshadowedReadOnlyTaintCall(
+  callName,
+  bindingNames,
+  mutatedIntrinsicPaths,
+) {
   if (!READ_ONLY_TAINT_CALLS.has(callName)) return false;
   const rootName = callName.split(".", 1)[0];
-  return !bindingNames.has(rootName);
+  return !bindingNames.has(rootName)
+    && !hasReadOnlyIntrinsicMutation(callName, mutatedIntrinsicPaths);
 }
 
 function collectReachableTaintedHazardSites({
@@ -1099,6 +1189,7 @@ function collectReachableTaintedHazardSites({
   localFunctions = null,
 } = {}) {
   const functions = localFunctions || topLevelFunctionDeclarations(ast);
+  const mutatedIntrinsicPaths = collectMutatedReadOnlyIntrinsicPaths(ast);
   const queue = [{
     functionNode: rootFunction,
     taintedParameterIndexes,
@@ -1229,7 +1320,11 @@ function collectReachableTaintedHazardSites({
       }
       if (
         taintedArgumentIndexes.length
-        && !isUnshadowedReadOnlyTaintCall(callName, bindingNames)
+        && !isUnshadowedReadOnlyTaintCall(
+          callName,
+          bindingNames,
+          mutatedIntrinsicPaths,
+        )
         && !READ_ONLY_TAINT_MEMBER_CALLS.has(memberCallName)
       ) {
         hazardSites.set(`${node.start}:${node.end}`, node);

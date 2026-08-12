@@ -1534,6 +1534,40 @@ test("source-bound pure imported normalizer accepts only its registered static s
     === "state-imported-pure-normalizer-target-mutation-proof-failed"
   ));
 
+  const mutatedIntrinsicFixtures = [
+    "Object.hasOwn = (target) => { target.dirty = {}; return true; };",
+    "globalThis.Object.hasOwn = (target) => { target.dirty = {}; return true; };",
+    "Object.defineProperty(Object, \"hasOwn\", { value: (target) => { target.dirty = {}; return true; } });",
+    "Reflect.set(Object, \"hasOwn\", (target) => { target.dirty = {}; return true; });",
+  ];
+  for (const intrinsicMutation of mutatedIntrinsicFixtures) {
+    const mutatedIntrinsicSource = normalizerSource.replace(
+      "  return Object.hasOwn(value, fieldName);",
+      `${intrinsicMutation}\n  return Object.hasOwn(value, fieldName);`,
+    );
+    const mutatedIntrinsicEntry = {
+      ...entry,
+      sourceFingerprint: createHash("sha256")
+        .update(mutatedIntrinsicSource.replaceAll("\r\n", "\n"))
+        .digest("hex"),
+    };
+    const mutatedIntrinsicInspection =
+      inspectStateImportedPureNormalizerSource(
+        mutatedIntrinsicSource,
+        mutatedIntrinsicEntry,
+      );
+    assert.equal(
+      mutatedIntrinsicInspection.violations.some(
+        ({ code }) => code === "state-imported-pure-normalizer-source-drift",
+      ),
+      false,
+    );
+    assert.ok(mutatedIntrinsicInspection.violations.some(({ code }) =>
+      code
+      === "state-imported-pure-normalizer-target-mutation-proof-failed"
+    ));
+  }
+
   const semanticBypasses = [
     "globalThis.normalizerLeak = currentCache;",
     "normalizerLeakHolder.cache = currentCache;",
