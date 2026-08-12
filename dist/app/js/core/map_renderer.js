@@ -33,18 +33,57 @@ import {
   createDefaultUnitCounterEditorState,
 } from "./state/strategic_overlay_state.js";
 import {
-  createDefaultProjectedBoundsCacheState,
   createDefaultProjectedBoundsDiagnostics,
   createDefaultIntensityFieldToolState,
   applyRendererSurfaceBridgeState,
+  ensureProjectedBoundsCacheState,
   ensureRenderPassCacheState,
   ensureSceneSnapshotState,
   ensureSidebarPerfState,
-  ensureSphericalFeatureDiagnosticsCache as ensureSphericalFeatureDiagnosticsCacheState,
   bumpSceneGenerationState,
   resetProjectedBoundsCacheState as resetProjectedBoundsRuntimeCacheState,
-  setInteractionInfrastructureStateFields,
+  commitRendererDprStageState,
+  commitProjectedBoundsDiagnosticsState,
 } from "./state/renderer_runtime_state.js";
+import {
+  setAdaptiveSettleProfileState,
+  setPendingDayNightRefreshState,
+  setPhaseEnteredAtState,
+  setRendererIsInteractingState,
+  setRenderPhaseTimerIdState,
+  setRenderPhaseValueState,
+} from "./state/actions/renderer_phase_actions.js";
+import {
+  beginInteractionRecoveryTaskState,
+  endInteractionRecoveryTaskState,
+  setInteractionInfrastructureStateFields,
+  setPendingZoomTransformState,
+  setZoomGestureEndedAtState,
+  setZoomGestureScaleDeltaState,
+  setZoomGestureStartTransformState,
+  setZoomRenderScheduledState,
+} from "./state/actions/renderer_interaction_actions.js";
+import {
+  setDeferExactAfterSettleState,
+  setPendingExactPoliticalFastFrameState,
+} from "./state/actions/renderer_exact_refresh_actions.js";
+import {
+  clearSphericalFeatureDiagnosticsCacheState,
+  getSphericalFeatureDiagnosticsCacheEntryState,
+  setSphericalFeatureDiagnosticsCacheEntryState,
+} from "./state/actions/renderer_cache_actions.js";
+import {
+  captureProjectedBoundsDiagnosticsState,
+  captureRenderPerfContextBreakdownState,
+  captureRenderPerfMetricEntryState,
+  captureRenderPerfMetricsState,
+  commitRenderPerfMetricState,
+  ensureRenderPerfMetricsState,
+  setDebugCountryCoverageState,
+  setFirstVisibleFramePaintedState,
+  setRenderPerfContextBreakdownState,
+  setRenderPerfMetricEntryState,
+} from "./state/actions/renderer_diagnostics_actions.js";
 import {
   MODERN_CITY_LIGHTS_BASE_THRESHOLD,
   MODERN_CITY_LIGHTS_CORRIDOR_THRESHOLD,
@@ -211,6 +250,7 @@ import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_pass
 import { createVisualEffectsPassOwner } from "./renderer/visual_effects_pass_owner.js";
 import { createContextPassOrchestratorOwner } from "./renderer/context_pass_orchestrator_owner.js";
 import { createPoliticalPassOrchestratorOwner } from "./renderer/political_pass_orchestrator_owner.js";
+import { createRenderPerfMetricsRuntimeOwner } from "./renderer/render_perf_metrics_runtime_owner.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";
 import { createTransformedFrameCompositorOwner } from "./map_renderer/transformed_frame_compositor_owner.js";
@@ -336,7 +376,6 @@ const UNIT_COUNTER_STATS_PRESETS = Object.freeze({
 const rendererSurfaceHost = createRendererSurfaceHost();
 let interactionInfrastructureBasicPromise = null;
 let interactionInfrastructureFullPromise = null;
-let activeContextMetricSession = null;
 let lastHitCanvasBuildStats = null;
 let legendControlElement = null;
 let legendControlHeaderElement = null;
@@ -997,6 +1036,8 @@ let renderCacheOwner = null;
 let cachedPassCompositorOwner = null;
 let transformedFrameCompositorOwner = null;
 let rendererRuntimeContext = null;
+let renderPerfMetricsRuntimeOwner = null;
+const renderPerfMetricsMirrorRuntime = { snapshot: null };
 let renderPassCacheHostOwner = null;
 let renderPassCommitAccountingOwner = null;
 let drawCanvasOrchestrationOwner = null;
@@ -1451,7 +1492,7 @@ function getRendererStartupTransactionOwner() {
       resetDeferredRenderFlags: () => {
         runtimeState.deferContextBasePass = false;
         runtimeState.deferHitCanvasBuild = false;
-        runtimeState.deferExactAfterSettle = false;
+        setDeferExactAfterSettleState(runtimeState, false);
         runtimeState.hitCanvasBuildScheduled = null;
       },
       resetProjectedBoundsCacheState,
@@ -1539,7 +1580,8 @@ function getSetMapDataTransactionOwner() {
         };
       },
       clearSphericalFeatureDiagnosticsCache: () => {
-        ensureSphericalFeatureDiagnosticsCache().clear();
+        ensureProjectedBoundsCache();
+        clearSphericalFeatureDiagnosticsCacheState(runtimeState);
       },
       buildIndex,
       ensureSovereigntyState,
@@ -1608,29 +1650,29 @@ function getRenderPhaseLifecycleOwner() {
       clearTimeout: (timerId) => globalThis.clearTimeout(timerId),
       setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
       setRenderPhaseTimerId: (timerId) => {
-        runtimeState.renderPhaseTimerId = timerId;
+        setRenderPhaseTimerIdState(runtimeState, timerId);
       },
       setRenderPhaseValue: (phase) => {
-        runtimeState.renderPhase = phase;
+        setRenderPhaseValueState(runtimeState, phase);
       },
       setPhaseEnteredAt: (enteredAtMs) => {
-        runtimeState.phaseEnteredAt = enteredAtMs;
+        setPhaseEnteredAtState(runtimeState, enteredAtMs);
       },
       setIsInteracting: (isInteracting) => {
-        runtimeState.isInteracting = Boolean(isInteracting);
+        setRendererIsInteractingState(runtimeState, isInteracting);
       },
       cancelPoliticalPathWarmup,
       setHoverOverlayDirty: (dirty) => {
         runtimeState.hoverOverlayDirty = Boolean(dirty);
       },
       setPendingDayNightRefresh: (pending) => {
-        runtimeState.pendingDayNightRefresh = Boolean(pending);
+        setPendingDayNightRefreshState(runtimeState, pending);
       },
       invalidateRenderPasses,
       updateDprStage,
       setCanvasSize,
       setAdaptiveSettleProfile: (settleProfile) => {
-        runtimeState.adaptiveSettleProfile = settleProfile;
+        setAdaptiveSettleProfileState(runtimeState, settleProfile);
       },
       scheduleScenarioChunkRefresh: (options) => (
         typeof runtimeState.scheduleScenarioChunkRefreshFn === "function"
@@ -1638,7 +1680,7 @@ function getRenderPhaseLifecycleOwner() {
           : "noop"
       ),
       setDeferExactAfterSettle: (deferred) => {
-        runtimeState.deferExactAfterSettle = Boolean(deferred);
+        setDeferExactAfterSettleState(runtimeState, deferred);
       },
       render,
       scheduleExactAfterSettleRefresh,
@@ -1709,7 +1751,7 @@ function getRendererTransactionResetOwner() {
         runtimeState.deferHitCanvasBuild = Boolean(deferred);
       },
       setDeferExactAfterSettle: (deferred) => {
-        runtimeState.deferExactAfterSettle = Boolean(deferred);
+        setDeferExactAfterSettleState(runtimeState, deferred);
       },
       resetLayerResolverCache: () => {
         layerResolverCache.primaryRef = null;
@@ -1813,7 +1855,7 @@ function getVisibleFrameDiagnosticsOwner() {
       recordVisibleFrameTransactionDiagnostics: (payload) => recordVisibleFrameTransactionDiagnostics(runtimeState, payload),
       recordRenderPerfMetric,
       setFirstVisibleFramePainted: (painted) => {
-        runtimeState.firstVisibleFramePainted = Boolean(painted);
+        setFirstVisibleFramePaintedState(runtimeState, painted);
       },
       callFirstVisibleFramePaintedHook: (payload) => {
         callRuntimeHook(runtimeState, "noteFirstVisibleFramePaintedFn", payload);
@@ -2709,7 +2751,7 @@ function getTransformedFrameCompositorOwner() {
       buildInteractionComposite,
       canDrawInteractionComposite,
       setPendingExactPoliticalFastFrame: (value) => {
-        runtimeState.pendingExactPoliticalFastFrame = value;
+        setPendingExactPoliticalFastFrameState(runtimeState, value);
       },
       recordRenderPerfMetric,
       recordPassTiming,
@@ -3012,22 +3054,22 @@ function getZoomInteractionLifecycleOwner() {
         rendererSurfaceHost.setZoomBehavior(nextZoomBehavior);
       },
       setZoomGestureStartTransform: (transform) => {
-        runtimeState.zoomGestureStartTransform = transform;
+        setZoomGestureStartTransformState(runtimeState, transform);
       },
       setZoomGestureScaleDelta: (scaleDelta) => {
-        runtimeState.zoomGestureScaleDelta = scaleDelta;
+        setZoomGestureScaleDeltaState(runtimeState, scaleDelta);
       },
       setPendingExactPoliticalFastFrame: (pending) => {
-        runtimeState.pendingExactPoliticalFastFrame = !!pending;
+        setPendingExactPoliticalFastFrameState(runtimeState, pending);
       },
       setPendingZoomTransform: (transform) => {
-        runtimeState.pendingZoomTransform = transform;
+        setPendingZoomTransformState(runtimeState, transform);
       },
       setZoomRenderScheduled: (scheduled) => {
-        runtimeState.zoomRenderScheduled = !!scheduled;
+        setZoomRenderScheduledState(runtimeState, scheduled);
       },
       setZoomGestureEndedAt: (endedAtMs) => {
-        runtimeState.zoomGestureEndedAt = endedAtMs;
+        setZoomGestureEndedAtState(runtimeState, endedAtMs);
       },
       clearRenderPhaseTimer,
       cancelExactAfterSettleRefresh,
@@ -3534,93 +3576,52 @@ function resetProjectedBoundsCacheState() {
   resetProjectedBoundsRuntimeCacheState(state);
 }
 
-function ensureSphericalFeatureDiagnosticsCache() {
-  return ensureSphericalFeatureDiagnosticsCacheState(state);
-}
-
-function ensureRenderPerfMetrics() {
-  if (!runtimeState.renderPerfMetrics || typeof runtimeState.renderPerfMetrics !== "object") {
-    runtimeState.renderPerfMetrics = {};
-  }
-  return runtimeState.renderPerfMetrics;
-}
-
-function recordRenderPerfMetric(name, durationMs, details = {}) {
-  const metrics = ensureRenderPerfMetrics();
-  const normalizedName = String(name || "").trim();
-  if (!normalizedName) return null;
-  runtimeState.renderPerfMetricSequence = Math.max(0, Number(runtimeState.renderPerfMetricSequence || 0)) + 1;
-  const nextEntry = {
-    durationMs: Math.max(0, Number(durationMs) || 0),
-    recordedAt: Date.now(),
-    ...details,
-    sequence: runtimeState.renderPerfMetricSequence,
-  };
-  metrics[normalizedName] = nextEntry;
-  globalThis.__renderPerfMetrics = metrics;
-  return nextEntry;
-}
-
-function beginContextMetricSession() {
-  activeContextMetricSession = {
-    metrics: {},
-  };
-}
-
-function collectContextMetric(name, durationMs, details = {}) {
-  const normalizedName = String(name || "").trim();
-  if (!normalizedName) return null;
-  const nextEntry = {
-    durationMs: Math.max(0, Number(durationMs) || 0),
-    recordedAt: Date.now(),
-    ...details,
-  };
-  if (!activeContextMetricSession?.metrics) {
-    return recordRenderPerfMetric(normalizedName, nextEntry.durationMs, details);
-  }
-  const existingEntry = activeContextMetricSession.metrics[normalizedName];
-  if (!existingEntry) {
-    activeContextMetricSession.metrics[normalizedName] = {
-      ...nextEntry,
-      callCount: 1,
-    };
-    return activeContextMetricSession.metrics[normalizedName];
-  }
-  activeContextMetricSession.metrics[normalizedName] = {
-    ...existingEntry,
-    ...details,
-    durationMs: Math.max(0, Number(existingEntry.durationMs || 0) + nextEntry.durationMs),
-    recordedAt: nextEntry.recordedAt,
-    callCount: Math.max(1, Number(existingEntry.callCount || 1) + 1),
-  };
-  return activeContextMetricSession.metrics[normalizedName];
-}
-
-function endContextMetricSession() {
-  const session = activeContextMetricSession;
-  activeContextMetricSession = null;
-  const metrics = ensureRenderPerfMetrics();
-  const breakdown = metrics.contextBreakdown && typeof metrics.contextBreakdown === "object"
-    ? { ...metrics.contextBreakdown }
-    : {};
-  const sessionMetrics = session?.metrics && typeof session.metrics === "object" ? session.metrics : {};
-  Object.entries(sessionMetrics).forEach(([name, entry]) => {
-    if (!entry || typeof entry !== "object") return;
-    const { durationMs, ...details } = entry;
-    const recordedEntry = recordRenderPerfMetric(name, durationMs, details);
-    if (CONTEXT_BREAKDOWN_METRIC_NAMES.has(name) && recordedEntry) {
-      breakdown[name] = { ...recordedEntry };
-    }
+function getRenderPerfMetricsRuntimeOwner() {
+  if (renderPerfMetricsRuntimeOwner) return renderPerfMetricsRuntimeOwner;
+  renderPerfMetricsRuntimeOwner = createRenderPerfMetricsRuntimeOwner({
+    constants: { contextBreakdownMetricNames: CONTEXT_BREAKDOWN_METRIC_NAMES },
+    getters: {
+      getRenderPerfContextBreakdownSnapshot: () => (
+        captureRenderPerfContextBreakdownState(runtimeState)
+      ),
+      getRenderPerfMetricSequence: () => runtimeState.renderPerfMetricSequence,
+      nowMs: () => Date.now(),
+    },
+    effects: {
+      ensureRenderPerfMetricsState: () => ensureRenderPerfMetricsState(runtimeState),
+      commitRenderPerfMetricState: (payload) => commitRenderPerfMetricState(runtimeState, payload),
+      setRenderPerfContextBreakdownState: (breakdown) => setRenderPerfContextBreakdownState(runtimeState, breakdown),
+      mirrorRenderPerfMetrics: mirrorRenderPerfMetricSnapshot,
+    },
   });
-  metrics.contextBreakdown = breakdown;
-  globalThis.__renderPerfMetrics = metrics;
-  return breakdown;
+  return renderPerfMetricsRuntimeOwner;
 }
 
-function resetContextBreakdownForExactFrame() {
-  const metrics = ensureRenderPerfMetrics();
-  metrics.contextBreakdown = {};
-  globalThis.__renderPerfMetrics = metrics;
+function recordRenderPerfMetric(name, durationMs, details = {}) { return getRenderPerfMetricsRuntimeOwner().recordRenderPerfMetric(name, durationMs, details); }
+
+function beginContextMetricSession() { return getRenderPerfMetricsRuntimeOwner().beginContextMetricSession(); }
+
+function collectContextMetric(name, durationMs, details = {}) { return getRenderPerfMetricsRuntimeOwner().collectContextMetric(name, durationMs, details); }
+
+function endContextMetricSession() { return getRenderPerfMetricsRuntimeOwner().endContextMetricSession(); }
+
+function resetContextBreakdownForExactFrame() { return getRenderPerfMetricsRuntimeOwner().resetContextBreakdownForExactFrame(); }
+
+function mirrorRenderPerfMetricSnapshot(name) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return false;
+  if (
+    !renderPerfMetricsMirrorRuntime.snapshot
+    || globalThis.__renderPerfMetrics !== renderPerfMetricsMirrorRuntime.snapshot
+  ) {
+    renderPerfMetricsMirrorRuntime.snapshot = captureRenderPerfMetricsState(runtimeState) || {};
+  } else {
+    const entry = captureRenderPerfMetricEntryState(runtimeState, normalizedName);
+    if (entry === undefined) delete renderPerfMetricsMirrorRuntime.snapshot[normalizedName];
+    else renderPerfMetricsMirrorRuntime.snapshot[normalizedName] = entry;
+  }
+  globalThis.__renderPerfMetrics = renderPerfMetricsMirrorRuntime.snapshot;
+  return true;
 }
 
 function incrementPerfCounter(counterName, amount = 1) {
@@ -3709,14 +3710,19 @@ function detectContextScenarioReasonMismatch({
 function resetScenarioWaterCacheAdaptiveState(reason = "water-adaptive-state-reset") {
   lastScenarioWaterRenderedCount = 0;
   incrementPerfCounter("waterAdaptiveStateResetCount");
-  const metrics = ensureRenderPerfMetrics();
-  const previousCount = Math.max(0, Number(metrics.waterAdaptiveStateResetCount?.count || 0));
-  metrics.waterAdaptiveStateResetCount = {
-    count: previousCount + 1,
-    reason: String(reason || "water-adaptive-state-reset"),
-    recordedAt: Date.now(),
-  };
-  globalThis.__renderPerfMetrics = metrics;
+  const previousCount = Math.max(
+    0,
+    Number(runtimeState.renderPerfMetrics?.waterAdaptiveStateResetCount?.count || 0),
+  );
+  setRenderPerfMetricEntryState(runtimeState, {
+    name: "waterAdaptiveStateResetCount",
+    entry: {
+      count: previousCount + 1,
+      reason: String(reason || "water-adaptive-state-reset"),
+      recordedAt: Date.now(),
+    },
+  });
+  mirrorRenderPerfMetricSnapshot("waterAdaptiveStateResetCount");
 }
 
 function stableJson(value) {
@@ -4222,11 +4228,15 @@ function noteBlackFrame(reason = "unknown") {
   incrementPerfCounter("blackFrameCount");
   const cache = getRenderPassCacheState();
   const count = Number(cache.counters.blackFrameCount || 0);
-  ensureRenderPerfMetrics().blackFrameCount = {
-    count,
-    reason: String(reason || "unknown"),
-    recordedAt: Date.now(),
-  };
+  setRenderPerfMetricEntryState(runtimeState, {
+    name: "blackFrameCount",
+    entry: {
+      count,
+      reason: String(reason || "unknown"),
+      recordedAt: Date.now(),
+    },
+  });
+  mirrorRenderPerfMetricSnapshot("blackFrameCount");
   recordVisibleFrameTransactionMetric("missing", {
     reason: String(reason || "unknown"),
     paintSource: "black-frame",
@@ -5225,7 +5235,10 @@ function resetRenderDiagnostics() {
   renderDiag.politicalPass = null;
   renderDiag.transformedPasses = {};
   renderDiag.waterHit = null;
-  runtimeState.projectedBoundsDiagnostics = createDefaultProjectedBoundsDiagnostics();
+  commitProjectedBoundsDiagnosticsState(
+    runtimeState,
+    createDefaultProjectedBoundsDiagnostics(),
+  );
   if (!renderDiag.enabled) {
     delete globalThis.__mapRenderDiag;
   } else {
@@ -6525,9 +6538,7 @@ function shouldStartExactAfterSettleFastPath() {
 }
 
 function ensureProjectedBoundsCache() {
-  if (!(runtimeState.projectedBoundsById instanceof Map)) {
-    runtimeState.projectedBoundsById = createDefaultProjectedBoundsCacheState().projectedBoundsById;
-  }
+  ensureProjectedBoundsCacheState(runtimeState);
   return runtimeState.projectedBoundsById;
 }
 
@@ -6541,25 +6552,27 @@ function isLineGeometryType(geometryType) {
 
 function recordProjectedBoundsDiagnosticsState(feature, reason = "unknown") {
   const geometryType = String(feature?.geometry?.type || "").trim() || "Unknown";
-  const diagnostics = runtimeState.projectedBoundsDiagnostics && typeof runtimeState.projectedBoundsDiagnostics === "object"
-    ? runtimeState.projectedBoundsDiagnostics
-    : { total: 0, byGeometryType: {}, byReason: {} };
-  diagnostics.total = Math.max(0, Number(diagnostics.total || 0) + 1);
-  diagnostics.byGeometryType = diagnostics.byGeometryType && typeof diagnostics.byGeometryType === "object"
-    ? diagnostics.byGeometryType
+  const currentDiagnostics = captureProjectedBoundsDiagnosticsState(runtimeState);
+  const currentByGeometryType = currentDiagnostics.byGeometryType
+    && typeof currentDiagnostics.byGeometryType === "object"
+    ? currentDiagnostics.byGeometryType
     : {};
-  diagnostics.byReason = diagnostics.byReason && typeof diagnostics.byReason === "object"
-    ? diagnostics.byReason
+  const currentByReason = currentDiagnostics.byReason
+    && typeof currentDiagnostics.byReason === "object"
+    ? currentDiagnostics.byReason
     : {};
-  diagnostics.byGeometryType[geometryType] = Math.max(
-    0,
-    Number(diagnostics.byGeometryType[geometryType] || 0) + 1,
-  );
-  diagnostics.byReason[reason] = Math.max(
-    0,
-    Number(diagnostics.byReason[reason] || 0) + 1,
-  );
-  runtimeState.projectedBoundsDiagnostics = diagnostics;
+  const diagnostics = {
+    total: Math.max(0, Number(currentDiagnostics.total || 0) + 1),
+    byGeometryType: {
+      ...currentByGeometryType,
+      [geometryType]: Math.max(0, Number(currentByGeometryType[geometryType] || 0) + 1),
+    },
+    byReason: {
+      ...currentByReason,
+      [reason]: Math.max(0, Number(currentByReason[reason] || 0) + 1),
+    },
+  };
+  commitProjectedBoundsDiagnosticsState(runtimeState, diagnostics);
   recordRenderPerfMetric("projectedBoundsDiagnostics", 0, {
     total: diagnostics.total,
     byGeometryType: { ...diagnostics.byGeometryType },
@@ -6982,9 +6995,12 @@ function isWorldBounds(bounds) {
 
 function getSphericalFeatureDiagnostics(feature, { featureId = null, allowCompute = true } = {}) {
   const resolvedFeatureId = featureId || getFeatureId(feature);
-  const diagnosticsCache = ensureSphericalFeatureDiagnosticsCache();
-  if (resolvedFeatureId && diagnosticsCache.has(resolvedFeatureId)) {
-    return diagnosticsCache.get(resolvedFeatureId) || null;
+  ensureProjectedBoundsCache();
+  const cachedDiagnostics = resolvedFeatureId
+    ? getSphericalFeatureDiagnosticsCacheEntryState(runtimeState, resolvedFeatureId)
+    : null;
+  if (cachedDiagnostics) {
+    return cachedDiagnostics;
   }
   if (!allowCompute || !globalThis.d3?.geoArea || !globalThis.d3?.geoBounds || !feature?.geometry) {
     return null;
@@ -6992,7 +7008,7 @@ function getSphericalFeatureDiagnostics(feature, { featureId = null, allowComput
 
   const diagnostics = getSphericalGeometryDiagnostics(feature);
   if (resolvedFeatureId && diagnostics) {
-    ensureSphericalFeatureDiagnosticsCache().set(resolvedFeatureId, diagnostics);
+    setSphericalFeatureDiagnosticsCacheEntryState(runtimeState, resolvedFeatureId, diagnostics);
   }
   return diagnostics;
 }
@@ -7020,8 +7036,10 @@ function updateDprStage(nextStage = "idle", { force = false } = {}) {
   if (!force && runtimeState.dprStage === normalizedStage) {
     return false;
   }
-  runtimeState.dprStage = normalizedStage;
-  runtimeState.dprLastStageSwitchAt = nowMs();
+  commitRendererDprStageState(runtimeState, {
+    stage: normalizedStage,
+    switchedAt: nowMs(),
+  });
   return true;
 }
 
@@ -7098,8 +7116,11 @@ function rebuildPoliticalLandCollections() {
   runtimeState.landDataFull = fullCollection;
   runtimeState.landData = interactiveCollection;
   const coverageStartedAt = nowMs();
-  runtimeState.debugCountryCoverage = collectCountryCoverageStats(
-    Array.isArray(fullCollection?.features) ? fullCollection.features : []
+  setDebugCountryCoverageState(
+    runtimeState,
+    collectCountryCoverageStats(
+      Array.isArray(fullCollection?.features) ? fullCollection.features : [],
+    ),
   );
   coverageMs = nowMs() - coverageStartedAt;
 
@@ -7195,8 +7216,15 @@ function beginInteractionRecoveryTask(taskKey) {
     });
     return false;
   }
-  runtimeState.activeInteractionRecoveryTaskKey = normalizedTaskKey;
-  runtimeState.activeInteractionRecoveryTaskStartedAt = nowMs();
+  const startedAt = nowMs();
+  const started = beginInteractionRecoveryTaskState(runtimeState, {
+    taskKey: normalizedTaskKey,
+    startedAt,
+    expectedActiveTaskKey: "",
+  });
+  if (!started) {
+    return false;
+  }
   recordRenderPerfMetric("interactionRecoveryTaskStarted", 0, {
     taskKey: normalizedTaskKey,
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
@@ -7206,10 +7234,7 @@ function beginInteractionRecoveryTask(taskKey) {
 
 function endInteractionRecoveryTask(taskKey) {
   const normalizedTaskKey = String(taskKey || "interaction-recovery").trim() || "interaction-recovery";
-  if (runtimeState.activeInteractionRecoveryTaskKey === normalizedTaskKey) {
-    runtimeState.activeInteractionRecoveryTaskKey = "";
-    runtimeState.activeInteractionRecoveryTaskStartedAt = 0;
-  }
+  endInteractionRecoveryTaskState(runtimeState, normalizedTaskKey);
 }
 
 function getInteractionRecoveryChunkState() {
@@ -14545,7 +14570,7 @@ function scheduleDayNightCycleFrame(callback) {
 
 function requestDayNightClockRender(reason) {
   if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    runtimeState.pendingDayNightRefresh = true;
+    setPendingDayNightRefreshState(runtimeState, true);
     return;
   }
   invalidateRenderPasses("dayNight", reason);

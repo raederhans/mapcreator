@@ -45562,7 +45562,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_bootstrap_support.js",
-      "size_bytes": 14495,
+      "size_bytes": 14721,
       "source_kind": "dist"
     },
     {
@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 884458,
+      "size_bytes": 885447,
       "source_kind": "dist"
     },
     {
@@ -45787,7 +45787,7 @@
     },
     {
       "path": "app/js/core/map_renderer/exact_after_settle_scheduler.js",
-      "size_bytes": 30760,
+      "size_bytes": 30893,
       "source_kind": "dist"
     },
     {
@@ -46086,6 +46086,16 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/render_pass_cache_state_normalizer.js",
+      "size_bytes": 4735,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/render_perf_metrics_runtime_owner.js",
+      "size_bytes": 4767,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/render_pipeline_catalog.js",
       "size_bytes": 854,
       "source_kind": "dist"
@@ -46332,7 +46342,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 158822,
+      "size_bytes": 158801,
       "source_kind": "dist"
     },
     {
@@ -46506,6 +46516,31 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/state/actions/renderer_cache_actions.js",
+      "size_bytes": 4980,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/renderer_diagnostics_actions.js",
+      "size_bytes": 6117,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/renderer_exact_refresh_actions.js",
+      "size_bytes": 17153,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/renderer_interaction_actions.js",
+      "size_bytes": 2742,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/renderer_phase_actions.js",
+      "size_bytes": 1610,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/state/actions/scenario_activation_actions.js",
       "size_bytes": 25385,
       "source_kind": "dist"
@@ -46607,7 +46642,7 @@
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 22471,
+      "size_bytes": 16897,
       "source_kind": "dist"
     },
     {
@@ -47487,7 +47522,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1469580,
+      "size_bytes": 1470566,
       "source_kind": "dist"
     },
     {
@@ -47617,9 +47652,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9437,
+      "file_count": 9444,
       "path": "app",
-      "size_bytes": 965810240
+      "size_bytes": 965848097
     },
     {
       "file_count": 57,
@@ -47629,7 +47664,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1469580
+      "size_bytes": 1470566
     },
     {
       "file_count": 1,
@@ -47652,5 +47687,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972378181
+  "total_bytes": 972417024
 }

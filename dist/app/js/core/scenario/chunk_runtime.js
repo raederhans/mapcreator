@@ -3,6 +3,7 @@
 // facade、startup cache、hydrate 主交易仍留在 scenario_resources.js。
 
 import { registerRuntimeHook } from "../state/index.js";
+import { setRenderPerfMetricEntryState } from "../state/actions/renderer_diagnostics_actions.js";
 import {
   beginScenarioChunkLoadState,
   captureScenarioChunkLoadStateContinuation,
@@ -951,14 +952,14 @@ function createScenarioChunkRuntimeController({
   }
 
   function recordScenarioRenderMetric(name, durationMs, details = {}) {
-    if (!runtimeState.renderPerfMetrics || typeof runtimeState.renderPerfMetrics !== "object") {
-      runtimeState.renderPerfMetrics = {};
-    }
-    runtimeState.renderPerfMetrics[String(name || "").trim()] = {
-      durationMs: Math.max(0, Number(durationMs) || 0),
-      recordedAt: Date.now(),
-      ...details,
-    };
+    setRenderPerfMetricEntryState(runtimeState, {
+      name,
+      entry: {
+        durationMs: Math.max(0, Number(durationMs) || 0),
+        recordedAt: Date.now(),
+        ...details,
+      },
+    });
     globalThis.__renderPerfMetrics = runtimeState.renderPerfMetrics;
   }
 

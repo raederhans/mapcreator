@@ -1,5 +1,6 @@
 import { normalizeCityLayerStyleConfig, state as runtimeState } from "../core/state.js";
 import { setLongAnimationFrameObserver } from "../core/state/actions/boot_actions.js";
+import { setRenderPerfMetricEntryState } from "../core/state/actions/renderer_diagnostics_actions.js";
 import {
   hydrateHierarchyState,
   hydrateStoredViewSettings,
@@ -169,35 +170,39 @@ export function initLongAnimationFrameObserver() {
       if (!entries.length) return;
       const latest = entries[entries.length - 1];
       if (!latest) return;
-      if (!runtimeState.renderPerfMetrics || typeof runtimeState.renderPerfMetrics !== "object") {
-        runtimeState.renderPerfMetrics = {};
-      }
-      runtimeState.renderPerfMetrics.longAnimationFrameBlockingDuration = {
-        durationMs: Math.max(0, Number(latest.duration || 0)),
-        blockingDuration: Math.max(0, Number(latest.blockingDuration || 0)),
-        startTime: Math.max(0, Number(latest.startTime || 0)),
-        renderStart: Math.max(0, Number(latest.renderStart || 0)),
-        firstUIEventTimestamp: Math.max(0, Number(latest.firstUIEventTimestamp || 0)),
-        bootPhase: String(runtimeState.bootPhase || ""),
-        renderPhase: String(runtimeState.renderPhase || ""),
-        startupReadonly: !!runtimeState.startupReadonly,
-        activePostReadyTaskKey: String(runtimeState.activePostReadyTaskKey || ""),
-        activePostReadyTaskStartedAt: Math.max(0, Number(runtimeState.activePostReadyTaskStartedAt || 0)),
-        activePostReadyTaskAgeMs: runtimeState.activePostReadyTaskStartedAt
-          ? Math.max(0, nowMs() - Number(runtimeState.activePostReadyTaskStartedAt || 0))
-          : 0,
-        pendingPostReadyTaskCount: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.pendingTaskCount || 0)),
-        pendingPostReadyTaskKeys: Array.isArray(runtimeState.postReadyTaskDiagnostics?.pendingTaskKeys)
-          ? [...runtimeState.postReadyTaskDiagnostics.pendingTaskKeys]
-          : [],
-        postReadyMaxPendingAgeMs: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.maxPendingAgeMs || 0)),
-        postReadyMaxRetryCount: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.maxRetryCount || 0)),
-        interactionRecoveryTaskKey: String(runtimeState.renderPerfMetrics?.interactionRecoveryTaskMs?.taskKey || ""),
-        activeInteractionRecoveryTaskKey: String(runtimeState.activeInteractionRecoveryTaskKey || ""),
-        interactionRecoveryTaskMs: Math.max(0, Number(runtimeState.renderPerfMetrics?.interactionRecoveryTaskMs?.durationMs || 0)),
-        interactionRecoveryWindowMs: Math.max(0, Number(runtimeState.renderPerfMetrics?.interactionRecoveryWindowMs?.durationMs || 0)),
-        recordedAt: Date.now(),
-      };
+      const currentRenderPerfMetrics =
+        runtimeState.renderPerfMetrics && typeof runtimeState.renderPerfMetrics === "object"
+          ? runtimeState.renderPerfMetrics
+          : {};
+      setRenderPerfMetricEntryState(runtimeState, {
+        name: "longAnimationFrameBlockingDuration",
+        entry: {
+          durationMs: Math.max(0, Number(latest.duration || 0)),
+          blockingDuration: Math.max(0, Number(latest.blockingDuration || 0)),
+          startTime: Math.max(0, Number(latest.startTime || 0)),
+          renderStart: Math.max(0, Number(latest.renderStart || 0)),
+          firstUIEventTimestamp: Math.max(0, Number(latest.firstUIEventTimestamp || 0)),
+          bootPhase: String(runtimeState.bootPhase || ""),
+          renderPhase: String(runtimeState.renderPhase || ""),
+          startupReadonly: !!runtimeState.startupReadonly,
+          activePostReadyTaskKey: String(runtimeState.activePostReadyTaskKey || ""),
+          activePostReadyTaskStartedAt: Math.max(0, Number(runtimeState.activePostReadyTaskStartedAt || 0)),
+          activePostReadyTaskAgeMs: runtimeState.activePostReadyTaskStartedAt
+            ? Math.max(0, nowMs() - Number(runtimeState.activePostReadyTaskStartedAt || 0))
+            : 0,
+          pendingPostReadyTaskCount: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.pendingTaskCount || 0)),
+          pendingPostReadyTaskKeys: Array.isArray(runtimeState.postReadyTaskDiagnostics?.pendingTaskKeys)
+            ? [...runtimeState.postReadyTaskDiagnostics.pendingTaskKeys]
+            : [],
+          postReadyMaxPendingAgeMs: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.maxPendingAgeMs || 0)),
+          postReadyMaxRetryCount: Math.max(0, Number(runtimeState.postReadyTaskDiagnostics?.maxRetryCount || 0)),
+          interactionRecoveryTaskKey: String(currentRenderPerfMetrics.interactionRecoveryTaskMs?.taskKey || ""),
+          activeInteractionRecoveryTaskKey: String(runtimeState.activeInteractionRecoveryTaskKey || ""),
+          interactionRecoveryTaskMs: Math.max(0, Number(currentRenderPerfMetrics.interactionRecoveryTaskMs?.durationMs || 0)),
+          interactionRecoveryWindowMs: Math.max(0, Number(currentRenderPerfMetrics.interactionRecoveryWindowMs?.durationMs || 0)),
+          recordedAt: Date.now(),
+        },
+      });
       globalThis.__renderPerfMetrics = runtimeState.renderPerfMetrics;
     });
     observer.observe({ type: "long-animation-frame", buffered: true });
