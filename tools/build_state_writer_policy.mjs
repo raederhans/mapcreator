@@ -50,6 +50,8 @@ import {
 } from "./p4_state_action_phases.mjs";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const FROZEN_SOURCE_BATCH_MAX_BUFFER_BYTES = 512 * 1024 * 1024;
+const FROZEN_SOURCE_MAX_BYTES_PER_REQUEST = 64 * 1024 * 1024;
 export const STATE_WRITER_POLICY_PATH = path.join(
   PROJECT_ROOT,
   "tools",
@@ -889,6 +891,212 @@ function defaultReadSourceAtRevision(sourceBaseSha, relativePath) {
   }
 }
 
+function defaultRunGitCatFileBatch(
+  input,
+  { maxBuffer = FROZEN_SOURCE_BATCH_MAX_BUFFER_BYTES } = {},
+) {
+  return execFileSync(
+    "git",
+    ["cat-file", "--batch"],
+    {
+      cwd: PROJECT_ROOT,
+      input,
+      encoding: null,
+      maxBuffer,
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+}
+
+function createFrozenSourceBatchReadError(
+  requests,
+  requestIndex,
+  reason,
+  details = {},
+) {
+  const boundedIndex = requests.length
+    ? Math.min(Math.max(Number(requestIndex) || 0, 0), requests.length - 1)
+    : 0;
+  const request = requests[boundedIndex] || {
+    sourceSha: "",
+    relativePath: "",
+  };
+  const error = new Error(
+    `Unable to read frozen source batch at request ${boundedIndex}: ${reason}.`,
+    { cause: details.cause },
+  );
+  error.code = "derived-alias-taint-frozen-source-batch-read-failed";
+  error.reason = reason;
+  error.requestIndex = boundedIndex;
+  error.sourceBaseSha = request.sourceSha;
+  error.path = request.relativePath;
+  const { cause: _cause, ...safeDetails } = details;
+  Object.assign(error, safeDetails);
+  return error;
+}
+
+function normalizeFrozenSourceBatchRequests(requests) {
+  if (!Array.isArray(requests)) {
+    throw createFrozenSourceBatchReadError(
+      [],
+      0,
+      "request-list-invalid",
+    );
+  }
+  return requests.map((request, requestIndex) => {
+    const sourceSha = String(request?.sourceSha || "").trim();
+    const relativePath = String(request?.relativePath || "");
+    if (
+      !/^[0-9a-f]{40}$/i.test(sourceSha)
+      || !relativePath
+      || /[\r\n\0]/.test(relativePath)
+    ) {
+      throw createFrozenSourceBatchReadError(
+        requests.map((item) => ({
+          sourceSha: String(item?.sourceSha || "").trim(),
+          relativePath: String(item?.relativePath || ""),
+        })),
+        requestIndex,
+        "request-invalid",
+      );
+    }
+    return { sourceSha, relativePath };
+  });
+}
+
+export function readSourcesAtRevisionsBatch(
+  requests = [],
+  { runGitBatch = defaultRunGitCatFileBatch } = {},
+) {
+  const normalizedRequests = normalizeFrozenSourceBatchRequests(requests);
+  if (!normalizedRequests.length) return [];
+  if (typeof runGitBatch !== "function") {
+    throw createFrozenSourceBatchReadError(
+      normalizedRequests,
+      0,
+      "runner-invalid",
+    );
+  }
+  const input = Buffer.from(
+    `${normalizedRequests.map(
+      ({ sourceSha, relativePath }) => `${sourceSha}:${relativePath}`,
+    ).join("\n")}\n`,
+    "utf8",
+  );
+  let output;
+  try {
+    output = runGitBatch(input, {
+      requestCount: normalizedRequests.length,
+      maxBuffer: Math.min(
+        FROZEN_SOURCE_BATCH_MAX_BUFFER_BYTES,
+        FROZEN_SOURCE_MAX_BYTES_PER_REQUEST * normalizedRequests.length,
+      ),
+    });
+  } catch (cause) {
+    throw createFrozenSourceBatchReadError(
+      normalizedRequests,
+      0,
+      "git-process-failed",
+      {
+        cause,
+        processStatus: Number.isInteger(cause?.status)
+          ? cause.status
+          : null,
+        processSignal: typeof cause?.signal === "string"
+          ? cause.signal
+          : null,
+      },
+    );
+  }
+  if (!Buffer.isBuffer(output) && !(output instanceof Uint8Array)) {
+    throw createFrozenSourceBatchReadError(
+      normalizedRequests,
+      0,
+      "protocol-output-invalid",
+    );
+  }
+  const protocol = Buffer.isBuffer(output)
+    ? output
+    : Buffer.from(output);
+  const sources = [];
+  let offset = 0;
+  for (
+    let requestIndex = 0;
+    requestIndex < normalizedRequests.length;
+    requestIndex += 1
+  ) {
+    const request = normalizedRequests[requestIndex];
+    const headerEnd = protocol.indexOf(0x0a, offset);
+    if (headerEnd < 0) {
+      throw createFrozenSourceBatchReadError(
+        normalizedRequests,
+        requestIndex,
+        "protocol-truncated-header",
+      );
+    }
+    const header = protocol.subarray(offset, headerEnd).toString("utf8");
+    offset = headerEnd + 1;
+    const revisionPath = `${request.sourceSha}:${request.relativePath}`;
+    if (header === `${revisionPath} missing`) {
+      sources.push(null);
+      continue;
+    }
+    const headerMatch = /^([0-9a-f]{40}|[0-9a-f]{64}) ([^ ]+) (.+)$/i
+      .exec(header);
+    if (!headerMatch) {
+      throw createFrozenSourceBatchReadError(
+        normalizedRequests,
+        requestIndex,
+        "protocol-header-invalid",
+      );
+    }
+    if (headerMatch[2] !== "blob") {
+      throw createFrozenSourceBatchReadError(
+        normalizedRequests,
+        requestIndex,
+        "protocol-object-type-invalid",
+      );
+    }
+    const sizeText = headerMatch[3];
+    const size = Number(sizeText);
+    if (
+      !/^(?:0|[1-9][0-9]*)$/.test(sizeText)
+      || !Number.isSafeInteger(size)
+    ) {
+      throw createFrozenSourceBatchReadError(
+        normalizedRequests,
+        requestIndex,
+        "protocol-size-invalid",
+      );
+    }
+    const contentEnd = offset + size;
+    if (contentEnd >= protocol.length) {
+      throw createFrozenSourceBatchReadError(
+        normalizedRequests,
+        requestIndex,
+        "protocol-content-truncated",
+      );
+    }
+    if (protocol[contentEnd] !== 0x0a) {
+      throw createFrozenSourceBatchReadError(
+        normalizedRequests,
+        requestIndex,
+        "protocol-content-delimiter-invalid",
+      );
+    }
+    sources.push(protocol.subarray(offset, contentEnd).toString("utf8"));
+    offset = contentEnd + 1;
+  }
+  if (offset !== protocol.length) {
+    throw createFrozenSourceBatchReadError(
+      normalizedRequests,
+      normalizedRequests.length - 1,
+      "protocol-extra-bytes",
+    );
+  }
+  return sources;
+}
+
 function buildFrozenBaselineWritersByPath(
   legacySemanticBaseline = {},
 ) {
@@ -1104,6 +1312,11 @@ export async function buildFrozenDerivedAliasTaintBaseline({
   acceptedPolicyCheckpoint = null,
   transitionCheckpoints = null,
   readSourceAtRevision = defaultReadSourceAtRevision,
+  readSourcesAtRevisions = (
+    readSourceAtRevision === defaultReadSourceAtRevision
+      ? readSourcesAtRevisionsBatch
+      : null
+  ),
   stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex(),
 } = {}) {
   const normalizedSourceBaseSha = String(sourceBaseSha || "").trim();
@@ -1230,16 +1443,79 @@ export async function buildFrozenDerivedAliasTaintBaseline({
   const transitionHistoricalWriters = [];
   const frozenBaselineWritersByPath =
     buildFrozenBaselineWritersByPath(legacySemanticBaseline);
-  for (const relativePath of frozenProofPaths) {
-    const frozenSourceSha = transitionSourceShaByPath.get(relativePath)
+  const frozenSourceRequests = frozenProofPaths.map((relativePath) => ({
+    sourceSha: transitionSourceShaByPath.get(relativePath)
       || (pendingPathSet.has(relativePath)
         ? normalizedAcceptedPolicyCheckpoint?.sourceSha
         : null)
-      || normalizedSourceBaseSha;
-    const source = await readSourceAtRevision(
-      frozenSourceSha,
-      relativePath,
+      || normalizedSourceBaseSha,
+    relativePath,
+  }));
+  const useBatchReader = typeof readSourcesAtRevisions === "function";
+  if (readSourcesAtRevisions !== null && !useBatchReader) {
+    const error = new TypeError(
+      "Frozen source batch reader must be a function or null.",
     );
+    error.code = "derived-alias-taint-frozen-source-batch-reader-invalid";
+    error.valueType = typeof readSourcesAtRevisions;
+    throw error;
+  }
+  const prefetchedSources = useBatchReader
+    ? await readSourcesAtRevisions(frozenSourceRequests)
+    : null;
+  if (
+    useBatchReader
+    && (
+      !Array.isArray(prefetchedSources)
+      || prefetchedSources.length !== frozenSourceRequests.length
+    )
+  ) {
+    const error = new Error(
+      "Frozen source batch reader returned an invalid result.",
+    );
+    error.code = "derived-alias-taint-frozen-source-batch-result-invalid";
+    error.expectedLength = frozenSourceRequests.length;
+    error.actualLength = Array.isArray(prefetchedSources)
+      ? prefetchedSources.length
+      : null;
+    throw error;
+  }
+  if (useBatchReader) {
+    for (
+      let requestIndex = 0;
+      requestIndex < prefetchedSources.length;
+      requestIndex += 1
+    ) {
+      const value = prefetchedSources[requestIndex];
+      if (
+        value === null
+        || value === undefined
+        || typeof value === "string"
+      ) {
+        continue;
+      }
+      const request = frozenSourceRequests[requestIndex];
+      const error = new Error(
+        `Frozen source batch reader returned an invalid value at request ${requestIndex}.`,
+      );
+      error.code = "derived-alias-taint-frozen-source-batch-result-invalid";
+      error.requestIndex = requestIndex;
+      error.sourceBaseSha = request.sourceSha;
+      error.path = request.relativePath;
+      error.valueType = typeof value;
+      throw error;
+    }
+  }
+  for (
+    let requestIndex = 0;
+    requestIndex < frozenSourceRequests.length;
+    requestIndex += 1
+  ) {
+    const { sourceSha: frozenSourceSha, relativePath } =
+      frozenSourceRequests[requestIndex];
+    const source = useBatchReader
+      ? prefetchedSources[requestIndex]
+      : await readSourceAtRevision(frozenSourceSha, relativePath);
     if (source === null || source === undefined) {
       continue;
     }

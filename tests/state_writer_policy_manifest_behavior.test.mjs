@@ -57,6 +57,7 @@ import {
   hasCanonicalStateMutationFinding,
   normalizeStateActionDelegations,
   readStateWriterPolicy,
+  readSourcesAtRevisionsBatch,
   resolveCachedHistoricalDerivedAliasProof,
   resolveCachedStateWriterRepositoryScan,
   resolveAcceptedStateWriterPolicyCheckpoint,
@@ -3251,6 +3252,354 @@ test("legacy semantic authority freezes alias dynamic and diagnostic source site
       "unsupportedSites",
     ],
   );
+});
+
+function buildCatFileBatchProtocol(entries) {
+  const chunks = [];
+  for (const entry of entries) {
+    const revisionPath = `${entry.sourceSha}:${entry.relativePath}`;
+    if (entry.missing) {
+      chunks.push(Buffer.from(`${revisionPath} missing\n`, "utf8"));
+      continue;
+    }
+    const content = Buffer.isBuffer(entry.content)
+      ? entry.content
+      : Buffer.from(String(entry.content), "utf8");
+    chunks.push(
+      Buffer.from(
+        `${entry.objectId || "a".repeat(40)} ${entry.type || "blob"} ${content.length}\n`,
+        "utf8",
+      ),
+      content,
+      Buffer.from("\n", "utf8"),
+    );
+  }
+  return Buffer.concat(chunks);
+}
+
+test("historical source batch reader preserves ordered byte-sized Git responses", () => {
+  const firstSha = "1".repeat(40);
+  const secondSha = "2".repeat(40);
+  const binaryish = Buffer.from([0x66, 0x80, 0x00, 0x67]);
+  const entries = [
+    {
+      sourceSha: firstSha,
+      relativePath: "js/space 雪.js",
+      content: Buffer.from("const value = '雪';\n", "utf8"),
+    },
+    {
+      sourceSha: secondSha,
+      relativePath: "js/crlf.js",
+      content: Buffer.from("first\r\nsecond\r\n", "utf8"),
+    },
+    {
+      sourceSha: firstSha,
+      relativePath: "js/no-final-newline.js",
+      content: Buffer.from("tail", "utf8"),
+    },
+    {
+      sourceSha: firstSha,
+      relativePath: "js/space 雪.js",
+      content: Buffer.from("const value = '雪';\n", "utf8"),
+    },
+    {
+      sourceSha: secondSha,
+      relativePath: "js/missing.js",
+      missing: true,
+    },
+    {
+      sourceSha: secondSha,
+      relativePath: "js/binaryish.js",
+      content: binaryish,
+    },
+  ];
+  const requests = entries.map(({ sourceSha, relativePath }) => ({
+    sourceSha,
+    relativePath,
+  }));
+  let runnerCalls = 0;
+  const sources = readSourcesAtRevisionsBatch(requests, {
+    runGitBatch(input, options) {
+      runnerCalls += 1;
+      assert.equal(options.maxBuffer, 6 * 64 * 1024 * 1024);
+      assert.equal(
+        input.toString("utf8"),
+        `${requests.map(
+          ({ sourceSha, relativePath }) =>
+            `${sourceSha}:${relativePath}`,
+        ).join("\n")}\n`,
+      );
+      return buildCatFileBatchProtocol(entries);
+    },
+  });
+
+  assert.equal(runnerCalls, 1);
+  assert.deepEqual(sources, [
+    "const value = '雪';\n",
+    "first\r\nsecond\r\n",
+    "tail",
+    "const value = '雪';\n",
+    null,
+    binaryish.toString("utf8"),
+  ]);
+  assert.deepEqual(
+    sources,
+    entries.map((entry) => (
+      entry.missing
+        ? null
+        : (Buffer.isBuffer(entry.content)
+          ? entry.content
+          : Buffer.from(String(entry.content), "utf8"))
+          .toString("utf8")
+    )),
+  );
+
+  let emptyRunnerCalls = 0;
+  assert.deepEqual(
+    readSourcesAtRevisionsBatch([], {
+      runGitBatch() {
+        emptyRunnerCalls += 1;
+        return Buffer.alloc(0);
+      },
+    }),
+    [],
+  );
+  assert.equal(emptyRunnerCalls, 0);
+
+  let cappedMaxBuffer = null;
+  const cappedRequests = Array.from({ length: 9 }, (_, index) => ({
+    sourceSha: firstSha,
+    relativePath: `js/missing ${index}.js`,
+  }));
+  assert.deepEqual(
+    readSourcesAtRevisionsBatch(cappedRequests, {
+      runGitBatch(input, options) {
+        cappedMaxBuffer = options.maxBuffer;
+        return buildCatFileBatchProtocol(
+          cappedRequests.map((request) => ({ ...request, missing: true })),
+        );
+      },
+    }),
+    Array(9).fill(null),
+  );
+  assert.equal(cappedMaxBuffer, 512 * 1024 * 1024);
+});
+
+test("default historical source batch matches sequential git show reads", () => {
+  const cwd = new URL("../", import.meta.url);
+  const revision = spawnSync(
+    "git",
+    ["rev-parse", "HEAD"],
+    { cwd, encoding: "utf8" },
+  );
+  assert.equal(revision.status, 0, revision.stderr);
+  const sourceSha = revision.stdout.trim();
+  const requests = [
+    { sourceSha, relativePath: "tools/build_state_writer_policy.mjs" },
+    { sourceSha, relativePath: "tools/state_writer_policy.json" },
+    { sourceSha, relativePath: "tools/build_state_writer_policy.mjs" },
+    { sourceSha, relativePath: "js/fixture-does-not-exist.js" },
+  ];
+  const expected = requests.map(({ sourceSha: sha, relativePath }) => {
+    const result = spawnSync(
+      "git",
+      ["show", `${sha}:${relativePath}`],
+      { cwd, encoding: null, maxBuffer: 64 * 1024 * 1024 },
+    );
+    return result.status === 0 ? result.stdout.toString("utf8") : null;
+  });
+
+  assert.deepEqual(readSourcesAtRevisionsBatch(requests), expected);
+});
+
+test("historical source batch reader fails closed on process and protocol errors", () => {
+  const request = {
+    sourceSha: "1".repeat(40),
+    relativePath: "js/fixture.js",
+  };
+  const objectId = "a".repeat(40);
+  const cases = [
+    ["protocol-truncated-header", Buffer.from("unterminated")],
+    [
+      "protocol-header-invalid",
+      Buffer.from("invalid header\n", "utf8"),
+    ],
+    [
+      "protocol-object-type-invalid",
+      Buffer.from(`${objectId} tree 0\n\n`, "utf8"),
+    ],
+    [
+      "protocol-size-invalid",
+      Buffer.from(`${objectId} blob nope\n`, "utf8"),
+    ],
+    [
+      "protocol-content-truncated",
+      Buffer.from(`${objectId} blob 4\nabc`, "utf8"),
+    ],
+    [
+      "protocol-content-delimiter-invalid",
+      Buffer.from(`${objectId} blob 3\nabcX`, "utf8"),
+    ],
+    [
+      "protocol-extra-bytes",
+      Buffer.from(`${objectId} blob 0\n\nextra`, "utf8"),
+    ],
+  ];
+  for (const [reason, output] of cases) {
+    assert.throws(
+      () => readSourcesAtRevisionsBatch([request], {
+        runGitBatch: () => output,
+      }),
+      (error) => (
+        error?.code
+          === "derived-alias-taint-frozen-source-batch-read-failed"
+        && error?.reason === reason
+        && error?.requestIndex === 0
+        && error?.sourceBaseSha === request.sourceSha
+        && error?.path === request.relativePath
+        && !error.message.includes("abc")
+      ),
+      reason,
+    );
+  }
+
+  assert.throws(
+    () => readSourcesAtRevisionsBatch([request], {
+      runGitBatch() {
+        const cause = new Error("fixture process failure");
+        cause.status = 9;
+        throw cause;
+      },
+    }),
+    (error) => (
+      error?.code
+        === "derived-alias-taint-frozen-source-batch-read-failed"
+      && error?.reason === "git-process-failed"
+      && error?.requestIndex === 0
+      && error?.sourceBaseSha === request.sourceSha
+      && error?.path === request.relativePath
+      && error?.processStatus === 9
+      && error?.cause?.message === "fixture process failure"
+      && !error.message.includes("fixture process failure")
+    ),
+  );
+});
+
+test("frozen derived baseline batch and custom single readers are output-equivalent", async () => {
+  const sourceBaseSha = "1".repeat(40);
+  const sourcesByPath = new Map([
+    [
+      "js/alpha.js",
+      [
+        "export function alpha(model) {",
+        '  model.bootPhase = "ready";',
+        "  consumeUnknown(model);",
+        "}",
+      ].join("\n"),
+    ],
+    [
+      "js/beta.js",
+      [
+        "export function beta(model) {",
+        '  model.bootPhase = "ready";',
+        "}",
+      ].join("\n"),
+    ],
+  ]);
+  const relativePaths = ["js/beta.js", "js/alpha.js"];
+  const singleReads = [];
+  const expected = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths,
+    legacySemanticBaseline: createEmptyLegacySemanticAuthority(),
+    readSourceAtRevision: async (revision, relativePath) => {
+      singleReads.push({ sourceSha: revision, relativePath });
+      return sourcesByPath.get(relativePath);
+    },
+  });
+  const customBufferResult = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths,
+    legacySemanticBaseline: createEmptyLegacySemanticAuthority(),
+    readSourceAtRevision: async (_revision, relativePath) => (
+      Buffer.from(sourcesByPath.get(relativePath), "utf8")
+    ),
+  });
+  let batchCalls = 0;
+  let batchRequests = [];
+  let fallbackSingleCalls = 0;
+  const actual = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths,
+    legacySemanticBaseline: createEmptyLegacySemanticAuthority(),
+    readSourceAtRevision: async () => {
+      fallbackSingleCalls += 1;
+      throw new Error("batch path used the single reader");
+    },
+    readSourcesAtRevisions: async (requests) => {
+      batchCalls += 1;
+      batchRequests = requests;
+      return requests.map(({ relativePath }) => (
+        sourcesByPath.get(relativePath)
+      ));
+    },
+  });
+
+  assert.deepEqual(actual, expected);
+  assert.deepEqual(customBufferResult, expected);
+  assert.deepEqual(singleReads, [
+    { sourceSha: sourceBaseSha, relativePath: "js/alpha.js" },
+    { sourceSha: sourceBaseSha, relativePath: "js/beta.js" },
+  ]);
+  assert.equal(batchCalls, 1);
+  assert.equal(fallbackSingleCalls, 0);
+  assert.deepEqual(batchRequests, singleReads);
+
+  let nullBatchSingleCalls = 0;
+  await assert.rejects(
+    buildFrozenDerivedAliasTaintBaseline({
+      sourceBaseSha,
+      relativePaths: ["js/alpha.js"],
+      legacySemanticBaseline: createEmptyLegacySemanticAuthority(),
+      readSourceAtRevision: async () => {
+        nullBatchSingleCalls += 1;
+        return sourcesByPath.get("js/alpha.js");
+      },
+      readSourcesAtRevisions: async () => null,
+    }),
+    (error) => (
+      error?.code
+        === "derived-alias-taint-frozen-source-batch-result-invalid"
+      && error?.expectedLength === 1
+      && error?.actualLength === null
+    ),
+  );
+  assert.equal(nullBatchSingleCalls, 0);
+
+  for (const [invalidValue, valueType] of [
+    [17, "number"],
+    [{ source: "fixture" }, "object"],
+    [Buffer.from("fixture", "utf8"), "object"],
+    [() => "fixture", "function"],
+  ]) {
+    await assert.rejects(
+      buildFrozenDerivedAliasTaintBaseline({
+        sourceBaseSha,
+        relativePaths: ["js/alpha.js"],
+        legacySemanticBaseline: createEmptyLegacySemanticAuthority(),
+        readSourcesAtRevisions: async () => [invalidValue],
+      }),
+      (error) => (
+        error?.code
+          === "derived-alias-taint-frozen-source-batch-result-invalid"
+        && error?.requestIndex === 0
+        && error?.sourceBaseSha === sourceBaseSha
+        && error?.path === "js/alpha.js"
+        && error?.valueType === valueType
+      ),
+      valueType,
+    );
+  }
 });
 
 test("derived alias diagnostic baseline admits frozen strict diagnostics only", async () => {
