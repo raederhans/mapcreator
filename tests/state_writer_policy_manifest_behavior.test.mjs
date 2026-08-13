@@ -85,9 +85,25 @@ import {
 
 const SHARED_REPOSITORY_POLICY_PROMISE = readStateWriterPolicy();
 const SHARED_REPOSITORY_SCAN_CACHE = new Map();
+let sharedCurrentPhasePolicyPromise = null;
 
 function readSharedRepositoryPolicy() {
   return SHARED_REPOSITORY_POLICY_PROMISE;
+}
+
+function buildSharedCurrentPhasePolicy() {
+  // Consumers must treat this expensive canonical rebuild as read-only.
+  if (!sharedCurrentPhasePolicyPromise) {
+    sharedCurrentPhasePolicyPromise = readSharedRepositoryPolicy()
+      .then((checkedIn) => buildStateWriterPolicySnapshot({
+        phase: checkedIn.progress.latestPhase,
+        baseSha: checkedIn.baseline.sourceBaseSha,
+        generatedAt: checkedIn.baseline.generatedAt,
+        previousPolicy: checkedIn,
+        repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+      }));
+  }
+  return sharedCurrentPhasePolicyPromise;
 }
 
 test("explicit repository scan cache deduplicates work and returns isolated values", async () => {
@@ -2896,13 +2912,7 @@ test("previous binding ordinals survive state-target parameter renaming", async 
 
 test("repository policy builder is deterministic and never auto-grants during verification", async () => {
   const checkedIn = await readSharedRepositoryPolicy();
-  const rebuilt = await buildStateWriterPolicySnapshot({
-    phase: checkedIn.progress.latestPhase,
-    baseSha: checkedIn.baseline.sourceBaseSha,
-    generatedAt: checkedIn.baseline.generatedAt,
-    previousPolicy: checkedIn,
-    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
-  });
+  const rebuilt = await buildSharedCurrentPhasePolicy();
 
   assert.deepEqual(rebuilt, checkedIn);
 });
@@ -6720,19 +6730,10 @@ test("policy snapshot keeps every historical caller-to-action proof live after l
   );
 });
 
-test("current phase deterministically preserves exactly the 36 backfilled P4.1 caller-to-action proofs", async () => {
+test("current phase preserves exactly the 36 checked-in P4.1 caller-to-action proofs", async () => {
   const checkedIn = await readSharedRepositoryPolicy();
-  const build = () =>
-    buildStateWriterPolicySnapshot({
-      phase: checkedIn.progress.latestPhase,
-      baseSha: checkedIn.baseline.sourceBaseSha,
-      generatedAt: checkedIn.baseline.generatedAt,
-      previousPolicy: checkedIn,
-      repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
-    });
-  const first = await build();
-  const second = await build();
-  const entries = first.progress?.callerToActionLedger?.entries;
+  const rebuilt = await buildSharedCurrentPhasePolicy();
+  const entries = rebuilt.progress?.callerToActionLedger?.entries;
 
   assert.ok(Array.isArray(entries));
   const backfilledEntries = entries.filter(
@@ -6759,8 +6760,8 @@ test("current phase deterministically preserves exactly the 36 backfilled P4.1 c
     ),
   );
   assert.deepEqual(
-    second.progress.callerToActionLedger,
-    first.progress.callerToActionLedger,
+    rebuilt.progress.callerToActionLedger,
+    checkedIn.progress.callerToActionLedger,
   );
 });
 
