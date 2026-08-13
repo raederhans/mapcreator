@@ -7,6 +7,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import {
   buildFrozenDerivedAliasTaintBaseline,
+  buildHistoricalDerivedAliasProofCheckpoint,
   buildIncrementalDerivedAliasTaintBaseline,
   buildLegacyStateWriterSemanticAuthority,
   buildStateWriterDerivedAliasTaintModeManifest,
@@ -16,6 +17,7 @@ import {
   P4_CLOSEOUT_MEMBERSHIP_RATIO,
   readStateWriterPolicy,
   resolveAcceptedStateWriterPolicyCheckpoint,
+  resolveCachedHistoricalDerivedAliasProof,
   resolveGitCommitSha,
   scanStateWriterPolicySnapshot,
   STATE_WRITER_POLICY_PATH,
@@ -840,6 +842,7 @@ export async function recomputeDerivedAliasTaintBaseline({
   candidatePaths = [],
   runGit,
   readSourceAtRevision,
+  historicalDerivedAliasProofCache = null,
 } = {}) {
   if (Number(currentPolicy?.schemaVersion) < 2) {
     return null;
@@ -869,15 +872,29 @@ export async function recomputeDerivedAliasTaintBaseline({
       ...strictProductionPaths,
     ]),
   ].map(String).sort((left, right) => left.localeCompare(right));
-  return buildFrozenDerivedAliasTaintBaseline({
-    sourceBaseSha,
-    relativePaths: expectedPaths,
-    legacySemanticBaseline:
-      currentPolicy?.baselines?.legacySemanticAuthority,
-    transitionCheckpoints:
-      currentPolicy?.baselines?.derivedAliasTaint
-        ?.transitionCheckpoints || [],
-    ...(readSourceAtRevision ? { readSourceAtRevision } : {}),
+  const phase = currentPolicy?.progress?.latestPhase || "P4.0";
+  return resolveCachedHistoricalDerivedAliasProof({
+    historicalDerivedAliasProofCache,
+    sourceSha: sourceBaseSha,
+    candidatePaths: expectedPaths,
+    phase,
+    taintMode: "strict",
+    checkpoint: buildHistoricalDerivedAliasProofCheckpoint({
+      phase,
+      policy: currentPolicy,
+    }),
+    previousPolicy,
+    policy: currentPolicy,
+    prove: () => buildFrozenDerivedAliasTaintBaseline({
+      sourceBaseSha,
+      relativePaths: expectedPaths,
+      legacySemanticBaseline:
+        currentPolicy?.baselines?.legacySemanticAuthority,
+      transitionCheckpoints:
+        currentPolicy?.baselines?.derivedAliasTaint
+          ?.transitionCheckpoints || [],
+      ...(readSourceAtRevision ? { readSourceAtRevision } : {}),
+    }),
   });
 }
 
@@ -1130,6 +1147,7 @@ export async function buildStateWriterPolicyReport({
   previousPolicy = undefined,
   requireClean = false,
   repositoryScanCache = null,
+  historicalDerivedAliasProofCache = null,
 } = {}) {
   const loadedPolicy = policy || await readStateWriterPolicy();
   const requestedPhase = String(phase || "").trim()
@@ -1224,6 +1242,7 @@ export async function buildStateWriterPolicyReport({
         await recomputeDerivedAliasTaintBaseline({
           previousPolicy: previousPolicyState.policy,
           currentPolicy: loadedPolicy,
+          historicalDerivedAliasProofCache,
           candidatePaths: Object.keys(
             inventory?.derivedAliasTaintModeManifest?.modeByPath
               || {},

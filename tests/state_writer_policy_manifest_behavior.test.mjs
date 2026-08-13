@@ -57,6 +57,7 @@ import {
   hasCanonicalStateMutationFinding,
   normalizeStateActionDelegations,
   readStateWriterPolicy,
+  resolveCachedHistoricalDerivedAliasProof,
   resolveCachedStateWriterRepositoryScan,
   resolveAcceptedStateWriterPolicyCheckpoint,
   resolveGitCommitSha,
@@ -85,6 +86,7 @@ import {
 
 const SHARED_REPOSITORY_POLICY_PROMISE = readStateWriterPolicy();
 const SHARED_REPOSITORY_SCAN_CACHE = new Map();
+const SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE = new Map();
 let sharedCurrentPhasePolicyPromise = null;
 
 function readSharedRepositoryPolicy() {
@@ -101,6 +103,8 @@ function buildSharedCurrentPhasePolicy() {
         generatedAt: checkedIn.baseline.generatedAt,
         previousPolicy: checkedIn,
         repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+        historicalDerivedAliasProofCache:
+          SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
       }));
   }
   return sharedCurrentPhasePolicyPromise;
@@ -141,6 +145,169 @@ test("explicit repository scan cache deduplicates work and returns isolated valu
     }),
     /fixture failure/,
   );
+});
+
+function createHistoricalDerivedAliasProofCacheFixture(overrides = {}) {
+  const previousPolicy = {
+    schemaVersion: 2,
+    baseline: { sourceBaseSha: "1".repeat(40) },
+    baselines: {
+      derivedAliasTaint: {
+        transitionCheckpoints: [],
+      },
+    },
+    progress: {
+      latestPhase: "P4.3",
+      checkpoints: [{ phase: "P4.3" }],
+    },
+  };
+  return {
+    sourceSha: previousPolicy.baseline.sourceBaseSha,
+    candidatePaths: ["js/b.js", "js/a.js", "js/a.js"],
+    phase: "P4.3",
+    taintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+    checkpoint: {
+      acceptedPolicyCheckpoint: null,
+      progressCheckpoint: previousPolicy.progress.checkpoints[0],
+      transitionCheckpoints: [],
+    },
+    previousPolicy,
+    policy: previousPolicy,
+    ...overrides,
+  };
+}
+
+test("historical derived-alias proof reuse is caller-owned and isolated by default", async () => {
+  let proofs = 0;
+  const prove = async () => ({ proof: ++proofs });
+  const fixture = createHistoricalDerivedAliasProofCacheFixture();
+
+  await resolveCachedHistoricalDerivedAliasProof({ ...fixture, prove });
+  await resolveCachedHistoricalDerivedAliasProof({ ...fixture, prove });
+
+  assert.equal(proofs, 2);
+});
+
+test("historical derived-alias proof reuse binds every proof identity input", async () => {
+  const cache = new Map();
+  let proofs = 0;
+  const prove = async () => ({
+    diagnosticDelta: { unsupportedSites: [`proof-${++proofs}`] },
+  });
+  const fixture = createHistoricalDerivedAliasProofCacheFixture();
+  const first = await resolveCachedHistoricalDerivedAliasProof({
+    historicalDerivedAliasProofCache: cache,
+    ...fixture,
+    prove,
+  });
+  first.diagnosticDelta.unsupportedSites[0] = "consumer-mutation";
+  const second = await resolveCachedHistoricalDerivedAliasProof({
+    historicalDerivedAliasProofCache: cache,
+    ...fixture,
+    prove,
+  });
+
+  assert.equal(proofs, 1);
+  assert.deepEqual(second, {
+    diagnosticDelta: { unsupportedSites: ["proof-1"] },
+  });
+  const [serializedIdentity] = cache.keys();
+  const identity = JSON.parse(serializedIdentity);
+  assert.deepEqual(identity.candidatePaths, ["js/a.js", "js/b.js"]);
+  assert.equal(identity.sourceSha, "1".repeat(40));
+  assert.equal(identity.phase, "P4.3");
+  assert.equal(identity.taintMode, DERIVED_ALIAS_TAINT_MODES.STRICT);
+  assert.match(identity.previousPolicySha256, /^[0-9a-f]{64}$/);
+  assert.match(identity.policySha256, /^[0-9a-f]{64}$/);
+  assert.deepEqual(identity.checkpoint, fixture.checkpoint);
+
+  const variants = [
+    { sourceSha: "2".repeat(40) },
+    { candidatePaths: ["js/a.js", "js/c.js"] },
+    { phase: "P4.2c" },
+    { taintMode: DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE },
+    {
+      checkpoint: {
+        ...fixture.checkpoint,
+        acceptedPolicyCheckpoint: { sourceSha: "3".repeat(40) },
+      },
+    },
+    {
+      previousPolicy: {
+        ...fixture.previousPolicy,
+        schemaVersion: 3,
+      },
+    },
+    {
+      policy: {
+        ...fixture.policy,
+        schemaVersion: 3,
+      },
+    },
+  ];
+  for (const overrides of variants) {
+    await resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache: cache,
+      ...fixture,
+      ...overrides,
+      prove,
+    });
+  }
+  assert.equal(proofs, 1 + variants.length);
+  await assert.rejects(
+    resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache: cache,
+      ...fixture,
+      sourceSha: "unresolved-revision",
+      prove,
+    }),
+    (error) =>
+      error?.code === "historical-derived-alias-proof-source-invalid",
+  );
+  await assert.rejects(
+    resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache: cache,
+      ...fixture,
+      previousPolicy: {
+        ...fixture.previousPolicy,
+        unresolvedIdentity: undefined,
+      },
+      prove,
+    }),
+    (error) =>
+      error?.code === "historical-derived-alias-proof-identity-invalid",
+  );
+  assert.equal(proofs, 1 + variants.length);
+});
+
+test("historical derived-alias proof reuse evicts rejected work", async () => {
+  const cache = new Map();
+  const fixture = createHistoricalDerivedAliasProofCacheFixture();
+  let proofs = 0;
+  const prove = async () => {
+    proofs += 1;
+    if (proofs === 1) throw new Error("fixture proof failed");
+    return { proof: "complete" };
+  };
+
+  await assert.rejects(
+    resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache: cache,
+      ...fixture,
+      prove,
+    }),
+    /fixture proof failed/,
+  );
+  assert.equal(cache.size, 0);
+  assert.deepEqual(
+    await resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache: cache,
+      ...fixture,
+      prove,
+    }),
+    { proof: "complete" },
+  );
+  assert.equal(proofs, 2);
 });
 
 function createPolicyFixture() {
@@ -2924,6 +3091,8 @@ test("later policy builds preserve the frozen P4.0 denominator", async () => {
     phase: currentPhase,
     previousPolicy: checkedIn,
     repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+    historicalDerivedAliasProofCache:
+      SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
   });
 
   assert.deepEqual(rebuilt.baseline, checkedIn.baseline);
@@ -3699,18 +3868,26 @@ test("checker recomputes derived alias diagnostics from frozen source", async ()
     }
     throw new Error(`unexpected git call: ${joined}`);
   };
-  const expected = await recomputeDerivedAliasTaintBaseline({
+  const historicalDerivedAliasProofCache = new Map();
+  let sourceReads = 0;
+  const recompute = () => recomputeDerivedAliasTaintBaseline({
     previousPolicy,
     currentPolicy,
     candidatePaths: ["js/fixture.js"],
     runGit,
+    historicalDerivedAliasProofCache,
     readSourceAtRevision: async (revision, relativePath) => {
+      sourceReads += 1;
       assert.equal(revision, sourceBaseSha);
       assert.equal(relativePath, "js/fixture.js");
       return frozenSource;
     },
   });
+  const expected = await recompute();
+  const reused = await recompute();
 
+  assert.equal(sourceReads, 1);
+  assert.deepEqual(reused, expected);
   assert.equal(expected.diagnosticDelta.ambiguousSites.length, 0);
   assert.equal(expected.diagnosticDelta.unsupportedSites.length, 1);
   assert.deepEqual(
@@ -6809,6 +6986,8 @@ test("repository checker reports a passing closed-world policy and default-state
   const report = await buildStateWriterPolicyReport({
     policy,
     repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+    historicalDerivedAliasProofCache:
+      SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
   });
   const currentCheckpoint = policy.progress.checkpoints.find(
     ({ phase }) => phase === policy.progress.latestPhase,
@@ -6864,6 +7043,8 @@ test("checker rejects a requested phase that has no matching policy checkpoint",
     phase: missingPhase,
     policy,
     repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+    historicalDerivedAliasProofCache:
+      SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
   });
   assert.equal(report.phase, missingPhase);
   assert.equal(report.verdict, "fail");

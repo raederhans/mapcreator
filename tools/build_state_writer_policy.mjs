@@ -950,6 +950,152 @@ function isTransitionSemanticBinding(binding, previousWriter = null) {
   return true;
 }
 
+function normalizeHistoricalDerivedAliasProofJson(value, label) {
+  let serialized;
+  let roundTripped;
+  try {
+    serialized = JSON.stringify(value);
+    roundTripped = JSON.parse(serialized);
+  } catch (cause) {
+    const error = new TypeError(
+      `Historical derived-alias proof ${label} must be JSON-safe.`,
+      { cause },
+    );
+    error.code = "historical-derived-alias-proof-identity-invalid";
+    throw error;
+  }
+  if (!isDeepStrictEqual(roundTripped, value)) {
+    const error = new TypeError(
+      `Historical derived-alias proof ${label} must round-trip exactly.`,
+    );
+    error.code = "historical-derived-alias-proof-identity-invalid";
+    throw error;
+  }
+  return { serialized, value: roundTripped };
+}
+
+function hashHistoricalDerivedAliasProofPolicy(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    const error = new TypeError(
+      `Historical derived-alias proof ${label} must be a policy object.`,
+    );
+    error.code = "historical-derived-alias-proof-identity-invalid";
+    throw error;
+  }
+  const normalized = normalizeHistoricalDerivedAliasProofJson(
+    value,
+    label,
+  );
+  return createHash("sha256")
+    .update(normalized.serialized)
+    .digest("hex");
+}
+
+export function buildHistoricalDerivedAliasProofIdentity({
+  sourceSha = "",
+  candidatePaths = [],
+  phase = "",
+  taintMode = DERIVED_ALIAS_TAINT_MODES.STRICT,
+  checkpoint = null,
+  previousPolicy = null,
+  policy = previousPolicy,
+} = {}) {
+  const normalizedSourceSha = String(sourceSha || "")
+    .trim()
+    .toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(normalizedSourceSha)) {
+    const error = new Error(
+      "Historical derived-alias proof reuse requires an exact source commit.",
+    );
+    error.code = "historical-derived-alias-proof-source-invalid";
+    throw error;
+  }
+  const normalizedCheckpoint = checkpoint === null
+    ? null
+    : normalizeHistoricalDerivedAliasProofJson(
+      checkpoint,
+      "checkpoint",
+    ).value;
+  return Object.freeze({
+    identityVersion: 1,
+    proofAlgorithmVersion:
+      DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION,
+    sourceSha: normalizedSourceSha,
+    candidatePaths: Object.freeze(
+      normalizeCandidatePathList(candidatePaths),
+    ),
+    phase: normalizeP4StateActionPhase(phase),
+    taintMode: normalizeDerivedAliasTaintMode(taintMode),
+    checkpoint: normalizedCheckpoint,
+    previousPolicySha256: hashHistoricalDerivedAliasProofPolicy(
+      previousPolicy,
+      "previous policy",
+    ),
+    policySha256: hashHistoricalDerivedAliasProofPolicy(
+      policy,
+      "policy",
+    ),
+  });
+}
+
+export function buildHistoricalDerivedAliasProofCheckpoint({
+  acceptedPolicyCheckpoint = null,
+  phase = "",
+  policy = null,
+} = {}) {
+  const normalizedPhase = normalizeP4StateActionPhase(phase);
+  return {
+    acceptedPolicyCheckpoint: acceptedPolicyCheckpoint
+      ? cloneJsonValue(acceptedPolicyCheckpoint)
+      : null,
+    progressCheckpoint: cloneJsonValue(
+      (policy?.progress?.checkpoints || []).find(
+        (checkpoint) => checkpoint?.phase === normalizedPhase,
+      ) || null,
+    ),
+    transitionCheckpoints: cloneJsonValue(
+      policy?.baselines?.derivedAliasTaint
+        ?.transitionCheckpoints || [],
+    ),
+  };
+}
+
+export async function resolveCachedHistoricalDerivedAliasProof({
+  historicalDerivedAliasProofCache = null,
+  prove,
+  ...identityInputs
+} = {}) {
+  if (typeof prove !== "function") {
+    throw new TypeError(
+      "resolveCachedHistoricalDerivedAliasProof requires a proof function.",
+    );
+  }
+  if (!historicalDerivedAliasProofCache) return prove();
+  if (!(historicalDerivedAliasProofCache instanceof Map)) {
+    throw new TypeError(
+      "historicalDerivedAliasProofCache must be a Map when provided.",
+    );
+  }
+  const identity = buildHistoricalDerivedAliasProofIdentity(
+    identityInputs,
+  );
+  const cacheKey = JSON.stringify(identity);
+  if (!historicalDerivedAliasProofCache.has(cacheKey)) {
+    const pending = Promise.resolve()
+      .then(prove)
+      .then((result) => structuredClone(result));
+    historicalDerivedAliasProofCache.set(cacheKey, pending);
+    pending.catch(() => {
+      if (historicalDerivedAliasProofCache.get(cacheKey) === pending) {
+        historicalDerivedAliasProofCache.delete(cacheKey);
+      }
+    });
+  }
+  return structuredClone(
+    await historicalDerivedAliasProofCache.get(cacheKey),
+  );
+}
+
 export async function buildFrozenDerivedAliasTaintBaseline({
   sourceBaseSha = "",
   relativePaths = [],
@@ -5022,6 +5168,7 @@ export async function buildStateWriterPolicySnapshot({
   refreshP4Baseline = false,
   acceptedPolicyCheckpoint = null,
   repositoryScanCache = null,
+  historicalDerivedAliasProofCache = null,
 } = {}) {
   const normalizedPhase = normalizeP4StateActionPhase(phase);
   if (refreshP4Baseline && normalizedPhase !== "P4.0") {
@@ -5300,15 +5447,29 @@ export async function buildStateWriterPolicySnapshot({
     )
     .map(([relativePath]) => relativePath);
   const derivedAliasTaint = derivedAliasTaintEnabled
-    ? await buildFrozenDerivedAliasTaintBaseline({
-      sourceBaseSha: previousPolicy.baseline.sourceBaseSha,
-      relativePaths: strictProductionPaths,
-      legacySemanticBaseline:
-        previousPolicy.baselines.legacySemanticAuthority,
-      existingBaseline:
-        previousPolicy.baselines.derivedAliasTaint || null,
-      acceptedPolicyCheckpoint,
-      stateKeyAuthorityIndex,
+    ? await resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache,
+      sourceSha: previousPolicy.baseline.sourceBaseSha,
+      candidatePaths: strictProductionPaths,
+      phase: normalizedPhase,
+      taintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+      checkpoint: buildHistoricalDerivedAliasProofCheckpoint({
+        acceptedPolicyCheckpoint,
+        phase: normalizedPhase,
+        policy: previousPolicy,
+      }),
+      previousPolicy,
+      policy: previousPolicy,
+      prove: () => buildFrozenDerivedAliasTaintBaseline({
+        sourceBaseSha: previousPolicy.baseline.sourceBaseSha,
+        relativePaths: strictProductionPaths,
+        legacySemanticBaseline:
+          previousPolicy.baselines.legacySemanticAuthority,
+        existingBaseline:
+          previousPolicy.baselines.derivedAliasTaint || null,
+        acceptedPolicyCheckpoint,
+        stateKeyAuthorityIndex,
+      }),
     })
     : null;
   const unbaselinedLegacyDiagnosticCounts =
