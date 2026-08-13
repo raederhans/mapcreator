@@ -26,7 +26,8 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - [x] Stage 6F: profile single-binding versus multi-binding scanner complexity and select the next bounded optimization.
 - [x] Stage 6G: evaluate one-process historical Git source prefetch and reject it on the frozen full-policy wall-clock gate.
 - [x] Stage 6H: cache source-analysis-owned scanner preparation and retain independent per-binding analysis.
-- [ ] Stage 6I: add explicit full-manifest admission and observable partial progress to the policy runner.
+- [x] Stage 6I: add explicit official-runner admission to the policy manifest.
+- [ ] Stage 6J: add observable partial progress to the policy runner with atomic final evidence.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
 ## Validation evidence
@@ -64,6 +65,7 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 | Stage 6H analysis preparation reuse | Integrated on the working branch as `ed735709`. A WeakMap keyed only by analysis object identity now reuses function/return indexes, syntactic export closure, trusted-global alias fixpoint, static-mutation paths, identity-transition records, and function identity context. Resolution, target-owner closure, modes, dataflow, traversal, findings, diagnostics, and delegations remain binding-local. Independent review closed one fresh-oracle seam blocker and returned `H_FINAL_REVIEW_CLEAR`. Root reruns passed scanner 32/32, policy 20/20, batch 9/9, syntax, 363 routes, diff check, and SF-ATS with zero route gaps. |
 | Stage 6H paired performance | The benchmark directly loaded the real `f2bfd75a` implementation and the candidate, alternated five runs, and required deep plus JSON output equality. On the 42.9 KiB real action module, N=33 improved from 155.849 ms to 101.590 ms (-34.8%) and N=72 from 547.534 ms to 269.824 ms (-50.7%). Shared preparation is mechanically one per scan; the fresh oracle is one per binding. |
 | Stage 6H long-gate observation | A direct deterministic-builder hotspot remained active at 10m58s and was stopped at the predeclared 1.25x historical subtest threshold; its exact three-process tree left zero residual PIDs. The result is inconclusive for H admission because an independent old-worktree manifest invocation in the same time window also remained active beyond 21 minutes, demonstrating substantial machine/baseline drift. Neither interrupted run overwrote the complete 356/356 full TAP. |
+| Stage 6I accidental-full-run guard | Integrated as `267511a`. The official wrapper overwrites a private full/focused/quick child mode; the manifest synchronously accepts only full/focused before repository setup. A direct manifest pattern failed with a clear official command in 732 ms, while the official focused path passed 1/1 and wrote the isolated focused TAP. Reachability/guard contracts passed 10/10; syntax, route schema 363, diff check, independent review, and SF-ATS with zero route gaps passed. |
 
 ## Open risks and remaining work
 
@@ -74,4 +76,4 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - Generalized Windows Job Object process containment remains a separate high-risk follow-up; current runners retain synchronous child-process behavior.
 - Full wall-clock savings remain unmeasured until the frozen-candidate Core/P4 admission run; current Stage 6C evidence proves command and test-file closure only.
 - Full Core wall-clock savings remain unmeasured. Stage 6D established that recursive descriptor audit/deep freeze is unsuitable for the real scan graph; Stage 6E established that fewer scanner invocations do not imply lower wall time when multi-binding analysis changes internal complexity; Stage 6G showed that a large isolated Git-read win did not translate into the frozen full-policy wall-clock gate. Stage 6H has paired scanner-local evidence, while its repository-scale effect requires a same-environment control or CI admission run.
-- Direct execution of the manifest test file can still launch the complete repository-scale suite without an explicit full-run token, and the synchronous wrapper buffers TAP until completion. Stage 6I should fail fast for accidental direct full runs and retain partial/progress evidence without weakening the official full gate.
+- The synchronous wrapper still buffers TAP until completion. Stage 6J should retain a running artifact and an interruption/failure artifact while publishing the canonical full TAP only after a complete terminal result. Signal propagation and Windows process-tree containment must be designed together with streaming.

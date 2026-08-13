@@ -45,6 +45,8 @@
 | 2026-08-14 | Integrate Hotspot H as `ed735709` after fixing the fresh-oracle seam. | Real old/new paired benchmarks improve N=33 by 34.8% and N=72 by 50.7%; independent review and all short gates are clear. |
 | 2026-08-14 | Treat the H long hotspot run as inconclusive due to timing drift. | The candidate hotspot crossed its historical 1.25x threshold, while an old-worktree manifest invocation in the same period also exceeded 21 minutes. Both exact process trees were stopped with zero residual PIDs, and the complete baseline TAP stayed intact. |
 | 2026-08-14 | Open Stage 6I on accidental full-run prevention and progress visibility. | Require an explicit official full-manifest admission path and preserve observable partial progress so focused reviews cannot silently launch the repository-scale suite. |
+| 2026-08-14 | Integrate the Stage 6I guard as `267511a`. | Direct manifest execution now fails in under one second with the official focused command; full and focused wrappers remain admitted, quick remains manifest-free, and mechanical ordering keeps the guard before repository setup. |
+| 2026-08-14 | Split streaming progress into Stage 6J. | Moving from `spawnSync` to streaming changes signal and process-tree behavior; final TAP atomicity, running/failed artifacts, stderr framing, and Windows teardown require one dedicated contract. |
 
 ## Live process ownership
 
@@ -68,4 +70,4 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Implement Stage 6I before another local full-policy attempt: make the manifest full run an explicit official-runner action, retain focused pattern support, and expose partial/progress evidence. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until a same-environment control or CI run admits the newer candidate.
+Design Stage 6J before another local full-policy attempt: retain the canonical full TAP as terminal complete evidence, write observable running/failed artifacts, and preserve exact Windows process-tree teardown. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until a same-environment control or CI run admits the newer candidate.
