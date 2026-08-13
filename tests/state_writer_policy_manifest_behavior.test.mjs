@@ -83,6 +83,11 @@ import {
   validateDerivedAliasTaintBaselineTransition,
   validateFrozenCloseoutTargets,
 } from "../tools/check_state_writer_policy.mjs";
+import {
+  assertP4StateWriterPolicyManifestRunMode,
+} from "../tools/run_p4_state_writer_policy_tests.mjs";
+
+assertP4StateWriterPolicyManifestRunMode();
 
 const SHARED_REPOSITORY_POLICY_PROMISE = readStateWriterPolicy();
 const SHARED_REPOSITORY_SCAN_CACHE = new Map();

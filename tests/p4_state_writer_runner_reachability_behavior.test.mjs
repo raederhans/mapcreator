@@ -3,10 +3,14 @@ import fs from "node:fs";
 import test from "node:test";
 
 import {
+  assertP4StateWriterPolicyManifestRunMode,
+  buildP4StateWriterPolicyChildEnv,
   P4_STATE_WRITER_POLICY_TEST_FILES,
   P4_STATE_WRITER_POLICY_QUICK_TEST_FILES,
+  P4_STATE_WRITER_POLICY_RUN_MODE_ENV,
   resolveP4StateWriterPolicyRun,
   resolveP4StateWriterPolicyTestFiles,
+  spawnP4StateWriterPolicyTestProcess,
 } from "../tools/run_p4_state_writer_policy_tests.mjs";
 import { buildP4PhaseVerificationPlan } from "../tools/run_p4_phase_verification.mjs";
 import { buildNodeRoutes } from "../tools/test_route_registry.mjs";
@@ -49,6 +53,96 @@ test("explicit focused runner requests remain isolated from the default suite", 
   );
 });
 
+test("official policy runner binds a private run mode into child environments", () => {
+  const parentEnv = {
+    FIXTURE_PARENT: "preserved",
+    [P4_STATE_WRITER_POLICY_RUN_MODE_ENV]: "inherited-stale-mode",
+  };
+  for (const mode of ["full", "focused", "quick"]) {
+    const childEnv = buildP4StateWriterPolicyChildEnv(mode, parentEnv);
+    assert.equal(childEnv.FIXTURE_PARENT, "preserved");
+    assert.equal(childEnv[P4_STATE_WRITER_POLICY_RUN_MODE_ENV], mode);
+  }
+  assert.equal(
+    parentEnv[P4_STATE_WRITER_POLICY_RUN_MODE_ENV],
+    "inherited-stale-mode",
+  );
+  assert.throws(
+    () => buildP4StateWriterPolicyChildEnv("unknown", parentEnv),
+    (error) => (
+      error?.code === "p4-state-writer-policy-run-mode-invalid"
+      && error?.mode === "unknown"
+    ),
+  );
+
+  let invocation = null;
+  const result = spawnP4StateWriterPolicyTestProcess(
+    ["tests/state_writer_policy_behavior.test.mjs"],
+    {
+      mode: "focused",
+      parentEnv: parentEnv,
+      runner(command, args, options) {
+        invocation = { command, args, options };
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    },
+  );
+  assert.equal(result.status, 0);
+  assert.equal(invocation.command, process.execPath);
+  assert.deepEqual(invocation.args, [
+    "--test",
+    "tests/state_writer_policy_behavior.test.mjs",
+  ]);
+  assert.equal(
+    invocation.options.env[P4_STATE_WRITER_POLICY_RUN_MODE_ENV],
+    "focused",
+  );
+});
+
+test("manifest guard admits official full and focused modes only", () => {
+  for (const mode of ["full", "focused"]) {
+    assert.equal(
+      assertP4StateWriterPolicyManifestRunMode({
+        env: { [P4_STATE_WRITER_POLICY_RUN_MODE_ENV]: mode },
+      }),
+      mode,
+    );
+  }
+  for (const mode of [undefined, "", "quick", "unknown"]) {
+    assert.throws(
+      () => assertP4StateWriterPolicyManifestRunMode({
+        env: mode === undefined
+          ? {}
+          : { [P4_STATE_WRITER_POLICY_RUN_MODE_ENV]: mode },
+      }),
+      (error) => (
+        error?.code === "p4-state-writer-policy-manifest-run-mode-required"
+        && error?.mode === String(mode || "")
+        && error.message.includes(
+          "npm run test:node:p4:state-writer-policy --",
+        )
+      ),
+      String(mode),
+    );
+  }
+
+  const manifestSource = fs.readFileSync(
+    "tests/state_writer_policy_manifest_behavior.test.mjs",
+    "utf8",
+  );
+  const guardIndex = manifestSource.indexOf(
+    "assertP4StateWriterPolicyManifestRunMode();",
+  );
+  const repositoryWorkIndex = manifestSource.indexOf(
+    "const SHARED_REPOSITORY_POLICY_PROMISE",
+  );
+  assert.ok(guardIndex >= 0, "manifest must invoke the official runner guard");
+  assert.ok(
+    guardIndex < repositoryWorkIndex,
+    "manifest guard must run before repository-scale setup",
+  );
+});
+
 test("quick policy runner keeps fast suites and writes an isolated TAP report", () => {
   const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
   const request = resolveP4StateWriterPolicyRun(["--quick"]);
@@ -58,6 +152,7 @@ test("quick policy runner keeps fast suites and writes an isolated TAP report", 
     "node tools/run_p4_state_writer_policy_tests.mjs --quick",
   );
   assert.deepEqual(request.testArguments, P4_STATE_WRITER_POLICY_QUICK_TEST_FILES);
+  assert.equal(request.mode, "quick");
   assert.equal(
     request.testArguments.includes("tests/state_writer_policy_manifest_behavior.test.mjs"),
     false,
@@ -78,6 +173,15 @@ test("quick policy runner keeps fast suites and writes an isolated TAP report", 
   ]);
   assert.equal(focused.mode, "focused");
   assert.match(focused.reportPath, /state-writer-policy-tests\.focused\.tap$/);
+
+  const full = resolveP4StateWriterPolicyRun([]);
+  assert.equal(full.mode, "full");
+  assert.equal(
+    full.testArguments.includes(
+      "tests/state_writer_policy_manifest_behavior.test.mjs",
+    ),
+    true,
+  );
 });
 
 test("exact P4.2a Node gate reaches the batch scanner regression suite", () => {
