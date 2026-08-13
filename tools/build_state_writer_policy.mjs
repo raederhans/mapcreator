@@ -571,6 +571,13 @@ const DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS = Object.freeze([
   "unsupportedSites",
 ]);
 
+const LEGACY_SEMANTIC_CUMULATIVE_AUTHORITY_SECTIONS = Object.freeze([
+  "bindings",
+  "memberships",
+  "aliasSites",
+  "dynamicSites",
+]);
+
 const DERIVED_ALIAS_TAINT_TRANSITION_SEMANTIC_SECTIONS =
   LEGACY_SEMANTIC_SECTIONS;
 const ALLOW_UNKNOWN_UNSUPPORTED_AUTHORITY = true;
@@ -689,12 +696,7 @@ export function composeLegacySemanticBaseline({
         : []),
     ].map(String).sort();
   }
-  for (const section of [
-    "bindings",
-    "memberships",
-    "aliasSites",
-    "dynamicSites",
-  ]) {
+  for (const section of LEGACY_SEMANTIC_CUMULATIVE_AUTHORITY_SECTIONS) {
     composed[section] = [
       ...composed[section],
       ...(Array.isArray(
@@ -1393,7 +1395,7 @@ export function validateLegacyStateWriterSemanticLedger({
     );
   }
   if (previousRetired) {
-    for (const section of LEGACY_SEMANTIC_SECTIONS) {
+    for (const section of LEGACY_SEMANTIC_CUMULATIVE_AUTHORITY_SECTIONS) {
       const currentCounts = signatureCounts(retired?.[section]);
       for (
         const [signature, previousCount] of

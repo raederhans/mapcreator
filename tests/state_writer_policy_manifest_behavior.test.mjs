@@ -3777,8 +3777,40 @@ test("legacy semantic authority preserves duplicate site multiplicity", () => {
   );
 });
 
-test("legacy semantic retirement ledger blocks reintroduction and ledger drift", () => {
+test("legacy semantic retirement accepts exact diagnostic proof replacement", () => {
+  const baseline = createEmptyLegacySemanticAuthority();
+  baseline.ambiguousSites = ["current-ambiguous-proof"];
+  baseline.unsupportedSites = ["current-unsupported-proof"];
+  const retired = subtractLegacyStateWriterSemanticAuthority(
+    baseline,
+    buildLegacyStateWriterSemanticAuthority([]),
+  );
+  const previousRetired = createEmptyLegacySemanticAuthority();
+  previousRetired.ambiguousSites = ["previous-ambiguous-proof"];
+  previousRetired.unsupportedSites = ["previous-unsupported-proof"];
+
+  assert.deepEqual(
+    validateLegacyStateWriterSemanticLedger({
+      baseline,
+      writers: [],
+      retired,
+      previousRetired,
+    }).violations,
+    [],
+  );
+});
+
+test("legacy semantic retirement blocks cumulative authority reintroduction", () => {
   const fixture = createPolicyFixture();
+  fixture.writers[0].bindings[0].grants[0].aliasSites = [{
+    alias: "bootAlias",
+    aliasChain: ["state", "bootAlias"],
+    operation: "assign",
+    key: "bootPhase",
+    line: 2,
+    column: 3,
+    sourceFingerprint: "a".repeat(64),
+  }];
   const baseline = buildLegacyStateWriterSemanticAuthority(fixture.writers);
   const emptyCurrent = buildLegacyStateWriterSemanticAuthority([]);
   const retired = subtractLegacyStateWriterSemanticAuthority(
@@ -3803,14 +3835,28 @@ test("legacy semantic retirement ledger blocks reintroduction and ledger drift",
       ),
       previousWriters: [],
       previousRetired: retired,
-    }).violations.map(({ code }) => code),
+    }).violations
+      .filter(({ code }) =>
+        code === "legacy-semantic-retirement-regressed"
+      )
+      .map(({ section }) => section),
     [
-      "legacy-semantic-authority-added",
-      "legacy-semantic-authority-added",
-      "legacy-semantic-retirement-regressed",
-      "legacy-semantic-retirement-regressed",
+      "bindings",
+      "memberships",
+      "aliasSites",
     ],
   );
+});
+
+test("legacy semantic retirement ledger rejects exact baseline drift", () => {
+  const baseline = createEmptyLegacySemanticAuthority();
+  baseline.memberships = ["retired-membership"];
+  baseline.ambiguousSites = ["current-ambiguous-proof"];
+  const retired = subtractLegacyStateWriterSemanticAuthority(
+    baseline,
+    buildLegacyStateWriterSemanticAuthority([]),
+  );
+
   assert.deepEqual(
     validateLegacyStateWriterSemanticLedger({
       baseline,
@@ -3818,12 +3864,19 @@ test("legacy semantic retirement ledger blocks reintroduction and ledger drift",
       retired: {
         ...retired,
         memberships: [],
+        ambiguousSites: ["stale-ambiguous-proof"],
       },
     }).violations.map(({ code, section }) => [code, section]),
     [
       ["legacy-semantic-retired-ledger-drift", "memberships"],
+      ["legacy-semantic-retired-ledger-drift", "ambiguousSites"],
     ],
   );
+});
+
+test("legacy semantic retirement allows current authority within the frozen baseline", () => {
+  const fixture = createPolicyFixture();
+  const baseline = buildLegacyStateWriterSemanticAuthority(fixture.writers);
   assert.deepEqual(
     validateLegacyStateWriterSemanticLedger({
       baseline,
