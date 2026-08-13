@@ -2,7 +2,7 @@
 
 ## Current status
 
-The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reuse, and Stage 6C strict command closure are committed. Stages 6D and 6E each passed short correctness review but failed frozen wall-clock gates and were reverted. Stage 6F now profiles the scanner's multi-binding complexity before another implementation.
+The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reuse, and Stage 6C strict command closure are committed. Stages 6D, 6E, and 6G passed short correctness review but failed frozen wall-clock gates and were reverted. Stage 6F isolated repeated binding-independent scanner preparation; Stage 6H is the next bounded implementation and uses short equivalence plus scaling evidence before any full-policy admission run.
 
 ## Checklist
 
@@ -23,7 +23,9 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - [x] Stage 6C: authorize and admit measured test-portfolio reform after Stages 6A and 6B.
 - [x] Stage 6D: evaluate explicit shared-readonly repository scan results and reject the candidate on frozen wall-clock evidence.
 - [x] Stage 6E: evaluate batched action non-target parameter scans and reject the candidate on frozen wall-clock evidence.
-- [ ] Stage 6F: profile single-binding versus multi-binding scanner complexity and select the next bounded optimization.
+- [x] Stage 6F: profile single-binding versus multi-binding scanner complexity and select the next bounded optimization.
+- [x] Stage 6G: evaluate one-process historical Git source prefetch and reject it on the frozen full-policy wall-clock gate.
+- [ ] Stage 6H: cache source-analysis-owned scanner preparation and retain independent per-binding analysis.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
 ## Validation evidence
@@ -56,6 +58,8 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 | Stage 6E measured target | The next slice batches `validateStateActionNonTargetParameterMutations`: static evidence shows 14 action modules and about 142 per-binding scanner setups before each module's normal batch inventory. Acceptance requires an exact legacy-oracle violation comparison and one scanner invocation per action module. |
 | Stage 6E batch experiment | `64c41aa` mechanically reduced production scanner invocations from 142 to 14 while preserving 142 binding analyses and zero violations. Independent review closed binding-ID collision, payload equality, oracle independence, and redundant-container postprocessing; root reruns passed focused 2/2, batch 10/10, scanner 30/30, policy 20/20, route 363, and SF-ATS with zero route gaps/unmatched. The frozen full-policy run remained active at the predeclared 1.25x threshold of about 20 minutes, so root stopped the exact four-process tree, confirmed zero remaining PIDs, and reverted the candidate as `ed25d341`. |
 | Stage 6F diagnostic target | Compare the same action-module bindings as N single-binding scans versus one N-binding scan at N=1/4/8/16/33. The next implementation must follow measured scanner complexity rather than invocation count alone. |
+| Stage 6F scanner diagnosis | `parseAndAnalyzeJavaScript` already reuses the same-source AST/index. Multi-binding still repeats `functionRecordByNode`, direct-return indexing, returned-function base closure, trusted-global alias fixpoint, static-path mutation indexing, and identity-transition indexing per binding. On the largest measured action module, 72-binding batch median was 387 ms versus 377 ms for repeated single calls, confirming that invocation batching leaves the dominant `B x S` preparation term intact. A 31.4 KiB synthetic source with 240 unrelated functions took about 124 ms/290 ms for 33/72 bindings versus 1.47 ms/1.30 ms on the 48-byte owner source, locating the bounded Stage 6H opportunity. |
+| Stage 6G historical source batch experiment | `02c13b29` replaced 47-path `cat-file -e` plus `git show` reads with one bounded `git cat-file --batch` process. Focused 4/4, syntax, 363 routes, diff hygiene, independent review, and SF-ATS route gaps all passed. Real 47-path output was pairwise equal and reduced the observed reader sample from 8.14 s to 0.112 s, with Git process count about `78 -> 2` including revision resolution. The frozen full-policy manifest worker remained CPU-active at 20m45s, beyond the predeclared 19m53s threshold derived from the 15m55s baseline. Root stopped the exact three-process Node tree, confirmed zero remaining PIDs, preserved the prior complete TAP, and reverted the candidate as `13c355e9`. |
 
 ## Open risks and remaining work
 
@@ -65,4 +69,4 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - The exact policy rebuild still spends roughly 18 minutes in the older focused baseline. Stage 6A now reuses identical historical proofs within one producer; a frozen-candidate live run remains required to measure the new wall time.
 - Generalized Windows Job Object process containment remains a separate high-risk follow-up; current runners retain synchronous child-process behavior.
 - Full wall-clock savings remain unmeasured until the frozen-candidate Core/P4 admission run; current Stage 6C evidence proves command and test-file closure only.
-- Full Core wall-clock savings remain unmeasured. Stage 6D established that recursive descriptor audit/deep freeze is unsuitable for the real scan graph; Stage 6E established that fewer scanner invocations do not imply lower wall time when multi-binding analysis changes internal complexity. Stage 6F must measure that curve before another scanner change.
+- Full Core wall-clock savings remain unmeasured. Stage 6D established that recursive descriptor audit/deep freeze is unsuitable for the real scan graph; Stage 6E established that fewer scanner invocations do not imply lower wall time when multi-binding analysis changes internal complexity; Stage 6G showed that a large isolated Git-read win did not translate into the frozen full-policy wall-clock gate. Stage 6H is limited to the measured repeated source-analysis preparation and requires short old/new output equivalence plus 33/72-binding scaling evidence before integration.

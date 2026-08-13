@@ -36,7 +36,9 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 6C: Reform the remaining test portfolio from measured timing and coverage-equivalence evidence.
 - [x] Stage 6D: Evaluate immutable shared repository-scan graphs and reject the real-graph performance regression.
 - [x] Stage 6E: Evaluate action non-target batching and reject the frozen wall-clock regression.
-- [ ] Stage 6F: Profile scanner scaling and choose a measured follow-up.
+- [x] Stage 6F: Profile scanner scaling and choose a measured follow-up.
+- [x] Stage 6G: Evaluate batched historical Git source reads and reject the frozen full-policy regression.
+- [ ] Stage 6H: Reuse source-analysis-owned immutable scanner preparation while preserving per-binding dataflow.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
 ## Acceptance criteria
@@ -54,6 +56,8 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Stage 6D preserves isolated results by default and exposes shared scan results only through an explicit, mechanically immutable contract.
 - Stage 6E reduces non-target scanner invocations from per-binding setup to one batch per action module while preserving violation order, attribution, evidence, coordinates, diagnostics, and fail-closed behavior.
 - Stage 6F records bounded real-module scaling for single-binding and multi-binding paths, and any follow-up must improve that measured mechanism without weakening the exact policy oracle.
+- Stage 6G preserves ordered exact blob bytes, missing-path semantics, bounded buffering, SHA/path provenance, and reader selection while reducing historical source-reader Git processes; frozen full-policy wall time remains the admission gate.
+- Stage 6H keeps resolution, target-owner closure, taint mode, current-contract recognition, traversal state, findings, diagnostics, and delegations binding-local while reusing only analysis-identity invariants.
 
 ## Non-goals
 
