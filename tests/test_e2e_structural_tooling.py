@@ -233,10 +233,10 @@ process.stdout.write(JSON.stringify(ignores));
                     f"{path} ignore status drifted",
                 )
 
-    def test_console_allowlist_decay_passes(self) -> None:
+    def test_console_allowlist_decay_passes_with_no_active_exceptions(self) -> None:
         result = run_command("node", "tools/check_console_allowlist_decay.mjs")
         self.assert_command_ok(result)
-        self.assertIn("Console allowlist passed", result.stdout)
+        self.assertIn("Console allowlist passed with 0 entries.", result.stdout)
 
     def test_timeout_guardrails_pass(self) -> None:
         result = run_command("node", "tools/check_test_timeout_guardrails.mjs")
