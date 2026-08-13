@@ -37,6 +37,8 @@
 | 2026-08-13 | Open Hotspot D on the frozen evidence. | Preserve default isolated scan results; allow only audited internal consumers to request one recursively immutable shared result. |
 | 2026-08-14 | Reject Hotspot D after the frozen candidate exceeded 30 minutes with an active single manifest worker. | Correctness review passed, but the real graph descriptor audit/deep freeze crossed 1.9x of the 15m55s baseline before completion; root stopped the exact owned process tree and reverted the candidate as `d873c075`. |
 | 2026-08-14 | Open Hotspot E on repeated action non-target scanner setup. | Batch about 142 per-binding scans into one call per each of 14 action modules while preserving the exact legacy violation oracle and fail-closed errors. |
+| 2026-08-14 | Reject Hotspot E at its predeclared 1.25x frozen wall-clock threshold. | The candidate proved 142-to-14 invocation closure and exact output contracts, but the full policy still ran at about 20 minutes; root stopped the exact owned tree and reverted it as `ed25d341`. |
+| 2026-08-14 | Open Hotspot F as a read-only scanner-complexity diagnostic. | Measure single-binding versus multi-binding scaling on real action modules before choosing parse/index reuse, traversal changes, or a no-change outcome. |
 
 ## Live process ownership
 
@@ -48,7 +50,8 @@
 | Hotspot B implementation | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | short task-owned outputs only | delivered `f2bfd75a`; integrated and revalidated by root as `f6310175` |
 | Hotspot C implementation | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | task-owned Core list/adaptive reports | delivered `15152ee1`; integrated and revalidated by root as `0df8698c` |
 | Hotspot D implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | short isolated outputs only | correctness clear; performance rejected and reverted as `d873c075` |
-| Hotspot E implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | short isolated outputs only | active on root-positioned `d873c075`; full policy remains root-owned |
+| Hotspot E implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | short isolated outputs only | correctness clear; performance rejected and reverted as `ed25d341` |
+| Hotspot F diagnostics | threads `019ffb54-8b38-7630-9b13-363cfba20917` and `019ffb53-ee12-7f72-9c0e-801190c2cae0` | no shared outputs | active read-only scaling/root-cause audit |
 
 ## Handoff
 
@@ -56,4 +59,4 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Admit Hotspot E only after exact legacy-oracle equivalence and scanner-invocation reduction pass. Run the full policy once on that frozen candidate, then freeze it for the remaining Core/Pages/browser/perf/TNO gates; use the resume checkpoint when a long command is interrupted or fails.
+Finish Hotspot F with a bounded scaling curve and select one implementation only when it has a direct runtime mechanism and a short proof. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline.

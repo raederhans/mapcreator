@@ -35,7 +35,8 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 6B: Reuse revision-bound policy evidence across Python, P4, and Core process boundaries.
 - [x] Stage 6C: Reform the remaining test portfolio from measured timing and coverage-equivalence evidence.
 - [x] Stage 6D: Evaluate immutable shared repository-scan graphs and reject the real-graph performance regression.
-- [ ] Stage 6E: Batch action non-target parameter scans with exact legacy-oracle equivalence.
+- [x] Stage 6E: Evaluate action non-target batching and reject the frozen wall-clock regression.
+- [ ] Stage 6F: Profile scanner scaling and choose a measured follow-up.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
 ## Acceptance criteria
@@ -52,6 +53,7 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Stage 6C keeps every deterministic admission contract reachable while reducing duplicate commands, processes, or setup work.
 - Stage 6D preserves isolated results by default and exposes shared scan results only through an explicit, mechanically immutable contract.
 - Stage 6E reduces non-target scanner invocations from per-binding setup to one batch per action module while preserving violation order, attribution, evidence, coordinates, diagnostics, and fail-closed behavior.
+- Stage 6F records bounded real-module scaling for single-binding and multi-binding paths, and any follow-up must improve that measured mechanism without weakening the exact policy oracle.
 
 ## Non-goals
 
