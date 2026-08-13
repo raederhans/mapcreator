@@ -2,7 +2,7 @@
 
 ## Current status
 
-The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reuse, and Stage 6C strict command closure are committed. The first combined frozen full-policy run passed and exposed one final repeated full-graph clone hotspot; Stage 6D is active.
+The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reuse, and Stage 6C strict command closure are committed. Stage 6D proved the shared-readonly contract but failed its frozen wall-clock gate and was reverted. Stage 6E now targets the measured repeated scanner setup.
 
 ## Checklist
 
@@ -21,7 +21,8 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - [x] Stage 6A: admit the derived-proof cache candidate from Hotspot A.
 - [x] Stage 6B: authorize and admit cross-process evidence reuse after Stage 6A.
 - [x] Stage 6C: authorize and admit measured test-portfolio reform after Stages 6A and 6B.
-- [ ] Stage 6D: admit explicit shared-readonly repository scan results for audited internal consumers.
+- [x] Stage 6D: evaluate explicit shared-readonly repository scan results and reject the candidate on frozen wall-clock evidence.
+- [ ] Stage 6E: batch action non-target parameter scans while preserving the exact violation oracle.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
 ## Validation evidence
@@ -50,6 +51,8 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 | Stage 6C read-only portfolio audit | Current Core closure is 87 top-level / 103 leaf / 70 Node / 20 Python processes. Strict command-closure supersession projects 80 top-level / 95 leaf / 62 Node / 20 Python with identical Node test-file coverage. |
 | Stage 6C strict command closure | Integrated as `0df8698c`. Core now lists 80 commands and seven durable supersession records; mechanical closure is 95 leaf / 62 Node / 20 Python while the unique Node test-file set remains 103/103. Cycle and unresolved provenance fail closed. Root rerun passed Core 34/34, metadata 29/29, supervisor contracts/routing 18/18, supervisor plan 17/17, route schema 363, list 80/7/0/0, and SF-ATS with five changed files / zero route gaps. |
 | Frozen full policy after Stages 6A-C | `b7f9b40e`: 356/356 passed, exit 0, TAP total 954,768.5944 ms (~15m55s). This is 84.4% below the 6,139,150.8 ms baseline and 73.9% below the 3,662,093.7 ms intermediate run. The closed snapshot (420,985.07 ms) and deterministic builder (470,960.75 ms) still account for 93.42%; both consume the shared repository-scan cache whose resolver still clones the full graph per return. |
+| Stage 6D shared-readonly experiment | Short correctness review closed two P1 certificate/proxy bypasses and one P2 revoked-proxy diagnostic gap; focused 8/8, batch 9/9, soundness 20/20, syntax, route 363, and SF-ATS route gaps all passed. The frozen full-policy candidate at `8d828e4` exceeded 30 minutes while its single manifest worker remained CPU-active, crossing 1.9x of the 954,768.5944 ms admission baseline before completion. Root stopped the exact four-process tree, confirmed zero remaining target PIDs, and reverted the candidate as `d873c075`. The checked-in full TAP remains the prior complete 356/356 baseline. |
+| Stage 6E measured target | The next slice batches `validateStateActionNonTargetParameterMutations`: static evidence shows 14 action modules and about 142 per-binding scanner setups before each module's normal batch inventory. Acceptance requires an exact legacy-oracle violation comparison and one scanner invocation per action module. |
 
 ## Open risks and remaining work
 
@@ -59,4 +62,4 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - The exact policy rebuild still spends roughly 18 minutes in the older focused baseline. Stage 6A now reuses identical historical proofs within one producer; a frozen-candidate live run remains required to measure the new wall time.
 - Generalized Windows Job Object process containment remains a separate high-risk follow-up; current runners retain synchronous child-process behavior.
 - Full wall-clock savings remain unmeasured until the frozen-candidate Core/P4 admission run; current Stage 6C evidence proves command and test-file closure only.
-- Full Core wall-clock savings remain unmeasured. The full policy wall-clock is now measured; Stage 6D targets only its two remaining dominant full-graph consumers.
+- Full Core wall-clock savings remain unmeasured. Stage 6D established that recursive descriptor audit and deep freeze are unsuitable for the real scan graph; Stage 6E now targets the repeated scanner setup with an explicit invocation-count contract.

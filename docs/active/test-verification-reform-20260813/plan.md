@@ -34,7 +34,8 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 6A: Cache exact historical derived-alias proofs with complete identity invalidation.
 - [x] Stage 6B: Reuse revision-bound policy evidence across Python, P4, and Core process boundaries.
 - [x] Stage 6C: Reform the remaining test portfolio from measured timing and coverage-equivalence evidence.
-- [ ] Stage 6D: Remove repeated full-graph repository-scan clones for audited read-only policy consumers.
+- [x] Stage 6D: Evaluate immutable shared repository-scan graphs and reject the real-graph performance regression.
+- [ ] Stage 6E: Batch action non-target parameter scans with exact legacy-oracle equivalence.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
 ## Acceptance criteria
@@ -50,6 +51,7 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Stage 6B rejects dirty, stale, plan-drifted, phase-drifted, or artifact-incomplete evidence before any cross-process reuse.
 - Stage 6C keeps every deterministic admission contract reachable while reducing duplicate commands, processes, or setup work.
 - Stage 6D preserves isolated results by default and exposes shared scan results only through an explicit, mechanically immutable contract.
+- Stage 6E reduces non-target scanner invocations from per-binding setup to one batch per action module while preserving violation order, attribution, evidence, coordinates, diagnostics, and fail-closed behavior.
 
 ## Non-goals
 
