@@ -21,6 +21,13 @@ import {
   runCheckpointedCommands,
   summarizeCommandStates,
 } from "./verification/resumable_verification.mjs";
+import {
+  buildStateWriterPolicyEvidenceTrace,
+  buildStrictStateWriterEvidenceEnvironment,
+  createStateWriterPolicyEvidenceSession,
+  ensureStateWriterPolicyEvidence,
+  isStateWriterPythonBoundaryCommandRef,
+} from "./verification/state_writer_policy_evidence.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
@@ -224,7 +231,15 @@ export function renderMarkdownReport(plan, results = []) {
     : ["- none"]));
   lines.push("", "## Execution results");
   lines.push(...(results.length
-    ? results.map((entry) => `- ${entry.commandRef}: exit=${entry.exitCode}`)
+    ? results.map((entry) => {
+      const evidence = entry.externalEvidence;
+      const evidenceSuffix = evidence?.evidenceId
+        ? ` evidence=${evidence.evidenceId} path=${evidence.evidencePath} disposition=${evidence.disposition}`
+        : evidence?.code
+          ? ` evidence=${evidence.code} disposition=${evidence.disposition}`
+          : "";
+      return `- ${entry.commandRef}: exit=${entry.exitCode}${evidenceSuffix}`;
+    })
     : ["- none"]));
   return `${lines.join("\n")}\n`;
 }
@@ -249,6 +264,7 @@ function renderExecutionMarkdown(report) {
   const base = renderMarkdownReport(report, results.map((entry) => ({
     commandRef: entry.commandRef,
     exitCode: entry.exitCode,
+    externalEvidence: entry.externalEvidence,
   }))).trimEnd();
   const decision = report.resumeDecision || {};
   const lines = [
@@ -279,6 +295,7 @@ function writeExecutionReport(report, { jsonOut, mdOut }) {
       exitCode: entry.exitCode,
       durationMs: entry.durationMs,
       evidenceDisposition: entry.evidenceDisposition,
+      externalEvidence: entry.externalEvidence || null,
     }));
   atomicWriteJsonSync(jsonOut, report);
   fs.mkdirSync(path.dirname(mdOut), { recursive: true });
@@ -292,22 +309,66 @@ export function runVerificationPlan(plan, {
   cwd = REPO_ROOT,
   stdio = "inherit",
   platform = process.platform,
+  stateWriterEvidenceEnsurer = ensureStateWriterPolicyEvidence,
+  baseEnv = process.env,
 } = {}) {
   const results = [];
+  const liveFallbackSession = createStateWriterPolicyEvidenceSession();
   for (const entry of plan.commandsToRun) {
     const command = commandToProcess(entry.commandRef, { packageScripts, platform });
     if (!command) {
       results.push({ commandRef: entry.commandRef, exitCode: 1, skipped: true, reason: "unresolvable command" });
       break;
     }
+    let env = baseEnv;
+    let externalEvidence = null;
+    if (isStateWriterPythonBoundaryCommandRef(entry.commandRef)) {
+      try {
+        const evidenceResult = stateWriterEvidenceEnsurer({
+          cwd,
+          producer: {
+            entrypoint: "tools/run_core_verification.mjs",
+            commandRef: entry.commandRef,
+          },
+          routeApplicability: { unmatchedChangedFiles: [] },
+          liveFallbackSession,
+        });
+        externalEvidence = buildStateWriterPolicyEvidenceTrace(evidenceResult);
+        env = buildStrictStateWriterEvidenceEnvironment(evidenceResult, {
+          cwd,
+          baseEnv,
+        });
+      } catch (error) {
+        externalEvidence = {
+          kind: "state-writer-policy-checker-evidence",
+          status: "blocked",
+          code: error?.code || "state-writer-evidence-setup-failed",
+          disposition: error?.disposition || "blocked",
+          message: error?.message || String(error),
+        };
+        results.push({
+          commandRef: entry.commandRef,
+          command: entry.command,
+          exitCode: 2,
+          externalEvidence,
+        });
+        break;
+      }
+    }
     const result = runner(command.bin, command.args, {
       cwd,
       stdio,
       shell: false,
       encoding: "utf8",
+      env,
     });
     const exitCode = typeof result?.status === "number" ? result.status : 1;
-    results.push({ commandRef: entry.commandRef, command: entry.command, exitCode });
+    results.push({
+      commandRef: entry.commandRef,
+      command: entry.command,
+      exitCode,
+      externalEvidence,
+    });
     if (exitCode !== 0) break;
   }
   return results;
@@ -324,8 +385,11 @@ export function runCoreVerification({
   identityReader = () => captureVerificationIdentity({ cwd }),
   checkpointReader = readResumeCheckpoint,
   changedFilesReader = (baseSha) => discoverChangedFilesBetween(baseSha, { cwd }),
+  stateWriterEvidenceEnsurer = ensureStateWriterPolicyEvidence,
+  baseEnv = process.env,
 } = {}) {
   const args = Array.isArray(argv) ? parseArgs(argv) : argv;
+  const liveFallbackSession = createStateWriterPolicyEvidenceSession();
   const plan = buildCoreVerificationPlan({ includeMainThread: args.includeMainThread, packageScripts });
   const runnerId = args.includeMainThread ? "verify-core-main-thread" : "verify-core";
   const planIdentity = buildPlanIdentity({ runnerId, entries: plan.commandsToRun });
@@ -406,11 +470,51 @@ export function runCoreVerification({
     execute(commandEntry) {
       const command = commandToProcess(commandEntry.commandRef, { packageScripts, platform });
       if (!command) return { status: 1, error: "unresolvable command" };
+      let env = baseEnv;
+      if (isStateWriterPythonBoundaryCommandRef(commandEntry.commandRef)) {
+        try {
+          const evidenceResult = stateWriterEvidenceEnsurer({
+            cwd,
+            producer: {
+              entrypoint: "tools/run_core_verification.mjs",
+              commandRef: commandEntry.commandRef,
+            },
+            routeApplicability: {
+              unmatchedChangedFiles: resumeDecision.unmatchedChangedFiles,
+            },
+            liveFallbackSession,
+          });
+          commandEntry.externalEvidence = buildStateWriterPolicyEvidenceTrace(
+            evidenceResult,
+          );
+          env = buildStrictStateWriterEvidenceEnvironment(evidenceResult, {
+            cwd,
+            baseEnv,
+          });
+        } catch (error) {
+          commandEntry.externalEvidence = {
+            kind: "state-writer-policy-checker-evidence",
+            status: "blocked",
+            code: error?.code || "state-writer-evidence-setup-failed",
+            disposition: error?.disposition || "blocked",
+            message: error?.message || String(error),
+          };
+          return {
+            status: 2,
+            error: [
+              "State writer policy evidence setup failed",
+              `code=${commandEntry.externalEvidence.code}`,
+              `disposition=${commandEntry.externalEvidence.disposition}`,
+            ].join(" "),
+          };
+        }
+      }
       return runner(command.bin, command.args, {
         cwd,
         stdio,
         shell: false,
         encoding: "utf8",
+        env,
       });
     },
   });

@@ -3,6 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+import {
+  buildStrictStateWriterEvidenceEnvironment,
+  createStateWriterPolicyEvidenceSession,
+  ensureStateWriterPolicyEvidence,
+  readCurrentStateWriterPolicyPhase,
+} from "./verification/state_writer_policy_evidence.mjs";
+
 const REPO_ROOT = process.cwd();
 const REPORT_DIR = path.join(
   REPO_ROOT,
@@ -16,6 +23,28 @@ const REPORT_PATH = path.join(REPORT_DIR, "state-write-boundary.log");
 
 function run() {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
+  const liveFallbackSession = createStateWriterPolicyEvidenceSession();
+  const phase = readCurrentStateWriterPolicyPhase({ cwd: REPO_ROOT });
+  const evidenceResult = ensureStateWriterPolicyEvidence({
+    cwd: REPO_ROOT,
+    phase,
+    producer: {
+      entrypoint: "tools/run_p4_state_write_boundary.mjs",
+      commandRef: "test:python:p4:state-write-boundary",
+    },
+    liveFallbackSession,
+  });
+  const evidenceTrace = [
+    "State writer policy evidence",
+    `id=${evidenceResult.evidenceId}`,
+    `phase=${phase}`,
+    `path=${evidenceResult.evidencePath}`,
+    `source=${evidenceResult.sourceVerificationSha}`,
+    `tree=${evidenceResult.sourceVerificationTreeSha}`,
+    `disposition=${evidenceResult.disposition}`,
+    `producer=${evidenceResult.producer.entrypoint}`,
+    `producerCommand=${evidenceResult.producer.commandRef}`,
+  ].join(" ");
   const result = spawnSync(
     process.execPath,
     [
@@ -30,11 +59,15 @@ function run() {
       encoding: "utf8",
       maxBuffer: 32 * 1024 * 1024,
       shell: false,
+      env: buildStrictStateWriterEvidenceEnvironment(evidenceResult, {
+        cwd: REPO_ROOT,
+      }),
     },
   );
   const stdout = result.stdout || "";
   const stderr = result.stderr || "";
   const report = [
+    evidenceTrace,
     stdout.trimEnd(),
     stderr.trimEnd(),
   ].filter(Boolean).join("\n");
@@ -52,4 +85,17 @@ function run() {
   process.exit(result.status ?? 1);
 }
 
-run();
+try {
+  run();
+} catch (error) {
+  fs.mkdirSync(REPORT_DIR, { recursive: true });
+  const diagnostic = [
+    "State writer policy evidence setup failed",
+    `code=${error?.code || "state-writer-evidence-wrapper-error"}`,
+    `disposition=${error?.disposition || "blocked"}`,
+    `message=${error?.message || String(error)}`,
+  ].join(" ");
+  fs.writeFileSync(REPORT_PATH, `${diagnostic}\n`, "utf8");
+  console.error(diagnostic);
+  process.exit(2);
+}

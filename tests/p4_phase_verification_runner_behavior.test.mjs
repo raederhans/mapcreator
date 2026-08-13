@@ -10,8 +10,36 @@ import {
   defaultP4PhaseReportPath,
   parseArgs,
   readVerificationIdentity,
-  runVerificationPlan,
+  runVerificationPlan as runP4VerificationPlan,
 } from "../tools/run_p4_phase_verification.mjs";
+
+function fakeStateWriterEvidenceResult(commandRef) {
+  return {
+    status: "reusable-exact",
+    disposition: "reused-exact",
+    evidenceId: "a".repeat(64),
+    evidencePath: ".runtime/reports/generated/p4-state-actions/P4.3/state-writer-policy-evidence.json",
+    sourceVerificationSha: "b".repeat(40),
+    sourceVerificationTreeSha: "c".repeat(40),
+    producer: {
+      entrypoint: "tools/run_p4_phase_verification.mjs",
+      commandRef,
+      planDigest: "d".repeat(64),
+      producedAt: "2026-08-13T00:00:00.000Z",
+      disposition: "produced-live",
+    },
+    evidence: { phase: "P4.3" },
+  };
+}
+
+function runVerificationPlan(plan, options = {}) {
+  return runP4VerificationPlan(plan, {
+    stateWriterEvidenceEnsurer: ({ producer }) => (
+      fakeStateWriterEvidenceResult(producer.commandRef)
+    ),
+    ...options,
+  });
+}
 
 test("P4.1 plan keeps focused policy and route commands exact", () => {
   const plan = buildP4PhaseVerificationPlan({ phase: "P4.1" });
@@ -268,6 +296,153 @@ test("execution stops at the first failing command and records it", () => {
   );
   assert.equal(executed.length, 2);
   assert.equal(result.report.commands[2].status, "pending");
+});
+
+test("P4 runner injects strict exact-tree evidence and persists its trace", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "p4-phase-evidence-"));
+  const commandRef = "npm run test:python:p4:p4-1-boundary";
+  const ensured = [];
+  const executions = [];
+  const identity = {
+    verificationSha: "b".repeat(40),
+    verificationTreeSha: "c".repeat(40),
+    trackedClean: true,
+    trackedStatus: "",
+  };
+  const result = runVerificationPlan(
+    buildP4PhaseVerificationPlan({ phase: "P4.1" }),
+    {
+      cwd: root,
+      jsonOut: "report.json",
+      platform: "linux",
+      identity,
+      identityReader: () => identity,
+      baseEnv: { FIXTURE_ENV: "kept" },
+      stateWriterEvidenceEnsurer(options) {
+        ensured.push(options);
+        return fakeStateWriterEvidenceResult(commandRef);
+      },
+      runner(command, args, options) {
+        executions.push({ command, args, options });
+        return { status: 0 };
+      },
+    },
+  );
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(ensured.length, 1);
+  assert.equal(ensured[0].producer.commandRef, commandRef);
+  assert.deepEqual(ensured[0].routeApplicability.unmatchedChangedFiles, []);
+  const boundaryExecution = executions[1];
+  assert.equal(boundaryExecution.options.env.FIXTURE_ENV, "kept");
+  assert.equal(
+    boundaryExecution.options.env.STATE_WRITER_POLICY_EVIDENCE_MODE,
+    "strict",
+  );
+  assert.equal(
+    boundaryExecution.options.env.STATE_WRITER_POLICY_EVIDENCE_ID,
+    "a".repeat(64),
+  );
+  assert.equal(
+    boundaryExecution.options.env.STATE_WRITER_POLICY_EVIDENCE_PATH,
+    fakeStateWriterEvidenceResult(commandRef).evidencePath,
+  );
+  const boundary = result.report.commands.find(
+    (entry) => entry.commandRef === commandRef,
+  );
+  assert.equal(boundary.externalEvidence.evidenceId, "a".repeat(64));
+  assert.equal(boundary.externalEvidence.disposition, "reused-exact");
+  const durable = JSON.parse(fs.readFileSync(path.join(root, "report.json"), "utf8"));
+  assert.equal(
+    durable.commands.find((entry) => entry.commandRef === commandRef)
+      .externalEvidence.evidencePath,
+    fakeStateWriterEvidenceResult(commandRef).evidencePath,
+  );
+});
+
+test("P4 runner blocks a boundary before spawn when evidence setup is blocked", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "p4-phase-evidence-blocked-"));
+  let executions = 0;
+  const blockedError = Object.assign(new Error("unmatched route"), {
+    code: "state-writer-evidence-unmatched-route",
+    disposition: "blocked",
+  });
+  const identity = {
+    verificationSha: "b".repeat(40),
+    verificationTreeSha: "c".repeat(40),
+    trackedClean: true,
+    trackedStatus: "",
+  };
+  const result = runVerificationPlan(
+    buildP4PhaseVerificationPlan({ phase: "P4.1" }),
+    {
+      cwd: root,
+      jsonOut: "report.json",
+      platform: "linux",
+      identity,
+      identityReader: () => identity,
+      stateWriterEvidenceEnsurer() {
+        throw blockedError;
+      },
+      runner() {
+        executions += 1;
+        return { status: 0 };
+      },
+    },
+  );
+
+  assert.equal(result.exitCode, 2);
+  assert.equal(executions, 1);
+  assert.equal(result.report.failedCommandRef, "npm run test:python:p4:p4-1-boundary");
+  const boundary = result.report.commands[1];
+  assert.equal(boundary.externalEvidence.code, "state-writer-evidence-unmatched-route");
+  assert.match(boundary.error, /disposition=blocked/);
+});
+
+test("each P4 runner invocation owns one fallback session across boundaries", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "p4-phase-session-"));
+  const commandRefs = [
+    "npm run test:python:p4:p4-1-boundary",
+    "npm run test:python:p4:p4-2a-boundary",
+  ];
+  const identity = {
+    verificationSha: "b".repeat(40),
+    verificationTreeSha: "c".repeat(40),
+    trackedClean: true,
+    trackedStatus: "",
+  };
+  let producerCount = 0;
+  const sessions = [];
+  const stateWriterEvidenceEnsurer = ({ producer, liveFallbackSession }) => {
+    sessions.push(liveFallbackSession);
+    if (liveFallbackSession.liveFallbackAttempts === 0) {
+      liveFallbackSession.liveFallbackAttempts += 1;
+      producerCount += 1;
+    }
+    return fakeStateWriterEvidenceResult(producer.commandRef);
+  };
+
+  for (let invocation = 0; invocation < 2; invocation += 1) {
+    const result = runVerificationPlan({
+      phase: "P4.1",
+      commands: commandRefs,
+      reportPath: `report-${invocation}.json`,
+    }, {
+      cwd: root,
+      jsonOut: `report-${invocation}.json`,
+      platform: "linux",
+      identity,
+      identityReader: () => identity,
+      stateWriterEvidenceEnsurer,
+      runner: () => ({ status: 0 }),
+    });
+    assert.equal(result.exitCode, 0);
+  }
+
+  assert.equal(producerCount, 2);
+  assert.equal(sessions[0], sessions[1]);
+  assert.notEqual(sessions[1], sessions[2]);
+  assert.equal(sessions[2], sessions[3]);
 });
 
 test("successful execution requires the final SHA tree and clean status to stay exact", () => {

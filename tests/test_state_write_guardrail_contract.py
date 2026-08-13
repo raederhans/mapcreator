@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 import re
 import subprocess
 import unittest
@@ -12,12 +13,101 @@ CHECK_SCRIPT = REPO_ROOT / "tools" / "check_state_write_allowlist.mjs"
 P4_POLICY_FILE = REPO_ROOT / "tools" / "state_writer_policy.json"
 P4_POLICY_BUILDER = REPO_ROOT / "tools" / "build_state_writer_policy.mjs"
 P4_POLICY_CHECKER = REPO_ROOT / "tools" / "check_state_writer_policy.mjs"
+P4_POLICY_EVIDENCE_VALIDATOR = (
+    REPO_ROOT / "tools" / "verification" / "state_writer_policy_evidence.mjs"
+)
 P4_INVENTORY = REPO_ROOT / "tools" / "state_writer_inventory.mjs"
 P4_ACTIONS_DIR = REPO_ROOT / "js" / "core" / "state" / "actions"
 P4_READ_ONLY_ACTION_MODULES = {
     "js/core/state/actions/scenario_transaction_rollback_actions.js",
 }
 PACKAGE_JSON = REPO_ROOT / "package.json"
+STATE_WRITER_POLICY_EVIDENCE_MODE_ENV = "STATE_WRITER_POLICY_EVIDENCE_MODE"
+STATE_WRITER_POLICY_EVIDENCE_PATH_ENV = "STATE_WRITER_POLICY_EVIDENCE_PATH"
+STATE_WRITER_POLICY_EVIDENCE_ID_ENV = "STATE_WRITER_POLICY_EVIDENCE_ID"
+STATE_WRITER_POLICY_EVIDENCE_STRICT_MODE = "strict"
+
+
+def run_p4_policy_boundary_check(
+    latest_phase,
+    *,
+    environment=None,
+    runner=subprocess.run,
+):
+    effective_environment = os.environ if environment is None else environment
+    evidence_mode = effective_environment.get(
+        STATE_WRITER_POLICY_EVIDENCE_MODE_ENV,
+        "",
+    ).strip()
+    if evidence_mode:
+        evidence_path = effective_environment.get(
+            STATE_WRITER_POLICY_EVIDENCE_PATH_ENV,
+            "",
+        ).strip()
+        evidence_id = effective_environment.get(
+            STATE_WRITER_POLICY_EVIDENCE_ID_ENV,
+            "",
+        ).strip()
+        if evidence_mode != STATE_WRITER_POLICY_EVIDENCE_STRICT_MODE:
+            return subprocess.CompletedProcess(
+                args=[],
+                returncode=2,
+                stdout="",
+                stderr=(
+                    "State writer policy evidence validation failed "
+                    "code=state-writer-evidence-consumer-mode-invalid "
+                    "disposition=blocked"
+                ),
+            ), ""
+        if not evidence_path:
+            return subprocess.CompletedProcess(
+                args=[],
+                returncode=2,
+                stdout="",
+                stderr=(
+                    "State writer policy evidence validation failed "
+                    "code=state-writer-evidence-consumer-path-missing "
+                    "disposition=blocked"
+                ),
+            ), ""
+        if not re.fullmatch(r"[0-9a-f]{64}", evidence_id):
+            return subprocess.CompletedProcess(
+                args=[],
+                returncode=2,
+                stdout="",
+                stderr=(
+                    "State writer policy evidence validation failed "
+                    "code=state-writer-evidence-consumer-id-missing "
+                    "disposition=blocked"
+                ),
+            ), ""
+        command = [
+            "node",
+            P4_POLICY_EVIDENCE_VALIDATOR.relative_to(REPO_ROOT).as_posix(),
+            "validate",
+            "--evidence",
+            evidence_path,
+            "--expected-id",
+            evidence_id,
+            "--phase",
+            latest_phase,
+        ]
+        expected_stdout = "State writer policy evidence reusable-exact"
+    else:
+        command = [
+            "node",
+            "tools/check_state_writer_policy.mjs",
+            "--phase",
+            latest_phase,
+        ]
+        expected_stdout = "P4 state writer policy pass:"
+    return runner(
+        command,
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    ), expected_stdout
 
 
 class StateWriteGuardrailContractTest(unittest.TestCase):
@@ -36,6 +126,7 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             P4_POLICY_FILE,
             P4_POLICY_BUILDER,
             P4_POLICY_CHECKER,
+            P4_POLICY_EVIDENCE_VALIDATOR,
             P4_INVENTORY,
         ]:
             self.assertTrue(file_path.exists(), str(file_path))
@@ -65,24 +156,115 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
         latest_phase = policy.get("progress", {}).get("latestPhase")
         self.assertIsInstance(latest_phase, str)
         self.assertTrue(latest_phase)
-        result = subprocess.run(
-            [
-                "node",
-                "tools/check_state_writer_policy.mjs",
-                "--phase",
-                latest_phase,
-            ],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        result, expected_stdout = run_p4_policy_boundary_check(latest_phase)
         if result.returncode != 0:
             details = "\n".join(
                 part for part in [result.stdout.strip(), result.stderr.strip()] if part
             )
             self.fail(details or "P4 state writer policy check failed")
-        self.assertIn("P4 state writer policy pass:", result.stdout)
+        self.assertIn(expected_stdout, result.stdout)
+
+    def test_p4_policy_strict_evidence_consumer_uses_only_validator(self):
+        calls = []
+
+        def fake_runner(command, **kwargs):
+            calls.append((command, kwargs))
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=0,
+                stdout=(
+                    "State writer policy evidence reusable-exact "
+                    "id=" + "a" * 64
+                ),
+                stderr="",
+            )
+
+        evidence_path = str(REPO_ROOT / ".runtime" / "evidence.json")
+        evidence_id = "a" * 64
+        result, expected_stdout = run_p4_policy_boundary_check(
+            "P4.3",
+            environment={
+                STATE_WRITER_POLICY_EVIDENCE_MODE_ENV: "strict",
+                STATE_WRITER_POLICY_EVIDENCE_PATH_ENV: evidence_path,
+                STATE_WRITER_POLICY_EVIDENCE_ID_ENV: evidence_id,
+            },
+            runner=fake_runner,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn(expected_stdout, result.stdout)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(
+            calls[0][0],
+            [
+                "node",
+                "tools/verification/state_writer_policy_evidence.mjs",
+                "validate",
+                "--evidence",
+                evidence_path,
+                "--expected-id",
+                evidence_id,
+                "--phase",
+                "P4.3",
+            ],
+        )
+        self.assertNotIn("tools/check_state_writer_policy.mjs", calls[0][0])
+
+    def test_p4_policy_default_consumer_keeps_live_checker(self):
+        calls = []
+
+        def fake_runner(command, **kwargs):
+            calls.append((command, kwargs))
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=0,
+                stdout="P4 state writer policy pass: fixture",
+                stderr="",
+            )
+
+        result, expected_stdout = run_p4_policy_boundary_check(
+            "P4.3",
+            environment={},
+            runner=fake_runner,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(expected_stdout, "P4 state writer policy pass:")
+        self.assertEqual(
+            calls[0][0],
+            [
+                "node",
+                "tools/check_state_writer_policy.mjs",
+                "--phase",
+                "P4.3",
+            ],
+        )
+
+    def test_p4_policy_strict_evidence_consumer_fails_closed_without_path(self):
+        calls = []
+        result, expected_stdout = run_p4_policy_boundary_check(
+            "P4.3",
+            environment={STATE_WRITER_POLICY_EVIDENCE_MODE_ENV: "strict"},
+            runner=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(expected_stdout, "")
+        self.assertIn("state-writer-evidence-consumer-path-missing", result.stderr)
+        self.assertEqual(calls, [])
+
+        result, expected_stdout = run_p4_policy_boundary_check(
+            "P4.3",
+            environment={
+                STATE_WRITER_POLICY_EVIDENCE_MODE_ENV: "strict",
+                STATE_WRITER_POLICY_EVIDENCE_PATH_ENV: ".runtime/evidence.json",
+            },
+            runner=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(expected_stdout, "")
+        self.assertIn("state-writer-evidence-consumer-id-missing", result.stderr)
+        self.assertEqual(calls, [])
 
     def test_p4_mutating_action_modules_match_current_policy(self):
         action_modules = (

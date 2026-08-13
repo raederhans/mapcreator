@@ -23,6 +23,7 @@ export const P4_STATE_WRITER_POLICY_TEST_FILES = Object.freeze([
   "tests/state_writer_policy_soundness_behavior.test.mjs",
   "tests/state_writer_scanner_soundness_behavior.test.mjs",
   "tests/state_writer_policy_manifest_behavior.test.mjs",
+  "tests/state_writer_policy_evidence_behavior.test.mjs",
   "tests/p4_state_action_routes_behavior.test.mjs",
   "tests/p4_state_writer_runner_reachability_behavior.test.mjs",
 ]);

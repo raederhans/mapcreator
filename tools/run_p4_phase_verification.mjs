@@ -17,6 +17,13 @@ import {
   runCheckpointedCommands,
   summarizeCommandStates,
 } from "./verification/resumable_verification.mjs";
+import {
+  buildStateWriterPolicyEvidenceTrace,
+  buildStrictStateWriterEvidenceEnvironment,
+  createStateWriterPolicyEvidenceSession,
+  ensureStateWriterPolicyEvidence,
+  isStateWriterPythonBoundaryCommandRef,
+} from "./verification/state_writer_policy_evidence.mjs";
 
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -174,7 +181,10 @@ export function runVerificationPlan(plan, {
   resumeCheckpoint = null,
   changedFilesReader = (baseSha) => discoverChangedFilesBetween(baseSha, { cwd }),
   now = () => new Date(),
+  stateWriterEvidenceEnsurer = ensureStateWriterPolicyEvidence,
+  baseEnv = process.env,
 } = {}) {
+  const liveFallbackSession = createStateWriterPolicyEvidenceSession();
   const effectiveIdentityReader = identityReader
     || (identity
       ? () => identity
@@ -268,11 +278,51 @@ export function runVerificationPlan(plan, {
     expectedVerificationIdentity: normalizedIdentity,
     execute(commandResult) {
       const resolved = commandToProcess(commandResult.commandRef, platform);
+      let env = baseEnv;
+      if (isStateWriterPythonBoundaryCommandRef(commandResult.commandRef)) {
+        try {
+          const evidenceResult = stateWriterEvidenceEnsurer({
+            cwd,
+            producer: {
+              entrypoint: "tools/run_p4_phase_verification.mjs",
+              commandRef: commandResult.commandRef,
+            },
+            routeApplicability: {
+              unmatchedChangedFiles: resumeDecision.unmatchedChangedFiles,
+            },
+            liveFallbackSession,
+          });
+          commandResult.externalEvidence = buildStateWriterPolicyEvidenceTrace(
+            evidenceResult,
+          );
+          env = buildStrictStateWriterEvidenceEnvironment(evidenceResult, {
+            cwd,
+            baseEnv,
+          });
+        } catch (error) {
+          commandResult.externalEvidence = {
+            kind: "state-writer-policy-checker-evidence",
+            status: "blocked",
+            code: error?.code || "state-writer-evidence-setup-failed",
+            disposition: error?.disposition || "blocked",
+            message: error?.message || String(error),
+          };
+          return {
+            status: 2,
+            error: [
+              "State writer policy evidence setup failed",
+              `code=${commandResult.externalEvidence.code}`,
+              `disposition=${commandResult.externalEvidence.disposition}`,
+            ].join(" "),
+          };
+        }
+      }
       return runner(resolved.command, resolved.args, {
         cwd,
         encoding: "utf8",
         shell: false,
         stdio: "inherit",
+        env,
       });
     },
   });

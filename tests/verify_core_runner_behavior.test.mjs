@@ -370,6 +370,78 @@ test("execution records failure and stops on first failing command", () => {
   assert.equal(calls.length, 2);
 });
 
+test("direct core plan execution injects strict evidence before a Python boundary", () => {
+  const commandRef = "test:python:p4:p4-1-boundary";
+  const plan = buildCoreVerificationPlan({
+    packageScripts: { [commandRef]: "node fake-python-boundary.mjs" },
+    groups: [{ id: "custom", title: "Custom", commands: [commandRef] }],
+    mainThreadGroup: { id: "main", title: "Main", commands: [] },
+    optionalMainThreadCommands: [],
+  });
+  const calls = [];
+  const results = runVerificationPlan(plan, {
+    packageScripts: { [commandRef]: "node fake-python-boundary.mjs" },
+    platform: "linux",
+    stdio: "pipe",
+    baseEnv: {},
+    stateWriterEvidenceEnsurer: () => fakeStateWriterEvidenceResult({ commandRef }),
+    runner(bin, args, options) {
+      calls.push({ bin, args, options });
+      return { status: 0 };
+    },
+  });
+
+  assert.equal(results[0].exitCode, 0);
+  assert.equal(results[0].externalEvidence.evidenceId, "a".repeat(64));
+  assert.equal(calls[0].options.env.STATE_WRITER_POLICY_EVIDENCE_MODE, "strict");
+  assert.equal(calls[0].options.env.STATE_WRITER_POLICY_EVIDENCE_ID, "a".repeat(64));
+});
+
+test("each direct-plan invocation owns one fallback session across boundaries", () => {
+  const commandRefs = [
+    "test:python:p4:p4-1-boundary",
+    "test:python:p4:p4-2a-boundary",
+  ];
+  const packageScripts = Object.fromEntries(
+    commandRefs.map((commandRef, index) => [
+      commandRef,
+      `node fake-boundary-${index}.mjs`,
+    ]),
+  );
+  const plan = buildCoreVerificationPlan({
+    packageScripts,
+    groups: [{ id: "custom", title: "Custom", commands: commandRefs }],
+    mainThreadGroup: { id: "main", title: "Main", commands: [] },
+    optionalMainThreadCommands: [],
+  });
+  let producerCount = 0;
+  const sessions = [];
+  const stateWriterEvidenceEnsurer = ({ producer, liveFallbackSession }) => {
+    sessions.push(liveFallbackSession);
+    if (liveFallbackSession.liveFallbackAttempts === 0) {
+      liveFallbackSession.liveFallbackAttempts += 1;
+      producerCount += 1;
+    }
+    return fakeStateWriterEvidenceResult({ commandRef: producer.commandRef });
+  };
+
+  for (let invocation = 0; invocation < 2; invocation += 1) {
+    const results = runVerificationPlan(plan, {
+      packageScripts,
+      platform: "linux",
+      stdio: "pipe",
+      stateWriterEvidenceEnsurer,
+      runner: () => ({ status: 0 }),
+    });
+    assert.deepEqual(results.map(({ exitCode }) => exitCode), [0, 0]);
+  }
+
+  assert.equal(producerCount, 2);
+  assert.equal(sessions[0], sessions[1]);
+  assert.notEqual(sessions[1], sessions[2]);
+  assert.equal(sessions[2], sessions[3]);
+});
+
 function cleanIdentity(verificationSha, verificationTreeSha) {
   return {
     verificationSha,
@@ -378,6 +450,28 @@ function cleanIdentity(verificationSha, verificationTreeSha) {
     trackedClean: true,
     includesUntracked: true,
     workspaceStatus: "",
+  };
+}
+
+function fakeStateWriterEvidenceResult({
+  commandRef = "test:python:p4:p4-1-boundary",
+  disposition = "reused-exact",
+} = {}) {
+  return {
+    status: disposition === "produced-live" ? "produced-live" : "reusable-exact",
+    disposition,
+    evidenceId: "a".repeat(64),
+    evidencePath: ".runtime/reports/generated/p4-state-actions/P4.3/state-writer-policy-evidence.json",
+    sourceVerificationSha: "b".repeat(40),
+    sourceVerificationTreeSha: "c".repeat(40),
+    producer: {
+      entrypoint: "tools/run_core_verification.mjs",
+      commandRef,
+      planDigest: "d".repeat(64),
+      producedAt: "2026-08-13T00:00:00.000Z",
+      disposition: "produced-live",
+    },
+    evidence: { phase: "P4.3" },
   };
 }
 
@@ -483,6 +577,8 @@ test("core runner same-tree resume skips its durable passed prefix", () => {
   assert.equal(first.report.commands[1].status, "failed");
 
   const resumedCalls = [];
+  let resumedProducerCount = 0;
+  let resumedFallbackSession = null;
   const resumed = runCoreVerification({
     argv: { list: false, includeMainThread: false, resume: true, resumeFrom: jsonOut, jsonOut, mdOut },
     packageScripts: PACKAGE_SCRIPTS,
@@ -492,6 +588,18 @@ test("core runner same-tree resume skips its durable passed prefix", () => {
       let tick = 1000;
       return () => new Date(tick++ * 5);
     })(),
+    stateWriterEvidenceEnsurer: ({ producer, liveFallbackSession }) => {
+      if (resumedFallbackSession === null) {
+        resumedFallbackSession = liveFallbackSession;
+      } else {
+        assert.equal(liveFallbackSession, resumedFallbackSession);
+      }
+      if (liveFallbackSession.liveFallbackAttempts === 0) {
+        liveFallbackSession.liveFallbackAttempts += 1;
+        resumedProducerCount += 1;
+      }
+      return fakeStateWriterEvidenceResult({ commandRef: producer.commandRef });
+    },
     runner(bin, args) {
       resumedCalls.push([bin, ...args]);
       return { status: 0 };
@@ -503,6 +611,111 @@ test("core runner same-tree resume skips its durable passed prefix", () => {
   assert.equal(resumed.report.summary.reused, 1);
   assert.equal(resumed.report.commands[0].evidenceDisposition, "reused-exact");
   assert.equal(resumedCalls.length, resumed.plan.commandsToRun.length - 1);
+  assert.equal(resumedProducerCount, 1);
+});
+
+test("core runner injects strict exact-tree evidence and persists its trace", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "verify-core-evidence-"));
+  const jsonOut = path.join(root, "verify-core.json");
+  const mdOut = path.join(root, "verify-core.md");
+  const commandRef = "test:python:p4:p4-1-boundary";
+  const identity = cleanIdentity("b".repeat(40), "c".repeat(40));
+  const ensured = [];
+  const spawns = [];
+
+  const result = runCoreVerification({
+    argv: { list: false, includeMainThread: false, resume: false, resumeFrom: null, jsonOut, mdOut },
+    packageScripts: { [commandRef]: "node fake-python-boundary.mjs" },
+    cwd: root,
+    platform: "linux",
+    stdio: "pipe",
+    identityReader: () => identity,
+    baseEnv: { FIXTURE_ENV: "kept" },
+    stateWriterEvidenceEnsurer(options) {
+      ensured.push(options);
+      return fakeStateWriterEvidenceResult({ commandRef });
+    },
+    runner(bin, args, options) {
+      spawns.push({ bin, args, options });
+      return { status: 0 };
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(ensured.length, 1);
+  assert.equal(ensured[0].producer.commandRef, commandRef);
+  assert.deepEqual(ensured[0].routeApplicability.unmatchedChangedFiles, []);
+  assert.equal(spawns.length, result.plan.commandsToRun.length);
+  const boundarySpawn = spawns.find(({ args }) => args.includes(commandRef));
+  assert.equal(boundarySpawn.options.env.FIXTURE_ENV, "kept");
+  assert.equal(boundarySpawn.options.env.STATE_WRITER_POLICY_EVIDENCE_MODE, "strict");
+  assert.equal(
+    boundarySpawn.options.env.STATE_WRITER_POLICY_EVIDENCE_ID,
+    "a".repeat(64),
+  );
+  assert.equal(
+    boundarySpawn.options.env.STATE_WRITER_POLICY_EVIDENCE_PATH,
+    fakeStateWriterEvidenceResult().evidencePath,
+  );
+  const command = result.report.commands.find(
+    (entry) => entry.commandRef === commandRef,
+  );
+  assert.equal(command.externalEvidence.evidenceId, "a".repeat(64));
+  assert.equal(command.externalEvidence.disposition, "reused-exact");
+  const durable = JSON.parse(fs.readFileSync(jsonOut, "utf8"));
+  assert.equal(
+    durable.commands.find((entry) => entry.commandRef === commandRef)
+      .externalEvidence.evidenceId,
+    "a".repeat(64),
+  );
+  assert.match(fs.readFileSync(mdOut, "utf8"), /evidence=a{64}/);
+});
+
+test("core runner blocks a boundary before spawn when evidence setup is blocked", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "verify-core-evidence-blocked-"));
+  const commandRef = "test:python:p4:p4-1-boundary";
+  const spawns = [];
+  const blockedError = Object.assign(new Error("workspace dirty"), {
+    code: "state-writer-evidence-workspace-dirty",
+    disposition: "blocked",
+  });
+  const result = runCoreVerification({
+    argv: {
+      list: false,
+      includeMainThread: false,
+      resume: false,
+      resumeFrom: null,
+      jsonOut: path.join(root, "verify-core.json"),
+      mdOut: path.join(root, "verify-core.md"),
+    },
+    packageScripts: { [commandRef]: "node fake-python-boundary.mjs" },
+    cwd: root,
+    platform: "linux",
+    stdio: "pipe",
+    identityReader: () => cleanIdentity("b".repeat(40), "c".repeat(40)),
+    stateWriterEvidenceEnsurer() {
+      throw blockedError;
+    },
+    runner(bin, args) {
+      spawns.push([bin, ...args]);
+      return { status: 0 };
+    },
+  });
+
+  assert.equal(result.exitCode, 2);
+  assert.equal(
+    spawns.some((spawn) => spawn.includes(commandRef)),
+    false,
+  );
+  assert.equal(result.report.failedCommandRef, commandRef);
+  const boundary = result.report.commands.find(
+    (entry) => entry.commandRef === commandRef,
+  );
+  assert.equal(
+    boundary.externalEvidence.code,
+    "state-writer-evidence-workspace-dirty",
+  );
+  assert.match(boundary.error, /disposition=blocked/);
 });
 
 test("changed-tree resume reruns the suffix from the earliest routed command", () => {
