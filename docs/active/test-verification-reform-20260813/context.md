@@ -32,6 +32,7 @@
 | 2026-08-13 | Implement Hotspot B as a lower-risk B1 slice first. | Exact clean-tree checker evidence targets Python boundary duplicates (`11 -> 4` scan roots) while full TAP and P4 direct checkers remain live. |
 | 2026-08-13 | Admit Hotspot B as `f6310175`. | Canonical policy evidence is fenced at both ends, identity completeness is explicit, and each runner invocation has one live-producer budget; strict Python consumers validate the expected evidence ID. |
 | 2026-08-13 | Hold Hotspot C implementation until B1 admission. | Its strict supersession slice is file-disjoint and projects seven fewer Core top-level commands and eight fewer Node processes. |
+| 2026-08-13 | Admit Hotspot C as `0df8698c`. | Core executes seven fewer top-level commands and eight fewer Node leaves with an identical 103-file Node test closure; cyclic or unresolved supersession fails closed. |
 
 ## Live process ownership
 
@@ -41,7 +42,7 @@
 | full core, full P4 policy, browser, dist, performance | root supervisor | assigned before launch | held until candidate freeze |
 | Hotspot A short tests | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | task-owned `.runtime` only | delivered `3fe5f76f`; integrated by root as `13f4849` |
 | Hotspot B implementation | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | short task-owned outputs only | delivered `f2bfd75a`; integrated and revalidated by root as `f6310175` |
-| Hotspot C analysis | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | no live outputs during read-only stage | audit complete; ready to move onto the combined A+B candidate |
+| Hotspot C implementation | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | task-owned Core list/adaptive reports | delivered `15152ee1`; integrated and revalidated by root as `0df8698c` |
 
 ## Handoff
 
@@ -49,4 +50,4 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Move Hotspot C to the resulting exact SHA and implement strict command-closure supersession. Freeze the combined candidate and run the fresh full policy/core/Pages/browser/perf/TNO gates once under the root supervisor.
+Freeze the combined candidate and run the fresh full policy/core/Pages/browser/perf/TNO gates once under the root supervisor. Use the new resume checkpoint when a long command is interrupted or fails.
