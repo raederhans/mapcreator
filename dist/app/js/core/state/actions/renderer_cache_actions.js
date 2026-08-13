@@ -13,46 +13,67 @@ function assertMap(value, label) {
   }
 }
 
-function writeOwnRenderPassCacheState(target, value) {
-  const descriptor = Object.getOwnPropertyDescriptor(target, "renderPassCache");
+function hasSameStateValue(left, right) {
+  return left === right || (left !== left && right !== right);
+}
+
+function assertOwnDataPropertyWritable(target, key, value, label) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
   if (descriptor && Object.hasOwn(descriptor, "value")) {
-    target.renderPassCache = value;
+    if (!descriptor.writable && !hasSameStateValue(descriptor.value, value)) {
+      throw new TypeError(`[renderer_cache_actions] ${label} must be writable`);
+    }
+    return descriptor;
+  }
+  if (descriptor && !descriptor.configurable) {
+    throw new TypeError(`[renderer_cache_actions] ${label} accessor must be configurable`);
+  }
+  if (!descriptor && !Object.isExtensible(target)) {
+    throw new TypeError(`[renderer_cache_actions] ${label} target must be extensible`);
+  }
+  return descriptor;
+}
+
+function writeOwnRenderPassCacheState(target, value, descriptor) {
+  if (descriptor && Object.hasOwn(descriptor, "value")) {
+    if (!hasSameStateValue(descriptor.value, value)) {
+      target.renderPassCache = value;
+    }
     return;
   }
   Object.defineProperty(target, "renderPassCache", {
-    configurable: true,
-    enumerable: true,
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
     value,
     writable: true,
   });
 }
 
-function writeOwnProjectedBoundsCacheState(target, value) {
-  const descriptor = Object.getOwnPropertyDescriptor(target, "projectedBoundsById");
+function writeOwnProjectedBoundsCacheState(target, value, descriptor) {
   if (descriptor && Object.hasOwn(descriptor, "value")) {
-    target.projectedBoundsById = value;
+    if (!hasSameStateValue(descriptor.value, value)) {
+      target.projectedBoundsById = value;
+    }
     return;
   }
   Object.defineProperty(target, "projectedBoundsById", {
-    configurable: true,
-    enumerable: true,
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
     value,
     writable: true,
   });
 }
 
-function writeOwnSphericalFeatureDiagnosticsCacheState(target, value) {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    target,
-    "sphericalFeatureDiagnosticsById",
-  );
+function writeOwnSphericalFeatureDiagnosticsCacheState(target, value, descriptor) {
   if (descriptor && Object.hasOwn(descriptor, "value")) {
-    target.sphericalFeatureDiagnosticsById = value;
+    if (!hasSameStateValue(descriptor.value, value)) {
+      target.sphericalFeatureDiagnosticsById = value;
+    }
     return;
   }
   Object.defineProperty(target, "sphericalFeatureDiagnosticsById", {
-    configurable: true,
-    enumerable: true,
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
     value,
     writable: true,
   });
@@ -87,7 +108,13 @@ export function commitRenderPassCacheState(target, renderPassCache) {
   if (!renderPassCache || typeof renderPassCache !== "object" || Array.isArray(renderPassCache)) {
     throw new TypeError("[renderer_cache_actions] renderPassCache must be an object");
   }
-  writeOwnRenderPassCacheState(target, renderPassCache);
+  const descriptor = assertOwnDataPropertyWritable(
+    target,
+    "renderPassCache",
+    renderPassCache,
+    "renderPassCache",
+  );
+  writeOwnRenderPassCacheState(target, renderPassCache, descriptor);
   return true;
 }
 
@@ -98,10 +125,27 @@ export function commitProjectedBoundsCacheState(
   assertStateTarget(target);
   assertMap(projectedBoundsById, "projectedBoundsById");
   assertMap(sphericalFeatureDiagnosticsById, "sphericalFeatureDiagnosticsById");
-  writeOwnProjectedBoundsCacheState(target, projectedBoundsById);
+  const projectedBoundsDescriptor = assertOwnDataPropertyWritable(
+    target,
+    "projectedBoundsById",
+    projectedBoundsById,
+    "projectedBoundsById",
+  );
+  const sphericalDiagnosticsDescriptor = assertOwnDataPropertyWritable(
+    target,
+    "sphericalFeatureDiagnosticsById",
+    sphericalFeatureDiagnosticsById,
+    "sphericalFeatureDiagnosticsById",
+  );
+  writeOwnProjectedBoundsCacheState(
+    target,
+    projectedBoundsById,
+    projectedBoundsDescriptor,
+  );
   writeOwnSphericalFeatureDiagnosticsCacheState(
     target,
     sphericalFeatureDiagnosticsById,
+    sphericalDiagnosticsDescriptor,
   );
   return true;
 }

@@ -81,6 +81,30 @@ test("projected bounds cache commit installs both exact Map identities", () => {
   assert.equal(target.sphericalFeatureDiagnosticsById, sphericalFeatureDiagnosticsById);
 });
 
+test("projected bounds cache commit validates both holders before writing", () => {
+  const originalProjectedBounds = new Map([["old", { minX: 1 }]]);
+  const originalDiagnostics = new Map([["old", null]]);
+  const target = {
+    projectedBoundsById: originalProjectedBounds,
+  };
+  Object.defineProperty(target, "sphericalFeatureDiagnosticsById", {
+    configurable: false,
+    enumerable: true,
+    value: originalDiagnostics,
+    writable: false,
+  });
+
+  assert.throws(
+    () => commitProjectedBoundsCacheState(target, {
+      projectedBoundsById: new Map([["new", { minX: 2 }]]),
+      sphericalFeatureDiagnosticsById: new Map([["new", null]]),
+    }),
+    /sphericalFeatureDiagnosticsById must be writable/,
+  );
+  assert.equal(target.projectedBoundsById, originalProjectedBounds);
+  assert.equal(target.sphericalFeatureDiagnosticsById, originalDiagnostics);
+});
+
 test("cache commits preserve existing own property descriptors", () => {
   const target = {};
   const originalRenderPassCache = { original: true };
