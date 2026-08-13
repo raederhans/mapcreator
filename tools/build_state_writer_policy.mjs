@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { isDeepStrictEqual } from "node:util";
+import { isDeepStrictEqual, types as utilTypes } from "node:util";
 
 import {
   DERIVED_ALIAS_TAINT_MODES,
@@ -4817,16 +4817,177 @@ async function discoverScannedCandidateBindings(
   };
 }
 
+const FROZEN_STATE_WRITER_REPOSITORY_SCAN_GRAPH = new WeakSet();
+
+function invalidSharedRepositoryScanResult(value, graphPath, reason) {
+  const error = new TypeError(
+    `State-writer shared repository scan result is not a read-only plain graph at ${graphPath}: ${reason}.`,
+  );
+  error.code = "state-writer-repository-scan-shared-result-invalid";
+  error.graphPath = graphPath;
+  error.valueType = value === null
+    ? "null"
+    : utilTypes.isProxy(value)
+      ? "Proxy"
+      : Array.isArray(value) ? "Array" : typeof value;
+  return error;
+}
+
+function freezeStateWriterRepositoryScanGraphNode(
+  value,
+  graphPath,
+  seen,
+  provisionalNodes,
+) {
+  if (value === null) return value;
+  const valueType = typeof value;
+  if (
+    (valueType === "object" || valueType === "function")
+    && utilTypes.isProxy(value)
+  ) {
+    throw invalidSharedRepositoryScanResult(
+      value,
+      graphPath,
+      "proxy object",
+    );
+  }
+  if (valueType !== "object") {
+    if (valueType === "function" || valueType === "symbol") {
+      throw invalidSharedRepositoryScanResult(
+        value,
+        graphPath,
+        `unsupported ${valueType} value`,
+      );
+    }
+    return value;
+  }
+  if (FROZEN_STATE_WRITER_REPOSITORY_SCAN_GRAPH.has(value)) return value;
+  if (seen.has(value)) return value;
+  let prototype;
+  let descriptors;
+  try {
+    prototype = Object.getPrototypeOf(value);
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch (cause) {
+    const error = invalidSharedRepositoryScanResult(
+      value,
+      graphPath,
+      "object could not be inspected",
+    );
+    error.cause = cause;
+    throw error;
+  }
+  const isArray = Array.isArray(value);
+  if (
+    (isArray && prototype !== Array.prototype)
+    || (
+      !isArray
+      && prototype !== Object.prototype
+      && prototype !== null
+    )
+  ) {
+    throw invalidSharedRepositoryScanResult(
+      value,
+      graphPath,
+      "unsupported mutable container",
+    );
+  }
+  seen.add(value);
+  for (const propertyKey of Reflect.ownKeys(descriptors)) {
+    if (typeof propertyKey === "symbol") {
+      throw invalidSharedRepositoryScanResult(
+        value,
+        graphPath,
+        "symbol-keyed property",
+      );
+    }
+    const descriptor = descriptors[propertyKey];
+    const propertyPath = isArray
+      ? `${graphPath}[${propertyKey}]`
+      : `${graphPath}.${propertyKey}`;
+    if (descriptor.get || descriptor.set) {
+      throw invalidSharedRepositoryScanResult(
+        value,
+        propertyPath,
+        "accessor property",
+      );
+    }
+    freezeStateWriterRepositoryScanGraphNode(
+      descriptor.value,
+      propertyPath,
+      seen,
+      provisionalNodes,
+    );
+  }
+  try {
+    Object.freeze(value);
+  } catch (cause) {
+    const error = invalidSharedRepositoryScanResult(
+      value,
+      graphPath,
+      "object could not be frozen",
+    );
+    error.cause = cause;
+    throw error;
+  }
+  if (!Object.isFrozen(value)) {
+    throw invalidSharedRepositoryScanResult(
+      value,
+      graphPath,
+      "object did not become frozen",
+    );
+  }
+  provisionalNodes.push(value);
+  return value;
+}
+
+function freezeStateWriterRepositoryScanGraph(value) {
+  if (
+    value !== null
+    && (typeof value === "object" || typeof value === "function")
+    && FROZEN_STATE_WRITER_REPOSITORY_SCAN_GRAPH.has(value)
+  ) {
+    return value;
+  }
+  const provisionalNodes = [];
+  freezeStateWriterRepositoryScanGraphNode(
+    value,
+    "$",
+    new WeakSet(),
+    provisionalNodes,
+  );
+  for (const node of provisionalNodes) {
+    FROZEN_STATE_WRITER_REPOSITORY_SCAN_GRAPH.add(node);
+  }
+  return value;
+}
+
 export async function resolveCachedStateWriterRepositoryScan({
   repositoryScanCache = null,
   previousPolicy = null,
   scanIdentity = "",
+  resultMode = "isolated",
   scan,
 }) {
   if (typeof scan !== "function") {
     throw new TypeError("resolveCachedStateWriterRepositoryScan requires a scan function.");
   }
-  if (!repositoryScanCache) return scan();
+  if (resultMode !== "isolated" && resultMode !== "shared-readonly") {
+    throw new TypeError(
+      "resolveCachedStateWriterRepositoryScan resultMode must be isolated or shared-readonly.",
+    );
+  }
+  const resolveResult = (result) => (
+    resultMode === "shared-readonly"
+      ? freezeStateWriterRepositoryScanGraph(result)
+      : structuredClone(result)
+  );
+  if (!repositoryScanCache) {
+    const result = await scan();
+    return resultMode === "shared-readonly"
+      ? freezeStateWriterRepositoryScanGraph(result)
+      : result;
+  }
   if (!(repositoryScanCache instanceof Map)) {
     throw new TypeError("repositoryScanCache must be a Map when provided.");
   }
@@ -4846,7 +5007,7 @@ export async function resolveCachedStateWriterRepositoryScan({
       }
     });
   }
-  return structuredClone(await scansByIdentity.get(normalizedIdentity));
+  return resolveResult(await scansByIdentity.get(normalizedIdentity));
 }
 
 function createGrantKey(domain, migrationPhase) {
@@ -5237,6 +5398,7 @@ export async function buildStateWriterPolicySnapshot({
   } = await resolveCachedStateWriterRepositoryScan({
     repositoryScanCache,
     previousPolicy: refreshP4Baseline ? null : previousPolicy,
+    resultMode: repositoryScanCache ? "shared-readonly" : "isolated",
     scanIdentity: JSON.stringify({
       baseSha: previousPolicy?.baseline?.sourceBaseSha || baseSha,
       legacyAllowlistPaths,
@@ -5654,6 +5816,7 @@ export async function scanStateWriterPolicySnapshot(policy, {
   } = await resolveCachedStateWriterRepositoryScan({
     repositoryScanCache,
     previousPolicy: policy,
+    resultMode: repositoryScanCache ? "shared-readonly" : "isolated",
     scanIdentity: JSON.stringify({
       baseSha: policy?.baseline?.sourceBaseSha || "",
       legacyAllowlistPaths,

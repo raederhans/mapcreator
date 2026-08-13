@@ -110,7 +110,7 @@ function buildSharedCurrentPhasePolicy() {
   return sharedCurrentPhasePolicyPromise;
 }
 
-test("explicit repository scan cache deduplicates work and returns isolated values", async () => {
+test("explicit repository scan cache deduplicates work and defaults to isolated values", async () => {
   const cache = new Map();
   const previousPolicy = { progress: { latestPhase: "fixture" } };
   let scans = 0;
@@ -133,18 +133,321 @@ test("explicit repository scan cache deduplicates work and returns isolated valu
   });
 
   assert.equal(scans, 1);
+  assert.notStrictEqual(first, second);
+  assert.notStrictEqual(first.candidates, second.candidates);
   assert.equal(second.candidates[0].path, "js/fixture.js");
+});
+
+test("shared-readonly repository scans reuse one deeply frozen graph", async () => {
+  const cache = new Map();
+  const previousPolicy = { progress: { latestPhase: "fixture" } };
+  let scans = 0;
+  let releaseScan;
+  const scan = () => {
+    scans += 1;
+    return new Promise((resolve) => {
+      releaseScan = () => resolve({
+        candidates: [{
+          path: "js/fixture.js",
+          binding: { findings: [{ pathSegments: ["state", "value"] }] },
+        }],
+      });
+    });
+  };
+  const firstPending = resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy,
+    scanIdentity: "fixture-scan",
+    resultMode: "shared-readonly",
+    scan,
+  });
+  const secondPending = resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy,
+    scanIdentity: "fixture-scan",
+    resultMode: "shared-readonly",
+    scan,
+  });
+  await Promise.resolve();
+  releaseScan();
+  const [first, second] = await Promise.all([firstPending, secondPending]);
+
+  assert.equal(scans, 1);
+  assert.strictEqual(first, second);
+  assert.equal(Object.isFrozen(first), true);
+  assert.equal(Object.isFrozen(first.candidates), true);
+  assert.equal(Object.isFrozen(first.candidates[0].binding.findings[0]), true);
+  assert.equal(
+    Object.isFrozen(
+      first.candidates[0].binding.findings[0].pathSegments,
+    ),
+    true,
+  );
+  assert.throws(
+    () => first.candidates[0].binding.findings[0].pathSegments.push("blocked"),
+    TypeError,
+  );
+});
+
+test("failed shared graph certification cannot authenticate a previously visited child", async () => {
+  const previousPolicy = { progress: { latestPhase: "fixture" } };
+  const visitedChild = { value: "fixture" };
   await assert.rejects(
     resolveCachedStateWriterRepositoryScan({
       repositoryScanCache: new Map(),
       previousPolicy,
+      scanIdentity: "partial-certification-failure",
+      resultMode: "shared-readonly",
+      scan: async () => ({
+        acceptedFirst: visitedChild,
+        rejectedLater: new Map(),
+      }),
+    }),
+    (error) => error?.code === "state-writer-repository-scan-shared-result-invalid",
+  );
+
+  const originalGetOwnPropertyDescriptors = Object.getOwnPropertyDescriptors;
+  Object.getOwnPropertyDescriptors = (value) => {
+    if (value === visitedChild) {
+      throw new Error("previously visited child was inspected again");
+    }
+    return originalGetOwnPropertyDescriptors(value);
+  };
+  try {
+    await assert.rejects(
+      resolveCachedStateWriterRepositoryScan({
+        repositoryScanCache: new Map(),
+        previousPolicy,
+        scanIdentity: "reused-child-after-partial-failure",
+        resultMode: "shared-readonly",
+        scan: async () => ({ reusedChild: visitedChild }),
+      }),
+      (error) => (
+        error?.code === "state-writer-repository-scan-shared-result-invalid"
+        && error?.cause?.message === "previously visited child was inspected again"
+      ),
+    );
+  } finally {
+    Object.getOwnPropertyDescriptors = originalGetOwnPropertyDescriptors;
+  }
+});
+
+test("shared-readonly repository scans reject proxies and custom array prototypes", async () => {
+  const previousPolicy = { progress: { latestPhase: "fixture" } };
+  const cases = [
+    {
+      scanIdentity: "proxy-result",
+      scan: async () => ({ candidates: new Proxy([], {}) }),
+    },
+    {
+      scanIdentity: "custom-array-prototype",
+      scan: async () => {
+        const candidates = [];
+        Object.setPrototypeOf(
+          candidates,
+          Object.create(Array.prototype),
+        );
+        return { candidates };
+      },
+    },
+  ];
+  for (const fixture of cases) {
+    await assert.rejects(
+      resolveCachedStateWriterRepositoryScan({
+        repositoryScanCache: new Map(),
+        previousPolicy,
+        resultMode: "shared-readonly",
+        ...fixture,
+      }),
+      (error) => error?.code === "state-writer-repository-scan-shared-result-invalid",
+      fixture.scanIdentity,
+    );
+  }
+});
+
+test("shared-readonly repository scans preserve structured errors for revoked proxies", async () => {
+  const previousPolicy = { progress: { latestPhase: "fixture" } };
+  const { proxy, revoke } = Proxy.revocable([], {});
+  revoke();
+
+  await assert.rejects(
+    resolveCachedStateWriterRepositoryScan({
+      repositoryScanCache: new Map(),
+      previousPolicy,
+      scanIdentity: "revoked-proxy-result",
+      resultMode: "shared-readonly",
+      scan: async () => ({ candidates: proxy }),
+    }),
+    (error) => (
+      error?.code === "state-writer-repository-scan-shared-result-invalid"
+      && error?.graphPath === "$.candidates"
+      && error?.valueType === "Proxy"
+    ),
+  );
+});
+
+test("successful shared graph certification supports DAGs, cycles, and certified fast hits", async () => {
+  const cache = new Map();
+  const previousPolicy = { progress: { latestPhase: "fixture" } };
+  const sharedNode = { path: "js/shared.js" };
+  const graph = {
+    candidates: [sharedNode],
+    sharedNode,
+  };
+  graph.self = graph;
+  let scans = 0;
+  const resolveShared = () => resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy,
+    scanIdentity: "dag-cycle",
+    resultMode: "shared-readonly",
+    scan: async () => {
+      scans += 1;
+      return graph;
+    },
+  });
+  const first = await resolveShared();
+
+  assert.strictEqual(first.candidates[0], first.sharedNode);
+  assert.strictEqual(first.self, first);
+  assert.equal(Object.isFrozen(first), true);
+  assert.equal(Object.isFrozen(first.candidates), true);
+  assert.equal(Object.isFrozen(first.sharedNode), true);
+  assert.throws(() => {
+    first.sharedNode.path = "mutated.js";
+  }, TypeError);
+
+  const originalGetOwnPropertyDescriptors = Object.getOwnPropertyDescriptors;
+  Object.getOwnPropertyDescriptors = () => {
+    throw new Error("certified graph was traversed again");
+  };
+  try {
+    const second = await resolveShared();
+    assert.strictEqual(second, first);
+    assert.equal(scans, 1);
+  } finally {
+    Object.getOwnPropertyDescriptors = originalGetOwnPropertyDescriptors;
+  }
+});
+
+test("repository scan result modes keep identities separate and mixed access safe", async () => {
+  const cache = new Map();
+  const firstPolicy = { progress: { latestPhase: "fixture-a" } };
+  const secondPolicy = { progress: { latestPhase: "fixture-b" } };
+  let scans = 0;
+  const scan = async () => ({
+    candidates: [{ path: `js/fixture-${++scans}.js` }],
+  });
+  const shared = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy: firstPolicy,
+    scanIdentity: "fixture-scan",
+    resultMode: "shared-readonly",
+    scan,
+  });
+  const isolated = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy: firstPolicy,
+    scanIdentity: "fixture-scan",
+    scan,
+  });
+  const differentIdentity = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy: firstPolicy,
+    scanIdentity: "different-scan",
+    resultMode: "shared-readonly",
+    scan,
+  });
+  const differentPolicy = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy: secondPolicy,
+    scanIdentity: "fixture-scan",
+    resultMode: "shared-readonly",
+    scan,
+  });
+  const isolatedFirst = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy: firstPolicy,
+    scanIdentity: "mixed-reverse",
+    scan,
+  });
+  isolatedFirst.candidates[0].path = "mutated-before-sharing.js";
+  const sharedAfterIsolated = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy: firstPolicy,
+    scanIdentity: "mixed-reverse",
+    resultMode: "shared-readonly",
+    scan,
+  });
+
+  assert.notStrictEqual(shared, isolated);
+  assert.equal(Object.isFrozen(isolated), false);
+  isolated.candidates[0].path = "mutated-isolated.js";
+  assert.equal(shared.candidates[0].path, "js/fixture-1.js");
+  assert.notStrictEqual(shared, differentIdentity);
+  assert.notStrictEqual(shared, differentPolicy);
+  assert.equal(sharedAfterIsolated.candidates[0].path, "js/fixture-4.js");
+  assert.equal(Object.isFrozen(sharedAfterIsolated), true);
+  assert.equal(scans, 4);
+});
+
+test("repository scan cache evicts rejection and shared mode rejects mutable containers", async () => {
+  const previousPolicy = { progress: { latestPhase: "fixture" } };
+  await assert.rejects(
+    resolveCachedStateWriterRepositoryScan({
+      repositoryScanCache: new Map(),
+      previousPolicy,
+      scanIdentity: "invalid-mode",
+      resultMode: "mutable-shared",
+      scan: async () => ({ candidates: [] }),
+    }),
+    /resultMode must be isolated or shared-readonly/,
+  );
+  const rejectionCache = new Map();
+  let attempts = 0;
+  await assert.rejects(
+    resolveCachedStateWriterRepositoryScan({
+      repositoryScanCache: rejectionCache,
+      previousPolicy,
       scanIdentity: "failed-scan",
       scan: async () => {
+        attempts += 1;
         throw new Error("fixture failure");
       },
     }),
     /fixture failure/,
   );
+  const recovered = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: rejectionCache,
+    previousPolicy,
+    scanIdentity: "failed-scan",
+    scan: async () => {
+      attempts += 1;
+      return { candidates: [] };
+    },
+  });
+  assert.deepEqual(recovered, { candidates: [] });
+  assert.equal(attempts, 2);
+
+  const unsupportedCache = new Map();
+  const scan = async () => ({ candidates: [], lookup: new Map() });
+  await assert.rejects(
+    resolveCachedStateWriterRepositoryScan({
+      repositoryScanCache: unsupportedCache,
+      previousPolicy,
+      scanIdentity: "unsupported-container",
+      resultMode: "shared-readonly",
+      scan,
+    }),
+    (error) => error?.code === "state-writer-repository-scan-shared-result-invalid",
+  );
+  const isolated = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: unsupportedCache,
+    previousPolicy,
+    scanIdentity: "unsupported-container",
+    scan,
+  });
+  assert.equal(isolated.lookup instanceof Map, true);
 });
 
 function createHistoricalDerivedAliasProofCacheFixture(overrides = {}) {
