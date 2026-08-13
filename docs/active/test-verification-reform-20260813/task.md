@@ -2,7 +2,7 @@
 
 ## Current status
 
-The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reuse, and Stage 6C strict command closure are committed. The combined candidate is ready to freeze for the remaining admission gates.
+The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reuse, and Stage 6C strict command closure are committed. The first combined frozen full-policy run passed and exposed one final repeated full-graph clone hotspot; Stage 6D is active.
 
 ## Checklist
 
@@ -21,6 +21,7 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - [x] Stage 6A: admit the derived-proof cache candidate from Hotspot A.
 - [x] Stage 6B: authorize and admit cross-process evidence reuse after Stage 6A.
 - [x] Stage 6C: authorize and admit measured test-portfolio reform after Stages 6A and 6B.
+- [ ] Stage 6D: admit explicit shared-readonly repository scan results for audited internal consumers.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
 ## Validation evidence
@@ -48,6 +49,7 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 | Stage 6B exact policy evidence | Integrated as `f6310175`. Evidence binds explicit untracked-aware clean SHA/tree identity, canonical phase and checker plan, policy/config/checkpoint identity, report bytes and producer provenance. Create/validate use start/end identity fences; each Core/P4/direct/standalone invocation owns one live-fallback attempt. Root rerun passed Node 63/63, Python 3/3, route schema 363, syntax/diff checks, and SF-ATS with 11 changed files / 0 route gaps. Full TAP and every P4 direct checker remain live. |
 | Stage 6C read-only portfolio audit | Current Core closure is 87 top-level / 103 leaf / 70 Node / 20 Python processes. Strict command-closure supersession projects 80 top-level / 95 leaf / 62 Node / 20 Python with identical Node test-file coverage. |
 | Stage 6C strict command closure | Integrated as `0df8698c`. Core now lists 80 commands and seven durable supersession records; mechanical closure is 95 leaf / 62 Node / 20 Python while the unique Node test-file set remains 103/103. Cycle and unresolved provenance fail closed. Root rerun passed Core 34/34, metadata 29/29, supervisor contracts/routing 18/18, supervisor plan 17/17, route schema 363, list 80/7/0/0, and SF-ATS with five changed files / zero route gaps. |
+| Frozen full policy after Stages 6A-C | `b7f9b40e`: 356/356 passed, exit 0, TAP total 954,768.5944 ms (~15m55s). This is 84.4% below the 6,139,150.8 ms baseline and 73.9% below the 3,662,093.7 ms intermediate run. The closed snapshot (420,985.07 ms) and deterministic builder (470,960.75 ms) still account for 93.42%; both consume the shared repository-scan cache whose resolver still clones the full graph per return. |
 
 ## Open risks and remaining work
 
@@ -57,3 +59,4 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - The exact policy rebuild still spends roughly 18 minutes in the older focused baseline. Stage 6A now reuses identical historical proofs within one producer; a frozen-candidate live run remains required to measure the new wall time.
 - Generalized Windows Job Object process containment remains a separate high-risk follow-up; current runners retain synchronous child-process behavior.
 - Full wall-clock savings remain unmeasured until the frozen-candidate Core/P4 admission run; current Stage 6C evidence proves command and test-file closure only.
+- Full Core wall-clock savings remain unmeasured. The full policy wall-clock is now measured; Stage 6D targets only its two remaining dominant full-graph consumers.
