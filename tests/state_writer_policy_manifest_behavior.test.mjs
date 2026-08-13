@@ -6325,29 +6325,93 @@ test("P4.3 renderer cross-boundary contracts exactly match the frozen retired mu
         domain === "renderer"
         && migrationPhase === "P4.3",
     );
-  assert.equal(rendererContracts.length, 12);
+  assert.deepEqual(
+    rendererContracts.map(({ contractIdentity }) => contractIdentity),
+    [
+      "5e6cd046957fc4a7f2d806adaa12afff8f86b5ea7e6fd62c4d023f6fa1885251",
+      "f8293fd8d98cb3ab0362a52ae7ebf30372c2cb9cc183641436a3f1895338c139",
+      "b039cb07c359bf2a0270c650c3b54a13e66c4d150b84ef369fcd07359f4dff58",
+      "661569a4008d4a8a207bab8115268533f7fd94035f2508e5572e1d5289a2d793",
+      "f0392f7324a158420ab19c737cc6fd8be57758a20ea4049e70e9ddd01333f740",
+      "4b0f41e40474b9eac61cb1e8afa533e7717f9bc62345afb53b4d9ef0ca4d141d",
+      "c01abd31e713c14331a6e2ac8f1c5529813d5fc5048e3d3fb970ad5dbf161a6b",
+      "4a1e7970e1ec86ff50ea3785eff073c2d015d2afa766fa2743361ac1ea0dda7d",
+      "70e4c965698025b40e1a74945b6880f421dc1260982afffab26c449b531a0277",
+      "a1574269705ceb9f5a06b7e8f10748e4f77e12778218d68a8e3104d757f1ef59",
+      "3ebe1743567ed05509aa5e55b801279d5a765b7dc5a3be42b54c6b5bd28d091f",
+      "907a7a73d938121b892601ad956e6cea04f5d1caeeedd038a94b1b76ebb4c440",
+      "784e03d190947f705368d03b069701532b6b3575337384b82325d7e2f2790200",
+    ],
+  );
+  const callerToActionEntries =
+    frozenPolicy.progress.callerToActionLedger.entries;
   for (const contract of rendererContracts) {
-    const writer = frozenPolicy.writers.find(
-      ({ path }) => path === contract.retiredCallerPath,
+    const entry = callerToActionEntries.find(
+      ({ retiredMembershipIdentity }) =>
+        retiredMembershipIdentity
+          === contract.retiredMembershipIdentity,
     );
-    const binding = writer?.bindings?.find(
-      (candidate) =>
-        buildStableStateBindingIdentity(candidate)
-          === contract.retiredCallerBindingIdentity,
-    );
-    const grant = binding?.grants?.find(
-      ({ domain, migrationPhase }) =>
-        domain === contract.domain
-        && migrationPhase === contract.migrationPhase,
-    );
-    const membership = grant?.memberships?.find(
-      ({ operation, key }) =>
-        operation === contract.operation
-        && key === contract.key,
-    );
+    const retiredMutationSiteFingerprint = createHash("sha256")
+      .update(JSON.stringify(contract.retiredMutationSites))
+      .digest("hex");
     assert.deepEqual(
-      membership?.mutationSites,
-      contract.retiredMutationSites,
+      {
+        retiredMembershipIdentity:
+          entry?.retiredMembershipIdentity,
+        callerPath: entry?.callerPath,
+        callerBindingIdentity: entry?.callerBindingIdentity,
+        enclosingFunctionIdentity:
+          entry?.enclosingFunctionIdentity,
+        retiredCallerPath: entry?.retiredCallerPath,
+        retiredCallerBindingIdentity:
+          entry?.retiredCallerBindingIdentity,
+        retiredMutationSiteFingerprint:
+          entry?.retiredMutationSiteFingerprint,
+        retiredMutationSiteCount:
+          entry?.retiredMutationSiteCount,
+        crossFileMigrationContractIdentity:
+          entry?.crossFileMigrationContractIdentity,
+        domain: entry?.domain,
+        migrationPhase: entry?.migrationPhase,
+        operation: entry?.operation,
+        key: entry?.key,
+        actionModulePath: entry?.actionModulePath,
+        actionExportName: entry?.actionExportName,
+        targetArgumentIndex: entry?.targetArgumentIndex,
+        sourceFingerprint: entry?.sourceFingerprint,
+        retiredInPhase: entry?.retiredInPhase,
+        recordedInPhase: entry?.recordedInPhase,
+        backfilled: entry?.backfilled,
+      },
+      {
+        retiredMembershipIdentity:
+          contract.retiredMembershipIdentity,
+        callerPath: contract.replacementCallerPath,
+        callerBindingIdentity:
+          contract.replacementCallerBindingIdentity,
+        enclosingFunctionIdentity:
+          contract.replacementEnclosingFunctionIdentity,
+        retiredCallerPath: contract.retiredCallerPath,
+        retiredCallerBindingIdentity:
+          contract.retiredCallerBindingIdentity,
+        retiredMutationSiteFingerprint,
+        retiredMutationSiteCount:
+          contract.retiredMutationSites.length,
+        crossFileMigrationContractIdentity:
+          contract.contractIdentity,
+        domain: contract.domain,
+        migrationPhase: contract.migrationPhase,
+        operation: contract.operation,
+        key: contract.key,
+        actionModulePath: contract.actionModulePath,
+        actionExportName: contract.actionExportName,
+        targetArgumentIndex: contract.targetArgumentIndex,
+        sourceFingerprint:
+          contract.replacementActionSourceFingerprint,
+        retiredInPhase: "P4.3",
+        recordedInPhase: "P4.3",
+        backfilled: false,
+      },
       contract.retiredMembershipIdentity,
     );
   }
@@ -6734,11 +6798,28 @@ test("repository checker reports a passing closed-world policy and default-state
 });
 
 test("checker rejects a requested phase that has no matching policy checkpoint", async () => {
-  const report = await buildStateWriterPolicyReport({ phase: "P4.3" });
-  assert.equal(report.phase, "P4.3");
+  const policy = await readStateWriterPolicy();
+  const missingPhase = "P4.4";
+  assert.equal(
+    policy.progress.checkpoints.some(
+      ({ phase }) => phase === missingPhase,
+    ),
+    false,
+  );
+  const report = await buildStateWriterPolicyReport({
+    phase: missingPhase,
+  });
+  assert.equal(report.phase, missingPhase);
   assert.equal(report.verdict, "fail");
-  assert.ok(
-    report.violations.some(({ code }) => code === "policy-phase-mismatch"),
+  assert.deepEqual(
+    report.violations.filter(
+      ({ code }) => code === "policy-phase-mismatch",
+    ),
+    [{
+      code: "policy-phase-mismatch",
+      requestedPhase: missingPhase,
+      policyLatestPhase: "P4.3",
+    }],
   );
 });
 
