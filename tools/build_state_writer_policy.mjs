@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { isDeepStrictEqual } from "node:util";
+import { inspect, isDeepStrictEqual } from "node:util";
 
 import {
   DERIVED_ALIAS_TAINT_MODES,
@@ -3303,6 +3303,64 @@ function toScannerBinding(binding) {
   };
 }
 
+function scannerBindingPayloadSignature(binding) {
+  return inspect(toScannerBinding(binding), {
+    breakLength: Infinity,
+    compact: true,
+    customInspect: false,
+    depth: null,
+    getters: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    sorted: true,
+  });
+}
+
+function dedupeBindingsByScannerPayload(bindings) {
+  const payloadsByBindingId = new Map();
+  const results = [];
+  for (const binding of bindings) {
+    const payload = toScannerBinding(binding);
+    const bindingId = String(payload.id || "");
+    const payloads = payloadsByBindingId.get(bindingId) || [];
+    if (payloads.some((candidate) => (
+      isDeepStrictEqual(candidate, payload)
+    ))) {
+      continue;
+    }
+    payloads.push(payload);
+    payloadsByBindingId.set(bindingId, payloads);
+    results.push(binding);
+  }
+  return results.sort((left, right) => (
+    String(left.id).localeCompare(String(right.id))
+  ));
+}
+
+function assertUniqueStateWriterBatchBindingIds(bindings) {
+  const signaturesByBindingId = new Map();
+  for (const binding of bindings) {
+    const scannerBinding = toScannerBinding(binding);
+    const bindingId = String(scannerBinding.id || "");
+    const signature = scannerBindingPayloadSignature(binding);
+    if (signaturesByBindingId.has(bindingId)) {
+      const signatures = [
+        signaturesByBindingId.get(bindingId),
+        signature,
+      ].sort((left, right) => left.localeCompare(right));
+      const error = new Error(
+        `State writer batch binding id collision: ${bindingId}.`,
+      );
+      error.code = "state-writer-batch-binding-id-collision";
+      error.bindingId = bindingId;
+      error.bindingIds = [bindingId, bindingId];
+      error.signatures = signatures;
+      throw error;
+    }
+    signaturesByBindingId.set(bindingId, signature);
+  }
+}
+
 function createModuleBinding(importBinding) {
   return {
     id: `module:${bindingIdPart(importBinding.localName)}`,
@@ -3411,6 +3469,9 @@ export async function validateStateActionNonTargetParameterMutations(
   source,
   contractEntries =
     getStateActionDelegationContractEntriesForModule(relativePath),
+  {
+    scanner = scanStateMutationInventory,
+  } = {},
 ) {
   const discovery = discoverFunctionParameterBindings(
     source,
@@ -3419,12 +3480,18 @@ export async function validateStateActionNonTargetParameterMutations(
   if (discovery.diagnostics.length) {
     return [];
   }
-  const violations = [];
+  const candidatesByExportName = new Map();
+  for (const candidate of discovery.bindings) {
+    const candidates = candidatesByExportName.get(candidate.functionName)
+      || [];
+    candidates.push(candidate);
+    candidatesByExportName.set(candidate.functionName, candidates);
+  }
+  const attributions = [];
   for (const entry of contractEntries || []) {
     for (
-      const candidate of discovery.bindings.filter(
-        ({ functionName }) => functionName === entry.exportName,
-      )
+      const candidate of
+      candidatesByExportName.get(entry.exportName) || []
     ) {
       if (
         candidate.parameterIndex === entry.targetArgumentIndex
@@ -3433,38 +3500,67 @@ export async function validateStateActionNonTargetParameterMutations(
         continue;
       }
       const binding = createParameterBinding(candidate);
-      const mutationFindings = scanBinding(
-        source,
-        relativePath,
+      attributions.push({
         binding,
+        candidate,
+        entry,
+      });
+    }
+  }
+  const bindings = dedupeBindingsByScannerPayload(
+    attributions.map(({ binding }) => binding),
+  );
+  const inventories = scanStateWriterBindingInventoriesBatch(
+    source,
+    relativePath,
+    bindings,
+    DERIVED_ALIAS_TAINT_MODES.STRICT,
+    {
+      scanner,
+      recognizeCurrentContracts: true,
+    },
+  );
+  const inventoriesByBindingId = new Map(
+    inventories.map((inventory) => [
+      inventory.binding.id,
+      inventory,
+    ]),
+  );
+  const violations = [];
+  for (const {
+    binding,
+    candidate,
+    entry,
+  } of attributions) {
+    for (
+      const finding of
+      inventoriesByBindingId.get(binding.id).findings
+    ) {
+      const conservativeMutationEvidence = Boolean(
+        !finding?.unsupported
+        || finding.reason !== "state-alias-escape"
+        || finding.evidenceKind === "unknown-call-argument",
       );
-      for (const finding of mutationFindings) {
-        const conservativeMutationEvidence = Boolean(
-          !finding?.unsupported
-          || finding.reason !== "state-alias-escape"
-          || finding.evidenceKind === "unknown-call-argument",
-        );
-        if (!conservativeMutationEvidence) {
-          continue;
-        }
-        violations.push({
-          code: "state-action-non-target-parameter-mutation",
-          modulePath: normalizeRelativePath(relativePath),
-          exportName: entry.exportName,
-          parameterName: candidate.parameterName,
-          parameterIndex: candidate.parameterIndex,
-          parameterPath: candidate.parameterPath,
-          operation: finding.operation,
-          key: finding.key,
-          unsupported: Boolean(finding.unsupported),
-          reason: String(finding.reason || ""),
-          evidenceKind: String(finding.evidenceKind || ""),
-          alias: String(finding.alias || ""),
-          aliasChain: (finding.aliasChain || []).map(String),
-          line: finding.line,
-          column: finding.column,
-        });
+      if (!conservativeMutationEvidence) {
+        continue;
       }
+      violations.push({
+        code: "state-action-non-target-parameter-mutation",
+        modulePath: normalizeRelativePath(relativePath),
+        exportName: entry.exportName,
+        parameterName: candidate.parameterName,
+        parameterIndex: candidate.parameterIndex,
+        parameterPath: candidate.parameterPath,
+        operation: finding.operation,
+        key: finding.key,
+        unsupported: Boolean(finding.unsupported),
+        reason: String(finding.reason || ""),
+        evidenceKind: String(finding.evidenceKind || ""),
+        alias: String(finding.alias || ""),
+        aliasChain: (finding.aliasChain || []).map(String),
+        line: finding.line,
+        column: finding.column,
+      });
     }
   }
   return violations.sort(
@@ -4233,6 +4329,7 @@ export function scanStateWriterBindingInventoriesBatch(
   const normalizedDerivedAliasTaintMode =
     normalizeDerivedAliasTaintMode(derivedAliasTaintMode);
   const orderedBindings = Array.isArray(bindings) ? bindings : [];
+  assertUniqueStateWriterBatchBindingIds(orderedBindings);
   const inventoriesByBindingId = new Map();
   const scannableBindings = [];
   for (const binding of orderedBindings) {
@@ -4311,37 +4408,6 @@ export function scanStateWriterBindingInventoriesBatch(
     binding,
     ...inventoriesByBindingId.get(binding.id),
   }));
-}
-
-function scanBindingInventory(
-  source,
-  relativePath,
-  binding,
-  derivedAliasTaintMode =
-    DERIVED_ALIAS_TAINT_MODES.STRICT,
-) {
-  const [inventory] = scanStateWriterBindingInventoriesBatch(
-    source,
-    relativePath,
-    [binding],
-    derivedAliasTaintMode,
-  );
-  return inventory;
-}
-
-function scanBinding(
-  source,
-  relativePath,
-  binding,
-  derivedAliasTaintMode =
-    DERIVED_ALIAS_TAINT_MODES.STRICT,
-) {
-  return scanBindingInventory(
-    source,
-    relativePath,
-    binding,
-    derivedAliasTaintMode,
-  ).findings;
 }
 
 export const STATE_WRITER_DERIVED_ALIAS_TAINT_POLICY =

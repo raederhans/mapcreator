@@ -221,6 +221,82 @@ test("batch binding inventory invokes the scanner once for all scannable binding
   );
 });
 
+test("batch binding inventory rejects duplicate ids before scanner execution", () => {
+  const first = {
+    ...PARAMETER_BINDING,
+    id: "collision-binding",
+  };
+  const conflicting = {
+    ...first,
+    name: "otherTarget",
+    parameterName: "otherTarget",
+    parameterIndex: 1,
+  };
+  let scannerCalls = 0;
+  const scanner = () => {
+    scannerCalls += 1;
+    return { findings: [], actionDelegations: [] };
+  };
+
+  assert.throws(
+    () => scanStateWriterBindingInventoriesBatch(
+      SOURCE,
+      FILE_PATH,
+      [first, conflicting],
+      DERIVED_ALIAS_TAINT_MODES.STRICT,
+      { scanner },
+    ),
+    (error) => (
+      error?.code === "state-writer-batch-binding-id-collision"
+      && error?.bindingId === "collision-binding"
+      && error?.bindingIds?.length === 2
+      && error?.bindingIds?.every((id) => id === "collision-binding")
+      && error?.signatures?.length === 2
+      && error.signatures[0] !== error.signatures[1]
+    ),
+  );
+  assert.equal(scannerCalls, 0);
+
+  const undefinedPayload = {
+    ...first,
+    aliasSources: [undefined],
+  };
+  const nullPayload = {
+    ...first,
+    aliasSources: [null],
+  };
+  assert.throws(
+    () => scanStateWriterBindingInventoriesBatch(
+      SOURCE,
+      FILE_PATH,
+      [undefinedPayload, nullPayload],
+      DERIVED_ALIAS_TAINT_MODES.STRICT,
+      { scanner },
+    ),
+    (error) => (
+      error?.code === "state-writer-batch-binding-id-collision"
+      && error?.signatures?.length === 2
+      && error.signatures[0] !== error.signatures[1]
+    ),
+  );
+  assert.equal(scannerCalls, 0);
+
+  assert.throws(
+    () => scanStateWriterBindingInventoriesBatch(
+      SOURCE,
+      FILE_PATH,
+      [first, { ...first }],
+      DERIVED_ALIAS_TAINT_MODES.STRICT,
+      { scanner },
+    ),
+    (error) => (
+      error?.code === "state-writer-batch-binding-id-collision"
+      && error?.signatures?.[0] === error?.signatures?.[1]
+    ),
+  );
+  assert.equal(scannerCalls, 0);
+});
+
 test("full-root leaf escapes replace redundant container diagnostics without hiding computed projections", () => {
   const sourceFor = (
     extraProperties,

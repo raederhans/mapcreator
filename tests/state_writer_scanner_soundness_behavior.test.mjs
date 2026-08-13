@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
   discoverStateWriterBindingsForSource,
+  scanStateWriterBindingInventoriesBatch,
   validateStateActionNonTargetParameterMutations,
 } from "../tools/build_state_writer_policy.mjs";
 import {
@@ -949,6 +951,302 @@ test("registered action exports reject concrete mutation through non-target para
         key: "*",
       },
     ],
+  );
+});
+
+function legacyBindingIdPart(value) {
+  return String(value || "")
+    .replaceAll(/[^A-Za-z0-9_$.-]+/g, "-")
+    .replaceAll(/^-+|-+$/g, "");
+}
+
+function createLegacyParameterBinding(candidate) {
+  const parameterPath = String(candidate.parameterPath || "$");
+  const parameterPathHash = createHash("sha256")
+    .update(parameterPath)
+    .digest("hex")
+    .slice(0, 12);
+  return {
+    id: [
+      "parameter",
+      legacyBindingIdPart(candidate.functionName),
+      Number(candidate.parameterIndex || 0),
+      parameterPathHash,
+      Number(candidate.line || 0),
+      Number(candidate.column || 0),
+    ].join(":"),
+    kind: "function-parameter",
+    name: candidate.parameterName,
+    functionName: candidate.functionName,
+    parameterName: candidate.parameterName,
+    parameterIndex: Number(candidate.parameterIndex || 0),
+    parameterPath,
+    locator: {
+      line: candidate.line,
+      column: candidate.column,
+    },
+  };
+}
+
+function validateNonTargetMutationsWithD873LegacyOracle(
+  relativePath,
+  source,
+  contractEntries,
+  {
+    onRawInventory = () => {},
+    onScan = () => {},
+  } = {},
+) {
+  const discovery = discoverFunctionParameterBindings(
+    source,
+    { parameterNames: null },
+  );
+  if (discovery.diagnostics.length) {
+    return [];
+  }
+  const violations = [];
+  for (const entry of contractEntries || []) {
+    for (
+      const candidate of discovery.bindings.filter(
+        ({ functionName }) => functionName === entry.exportName,
+      )
+    ) {
+      if (
+        candidate.parameterIndex === entry.targetArgumentIndex
+        && candidate.parameterPath === "$"
+      ) {
+        continue;
+      }
+      const binding = createLegacyParameterBinding(candidate);
+      const [inventory] = scanStateWriterBindingInventoriesBatch(
+        source,
+        relativePath,
+        [binding],
+        DERIVED_ALIAS_TAINT_MODES.STRICT,
+        {
+          recognizeCurrentContracts: true,
+          scanner(scannerSource, options) {
+            onScan(options.bindings[0]);
+            const rawInventory = scanStateMutationInventory(
+              scannerSource,
+              options,
+            );
+            onRawInventory(rawInventory, options.bindings[0]);
+            return rawInventory;
+          },
+        },
+      );
+      for (const finding of inventory.findings) {
+        const conservativeMutationEvidence = Boolean(
+          !finding?.unsupported
+          || finding.reason !== "state-alias-escape"
+          || finding.evidenceKind === "unknown-call-argument",
+        );
+        if (!conservativeMutationEvidence) {
+          continue;
+        }
+        violations.push({
+          code: "state-action-non-target-parameter-mutation",
+          modulePath: String(relativePath || "").replaceAll("\\", "/"),
+          exportName: entry.exportName,
+          parameterName: candidate.parameterName,
+          parameterIndex: candidate.parameterIndex,
+          parameterPath: candidate.parameterPath,
+          operation: finding.operation,
+          key: finding.key,
+          unsupported: Boolean(finding.unsupported),
+          reason: String(finding.reason || ""),
+          evidenceKind: String(finding.evidenceKind || ""),
+          alias: String(finding.alias || ""),
+          aliasChain: (finding.aliasChain || []).map(String),
+          line: finding.line,
+          column: finding.column,
+        });
+      }
+    }
+  }
+  return violations.sort(
+    (left, right) =>
+      left.exportName.localeCompare(right.exportName)
+      || left.parameterIndex - right.parameterIndex
+      || left.parameterPath.localeCompare(right.parameterPath)
+      || left.line - right.line
+      || left.column - right.column,
+  );
+}
+
+test("non-target parameter batch matches the legacy single-binding oracle with one scanner setup", async () => {
+  const modulePath = "js/core/state/actions/fixture_actions.js";
+  const source = [
+    "export function zeta({ branch }, other) {",
+    '  branch.status = "nested";',
+    '  other.status = "ready";',
+    "  consumeUnknown(other);",
+    "  consumeUnknown({ other, mirror: other });",
+    "  return other;",
+    "}",
+    "export function alpha(target, value) {",
+    '  value.count = 1;',
+    '  target.count = 1;',
+    "}",
+  ].join("\n");
+  const contract = [
+    { modulePath, exportName: "zeta", targetArgumentIndex: 0 },
+    { modulePath, exportName: "zeta", targetArgumentIndex: 0 },
+    { modulePath, exportName: "zeta", targetArgumentIndex: 1 },
+    { modulePath, exportName: "alpha", targetArgumentIndex: 0 },
+  ];
+  let legacyScans = 0;
+  let rawRedundantContainerEscapes = 0;
+  const expected = validateNonTargetMutationsWithD873LegacyOracle(
+    modulePath,
+    source,
+    contract,
+    {
+      onScan() {
+        legacyScans += 1;
+      },
+      onRawInventory(inventory) {
+        rawRedundantContainerEscapes += inventory.findings.filter(
+          ({ evidenceKind, line, reason }) =>
+            reason === "state-alias-escape"
+            && evidenceKind === "unknown-call-argument"
+            && line === 5,
+        ).length;
+      },
+    },
+  );
+  let batchScans = 0;
+  let batchBindingIds = [];
+  const actual = await validateStateActionNonTargetParameterMutations(
+    modulePath,
+    source,
+    contract,
+    {
+      scanner(scannerSource, options) {
+        batchScans += 1;
+        batchBindingIds = options.bindings.map(({ id }) => id);
+        assert.equal(
+          options.derivedAliasTaintMode,
+          DERIVED_ALIAS_TAINT_MODES.STRICT,
+        );
+        assert.equal(options.recognizeCurrentContracts, true);
+        return scanStateMutationInventory(scannerSource, options);
+      },
+    },
+  );
+
+  assert.deepEqual(actual, expected);
+  assert.equal(JSON.stringify(actual), JSON.stringify(expected));
+  assert.equal(legacyScans, 6);
+  assert.equal(rawRedundantContainerEscapes, 2);
+  assert.equal(batchScans, legacyScans > 0 ? 1 : 0);
+  assert.equal(batchBindingIds.length, 3);
+  assert.deepEqual(
+    actual.map(({ exportName }) => exportName),
+    [
+      "alpha",
+      "zeta",
+      "zeta",
+      "zeta",
+      "zeta",
+      "zeta",
+      "zeta",
+      "zeta",
+    ],
+  );
+  assert.equal(
+    actual.some(({ parameterName }) => parameterName === "target"),
+    false,
+  );
+  assert.equal(
+    actual.filter(
+      ({ parameterName, operation }) =>
+        parameterName === "branch" && operation === "assign",
+    ).length,
+    3,
+  );
+  assert.equal(
+    actual.filter(
+      ({ parameterName, operation }) =>
+        parameterName === "other" && operation === "assign",
+    ).length,
+    2,
+  );
+  assert.equal(
+    actual.filter(
+      ({ reason, evidenceKind }) =>
+        reason === "state-alias-escape"
+        && evidenceKind === "unknown-call-argument",
+    ).length,
+    2,
+  );
+  assert.equal(
+    actual.some(({ evidenceKind }) => evidenceKind === "return-value"),
+    false,
+  );
+  assert.equal(
+    actual.some(({ line }) => line === 5),
+    false,
+  );
+});
+
+test("non-target parameter batch preserves discovery and scanner failures", async () => {
+  const modulePath = "js/core/state/actions/fixture_actions.js";
+  const contract = [{
+    modulePath,
+    exportName: "update",
+    targetArgumentIndex: 0,
+  }];
+  let parseFailureScannerCalls = 0;
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(
+      modulePath,
+      "export function update(target, other) {",
+      contract,
+      {
+        scanner() {
+          parseFailureScannerCalls += 1;
+          throw new Error("scanner should not run after discovery failure");
+        },
+      },
+    ),
+    [],
+  );
+  assert.equal(parseFailureScannerCalls, 0);
+
+  const source = [
+    "export function update(target, other) {",
+    '  other.status = "ready";',
+    "}",
+  ].join("\n");
+  await assert.rejects(
+    validateStateActionNonTargetParameterMutations(
+      modulePath,
+      source,
+      contract,
+      { scanner: () => { throw new Error("fixture scanner failure"); } },
+    ),
+    /fixture scanner failure/,
+  );
+  await assert.rejects(
+    validateStateActionNonTargetParameterMutations(
+      modulePath,
+      source,
+      contract,
+      {
+        scanner: () => ({
+          findings: [{
+            bindingId: "unknown-binding",
+            unsupported: false,
+            operation: "assign",
+            key: "status",
+          }],
+          actionDelegations: [],
+        }),
+      },
+    ),
+    /unknown binding: unknown-binding/,
   );
 });
 
