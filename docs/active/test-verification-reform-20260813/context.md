@@ -42,6 +42,9 @@
 | 2026-08-14 | Complete Hotspot F and reject invocation-count-only batching as the next mechanism. | The parser/index already has same-source reuse; repeated binding-independent whole-source preparation is the bounded scanner target. |
 | 2026-08-14 | Reject Hotspot G after its frozen candidate crossed the 1.25x wall-clock threshold. | Exact historical blob batching reduced an isolated 47-path sample from 8.14 s to 0.112 s and preserved bytes, but the full manifest worker remained active at 20m45s. Root stopped the exact owned Node tree, preserved the last complete 356/356 TAP, and reverted the candidate as `13c355e9`. |
 | 2026-08-14 | Open Hotspot H on source-analysis-owned scanner preparation. | Cache only AST/scope invariants by analysis object identity; keep every binding's resolution, modes, dataflow, traversal, outputs, and error state independent. |
+| 2026-08-14 | Integrate Hotspot H as `ed735709` after fixing the fresh-oracle seam. | Real old/new paired benchmarks improve N=33 by 34.8% and N=72 by 50.7%; independent review and all short gates are clear. |
+| 2026-08-14 | Treat the H long hotspot run as inconclusive due to timing drift. | The candidate hotspot crossed its historical 1.25x threshold, while an old-worktree manifest invocation in the same period also exceeded 21 minutes. Both exact process trees were stopped with zero residual PIDs, and the complete baseline TAP stayed intact. |
+| 2026-08-14 | Open Stage 6I on accidental full-run prevention and progress visibility. | Require an explicit official full-manifest admission path and preserve observable partial progress so focused reviews cannot silently launch the repository-scale suite. |
 
 ## Live process ownership
 
@@ -56,7 +59,8 @@
 | Hotspot E implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | short isolated outputs only | correctness clear; performance rejected and reverted as `ed25d341` |
 | Hotspot F diagnostics | threads `019ffb54-8b38-7630-9b13-363cfba20917` and `019ffb53-ee12-7f72-9c0e-801190c2cae0` | no shared outputs | completed; repeated source-analysis preparation selected |
 | Hotspot G implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | focused tests only; full TAP owned by root | correctness clear; frozen performance rejected, candidate reverted as `13c355e9` |
-| Hotspot H implementation | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | short isolated tests and microbench only | active; no full-policy lane authorization |
+| Hotspot H implementation | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | short isolated tests and microbench only | delivered `faf66e53`; integrated and revalidated by root as `ed735709` |
+| Hotspot H independent review | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | read-only diff and short checks | one fresh-oracle blocker fixed; final verdict `H_FINAL_REVIEW_CLEAR` |
 
 ## Handoff
 
@@ -64,4 +68,4 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Complete Hotspot H with old/new byte-equivalent scanner outputs and alternating 33/72-binding timing. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline, and require fresh evidence before launching another full-policy candidate.
+Implement Stage 6I before another local full-policy attempt: make the manifest full run an explicit official-runner action, retain focused pattern support, and expose partial/progress evidence. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until a same-environment control or CI run admits the newer candidate.

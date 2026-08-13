@@ -38,7 +38,8 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 6E: Evaluate action non-target batching and reject the frozen wall-clock regression.
 - [x] Stage 6F: Profile scanner scaling and choose a measured follow-up.
 - [x] Stage 6G: Evaluate batched historical Git source reads and reject the frozen full-policy regression.
-- [ ] Stage 6H: Reuse source-analysis-owned immutable scanner preparation while preserving per-binding dataflow.
+- [x] Stage 6H: Reuse source-analysis-owned immutable scanner preparation while preserving per-binding dataflow.
+- [ ] Stage 6I: Require explicit manifest full-run admission and expose durable partial progress for long policy runs.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
 ## Acceptance criteria
