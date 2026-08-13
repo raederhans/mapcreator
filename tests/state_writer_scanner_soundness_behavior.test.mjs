@@ -54,6 +54,35 @@ function scanWithFunctionTrace(source, {
   };
 }
 
+function parameterBindingFor(
+  source,
+  functionName,
+  parameterName,
+  id = `parameter:${functionName}:${parameterName}`,
+) {
+  const candidate = discoverFunctionParameterBindings(
+    source,
+    { parameterNames: null },
+  ).bindings.find((entry) => (
+    entry.functionName === functionName
+    && entry.parameterName === parameterName
+  ));
+  assert.ok(candidate, `${functionName}:${parameterName}`);
+  return {
+    id,
+    kind: "function-parameter",
+    name: candidate.parameterName,
+    functionName: candidate.functionName,
+    parameterName: candidate.parameterName,
+    parameterIndex: candidate.parameterIndex,
+    parameterPath: candidate.parameterPath,
+    locator: {
+      line: candidate.line,
+      column: candidate.column,
+    },
+  };
+}
+
 test("unique function-parameter analysis matches full-program semantics while skipping unrelated function bodies", () => {
   const unrelatedFunctions = Array.from(
     { length: 80 },
@@ -214,6 +243,290 @@ test("module bindings retain full-program traversal under automatic scoping", ()
     ),
     true,
   );
+});
+
+test("binding mutation preparation follows exact analysis-object lifetime", () => {
+  const sourceA = [
+    "export function prepareLifetimeA(target) {",
+    "  target.ready = true;",
+    "}",
+  ].join("\n");
+  const sourceB = [
+    "export function prepareLifetimeB(target) {",
+    "  target.ready = false;",
+    "}",
+  ].join("\n");
+  const preparationBuilds = [];
+  const scan = (source, label) => scanStateMutationInventory(source, {
+    filePath: `js/${label}.js`,
+    bindings: [parameterBindingFor(
+      source,
+      `prepareLifetime${label}`,
+      "target",
+    )],
+    analysisInstrumentation: {
+      onPrepareBindingMutationAnalysis() {
+        preparationBuilds.push(label);
+      },
+    },
+  });
+
+  scan(sourceA, "A");
+  scan(sourceA, "A");
+  scan(sourceB, "B");
+  scan(sourceA, "A");
+
+  assert.deepEqual(preparationBuilds, ["A", "B", "A"]);
+});
+
+test("failed binding mutation preparation is retried without publishing a partial context", () => {
+  const source = [
+    "export function retryPreparation(target) {",
+    "  target.ready = true;",
+    "}",
+  ].join("\n");
+  const binding = parameterBindingFor(
+    source,
+    "retryPreparation",
+    "target",
+  );
+  const expected = new Error("preparation-probe-failed");
+  let attempts = 0;
+
+  assert.throws(
+    () => scanStateMutationInventory(source, {
+      bindings: [binding],
+      analysisInstrumentation: {
+        onCompleteBindingMutationAnalysisPreparation() {
+          attempts += 1;
+          throw expected;
+        },
+      },
+    }),
+    (error) => error === expected,
+  );
+  scanStateMutationInventory(source, {
+    bindings: [binding],
+    analysisInstrumentation: {
+      onCompleteBindingMutationAnalysisPreparation() {
+        attempts += 1;
+      },
+    },
+  });
+  scanStateMutationInventory(source, {
+    bindings: [binding],
+    analysisInstrumentation: {
+      onCompleteBindingMutationAnalysisPreparation() {
+        attempts += 1;
+      },
+    },
+  });
+
+  assert.equal(attempts, 2);
+});
+
+test("target-owner exported closures remain fresh for every binding", () => {
+  const source = [
+    "function firstHidden(target) {",
+    "  return function firstReturned() { target.first = true; };",
+    "}",
+    "function secondHidden(target) {",
+    "  return function secondReturned() { target.second = true; };",
+    "}",
+  ].join("\n");
+  const bindings = [
+    parameterBindingFor(source, "firstHidden", "target", "first-target"),
+    parameterBindingFor(source, "secondHidden", "target", "second-target"),
+  ];
+  const exportedFunctionNamesByBinding = new Map();
+  const preparationPasses = [];
+
+  scanStateMutationInventory(source, {
+    bindings,
+    analysisInstrumentation: {
+      onCompleteBindingMutationAnalysisPreparation(summary) {
+        preparationPasses.push(summary);
+      },
+      onDeriveBindingMutationExportedFunctions({
+        bindingId,
+        functionNames,
+      }) {
+        exportedFunctionNamesByBinding.set(bindingId, functionNames);
+      },
+    },
+  });
+
+  assert.deepEqual(
+    exportedFunctionNamesByBinding.get("first-target"),
+    ["firstHidden", "firstReturned"],
+  );
+  assert.deepEqual(
+    exportedFunctionNamesByBinding.get("second-target"),
+    ["secondHidden", "secondReturned"],
+  );
+  assert.equal(preparationPasses.length, 1);
+  assert.equal(preparationPasses[0].ancestorWalks, 1);
+  assert.ok(preparationPasses[0].fullWalks >= 2);
+});
+
+test("shared preparation is byte-equivalent across cache reuse modes", () => {
+  const source = [
+    'import { state as runtimeState } from "../core/state.js";',
+    "const defineProperty = Object.defineProperty;",
+    "function identity(value) { return value; }",
+    "export function update(target, other) {",
+    "  const alias = target;",
+    "  alias.bootReady = true;",
+    "  const returned = identity(other);",
+    '  returned.bootPhase = "pending";',
+    '  defineProperty(target, "bootPreviewVisible", { value: true });',
+    "  publishUnknown({ other });",
+    "  runtimeState.bootPhase = other.bootPhase;",
+    "  return other;",
+    "}",
+  ].join("\n");
+  const targetBinding = parameterBindingFor(
+    source,
+    "update",
+    "target",
+    "matrix-target",
+  );
+  const otherBinding = parameterBindingFor(
+    source,
+    "update",
+    "other",
+    "matrix-other",
+  );
+  const moduleBinding = {
+    id: "matrix-module",
+    kind: "module",
+    name: "runtimeState",
+  };
+  const cases = [
+    {
+      bindings: [targetBinding],
+      analysisTraversalMode: "auto",
+      derivedAliasTaintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+      recognizeCurrentContracts: true,
+    },
+    {
+      bindings: [targetBinding],
+      analysisTraversalMode: "full-program",
+      derivedAliasTaintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+      recognizeCurrentContracts: true,
+    },
+    {
+      bindings: [moduleBinding],
+      analysisTraversalMode: "auto",
+      derivedAliasTaintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+      recognizeCurrentContracts: true,
+    },
+    {
+      bindings: [moduleBinding, targetBinding, otherBinding],
+      analysisTraversalMode: "auto",
+      derivedAliasTaintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+      recognizeCurrentContracts: true,
+    },
+    {
+      bindings: [targetBinding, otherBinding],
+      analysisTraversalMode: "auto",
+      derivedAliasTaintMode:
+        DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE,
+      recognizeCurrentContracts: false,
+    },
+  ];
+
+  cases.forEach((options, caseIndex) => {
+    const caseSource = `${source}\n// cache-mode-case-${caseIndex}`;
+    let sharedPreparationCount = 0;
+    let freshPreparationCount = 0;
+    const shared = scanStateMutationInventory(caseSource, {
+      ...options,
+      analysisInstrumentation: {
+        onPrepareBindingMutationAnalysis() {
+          sharedPreparationCount += 1;
+        },
+      },
+    });
+    const legacyFresh = scanStateMutationInventory(caseSource, {
+      ...options,
+      analysisInstrumentation: {
+        bindingMutationAnalysisContextMode: "fresh",
+        onPrepareBindingMutationAnalysis() {
+          freshPreparationCount += 1;
+        },
+      },
+    });
+    assert.deepEqual(shared, legacyFresh);
+    assert.equal(JSON.stringify(shared), JSON.stringify(legacyFresh));
+    assert.equal(sharedPreparationCount, 1);
+    assert.equal(freshPreparationCount, options.bindings.length);
+  });
+
+  const malformed = "export function malformed(target) {";
+  const malformedBinding = {
+    id: "malformed-target",
+    kind: "function-parameter",
+    name: "target",
+    functionName: "malformed",
+    parameterName: "target",
+    parameterIndex: 0,
+    parameterPath: "$",
+  };
+  const malformedShared = scanStateMutationInventory(malformed, {
+    bindings: [malformedBinding],
+  });
+  const malformedFresh = scanStateMutationInventory(malformed, {
+    bindings: [malformedBinding],
+    analysisInstrumentation: {
+      bindingMutationAnalysisContextMode: "fresh",
+    },
+  });
+  assert.deepEqual(malformedShared, malformedFresh);
+  assert.equal(
+    JSON.stringify(malformedShared),
+    JSON.stringify(malformedFresh),
+  );
+
+  const ambiguousSource = [
+    "function duplicate(target) { target.first = true; }",
+    "function duplicate(target) { target.second = true; }",
+  ].join("\n");
+  const ambiguousBinding = {
+    id: "ambiguous-target",
+    kind: "function-parameter",
+    name: "target",
+    functionName: "duplicate",
+    parameterName: "target",
+    parameterIndex: 0,
+    parameterPath: "$",
+  };
+  const ambiguousShared = scanStateMutationInventory(ambiguousSource, {
+    bindings: [ambiguousBinding],
+  });
+  const ambiguousFresh = scanStateMutationInventory(ambiguousSource, {
+    bindings: [ambiguousBinding],
+    analysisInstrumentation: {
+      bindingMutationAnalysisContextMode: "fresh",
+    },
+  });
+  assert.deepEqual(ambiguousShared, ambiguousFresh);
+
+  for (const contextMode of ["shared", "fresh"]) {
+    const expected = new Error(`matrix-${contextMode}-exception`);
+    assert.throws(
+      () => scanStateMutationInventory(source, {
+        bindings: [targetBinding],
+        analysisInstrumentation: {
+          bindingMutationAnalysisContextMode: contextMode,
+          onProcessFunction() {
+            throw expected;
+          },
+        },
+      }),
+      (error) => error === expected,
+    );
+  }
 });
 
 test("ambiguous function-parameter owners remain fail-closed in scoped and full modes", () => {

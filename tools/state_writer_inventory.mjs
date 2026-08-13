@@ -1277,6 +1277,532 @@ function getFunctionIdentityContext(analysis) {
   return context;
 }
 
+const bindingMutationAnalysisContextByAnalysis = new WeakMap();
+
+function prepareBindingMutationAnalysisContext(
+  analysis,
+  analysisInstrumentation = null,
+) {
+  if (
+    typeof analysisInstrumentation
+      ?.onPrepareBindingMutationAnalysis === "function"
+  ) {
+    analysisInstrumentation.onPrepareBindingMutationAnalysis();
+  }
+
+  const functionRecordByNode = new WeakMap(
+    analysis.functionRecords.map((functionRecord) => [
+      functionRecord.node,
+      functionRecord,
+    ]),
+  );
+  const directReturnsByFunctionNode = new Map();
+  walk.ancestor(analysis.ast, {
+    ReturnStatement(node, ancestors) {
+      const ownerFunction = [...ancestors]
+        .slice(0, -1)
+        .reverse()
+        .find(isFunctionNode);
+      if (!ownerFunction) {
+        return;
+      }
+      if (!directReturnsByFunctionNode.has(ownerFunction)) {
+        directReturnsByFunctionNode.set(ownerFunction, []);
+      }
+      directReturnsByFunctionNode.get(ownerFunction).push(node);
+    },
+  });
+  for (const [functionNode, returnStatements] of directReturnsByFunctionNode) {
+    directReturnsByFunctionNode.set(
+      functionNode,
+      Object.freeze([...returnStatements]),
+    );
+  }
+
+  function returnedFunctionNodes(expression) {
+    const node = unwrapChain(expression);
+    if (!node) {
+      return [];
+    }
+    if (isFunctionNode(node)) {
+      return [node];
+    }
+    if (node.type === "Identifier") {
+      const record = analysis.resolveIdentifier(node);
+      if (
+        record?.kind === "function"
+        && isFunctionNode(record.ownerNode)
+      ) {
+        return [record.ownerNode];
+      }
+      if (
+        record?.kind === "variable"
+        && record.declarationKind === "const"
+        && isFunctionNode(record.init)
+      ) {
+        return [record.init];
+      }
+      return [];
+    }
+    if (node.type === "ObjectExpression") {
+      return node.properties.flatMap((property) =>
+        property.type === "Property"
+          ? returnedFunctionNodes(property.value)
+          : []
+      );
+    }
+    if (node.type === "ArrayExpression") {
+      return node.elements.flatMap((element) =>
+        returnedFunctionNodes(element)
+      );
+    }
+    if (node.type === "ConditionalExpression") {
+      return [
+        ...returnedFunctionNodes(node.consequent),
+        ...returnedFunctionNodes(node.alternate),
+      ];
+    }
+    if (node.type === "LogicalExpression") {
+      return [
+        ...returnedFunctionNodes(node.left),
+        ...returnedFunctionNodes(node.right),
+      ];
+    }
+    if (node.type === "SequenceExpression") {
+      return returnedFunctionNodes(node.expressions.at(-1));
+    }
+    if (node.type === "CallExpression") {
+      const callee = unwrapChain(node.callee);
+      const isUnshadowedObjectWrapper = Boolean(
+        callee?.type === "MemberExpression"
+        && callee.object?.type === "Identifier"
+        && callee.object.name === "Object"
+        && !analysis.resolveIdentifier(callee.object)
+        && ["freeze", "seal"].includes(
+          staticPropertyName(callee.property, callee.computed),
+        )
+      );
+      return isUnshadowedObjectWrapper
+        ? returnedFunctionNodes(node.arguments[0])
+        : [];
+    }
+    return [];
+  }
+
+  const returnedFunctionNodesByFunctionNode = new Map(
+    [...directReturnsByFunctionNode].map(
+      ([functionNode, returnStatements]) => [
+        functionNode,
+        Object.freeze(
+          returnStatements.flatMap((returnStatement) =>
+            returnedFunctionNodes(returnStatement.argument)
+          ),
+        ),
+      ],
+    ),
+  );
+  const syntacticExportedFunctionNodes = new Set();
+  for (const statement of analysis.ast?.body || []) {
+    if (
+      ["ExportNamedDeclaration", "ExportDefaultDeclaration"]
+        .includes(statement.type)
+      && isFunctionNode(statement.declaration)
+    ) {
+      syntacticExportedFunctionNodes.add(statement.declaration);
+    }
+    if (
+      statement.type === "ExportNamedDeclaration"
+      && statement.declaration?.type === "VariableDeclaration"
+    ) {
+      for (
+        const declarator of statement.declaration.declarations || []
+      ) {
+        if (isFunctionNode(declarator.init)) {
+          syntacticExportedFunctionNodes.add(declarator.init);
+        }
+      }
+    }
+    if (
+      statement.type === "ExportNamedDeclaration"
+      && !statement.source
+    ) {
+      for (const specifier of statement.specifiers || []) {
+        const record = analysis.resolveIdentifier(specifier.local);
+        if (isFunctionNode(record?.ownerNode)) {
+          syntacticExportedFunctionNodes.add(record.ownerNode);
+        } else if (isFunctionNode(record?.init)) {
+          syntacticExportedFunctionNodes.add(record.init);
+        }
+      }
+    }
+  }
+
+  function closeExportedFunctionNodes(seeds) {
+    const result = new Set(seeds);
+    const queue = [...result];
+    for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+      for (
+        const exposedFunction of
+        returnedFunctionNodesByFunctionNode.get(queue[queueIndex]) || []
+      ) {
+        if (result.has(exposedFunction)) {
+          continue;
+        }
+        result.add(exposedFunction);
+        queue.push(exposedFunction);
+      }
+    }
+    return result;
+  }
+
+  const baseExportedFunctionNodes = closeExportedFunctionNodes(
+    syntacticExportedFunctionNodes,
+  );
+  const trustedGlobalAliasPathsByRecord = new Map();
+
+  function canonicalizeTrustedGlobalPath(value) {
+    const segments = String(value || "").split(".").filter(Boolean);
+    if (
+      segments.length > 1
+      && GLOBAL_REALM_IDENTIFIERS.has(segments[0])
+    ) {
+      segments.shift();
+    }
+    return segments.join(".");
+  }
+
+  function trustedGlobalReferencePath(expression) {
+    const node = unwrapChain(expression);
+    if (node?.type === "Identifier") {
+      const record = analysis.resolveIdentifier(node);
+      return record
+        ? trustedGlobalAliasPathsByRecord.get(record) || ""
+        : canonicalizeTrustedGlobalPath(node.name);
+    }
+    if (node?.type !== "MemberExpression") {
+      return "";
+    }
+    const objectPath = trustedGlobalReferencePath(node.object);
+    const propertyName = staticPropertyName(node.property, node.computed);
+    const result = objectPath && propertyName
+      ? `${objectPath}.${propertyName}`
+      : "";
+    return canonicalizeTrustedGlobalPath(result);
+  }
+
+  function trustedGlobalPatternAliasEntries(pattern, sourcePath) {
+    const node = unwrapChain(pattern);
+    if (!node || !sourcePath) {
+      return [];
+    }
+    if (node.type === "Identifier") {
+      return [{ identifier: node, path: sourcePath }];
+    }
+    if (node.type === "AssignmentPattern") {
+      return trustedGlobalPatternAliasEntries(node.left, sourcePath);
+    }
+    if (node.type === "RestElement") {
+      return [];
+    }
+    if (node.type === "ArrayPattern") {
+      return node.elements.flatMap((element, index) =>
+        trustedGlobalPatternAliasEntries(
+          element,
+          canonicalizeTrustedGlobalPath(`${sourcePath}.${index}`),
+        )
+      );
+    }
+    if (node.type === "ObjectPattern") {
+      return node.properties.flatMap((property) => {
+        if (property.type !== "Property") {
+          return [];
+        }
+        const propertyName = staticPropertyName(
+          property.key,
+          property.computed,
+        );
+        return propertyName
+          ? trustedGlobalPatternAliasEntries(
+            property.value,
+            canonicalizeTrustedGlobalPath(
+              `${sourcePath}.${propertyName}`,
+            ),
+          )
+          : [];
+      });
+    }
+    return [];
+  }
+
+  let invariantFullWalks = 0;
+  let previousTrustedAliasCount = -1;
+  while (
+    previousTrustedAliasCount
+    !== trustedGlobalAliasPathsByRecord.size
+  ) {
+    previousTrustedAliasCount = trustedGlobalAliasPathsByRecord.size;
+    invariantFullWalks += 1;
+    walk.full(analysis.ast, (node) => {
+      if (node.type !== "VariableDeclarator") {
+        return;
+      }
+      const trustedPath = trustedGlobalReferencePath(node.init);
+      if (!trustedPath) {
+        return;
+      }
+      for (
+        const { identifier, path: aliasPath } of
+        trustedGlobalPatternAliasEntries(node.id, trustedPath)
+      ) {
+        const record = analysis.resolveIdentifier(identifier);
+        if (
+          !record
+          || record.declarationKind !== "const"
+          || trustedGlobalAliasPathsByRecord.has(record)
+        ) {
+          continue;
+        }
+        trustedGlobalAliasPathsByRecord.set(record, aliasPath);
+      }
+    });
+  }
+
+  function unshadowedStaticMutationPath(expression) {
+    return trustedGlobalReferencePath(expression);
+  }
+
+  function unshadowedStaticMutationPaths(expression) {
+    const node = unwrapChain(expression);
+    if (!node) {
+      return [];
+    }
+    if (
+      node.type === "Identifier"
+      || node.type === "MemberExpression"
+    ) {
+      const mutationPath = unshadowedStaticMutationPath(node);
+      return mutationPath ? [mutationPath] : [];
+    }
+    if (node.type === "AssignmentPattern") {
+      return unshadowedStaticMutationPaths(node.left);
+    }
+    if (node.type === "RestElement") {
+      return unshadowedStaticMutationPaths(node.argument);
+    }
+    if (node.type === "ArrayPattern") {
+      return node.elements.flatMap(
+        (element) => unshadowedStaticMutationPaths(element),
+      );
+    }
+    if (node.type === "ObjectPattern") {
+      return node.properties.flatMap((property) =>
+        property.type === "RestElement"
+          ? unshadowedStaticMutationPaths(property.argument)
+          : unshadowedStaticMutationPaths(property.value)
+      );
+    }
+    return [];
+  }
+
+  function unshadowedStaticMutationCallPaths(node) {
+    if (node?.type !== "CallExpression") {
+      return [];
+    }
+    const mutationCallName = trustedGlobalReferencePath(node.callee);
+    if (!OBJECT_MUTATION_OPERATIONS.has(mutationCallName)) {
+      return [];
+    }
+    const targetPath = unshadowedStaticMutationPath(node.arguments?.[0]);
+    if (!targetPath) {
+      return [];
+    }
+    if (
+      [
+        "Object.defineProperty",
+        "Reflect.defineProperty",
+        "Reflect.set",
+      ].includes(mutationCallName)
+    ) {
+      const propertyName = staticPropertyName(node.arguments?.[1], true);
+      return [
+        propertyName
+          ? canonicalizeTrustedGlobalPath(
+            `${targetPath}.${propertyName}`,
+          )
+          : targetPath,
+      ];
+    }
+    if (
+      GLOBAL_REALM_IDENTIFIERS.has(targetPath)
+      && [
+        "Object.assign",
+        "Object.defineProperties",
+      ].includes(mutationCallName)
+    ) {
+      const sourceArguments = mutationCallName === "Object.assign"
+        ? node.arguments.slice(1)
+        : [node.arguments?.[1]];
+      const mutationPaths = [];
+      for (const sourceArgument of sourceArguments) {
+        if (sourceArgument?.type !== "ObjectExpression") {
+          return [...TRUSTED_INTRINSIC_ROOTS];
+        }
+        for (const property of sourceArgument.properties || []) {
+          if (property.type !== "Property") {
+            return [...TRUSTED_INTRINSIC_ROOTS];
+          }
+          const propertyName = staticPropertyName(
+            property.key,
+            property.computed,
+          );
+          if (!propertyName) {
+            return [...TRUSTED_INTRINSIC_ROOTS];
+          }
+          mutationPaths.push(propertyName);
+        }
+      }
+      return mutationPaths;
+    }
+    if (GLOBAL_REALM_IDENTIFIERS.has(targetPath)) {
+      return [...TRUSTED_INTRINSIC_ROOTS];
+    }
+    return [targetPath];
+  }
+
+  const mutatedUnshadowedStaticPaths = new Set();
+  const identityTransitionRecords = new Set();
+  invariantFullWalks += 1;
+  walk.full(analysis.ast, (node) => {
+    const staticMutationTarget = node.type === "AssignmentExpression"
+      ? node.left
+      : node.type === "UpdateExpression"
+        ? node.argument
+        : node.type === "UnaryExpression" && node.operator === "delete"
+          ? node.argument
+          : (
+              node.type === "ForInStatement"
+              || node.type === "ForOfStatement"
+            ) && node.left.type !== "VariableDeclaration"
+            ? node.left
+            : null;
+    for (
+      const staticMutationPath of
+      unshadowedStaticMutationPaths(staticMutationTarget)
+    ) {
+      mutatedUnshadowedStaticPaths.add(staticMutationPath);
+    }
+    for (
+      const staticMutationPath of
+      unshadowedStaticMutationCallPaths(node)
+    ) {
+      mutatedUnshadowedStaticPaths.add(staticMutationPath);
+    }
+    if (
+      node.type === "AssignmentExpression"
+      && node.left.type !== "MemberExpression"
+    ) {
+      for (const identifier of collectPatternIdentifiers(node.left)) {
+        const record = analysis.resolveIdentifier(identifier);
+        if (record) {
+          identityTransitionRecords.add(record);
+        }
+      }
+    } else if (
+      node.type === "UpdateExpression"
+      && node.argument.type === "Identifier"
+    ) {
+      const record = analysis.resolveIdentifier(node.argument);
+      if (record) {
+        identityTransitionRecords.add(record);
+      }
+    } else if (
+      (node.type === "ForInStatement" || node.type === "ForOfStatement")
+      && node.left.type !== "VariableDeclaration"
+    ) {
+      for (const identifier of collectPatternIdentifiers(node.left)) {
+        const record = analysis.resolveIdentifier(identifier);
+        if (record) {
+          identityTransitionRecords.add(record);
+        }
+      }
+    }
+  });
+
+  const functionIdentityContext = getFunctionIdentityContext(analysis);
+  const context = Object.freeze({
+    deriveExportedFunctionNodes(targetRecords = []) {
+      const seeds = new Set(baseExportedFunctionNodes);
+      for (const record of targetRecords) {
+        if (isFunctionNode(record?.ownerNode)) {
+          seeds.add(record.ownerNode);
+        }
+      }
+      return closeExportedFunctionNodes(seeds);
+    },
+    functionNameForNode(node) {
+      return functionRecordByNode.get(node)?.name || "";
+    },
+    functionRecordForNode(node) {
+      return functionRecordByNode.get(node);
+    },
+    directReturnStatementsForFunction(node) {
+      return directReturnsByFunctionNode.get(node) || [];
+    },
+    trustedGlobalReferencePath,
+    hasUnshadowedStaticMutation(name) {
+      const segments = String(name || "").split(".");
+      while (segments.length) {
+        if (mutatedUnshadowedStaticPaths.has(segments.join("."))) {
+          return true;
+        }
+        segments.pop();
+      }
+      return false;
+    },
+    isIdentityTransitionRecord(record) {
+      return identityTransitionRecords.has(record);
+    },
+    forEachIdentityTransitionRecord(callback) {
+      identityTransitionRecords.forEach(callback);
+    },
+    functionIdentityContext,
+  });
+  if (
+    typeof analysisInstrumentation
+      ?.onCompleteBindingMutationAnalysisPreparation === "function"
+  ) {
+    analysisInstrumentation.onCompleteBindingMutationAnalysisPreparation({
+      ancestorWalks: 1,
+      fullWalks: invariantFullWalks,
+    });
+  }
+  return context;
+}
+
+function getBindingMutationAnalysisContext(
+  analysis,
+  analysisInstrumentation = null,
+) {
+  if (
+    analysisInstrumentation?.bindingMutationAnalysisContextMode
+      === "fresh"
+  ) {
+    return prepareBindingMutationAnalysisContext(
+      analysis,
+      analysisInstrumentation,
+    );
+  }
+  if (bindingMutationAnalysisContextByAnalysis.has(analysis)) {
+    return bindingMutationAnalysisContextByAnalysis.get(analysis);
+  }
+  const context = prepareBindingMutationAnalysisContext(
+    analysis,
+    analysisInstrumentation,
+  );
+  bindingMutationAnalysisContextByAnalysis.set(analysis, context);
+  return context;
+}
+
 function createActionDelegationEdge(
   source,
   filePath,
@@ -1533,6 +2059,7 @@ function analyzeBindingMutations(
     analysisTraversalMode = "auto",
     analysisInstrumentation = null,
     recognizeCurrentContracts = true,
+    getBindingMutationAnalysisContextForScan = null,
   } = {},
 ) {
   const normalizedDerivedAliasTaintMode =
@@ -1555,259 +2082,40 @@ function analyzeBindingMutations(
   const findings = [];
   const diagnostics = [];
   const actionDelegations = [];
-  const identityTransitionRecords = new Set();
-  const mutatedUnshadowedStaticPaths = new Set();
-  const trustedGlobalAliasPathsByRecord = new Map();
-  const functionRecordByNode = new WeakMap(
-    analysis.functionRecords.map((functionRecord) => [
-      functionRecord.node,
-      functionRecord,
-    ]),
-  );
-  const exportedFunctionNodes = new Set();
-  for (const statement of analysis.ast?.body || []) {
-    if (
-      ["ExportNamedDeclaration", "ExportDefaultDeclaration"]
-        .includes(statement.type)
-      && isFunctionNode(statement.declaration)
-    ) {
-      exportedFunctionNodes.add(statement.declaration);
-    }
-    if (
-      statement.type === "ExportNamedDeclaration"
-      && statement.declaration?.type === "VariableDeclaration"
-    ) {
-      for (
-        const declarator of statement.declaration.declarations || []
-      ) {
-        if (isFunctionNode(declarator.init)) {
-          exportedFunctionNodes.add(declarator.init);
-        }
-      }
-    }
-    if (
-      statement.type === "ExportNamedDeclaration"
-      && !statement.source
-    ) {
-      for (const specifier of statement.specifiers || []) {
-        const record = analysis.resolveIdentifier(specifier.local);
-        if (isFunctionNode(record?.ownerNode)) {
-          exportedFunctionNodes.add(record.ownerNode);
-        } else if (isFunctionNode(record?.init)) {
-          exportedFunctionNodes.add(record.init);
-        }
-      }
-    }
-  }
-  for (const record of resolution.targetRecords || []) {
-    if (isFunctionNode(record?.ownerNode)) {
-      exportedFunctionNodes.add(record.ownerNode);
-    }
-  }
-  const directReturnsByFunctionNode = new Map();
-  const resolvingLocalCallResultNodes = new Set();
-  walk.ancestor(analysis.ast, {
-    ReturnStatement(node, ancestors) {
-      const ownerFunction = [...ancestors]
-        .slice(0, -1)
-        .reverse()
-        .find(isFunctionNode);
-      if (!ownerFunction) {
-        return;
-      }
-      if (!directReturnsByFunctionNode.has(ownerFunction)) {
-        directReturnsByFunctionNode.set(ownerFunction, []);
-      }
-      directReturnsByFunctionNode.get(ownerFunction).push(node);
-    },
-  });
-
-  function returnedFunctionNodes(expression) {
-    const node = unwrapChain(expression);
-    if (!node) {
-      return [];
-    }
-    if (isFunctionNode(node)) {
-      return [node];
-    }
-    if (node.type === "Identifier") {
-      const record = analysis.resolveIdentifier(node);
-      if (
-        record?.kind === "function"
-        && isFunctionNode(record.ownerNode)
-      ) {
-        return [record.ownerNode];
-      }
-      if (
-        record?.kind === "variable"
-        && record.declarationKind === "const"
-        && isFunctionNode(record.init)
-      ) {
-        return [record.init];
-      }
-      return [];
-    }
-    if (node.type === "ObjectExpression") {
-      return node.properties.flatMap((property) =>
-        property.type === "Property"
-          ? returnedFunctionNodes(property.value)
-          : []
-      );
-    }
-    if (node.type === "ArrayExpression") {
-      return node.elements.flatMap((element) =>
-        returnedFunctionNodes(element)
-      );
-    }
-    if (node.type === "ConditionalExpression") {
-      return [
-        ...returnedFunctionNodes(node.consequent),
-        ...returnedFunctionNodes(node.alternate),
-      ];
-    }
-    if (node.type === "LogicalExpression") {
-      return [
-        ...returnedFunctionNodes(node.left),
-        ...returnedFunctionNodes(node.right),
-      ];
-    }
-    if (node.type === "SequenceExpression") {
-      return returnedFunctionNodes(node.expressions.at(-1));
-    }
-    if (node.type === "CallExpression") {
-      const callee = unwrapChain(node.callee);
-      const isUnshadowedObjectWrapper = Boolean(
-        callee?.type === "MemberExpression"
-        && callee.object?.type === "Identifier"
-        && callee.object.name === "Object"
-        && !analysis.resolveIdentifier(callee.object)
-        && ["freeze", "seal"].includes(
-          staticPropertyName(callee.property, callee.computed),
-        ),
-      );
-      return isUnshadowedObjectWrapper
-        ? returnedFunctionNodes(node.arguments[0])
-        : [];
-    }
-    return [];
-  }
-
-  const exposedFunctionQueue = [...exportedFunctionNodes];
-  for (
-    let queueIndex = 0;
-    queueIndex < exposedFunctionQueue.length;
-    queueIndex += 1
+  const bindingMutationAnalysisContext =
+    getBindingMutationAnalysisContextForScan();
+  const exportedFunctionNodes =
+    bindingMutationAnalysisContext.deriveExportedFunctionNodes(
+      resolution.targetRecords,
+    );
+  if (
+    typeof analysisInstrumentation
+      ?.onDeriveBindingMutationExportedFunctions === "function"
   ) {
-    const ownerFunction = exposedFunctionQueue[queueIndex];
-    for (
-      const returnStatement of
-      directReturnsByFunctionNode.get(ownerFunction) || []
-    ) {
-      for (
-        const exposedFunction of
-        returnedFunctionNodes(returnStatement.argument)
-      ) {
-        if (exportedFunctionNodes.has(exposedFunction)) {
-          continue;
-        }
-        exportedFunctionNodes.add(exposedFunction);
-        exposedFunctionQueue.push(exposedFunction);
-      }
-    }
-  }
-  const functionIdentityContext =
-    getFunctionIdentityContext(analysis);
-
-  let previousTrustedAliasCount = -1;
-  while (
-    previousTrustedAliasCount
-    !== trustedGlobalAliasPathsByRecord.size
-  ) {
-    previousTrustedAliasCount =
-      trustedGlobalAliasPathsByRecord.size;
-    walk.full(analysis.ast, (node) => {
-      if (node.type !== "VariableDeclarator") {
-        return;
-      }
-      const trustedPath = trustedGlobalReferencePath(node.init);
-      if (!trustedPath) {
-        return;
-      }
-      for (
-        const { identifier, path: aliasPath } of
-        trustedGlobalPatternAliasEntries(node.id, trustedPath)
-      ) {
-        const record = analysis.resolveIdentifier(identifier);
-        if (
-          !record
-          || record.declarationKind !== "const"
-          || trustedGlobalAliasPathsByRecord.has(record)
-        ) {
-          continue;
-        }
-        trustedGlobalAliasPathsByRecord.set(record, aliasPath);
-      }
+    analysisInstrumentation.onDeriveBindingMutationExportedFunctions({
+      bindingId: binding.id,
+      functionNames: [...exportedFunctionNodes]
+        .map((node) =>
+          bindingMutationAnalysisContext.functionNameForNode(node)
+        )
+        .filter(Boolean),
     });
   }
-
-  walk.full(analysis.ast, (node) => {
-    const staticMutationTarget =
-      node.type === "AssignmentExpression"
-        ? node.left
-        : node.type === "UpdateExpression"
-          ? node.argument
-          : node.type === "UnaryExpression"
-              && node.operator === "delete"
-            ? node.argument
-            : (
-                node.type === "ForInStatement"
-                || node.type === "ForOfStatement"
-              )
-              && node.left.type !== "VariableDeclaration"
-              ? node.left
-              : null;
-    for (
-      const staticMutationPath of
-      unshadowedStaticMutationPaths(staticMutationTarget)
-    ) {
-      mutatedUnshadowedStaticPaths.add(staticMutationPath);
-    }
-    for (
-      const staticMutationPath of
-      unshadowedStaticMutationCallPaths(node)
-    ) {
-      mutatedUnshadowedStaticPaths.add(staticMutationPath);
-    }
-    if (
-      node.type === "AssignmentExpression"
-      && node.left.type !== "MemberExpression"
-    ) {
-      for (const identifier of collectPatternIdentifiers(node.left)) {
-        const record = analysis.resolveIdentifier(identifier);
-        if (record) {
-          identityTransitionRecords.add(record);
-        }
-      }
-    } else if (
-      node.type === "UpdateExpression"
-      && node.argument.type === "Identifier"
-    ) {
-      const record = analysis.resolveIdentifier(node.argument);
-      if (record) {
-        identityTransitionRecords.add(record);
-      }
-    } else if (
-      (node.type === "ForInStatement" || node.type === "ForOfStatement")
-      && node.left.type !== "VariableDeclaration"
-    ) {
-      for (const identifier of collectPatternIdentifiers(node.left)) {
-        const record = analysis.resolveIdentifier(identifier);
-        if (record) {
-          identityTransitionRecords.add(record);
-        }
-      }
-    }
-  });
+  const resolvingLocalCallResultNodes = new Set();
+  const functionIdentityContext =
+    bindingMutationAnalysisContext.functionIdentityContext;
+  const functionRecordForNode =
+    bindingMutationAnalysisContext.functionRecordForNode;
+  const directReturnStatementsForFunction =
+    bindingMutationAnalysisContext.directReturnStatementsForFunction;
+  const trustedGlobalReferencePath =
+    bindingMutationAnalysisContext.trustedGlobalReferencePath;
+  const hasUnshadowedStaticMutation =
+    bindingMutationAnalysisContext.hasUnshadowedStaticMutation;
+  const isIdentityTransitionRecord =
+    bindingMutationAnalysisContext.isIdentityTransitionRecord;
+  const forEachIdentityTransitionRecord =
+    bindingMutationAnalysisContext.forEachIdentityTransitionRecord;
 
   function exactTrackedState(reference, record, aliasName = "") {
     const isConfiguredTarget = resolution.targetRecords.has(record);
@@ -1874,7 +2182,7 @@ function analyzeBindingMutations(
     }
     const executionNode = currentExecutionFunction();
     const executionRecord = executionNode
-      ? functionRecordByNode.get(executionNode)
+      ? functionRecordForNode(executionNode)
       : null;
     if (
       executionRecord
@@ -2175,7 +2483,7 @@ function analyzeBindingMutations(
       const returnedExpressions = helperNode.type === "ArrowFunctionExpression"
         && helperNode.body?.type !== "BlockStatement"
         ? [helperNode.body]
-        : (directReturnsByFunctionNode.get(helperNode) || [])
+        : directReturnStatementsForFunction(helperNode)
           .map((statement) => statement.argument)
           .filter(Boolean);
       if (!returnedExpressions.length) {
@@ -2357,200 +2665,6 @@ function analyzeBindingMutations(
       return "";
     }
     return callee.name;
-  }
-
-  function unshadowedStaticMutationPath(expression) {
-    return trustedGlobalReferencePath(expression);
-  }
-
-  function canonicalizeTrustedGlobalPath(path) {
-    const segments = String(path || "").split(".").filter(Boolean);
-    if (
-      segments.length > 1
-      && GLOBAL_REALM_IDENTIFIERS.has(segments[0])
-    ) {
-      segments.shift();
-    }
-    return segments.join(".");
-  }
-
-  function trustedGlobalReferencePath(expression) {
-    const node = unwrapChain(expression);
-    if (node?.type === "Identifier") {
-      const record = analysis.resolveIdentifier(node);
-      return record
-        ? trustedGlobalAliasPathsByRecord.get(record) || ""
-        : canonicalizeTrustedGlobalPath(node.name);
-    }
-    if (node?.type !== "MemberExpression") {
-      return "";
-    }
-    const objectPath = trustedGlobalReferencePath(node.object);
-    const propertyName = staticPropertyName(node.property, node.computed);
-    const path = objectPath && propertyName
-      ? `${objectPath}.${propertyName}`
-      : "";
-    return canonicalizeTrustedGlobalPath(path);
-  }
-
-  function trustedGlobalPatternAliasEntries(pattern, sourcePath) {
-    const node = unwrapChain(pattern);
-    if (!node || !sourcePath) {
-      return [];
-    }
-    if (node.type === "Identifier") {
-      return [{ identifier: node, path: sourcePath }];
-    }
-    if (node.type === "AssignmentPattern") {
-      return trustedGlobalPatternAliasEntries(node.left, sourcePath);
-    }
-    if (node.type === "RestElement") {
-      return [];
-    }
-    if (node.type === "ArrayPattern") {
-      return node.elements.flatMap((element, index) =>
-        trustedGlobalPatternAliasEntries(
-          element,
-          canonicalizeTrustedGlobalPath(
-            `${sourcePath}.${index}`,
-          ),
-        )
-      );
-    }
-    if (node.type === "ObjectPattern") {
-      return node.properties.flatMap((property) => {
-        if (property.type !== "Property") {
-          return [];
-        }
-        const propertyName = staticPropertyName(
-          property.key,
-          property.computed,
-        );
-        return propertyName
-          ? trustedGlobalPatternAliasEntries(
-            property.value,
-            canonicalizeTrustedGlobalPath(
-              `${sourcePath}.${propertyName}`,
-            ),
-          )
-          : [];
-      });
-    }
-    return [];
-  }
-
-  function unshadowedStaticMutationPaths(expression) {
-    const node = unwrapChain(expression);
-    if (!node) {
-      return [];
-    }
-    if (
-      node.type === "Identifier"
-      || node.type === "MemberExpression"
-    ) {
-      const path = unshadowedStaticMutationPath(node);
-      return path ? [path] : [];
-    }
-    if (node.type === "AssignmentPattern") {
-      return unshadowedStaticMutationPaths(node.left);
-    }
-    if (node.type === "RestElement") {
-      return unshadowedStaticMutationPaths(node.argument);
-    }
-    if (node.type === "ArrayPattern") {
-      return node.elements.flatMap(
-        (element) => unshadowedStaticMutationPaths(element),
-      );
-    }
-    if (node.type === "ObjectPattern") {
-      return node.properties.flatMap((property) =>
-        property.type === "RestElement"
-          ? unshadowedStaticMutationPaths(property.argument)
-          : unshadowedStaticMutationPaths(property.value)
-      );
-    }
-    return [];
-  }
-
-  function unshadowedStaticMutationCallPaths(node) {
-    if (node?.type !== "CallExpression") {
-      return [];
-    }
-    const mutationCallName =
-      trustedGlobalReferencePath(node.callee);
-    if (!OBJECT_MUTATION_OPERATIONS.has(mutationCallName)) {
-      return [];
-    }
-    const targetPath =
-      unshadowedStaticMutationPath(node.arguments?.[0]);
-    if (!targetPath) {
-      return [];
-    }
-    if (
-      [
-        "Object.defineProperty",
-        "Reflect.defineProperty",
-        "Reflect.set",
-      ].includes(mutationCallName)
-    ) {
-      const propertyName = staticPropertyName(
-        node.arguments?.[1],
-        true,
-      );
-      return [
-        propertyName
-          ? canonicalizeTrustedGlobalPath(
-            `${targetPath}.${propertyName}`,
-          )
-          : targetPath,
-      ];
-    }
-    if (
-      GLOBAL_REALM_IDENTIFIERS.has(targetPath)
-      && [
-        "Object.assign",
-        "Object.defineProperties",
-      ].includes(mutationCallName)
-    ) {
-      const sourceArguments = mutationCallName === "Object.assign"
-        ? node.arguments.slice(1)
-        : [node.arguments?.[1]];
-      const mutationPaths = [];
-      for (const sourceArgument of sourceArguments) {
-        if (sourceArgument?.type !== "ObjectExpression") {
-          return [...TRUSTED_INTRINSIC_ROOTS];
-        }
-        for (const property of sourceArgument.properties || []) {
-          if (property.type !== "Property") {
-            return [...TRUSTED_INTRINSIC_ROOTS];
-          }
-          const propertyName = staticPropertyName(
-            property.key,
-            property.computed,
-          );
-          if (!propertyName) {
-            return [...TRUSTED_INTRINSIC_ROOTS];
-          }
-          mutationPaths.push(propertyName);
-        }
-      }
-      return mutationPaths;
-    }
-    if (GLOBAL_REALM_IDENTIFIERS.has(targetPath)) {
-      return [...TRUSTED_INTRINSIC_ROOTS];
-    }
-    return [targetPath];
-  }
-
-  function hasUnshadowedStaticMutation(name) {
-    const segments = String(name || "").split(".");
-    while (segments.length) {
-      if (mutatedUnshadowedStaticPaths.has(segments.join("."))) {
-        return true;
-      }
-      segments.pop();
-    }
-    return false;
   }
 
   function isKnownObjectMutationCall(node) {
@@ -2940,7 +3054,7 @@ function analyzeBindingMutations(
     } = {},
   ) {
     const functionState = cloneAliasRecords(aliasRecords);
-    const functionRecord = functionRecordByNode.get(node);
+    const functionRecord = functionRecordForNode(node);
     if (
       typeof analysisInstrumentation?.onProcessFunction === "function"
     ) {
@@ -2952,11 +3066,11 @@ function analyzeBindingMutations(
       });
     }
     if (functionRecord) {
-      for (const record of identityTransitionRecords) {
+      forEachIdentityTransitionRecord((record) => {
         if (!analysis.isScopeDescendant(record.scope, functionRecord.scope)) {
           functionState.set(record, maybeTrackedState());
         }
-      }
+      });
     }
     executionFunctionStack.push(node);
     actionProofReachabilityStack.push(
@@ -3007,7 +3121,7 @@ function analyzeBindingMutations(
     const record = analysis.resolveIdentifier(callee);
     if (
       !record
-      || identityTransitionRecords.has(record)
+      || isIdentityTransitionRecord(record)
       || IMPORTED_COMPAT_TARGET_HELPERS.has(record.name)
     ) {
       return null;
@@ -3065,7 +3179,7 @@ function analyzeBindingMutations(
     if (
       record?.kind !== "import"
       || record.importKind !== "ImportSpecifier"
-      || identityTransitionRecords.has(record)
+      || isIdentityTransitionRecord(record)
     ) {
       return null;
     }
@@ -3323,7 +3437,7 @@ function analyzeBindingMutations(
       record?.kind !== "variable"
       || record.declarationKind !== "const"
       || !record.init
-      || identityTransitionRecords.has(record)
+      || isIdentityTransitionRecord(record)
       || visitedRecords.has(record)
     ) {
       return { valid: false, hasRoot: false };
@@ -3366,7 +3480,7 @@ function analyzeBindingMutations(
     if (
       record?.kind !== "parameter"
       || record.parameterPath !== "$"
-      || identityTransitionRecords.has(record)
+      || isIdentityTransitionRecord(record)
     ) {
       return false;
     }
@@ -3397,7 +3511,7 @@ function analyzeBindingMutations(
     if (
       record?.kind !== "import"
       || record.importKind !== "ImportSpecifier"
-      || identityTransitionRecords.has(record)
+      || isIdentityTransitionRecord(record)
     ) return false;
     const contract = findStateMutationDelegatingOwnerFactoryContractEntry(
       resolveProjectLocalImportPath(record.importSource),
@@ -3812,7 +3926,7 @@ function analyzeBindingMutations(
             record?.kind === "variable"
             && record.declarationKind === "const"
             && record.init
-            && !identityTransitionRecords.has(record)
+            && !isIdentityTransitionRecord(record)
             && !visitedRecords.has(record)
           ) {
             const nextVisitedRecords = new Set(visitedRecords);
@@ -5324,6 +5438,25 @@ export function scanStateMutationInventory(
       actionDelegations: [],
     };
   }
+  let bindingMutationAnalysisContext = null;
+  const getBindingMutationAnalysisContextForScan = () => {
+    if (
+      analysisInstrumentation?.bindingMutationAnalysisContextMode
+        === "fresh"
+    ) {
+      return getBindingMutationAnalysisContext(
+        analysis,
+        analysisInstrumentation,
+      );
+    }
+    if (!bindingMutationAnalysisContext) {
+      bindingMutationAnalysisContext = getBindingMutationAnalysisContext(
+        analysis,
+        analysisInstrumentation,
+      );
+    }
+    return bindingMutationAnalysisContext;
+  };
   const inventories = normalizedBindings.map((binding) => {
       const resolution = resolveConfiguredBinding(analysis, binding);
       return analyzeBindingMutations(
@@ -5338,6 +5471,7 @@ export function scanStateMutationInventory(
           analysisTraversalMode,
           analysisInstrumentation,
           recognizeCurrentContracts,
+          getBindingMutationAnalysisContextForScan,
         },
       );
     });
