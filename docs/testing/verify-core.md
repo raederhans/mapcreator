@@ -30,6 +30,19 @@
 
 这些分组由 `tools/verification/verification_domains.mjs` 生成，`tools/run_core_verification.mjs` 只负责执行、报告和失败即停。修改命令归属时先更新 metadata，再运行 `npm run test:node:verification-metadata`。
 
+Core plan 在保留 metadata 顺序和分组归属的前提下应用 `tools/verification/command_supersession.mjs`。当前默认 metadata 先生成 87 个顶层命令，再折叠 7 个由更大 Node suite 完整覆盖的命令，最终执行 80 个顶层命令。静态 package-script closure 从 103 个叶命令收敛为 95 个，Node test 进程从 70 个收敛为 62 个，Python wrapper 保持 20 个；前后 Node test-file closure 完全相同。
+
+当前 Core command-closure 映射：
+
+- `test:node:p4:p4-2a` 覆盖 scenario apply、lifecycle 和 runtime-state 三个 standalone 命令。
+- `test:node:p4:p4-2b` 覆盖 standalone scenario chunk contracts。
+- `test:node:p4:p4-3` 覆盖 renderer render-phase lifecycle 与 zoom lifecycle standalone 命令。
+- `test:node:hit-canvas-scheduling-owner-suite` 覆盖 renderer hit-canvas inventory standalone 命令。
+
+SF-ATS adaptive/supervisor 计划同时使用 supervisor aggregate 映射：`verify:supervisor-contracts` 覆盖 supervisor contracts 与 routing，`verify:supervisor-plan` 覆盖 supervisor plan unit command。单独选中 constituent 时该命令继续保留。JSON 和 Markdown 报告通过 `supersededCommands` 记录每个被折叠命令及其 retained aggregate。
+
+Command supersession 在生成任何折叠结果前检查 selected command graph。Self-cycle 或 multi-node cycle 会以稳定的 `command-supersession-cycle` code 和排序节点列表终止计划；每条 provenance 必须解析到 retained root，无法解析时以 `command-supersession-unresolved:<command>` 终止计划。Core、adaptive runner 和 supervisor plan 共用这一 fail-closed 合同。
+
 默认范围是确定性的，不会启动 browser、dev server 或 Playwright。它覆盖 CLI/build 合同，并默认保留 `pages` 分组：
 
 - `verify:pages-dist-and-drift`
@@ -92,4 +105,4 @@ P0.1.1 后验收要求 full `npm run verify:core` 实际运行，并把通过结
 
 ## 有意跳过的项
 
-`verify:core` 会过滤自递归命令，例如 `verify:core` 和 `node tools/run_core_verification.mjs`。缺失的 package script 会在报告里记为 omitted commands。重复的具体命令会只在 `duplicateCommands` 中记录一次。
+`verify:core` 会过滤自递归命令，例如 `verify:core` 和 `node tools/run_core_verification.mjs`。缺失的 package script 会在报告里记为 omitted commands。重复的具体命令会只在 `duplicateCommands` 中记录一次；完整 command closure 覆盖的命令记录在 `supersededCommands`。

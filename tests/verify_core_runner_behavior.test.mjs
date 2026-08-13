@@ -28,7 +28,10 @@ import {
   buildExecutionPlan,
   executeAdaptivePlan,
 } from "../tools/run_adaptive_tests.mjs";
-import { collapseSupersededCommands } from "../tools/verification/command_supersession.mjs";
+import {
+  buildCommandSupersessionPlan,
+  collapseSupersededCommands,
+} from "../tools/verification/command_supersession.mjs";
 
 const PACKAGE_SCRIPTS = {
   "test:node:city-points-render-owner": "node --test tests/city_points_render_owner_behavior.test.mjs tests/urban_city_policy_strategic_values_behavior.test.mjs",
@@ -224,13 +227,13 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
     "test:python:map-renderer-click-selection-transaction-boundary",
     "test:node:renderer-viewport-update-owner",
     "test:node:viewport-resize-lifecycle-owner",
-    "test:node:zoom-interaction-lifecycle-owner",
     "test:node:map-interaction-event-binding-owner",
     "test:node:render-pass-cache-host-owner-suite",
     "test:node:render-pass-commit-accounting-owner-suite",
     "test:node:hit-canvas-scheduling-owner-suite",
   ]);
   assert.equal(commandRefs(plan).includes("verify:p4:p4-1"), false);
+  assert.equal(commandRefs(plan).includes("test:node:zoom-interaction-lifecycle-owner"), false);
   assert.ok(commandRefs(plan).includes(
     "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q",
   ));
@@ -246,6 +249,50 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
       "test:e2e:tno-contracts",
       "test:e2e:water-rendering",
       "test:e2e:city-rendering",
+    ],
+  );
+});
+
+test("default core plan applies strict command closure without changing test coverage", () => {
+  const packageScripts = JSON.parse(
+    fs.readFileSync("package.json", "utf8"),
+  ).scripts;
+  const rawPlan = buildCoreVerificationPlan({
+    packageScripts,
+    applySupersession: false,
+  });
+  const plan = buildCoreVerificationPlan({ packageScripts });
+  const rawLeaves = rawPlan.commandsToRun.flatMap(({ commandRef }) => (
+    resolveCommandLeafProcesses(commandRef, packageScripts)
+  ));
+  const retainedLeaves = plan.commandsToRun.flatMap(({ commandRef }) => (
+    resolveCommandLeafProcesses(commandRef, packageScripts)
+  ));
+  const nodeFiles = (targetPlan) => [...new Set(
+    targetPlan.commandsToRun.flatMap(({ commandRef }) => (
+      nodeTestFileClosure(commandRef, packageScripts)
+    )),
+  )].sort();
+
+  assert.equal(rawPlan.commandsToRun.length, 87);
+  assert.equal(plan.commandsToRun.length, 80);
+  assert.equal(rawLeaves.length, 103);
+  assert.equal(retainedLeaves.length, 95);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 70);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 62);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
+  assert.deepEqual(nodeFiles(plan), nodeFiles(rawPlan));
+  assert.deepEqual(
+    plan.supersededCommands.map(({ commandRef }) => commandRef).sort(),
+    [
+      "test:node:renderer-hit-canvas-scheduling-inventory",
+      "test:node:renderer-render-phase-lifecycle",
+      "test:node:scenario-apply-transaction-ownership",
+      "test:node:scenario-chunk-contracts",
+      "test:node:scenario-lifecycle-runtime-behavior",
+      "test:node:scenario-runtime-state-behavior",
+      "test:node:zoom-interaction-lifecycle-owner",
     ],
   );
 });
@@ -979,6 +1026,180 @@ test("command supersession preserves current policy evidence beside historical e
     "verify:p4:state-writer-policy",
     "test:node:p4:state-writer-policy",
   ]), ["verify:p4:p4-3"]);
+});
+
+const STRICT_COMMAND_CLOSURE_SUPERSESSION = Object.freeze({
+  "verify:supervisor-contracts": Object.freeze([
+    "test:node:supervisor-contracts",
+    "test:node:supervisor-routing",
+  ]),
+  "verify:supervisor-plan": Object.freeze([
+    "test:node:supervisor-plan",
+  ]),
+  "test:node:p4:p4-2a": Object.freeze([
+    "test:node:scenario-apply-transaction-ownership",
+    "test:node:scenario-lifecycle-runtime-behavior",
+    "test:node:scenario-runtime-state-behavior",
+  ]),
+  "test:node:p4:p4-2b": Object.freeze([
+    "test:node:scenario-chunk-contracts",
+  ]),
+  "test:node:p4:p4-3": Object.freeze([
+    "test:node:renderer-render-phase-lifecycle",
+    "test:node:zoom-interaction-lifecycle-owner",
+  ]),
+  "test:node:hit-canvas-scheduling-owner-suite": Object.freeze([
+    "test:node:renderer-hit-canvas-scheduling-inventory",
+  ]),
+});
+
+function resolveCommandLeafProcesses(commandRef, packageScripts, seen = new Set()) {
+  if (seen.has(commandRef)) return [];
+  const command = packageScripts[commandRef] || commandRef;
+  const nextSeen = new Set(seen).add(commandRef);
+  return String(command)
+    .split(/\s*&&\s*/)
+    .flatMap((part) => {
+      const npmRun = part.trim().match(/^npm run(?: -s)? ([A-Za-z0-9:_-]+)(.*)$/);
+      return npmRun && packageScripts[npmRun[1]] && !nextSeen.has(npmRun[1])
+        ? resolveCommandLeafProcesses(
+          `${packageScripts[npmRun[1]]}${npmRun[2]}`,
+          packageScripts,
+          new Set(nextSeen).add(npmRun[1]),
+        )
+        : [part.trim()];
+    });
+}
+
+function nodeTestFileClosure(commandRef, packageScripts) {
+  return [...new Set(
+    resolveCommandLeafProcesses(commandRef, packageScripts)
+      .flatMap((command) => (
+        [...command.matchAll(/tests\/[A-Za-z0-9_./-]+\.(?:test\.mjs|node\.test\.mjs)/g)]
+          .map((match) => match[0])
+      )),
+  )].sort();
+}
+
+test("strict command supersession declares every approved aggregate mapping", () => {
+  for (const [superseder, coveredCommands] of Object.entries(
+    STRICT_COMMAND_CLOSURE_SUPERSESSION,
+  )) {
+    assert.deepEqual(
+      collapseSupersededCommands([superseder, ...coveredCommands]),
+      [superseder],
+      superseder,
+    );
+    for (const coveredCommand of coveredCommands) {
+      assert.deepEqual(
+        collapseSupersededCommands([coveredCommand]),
+        [coveredCommand],
+        `${coveredCommand} remains reachable by itself`,
+      );
+    }
+  }
+});
+
+test("command supersession preserves retained order and reports the retained aggregate", () => {
+  assert.deepEqual(
+    buildCommandSupersessionPlan([
+      "before",
+      "test:node:p4:state-writer-policy",
+      "verify:p4:state-writer-policy",
+      "verify:p4:p4-3",
+      "after",
+    ]),
+    {
+      commandRefs: ["before", "verify:p4:p4-3", "after"],
+      supersededCommands: [
+        {
+          commandRef: "test:node:p4:state-writer-policy",
+          supersededBy: "verify:p4:p4-3",
+        },
+        {
+          commandRef: "verify:p4:state-writer-policy",
+          supersededBy: "verify:p4:p4-3",
+        },
+      ],
+    },
+  );
+});
+
+test("command supersession resolves direct provenance to a retained root", () => {
+  assert.deepEqual(
+    buildCommandSupersessionPlan(["A", "B"], {
+      supersession: { A: ["B"] },
+    }),
+    {
+      commandRefs: ["A"],
+      supersededCommands: [{ commandRef: "B", supersededBy: "A" }],
+    },
+  );
+});
+
+test("command supersession resolves recursive provenance to the retained root", () => {
+  assert.deepEqual(
+    buildCommandSupersessionPlan(["A", "B", "C"], {
+      supersession: { A: ["B"], B: ["C"] },
+    }),
+    {
+      commandRefs: ["A"],
+      supersededCommands: [
+        { commandRef: "B", supersededBy: "A" },
+        { commandRef: "C", supersededBy: "A" },
+      ],
+    },
+  );
+});
+
+test("command supersession rejects a selected self-cycle", () => {
+  assert.throws(
+    () => buildCommandSupersessionPlan(["A"], {
+      supersession: { A: ["A"] },
+    }),
+    (error) => {
+      assert.equal(error.code, "command-supersession-cycle");
+      assert.deepEqual(error.nodes, ["A"]);
+      assert.equal(error.message, "command-supersession-cycle:A");
+      return true;
+    },
+  );
+});
+
+test("command supersession rejects a selected multi-node cycle deterministically", () => {
+  assert.throws(
+    () => collapseSupersededCommands(["B", "A"], {
+      supersession: { A: ["B"], B: ["A"] },
+    }),
+    (error) => {
+      assert.equal(error.code, "command-supersession-cycle");
+      assert.deepEqual(error.nodes, ["A", "B"]);
+      assert.equal(error.message, "command-supersession-cycle:A,B");
+      return true;
+    },
+  );
+});
+
+test("strict command supersession preserves the complete Node test-file closure", () => {
+  const packageScripts = JSON.parse(
+    fs.readFileSync("package.json", "utf8"),
+  ).scripts;
+  for (const [superseder, coveredCommands] of Object.entries(
+    STRICT_COMMAND_CLOSURE_SUPERSESSION,
+  )) {
+    const supersederFiles = new Set(
+      nodeTestFileClosure(superseder, packageScripts),
+    );
+    for (const coveredCommand of coveredCommands) {
+      const coveredFiles = nodeTestFileClosure(coveredCommand, packageScripts);
+      assert.ok(coveredFiles.length > 0, coveredCommand);
+      assert.deepEqual(
+        coveredFiles.filter((testFile) => !supersederFiles.has(testFile)),
+        [],
+        `${superseder} must cover ${coveredCommand}`,
+      );
+    }
+  }
 });
 
 test("Pages checked gate keeps generation compatibility and performs one build", () => {

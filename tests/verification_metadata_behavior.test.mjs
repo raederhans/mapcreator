@@ -707,14 +707,32 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
   );
 });
 
-test("verify-core default plan is generated from verification metadata", () => {
+test("verify-core default plan preserves metadata closure before command supersession", () => {
   const packageJson = readJson("package.json");
   const metadataDefaultRefs = commandRefsFromGroups(buildVerifyCoreDefaultGroups());
+  const metadataPlan = buildCoreVerificationPlan({
+    packageScripts: packageJson.scripts,
+    applySupersession: false,
+  });
   const plan = buildCoreVerificationPlan({ packageScripts: packageJson.scripts });
 
   assert.deepEqual(
-    plan.commandsToRun.map((entry) => entry.commandRef),
+    metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
+  );
+  assert.equal(metadataDefaultRefs.length, 87);
+  assert.equal(plan.commandsToRun.length, 80);
+  assert.deepEqual(
+    plan.supersededCommands.map((entry) => entry.commandRef),
+    [
+      "test:node:renderer-render-phase-lifecycle",
+      "test:node:renderer-hit-canvas-scheduling-inventory",
+      "test:node:zoom-interaction-lifecycle-owner",
+      "test:node:scenario-chunk-contracts",
+      "test:node:scenario-apply-transaction-ownership",
+      "test:node:scenario-lifecycle-runtime-behavior",
+      "test:node:scenario-runtime-state-behavior",
+    ],
   );
   assert.equal(plan.omittedCommands.length, 0);
   assert.equal(plan.duplicateCommands.length, 0);

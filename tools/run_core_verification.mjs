@@ -28,6 +28,9 @@ import {
   ensureStateWriterPolicyEvidence,
   isStateWriterPythonBoundaryCommandRef,
 } from "./verification/state_writer_policy_evidence.mjs";
+import {
+  buildCommandSupersessionPlan,
+} from "./verification/command_supersession.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
@@ -102,6 +105,7 @@ function makeCommandEntry(commandRef, group, packageScripts) {
 
 export function buildCoreVerificationPlan({
   includeMainThread = false,
+  applySupersession = true,
   packageScripts = readPackageScripts(),
   groups = DEFAULT_GROUPS,
   mainThreadGroup = MAIN_THREAD_GROUP,
@@ -159,6 +163,17 @@ export function buildCoreVerificationPlan({
     }
   }
 
+  const commandEntries = planGroups.flatMap((group) => group.commands);
+  const supersessionPlan = applySupersession
+    ? buildCommandSupersessionPlan(
+      commandEntries.map((entry) => entry.commandRef),
+    )
+    : { commandRefs: commandEntries.map((entry) => entry.commandRef), supersededCommands: [] };
+  const retainedCommandRefs = new Set(supersessionPlan.commandRefs);
+  for (const group of planGroups) {
+    group.commands = group.commands.filter((entry) => retainedCommandRefs.has(entry.commandRef));
+  }
+
   const defaultIncludesPagesGroup = planGroups.some((group) => group.id === "pages" && group.commands.length > 0);
 
   return {
@@ -173,6 +188,7 @@ export function buildCoreVerificationPlan({
     commandsToRun: planGroups.flatMap((group) => group.commands),
     omittedCommands,
     duplicateCommands,
+    supersededCommands: supersessionPlan.supersededCommands,
     skippedMainThreadCommands,
     reportPaths: {
       json: DEFAULT_JSON_OUT,
@@ -228,6 +244,10 @@ export function renderMarkdownReport(plan, results = []) {
   lines.push("", "## Duplicate commands");
   lines.push(...(plan.duplicateCommands.length
     ? plan.duplicateCommands.map((entry) => `- ${entry.commandRef}: duplicates ${entry.duplicateOf}`)
+    : ["- none"]));
+  lines.push("", "## Superseded commands");
+  lines.push(...(plan.supersededCommands.length
+    ? plan.supersededCommands.map((entry) => `- ${entry.commandRef}: covered by ${entry.supersededBy}`)
     : ["- none"]));
   lines.push("", "## Execution results");
   lines.push(...(results.length
