@@ -2,7 +2,7 @@
 
 ## Current status
 
-Implementation and bounded validation are complete. The frozen-candidate long admission lane remains pending.
+The initial runner reform is committed. Stage 6 hotspot reduction is active under three ordered worktree tasks; frozen-candidate admission follows their integration.
 
 ## Checklist
 
@@ -18,6 +18,9 @@ Implementation and bounded validation are complete. The frozen-candidate long ad
 - [x] Collapse covered commands for P4 exact phases, TNO coverage chain, and Pages verification.
 - [x] Run SF-ATS dry-run and targeted validation.
 - [x] Complete independent fail-closed and compatibility review.
+- [ ] Stage 6A: admit the derived-proof cache candidate from Hotspot A.
+- [ ] Stage 6B: authorize and admit cross-process evidence reuse after Stage 6A.
+- [ ] Stage 6C: authorize and admit measured test-portfolio reform after Stages 6A and 6B.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
 ## Validation evidence
@@ -48,3 +51,4 @@ Implementation and bounded validation are complete. The frozen-candidate long ad
 - Full browser, Pages dist, performance, TNO corpus, and full core validation remain held outside the implementation loop. Full P4 policy passed at commit `58e6d350`; later performance experiments were bounded to focused patterns.
 - The exact policy rebuild still spends roughly 18 minutes in the measured focused run. Historical derived-alias proof replay is the next measured optimization target; any cache for those proofs needs source SHA, path-set, checkpoint, and policy-identity invalidation.
 - Generalized Windows Job Object process containment remains a separate high-risk follow-up; current runners retain synchronous child-process behavior.
+- Hotspot B and C are read-only until the root supervisor supplies their exact upstream candidate SHA and implementation authorization.

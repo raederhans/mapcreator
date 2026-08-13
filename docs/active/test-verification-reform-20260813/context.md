@@ -25,6 +25,9 @@
 | 2026-08-13 | Bind every passed command to its post-command clean identity and bind SF-ATS-reused evidence to both source and current applicability identities. | Identity drift, invalid final verdicts, and two-hop resume ambiguity fail closed. |
 | 2026-08-13 | Preserve `verify:pages-dist` generation semantics and add `verify:pages-dist-and-drift` for single-build admission. | Existing dist-generation workflows stay compatible while core/adaptive/supervisor avoid the duplicate build. |
 | 2026-08-13 | Restrict historical P4.2b/P4.2c supersession to commands they actually execute. | The current P4.3 policy gate remains present whenever historical exact evidence cannot cover it. |
+| 2026-08-13 | Continue with three ordered hotspot tasks from `bc3d674a`. | A owns derived-proof reuse; B owns cross-process evidence after A; C owns portfolio reform after A/B. |
+| 2026-08-13 | Keep all hour-scale validation under the root supervisor. | Child tasks may run short isolated checks and must return long-gate requests as handoff items. |
+| 2026-08-13 | Allow Hotspot A one optional proof-cache parameter pass-through in `tools/check_state_writer_policy.mjs`. | A can cover the two report recomputation paths; B treats that file as A-owned until the exact A diff is admitted. |
 
 ## Live process ownership
 
@@ -32,11 +35,14 @@
 | --- | --- | --- | --- |
 | core/P4/adaptive runner unit tests | root supervisor | `.runtime/reports/generated/test-verification-reform/` | short isolated commands only |
 | full core, full P4 policy, browser, dist, performance | root supervisor | assigned before launch | held until candidate freeze |
+| Hotspot A short tests | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | task-owned `.runtime` only | active implementation; full policy prohibited |
+| Hotspot B analysis | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | no live outputs during read-only stage | waits for A candidate before implementation |
+| Hotspot C analysis | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | no live outputs during read-only stage | waits for A/B candidates before implementation |
 
 ## Handoff
 
-Subagents provide read-only runner architecture and test-cost findings. The root supervisor owns all edits, `.runtime` outputs, Git state, long commands, and final verification.
+The root supervisor is the integration owner. Each hotspot task owns only its assigned files and local commit; merge, rebase, cherry-pick, push, worktree cleanup, shared `.runtime` outputs, and long commands remain root-owned.
 
 ## Next step
 
-Freeze the candidate, then run the fresh full policy/core/Pages/browser/perf/TNO gates once under their explicit live-test owners. The final implementation loop completed with zero SF-ATS unmatched paths and an 89/89 bounded matrix.
+Admit Hotspot A with short equivalence evidence, create an integration candidate, then send its exact SHA to Hotspot B. Repeat for Hotspot C. Freeze the combined candidate and run the fresh full policy/core/Pages/browser/perf/TNO gates once under the root supervisor.

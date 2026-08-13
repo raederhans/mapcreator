@@ -31,6 +31,9 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 3: Profile and reduce repeated state-writer repository scans.
 - [x] Stage 4: Audit route metadata, gate overlap, timing budgets, and focused test entrypoints.
 - [x] Stage 5a: Run targeted regression, adaptive selection, and independent review.
+- [ ] Stage 6A: Cache exact historical derived-alias proofs with complete identity invalidation.
+- [ ] Stage 6B: Reuse revision-bound policy evidence across Python, P4, and Core process boundaries.
+- [ ] Stage 6C: Reform the remaining test portfolio from measured timing and coverage-equivalence evidence.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
 ## Acceptance criteria
@@ -42,6 +45,9 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Long runner unit tests cover interruption, same-tree resume, changed-tree invalidation, and fail-closed cases.
 - The state-writer policy suite retains all closed-world assertions with materially fewer repeated full repository scans, or records a concrete validated blocker.
 - SF-ATS routes every production or verification file changed by this work with zero unmatched files.
+- Stage 6A preserves byte-equivalent policy output while reducing repeated historical proof executions for identical inputs.
+- Stage 6B rejects dirty, stale, plan-drifted, phase-drifted, or artifact-incomplete evidence before any cross-process reuse.
+- Stage 6C keeps every deterministic admission contract reachable while reducing duplicate commands, processes, or setup work.
 
 ## Non-goals
 
@@ -49,10 +55,12 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Broadening timeout, console, or route allowlists.
 - Running browser, dist, performance, or full policy suites before the candidate and live-test lane are stable.
 - Replacing the existing Williams Windows Job Object runtime with a generalized process-containment layer in the same diff.
+- Running Stage 6B or Stage 6C implementation before their upstream candidate SHA is admitted by the root supervisor.
 
 ## Risks and constraints
 
 - Resume evidence crossing revisions must be derived from committed clean trees and complete SF-ATS route coverage.
 - Shared `.runtime` outputs, browser processes, dist mirrors, and policy TAP reports require one live-process owner.
 - A cached repository scan must remain immutable or isolated so tests cannot influence one another.
+- Historical-proof and cross-process caches must expose their identity and invalidation decisions in durable evidence.
 - Existing user and worktree changes outside this task remain untouched.
