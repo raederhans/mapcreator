@@ -957,13 +957,13 @@ const report = buildRecommendation([
   'dist/pages-dist-manifest.json',
 ]);
 const commands = report.recommendedCommands.map((entry) => entry.commandRef);
-if (!commands.includes('verify:pages-dist')) {
+if (!commands.includes('verify:pages-dist-and-drift')) {
   throw new Error(`missing Pages dist verification route: ${commands.join(', ')}`);
 }
 if (report.unmatchedChangedFiles.length) {
   throw new Error(`Pages dist mirror files should be matched: ${report.unmatchedChangedFiles.join(', ')}`);
 }
-const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === 'verify:pages-dist');
+const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === 'verify:pages-dist-and-drift');
 if (!mainThreadEntry) {
   throw new Error(`Pages dist verification must be main-thread serial: ${JSON.stringify(report.mainThreadSerialVerification)}`);
 }
@@ -977,7 +977,7 @@ const sourceReport = buildRecommendation([
   'js/core/map_renderer/render_pass_cache_host_owner.js',
 ]);
 const sourceCommands = sourceReport.recommendedCommands.map((entry) => entry.commandRef);
-if (!sourceCommands.includes('verify:pages-dist')) {
+if (!sourceCommands.includes('verify:pages-dist-and-drift')) {
   throw new Error(`missing Pages dist source mirror route: ${sourceCommands.join(', ')}`);
 }
 for (const filePath of ['js/core/map_renderer.js', 'js/core/map_renderer/render_pass_cache_host_owner.js']) {

@@ -121,6 +121,63 @@ test("executeSupervisorPlan records fake runner results and stops after failure"
   assert.equal(executed.executionResults[0].exitCode, 1);
 });
 
+test("supervisor execution list collapses commands covered by composite heavy gates", () => {
+  const mainThreadCommands = [
+    "verify:scenario-contracts:strict",
+    "verify:tno-coverage-ledger",
+    "verify:tno-atlantropa-coverage",
+    "verify:tno-polar-coverage",
+    "test:node:scenario-chunk-contracts",
+    "verify:tno-coverage-chain",
+    "verify:dist-drift",
+    "verify:pages-dist-and-drift",
+  ].map((commandRef) => laneEntry(commandRef, "main-thread", {
+    resourceLocks: [".runtime-output"],
+  }));
+  const plan = buildSupervisorPlan({
+    dossier: dossier({
+      laneSummary: {
+        childSafeCommands: [],
+        mainThreadCommands,
+        ciOnlyCommands: [],
+        blockedCommands: [],
+        counts: { childSafe: 0, mainThread: mainThreadCommands.length, ciOnly: 0, blocked: 0, total: mainThreadCommands.length },
+        resourceLocks: [".runtime-output"],
+        executionOwners: ["main-thread"],
+      },
+    }),
+    includeMainThread: true,
+    now: NOW,
+  });
+
+  assert.deepEqual(plan.commandsToRun, ["verify:pages-dist-and-drift", "verify:tno-coverage-chain"]);
+});
+
+test("executeSupervisorPlan checkpoints running and terminal command states", () => {
+  const plan = buildSupervisorPlan({
+    dossier: dossier(),
+    execute: true,
+    now: NOW,
+  });
+  const checkpoints = [];
+  const executed = executeSupervisorPlan(plan, {
+    runner: () => ({ status: 0 }),
+    now: (() => {
+      let tick = 0;
+      return () => new Date(NOW.getTime() + tick++ * 10);
+    })(),
+    onCheckpoint(checkpoint) {
+      checkpoints.push(checkpoint);
+    },
+  });
+
+  assert.equal(checkpoints.length, 2);
+  assert.equal(checkpoints[0].executionResults[0].status, "running");
+  assert.equal(checkpoints[1].executionResults[0].status, "passed");
+  assert.equal(checkpoints[1].executionResults[0].durationMs, 10);
+  assert.equal(executed.executionResults[0].exitCode, 0);
+});
+
 test("runCommand resolves npm script commands through the shared adaptive runner resolver", () => {
   const result = runCommand("verify:supervisor-contracts", {
     runner(bin, args) {

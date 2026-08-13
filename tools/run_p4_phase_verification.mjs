@@ -1,10 +1,22 @@
-import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { normalizeP4StateActionPhase } from "./p4_state_action_phases.mjs";
+import {
+  RESUMABLE_VERIFICATION_SCHEMA_VERSION,
+  atomicWriteJsonSync,
+  buildCommandStates,
+  buildPlanIdentity,
+  captureVerificationIdentity,
+  decideResume,
+  discoverChangedFilesBetween,
+  normalizeVerificationIdentity,
+  readResumeCheckpoint,
+  runCheckpointedCommands,
+  summarizeCommandStates,
+} from "./verification/resumable_verification.mjs";
 
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -63,6 +75,8 @@ export function parseArgs(argv) {
   const args = {
     phase: null,
     list: false,
+    resume: false,
+    resumeFrom: null,
     jsonOut: null,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -71,6 +85,11 @@ export function parseArgs(argv) {
       args.phase = argv[++index] || null;
     } else if (token === "--list") {
       args.list = true;
+    } else if (token === "--resume") {
+      args.resume = true;
+    } else if (token === "--resume-from") {
+      args.resume = true;
+      args.resumeFrom = argv[++index] || null;
     } else if (token === "--json-out") {
       args.jsonOut = argv[++index] || null;
     } else {
@@ -128,126 +147,172 @@ export function commandToProcess(commandRef, platform = process.platform) {
   throw new Error(`Unsupported P4 phase commandRef: ${command}`);
 }
 
-function runGit(args, {
-  cwd = REPO_ROOT,
-  runner = spawnSync,
-} = {}) {
-  const result = runner("git", args, {
-    cwd,
-    encoding: "utf8",
-    shell: false,
-  });
-  if (result.status !== 0) {
-    throw new Error(
-      `git ${args.join(" ")} failed: ${String(result.stderr || "").trim()}`,
-    );
-  }
-  return String(result.stdout || "").trim();
-}
-
 export function readVerificationIdentity({
   cwd = REPO_ROOT,
   runner = spawnSync,
 } = {}) {
-  const verificationSha = runGit(["rev-parse", "HEAD"], { cwd, runner });
-  const verificationTreeSha = runGit(
-    ["rev-parse", "HEAD^{tree}"],
-    { cwd, runner },
-  );
-  const trackedStatus = runGit(
-    ["status", "--porcelain=v1", "--untracked-files=no"],
-    { cwd, runner },
-  );
+  const identity = captureVerificationIdentity({ cwd, runner });
   return Object.freeze({
-    verificationSha,
-    verificationTreeSha,
-    trackedClean: trackedStatus === "",
-    trackedStatus,
+    ...identity,
+    trackedStatus: identity.workspaceStatus,
   });
 }
 
 function writeJsonReport(reportPath, report, cwd = REPO_ROOT) {
   const absolutePath = path.resolve(cwd, reportPath);
-  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
-  fs.writeFileSync(absolutePath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  atomicWriteJsonSync(absolutePath, report);
 }
 
 export function runVerificationPlan(plan, {
   cwd = REPO_ROOT,
   runner = spawnSync,
   platform = process.platform,
-  identityReader = () => readVerificationIdentity({ cwd, runner }),
-  identity = identityReader(),
+  identityReader = null,
+  identity = null,
   jsonOut = plan.reportPath,
   execute = true,
+  resumeCheckpoint = null,
+  changedFilesReader = (baseSha) => discoverChangedFilesBetween(baseSha, { cwd }),
+  now = () => new Date(),
 } = {}) {
-  const report = {
-    schemaVersion: 1,
-    kind: "p4-phase-verification",
-    phase: plan.phase,
-    verificationIdentity: identity,
-    commands: plan.commands.map((commandRef) => ({
+  const effectiveIdentityReader = identityReader
+    || (identity
+      ? () => identity
+      : () => readVerificationIdentity({ cwd, runner }));
+  const normalizedIdentity = normalizeVerificationIdentity(identity || effectiveIdentityReader());
+  const normalizedIdentityReader = () => normalizeVerificationIdentity(effectiveIdentityReader());
+  const runnerId = `p4-phase-${plan.phase}`;
+  const planIdentity = buildPlanIdentity({
+    runnerId,
+    entries: plan.commands.map((commandRef) => ({
+      group: plan.phase,
       commandRef,
-      status: execute ? "pending" : "listed",
-      exitCode: null,
+      command: commandRef,
+      commandType: commandRef.startsWith("npm run ") ? "package-script" : "direct",
     })),
-    verdict: execute ? "running" : "listed",
+  });
+  let resumeDecision = {
+    mode: "fresh",
+    blockReason: null,
+    reusedIndexes: [],
+    changedFiles: [],
+    unmatchedChangedFiles: [],
+    invalidatedCommandRefs: [],
   };
-  if (!identity.trackedClean) {
-    report.verdict = "blocked";
-    report.blockReason = "tracked-worktree-dirty";
+  if (resumeCheckpoint) {
+    try {
+      resumeDecision = decideResume({
+        checkpoint: resumeCheckpoint,
+        checkpointKind: "p4-phase-verification",
+        runnerId,
+        planIdentity,
+        verificationIdentity: normalizedIdentity,
+        changedFilesReader,
+      });
+    } catch (error) {
+      resumeDecision = {
+        mode: "blocked",
+        blockReason: error?.code || "checkpoint-invalid",
+        detail: error?.message || String(error),
+        reusedIndexes: [],
+        changedFiles: [],
+        unmatchedChangedFiles: [],
+        invalidatedCommandRefs: [],
+      };
+    }
+  }
+  const report = {
+    schemaVersion: RESUMABLE_VERIFICATION_SCHEMA_VERSION,
+    kind: "p4-phase-verification",
+    runnerId,
+    phase: plan.phase,
+    planIdentity,
+    verificationIdentity: normalizedIdentity,
+    commands: buildCommandStates(planIdentity, {
+      checkpoint: resumeCheckpoint,
+      resumeDecision,
+      verificationIdentity: normalizedIdentity,
+    }),
+    resumeDecision,
+    startedAt: now().toISOString(),
+    updatedAt: null,
+    summary: null,
+    verdict: execute ? resumeDecision.mode === "blocked" ? "blocked" : "running" : "listed",
+  };
+  const checkpoint = () => {
+    report.updatedAt = now().toISOString();
+    report.summary = summarizeCommandStates(report.commands);
     writeJsonReport(jsonOut, report, cwd);
+  };
+  if (!normalizedIdentity.workspaceClean) {
+    report.verdict = "blocked";
+    report.blockReason = "workspace-dirty";
+    checkpoint();
+    return { report, exitCode: 2 };
+  }
+  if (resumeDecision.mode === "blocked") {
+    report.blockReason = resumeDecision.blockReason;
+    checkpoint();
     return { report, exitCode: 2 };
   }
   if (!execute) {
-    writeJsonReport(jsonOut, report, cwd);
+    checkpoint();
     return { report, exitCode: 0 };
   }
+  checkpoint();
+  runCheckpointedCommands({
+    report,
+    checkpoint,
+    now,
+    identityReader: normalizedIdentityReader,
+    expectedVerificationIdentity: normalizedIdentity,
+    execute(commandResult) {
+      const resolved = commandToProcess(commandResult.commandRef, platform);
+      return runner(resolved.command, resolved.args, {
+        cwd,
+        encoding: "utf8",
+        shell: false,
+        stdio: "inherit",
+      });
+    },
+  });
+  const failed = report.commands.find((entry) => entry.status === "failed");
+  if (failed) return { report, exitCode: failed.exitCode };
 
-  for (const commandResult of report.commands) {
-    const resolved = commandToProcess(commandResult.commandRef, platform);
-    commandResult.status = "running";
-    writeJsonReport(jsonOut, report, cwd);
-    const result = runner(resolved.command, resolved.args, {
-      cwd,
-      encoding: "utf8",
-      shell: false,
-      stdio: "inherit",
-    });
-    const exitCode = Number.isInteger(result.status) ? result.status : 1;
-    commandResult.exitCode = exitCode;
-    commandResult.status = exitCode === 0 ? "passed" : "failed";
-    if (exitCode !== 0) {
-      report.verdict = "failed";
-      report.failedCommandRef = commandResult.commandRef;
-      writeJsonReport(jsonOut, report, cwd);
-      return { report, exitCode };
-    }
-  }
-
-  const finalIdentity = identityReader();
+  const finalIdentity = normalizedIdentityReader();
   report.finalVerificationIdentity = finalIdentity;
   if (
-    !finalIdentity.trackedClean
-    || finalIdentity.verificationSha !== identity.verificationSha
-    || finalIdentity.verificationTreeSha !== identity.verificationTreeSha
+    !finalIdentity.workspaceClean
+    || finalIdentity.verificationSha !== normalizedIdentity.verificationSha
+    || finalIdentity.verificationTreeSha !== normalizedIdentity.verificationTreeSha
   ) {
     report.verdict = "failed";
     report.blockReason = "verification-identity-drift";
-    writeJsonReport(jsonOut, report, cwd);
+    checkpoint();
     return { report, exitCode: 2 };
   }
   report.verdict = "pass";
-  writeJsonReport(jsonOut, report, cwd);
+  checkpoint();
   return { report, exitCode: 0 };
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const plan = buildP4PhaseVerificationPlan({ phase: args.phase });
+  let resumeCheckpoint = null;
+  if (args.resume) {
+    try {
+      resumeCheckpoint = readResumeCheckpoint(args.resumeFrom || args.jsonOut);
+    } catch (error) {
+      console.error(error?.message || error);
+      process.exitCode = 2;
+      return;
+    }
+  }
   const result = runVerificationPlan(plan, {
     jsonOut: args.jsonOut,
     execute: !args.list,
+    resumeCheckpoint,
   });
   console.log(
     [

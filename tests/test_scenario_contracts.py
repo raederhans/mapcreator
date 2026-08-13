@@ -1368,6 +1368,29 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             repair_mock.assert_not_called()
 
+    def test_validation_report_paths_support_repeated_outputs_and_legacy_string_args(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            first = root / "first.json"
+            second = root / "nested" / "second.json"
+            paths = check_scenario_contracts.resolve_validation_report_paths([str(first), str(second)])
+            for output_path in paths:
+                check_scenario_contracts.write_validation_report(
+                    output_path,
+                    [{"scenario_id": "fixture", "status": "ok"}],
+                    strict=True,
+                )
+
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            self.assertEqual(
+                check_scenario_contracts.resolve_validation_report_paths(""),
+                [],
+            )
+            self.assertEqual(
+                check_scenario_contracts.resolve_validation_report_paths(str(first)),
+                [first.resolve()],
+            )
+
     def test_validate_scenario_contract_strict_mode_rejects_unreviewed_geo_locale_collisions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_root = Path(tmp_dir)

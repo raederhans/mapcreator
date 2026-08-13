@@ -57,6 +57,7 @@ import {
   hasCanonicalStateMutationFinding,
   normalizeStateActionDelegations,
   readStateWriterPolicy,
+  resolveCachedStateWriterRepositoryScan,
   resolveAcceptedStateWriterPolicyCheckpoint,
   resolveGitCommitSha,
   composeLegacySemanticBaseline,
@@ -81,6 +82,50 @@ import {
   validateDerivedAliasTaintBaselineTransition,
   validateFrozenCloseoutTargets,
 } from "../tools/check_state_writer_policy.mjs";
+
+const SHARED_REPOSITORY_POLICY_PROMISE = readStateWriterPolicy();
+const SHARED_REPOSITORY_SCAN_CACHE = new Map();
+
+function readSharedRepositoryPolicy() {
+  return SHARED_REPOSITORY_POLICY_PROMISE;
+}
+
+test("explicit repository scan cache deduplicates work and returns isolated values", async () => {
+  const cache = new Map();
+  const previousPolicy = { progress: { latestPhase: "fixture" } };
+  let scans = 0;
+  const scan = async () => {
+    scans += 1;
+    return { candidates: [{ path: "js/fixture.js" }] };
+  };
+  const first = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy,
+    scanIdentity: "fixture-scan",
+    scan,
+  });
+  first.candidates[0].path = "mutated-by-consumer.js";
+  const second = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache: cache,
+    previousPolicy,
+    scanIdentity: "fixture-scan",
+    scan,
+  });
+
+  assert.equal(scans, 1);
+  assert.equal(second.candidates[0].path, "js/fixture.js");
+  await assert.rejects(
+    resolveCachedStateWriterRepositoryScan({
+      repositoryScanCache: new Map(),
+      previousPolicy,
+      scanIdentity: "failed-scan",
+      scan: async () => {
+        throw new Error("fixture failure");
+      },
+    }),
+    /fixture failure/,
+  );
+});
 
 function createPolicyFixture() {
   return {
@@ -2677,8 +2722,10 @@ test("global state import discovery resolves exact local aliases only", () => {
 });
 
 test("checked-in repository policy is a closed binding-scoped snapshot", async () => {
-  const policy = await readStateWriterPolicy();
-  const inventory = await scanStateWriterPolicySnapshot(policy);
+  const policy = await readSharedRepositoryPolicy();
+  const inventory = await scanStateWriterPolicySnapshot(policy, {
+    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+  });
   const result = validateStateWriterPolicySnapshot({
     policy,
     legacyAllowlistPaths: inventory.legacyAllowlistPaths,
@@ -2848,23 +2895,25 @@ test("previous binding ordinals survive state-target parameter renaming", async 
 });
 
 test("repository policy builder is deterministic and never auto-grants during verification", async () => {
-  const checkedIn = await readStateWriterPolicy();
+  const checkedIn = await readSharedRepositoryPolicy();
   const rebuilt = await buildStateWriterPolicySnapshot({
     phase: checkedIn.progress.latestPhase,
     baseSha: checkedIn.baseline.sourceBaseSha,
     generatedAt: checkedIn.baseline.generatedAt,
     previousPolicy: checkedIn,
+    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
   });
 
   assert.deepEqual(rebuilt, checkedIn);
 });
 
 test("later policy builds preserve the frozen P4.0 denominator", async () => {
-  const checkedIn = await readStateWriterPolicy();
+  const checkedIn = await readSharedRepositoryPolicy();
   const currentPhase = checkedIn.progress.latestPhase;
   const rebuilt = await buildStateWriterPolicySnapshot({
     phase: currentPhase,
     previousPolicy: checkedIn,
+    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
   });
 
   assert.deepEqual(rebuilt.baseline, checkedIn.baseline);
@@ -6672,13 +6721,14 @@ test("policy snapshot keeps every historical caller-to-action proof live after l
 });
 
 test("current phase deterministically preserves exactly the 36 backfilled P4.1 caller-to-action proofs", async () => {
-  const checkedIn = await readStateWriterPolicy();
+  const checkedIn = await readSharedRepositoryPolicy();
   const build = () =>
     buildStateWriterPolicySnapshot({
       phase: checkedIn.progress.latestPhase,
       baseSha: checkedIn.baseline.sourceBaseSha,
       generatedAt: checkedIn.baseline.generatedAt,
       previousPolicy: checkedIn,
+      repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
     });
   const first = await build();
   const second = await build();
@@ -6754,8 +6804,11 @@ test("P4.5b closeout turns missed frozen targets into policy violations", () => 
 });
 
 test("repository checker reports a passing closed-world policy and default-state shape", async () => {
-  const policy = await readStateWriterPolicy();
-  const report = await buildStateWriterPolicyReport();
+  const policy = await readSharedRepositoryPolicy();
+  const report = await buildStateWriterPolicyReport({
+    policy,
+    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+  });
   const currentCheckpoint = policy.progress.checkpoints.find(
     ({ phase }) => phase === policy.progress.latestPhase,
   );
@@ -6798,7 +6851,7 @@ test("repository checker reports a passing closed-world policy and default-state
 });
 
 test("checker rejects a requested phase that has no matching policy checkpoint", async () => {
-  const policy = await readStateWriterPolicy();
+  const policy = await readSharedRepositoryPolicy();
   const missingPhase = "P4.4";
   assert.equal(
     policy.progress.checkpoints.some(
@@ -6808,6 +6861,8 @@ test("checker rejects a requested phase that has no matching policy checkpoint",
   );
   const report = await buildStateWriterPolicyReport({
     phase: missingPhase,
+    policy,
+    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
   });
   assert.equal(report.phase, missingPhase);
   assert.equal(report.verdict, "fail");

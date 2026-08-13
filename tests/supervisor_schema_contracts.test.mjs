@@ -58,6 +58,16 @@ test("supervisor plan schema includes lane planning fields", () => {
   ]);
 });
 
+test("supervisor plan schema permits durable running checkpoints with timing fields", () => {
+  const schema = readSchema(SCHEMA_FILES.supervisorPlan);
+  const resultProperties = schema.properties.executionResults.items.properties;
+
+  assert.deepEqual(resultProperties.status.enum, ["running", "passed", "failed"]);
+  assert.deepEqual(resultProperties.exitCode.type, ["integer", "null"]);
+  assert.deepEqual(resultProperties.durationMs.type, ["integer", "null"]);
+  assert.deepEqual(resultProperties.finishedAt.type, ["string", "null"]);
+});
+
 test("change dossier schema includes discovery and risk fields", () => {
   const schema = readSchema(SCHEMA_FILES.changeDossier);
   assertRequiredProperties(schema, [

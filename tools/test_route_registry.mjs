@@ -62,7 +62,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:verification-selector",
     commandRef: "node tools/select_verification_targets.mjs --check",
-    sourceRef: ".gitignore,tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
+    sourceRef: ".gitignore,tools/run_adaptive_tests.mjs,tools/verification/command_supersession.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -109,7 +109,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:core-verification-runner",
     commandRef: "test:node:verify-core-runner",
-    sourceRef: "tools/run_core_verification.mjs,tests/verify_core_runner_behavior.test.mjs,docs/testing/verify-core.md,package.json",
+    sourceRef: "tools/run_core_verification.mjs,tools/verification/resumable_verification.mjs,tools/verification/command_supersession.mjs,tests/verify_core_runner_behavior.test.mjs,docs/testing/verify-core.md,docs/active/test-verification-reform-20260813,package.json",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -228,7 +228,7 @@ const INFRASTRUCTURE_ROUTES = [
   },
   {
     id: "infra:pages-dist",
-    commandRef: "verify:pages-dist",
+    commandRef: "verify:pages-dist-and-drift",
     sourceRef: "tools/build_pages_dist.py,tests/test_pages_dist_startup_shell.py,js/core/map_renderer.js,js/core/map_renderer,js/core/renderer,.github/workflows/verify-shared.yml",
     domain: "pages-dist",
     ownerHint: "deploy-runtime",

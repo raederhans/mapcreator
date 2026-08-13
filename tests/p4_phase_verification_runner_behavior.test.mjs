@@ -99,6 +99,8 @@ test("argument parsing requires an exact phase and supports list reports", () =>
     {
       phase: "P4.1",
       list: true,
+      resume: false,
+      resumeFrom: null,
       jsonOut: "custom.json",
     },
   );
@@ -155,7 +157,10 @@ test("verification identity records exact SHA tree and tracked cleanliness", () 
   assert.deepEqual(readVerificationIdentity({ runner }), {
     verificationSha: "candidate-sha",
     verificationTreeSha: "candidate-tree",
+    workspaceClean: true,
     trackedClean: true,
+    includesUntracked: true,
+    workspaceStatus: "",
     trackedStatus: "",
   });
   assert.equal(calls.length, 3);
@@ -187,7 +192,7 @@ test("list mode writes an auditable report without executing commands", () => {
   assert.equal(fs.existsSync(path.join(root, reportPath)), true);
 });
 
-test("dirty tracked state blocks execution before the first command", () => {
+test("dirty tracked or untracked state blocks execution before the first command", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "p4-phase-dirty-"));
   let executions = 0;
   const result = runVerificationPlan(
@@ -209,7 +214,30 @@ test("dirty tracked state blocks execution before the first command", () => {
   );
   assert.equal(result.exitCode, 2);
   assert.equal(result.report.verdict, "blocked");
-  assert.equal(result.report.blockReason, "tracked-worktree-dirty");
+  assert.equal(result.report.blockReason, "workspace-dirty");
+  assert.equal(executions, 0);
+
+  const untracked = runVerificationPlan(
+    buildP4PhaseVerificationPlan({ phase: "P4.1" }),
+    {
+      cwd: root,
+      jsonOut: "untracked-report.json",
+      identity: {
+        verificationSha: "candidate-sha",
+        verificationTreeSha: "candidate-tree",
+        workspaceClean: false,
+        trackedClean: true,
+        includesUntracked: true,
+        workspaceStatus: "?? scratch.mjs",
+      },
+      runner: () => {
+        executions += 1;
+        return { status: 0 };
+      },
+    },
+  );
+  assert.equal(untracked.exitCode, 2);
+  assert.equal(untracked.report.blockReason, "workspace-dirty");
   assert.equal(executions, 0);
 });
 
@@ -263,7 +291,12 @@ test("successful execution requires the final SHA tree and clean status to stay 
   );
   assert.equal(result.exitCode, 0);
   assert.equal(result.report.verdict, "pass");
-  assert.deepEqual(result.report.finalVerificationIdentity, identity);
+  assert.deepEqual(result.report.finalVerificationIdentity, {
+    ...identity,
+    workspaceClean: true,
+    includesUntracked: true,
+    workspaceStatus: "",
+  });
 
   const drifted = runVerificationPlan(
     buildP4PhaseVerificationPlan({ phase: "P4.1" }),
@@ -282,4 +315,87 @@ test("successful execution requires the final SHA tree and clean status to stay 
   assert.equal(drifted.exitCode, 2);
   assert.equal(drifted.report.verdict, "failed");
   assert.equal(drifted.report.blockReason, "verification-identity-drift");
+
+  const invalidCheckpoint = structuredClone(result.report);
+  invalidCheckpoint.verdict = "failed";
+  invalidCheckpoint.blockReason = "verification-identity-drift";
+  invalidCheckpoint.finalVerificationIdentity.verificationTreeSha = "drifted-tree";
+  let resumeExecutions = 0;
+  const rejectedResume = runVerificationPlan(
+    buildP4PhaseVerificationPlan({ phase: "P4.1" }),
+    {
+      cwd: root,
+      jsonOut: "rejected-resume-report.json",
+      platform: "linux",
+      identity,
+      identityReader: () => identity,
+      resumeCheckpoint: invalidCheckpoint,
+      runner: () => {
+        resumeExecutions += 1;
+        return { status: 0 };
+      },
+    },
+  );
+  assert.equal(rejectedResume.exitCode, 2);
+  assert.equal(rejectedResume.report.blockReason, "checkpoint-invalid");
+  assert.equal(resumeExecutions, 0);
+});
+
+test("same-tree resume reuses passed P4 commands and reruns the failed suffix", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "p4-phase-resume-"));
+  const reportPath = "phase-report.json";
+  const identity = {
+    verificationSha: "candidate-sha",
+    verificationTreeSha: "candidate-tree",
+    workspaceClean: true,
+    trackedClean: true,
+    includesUntracked: true,
+    workspaceStatus: "",
+    trackedStatus: "",
+  };
+  const plan = buildP4PhaseVerificationPlan({ phase: "P4.1" });
+  let calls = 0;
+  const first = runVerificationPlan(plan, {
+    cwd: root,
+    jsonOut: reportPath,
+    platform: "linux",
+    identity,
+    identityReader: () => identity,
+    now: (() => {
+      let value = 0;
+      return () => new Date(value++ * 10);
+    })(),
+    runner: () => ({ status: ++calls === 2 ? 7 : 0 }),
+  });
+  assert.equal(first.exitCode, 7);
+  const checkpoint = JSON.parse(fs.readFileSync(path.join(root, reportPath), "utf8"));
+
+  const resumedCalls = [];
+  const resumed = runVerificationPlan(plan, {
+    cwd: root,
+    jsonOut: reportPath,
+    platform: "linux",
+    identity,
+    identityReader: () => identity,
+    resumeCheckpoint: checkpoint,
+    now: (() => {
+      let value = 100;
+      return () => new Date(value++ * 10);
+    })(),
+    runner: (command, args) => {
+      resumedCalls.push([command, ...args]);
+      return { status: 0 };
+    },
+  });
+
+  assert.equal(resumed.exitCode, 0);
+  assert.equal(resumed.report.resumeDecision.mode, "exact");
+  assert.equal(resumed.report.summary.reused, 1);
+  assert.equal(resumed.report.commands[0].evidenceDisposition, "reused-exact");
+  assert.deepEqual(
+    resumedCalls.map((entry) => entry.join(" ")),
+    plan.commands.slice(1).map((commandRef) => (
+      commandRef.startsWith("npm run ") ? commandRef : commandRef.replace(/^node /, `${process.execPath} `)
+    )),
+  );
 });

@@ -7,6 +7,7 @@ import { commandToProcess } from "../run_adaptive_tests.mjs";
 import { buildChangeDossier } from "./build_change_dossier.mjs";
 import { buildExecutionCommandList, commandKey } from "./command_lanes.mjs";
 import { renderSupervisorMarkdown } from "./render_supervisor_markdown.mjs";
+import { atomicWriteJsonSync } from "../verification/resumable_verification.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_DOSSIER_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "supervisor-change-dossier.json");
@@ -168,15 +169,26 @@ export function runCommand(commandRef, {
   runner = spawnSync,
   cwd = REPO_ROOT,
   now = () => new Date(),
+  onStarted = () => {},
 } = {}) {
   const startedAtDate = now();
   const startedAt = startedAtDate.toISOString();
   const startedMs = startedAtDate.getTime();
+  const runningResult = {
+    commandRef,
+    status: "running",
+    startedAt,
+    finishedAt: null,
+    durationMs: null,
+    exitCode: null,
+  };
+  onStarted(runningResult);
   const command = commandToProcess(commandRef);
   if (!command) {
     const finishedAtDate = now();
     return {
       commandRef,
+      status: "failed",
       startedAt,
       finishedAt: finishedAtDate.toISOString(),
       durationMs: Math.max(0, finishedAtDate.getTime() - startedMs),
@@ -194,6 +206,7 @@ export function runCommand(commandRef, {
   const exitCode = typeof result?.status === "number" ? result.status : 1;
   return {
     commandRef,
+    status: exitCode === 0 ? "passed" : "failed",
     bin: command.bin,
     args: command.args,
     startedAt,
@@ -207,6 +220,7 @@ export function executeSupervisorPlan(plan, {
   runner = spawnSync,
   cwd = REPO_ROOT,
   now = () => new Date(),
+  onCheckpoint = () => {},
 } = {}) {
   // route gap 是执行前合同缺口，保留空结果能让报告说明“未执行”而非误报全绿。
   if ((plan.routeGaps || []).length > 0) {
@@ -218,8 +232,18 @@ export function executeSupervisorPlan(plan, {
 
   const executionResults = [];
   for (const commandRef of plan.commandsToRun || []) {
-    const result = runCommand(commandRef, { runner, cwd, now });
-    executionResults.push(result);
+    const resultIndex = executionResults.length;
+    const result = runCommand(commandRef, {
+      runner,
+      cwd,
+      now,
+      onStarted(startedResult) {
+        executionResults.push(startedResult);
+        onCheckpoint({ ...plan, executionResults: structuredClone(executionResults) });
+      },
+    });
+    executionResults[resultIndex] = result;
+    onCheckpoint({ ...plan, executionResults: structuredClone(executionResults) });
     if (result.exitCode !== 0 && !plan.executionPolicy?.continueOnFailure) {
       break;
     }
@@ -239,8 +263,7 @@ export function supervisorExitCodeForPlan(plan, { strictRouteGaps = false } = {}
 }
 
 function writeJson(filePath, value) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  atomicWriteJsonSync(filePath, value);
 }
 
 function writeText(filePath, value) {
@@ -265,7 +288,13 @@ export function main(argv = process.argv.slice(2)) {
     execute: args.execute,
   });
   if (args.execute) {
-    plan = executeSupervisorPlan(plan);
+    writeJson(args.dossierOut, dossier);
+    plan = executeSupervisorPlan(plan, {
+      onCheckpoint(checkpointPlan) {
+        writeJson(args.jsonOut, checkpointPlan);
+        writeText(args.mdOut, renderSupervisorMarkdown({ dossier, plan: checkpointPlan }));
+      },
+    });
   }
   writeJson(args.dossierOut, dossier);
   writeJson(args.jsonOut, plan);

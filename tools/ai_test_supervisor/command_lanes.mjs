@@ -1,3 +1,5 @@
+import { collapseSupersededCommands } from "../verification/command_supersession.mjs";
+
 const CHILD_SAFE = "child-safe";
 const MAIN_THREAD = "main-thread";
 const CI_ONLY = "ci-only";
@@ -246,7 +248,7 @@ export function buildExecutionCommandList(plan = {}, {
     blockedCommands.push(...ciOnlyCommands.map((commandRef) => blockedEntry(commandRef, CI_ONLY, "reserved for CI lane")));
   }
   return {
-    commandsToRun: uniqueSorted(commandsToRun),
+    commandsToRun: collapseSupersededCommands(uniqueSorted(commandsToRun)),
     blockedCommands: dedupeCommandEntries(blockedCommands).map((entry) => ({
       commandRef: entry.commandRef,
       lane: entry.lane || BLOCKED,

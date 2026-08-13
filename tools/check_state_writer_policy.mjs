@@ -1129,13 +1129,16 @@ export async function buildStateWriterPolicyReport({
   policy = null,
   previousPolicy = undefined,
   requireClean = false,
+  repositoryScanCache = null,
 } = {}) {
   const loadedPolicy = policy || await readStateWriterPolicy();
   const requestedPhase = String(phase || "").trim()
     || String(loadedPolicy?.progress?.latestPhase || "").trim()
     || "P4.0";
   const normalizedPhase = normalizeP4StateActionPhase(requestedPhase);
-  const inventory = await scanStateWriterPolicySnapshot(loadedPolicy);
+  const inventory = await scanStateWriterPolicySnapshot(loadedPolicy, {
+    repositoryScanCache,
+  });
   const validation = validateStateWriterPolicySnapshot({
     policy: loadedPolicy,
     legacyAllowlistPaths: inventory.legacyAllowlistPaths,

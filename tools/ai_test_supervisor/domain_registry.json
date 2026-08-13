@@ -583,7 +583,7 @@
       ],
       "preferredChildSafeChecks": [],
       "preferredMainThreadChecks": [
-        "npm run verify:pages-dist",
+        "npm run verify:pages-dist-and-drift",
         "npm run verify:dist-drift"
       ],
       "mainRiskSignals": [

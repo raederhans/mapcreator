@@ -7,6 +7,8 @@
 - `npm run verify:core:list`：只生成 JSON 和 Markdown 报告，不实际执行命令。
 - `npm run verify:core`：运行默认的确定性核心验证计划。
 - `npm run verify:core:main-thread`：在默认计划上追加显式的 main-thread E2E 组。
+- `npm run verify:core -- --resume`：从默认 JSON checkpoint 恢复同计划的连续已通过前缀。
+- `npm run verify:core -- --resume-from <path>`：从指定 checkpoint 恢复。
 - `npm run test:node:verify-core-runner`：验证 runner 自身行为。
 - `npm run test:node:verification-metadata`：验证 metadata、route registry、selector 和 verify:core plan 一致。
 
@@ -30,8 +32,9 @@
 
 默认范围是确定性的，不会启动 browser、dev server 或 Playwright。它覆盖 CLI/build 合同，并默认保留 `pages` 分组：
 
-- `verify:pages-dist`
-- `verify:dist-drift`
+- `verify:pages-dist-and-drift`
+
+`verify:pages-dist` 保留 Pages mirror 生成和 startup/node contracts 入口。`verify:pages-dist-and-drift` 只构建一次，随后运行同一组 contracts 和 dist drift 检查。`verify:dist-drift` 保留为独立诊断命令；adaptive/supervisor 同时选中这些命令时，command supersession 会保留覆盖完整 admission 合同的 `verify:pages-dist-and-drift`。
 
 `pages` 分组会写入或检查 Pages mirror、dist manifest 和 `.runtime` 报告，所以运行 `verify:core` 时，integration owner 需要持有 dist lane。这个默认范围适合做 non-browser 核心安全线；它具备 dist / runtime-output 资源语义。
 
@@ -65,6 +68,25 @@ SF-ATS route registry 会把 runner、runner 测试、package scripts 和这份�
 - 第一个失败的 `failing commandRef`
 - `verify:dist-drift` 的 dist drift 输出
 - selector 或 supervisor 报告里的 route gaps
+
+## Checkpoint 与恢复
+
+runner 会在每条命令开始前和结束后原子写入 JSON checkpoint，并记录 `startedAt`、`finishedAt`、`durationMs`、exit code 与 evidence disposition。恢复只接受相同 command plan、来源 clean workspace 和当前 clean workspace。
+
+- 相同 commit/tree：复用连续已通过前缀，从第一条 failed/running/pending 命令继续。
+- clean tree 变化：由 SF-ATS 计算最早受影响命令，从该位置与第一条未通过命令中的较早位置重跑整个 suffix。路由与当前计划缺少交集时从第 0 条保守重跑；当前 P4 renderer 路径会进入这一分支。
+- dirty workspace、unmatched changed file、plan drift、损坏 checkpoint：在首条命令启动前以 exit `2` 阻塞。
+- 同 tree 不同 commit、控制面变更、changed file 与当前计划没有 command 交集：从第 0 条重跑。
+
+恢复接口不提供任意 skip；每条复用证据都绑定来源 revision 和 exact command plan。默认执行仍建立 fresh checkpoint。
+
+## P4 policy 快速入口
+
+- `npm run test:node:p4:state-writer-policy:quick`：运行 7 个快速 policy/scanner/route 合同，跳过承担仓库级 closed-world 快照的 manifest 文件；TAP 写入独立的 `state-writer-policy-tests.quick.tap`。
+- `npm run test:node:p4:state-writer-policy -- --test-name-pattern="<pattern>" tests/state_writer_policy_manifest_behavior.test.mjs`：只运行指定 manifest 子测试；TAP 写入 `state-writer-policy-tests.focused.tap`。
+- `npm run test:node:p4:state-writer-policy`：完整 admission suite；manifest 内共享一次显式 repository scan，同时保留全部断言。
+
+quick/focused 入口服务开发回归，完整 suite 继续承担 frozen candidate admission。三种模式使用不同 TAP 文件，避免快速检查覆盖完整 admission evidence。
 
 P0.1.1 后验收要求 full `npm run verify:core` 实际运行，并把通过结果或失败分类记录到 worktree registry。
 

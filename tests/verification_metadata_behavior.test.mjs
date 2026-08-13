@@ -83,6 +83,12 @@ function routeFields(route) {
   };
 }
 
+function commandsForChangedFile(report, changedFile) {
+  const entry = report.matchedByFile.find((candidate) => candidate.changedFile === changedFile);
+  assert.ok(entry, `${changedFile} should be present in matchedByFile`);
+  return entry.recommendedCommands;
+}
+
 test("verification metadata validates against package scripts and supervisor domains", () => {
   const packageJson = readJson("package.json");
   const domainRegistry = readJson("tools", "ai_test_supervisor", "domain_registry.json");
@@ -116,7 +122,9 @@ test("P4.0 state ownership policy owns its files, routes, and verify-core comman
   for (const entry of [policyEntry, boundaryEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
-    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.executionOwner, "main-thread");
+    assert.equal(entry.cost, "heavy");
+    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
     assert.equal(entry.supervisorDomain, "state-ownership");
     assert.equal(entry.verifyCoreDefaultGroup, "infra");
     assert.equal(entry.routeRegistry, true);
@@ -132,10 +140,10 @@ test("P4.0 state ownership policy owns its files, routes, and verify-core comman
     ],
   );
 
+  const policyReport = buildRecommendation(P4_POLICY_SOURCE_REFS);
+  assert.deepEqual(policyReport.unmatchedChangedFiles, []);
   for (const sourceRef of P4_POLICY_SOURCE_REFS) {
-    const report = buildRecommendation([sourceRef]);
-    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
-    const command = report.recommendedCommands.find((entry) => (
+    const command = commandsForChangedFile(policyReport, sourceRef).find((entry) => (
       entry.commandRef === policyEntry.commandRef
     ));
     assert.ok(command, `${sourceRef} should select the P4 policy command`);
@@ -159,7 +167,7 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
   assert.ok(boundaryEntry);
   assert.ok(exactPhaseEntry);
 
-  for (const entry of [actionEntry, boundaryEntry, exactPhaseEntry]) {
+  for (const entry of [actionEntry, boundaryEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
     assert.equal(entry.executionOwner, "child-safe");
@@ -167,6 +175,10 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
   }
+  assert.equal(exactPhaseEntry.executionOwner, "main-thread");
+  assert.equal(exactPhaseEntry.cost, "heavy");
+  assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(exactPhaseEntry.routeRegistry, true);
 
   assert.equal(actionEntry.verifyCoreDefaultGroup, "startup-node");
   assert.equal(boundaryEntry.verifyCoreDefaultGroup, "startup-node");
@@ -187,13 +199,14 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
   assert.ok(defaultCommandRefs.includes(boundaryEntry.commandRef));
   assert.equal(defaultCommandRefs.includes(exactPhaseEntry.commandRef), false);
 
+  const exactPhaseReport = buildRecommendation(exactPhaseEntry.sourceRefs);
+  assert.deepEqual(exactPhaseReport.unmatchedChangedFiles, []);
   for (const sourceRef of exactPhaseEntry.sourceRefs) {
-    const report = buildRecommendation([sourceRef]);
-    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
-    const staleCommand = report.recommendedCommands.find((entry) => (
+    const perFileCommands = commandsForChangedFile(exactPhaseReport, sourceRef);
+    const staleCommand = perFileCommands.find((entry) => (
       entry.commandRef === exactPhaseEntry.commandRef
     ));
-    const currentCommand = report.recommendedCommands.find((entry) => (
+    const currentCommand = perFileCommands.find((entry) => (
       entry.commandRef === "verify:p4:p4-3"
     ));
     assert.equal(staleCommand, undefined, `${sourceRef} should not select the stale P4.1 exact phase command`);
@@ -247,9 +260,10 @@ test("shared P4 control files select only the policy current exact phase gate", 
       ? Object.freeze({ ...route, id: "p4:historical-boot-exact" })
       : route
   ));
-  for (const sourceRef of [...changedFiles, "js/core/state/actions/boot_actions.js"]) {
-    const renamedReport = buildRecommendation([sourceRef], renamedHistoricalRoutes);
-    const renamedExactCommands = renamedReport.recommendedCommands
+  const renamedSources = [...changedFiles, "js/core/state/actions/boot_actions.js"];
+  const renamedReport = buildRecommendation(renamedSources, renamedHistoricalRoutes);
+  for (const sourceRef of renamedSources) {
+    const renamedExactCommands = commandsForChangedFile(renamedReport, sourceRef)
       .map((entry) => entry.commandRef)
       .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
     assert.deepEqual(renamedExactCommands, ["verify:p4:p4-3"]);
@@ -271,7 +285,7 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
   assert.ok(boundaryEntry);
   assert.ok(exactPhaseEntry);
 
-  for (const entry of [actionEntry, boundaryEntry, exactPhaseEntry]) {
+  for (const entry of [actionEntry, boundaryEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
     assert.equal(entry.executionOwner, "child-safe");
@@ -279,6 +293,10 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
   }
+  assert.equal(exactPhaseEntry.executionOwner, "main-thread");
+  assert.equal(exactPhaseEntry.cost, "heavy");
+  assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(exactPhaseEntry.routeRegistry, true);
 
   assert.equal(actionEntry.verifyCoreDefaultGroup, "scenario-project-chunk");
   assert.equal(boundaryEntry.verifyCoreDefaultGroup, "scenario-project-chunk");
@@ -289,10 +307,10 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
   assert.ok(defaultCommandRefs.includes(boundaryEntry.commandRef));
   assert.equal(defaultCommandRefs.includes(exactPhaseEntry.commandRef), false);
 
+  const exactPhaseReport = buildRecommendation(exactPhaseEntry.sourceRefs);
+  assert.deepEqual(exactPhaseReport.unmatchedChangedFiles, []);
   for (const sourceRef of exactPhaseEntry.sourceRefs) {
-    const report = buildRecommendation([sourceRef]);
-    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
-    const command = report.recommendedCommands.find((entry) => (
+    const command = commandsForChangedFile(exactPhaseReport, sourceRef).find((entry) => (
       entry.commandRef === "verify:p4:p4-3"
     ));
     assert.ok(command, `${sourceRef} should select the current P4.3 exact phase command`);
@@ -301,7 +319,7 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
   }
 });
 
-test("P4.2b scenario chunk actions own child-safe focused and exact routes", () => {
+test("P4.2b scenario chunk actions keep focused checks child-safe and exact verification serialized", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-2b-scenario-chunk-actions"
   ));
@@ -312,13 +330,17 @@ test("P4.2b scenario chunk actions own child-safe focused and exact routes", () 
     entry.id === "p4:p4-2b-exact-phase"
   ));
 
-  for (const entry of [actionEntry, boundaryEntry, exactPhaseEntry]) {
+  for (const entry of [actionEntry, boundaryEntry]) {
     assert.ok(entry);
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
     assert.equal(entry.executionOwner, "child-safe");
     assert.equal(entry.routeRegistry, true);
   }
+  assert.equal(exactPhaseEntry.executionOwner, "main-thread");
+  assert.equal(exactPhaseEntry.cost, "heavy");
+  assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(exactPhaseEntry.routeRegistry, true);
   assert.equal(actionEntry.commandRef, "test:node:p4:p4-2b");
   assert.equal(boundaryEntry.commandRef, "test:python:p4:p4-2b-boundary");
   assert.equal(exactPhaseEntry.commandRef, "verify:p4:p4-2b");
@@ -350,7 +372,7 @@ test("P4.2b scenario chunk actions own child-safe focused and exact routes", () 
   assert.equal(defaultCommandRefs.has(exactPhaseEntry.commandRef), false);
 });
 
-test("P4.2c Scenario health actions own child-safe focused and exact routes", () => {
+test("P4.2c Scenario health actions keep focused checks child-safe and exact verification serialized", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-2c-scenario-health-actions"
   ));
@@ -361,7 +383,7 @@ test("P4.2c Scenario health actions own child-safe focused and exact routes", ()
     entry.id === "p4:p4-2c-exact-phase"
   ));
 
-  for (const entry of [actionEntry, boundaryEntry, exactPhaseEntry]) {
+  for (const entry of [actionEntry, boundaryEntry]) {
     assert.ok(entry);
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
@@ -370,6 +392,10 @@ test("P4.2c Scenario health actions own child-safe focused and exact routes", ()
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
   }
+  assert.equal(exactPhaseEntry.executionOwner, "main-thread");
+  assert.equal(exactPhaseEntry.cost, "heavy");
+  assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(exactPhaseEntry.routeRegistry, true);
   assert.equal(actionEntry.commandRef, "test:node:p4:p4-2c");
   assert.equal(boundaryEntry.commandRef, "test:python:p4:p4-2c-boundary");
   assert.equal(exactPhaseEntry.commandRef, "verify:p4:p4-2c");
@@ -454,11 +480,12 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   assert.equal(buildVerifyCoreMainThreadGroup().commands.includes(entry.commandRef), false);
   assert.equal(getVerifyCoreOptionalMainThreadCommands().includes(entry.commandRef), false);
 
-  for (const sourceRef of expectedSourceRefs.filter((candidate) => candidate !== "package.json")) {
-    const report = buildRecommendation([sourceRef]);
-    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
+  const inventorySourceRefs = expectedSourceRefs.filter((candidate) => candidate !== "package.json");
+  const inventoryReport = buildRecommendation(inventorySourceRefs);
+  assert.deepEqual(inventoryReport.unmatchedChangedFiles, []);
+  for (const sourceRef of inventorySourceRefs) {
     assert.equal(
-      report.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+      commandsForChangedFile(inventoryReport, sourceRef).some((command) => command.commandRef === entry.commandRef),
       true,
       `${sourceRef} should select the inventory contract`,
     );
@@ -473,11 +500,12 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
     hgoOwnerReport.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
     true,
   );
-  for (const routedProductPath of ["js/core/renderer/ocean_render_owner.js", "dist/app.js"]) {
-    const productReport = buildRecommendation([routedProductPath]);
-    assert.equal(productReport.unmatchedChangedFiles.length, 0, `${routedProductPath} should be routed`);
+  const routedProductPaths = ["js/core/renderer/ocean_render_owner.js", "dist/app.js"];
+  const productReport = buildRecommendation(routedProductPaths);
+  assert.deepEqual(productReport.unmatchedChangedFiles, []);
+  for (const routedProductPath of routedProductPaths) {
     assert.equal(
-      productReport.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+      commandsForChangedFile(productReport, routedProductPath).some((command) => command.commandRef === entry.commandRef),
       true,
       `${routedProductPath} should select the inventory contract`,
     );
@@ -578,7 +606,7 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
     "test:node:physical-layer-contracts",
     "test:node:river-layer-contracts",
     "test:node:scenario-chunk-contracts",
-    "verify:pages-dist",
+    "verify:pages-dist-and-drift",
     "perf:gate",
     "test:e2e:physical-layer-runtime-contract",
     "test:e2e:water-rendering",
@@ -604,7 +632,7 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
     "test:node:visual-effects-pass-owner",
     "test:node:renderer-pass-family-inventory",
     "test:python:map-renderer-render-pipeline-passes-boundary",
-    "verify:pages-dist",
+    "verify:pages-dist-and-drift",
     "perf:gate",
     "test:e2e:layer:regression",
     "test:e2e:city-rendering",
@@ -644,7 +672,7 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
     "test:node:scenario-chunk-contracts",
     "test:node:political-raster-worker-packet",
     "test:node:political-collection-fragment-camouflage",
-    "verify:pages-dist",
+    "verify:pages-dist-and-drift",
     "perf:gate",
     "test:e2e:dev:political-progressive-recovery",
     "test:e2e:dev:scenario-chunk-runtime",
@@ -945,7 +973,7 @@ test("renderer click selection P1.8 files route to owner and both canonical boun
     "test:node:renderer-click-selection-transaction-inventory",
     "test:python:map-renderer-click-selection-transaction-boundary",
     "verify:architecture-boundaries",
-    "verify:pages-dist",
+    "verify:pages-dist-and-drift",
   ]) {
     assert.ok(
       ownerOnlyReport.recommendedCommands.some((command) => command.commandRef === commandRef),
@@ -1040,7 +1068,7 @@ test("renderer draw canvas P2.1 files route to owner behavior inventory and boun
     "test:node:renderer-draw-canvas-orchestration-inventory",
     "test:python:map-renderer-draw-canvas-orchestration-boundary",
     "verify:architecture-boundaries",
-    "verify:pages-dist",
+    "verify:pages-dist-and-drift",
   ]) {
     assert.ok(
       ownerOnlyReport.recommendedCommands.some((command) => command.commandRef === commandRef),
@@ -1141,7 +1169,7 @@ test("renderer frame compositor P2.2 files route to behavior inventory boundary 
     "test:node:renderer-draw-canvas-orchestration-inventory",
     "test:python:map-renderer-frame-compositor-boundary",
     "verify:architecture-boundaries",
-    "verify:pages-dist",
+    "verify:pages-dist-and-drift",
   ]) {
     assert.ok(
       ownerOnlyReport.recommendedCommands.some((command) => command.commandRef === commandRef),
@@ -1248,26 +1276,28 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     .flatMap((group) => group.commands.map((command) => command.commandRef));
   assert.equal(defaultCoreCommands.includes("test:node:williams-crossover-telemetry-live"), false);
 
-  for (const sourceRef of ["tools/perf/run_baseline.mjs", "tools/perf/render_sample_role_policy.mjs", "package-lock.json"]) {
-    const identityInputReport = buildRecommendation([sourceRef]);
-    assert.ok(identityInputReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), sourceRef);
+  const identityInputs = ["tools/perf/run_baseline.mjs", "tools/perf/render_sample_role_policy.mjs", "package-lock.json"];
+  const identityInputReport = buildRecommendation(identityInputs);
+  for (const sourceRef of identityInputs) {
+    assert.ok(commandsForChangedFile(identityInputReport, sourceRef).some((command) => command.commandRef === "perf:williams-crossover:run"), sourceRef);
   }
 });
 
 test("dated schema-2 baseline artifacts route to the perf contract", () => {
   const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === "infra:render-sample-role-policy");
   assert.ok(entry);
-  for (const sourceRef of [
+  const baselineSourceRefs = [
     "docs/perf/baseline_2026-07-14.json",
     "docs/perf/baseline_2026-07-14.md",
     "docs/perf/baseline_2026-07-30.json",
     "docs/perf/baseline_2026-07-30.md",
-  ]) {
+  ];
+  const baselineReport = buildRecommendation(baselineSourceRefs);
+  assert.deepEqual(baselineReport.unmatchedChangedFiles, []);
+  for (const sourceRef of baselineSourceRefs) {
     assert.ok(entry.sourceRefs.includes(sourceRef), `${sourceRef} must be declared by the perf contract`);
-    const report = buildRecommendation([sourceRef]);
-    assert.deepEqual(report.unmatchedChangedFiles, []);
     assert.ok(
-      report.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+      commandsForChangedFile(baselineReport, sourceRef).some((command) => command.commandRef === entry.commandRef),
       `${sourceRef} must select ${entry.commandRef}`,
     );
   }

@@ -4,6 +4,8 @@ import test from "node:test";
 
 import {
   P4_STATE_WRITER_POLICY_TEST_FILES,
+  P4_STATE_WRITER_POLICY_QUICK_TEST_FILES,
+  resolveP4StateWriterPolicyRun,
   resolveP4StateWriterPolicyTestFiles,
 } from "../tools/run_p4_state_writer_policy_tests.mjs";
 import { buildP4PhaseVerificationPlan } from "../tools/run_p4_phase_verification.mjs";
@@ -44,6 +46,33 @@ test("explicit focused runner requests remain isolated from the default suite", 
     ]),
     ["tests/state_writer_policy_behavior.test.mjs"],
   );
+});
+
+test("quick policy runner keeps fast suites and writes an isolated TAP report", () => {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const request = resolveP4StateWriterPolicyRun(["--quick"]);
+
+  assert.equal(
+    packageJson.scripts["test:node:p4:state-writer-policy:quick"],
+    "node tools/run_p4_state_writer_policy_tests.mjs --quick",
+  );
+  assert.deepEqual(request.testArguments, P4_STATE_WRITER_POLICY_QUICK_TEST_FILES);
+  assert.equal(
+    request.testArguments.includes("tests/state_writer_policy_manifest_behavior.test.mjs"),
+    false,
+  );
+  assert.match(request.reportPath, /state-writer-policy-tests\.quick\.tap$/);
+  assert.throws(
+    () => resolveP4StateWriterPolicyRun(["--quick", "tests/state_writer_policy_behavior.test.mjs"]),
+    /cannot be combined/,
+  );
+
+  const focused = resolveP4StateWriterPolicyRun([
+    "--test-name-pattern=explicit repository scan cache",
+    "tests/state_writer_policy_manifest_behavior.test.mjs",
+  ]);
+  assert.equal(focused.mode, "focused");
+  assert.match(focused.reportPath, /state-writer-policy-tests\.focused\.tap$/);
 });
 
 test("exact P4.2a Node gate reaches the batch scanner regression suite", () => {

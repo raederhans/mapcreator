@@ -55,6 +55,27 @@ export const VERIFY_CORE_MAIN_THREAD_GROUP = Object.freeze({
   title: "Main-thread E2E checks",
 });
 
+const P4_RUNTIME_HEAVY_COMMANDS = new Set([
+  "verify:p4:state-writer-policy",
+  "test:python:p4:state-write-boundary",
+  "verify:p4:p4-1",
+  "verify:p4:p4-2a",
+  "verify:p4:p4-2b",
+  "verify:p4:p4-2c",
+  "verify:p4:p4-3",
+]);
+
+function applyMeasuredRuntimeMetadata(entry) {
+  if (!P4_RUNTIME_HEAVY_COMMANDS.has(entry.commandRef)) return entry;
+  return Object.freeze({
+    ...entry,
+    cost: "heavy",
+    resourceLocks: [".runtime-output"],
+    executionOwner: "main-thread",
+    ciProfile: "full",
+  });
+}
+
 function createP3PassFamilyRoute({
   id,
   commandRef,
@@ -117,6 +138,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     sourceRefs: [
       ".gitignore",
       "tools/run_adaptive_tests.mjs",
+      "tools/verification/command_supersession.mjs",
       "tools/select_verification_targets.mjs",
       "tools/test_route_registry.mjs",
       ".github/workflows/pr-verify.yml",
@@ -190,8 +212,11 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     packageScriptRequired: true,
     sourceRefs: [
       "tools/run_core_verification.mjs",
+      "tools/verification/resumable_verification.mjs",
+      "tools/verification/command_supersession.mjs",
       "tests/verify_core_runner_behavior.test.mjs",
       "docs/testing/verify-core.md",
+      "docs/active/test-verification-reform-20260813",
       "package.json",
     ],
     domain: "test-routing",
@@ -1084,6 +1109,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tools/check_p4_state_action_routes.mjs",
       "tools/select_verification_targets.mjs",
       "tools/run_p4_phase_verification.mjs",
+      "tools/verification/resumable_verification.mjs",
       "tools/run_p4_state_writer_policy_tests.mjs",
       "tests/renderer_phase_actions_behavior.test.mjs",
       "tests/renderer_interaction_actions_behavior.test.mjs",
@@ -2469,12 +2495,14 @@ export const VERIFICATION_DOMAINS = Object.freeze([
   })),
   Object.freeze({
     id: "infra:pages-dist",
-    commandRef: "verify:pages-dist",
+    commandRef: "verify:pages-dist-and-drift",
     commandType: "package-script",
     packageScriptRequired: true,
     sourceRefs: [
       "tools/build_pages_dist.py",
       "tests/test_pages_dist_startup_shell.py",
+      "dist/pages-dist-manifest.json",
+      "dist/app",
       "js/core/map_renderer.js",
       "js/core/map_renderer",
       "js/core/renderer",
@@ -2505,7 +2533,6 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     resourceLocks: ["dist", ".runtime-output"],
     executionOwner: "main-thread",
     ciProfile: "deploy-minimal",
-    verifyCoreDefaultGroup: "pages",
     supervisorDomain: "pages-dist",
   }),
   ...[
@@ -2549,4 +2576,4 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     optionalMainThread: true,
     supervisorDomain: "test-routing",
   })),
-]);
+].map(applyMeasuredRuntimeMetadata));

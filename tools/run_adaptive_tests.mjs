@@ -4,6 +4,8 @@ import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { buildRecommendation } from "./select_verification_targets.mjs";
+import { collapseSupersededCommands } from "./verification/command_supersession.mjs";
+import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "test-adaptive-selection.json");
@@ -136,10 +138,13 @@ export function buildExecutionPlan(report, { includeMainThread = false } = {}) {
     .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
   const mainThreadCommands = [...new Set((report.mainThreadSerialVerification || []).map((entry) => entry.commandRef))]
     .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
+  const commandsToRun = collapseSupersededCommands(
+    includeMainThread ? [...childSafeCommands, ...mainThreadCommands] : childSafeCommands,
+  );
   return {
     childSafeCommands,
     mainThreadCommands,
-    commandsToRun: includeMainThread ? [...childSafeCommands, ...mainThreadCommands] : childSafeCommands,
+    commandsToRun,
     blockedMainThreadCommands: includeMainThread ? [] : mainThreadCommands,
   };
 }
@@ -185,10 +190,50 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
 }
 
 function writeOutputs(report, args, executionResults = null, executionPlan = null) {
-  fs.mkdirSync(path.dirname(args.jsonOut), { recursive: true });
-  fs.writeFileSync(args.jsonOut, `${JSON.stringify({ ...report, executionResults, executionPlan }, null, 2)}\n`, "utf8");
+  atomicWriteJsonSync(args.jsonOut, { ...report, executionResults, executionPlan });
   fs.mkdirSync(path.dirname(args.mdOut), { recursive: true });
   fs.writeFileSync(args.mdOut, renderMarkdown(report, executionResults, executionPlan), "utf8");
+}
+
+export function executeAdaptivePlan(executionPlan, {
+  runner = spawnSync,
+  cwd = REPO_ROOT,
+  now = () => new Date(),
+  onCheckpoint = () => {},
+} = {}) {
+  const executionResults = [];
+  for (const commandRef of executionPlan.commandsToRun || []) {
+    const startedAtDate = now();
+    const entry = {
+      commandRef,
+      status: "running",
+      startedAt: startedAtDate.toISOString(),
+      finishedAt: null,
+      durationMs: null,
+      exitCode: null,
+    };
+    executionResults.push(entry);
+    onCheckpoint(executionResults);
+
+    const command = commandToProcess(commandRef);
+    const result = command
+      ? runner(command.bin, command.args, {
+        cwd,
+        stdio: "inherit",
+        shell: false,
+        encoding: "utf8",
+      })
+      : { status: 1, error: "Command could not be resolved." };
+    const finishedAtDate = now();
+    entry.finishedAt = finishedAtDate.toISOString();
+    entry.durationMs = Math.max(0, finishedAtDate.getTime() - startedAtDate.getTime());
+    entry.exitCode = typeof result?.status === "number" ? result.status : 1;
+    entry.status = entry.exitCode === 0 ? "passed" : "failed";
+    if (result?.error) entry.error = String(result.error);
+    onCheckpoint(executionResults);
+    if (entry.exitCode !== 0) break;
+  }
+  return executionResults;
 }
 
 function main() {
@@ -205,9 +250,14 @@ function main() {
         ? "workspace-plus-history"
         : "workspace-only",
   };
+  const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
   if (args.dryRun) {
-    writeOutputs(report, args);
-    console.log(`Adaptive selection planned ${report.recommendedCommands.length} commands (dry-run only; no verification executed).`);
+    writeOutputs(report, args, null, executionPlan);
+    console.log(
+      `Adaptive selection recommended ${report.recommendedCommands.length} commands; `
+      + `execution plan keeps ${executionPlan.commandsToRun.length} and blocks ${executionPlan.blockedMainThreadCommands.length} `
+      + "(dry-run only; no verification executed).",
+    );
     return;
   }
 
@@ -220,7 +270,6 @@ function main() {
     process.exit(2);
   }
 
-  const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
   if (executionPlan.blockedMainThreadCommands.length > 0) {
     writeOutputs(report, args, null, executionPlan);
     console.error(
@@ -230,23 +279,13 @@ function main() {
     process.exit(2);
   }
 
-  const executionResults = [];
-  for (const commandRef of executionPlan.commandsToRun) {
-    const command = commandToProcess(commandRef);
-    if (!command) continue;
-    const result = spawnSync(command.bin, command.args, {
-      cwd: REPO_ROOT,
-      stdio: "inherit",
-      shell: false,
-      encoding: "utf8",
-    });
-    const exitCode = typeof result.status === "number" ? result.status : 1;
-    executionResults.push({ commandRef, exitCode });
-    if (exitCode !== 0) {
-      writeOutputs(report, args, executionResults, executionPlan);
-      process.exit(exitCode);
-    }
-  }
+  const executionResults = executeAdaptivePlan(executionPlan, {
+    onCheckpoint(results) {
+      writeOutputs(report, args, results, executionPlan);
+    },
+  });
+  const failed = executionResults.find((entry) => entry.exitCode !== 0);
+  if (failed) process.exit(failed.exitCode);
   if (executionPlan.commandsToRun.length > 0) {
     spawnSync("node", ["tools/test_timing_summary.mjs"], {
       cwd: REPO_ROOT,

@@ -16,6 +16,19 @@ import {
   runCoreVerification,
   runVerificationPlan,
 } from "../tools/run_core_verification.mjs";
+import {
+  RESUMABLE_VERIFICATION_KIND,
+  RESUMABLE_VERIFICATION_SCHEMA_VERSION,
+  atomicWriteJsonSync,
+  buildCommandStates,
+  buildPlanIdentity,
+  decideResume,
+} from "../tools/verification/resumable_verification.mjs";
+import {
+  buildExecutionPlan,
+  executeAdaptivePlan,
+} from "../tools/run_adaptive_tests.mjs";
+import { collapseSupersededCommands } from "../tools/verification/command_supersession.mjs";
 
 const PACKAGE_SCRIPTS = {
   "test:node:city-points-render-owner": "node --test tests/city_points_render_owner_behavior.test.mjs tests/urban_city_policy_strategic_values_behavior.test.mjs",
@@ -107,6 +120,7 @@ const PACKAGE_SCRIPTS = {
   "test:node:scenario-chunk-contracts": "node --test tests/scenario_chunk_contracts.test.mjs",
   "test:node:annotation-productization": "node --test tests/file_manager_project_roundtrip_behavior.test.mjs tests/export_workbench_state_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs",
   "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts",
+  "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
   "verify:dist-drift": "npm run python -- tools/build_pages_dist.py && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
   "test:e2e:smoke": "node tools/e2e_layering.mjs run smoke",
   "test:e2e:scenario-apply-concurrency": "node node_modules/@playwright/test/cli.js test tests/e2e/scenario_apply_concurrency.spec.js --workers=1 --retries=0",
@@ -175,8 +189,7 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
     "test:python:p4:p4-2c-boundary",
     "test:node:p4:p4-3",
     "test:python:p4:p4-3-boundary",
-    "verify:pages-dist",
-    "verify:dist-drift",
+    "verify:pages-dist-and-drift",
     "test:node:verification-metadata",
     "test:node:renderer-pass-family-inventory",
     "test:node:visual-effects-pass-owner",
@@ -355,4 +368,460 @@ test("execution records failure and stops on first failing command", () => {
 
   assert.deepEqual(results.map((entry) => [entry.commandRef, entry.exitCode]), [["first", 0], ["second", 7]]);
   assert.equal(calls.length, 2);
+});
+
+function cleanIdentity(verificationSha, verificationTreeSha) {
+  return {
+    verificationSha,
+    verificationTreeSha,
+    workspaceClean: true,
+    trackedClean: true,
+    includesUntracked: true,
+    workspaceStatus: "",
+  };
+}
+
+function checkpointFor(planIdentity, identity, passedIndexes) {
+  const commands = buildCommandStates(planIdentity);
+  for (const index of passedIndexes) {
+    Object.assign(commands[index], {
+      status: "passed",
+      exitCode: 0,
+      startedAt: "2026-08-13T00:00:00.000Z",
+      finishedAt: "2026-08-13T00:00:01.000Z",
+      durationMs: 1000,
+      verificationIdentityAfter: identity,
+      evidenceValidatedForIdentity: identity,
+    });
+  }
+  const allPassed = commands.every((entry) => entry.status === "passed");
+  return {
+    schemaVersion: RESUMABLE_VERIFICATION_SCHEMA_VERSION,
+    kind: RESUMABLE_VERIFICATION_KIND,
+    runnerId: planIdentity.runnerId,
+    planIdentity,
+    verificationIdentity: identity,
+    finalVerificationIdentity: allPassed ? identity : null,
+    verdict: allPassed ? "pass" : "failed",
+    commands,
+  };
+}
+
+test("resume parsing is explicit and does not expose an arbitrary skip flag", () => {
+  assert.deepEqual(parseArgs(["--resume-from", "previous.json"]), {
+    list: false,
+    includeMainThread: false,
+    resume: true,
+    resumeFrom: "previous.json",
+    jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
+    mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.md"),
+  });
+  assert.throws(() => parseArgs(["--skip", "verify:p4:state-writer-policy"]), /Unknown verify:core argument/);
+});
+
+test("verification checkpoints atomically replace complete parseable JSON", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "verify-checkpoint-"));
+  const reportPath = path.join(root, "nested", "checkpoint.json");
+  atomicWriteJsonSync(reportPath, { generation: 1, commands: [{ status: "running" }] });
+  atomicWriteJsonSync(reportPath, { generation: 2, commands: [{ status: "passed" }] });
+
+  assert.deepEqual(JSON.parse(fs.readFileSync(reportPath, "utf8")), {
+    generation: 2,
+    commands: [{ status: "passed" }],
+  });
+  assert.deepEqual(
+    fs.readdirSync(path.dirname(reportPath)).filter((entry) => entry.endsWith(".tmp")),
+    [],
+  );
+});
+
+test("same-tree resume reuses every command with durable passed evidence", () => {
+  const planIdentity = buildPlanIdentity({
+    runnerId: "verify-core",
+    entries: [
+      { group: "one", commandRef: "first", command: "node first.mjs", commandType: "package-script" },
+      { group: "one", commandRef: "second", command: "node second.mjs", commandType: "package-script" },
+    ],
+  });
+  const identity = cleanIdentity("sha-one", "tree-one");
+  const checkpoint = checkpointFor(planIdentity, identity, [0]);
+  const decision = decideResume({
+    checkpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: identity,
+    changedFilesReader: () => {
+      throw new Error("exact resume must not inspect a diff");
+    },
+  });
+  assert.equal(decision.mode, "exact");
+  assert.deepEqual(decision.reusedIndexes, [0]);
+});
+
+test("core runner same-tree resume skips its durable passed prefix", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "verify-core-resume-"));
+  const jsonOut = path.join(root, "verify-core.json");
+  const mdOut = path.join(root, "verify-core.md");
+  const identity = cleanIdentity("sha-one", "tree-one");
+  let firstCalls = 0;
+  const first = runCoreVerification({
+    argv: { list: false, includeMainThread: false, resume: false, resumeFrom: null, jsonOut, mdOut },
+    packageScripts: PACKAGE_SCRIPTS,
+    identityReader: () => identity,
+    stdio: "pipe",
+    now: (() => {
+      let tick = 0;
+      return () => new Date(tick++ * 5);
+    })(),
+    runner() {
+      firstCalls += 1;
+      return { status: firstCalls === 2 ? 7 : 0 };
+    },
+  });
+  assert.equal(first.exitCode, 7);
+  assert.equal(first.report.commands[0].status, "passed");
+  assert.equal(first.report.commands[1].status, "failed");
+
+  const resumedCalls = [];
+  const resumed = runCoreVerification({
+    argv: { list: false, includeMainThread: false, resume: true, resumeFrom: jsonOut, jsonOut, mdOut },
+    packageScripts: PACKAGE_SCRIPTS,
+    identityReader: () => identity,
+    stdio: "pipe",
+    now: (() => {
+      let tick = 1000;
+      return () => new Date(tick++ * 5);
+    })(),
+    runner(bin, args) {
+      resumedCalls.push([bin, ...args]);
+      return { status: 0 };
+    },
+  });
+
+  assert.equal(resumed.exitCode, 0);
+  assert.equal(resumed.report.resumeDecision.mode, "exact");
+  assert.equal(resumed.report.summary.reused, 1);
+  assert.equal(resumed.report.commands[0].evidenceDisposition, "reused-exact");
+  assert.equal(resumedCalls.length, resumed.plan.commandsToRun.length - 1);
+});
+
+test("changed-tree resume reruns the suffix from the earliest routed command", () => {
+  const planIdentity = buildPlanIdentity({
+    runnerId: "verify-core",
+    entries: [
+      { group: "one", commandRef: "verify:alpha", command: "node alpha.mjs", commandType: "package-script" },
+      { group: "one", commandRef: "verify:beta", command: "node beta.mjs", commandType: "package-script" },
+      { group: "one", commandRef: "verify:gamma", command: "node gamma.mjs", commandType: "package-script" },
+    ],
+  });
+  const checkpoint = checkpointFor(planIdentity, cleanIdentity("sha-one", "tree-one"), [0, 1]);
+  const decision = decideResume({
+    checkpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: cleanIdentity("sha-two", "tree-two"),
+    changedFilesReader: () => ["js/alpha.js"],
+    selector: () => ({
+      unmatchedChangedFiles: [],
+      matchedByFile: [{
+        changedFile: "js/alpha.js",
+        recommendedCommands: [{ commandRef: "verify:alpha" }],
+      }],
+    }),
+  });
+  assert.equal(decision.mode, "sf-ats");
+  assert.equal(decision.resumeIndex, 0);
+  assert.deepEqual(decision.reusedIndexes, []);
+  assert.deepEqual(decision.invalidatedCommandRefs, ["verify:alpha"]);
+});
+
+test("cross-revision reused evidence remains bound across repeated exact resumes", () => {
+  const planIdentity = buildPlanIdentity({
+    runnerId: "verify-core",
+    entries: [
+      { group: "one", commandRef: "verify:alpha", command: "node alpha.mjs" },
+      { group: "one", commandRef: "verify:beta", command: "node beta.mjs" },
+      { group: "one", commandRef: "verify:gamma", command: "node gamma.mjs" },
+    ],
+  });
+  const oldIdentity = cleanIdentity("sha-old", "tree-old");
+  const currentIdentity = cleanIdentity("sha-current", "tree-current");
+  const oldCheckpoint = checkpointFor(planIdentity, oldIdentity, [0]);
+  const crossRevision = decideResume({
+    checkpoint: oldCheckpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: currentIdentity,
+    changedFilesReader: () => ["js/beta.js"],
+    selector: () => ({
+      unmatchedChangedFiles: [],
+      matchedByFile: [{
+        changedFile: "js/beta.js",
+        recommendedCommands: [{ commandRef: "verify:beta" }],
+      }],
+    }),
+  });
+  assert.deepEqual(crossRevision.reusedIndexes, [0]);
+  const currentCommands = buildCommandStates(planIdentity, {
+    checkpoint: oldCheckpoint,
+    resumeDecision: crossRevision,
+    verificationIdentity: currentIdentity,
+  });
+  Object.assign(currentCommands[1], {
+    status: "failed",
+    exitCode: 7,
+    startedAt: "2026-08-13T00:01:00.000Z",
+    finishedAt: "2026-08-13T00:01:01.000Z",
+    durationMs: 1000,
+    verificationIdentityAfter: currentIdentity,
+    evidenceValidatedForIdentity: currentIdentity,
+  });
+  const currentCheckpoint = {
+    schemaVersion: RESUMABLE_VERIFICATION_SCHEMA_VERSION,
+    kind: RESUMABLE_VERIFICATION_KIND,
+    runnerId: planIdentity.runnerId,
+    planIdentity,
+    verificationIdentity: currentIdentity,
+    finalVerificationIdentity: null,
+    verdict: "failed",
+    commands: currentCommands,
+  };
+  const secondResume = decideResume({
+    checkpoint: currentCheckpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: currentIdentity,
+    changedFilesReader: () => {
+      throw new Error("second exact resume must not inspect a diff");
+    },
+  });
+  assert.equal(secondResume.mode, "exact");
+  assert.deepEqual(secondResume.reusedIndexes, [0]);
+  assert.equal(secondResume.resumeIndex, 1);
+  assert.deepEqual(currentCommands[0].verificationIdentityAfter, oldIdentity);
+  assert.deepEqual(currentCommands[0].evidenceValidatedForIdentity, currentIdentity);
+
+  const secondCommands = buildCommandStates(planIdentity, {
+    checkpoint: currentCheckpoint,
+    resumeDecision: secondResume,
+    verificationIdentity: currentIdentity,
+  });
+  Object.assign(secondCommands[1], {
+    status: "failed",
+    exitCode: 7,
+    startedAt: "2026-08-13T00:02:00.000Z",
+    finishedAt: "2026-08-13T00:02:01.000Z",
+    durationMs: 1000,
+    verificationIdentityAfter: currentIdentity,
+    evidenceValidatedForIdentity: currentIdentity,
+  });
+  const secondCheckpoint = {
+    ...currentCheckpoint,
+    commands: secondCommands,
+  };
+  const thirdResume = decideResume({
+    checkpoint: secondCheckpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: currentIdentity,
+    changedFilesReader: () => {
+      throw new Error("third exact resume must not inspect a diff");
+    },
+  });
+  assert.deepEqual(thirdResume.reusedIndexes, [0]);
+  assert.equal(secondCommands[0].evidenceDisposition, "reused-after-sf-ats");
+  assert.equal(secondCommands[0].lastReuseMode, "reused-exact");
+  assert.equal(secondCommands[0].sourceVerificationSha, oldIdentity.verificationSha);
+});
+
+test("revision drift without path changes and non-contiguous evidence fail closed", () => {
+  const planIdentity = buildPlanIdentity({
+    runnerId: "verify-core",
+    entries: [
+      { group: "one", commandRef: "verify:alpha", command: "node alpha.mjs" },
+      { group: "one", commandRef: "verify:beta", command: "node beta.mjs" },
+    ],
+  });
+  const checkpoint = checkpointFor(planIdentity, cleanIdentity("sha-one", "tree-one"), [0]);
+  const revisionOnly = decideResume({
+    checkpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: cleanIdentity("sha-two", "tree-one"),
+    changedFilesReader: () => [],
+  });
+  assert.equal(revisionOnly.resumeIndex, 0);
+  assert.deepEqual(revisionOnly.reusedIndexes, []);
+  assert.deepEqual(revisionOnly.reasonCodes, ["revision-drift-without-path-change"]);
+
+  const invalid = checkpointFor(planIdentity, cleanIdentity("sha-one", "tree-one"), [1]);
+  assert.throws(() => decideResume({
+    checkpoint: invalid,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: cleanIdentity("sha-one", "tree-one"),
+    changedFilesReader: () => [],
+  }), /non-contiguous passed command/);
+});
+
+test("resume rejects passed evidence with command or final identity drift", () => {
+  const planIdentity = buildPlanIdentity({
+    runnerId: "verify-core",
+    entries: [
+      { group: "one", commandRef: "verify:alpha", command: "node alpha.mjs" },
+      { group: "one", commandRef: "verify:beta", command: "node beta.mjs" },
+    ],
+  });
+  const identity = cleanIdentity("sha-one", "tree-one");
+  const commandDrift = checkpointFor(planIdentity, identity, [0]);
+  commandDrift.commands[0].verificationIdentityAfter = cleanIdentity("sha-one", "tree-drifted");
+  assert.throws(() => decideResume({
+    checkpoint: commandDrift,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: identity,
+    changedFilesReader: () => [],
+  }), /drifted execution evidence/);
+
+  const finalDrift = checkpointFor(planIdentity, identity, [0, 1]);
+  finalDrift.verdict = "failed";
+  finalDrift.finalVerificationIdentity = cleanIdentity("sha-one", "tree-drifted");
+  assert.throws(() => decideResume({
+    checkpoint: finalDrift,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: identity,
+    changedFilesReader: () => [],
+  }), /no valid final pass identity/);
+});
+
+test("dirty and unmatched changed workspaces block resume before execution", () => {
+  const planIdentity = buildPlanIdentity({
+    runnerId: "verify-core",
+    entries: [{ group: "one", commandRef: "verify:alpha", command: "node alpha.mjs" }],
+  });
+  const checkpoint = checkpointFor(planIdentity, cleanIdentity("sha-one", "tree-one"), [0]);
+  const dirty = decideResume({
+    checkpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: { ...cleanIdentity("sha-two", "tree-two"), workspaceClean: false },
+    changedFilesReader: () => [],
+  });
+  assert.equal(dirty.blockReason, "workspace-dirty");
+
+  const unmatched = decideResume({
+    checkpoint,
+    runnerId: "verify-core",
+    planIdentity,
+    verificationIdentity: cleanIdentity("sha-two", "tree-two"),
+    changedFilesReader: () => ["unknown.file"],
+    selector: () => ({ unmatchedChangedFiles: ["unknown.file"], matchedByFile: [] }),
+  });
+  assert.equal(unmatched.blockReason, "unmatched-changed-files");
+  assert.deepEqual(unmatched.reusedIndexes, []);
+});
+
+test("adaptive command supersession removes covered TNO and Pages commands", () => {
+  const commands = collapseSupersededCommands([
+    "verify:scenario-contracts:strict",
+    "verify:tno-coverage-ledger",
+    "verify:tno-atlantropa-coverage",
+    "verify:tno-polar-coverage",
+    "test:node:scenario-chunk-contracts",
+    "verify:tno-coverage-chain",
+    "verify:dist-drift",
+    "verify:pages-dist",
+    "verify:pages-dist-and-drift",
+    "verify:unrelated",
+  ]);
+  assert.deepEqual(commands, [
+    "verify:tno-coverage-chain",
+    "verify:pages-dist-and-drift",
+    "verify:unrelated",
+  ]);
+
+  const plan = buildExecutionPlan({
+    childAgentStaticTasks: [
+      { commandRef: "verify:tno-coverage-ledger" },
+      { commandRef: "verify:tno-coverage-chain" },
+    ],
+    mainThreadSerialVerification: [],
+  });
+  assert.deepEqual(plan.commandsToRun, ["verify:tno-coverage-chain"]);
+});
+
+test("command supersession preserves current policy evidence beside historical exact phases", () => {
+  assert.deepEqual(collapseSupersededCommands([
+    "verify:p4:p4-2b",
+    "verify:p4:state-writer-policy",
+    "test:node:p4:state-writer-policy",
+    "test:node:p4:state-writer-policy:quick",
+  ]), [
+    "verify:p4:p4-2b",
+    "verify:p4:state-writer-policy",
+  ]);
+  assert.deepEqual(collapseSupersededCommands([
+    "verify:p4:p4-3",
+    "verify:p4:state-writer-policy",
+    "test:node:p4:state-writer-policy",
+  ]), ["verify:p4:p4-3"]);
+});
+
+test("Pages checked gate keeps generation compatibility and performs one build", () => {
+  const scripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  const generation = scripts["verify:pages-dist"];
+  const checked = scripts["verify:pages-dist-and-drift"];
+  assert.equal((generation.match(/tools\/build_pages_dist\.py/g) || []).length, 1);
+  assert.equal((checked.match(/tools\/build_pages_dist\.py/g) || []).length, 1);
+  for (const contract of [
+    "tests.test_pages_dist_startup_shell",
+    "test:node:landing-showcase-view",
+    "test:node:sample-project-contracts",
+  ]) {
+    assert.match(generation, new RegExp(contract.replaceAll(":", "\\:")));
+    assert.match(checked, new RegExp(contract.replaceAll(":", "\\:")));
+  }
+  assert.equal(generation.includes("git diff --exit-code"), false);
+  assert.equal(checked.includes("git diff --exit-code"), true);
+});
+
+test("adaptive command supersession keeps the exact P4.3 gate as the complete heavy lane", () => {
+  const commands = collapseSupersededCommands([
+    "test:node:p4:p4-3",
+    "test:python:p4:p4-3-boundary",
+    "test:node:p4:state-writer-policy:quick",
+    "test:node:p4:state-writer-policy",
+    "verify:p4:state-writer-policy",
+    "verify:p4:p4-3",
+  ]);
+
+  assert.deepEqual(commands, ["verify:p4:p4-3"]);
+});
+
+test("adaptive execution checkpoints running and terminal results with timings", () => {
+  const checkpoints = [];
+  const calls = [];
+  const results = executeAdaptivePlan({
+    commandsToRun: ["node first.mjs", "node second.mjs"],
+  }, {
+    cwd: process.cwd(),
+    now: (() => {
+      let tick = 0;
+      return () => new Date(tick++ * 25);
+    })(),
+    runner(bin, args) {
+      calls.push([bin, ...args]);
+      return { status: calls.length === 1 ? 0 : 7 };
+    },
+    onCheckpoint(entries) {
+      checkpoints.push(structuredClone(entries));
+    },
+  });
+  assert.equal(checkpoints.length, 4);
+  assert.equal(checkpoints[0][0].status, "running");
+  assert.equal(checkpoints[1][0].status, "passed");
+  assert.equal(checkpoints[3][1].status, "failed");
+  assert.deepEqual(results.map((entry) => entry.durationMs), [25, 25]);
+  assert.deepEqual(results.map((entry) => entry.exitCode), [0, 7]);
 });

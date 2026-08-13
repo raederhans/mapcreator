@@ -4671,6 +4671,38 @@ async function discoverScannedCandidateBindings(
   };
 }
 
+export async function resolveCachedStateWriterRepositoryScan({
+  repositoryScanCache = null,
+  previousPolicy = null,
+  scanIdentity = "",
+  scan,
+}) {
+  if (typeof scan !== "function") {
+    throw new TypeError("resolveCachedStateWriterRepositoryScan requires a scan function.");
+  }
+  if (!repositoryScanCache) return scan();
+  if (!(repositoryScanCache instanceof Map)) {
+    throw new TypeError("repositoryScanCache must be a Map when provided.");
+  }
+  const policyKey = previousPolicy || null;
+  let scansByIdentity = repositoryScanCache.get(policyKey);
+  if (!scansByIdentity) {
+    scansByIdentity = new Map();
+    repositoryScanCache.set(policyKey, scansByIdentity);
+  }
+  const normalizedIdentity = String(scanIdentity || "default");
+  if (!scansByIdentity.has(normalizedIdentity)) {
+    const pending = Promise.resolve().then(scan);
+    scansByIdentity.set(normalizedIdentity, pending);
+    pending.catch(() => {
+      if (scansByIdentity.get(normalizedIdentity) === pending) {
+        scansByIdentity.delete(normalizedIdentity);
+      }
+    });
+  }
+  return structuredClone(await scansByIdentity.get(normalizedIdentity));
+}
+
 function createGrantKey(domain, migrationPhase) {
   return `${domain}|${migrationPhase}`;
 }
@@ -4989,6 +5021,7 @@ export async function buildStateWriterPolicySnapshot({
   callerToActionBootstrapSeed = [],
   refreshP4Baseline = false,
   acceptedPolicyCheckpoint = null,
+  repositoryScanCache = null,
 } = {}) {
   const normalizedPhase = normalizeP4StateActionPhase(phase);
   if (refreshP4Baseline && normalizedPhase !== "P4.0") {
@@ -5054,14 +5087,23 @@ export async function buildStateWriterPolicySnapshot({
     candidates: scannedCandidates,
     actionDelegations,
     derivedAliasTaintModeManifest,
-  } = await discoverScannedCandidateBindings(
-    legacyAllowlistPaths,
-    {
-      previousPolicy: refreshP4Baseline ? null : previousPolicy,
-      baseSha: previousPolicy?.baseline?.sourceBaseSha
-        || baseSha,
-    },
-  );
+  } = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache,
+    previousPolicy: refreshP4Baseline ? null : previousPolicy,
+    scanIdentity: JSON.stringify({
+      baseSha: previousPolicy?.baseline?.sourceBaseSha || baseSha,
+      legacyAllowlistPaths,
+      refreshP4Baseline,
+    }),
+    scan: () => discoverScannedCandidateBindings(
+      legacyAllowlistPaths,
+      {
+        previousPolicy: refreshP4Baseline ? null : previousPolicy,
+        baseSha: previousPolicy?.baseline?.sourceBaseSha
+          || baseSha,
+      },
+    ),
+  });
   const unknownStateKeyAuthorityViolations =
     collectUnknownStateKeyAuthorityViolations(
       scannedCandidates,
@@ -5439,20 +5481,31 @@ function policyBindingSignatures(policy) {
   return signatures;
 }
 
-export async function scanStateWriterPolicySnapshot(policy) {
+export async function scanStateWriterPolicySnapshot(policy, {
+  repositoryScanCache = null,
+} = {}) {
   const legacyAllowlistPaths = await readLegacyStateWriterAllowlist();
   const policySignatures = policyBindingSignatures(policy);
   const {
     candidates,
     actionDelegations,
     derivedAliasTaintModeManifest,
-  } = await discoverScannedCandidateBindings(
-    legacyAllowlistPaths,
-    {
-      previousPolicy: policy,
-      baseSha: policy?.baseline?.sourceBaseSha,
-    },
-  );
+  } = await resolveCachedStateWriterRepositoryScan({
+    repositoryScanCache,
+    previousPolicy: policy,
+    scanIdentity: JSON.stringify({
+      baseSha: policy?.baseline?.sourceBaseSha || "",
+      legacyAllowlistPaths,
+      refreshP4Baseline: false,
+    }),
+    scan: () => discoverScannedCandidateBindings(
+      legacyAllowlistPaths,
+      {
+        previousPolicy: policy,
+        baseSha: policy?.baseline?.sourceBaseSha,
+      },
+    ),
+  });
   const candidateSignatures = new Set(
     candidates.map(
       (candidate) =>

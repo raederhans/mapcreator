@@ -176,8 +176,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--report-path",
-        default="",
-        help="Optional JSON report output path. Writes a structured validation report when provided.",
+        action="append",
+        default=[],
+        help="Optional JSON report output path. May be repeated to write one validation result to multiple compatibility paths.",
     )
     return parser.parse_args()
 
@@ -3118,6 +3119,12 @@ def write_validation_report(report_path: Path, reports: list[dict[str, Any]], st
     report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def resolve_validation_report_paths(values: list[str] | str | None) -> list[Path]:
+    if isinstance(values, str):
+        values = [values] if values.strip() else []
+    return [Path(value).resolve() for value in (values or []) if str(value).strip()]
+
+
 def main() -> int:
     args = parse_args()
     if args.write_safe and not args.strict:
@@ -3128,7 +3135,8 @@ def main() -> int:
         raise SystemExit("No scenario directories found to validate.")
 
     duplicate_scenario_dirs = collect_duplicate_scenario_dirs(discover_scenario_dirs(scenarios_root, []))
-    report_path = Path(args.report_path).resolve() if args.report_path else None
+    report_paths = resolve_validation_report_paths(args.report_path)
+    report_path = report_paths[0] if report_paths else None
     any_errors = False
     reports: list[dict[str, Any]] = []
     for scenario_dir in scenario_dirs:
@@ -3203,8 +3211,8 @@ def main() -> int:
         for line in repair_track_lines:
             print(f"~ {line}")
 
-    if report_path is not None:
-        write_validation_report(report_path, reports, strict=args.strict)
+    for output_path in report_paths:
+        write_validation_report(output_path, reports, strict=args.strict)
 
     return 1 if any_errors else 0
 

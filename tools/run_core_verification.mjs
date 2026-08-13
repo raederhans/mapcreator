@@ -8,6 +8,19 @@ import {
   buildVerifyCoreMainThreadGroup,
   getVerifyCoreOptionalMainThreadCommands,
 } from "./verification/verification_metadata_helpers.mjs";
+import {
+  RESUMABLE_VERIFICATION_KIND,
+  RESUMABLE_VERIFICATION_SCHEMA_VERSION,
+  atomicWriteJsonSync,
+  buildCommandStates,
+  buildPlanIdentity,
+  captureVerificationIdentity,
+  decideResume,
+  discoverChangedFilesBetween,
+  readResumeCheckpoint,
+  runCheckpointedCommands,
+  summarizeCommandStates,
+} from "./verification/resumable_verification.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
@@ -21,6 +34,8 @@ export function parseArgs(argv) {
   const args = {
     list: false,
     includeMainThread: false,
+    resume: false,
+    resumeFrom: null,
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
   };
@@ -28,6 +43,11 @@ export function parseArgs(argv) {
     const token = argv[index];
     if (token === "--list") args.list = true;
     else if (token === "--include-main-thread") args.includeMainThread = true;
+    else if (token === "--resume") args.resume = true;
+    else if (token === "--resume-from") {
+      args.resume = true;
+      args.resumeFrom = argv[++index];
+    }
     else if (token === "--json-out") args.jsonOut = argv[++index];
     else if (token === "--md-out") args.mdOut = argv[++index];
     else throw new Error(`Unknown verify:core argument: ${token}`);
@@ -218,10 +238,51 @@ export function writeReports(plan, results = [], { jsonOut = DEFAULT_JSON_OUT, m
     },
     results,
   };
-  fs.mkdirSync(path.dirname(jsonOut), { recursive: true });
-  fs.writeFileSync(jsonOut, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  atomicWriteJsonSync(jsonOut, report);
   fs.mkdirSync(path.dirname(mdOut), { recursive: true });
   fs.writeFileSync(mdOut, renderMarkdownReport(plan, results), "utf8");
+  return report;
+}
+
+function renderExecutionMarkdown(report) {
+  const results = (report.commands || []).filter((entry) => entry.status !== "pending");
+  const base = renderMarkdownReport(report, results.map((entry) => ({
+    commandRef: entry.commandRef,
+    exitCode: entry.exitCode,
+  }))).trimEnd();
+  const decision = report.resumeDecision || {};
+  const lines = [
+    base,
+    "",
+    "## Resume",
+    `- mode: ${decision.mode || "fresh"}`,
+    `- blockReason: ${decision.blockReason || "none"}`,
+    `- reusedCommands: ${report.summary?.reused || 0}`,
+    `- changedFiles: ${(decision.changedFiles || []).length}`,
+    `- unmatchedChangedFiles: ${(decision.unmatchedChangedFiles || []).length}`,
+    "",
+    "## Timings",
+    `- observedDurationMs: ${report.summary?.observedDurationMs || 0}`,
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
+function writeExecutionReport(report, { jsonOut, mdOut }) {
+  report.updatedAt = new Date().toISOString();
+  report.summary = summarizeCommandStates(report.commands);
+  report.results = report.commands
+    .filter((entry) => entry.status !== "pending")
+    .map((entry) => ({
+      commandRef: entry.commandRef,
+      command: entry.command,
+      status: entry.status,
+      exitCode: entry.exitCode,
+      durationMs: entry.durationMs,
+      evidenceDisposition: entry.evidenceDisposition,
+    }));
+  atomicWriteJsonSync(jsonOut, report);
+  fs.mkdirSync(path.dirname(mdOut), { recursive: true });
+  fs.writeFileSync(mdOut, renderExecutionMarkdown(report), "utf8");
   return report;
 }
 
@@ -259,17 +320,120 @@ export function runCoreVerification({
   cwd = REPO_ROOT,
   stdio = "inherit",
   platform = process.platform,
+  now = () => new Date(),
+  identityReader = () => captureVerificationIdentity({ cwd }),
+  checkpointReader = readResumeCheckpoint,
+  changedFilesReader = (baseSha) => discoverChangedFilesBetween(baseSha, { cwd }),
 } = {}) {
   const args = Array.isArray(argv) ? parseArgs(argv) : argv;
   const plan = buildCoreVerificationPlan({ includeMainThread: args.includeMainThread, packageScripts });
+  const runnerId = args.includeMainThread ? "verify-core-main-thread" : "verify-core";
+  const planIdentity = buildPlanIdentity({ runnerId, entries: plan.commandsToRun });
+  const verificationIdentity = identityReader();
+  let previousCheckpoint = null;
+  let resumeDecision = {
+    mode: "fresh",
+    blockReason: null,
+    reusedIndexes: [],
+    changedFiles: [],
+    unmatchedChangedFiles: [],
+    invalidatedCommandRefs: [],
+  };
+  if (args.resume) {
+    try {
+      previousCheckpoint = checkpointReader(args.resumeFrom || args.jsonOut);
+      resumeDecision = decideResume({
+        checkpoint: previousCheckpoint,
+        runnerId,
+        planIdentity,
+        verificationIdentity,
+        changedFilesReader,
+      });
+    } catch (error) {
+      resumeDecision = {
+        mode: "blocked",
+        blockReason: error?.code || "checkpoint-invalid",
+        detail: error?.message || String(error),
+        reusedIndexes: [],
+        changedFiles: [],
+        unmatchedChangedFiles: [],
+        invalidatedCommandRefs: [],
+      };
+    }
+  }
+  const report = {
+    ...plan,
+    schemaVersion: RESUMABLE_VERIFICATION_SCHEMA_VERSION,
+    kind: RESUMABLE_VERIFICATION_KIND,
+    runnerId,
+    planIdentity,
+    verificationIdentity,
+    finalVerificationIdentity: null,
+    startedAt: now().toISOString(),
+    updatedAt: null,
+    verdict: args.list ? "listed" : resumeDecision.mode === "blocked" ? "blocked" : "running",
+    blockReason: resumeDecision.blockReason,
+    failedCommandRef: null,
+    resumeDecision,
+    commands: buildCommandStates(planIdentity, {
+      checkpoint: previousCheckpoint,
+      resumeDecision,
+      verificationIdentity,
+    }),
+    summary: null,
+    results: [],
+    reportPaths: {
+      json: args.jsonOut,
+      markdown: args.mdOut,
+    },
+  };
+  const checkpoint = () => writeExecutionReport(report, { jsonOut: args.jsonOut, mdOut: args.mdOut });
   if (args.list) {
-    const report = writeReports(plan, [], { jsonOut: args.jsonOut, mdOut: args.mdOut });
+    checkpoint();
     return { plan, results: [], report, exitCode: 0 };
   }
-  const results = runVerificationPlan(plan, { runner, packageScripts, cwd, stdio, platform });
-  const report = writeReports(plan, results, { jsonOut: args.jsonOut, mdOut: args.mdOut });
-  const failed = results.find((entry) => entry.exitCode !== 0);
-  return { plan, results, report, exitCode: failed ? failed.exitCode : 0 };
+  if (resumeDecision.mode === "blocked") {
+    checkpoint();
+    return { plan, results: [], report, exitCode: 2 };
+  }
+  checkpoint();
+  runCheckpointedCommands({
+    report,
+    now,
+    checkpoint,
+    identityReader,
+    expectedVerificationIdentity: verificationIdentity,
+    execute(commandEntry) {
+      const command = commandToProcess(commandEntry.commandRef, { packageScripts, platform });
+      if (!command) return { status: 1, error: "unresolvable command" };
+      return runner(command.bin, command.args, {
+        cwd,
+        stdio,
+        shell: false,
+        encoding: "utf8",
+      });
+    },
+  });
+  const failed = report.commands.find((entry) => entry.status === "failed");
+  if (!failed && report.commands.every((entry) => entry.status === "passed")) {
+    report.finalVerificationIdentity = identityReader();
+    if (
+      verificationIdentity.workspaceClean
+      && (
+        !report.finalVerificationIdentity.workspaceClean
+        || report.finalVerificationIdentity.verificationSha !== verificationIdentity.verificationSha
+        || report.finalVerificationIdentity.verificationTreeSha !== verificationIdentity.verificationTreeSha
+      )
+    ) {
+      report.verdict = "failed";
+      report.blockReason = "verification-identity-drift";
+    } else {
+      report.verdict = "pass";
+    }
+  }
+  checkpoint();
+  const exitCode = failed ? failed.exitCode : report.verdict === "pass" ? 0 : 2;
+  return { plan, results: report.results, report, exitCode };
 }
 
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
