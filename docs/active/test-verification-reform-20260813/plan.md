@@ -31,7 +31,7 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 3: Profile and reduce repeated state-writer repository scans.
 - [x] Stage 4: Audit route metadata, gate overlap, timing budgets, and focused test entrypoints.
 - [x] Stage 5a: Run targeted regression, adaptive selection, and independent review.
-- [ ] Stage 6A: Cache exact historical derived-alias proofs with complete identity invalidation.
+- [x] Stage 6A: Cache exact historical derived-alias proofs with complete identity invalidation.
 - [ ] Stage 6B: Reuse revision-bound policy evidence across Python, P4, and Core process boundaries.
 - [ ] Stage 6C: Reform the remaining test portfolio from measured timing and coverage-equivalence evidence.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.

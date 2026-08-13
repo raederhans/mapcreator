@@ -2,7 +2,7 @@
 
 ## Current status
 
-The initial runner reform is committed. Stage 6 hotspot reduction is active under three ordered worktree tasks; frozen-candidate admission follows their integration.
+The initial runner reform and Stage 6A proof reuse are committed. Stage 6B evidence reuse is active; Stage 6C has a measured, non-overlapping implementation slice ready after B.
 
 ## Checklist
 
@@ -18,7 +18,7 @@ The initial runner reform is committed. Stage 6 hotspot reduction is active unde
 - [x] Collapse covered commands for P4 exact phases, TNO coverage chain, and Pages verification.
 - [x] Run SF-ATS dry-run and targeted validation.
 - [x] Complete independent fail-closed and compatibility review.
-- [ ] Stage 6A: admit the derived-proof cache candidate from Hotspot A.
+- [x] Stage 6A: admit the derived-proof cache candidate from Hotspot A.
 - [ ] Stage 6B: authorize and admit cross-process evidence reuse after Stage 6A.
 - [ ] Stage 6C: authorize and admit measured test-portfolio reform after Stages 6A and 6B.
 - [ ] Freeze candidate and run the remaining full admission gates once.
@@ -43,6 +43,9 @@ The initial runner reform is committed. Stage 6 hotspot reduction is active unde
 | SF-ATS follow-up dry-run | The final two-file diff selected four commands: two child-safe commands passed and two full P4 main-thread commands remain reserved for frozen-candidate admission; unmatched changed files = 0. |
 | Pages route structural regression | 1/1 Python selector contract passed; generation and admission composite each contain one builder call. |
 | Independent diff review | Three initial findings plus multi-hop provenance findings fixed; final verdict `FINAL_REVIEW_CLEAR`. |
+| Stage 6A historical proof reuse | Integrated as `13f4849`; exact identity binds source, paths, phase, taint mode, checkpoints, algorithm version, and previous/current policy hashes. Root rerun passed focused 6/6, batch/soundness 29/29, 363 routes, three syntax checks, SF-ATS unmatched 0, and diff check. |
+| Stage 6B read-only design | Core plus P4.3 exact exposes about 11 repository-scale scan roots. B1 targets exact clean-tree checker evidence for Python boundaries, directionally `11 -> 4`, while retaining live full policy TAP and P4 direct checkers. |
+| Stage 6C read-only portfolio audit | Current Core closure is 87 top-level / 103 leaf / 70 Node / 20 Python processes. Strict command-closure supersession projects 80 top-level / 95 leaf / 62 Node / 20 Python with identical Node test-file coverage. |
 
 ## Open risks and remaining work
 
