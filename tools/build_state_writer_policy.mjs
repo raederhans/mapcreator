@@ -1085,11 +1085,13 @@ export async function buildFrozenDerivedAliasTaintBaseline({
   const frozenBaselineWritersByPath =
     buildFrozenBaselineWritersByPath(legacySemanticBaseline);
   for (const relativePath of frozenProofPaths) {
-    const pendingSourceSha = transitionSourceShaByPath.get(relativePath)
-      || normalizedAcceptedPolicyCheckpoint?.sourceSha
+    const frozenSourceSha = transitionSourceShaByPath.get(relativePath)
+      || (pendingPathSet.has(relativePath)
+        ? normalizedAcceptedPolicyCheckpoint?.sourceSha
+        : null)
       || normalizedSourceBaseSha;
     const source = await readSourceAtRevision(
-      pendingSourceSha,
+      frozenSourceSha,
       relativePath,
     );
     if (source === null || source === undefined) {

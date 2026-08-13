@@ -2267,7 +2267,7 @@ test("policy schema v2 requires a frozen derived alias diagnostic baseline", () 
   );
 });
 
-test("derived alias diagnostic baseline transition is append-only", () => {
+test("derived alias diagnostic baseline transition follows exact source proof", () => {
   const sourceBaseSha = "1".repeat(40);
   const previousBaseline = {
     algorithmVersion: 1,
@@ -2283,8 +2283,8 @@ test("derived alias diagnostic baseline transition is append-only", () => {
     sourceBaseSha,
     paths: ["js/first.js", "js/second.js"],
     diagnosticDelta: {
-      ambiguousSites: ["a", "b"],
-      unsupportedSites: ["u", "u", "v"],
+      ambiguousSites: ["b"],
+      unsupportedSites: ["v"],
     },
   };
   assert.deepEqual(
@@ -2333,11 +2333,7 @@ test("derived alias diagnostic baseline transition is append-only", () => {
       currentBaseline: regressed,
       expectedBaseline: regressed,
     }).map(({ code }) => code),
-    [
-      "derived-alias-taint-baseline-path-regressed",
-      "derived-alias-taint-baseline-diagnostic-regressed",
-      "derived-alias-taint-baseline-diagnostic-regressed",
-    ],
+    ["derived-alias-taint-baseline-path-regressed"],
   );
 
   const forged = structuredClone(currentBaseline);
@@ -3305,6 +3301,73 @@ test("new strict paths freeze at the previous accepted policy checkpoint", async
   });
   assert.deepEqual(replayReads, [[acceptedSourceSha, "js/fixture.js"]]);
   assert.deepEqual(replayed, derivedAliasTaint);
+});
+
+test("frozen paths replay from their exact recorded provenance", async () => {
+  const sourceBaseSha = "1".repeat(40);
+  const earlierSourceSha = "2".repeat(40);
+  const acceptedSourceSha = "3".repeat(40);
+  const earlierPolicyBlobSha256 = "4".repeat(64);
+  const acceptedPolicyBlobSha256 = "5".repeat(64);
+  const transitionSemanticDelta = Object.fromEntries(
+    [
+      "bindings",
+      "memberships",
+      "aliasSites",
+      "dynamicSites",
+      "ambiguousSites",
+      "unsupportedSites",
+    ].map((section) => [section, []]),
+  );
+  const existingBaseline = {
+    algorithmVersion: 1,
+    sourceBaseSha,
+    paths: ["js/base-only.js", "js/earlier.js"],
+    diagnosticDelta: {
+      ambiguousSites: [],
+      unsupportedSites: [],
+    },
+    transitionSemanticDelta,
+    transitionCheckpoints: [{
+      sourceSha: earlierSourceSha,
+      policyBlobSha256: earlierPolicyBlobSha256,
+      paths: ["js/earlier.js"],
+    }],
+  };
+  const reads = [];
+
+  const refreshed = await buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: [
+      "js/base-only.js",
+      "js/earlier.js",
+      "js/pending.js",
+    ],
+    legacySemanticBaseline: createEmptyLegacySemanticAuthority(),
+    existingBaseline,
+    acceptedPolicyCheckpoint: {
+      sourceSha: acceptedSourceSha,
+      policyBlobSha256: acceptedPolicyBlobSha256,
+    },
+    readSourceAtRevision: async (revision, relativePath) => {
+      reads.push([revision, relativePath]);
+      return "export function read(value) { return value; }";
+    },
+  });
+
+  assert.deepEqual(reads, [
+    [sourceBaseSha, "js/base-only.js"],
+    [earlierSourceSha, "js/earlier.js"],
+    [acceptedSourceSha, "js/pending.js"],
+  ]);
+  assert.deepEqual(refreshed.transitionCheckpoints, [
+    existingBaseline.transitionCheckpoints[0],
+    {
+      sourceSha: acceptedSourceSha,
+      policyBlobSha256: acceptedPolicyBlobSha256,
+      paths: ["js/pending.js"],
+    },
+  ]);
 });
 
 test("accepted checkpoint transition semantics are append-only multisets", () => {

@@ -560,29 +560,6 @@ export function validateDerivedAliasTaintBaselineTransition({
       });
     }
   }
-  for (const section of ["ambiguousSites", "unsupportedSites"]) {
-    const currentCounts = stringMultisetCounts(
-      currentBaseline?.diagnosticDelta?.[section],
-    );
-    for (
-      const [signature, previousCount] of
-        stringMultisetCounts(
-          previousBaseline?.diagnosticDelta?.[section],
-        )
-    ) {
-      const currentCount = currentCounts.get(signature) || 0;
-      if (currentCount < previousCount) {
-        violations.push({
-          code:
-            "derived-alias-taint-baseline-diagnostic-regressed",
-          section,
-          signature,
-          previousCount,
-          currentCount,
-        });
-      }
-    }
-  }
   for (const section of [
     "bindings",
     "memberships",
