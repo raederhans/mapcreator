@@ -32,7 +32,7 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 4: Audit route metadata, gate overlap, timing budgets, and focused test entrypoints.
 - [x] Stage 5a: Run targeted regression, adaptive selection, and independent review.
 - [x] Stage 6A: Cache exact historical derived-alias proofs with complete identity invalidation.
-- [ ] Stage 6B: Reuse revision-bound policy evidence across Python, P4, and Core process boundaries.
+- [x] Stage 6B: Reuse revision-bound policy evidence across Python, P4, and Core process boundaries.
 - [ ] Stage 6C: Reform the remaining test portfolio from measured timing and coverage-equivalence evidence.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
@@ -55,7 +55,7 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Broadening timeout, console, or route allowlists.
 - Running browser, dist, performance, or full policy suites before the candidate and live-test lane are stable.
 - Replacing the existing Williams Windows Job Object runtime with a generalized process-containment layer in the same diff.
-- Running Stage 6B or Stage 6C implementation before their upstream candidate SHA is admitted by the root supervisor.
+- Running Stage 6C implementation before its upstream candidate SHA is admitted by the root supervisor.
 
 ## Risks and constraints
 

@@ -2,7 +2,7 @@
 
 ## Current status
 
-The initial runner reform and Stage 6A proof reuse are committed. Stage 6B evidence reuse is active; Stage 6C has a measured, non-overlapping implementation slice ready after B.
+The initial runner reform plus Stage 6A proof reuse and Stage 6B exact evidence reuse are committed. Stage 6C has a measured command-closure implementation slice ready on the combined candidate.
 
 ## Checklist
 
@@ -19,7 +19,7 @@ The initial runner reform and Stage 6A proof reuse are committed. Stage 6B evide
 - [x] Run SF-ATS dry-run and targeted validation.
 - [x] Complete independent fail-closed and compatibility review.
 - [x] Stage 6A: admit the derived-proof cache candidate from Hotspot A.
-- [ ] Stage 6B: authorize and admit cross-process evidence reuse after Stage 6A.
+- [x] Stage 6B: authorize and admit cross-process evidence reuse after Stage 6A.
 - [ ] Stage 6C: authorize and admit measured test-portfolio reform after Stages 6A and 6B.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
@@ -45,6 +45,7 @@ The initial runner reform and Stage 6A proof reuse are committed. Stage 6B evide
 | Independent diff review | Three initial findings plus multi-hop provenance findings fixed; final verdict `FINAL_REVIEW_CLEAR`. |
 | Stage 6A historical proof reuse | Integrated as `13f4849`; exact identity binds source, paths, phase, taint mode, checkpoints, algorithm version, and previous/current policy hashes. Root rerun passed focused 6/6, batch/soundness 29/29, 363 routes, three syntax checks, SF-ATS unmatched 0, and diff check. |
 | Stage 6B read-only design | Core plus P4.3 exact exposes about 11 repository-scale scan roots. B1 targets exact clean-tree checker evidence for Python boundaries, directionally `11 -> 4`, while retaining live full policy TAP and P4 direct checkers. |
+| Stage 6B exact policy evidence | Integrated as `f6310175`. Evidence binds explicit untracked-aware clean SHA/tree identity, canonical phase and checker plan, policy/config/checkpoint identity, report bytes and producer provenance. Create/validate use start/end identity fences; each Core/P4/direct/standalone invocation owns one live-fallback attempt. Root rerun passed Node 63/63, Python 3/3, route schema 363, syntax/diff checks, and SF-ATS with 11 changed files / 0 route gaps. Full TAP and every P4 direct checker remain live. |
 | Stage 6C read-only portfolio audit | Current Core closure is 87 top-level / 103 leaf / 70 Node / 20 Python processes. Strict command-closure supersession projects 80 top-level / 95 leaf / 62 Node / 20 Python with identical Node test-file coverage. |
 
 ## Open risks and remaining work
@@ -52,6 +53,6 @@ The initial runner reform and Stage 6A proof reuse are committed. Stage 6B evide
 - Cross-revision reuse requires complete route metadata and clean source/current checkpoints; current P4 renderer changes conservatively restart the phase plan at command 0 because their route does not intersect phase command refs.
 - Schema-1 core reports remain intentionally ineligible because they lack revision identity.
 - Full browser, Pages dist, performance, TNO corpus, and full core validation remain held outside the implementation loop. Full P4 policy passed at commit `58e6d350`; later performance experiments were bounded to focused patterns.
-- The exact policy rebuild still spends roughly 18 minutes in the measured focused run. Historical derived-alias proof replay is the next measured optimization target; any cache for those proofs needs source SHA, path-set, checkpoint, and policy-identity invalidation.
+- The exact policy rebuild still spends roughly 18 minutes in the older focused baseline. Stage 6A now reuses identical historical proofs within one producer; a frozen-candidate live run remains required to measure the new wall time.
 - Generalized Windows Job Object process containment remains a separate high-risk follow-up; current runners retain synchronous child-process behavior.
-- Hotspot B and C are read-only until the root supervisor supplies their exact upstream candidate SHA and implementation authorization.
+- Hotspot C remains implementation-gated until the root supervisor positions its worktree on the exact combined Stage 6A+B candidate SHA.

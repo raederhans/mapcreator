@@ -30,6 +30,7 @@
 | 2026-08-13 | Allow Hotspot A one optional proof-cache parameter pass-through in `tools/check_state_writer_policy.mjs`. | A can cover the two report recomputation paths; B treats that file as A-owned until the exact A diff is admitted. |
 | 2026-08-13 | Admit Hotspot A as `13f4849`. | Four identical manifest historical-proof calls share one caller-owned cache; default callers keep live proof behavior. |
 | 2026-08-13 | Implement Hotspot B as a lower-risk B1 slice first. | Exact clean-tree checker evidence targets Python boundary duplicates (`11 -> 4` scan roots) while full TAP and P4 direct checkers remain live. |
+| 2026-08-13 | Admit Hotspot B as `f6310175`. | Canonical policy evidence is fenced at both ends, identity completeness is explicit, and each runner invocation has one live-producer budget; strict Python consumers validate the expected evidence ID. |
 | 2026-08-13 | Hold Hotspot C implementation until B1 admission. | Its strict supersession slice is file-disjoint and projects seven fewer Core top-level commands and eight fewer Node processes. |
 
 ## Live process ownership
@@ -39,8 +40,8 @@
 | core/P4/adaptive runner unit tests | root supervisor | `.runtime/reports/generated/test-verification-reform/` | short isolated commands only |
 | full core, full P4 policy, browser, dist, performance | root supervisor | assigned before launch | held until candidate freeze |
 | Hotspot A short tests | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | task-owned `.runtime` only | delivered `3fe5f76f`; integrated by root as `13f4849` |
-| Hotspot B implementation | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | short task-owned outputs only | B1 active on root-positioned `13f4849`; long gates prohibited |
-| Hotspot C analysis | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | no live outputs during read-only stage | audit complete; waits for A+B candidate before implementation |
+| Hotspot B implementation | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | short task-owned outputs only | delivered `f2bfd75a`; integrated and revalidated by root as `f6310175` |
+| Hotspot C analysis | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | no live outputs during read-only stage | audit complete; ready to move onto the combined A+B candidate |
 
 ## Handoff
 
@@ -48,4 +49,4 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Admit Hotspot B1 with short evidence, move Hotspot C to the resulting exact SHA, and implement strict command-closure supersession. Freeze the combined candidate and run the fresh full policy/core/Pages/browser/perf/TNO gates once under the root supervisor.
+Move Hotspot C to the resulting exact SHA and implement strict command-closure supersession. Freeze the combined candidate and run the fresh full policy/core/Pages/browser/perf/TNO gates once under the root supervisor.
