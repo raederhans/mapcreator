@@ -42,6 +42,7 @@
 ### merged state 区分“缺失”和“明确为空”
 - 回写 merged layer 前先判 `hasOwnProperty(layerKey)`。
 - fallback layer 继续走既有 bundle/topology 路径。
+- state owner 接管可继承容器时先读 property descriptor，再把继承数据或 configurable accessor 落成 owner-local data property；初始化阶段直接读属性会触发 getter 副作用并破坏纯数据边界。
 
 ### pending / settled 真状态先于保存与可见性
 - optional asset 允许先编辑时，保存链先抓 pending canonical payload。
@@ -113,7 +114,7 @@
 - 新边界优先补 source contract、node contract、targeted Python contract，再决定是否上更重的 E2E。
 - static contract 进入具名入口后，route registry 递归展开到真实 leaf test 文件。
 - owner boundary 测试锁具体 owner token，必要时把旧实现 token 一起列入禁令，避免整文件级禁令误伤无关 sidebar 或邻近 owner 的改动。
-- 隔离 worktree 跑 Playwright E2E 前先确认 `node_modules` 入口；可用被 `.gitignore` 忽略的 junction 指向父 checkout 依赖，让验证使用当前工作树源码并复用既有依赖。
+- 隔离 worktree 跑 Playwright E2E 前先确认 `node_modules` 入口；可用 `npm ci` 建立独立依赖树，或用被 `.gitignore` 忽略的 junction 指向父 checkout 依赖，让验证使用当前工作树源码并复用既有依赖。
 - CSS 视觉合同要检查后置规则的最终层叠结果；只检查共享 token 存在会漏掉后面 selector 把圆角、背景或间距覆盖回旧值。
 - 追加可选 E2E gate 失败时，先在同 commit 的 clean baseline 跑同一命令；失败形态一致就登记为既有 gate 漂移，避免把非本轮布局债务混进启动抽取。
 - 退休一个 spec 时，同步删除 manifest、test list、allowlist、引用关系。
@@ -339,6 +340,7 @@
 - `js/ui/i18n.js` 会先读 runtime locales，再回退到 `js/ui/i18n_catalog.js`；审查新增 UI 文案时，先补 catalog 和真实 `t(..., "ui")` 动态格式化链路，用户可见面会更快闭环。
 - `tools/translate_manager.py` 扫全量 geo/scenario 时可能长时间静默；这类任务先以可见 UI 入口为 owner 做最小闭环，再把大 locale 快照同步当成后续维护步骤。
 - 动态标签改走 `t(..., "ui")` 或运行时填充值后，行为测试和 HTML 合同测试要同步锁“翻译后的输出”与“初始空占位”，避免继续把英文常量或静态默认值当合同。
+- `ui_shell=1` 这类提前返回的启动分支也要在 full localization load 后调用统一 UI text refresh，避免动态面板只有切换语言后才补齐。
 
 ### 云端合流后验证前再查远端
 - 合流和冲突解析过程中 `origin/main` 仍可能新增提交；跑最终验证前再查 `HEAD..origin/main`，确保本地验证的是最新远端基线。
@@ -471,15 +473,9 @@
 ### 水域边界探针要同时看最终画布和命中目标
 - Red Sea 这类边界点可能同时落进政治 shell fallback 和水域 region；诊断时要记录 final canvas RGB、water spatial index、selected water hit 和政治 feature 命中，避免把地理重叠误判成最终绘制污染。
 
-### UI shell 也要走完整 i18n 补水
-- `ui_shell=1` 这类提前返回的启动分支会绕过 normal boot 的 post-ready hydration；如果动态面板出现“切换语言后才正常”，先检查 full localization load 后是否调用了统一 UI text refresh。
-
 ### 原生 select 弹出层要用统一外壳接管
 - 浏览器会接管原生 `<select>` 的弹出层，圆角、阴影和选项 hover 很难稳定统一；需要项目级风格时，用轻量 listbox 外壳同步原生 select 的 value/change，保留原 select 作为数据入口。
 - 自定义 select 菜单放在滚动/折叠容器内会被父级 overflow 裁切；打开时用 viewport fixed 定位，并在底部空间不足时向上展开。
-
-### UI-shell 调试 seed 要显式绑定 preset lookup
-- 调试用 scenario country 同时带 `lookup_iso2` 和 fake `regional_presets` 时，侧栏会优先用 lookup code 读取默认国家 preset；预览数据要显式设置 `preset_lookup_code` 指向调试 tag，避免真实默认 preset 抢占 UI。
 
 ### Scenario UI await 后要复核事务归属
 - 点击处理器等待 optional scenario asset 后再写 UI 状态时，要同时复核 `activeScenarioId` 和 `currentScenarioApplyRequestId`；数据层挡住 stale payload 后，UI continuation 仍可能把旧 scenario 操作写进新 scenario。
@@ -487,9 +483,6 @@
 ### 抽 owner 时同步旧边界合同
 - 从 `main.js` 抽出 bootstrap owner 后，除了新增 owner 合同，还要 grep 旧 Python/Node boundary tests 里的旧 owner token；否则正确的职责迁移会被旧合同当成回归。
 - 边界测试如果断言被移走的 `state` / `runtimeState` 写入，不要把完整写语句作为测试源码字面量；state-write 扫描会扫测试文件本身，用片段组合保留合同强度。
-
-### Clean worktree 跑浏览器 smoke 先装依赖
-- 新建 clean worktree 可以跑纯 Node source tests，但 Playwright smoke 依赖本地 `node_modules/@playwright/test`；首次浏览器验证前先用 `npm ci` 建立 ignored 依赖树，避免把 `MODULE_NOT_FOUND` 误判成应用启动回归。
 
 ### 收尾文档避免记录同提交自哈希
 - 如果交付包会被 amend 进同一个功能提交，文档里不要写该提交的精确 hash；先写 branch HEAD 或 recovery branch，等归档/closeout 提交再记录稳定功能 hash。
