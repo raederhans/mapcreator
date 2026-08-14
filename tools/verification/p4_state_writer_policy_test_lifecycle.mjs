@@ -240,6 +240,8 @@ function buildLifecycleArtifact({
   reportTruncated = false,
   containmentStatus = "root-only",
   cleanupVerified = false,
+  containmentEvidence = null,
+  containmentEvidenceSha256 = null,
   startVerificationIdentity,
   endVerificationIdentity,
   reportBytes = 0,
@@ -277,6 +279,8 @@ function buildLifecycleArtifact({
     maxReportBytes,
     containmentScope: containmentStatus,
     cleanupVerified,
+    containmentEvidence,
+    containmentEvidenceSha256,
     verificationIdentity: {
       start: startVerificationIdentity,
       end: endVerificationIdentity,
@@ -375,6 +379,7 @@ export function runP4StateWriterPolicyTestLifecycle({
   fsImpl = fs,
   containmentStatus = "root-only",
   cleanupVerified = false,
+  containmentResultReader = null,
   admissionCandidate = false,
   fullPlanIdentity = null,
 } = {}) {
@@ -406,6 +411,9 @@ export function runP4StateWriterPolicyTestLifecycle({
   let reportTruncated = false;
   let reportBytes = 0;
   let effectiveContainmentStatus = containmentStatus;
+  let effectiveCleanupVerified = cleanupVerified;
+  let containmentEvidence = null;
+  let containmentEvidenceSha256 = null;
   const stdoutChunks = [];
   const stderrChunks = [];
   const stdoutCountDecoder = new StringDecoder("utf8");
@@ -534,7 +542,9 @@ export function runP4StateWriterPolicyTestLifecycle({
     reportBytes,
     maxReportBytes,
     containmentStatus: effectiveContainmentStatus,
-    cleanupVerified,
+    cleanupVerified: effectiveCleanupVerified,
+    containmentEvidence,
+    containmentEvidenceSha256,
     admissionCandidate,
     planIdentity: fullPlanIdentity,
     planIdentityVerified,
@@ -579,7 +589,7 @@ export function runP4StateWriterPolicyTestLifecycle({
     if (terminationRequested || !child) return;
     terminationRequested = true;
     try {
-      const accepted = terminateChild(child, signal);
+      const accepted = terminateChild(child, signal, diagnostic);
       if (accepted === false) {
         const error = new Error(
           "P4 state-writer policy root-child termination request was rejected.",
@@ -730,6 +740,62 @@ export function runP4StateWriterPolicyTestLifecycle({
         scheduledUpdate = null;
       }
       if (spawnError) setPrimaryError(spawnError, 30);
+      if (child && typeof containmentResultReader === "function") {
+        try {
+          const containmentResult = containmentResultReader(child, {
+            exitCode,
+            signal,
+            requestedSignal,
+          });
+          if (
+            !containmentResult
+            || typeof containmentResult !== "object"
+            || !["tree-contained", "blocked", "root-only"].includes(
+              containmentResult.containmentScope,
+            )
+            || typeof containmentResult.cleanupVerified !== "boolean"
+          ) {
+            const error = new Error(
+              "P4 state-writer policy containment result is missing or invalid.",
+            );
+            error.code = "p4-state-writer-policy-containment-result-invalid";
+            throw error;
+          }
+          effectiveContainmentStatus = containmentResult.containmentScope;
+          effectiveCleanupVerified = containmentResult.cleanupVerified;
+          containmentEvidence = containmentResult.evidence ?? null;
+          containmentEvidenceSha256 =
+            typeof containmentResult.evidenceSha256 === "string"
+              ? containmentResult.evidenceSha256
+              : null;
+          if (containmentResult.error) {
+            const containmentError = containmentResult.error;
+            const error = new Error(
+              typeof containmentError === "object"
+                ? (containmentError.message
+                  || "P4 state-writer policy containment verification failed.")
+                : String(containmentError),
+            );
+            error.code = containmentError?.code
+              || "p4-state-writer-policy-containment-verification-failed";
+            throw error;
+          }
+          if (
+            containmentResult.containmentScope !== "tree-contained"
+            || containmentResult.cleanupVerified !== true
+          ) {
+            const error = new Error(
+              "P4 state-writer policy process-tree cleanup was not verified.",
+            );
+            error.code = "p4-state-writer-policy-containment-unverified";
+            throw error;
+          }
+        } catch (error) {
+          effectiveContainmentStatus = "blocked";
+          effectiveCleanupVerified = false;
+          setPrimaryError(error, 85);
+        }
+      }
       try {
         writeRunning();
         closeRunningStreams();
@@ -803,7 +869,7 @@ export function runP4StateWriterPolicyTestLifecycle({
         && fullAdmissionIdentity;
       const admissionEligible = reusable
         && effectiveContainmentStatus === "tree-contained"
-        && cleanupVerified === true;
+        && effectiveCleanupVerified === true;
       const canonicalSha256 = passed
         ? createHash("sha256").update(diagnosticTap).digest("hex")
         : null;
@@ -959,7 +1025,7 @@ export function runP4StateWriterPolicyTestLifecycle({
         error.code = "p4-state-writer-policy-spawn-child-required";
         throw error;
       }
-      const spawnedChild = spawnChild();
+      const spawnedChild = spawnChild({ runId, artifactPaths });
       if (!spawnedChild || typeof spawnedChild.once !== "function") {
         const error = new Error("P4 state-writer policy spawnChild returned an invalid child.");
         error.code = "p4-state-writer-policy-child-invalid";

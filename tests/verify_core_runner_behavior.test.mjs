@@ -68,6 +68,8 @@ const PACKAGE_SCRIPTS = {
   "test:node:render-sample-role-policy": "node --test tests/render_sample_role_policy_behavior.test.mjs tests/perf_role_governed_report_behavior.test.mjs",
   "test:node:williams-crossover-governance": "node --test tests/williams_crossover_governance_behavior.test.mjs",
   "test:node:williams-crossover-job-runner": "node --test tests/williams_crossover_windows_job_runner_behavior.test.mjs tests/williams_crossover_windows_job_runner_integration.test.mjs",
+  "test:node:windows-job-runtime": "node --test tests/windows_job_runner_v2_native_contract.test.mjs tests/windows_job_runtime_behavior.test.mjs",
+  "test:node:windows-job-runtime:integration": "node --test tests/windows_job_runtime_integration.test.mjs",
   "test:node:renderer-draw-canvas-orchestration-inventory": "node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
   "test:node:draw-canvas-orchestration-owner": "node --test tests/draw_canvas_orchestration_owner_behavior.test.mjs",
   "test:node:draw-canvas-orchestration-owner-suite": "npm run test:node:draw-canvas-orchestration-owner && npm run test:node:renderer-draw-canvas-orchestration-inventory && npm run test:python:map-renderer-draw-canvas-orchestration-boundary",
@@ -244,6 +246,7 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
       "test:e2e:scenario-apply-concurrency",
       "test:e2e:project-save-load",
       "test:e2e:interaction-funnel",
+      "test:node:windows-job-runtime:integration",
       "perf:williams-power-scheme:live-preflight",
       "test:e2e:dev:scenario-chunk-runtime",
       "test:e2e:tno-contracts",
@@ -274,12 +277,12 @@ test("default core plan applies strict command closure without changing test cov
     )),
   )].sort();
 
-  assert.equal(rawPlan.commandsToRun.length, 87);
-  assert.equal(plan.commandsToRun.length, 80);
-  assert.equal(rawLeaves.length, 103);
-  assert.equal(retainedLeaves.length, 95);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 70);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 62);
+  assert.equal(rawPlan.commandsToRun.length, 88);
+  assert.equal(plan.commandsToRun.length, 81);
+  assert.equal(rawLeaves.length, 104);
+  assert.equal(retainedLeaves.length, 96);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 71);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 63);
   assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
   assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
   assert.deepEqual(nodeFiles(plan), nodeFiles(rawPlan));
@@ -310,6 +313,7 @@ test("includeMainThread adds explicit E2E group and keeps optional E2E skipped",
   assert.deepEqual(
     plan.skippedMainThreadCommands.map((entry) => entry.commandRef),
     [
+      "test:node:windows-job-runtime:integration",
       "perf:williams-power-scheme:live-preflight",
       "test:e2e:dev:scenario-chunk-runtime",
       "test:e2e:tno-contracts",
@@ -1231,6 +1235,22 @@ test("adaptive command supersession keeps the exact P4.3 gate as the complete he
   ]);
 
   assert.deepEqual(commands, ["verify:p4:p4-3"]);
+});
+
+test("adaptive child-safe execution substitutes quick coverage for the full P4 policy lane", () => {
+  const report = buildRecommendation(["tools/run_p4_state_writer_policy_tests.mjs"]);
+  const childSafePlan = buildExecutionPlan(report);
+  assert.ok(childSafePlan.commandsToRun.includes("test:node:p4:state-writer-policy:quick"));
+  assert.equal(childSafePlan.commandsToRun.includes("test:node:p4:state-writer-policy"), false);
+  assert.ok(childSafePlan.mainThreadCommands.includes("test:node:p4:state-writer-policy"));
+  assert.ok(childSafePlan.blockedMainThreadCommands.includes("verify:p4:state-writer-policy"));
+
+  const mainThreadPlan = buildExecutionPlan(report, { includeMainThread: true });
+  assert.equal(mainThreadPlan.commandsToRun.includes("test:node:p4:state-writer-policy"), false);
+  assert.equal(mainThreadPlan.commandsToRun.includes("test:node:p4:state-writer-policy:quick"), false);
+  assert.ok(mainThreadPlan.commandsToRun.some((commandRef) => (
+    commandRef === "verify:p4:state-writer-policy" || commandRef === "verify:p4:p4-3"
+  )));
 });
 
 test("adaptive execution checkpoints running and terminal results with timings", () => {

@@ -11,12 +11,16 @@ import {
   P4_STATE_WRITER_POLICY_RUN_MODE_ENV,
   P4_STATE_WRITER_POLICY_TEST_FILES,
   P4_STATE_WRITER_POLICY_FULL_PLAN_IDENTITY,
+  P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS,
+  cleanupP4StateWriterPolicyWindowsJobSession,
   isOfficialP4StateWriterPolicyCanonicalAdmissionEligible,
   isOfficialP4StateWriterPolicyCanonicalReusable,
   resolveP4StateWriterPolicyArtifactPaths,
   resolveP4StateWriterPolicyExitCode,
   resolveP4StateWriterPolicyRun,
+  readP4StateWriterPolicyWindowsJobContainmentResult,
   runP4StateWriterPolicyTestLifecycle,
+  shouldUseP4StateWriterPolicyWindowsJobV2,
 } from "../tools/run_p4_state_writer_policy_tests.mjs";
 
 class FakeChild extends EventEmitter {
@@ -79,6 +83,71 @@ const CLEAN_IDENTITY = Object.freeze({
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function validOfficialContainmentEvidence(completedArtifact) {
+  return {
+    schemaVersion: 2,
+    kind: "scenario-forge-windows-job-run",
+    protocolId: "SF_WINDOWS_JOB_V2",
+    provider: "windows-job-object",
+    runId: completedArtifact.runId,
+    status: "complete",
+    primaryCause: "root-exit",
+    secondaryCauses: [],
+    startedAt: "2026-08-14T00:00:00.000Z",
+    rootResumedAt: "2026-08-14T00:00:00.010Z",
+    cleanupStartedAt: "2026-08-14T00:00:00.020Z",
+    finishedAt: "2026-08-14T00:00:00.030Z",
+    helperPid: 4241,
+    parent: {
+      pid: completedArtifact.producerPid,
+      creationTimeFileTime: "134000000000000000",
+      handleOpened: true,
+      identityAcknowledged: true,
+      deathObserved: false,
+    },
+    root: {
+      pid: completedArtifact.childPid,
+      creationTimeFileTime: "134000000000000001",
+      exitCode: 0,
+      createSuspended: true,
+      assignedAtCreation: true,
+      assignedBeforeResume: true,
+      rootInJobBeforeResume: true,
+      resumed: true,
+      terminationConfirmed: true,
+    },
+    job: {
+      killOnJobClose: true,
+      breakawayAllowed: false,
+      jobListAtCreation: true,
+      terminateRequested: true,
+      terminateSucceeded: true,
+      activeProcessesAtCleanupStart: 0,
+      activeProcessesAfterCleanup: 0,
+      processIdsAtCleanupStart: [],
+      remainingPids: [],
+      unverifiedPids: [],
+      jobCloseSucceeded: true,
+    },
+    control: {
+      transport: "named-pipe-jsonl",
+      authenticated: true,
+      startAcknowledged: true,
+      cancelRequestId: null,
+      terminalMessagePrepared: true,
+    },
+    timeoutMs: P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS,
+    cleanupWaitMs: 0,
+    command: {
+      executablePath: process.execPath,
+      workingDirectory: process.cwd(),
+      arguments: ["--test", ...P4_STATE_WRITER_POLICY_TEST_FILES],
+    },
+    cleanupVerified: true,
+    error: null,
+  };
 }
 
 test("streaming runner publishes canonical TAP only after successful close", async (t) => {
@@ -717,6 +786,11 @@ test("full reusable evidence binds exact args, canonical bytes, and publication 
     cleanupVerified: true,
     admissionEligible: true,
   };
+  const containmentEvidence = validOfficialContainmentEvidence(admittedArtifact);
+  admittedArtifact.containmentEvidence = containmentEvidence;
+  admittedArtifact.containmentEvidenceSha256 = createHash("sha256")
+    .update(`${JSON.stringify(containmentEvidence)}\r\n`)
+    .digest("hex");
   assert.equal(isOfficialP4StateWriterPolicyCanonicalAdmissionEligible({
     completedArtifact: admittedArtifact,
     canonicalTap,
@@ -729,6 +803,146 @@ test("full reusable evidence binds exact args, canonical bytes, and publication 
     completedArtifact: { ...admittedArtifact, cleanupVerified: false },
     canonicalTap,
   }), false);
+  for (const mutateEvidence of [
+    (evidence) => { evidence.runId = "other-run"; },
+    (evidence) => { evidence.root.pid += 1; },
+    (evidence) => { evidence.command.arguments = []; },
+    (evidence) => { evidence.job.activeProcessesAfterCleanup = 1; },
+    (evidence) => { evidence.control.cancelRequestId = "cancelled"; },
+  ]) {
+    const mutatedEvidence = structuredClone(admittedArtifact.containmentEvidence);
+    mutateEvidence(mutatedEvidence);
+    const mutatedArtifact = {
+      ...admittedArtifact,
+      containmentEvidence: mutatedEvidence,
+      containmentEvidenceSha256: createHash("sha256")
+        .update(`${JSON.stringify(mutatedEvidence)}\r\n`)
+        .digest("hex"),
+    };
+    assert.equal(isOfficialP4StateWriterPolicyCanonicalAdmissionEligible({
+      completedArtifact: mutatedArtifact,
+      canonicalTap,
+    }), false);
+  }
+  assert.equal(isOfficialP4StateWriterPolicyCanonicalAdmissionEligible({
+    completedArtifact: {
+      ...admittedArtifact,
+      containmentEvidenceSha256: "invalid",
+    },
+    canonicalTap,
+  }), false);
+});
+
+test("Windows Job V2 is selected only for the exact official full plan", () => {
+  assert.equal(shouldUseP4StateWriterPolicyWindowsJobV2({
+    platform: "win32",
+    fullPlan: true,
+  }), true);
+  assert.equal(shouldUseP4StateWriterPolicyWindowsJobV2({
+    platform: "win32",
+    fullPlan: false,
+  }), false);
+  assert.equal(shouldUseP4StateWriterPolicyWindowsJobV2({
+    platform: "linux",
+    fullPlan: true,
+  }), false);
+});
+
+test("Windows Job V2 terminal causes fail closed before P4 publication", () => {
+  const child = {
+    getContainmentResult: () => ({
+      containmentScope: "tree-contained",
+      cleanupVerified: true,
+      evidence: { primaryCause: "timeout" },
+    }),
+  };
+  const timeout = readP4StateWriterPolicyWindowsJobContainmentResult(child);
+  assert.equal(
+    timeout.error.code,
+    "p4-state-writer-policy-windows-job-v2-terminal-cause",
+  );
+  child.getContainmentResult = () => ({
+    containmentScope: "tree-contained",
+    cleanupVerified: true,
+    evidence: { primaryCause: "cancel-requested" },
+  });
+  assert.equal(
+    readP4StateWriterPolicyWindowsJobContainmentResult(child, {
+      requestedSignal: "SIGTERM",
+    }).error,
+    undefined,
+  );
+  child.getContainmentResult = () => ({
+    containmentScope: "tree-contained",
+    cleanupVerified: true,
+    evidence: { primaryCause: "root-exit" },
+  });
+  assert.equal(
+    readP4StateWriterPolicyWindowsJobContainmentResult(child).error,
+    undefined,
+  );
+});
+
+test("completed Windows Job sessions remove their per-run containment sidecar", async () => {
+  const removals = [];
+  const session = {
+    getContainmentResult: () => ({
+      evidencePath: "C:\\runtime\\containment.fixture.json",
+    }),
+  };
+  assert.equal(await cleanupP4StateWriterPolicyWindowsJobSession(session, {
+    removeFile: async (...args) => { removals.push(args); },
+  }), null);
+  assert.deepEqual(removals, [[
+    "C:\\runtime\\containment.fixture.json",
+    { force: true },
+  ]]);
+  const diagnostic = await cleanupP4StateWriterPolicyWindowsJobSession(session, {
+    removeFile: async () => {
+      throw Object.assign(new Error("fixture cleanup failed"), { code: "EIO" });
+    },
+  });
+  assert.deepEqual(diagnostic, {
+    code: "EIO",
+    message: "fixture cleanup failed",
+  });
+});
+
+test("close-time containment evidence is embedded before canonical publication", async (t) => {
+  const { artifactRoot, paths } = createFixture("focused");
+  t.after(() => fs.rmSync(artifactRoot, { recursive: true, force: true }));
+  const child = new FakeChild();
+  const evidence = { schemaVersion: 2, runId: "fixture-containment" };
+  const evidenceSha256 = createHash("sha256")
+    .update(`${JSON.stringify(evidence)}\r\n`)
+    .digest("hex");
+  const lifecycle = runP4StateWriterPolicyTestLifecycle({
+    mode: "focused",
+    artifactRoot,
+    platform: "linux",
+    runner: () => child,
+    containmentResultReader: () => ({
+      containmentScope: "tree-contained",
+      cleanupVerified: true,
+      evidence,
+      evidenceSha256,
+    }),
+    stdoutTarget: createTarget(),
+    stderrTarget: createTarget(),
+    signalSource: new EventEmitter(),
+    now: createClock(),
+    verificationIdentityReader: () => CLEAN_IDENTITY,
+  });
+  child.stdout.write("TAP version 13\n1..0\n");
+  child.emit("close", 0, null);
+  const result = await lifecycle;
+  const completed = readJson(paths.completedPath);
+  assert.equal(result.status, "passed");
+  assert.equal(completed.containmentScope, "tree-contained");
+  assert.equal(completed.cleanupVerified, true);
+  assert.deepEqual(completed.containmentEvidence, evidence);
+  assert.equal(completed.containmentEvidenceSha256, evidenceSha256);
+  assert.equal(completed.admissionEligible, false);
 });
 
 test("full mode with a subset remains local and ineligible for reuse", async (t) => {

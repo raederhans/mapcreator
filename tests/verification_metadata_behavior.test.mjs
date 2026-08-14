@@ -9,6 +9,7 @@ import {
   buildRecommendation,
 } from "../tools/select_verification_targets.mjs";
 import {
+  buildNodeRoutes,
   buildRouteIndex,
 } from "../tools/test_route_registry.mjs";
 import {
@@ -33,6 +34,9 @@ const P4_POLICY_SOURCE_REFS = Object.freeze([
   "tools/p4_state_action_phases.mjs",
   "tools/run_p4_state_writer_policy_tests.mjs",
   "tools/verification/p4_state_writer_policy_test_lifecycle.mjs",
+  "tools/process_containment/windows_job_runtime.mjs",
+  "tools/process_containment/windows_job_runner_v2.cs",
+  "tools/process_containment/windows_job_runner_core.cs",
   "tools/run_p4_state_write_boundary.mjs",
   "tools/check_p4_state_action_routes.mjs",
   "tests/state_action_delegation_edges_behavior.test.mjs",
@@ -722,8 +726,8 @@ test("verify-core default plan preserves metadata closure before command superse
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 87);
-  assert.equal(plan.commandsToRun.length, 80);
+  assert.equal(metadataDefaultRefs.length, 88);
+  assert.equal(plan.commandsToRun.length, 81);
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [
@@ -1204,6 +1208,98 @@ test("renderer frame compositor P2.2 files route to behavior inventory boundary 
   assert.ok(ownerOnlyReport.mainThreadSerialVerification.some((command) => (
     command.commandRef === "test:e2e:dev:scenario-chunk-runtime"
   )));
+});
+
+test("Windows Job V2 routes child-safe contracts separately from bounded live integration", () => {
+  const generatedNodeRoutes = buildNodeRoutes();
+  for (const commandRef of [
+    "test:node:p4:state-writer-policy",
+    "test:node:p4:state-writer-policy:quick",
+  ]) {
+    assert.equal(
+      generatedNodeRoutes.find((entry) => entry.commandRef === commandRef)?.domain,
+      "state-ownership",
+    );
+  }
+  const fullPolicyRoute = generatedNodeRoutes.find((entry) => (
+    entry.commandRef === "test:node:p4:state-writer-policy"
+  ));
+  const quickPolicyRoute = generatedNodeRoutes.find((entry) => (
+    entry.commandRef === "test:node:p4:state-writer-policy:quick"
+  ));
+  assert.deepEqual({
+    cost: fullPolicyRoute.cost,
+    resourceLocks: fullPolicyRoute.resourceLocks,
+    executionOwner: fullPolicyRoute.executionOwner,
+    ciProfile: fullPolicyRoute.ciProfile,
+  }, {
+    cost: "heavy",
+    resourceLocks: [".runtime-output"],
+    executionOwner: "main-thread",
+    ciProfile: "full",
+  });
+  assert.deepEqual({
+    cost: quickPolicyRoute.cost,
+    resourceLocks: quickPolicyRoute.resourceLocks,
+    executionOwner: quickPolicyRoute.executionOwner,
+    ciProfile: quickPolicyRoute.ciProfile,
+  }, {
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  });
+  for (const commandRef of [
+    "test:node:windows-job-runtime",
+    "test:node:windows-job-runtime:integration",
+  ]) {
+    assert.equal(
+      generatedNodeRoutes.find((entry) => entry.commandRef === commandRef)?.domain,
+      "test-routing",
+    );
+  }
+
+  const contractEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "infra:windows-job-runtime-contract"
+  ));
+  const integrationEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "infra:windows-job-runtime-integration"
+  ));
+  assert.ok(contractEntry);
+  assert.ok(integrationEntry);
+  assert.equal(contractEntry.commandRef, "test:node:windows-job-runtime");
+  assert.equal(contractEntry.executionOwner, "child-safe");
+  assert.equal(contractEntry.verifyCoreDefaultGroup, "infra");
+  assert.deepEqual(contractEntry.resourceLocks, []);
+  assert.equal(integrationEntry.commandRef, "test:node:windows-job-runtime:integration");
+  assert.equal(integrationEntry.executionOwner, "main-thread");
+  assert.equal(integrationEntry.optionalMainThread, true);
+  assert.deepEqual(integrationEntry.resourceLocks, [".runtime-output"]);
+
+  for (const sourceRef of [
+    "tools/process_containment/windows_job_runtime.mjs",
+    "tools/process_containment/windows_job_runner_v2.cs",
+    "tools/process_containment/windows_job_runner_core.cs",
+  ]) {
+    const report = buildRecommendation([sourceRef]);
+    assert.deepEqual(report.unmatchedChangedFiles, []);
+    const commands = commandsForChangedFile(report, sourceRef);
+    assert.ok(commands.some((command) => command.commandRef === contractEntry.commandRef));
+    assert.ok(commands.some((command) => command.commandRef === integrationEntry.commandRef));
+    for (const command of commands.filter((entry) => (
+      entry.commandRef === contractEntry.commandRef
+      || entry.commandRef === integrationEntry.commandRef
+    ))) {
+      assert.ok(command.domains.includes("test-routing"));
+      assert.equal(command.domains.includes("renderer-runtime"), false);
+    }
+  }
+  const testReport = buildRecommendation([
+    "tests/windows_job_runner_v2_native_contract.test.mjs",
+    "tests/windows_job_runtime_behavior.test.mjs",
+    "tests/windows_job_runtime_integration.test.mjs",
+  ]);
+  assert.deepEqual(testReport.unmatchedChangedFiles, []);
 });
 
 test("Williams crossover tooling routes to child-safe governance plus an explicit heavy perf lane", () => {

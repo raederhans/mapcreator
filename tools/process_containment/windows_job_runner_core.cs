@@ -5,7 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-internal static class ScenarioForgeWindowsJobRunnerCore
+internal static partial class ScenarioForgeWindowsJobRunnerCore
 {
     private const uint CREATE_SUSPENDED = 0x00000004;
     private const uint CREATE_NO_WINDOW = 0x08000000;

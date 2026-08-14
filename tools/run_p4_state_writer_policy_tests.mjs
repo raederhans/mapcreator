@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -12,6 +14,11 @@ import {
   resolveP4StateWriterPolicyArtifactPaths,
   runP4StateWriterPolicyTestLifecycle as runLifecycle,
 } from "./verification/p4_state_writer_policy_test_lifecycle.mjs";
+import {
+  prepareWindowsJobRunnerV2,
+  spawnWindowsJobSession,
+  validateWindowsJobRunnerV2Evidence,
+} from "./process_containment/windows_job_runtime.mjs";
 
 const REPO_ROOT = process.cwd();
 const REPORT_DIR = path.join(
@@ -25,6 +32,7 @@ const REPORT_DIR = path.join(
 const REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.tap");
 const QUICK_REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.quick.tap");
 const FOCUSED_REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.focused.tap");
+export const P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS = 30 * 60 * 1000;
 
 export {
   buildCanonicalP4StateWriterPolicyTap,
@@ -94,7 +102,7 @@ export function isOfficialP4StateWriterPolicyCanonicalAdmissionEligible({
   canonicalTap,
   publishingArtifact = null,
 } = {}) {
-  return isP4StateWriterPolicyCanonicalAdmissionEligible({
+  if (!isP4StateWriterPolicyCanonicalAdmissionEligible({
     completedArtifact,
     canonicalTap,
     publishingArtifact,
@@ -103,7 +111,37 @@ export function isOfficialP4StateWriterPolicyCanonicalAdmissionEligible({
     expectedCommand: process.execPath,
     expectedReportTarget: REPORT_PATH,
     expectedPlanIdentity: P4_STATE_WRITER_POLICY_FULL_PLAN_IDENTITY,
+  })) return false;
+  const evidence = completedArtifact?.containmentEvidence;
+  const evidenceErrors = validateWindowsJobRunnerV2Evidence(evidence, {
+    command: {
+      bin: process.execPath,
+      args: ["--test", ...P4_STATE_WRITER_POLICY_TEST_FILES],
+    },
+    cwd: REPO_ROOT,
+    runId: completedArtifact.runId,
+    parentPid: completedArtifact.producerPid,
+    rootPid: completedArtifact.childPid,
+    timeoutMs: P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS,
   });
+  const embeddedEvidenceSha256 = evidence && typeof evidence === "object"
+    ? createHash("sha256")
+      .update(`${JSON.stringify(evidence)}\r\n`)
+      .digest("hex")
+    : null;
+  return evidenceErrors.length === 0
+    && evidence.primaryCause === "root-exit"
+    && evidence.root.exitCode === 0
+    && evidence.control.cancelRequestId === null
+    && typeof completedArtifact.containmentEvidenceSha256 === "string"
+    && completedArtifact.containmentEvidenceSha256 === embeddedEvidenceSha256;
+}
+
+export function shouldUseP4StateWriterPolicyWindowsJobV2({
+  platform = process.platform,
+  fullPlan = false,
+} = {}) {
+  return platform === "win32" && fullPlan === true;
 }
 
 export function resolveP4StateWriterPolicyTestFiles(requestedTestFiles = []) {
@@ -175,13 +213,84 @@ export function spawnP4StateWriterPolicyTestProcess(
   });
 }
 
-export function runP4StateWriterPolicyTestLifecycle({
+export function spawnP4StateWriterPolicyWindowsJobProcess(
+  testArguments,
+  {
+    mode,
+    parentEnv = process.env,
+    preparedRunner,
+    artifactPaths,
+    runId,
+    timeoutMs = P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS,
+    sessionSpawner = spawnWindowsJobSession,
+  } = {},
+) {
+  return sessionSpawner({
+    bin: process.execPath,
+    args: ["--test", ...testArguments],
+    cwd: REPO_ROOT,
+  }, {
+    preparedRunner,
+    cwd: REPO_ROOT,
+    evidencePath: `${artifactPaths.reportPath.slice(0, -4)}.containment.${runId}.json`,
+    timeoutMs,
+    env: buildP4StateWriterPolicyChildEnv(mode, parentEnv),
+    runId,
+  });
+}
+
+export function readP4StateWriterPolicyWindowsJobContainmentResult(
+  child,
+  terminal = {},
+) {
+  const result = child.getContainmentResult();
+  const primaryCause = result?.evidence?.primaryCause;
+  if (
+    primaryCause === "root-exit"
+    || (
+      primaryCause === "cancel-requested"
+      && Boolean(terminal.signal || terminal.requestedSignal)
+    )
+  ) return result;
+  if (result?.error) return result;
+  return {
+    ...result,
+    error: {
+      code: "p4-state-writer-policy-windows-job-v2-terminal-cause",
+      message: `Windows Job V2 ended with terminal cause ${primaryCause || "unavailable"}.`,
+    },
+  };
+}
+
+export async function cleanupP4StateWriterPolicyWindowsJobSession(
+  session,
+  { removeFile = fs.rm } = {},
+) {
+  const evidencePath = session?.getContainmentResult?.()?.evidencePath;
+  if (typeof evidencePath !== "string" || !evidencePath) return null;
+  try {
+    await removeFile(evidencePath, { force: true });
+    return null;
+  } catch (error) {
+    return {
+      code: error.code
+        || "p4-state-writer-policy-windows-job-v2-evidence-cleanup-failed",
+      message: error.message || String(error),
+    };
+  }
+}
+
+export async function runP4StateWriterPolicyTestLifecycle({
   testArguments = [],
   mode = "full",
   runner = spawn,
   parentEnv = process.env,
   artifactRoot = REPORT_DIR,
   reportPath = null,
+  platform = process.platform,
+  prepareWindowsJobRunner = prepareWindowsJobRunnerV2,
+  spawnWindowsJobSessionFn = spawnWindowsJobSession,
+  windowsJobTimeoutMs = P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS,
   ...options
 } = {}) {
   const artifactPaths = resolveP4StateWriterPolicyArtifactPaths({
@@ -191,7 +300,37 @@ export function runP4StateWriterPolicyTestLifecycle({
   });
   const fullPlan = isExactFullPlan(testArguments, mode)
     && artifactPaths.reportPath === path.resolve(REPORT_PATH);
-  return runLifecycle({
+  const useWindowsJobV2 = shouldUseP4StateWriterPolicyWindowsJobV2({
+    platform,
+    fullPlan,
+  });
+  let preparedRunner = null;
+  let windowsJobSession = null;
+  if (useWindowsJobV2) {
+    try {
+      preparedRunner = await prepareWindowsJobRunner({
+        platform,
+        buildRoot: path.join(
+          REPO_ROOT,
+          ".runtime",
+          "tmp",
+          "p4-state-writer-policy-windows-job-v2",
+        ),
+      });
+    } catch (error) {
+      preparedRunner = {
+        status: "compile-error",
+        error: String(error?.stack || error?.message || error),
+      };
+    }
+  }
+  const preparationError = useWindowsJobV2
+    && preparedRunner?.status !== "available"
+    ? Object.assign(new Error(
+      `Windows Job V2 preparation failed: ${preparedRunner?.error || preparedRunner?.status || "missing result"}`,
+    ), { code: "p4-state-writer-policy-windows-job-v2-unavailable" })
+    : null;
+  const lifecycle = runLifecycle({
     ...options,
     testArguments,
     mode,
@@ -203,14 +342,79 @@ export function runP4StateWriterPolicyTestLifecycle({
     fullPlanIdentity: fullPlan
       ? P4_STATE_WRITER_POLICY_FULL_PLAN_IDENTITY
       : null,
-    containmentStatus: "root-only",
-    cleanupVerified: false,
-    spawnChild: () => spawnP4StateWriterPolicyTestProcess(testArguments, {
-      mode,
-      runner,
-      parentEnv,
-    }),
+    containmentStatus: useWindowsJobV2
+      ? "root-only"
+      : (options.containmentStatus ?? "root-only"),
+    cleanupVerified: useWindowsJobV2
+      ? false
+      : (options.cleanupVerified ?? false),
+    containmentResultReader: useWindowsJobV2
+      ? readP4StateWriterPolicyWindowsJobContainmentResult
+      : options.containmentResultReader,
+    terminateChild: useWindowsJobV2
+      ? (child, signal, diagnostic) => child.requestCancel({
+        reasonCode: diagnostic?.code || "p4-state-writer-policy-parent-signal",
+        requestedSignal: signal,
+      })
+      : options.terminateChild,
+    spawnChild: ({ runId, artifactPaths: paths } = {}) => {
+      if (preparationError) throw preparationError;
+      if (useWindowsJobV2) {
+        windowsJobSession = spawnP4StateWriterPolicyWindowsJobProcess(testArguments, {
+          mode,
+          parentEnv,
+          preparedRunner,
+          artifactPaths: paths || artifactPaths,
+          runId,
+          timeoutMs: windowsJobTimeoutMs,
+          sessionSpawner: spawnWindowsJobSessionFn,
+        });
+        return windowsJobSession;
+      }
+      return spawnP4StateWriterPolicyTestProcess(testArguments, {
+        mode,
+        runner,
+        parentEnv,
+      });
+    },
   });
+  let result;
+  let lifecycleError = null;
+  try {
+    result = await lifecycle;
+  } catch (error) {
+    lifecycleError = error;
+  }
+  const cleanupDiagnostics = [];
+  const evidenceCleanupDiagnostic = await cleanupP4StateWriterPolicyWindowsJobSession(
+    windowsJobSession,
+  );
+  if (evidenceCleanupDiagnostic) cleanupDiagnostics.push(evidenceCleanupDiagnostic);
+  try {
+    await preparedRunner?.cleanup?.();
+  } catch (error) {
+    cleanupDiagnostics.push({
+      code: error.code
+        || "p4-state-writer-policy-windows-job-v2-cleanup-failed",
+      message: error.message || String(error),
+    });
+  }
+  if (lifecycleError) {
+    if (cleanupDiagnostics.length) {
+      lifecycleError.cleanupDiagnostics = cleanupDiagnostics;
+    }
+    throw lifecycleError;
+  }
+  if (cleanupDiagnostics.length) {
+    return Object.freeze({
+      ...result,
+      additionalDiagnostics: [
+        ...(result.additionalDiagnostics || []),
+        ...cleanupDiagnostics,
+      ],
+    });
+  }
+  return result;
 }
 
 export async function run(

@@ -109,6 +109,8 @@
     "perf:williams-crossover:run": "node tools/perf/run_williams_crossover.mjs --execute",
     "test:node:williams-crossover-governance": "node --test tests/williams_crossover_governance_behavior.test.mjs",
     "test:node:williams-crossover-job-runner": "node --test tests/williams_crossover_windows_job_runner_behavior.test.mjs tests/williams_crossover_windows_job_runner_integration.test.mjs",
+    "test:node:windows-job-runtime": "node --test tests/windows_job_runner_v2_native_contract.test.mjs tests/windows_job_runtime_behavior.test.mjs",
+    "test:node:windows-job-runtime:integration": "node --test tests/windows_job_runtime_integration.test.mjs",
     "test:node:williams-crossover-telemetry-live": "node -e \"process.env.WILLIAMS_LIVE_TELEMETRY_TEST='1'; import('./tests/williams_crossover_windows_job_runner_integration.test.mjs')\"",
     "perf:williams-power-scheme:live-preflight": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/perf/williams_crossover_power_scheme.ps1 -LivePreflight",
     "test:e2e:ui-contract-foundation": "node node_modules/@playwright/test/cli.js test tests/e2e/ui_contract_foundation.spec.js --workers=1 --retries=0",

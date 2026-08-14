@@ -643,10 +643,13 @@ function collectFileDependencies(baseRepoPath) {
 function resolveNodeRouteDomain(scriptName, sourceRefs) {
   const haystack = `${scriptName},${sourceRefs.join(",")}`;
   if (haystack.includes("release-smoke") || haystack.includes("release_smoke") || haystack.includes("pages_public_release_gate")) return "release-smoke";
+  if (scriptName.includes("p4:state-writer-policy")) return "state-ownership";
   if (
     haystack.includes("test:node:verify-core-runner")
     || haystack.includes("verify_core_runner")
     || haystack.includes("run_core_verification")
+    || haystack.includes("windows_job")
+    || haystack.includes("process_containment")
   ) return "test-routing";
   if (
     haystack.includes("p4:state-writer-policy")
@@ -739,17 +742,18 @@ export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
           .flatMap((sourceFile) => collectFileDependencies(sourceFile)),
       ]);
       const domain = resolveNodeRouteDomain(name, sourceRefs);
+      const isFullP4StateWriterPolicy = name === "test:node:p4:state-writer-policy";
       return {
         id: `node:${name}`,
         commandRef: name,
         sourceRef: sourceRefs.join(","),
         domain,
         ownerHint: domain === "test-routing" ? "test-infra" : domain,
-        layer: "contract",
-        cost: "fast",
-        resourceLocks: [],
-        executionOwner: "child-safe",
-        ciProfile: "pr-fast",
+        layer: isFullP4StateWriterPolicy ? "heavy" : "contract",
+        cost: isFullP4StateWriterPolicy ? "heavy" : "fast",
+        resourceLocks: isFullP4StateWriterPolicy ? [".runtime-output"] : [],
+        executionOwner: isFullP4StateWriterPolicy ? "main-thread" : "child-safe",
+        ciProfile: isFullP4StateWriterPolicy ? "full" : "pr-fast",
       };
     });
 }
