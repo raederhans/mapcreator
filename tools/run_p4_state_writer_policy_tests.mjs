@@ -1,8 +1,17 @@
-import { spawnSync } from "node:child_process";
-import fs from "node:fs";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+
+import {
+  buildCanonicalP4StateWriterPolicyTap,
+  buildP4StateWriterPolicyPlanIdentity,
+  frameP4StateWriterPolicyStderr,
+  isP4StateWriterPolicyCanonicalAdmissionEligible,
+  isP4StateWriterPolicyCanonicalReusable,
+  resolveP4StateWriterPolicyArtifactPaths,
+  runP4StateWriterPolicyTestLifecycle as runLifecycle,
+} from "./verification/p4_state_writer_policy_test_lifecycle.mjs";
 
 const REPO_ROOT = process.cwd();
 const REPORT_DIR = path.join(
@@ -16,6 +25,15 @@ const REPORT_DIR = path.join(
 const REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.tap");
 const QUICK_REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.quick.tap");
 const FOCUSED_REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.focused.tap");
+
+export {
+  buildCanonicalP4StateWriterPolicyTap,
+  frameP4StateWriterPolicyStderr,
+  isP4StateWriterPolicyCanonicalAdmissionEligible,
+  isP4StateWriterPolicyCanonicalReusable,
+  resolveP4StateWriterPolicyArtifactPaths,
+};
+
 export const P4_STATE_WRITER_POLICY_RUN_MODE_ENV =
   "MAPCREATOR_INTERNAL_P4_STATE_WRITER_POLICY_RUN_MODE";
 const P4_STATE_WRITER_POLICY_RUN_MODES = Object.freeze([
@@ -39,10 +57,55 @@ export const P4_STATE_WRITER_POLICY_QUICK_TEST_FILES = Object.freeze(
     testFile !== "tests/state_writer_policy_manifest_behavior.test.mjs"
   )),
 );
+export const P4_STATE_WRITER_POLICY_FULL_PLAN_IDENTITY =
+  buildP4StateWriterPolicyPlanIdentity(
+    process.execPath,
+    ["--test", ...P4_STATE_WRITER_POLICY_TEST_FILES],
+  );
 
-export function resolveP4StateWriterPolicyTestFiles(
-  requestedTestFiles = [],
-) {
+function isExactFullPlan(testArguments, mode) {
+  return mode === "full"
+    && testArguments.length === P4_STATE_WRITER_POLICY_TEST_FILES.length
+    && testArguments.every(
+      (testArgument, index) => testArgument === P4_STATE_WRITER_POLICY_TEST_FILES[index],
+    );
+}
+
+export function isOfficialP4StateWriterPolicyCanonicalReusable({
+  completedArtifact,
+  canonicalTap,
+  publishingArtifact = null,
+} = {}) {
+  return isP4StateWriterPolicyCanonicalReusable({
+    completedArtifact,
+    canonicalTap,
+    publishingArtifact,
+    expectedMode: "full",
+    expectedTestArguments: P4_STATE_WRITER_POLICY_TEST_FILES,
+    expectedCommand: process.execPath,
+    expectedReportTarget: REPORT_PATH,
+    expectedPlanIdentity: P4_STATE_WRITER_POLICY_FULL_PLAN_IDENTITY,
+  });
+}
+
+export function isOfficialP4StateWriterPolicyCanonicalAdmissionEligible({
+  completedArtifact,
+  canonicalTap,
+  publishingArtifact = null,
+} = {}) {
+  return isP4StateWriterPolicyCanonicalAdmissionEligible({
+    completedArtifact,
+    canonicalTap,
+    publishingArtifact,
+    expectedMode: "full",
+    expectedTestArguments: P4_STATE_WRITER_POLICY_TEST_FILES,
+    expectedCommand: process.execPath,
+    expectedReportTarget: REPORT_PATH,
+    expectedPlanIdentity: P4_STATE_WRITER_POLICY_FULL_PLAN_IDENTITY,
+  });
+}
+
+export function resolveP4StateWriterPolicyTestFiles(requestedTestFiles = []) {
   return requestedTestFiles.length
     ? [...requestedTestFiles]
     : [...P4_STATE_WRITER_POLICY_TEST_FILES];
@@ -101,56 +164,74 @@ export function assertP4StateWriterPolicyManifestRunMode({
 
 export function spawnP4StateWriterPolicyTestProcess(
   testArguments,
-  {
-    mode,
-    runner = spawnSync,
-    parentEnv = process.env,
-  } = {},
+  { mode, runner = spawn, parentEnv = process.env } = {},
 ) {
   return runner(process.execPath, ["--test", ...testArguments], {
     cwd: REPO_ROOT,
-    encoding: "utf8",
     env: buildP4StateWriterPolicyChildEnv(mode, parentEnv),
-    maxBuffer: 64 * 1024 * 1024,
     shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
   });
 }
 
-export function run(
-  testArguments = resolveP4StateWriterPolicyRun(process.argv.slice(2)).testArguments,
-  {
-    reportPath = REPORT_PATH,
-    mode = "full",
-  } = {},
-) {
-  fs.mkdirSync(REPORT_DIR, { recursive: true });
-  const result = spawnP4StateWriterPolicyTestProcess(testArguments, {
+export function runP4StateWriterPolicyTestLifecycle({
+  testArguments = [],
+  mode = "full",
+  runner = spawn,
+  parentEnv = process.env,
+  artifactRoot = REPORT_DIR,
+  reportPath = null,
+  ...options
+} = {}) {
+  const artifactPaths = resolveP4StateWriterPolicyArtifactPaths({
     mode,
+    artifactRoot,
+    reportPath,
   });
-  const stdout = result.stdout || "";
-  const stderr = result.stderr || "";
-  const stderrComments = stderr
-    .trimEnd()
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((line) => `# stderr: ${line}`)
-    .join("\n");
-  const report = [
-    stdout.trimEnd(),
-    stderrComments,
-  ].filter(Boolean).join("\n");
-  fs.writeFileSync(reportPath, `${report}\n`, "utf8");
-  if (stdout) process.stdout.write(stdout);
-  if (stderr) process.stderr.write(stderr);
-  if (result.error) {
-    console.error(result.error.message);
-    process.exit(1);
-  }
+  const fullPlan = isExactFullPlan(testArguments, mode)
+    && artifactPaths.reportPath === path.resolve(REPORT_PATH);
+  return runLifecycle({
+    ...options,
+    testArguments,
+    mode,
+    artifactRoot,
+    reportPath,
+    command: process.execPath,
+    commandArguments: ["--test", ...testArguments],
+    admissionCandidate: fullPlan,
+    fullPlanIdentity: fullPlan
+      ? P4_STATE_WRITER_POLICY_FULL_PLAN_IDENTITY
+      : null,
+    containmentStatus: "root-only",
+    cleanupVerified: false,
+    spawnChild: () => spawnP4StateWriterPolicyTestProcess(testArguments, {
+      mode,
+      runner,
+      parentEnv,
+    }),
+  });
+}
+
+export async function run(
+  testArguments = resolveP4StateWriterPolicyRun(process.argv.slice(2)).testArguments,
+  { reportPath = REPORT_PATH, mode = "full" } = {},
+) {
+  const result = await runP4StateWriterPolicyTestLifecycle({
+    testArguments,
+    mode,
+    reportPath,
+  });
+  if (result.error?.message) console.error(result.error.message);
   if (result.signal) {
     console.error(`P4 state writer policy tests exited with signal ${result.signal}.`);
-    process.exit(1);
   }
-  process.exit(result.status ?? 1);
+  return resolveP4StateWriterPolicyExitCode(result);
+}
+
+export function resolveP4StateWriterPolicyExitCode(result) {
+  return result?.status === "passed"
+    ? 0
+    : (result?.exitCode && result.exitCode !== 0 ? result.exitCode : 1);
 }
 
 const isMainModule = process.argv[1]
@@ -160,5 +241,10 @@ if (isMainModule) {
   run(request.testArguments, {
     mode: request.mode,
     reportPath: request.reportPath,
+  }).then((exitCode) => {
+    process.exitCode = exitCode;
+  }).catch((error) => {
+    console.error(error?.message || error);
+    process.exitCode = 1;
   });
 }
