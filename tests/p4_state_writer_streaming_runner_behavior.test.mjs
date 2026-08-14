@@ -475,6 +475,90 @@ test("same-mode lock and stale running artifacts block before spawn", async (t) 
   assert.equal(spawnCalls, 0);
 });
 
+test("partial sidecar acquisition rolls back its lock and owned files", async (t) => {
+  const { artifactRoot, paths } = createFixture("quick");
+  t.after(() => fs.rmSync(artifactRoot, { recursive: true, force: true }));
+  let spawnCalls = 0;
+  const fsImpl = new Proxy(fs, {
+    get(target, property) {
+      if (property !== "openSync") return Reflect.get(target, property);
+      return (filePath, ...args) => {
+        if (path.resolve(filePath) === path.resolve(paths.runningStderrPath)) {
+          const error = new Error("fixture running stderr acquisition failure");
+          error.code = "EIO";
+          throw error;
+        }
+        return target.openSync(filePath, ...args);
+      };
+    },
+  });
+
+  await assert.rejects(
+    runP4StateWriterPolicyTestLifecycle({
+      mode: "quick",
+      artifactRoot,
+      fsImpl,
+      runner() {
+        spawnCalls += 1;
+        return new FakeChild();
+      },
+      verificationIdentityReader: () => CLEAN_IDENTITY,
+    }),
+    (error) => error?.code === "EIO",
+  );
+
+  assert.equal(spawnCalls, 0);
+  assert.equal(fs.existsSync(paths.lockPath), false);
+  assert.equal(fs.existsSync(paths.runningTapPath), false);
+  assert.equal(fs.existsSync(paths.runningStderrPath), false);
+
+  const child = new FakeChild();
+  const retry = runP4StateWriterPolicyTestLifecycle({
+    mode: "quick",
+    artifactRoot,
+    runner: () => child,
+    verificationIdentityReader: () => CLEAN_IDENTITY,
+  });
+  child.stdout.write("TAP version 13\n1..0\n");
+  child.emit("close", 0, null);
+  assert.equal((await retry).status, "passed");
+});
+
+test("partial lock metadata write rolls back the owned empty lock", async (t) => {
+  const { artifactRoot, paths } = createFixture("focused");
+  t.after(() => fs.rmSync(artifactRoot, { recursive: true, force: true }));
+  let failedLockWrite = false;
+  const fsImpl = new Proxy(fs, {
+    get(target, property) {
+      if (property !== "writeFileSync") return Reflect.get(target, property);
+      return (file, ...args) => {
+        if (!failedLockWrite && typeof file === "number") {
+          failedLockWrite = true;
+          const error = new Error("fixture lock metadata write failure");
+          error.code = "EIO";
+          throw error;
+        }
+        return target.writeFileSync(file, ...args);
+      };
+    },
+  });
+
+  await assert.rejects(
+    runP4StateWriterPolicyTestLifecycle({
+      mode: "focused",
+      artifactRoot,
+      fsImpl,
+      runner: () => new FakeChild(),
+      verificationIdentityReader: () => CLEAN_IDENTITY,
+    }),
+    (error) => error?.code === "EIO",
+  );
+
+  assert.equal(fs.existsSync(paths.lockPath), false);
+  assert.equal(fs.existsSync(paths.runningTapPath), false);
+  assert.equal(fs.existsSync(paths.runningStderrPath), false);
+});
+
 test("error plus close and empty code-zero output fail once", async (t) => {
   for (const failureKind of ["error-close", "empty-success"]) {
     const { artifactRoot, reportPath, paths } = createFixture("quick");

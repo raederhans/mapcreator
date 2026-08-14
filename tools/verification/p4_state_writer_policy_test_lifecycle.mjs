@@ -415,7 +415,10 @@ export function runP4StateWriterPolicyTestLifecycle({
   let stderrPending = "";
   let runningTapFd = null;
   let runningStderrFd = null;
+  let runningTapCreated = false;
+  let runningStderrCreated = false;
   let lockFd = null;
+  let lockCreated = false;
   let claimed = false;
   let scheduledUpdate = null;
   let observedExitCode = null;
@@ -450,6 +453,40 @@ export function runP4StateWriterPolicyTestLifecycle({
       if (key === "runningTapFd") runningTapFd = null;
       else runningStderrFd = null;
     }
+  };
+
+  const rollbackUnclaimedSidecars = () => {
+    for (const [filePath, created] of [
+      [artifactPaths.runningTapPath, runningTapCreated],
+      [artifactPaths.runningStderrPath, runningStderrCreated],
+    ]) {
+      if (!created) continue;
+      try {
+        removeFileIfPresent(filePath, fsImpl);
+      } catch (error) {
+        additionalDiagnostics.push(error);
+      }
+    }
+    runningTapCreated = false;
+    runningStderrCreated = false;
+  };
+
+  const rollbackUnclaimedLock = () => {
+    if (lockFd !== null) {
+      try {
+        fsImpl.closeSync(lockFd);
+      } catch (error) {
+        additionalDiagnostics.push(error);
+      }
+      lockFd = null;
+    }
+    if (!lockCreated) return;
+    try {
+      removeFileIfPresent(artifactPaths.lockPath, fsImpl);
+    } catch (error) {
+      additionalDiagnostics.push(error);
+    }
+    lockCreated = false;
   };
 
   const releaseLock = () => {
@@ -650,6 +687,7 @@ export function runP4StateWriterPolicyTestLifecycle({
     }
     try {
       lockFd = fsImpl.openSync(artifactPaths.lockPath, "wx");
+      lockCreated = true;
     } catch (error) {
       if (error?.code === "EEXIST") {
         const conflict = new Error(
@@ -669,7 +707,9 @@ export function runP4StateWriterPolicyTestLifecycle({
     })}\n`, "utf8");
     fsImpl.fsyncSync(lockFd);
     runningTapFd = fsImpl.openSync(artifactPaths.runningTapPath, "wx");
+    runningTapCreated = true;
     runningStderrFd = fsImpl.openSync(artifactPaths.runningStderrPath, "wx");
+    runningStderrCreated = true;
   };
 
   return new Promise((resolve, reject) => {
@@ -980,7 +1020,8 @@ export function runP4StateWriterPolicyTestLifecycle({
         finalize({ spawnError: error });
       } else if (!claimed) {
         closeRunningStreams();
-        releaseLock();
+        rollbackUnclaimedSidecars();
+        rollbackUnclaimedLock();
         reject(error);
       }
     }
