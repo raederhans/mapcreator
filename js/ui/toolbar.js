@@ -31,6 +31,7 @@ import {
   getPaletteSourceOptions,
   normalizeHexColor,
 } from "../core/palette_manager.js";
+import { buildExportArtifactPackage } from "../core/export_artifact_package.js";
 import { ensureActiveScenarioOptionalLayerLoaded } from "../core/scenario_resources.js";
 import { resetScenarioToBaselineCommand } from "../core/scenario_dispatcher.js";
 import { toggleLanguage, updateUIText, t } from "./i18n.js";
@@ -50,13 +51,17 @@ import {
   UI_URL_STATE_KEYS,
 } from "./ui_contract.js";
 import { markDirty, updateDirtyIndicator } from "../core/dirty_state.js";
-import { showExportFailureToast } from "./toolbar/export_failure_handler.js";
 import {
-  createExportArtifactPipeline,
-  EXPORT_MAX_CONCURRENT_JOBS,
-} from "./toolbar/export_artifact_pipeline.js";
+  createExportError,
+  showExportFailureToast,
+} from "./toolbar/export_failure_handler.js";
 import { createOceanLakeControlsController } from "./toolbar/ocean_lake_controls_controller.js";
 import {
+  EXPORT_BAKE_OUTPUT_MODELS,
+  EXPORT_MAIN_LAYER_IDS,
+  EXPORT_MAIN_LAYER_MODEL_BY_ID,
+  EXPORT_TEXT_LAYER_IDS,
+  EXPORT_TEXT_LAYER_MODEL_BY_ID,
   createExportWorkbenchController,
   ensureExportWorkbenchUiState as ensureExportWorkbenchUiStateFromController,
   normalizeExportWorkbenchLayerOrder as normalizeExportWorkbenchLayerOrderFromController,
@@ -145,6 +150,20 @@ function populatePaletteSourceOptions(select) {
   });
   select.value = runtimeState.currentPaletteTheme;
 }
+
+const EXPORT_MAX_DIMENSION_PX = 7680;
+const EXPORT_MAX_PIXELS = 7680 * 4320;
+const EXPORT_MAX_CONCURRENT_JOBS = 1;
+
+function resolveExportBaseDimensions() {
+  const dpr = Math.max(1, Number(runtimeState.dpr || globalThis.devicePixelRatio || 1));
+  const fallbackLogicalWidth = Number(runtimeState.colorCanvas?.width || 0) / dpr;
+  const fallbackLogicalHeight = Number(runtimeState.colorCanvas?.height || 0) / dpr;
+  const width = Math.round(Number(runtimeState.width || fallbackLogicalWidth || 0));
+  const height = Math.round(Number(runtimeState.height || fallbackLogicalHeight || 0));
+  return { width, height };
+}
+
 
 function initToolbar({ render } = {}) {
   // toolbar.js 保留的是壳层接线职责：集中拿 DOM、拼 controller、注册 runtime hooks。
@@ -540,6 +559,16 @@ function initToolbar({ render } = {}) {
     element.focus({ preventScroll: true });
     return true;
   };
+  const getExportBakeVisibilitySignature = (exportUi) => {
+    const main = EXPORT_MAIN_LAYER_IDS
+      .map((layerId) => `${layerId}:${exportUi?.visibility?.[layerId] === false ? "0" : "1"}`)
+      .join("|");
+    const text = EXPORT_TEXT_LAYER_IDS
+      .map((layerId) => `${layerId}:${exportUi?.textVisibility?.[layerId] === false ? "0" : "1"}`)
+      .join("|");
+    return `main=${main};text=${text}`;
+  };
+
   let exportWorkbenchController = null;
   const renderExportWorkbenchLayerList = () => exportWorkbenchController?.renderExportWorkbenchLayerList();
   const renderExportWorkbenchTextElementList = () => exportWorkbenchController?.renderExportWorkbenchTextElementList();
@@ -1858,13 +1887,6 @@ function initToolbar({ render } = {}) {
     showToast,
     t,
   });
-  const artifactPipeline = createExportArtifactPipeline({
-    state,
-    normalizeExportWorkbenchUiState,
-    renderPassNames: RENDER_PASS_NAMES,
-    renderExportPassesToCanvas,
-    exportScale,
-  });
   exportWorkbenchController = createExportWorkbenchController({
     state,
     t,
@@ -1905,7 +1927,18 @@ function initToolbar({ render } = {}) {
     onRequestClose: ({ restoreFocus = true } = {}) => {
       callRuntimeHook(state, "closeExportWorkbenchFn", { restoreFocus });
     },
-    artifactPipeline,
+    buildCompositeSourceCanvas: (...args) => buildCompositeSourceCanvas(...args),
+    buildSingleExportSourceCanvas: (...args) => buildSingleExportSourceCanvas(...args),
+    applyExportAdjustmentsToCanvas: (...args) => applyExportAdjustmentsToCanvas(...args),
+    buildPerLayerExportOutputs: (...args) => buildPerLayerExportOutputs(...args),
+    buildPerLayerExportPackage: (...args) => buildPerLayerExportPackage(...args),
+    buildBakePackOutputs: (...args) => buildBakePackOutputs(...args),
+    buildBakePackPackage: (...args) => buildBakePackPackage(...args),
+    buildCompositeExportCanvas: (...args) => buildCompositeExportCanvas(...args),
+    getSelectedExportScale: (...args) => getSelectedExportScale(...args),
+    triggerCanvasDownload: (...args) => triggerCanvasDownload(...args),
+    triggerBlobDownload: (...args) => triggerBlobDownload(...args),
+    bakeLayer: (...args) => bakeLayer(...args),
     exportMaxConcurrentJobs: EXPORT_MAX_CONCURRENT_JOBS,
   });
 
@@ -2261,6 +2294,608 @@ function initToolbar({ render } = {}) {
       restoreSupportSurfaceFromUrl();
     });
   });
+
+  const computeBakeHash = (parts) => {
+    const source = Array.isArray(parts) ? parts.join("|") : String(parts || "");
+    let hash = 2166136261;
+    for (let index = 0; index < source.length; index += 1) {
+      hash ^= source.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `fnv1a_${(hash >>> 0).toString(16).padStart(8, "0")}`;
+  };
+
+  const getLayerDependencyRevision = (layerId, exportUi = ensureExportWorkbenchUiState()) => {
+    const mapSvg = document.getElementById("map-svg");
+    const mapSvgChildCount = mapSvg ? mapSvg.childElementCount : 0;
+    const renderPassCache = runtimeState.renderPassCache && typeof runtimeState.renderPassCache === "object"
+      ? runtimeState.renderPassCache
+      : {};
+    const signatures = renderPassCache.signatures && typeof renderPassCache.signatures === "object"
+      ? renderPassCache.signatures
+      : {};
+    const dirtyRevision = Number(runtimeState.dirtyRevision || 0);
+    const zoomTransform = runtimeState.zoomTransform && typeof runtimeState.zoomTransform === "object"
+      ? runtimeState.zoomTransform
+      : { k: 1, x: 0, y: 0 };
+    const transformSignature = [
+      `zoomK:${Number(zoomTransform.k || 1).toFixed(5)}`,
+      `zoomX:${Number(zoomTransform.x || 0).toFixed(2)}`,
+      `zoomY:${Number(zoomTransform.y || 0).toFixed(2)}`,
+    ];
+    if (layerId === "color") {
+      return [
+        getExportBakeVisibilitySignature(exportUi),
+        `colorRevision:${Number(runtimeState.colorRevision) || 0}`,
+        `topologyRevision:${Number(runtimeState.topologyRevision) || 0}`,
+        `dirtyRevision:${dirtyRevision}`,
+        `passBackground:${String(signatures.background || "")}`,
+        `passPhysicalBase:${String(signatures.physicalBase || "")}`,
+        `passPolitical:${String(signatures.political || "")}`,
+        `passContextBase:${String(signatures.contextBase || "")}`,
+        `passContextScenario:${String(signatures.contextScenario || "")}`,
+        `passEffects:${String(signatures.effects || "")}`,
+        `passDayNight:${String(signatures.dayNight || "")}`,
+      ];
+    }
+    if (layerId === "line") {
+      return [
+        getExportBakeVisibilitySignature(exportUi),
+        `topologyRevision:${Number(runtimeState.topologyRevision) || 0}`,
+        `dynamicDirty:${runtimeState.dynamicBordersDirty ? 1 : 0}`,
+        `dirtyRevision:${dirtyRevision}`,
+        `passBorders:${String(signatures.borders || "")}`,
+        `passLineEffects:${String(signatures.lineEffects || "")}`,
+      ];
+    }
+    if (layerId === "text") {
+      return [
+        getExportBakeVisibilitySignature(exportUi),
+        `topologyRevision:${Number(runtimeState.topologyRevision) || 0}`,
+        `svgChildren:${mapSvgChildCount}`,
+        `dirtyRevision:${dirtyRevision}`,
+        ...transformSignature,
+      ];
+    }
+    return [
+      getExportBakeVisibilitySignature(exportUi),
+      `colorRevision:${Number(runtimeState.colorRevision) || 0}`,
+      `topologyRevision:${Number(runtimeState.topologyRevision) || 0}`,
+      `svgChildren:${mapSvgChildCount}`,
+      `dirtyRevision:${dirtyRevision}`,
+      ...transformSignature,
+      `passPolitical:${String(signatures.political || "")}`,
+      `passContextBase:${String(signatures.contextBase || "")}`,
+      `passContextScenario:${String(signatures.contextScenario || "")}`,
+      `passEffects:${String(signatures.effects || "")}`,
+      `passBorders:${String(signatures.borders || "")}`,
+      `passLineEffects:${String(signatures.lineEffects || "")}`,
+      `passDayNight:${String(signatures.dayNight || "")}`,
+      `passContextMarkers:${String(signatures.contextMarkers || "")}`,
+      `passTextureLabels:${String(signatures.textureLabels || "")}`,
+      `passLabels:${String(signatures.labels || "")}`,
+    ];
+  };
+
+  const SVG_ANNOTATION_VIEWPORT_SELECTOR = [
+    ".frontline-overlay-layer",
+    ".frontline-labels-layer",
+    ".operational-lines-layer",
+    ".operation-graphics-layer",
+    ".unit-counters-layer",
+  ].join(", ");
+  const cloneSvgForExport = ({ onlyViewportSelector = "", removeSelectors = [] } = {}) => {
+    const mapSvg = document.getElementById("map-svg");
+    if (!mapSvg) return null;
+    const clone = mapSvg.cloneNode(true);
+    removeSelectors.forEach((selector) => {
+      clone.querySelectorAll(selector).forEach((node) => node.remove());
+    });
+    if (onlyViewportSelector) {
+      const viewport = clone.querySelector(".viewport-layer");
+      if (viewport) {
+        Array.from(viewport.children).forEach((child) => {
+          if (!child.matches(onlyViewportSelector)) child.remove();
+        });
+      }
+      Array.from(clone.children).forEach((child) => {
+        const tagName = String(child.tagName || "").toLowerCase();
+        if (child !== viewport && tagName !== "defs") child.remove();
+      });
+    }
+    return clone;
+  };
+
+  const drawSvgLayerToCanvas = async (targetCanvas, targetCtx, options = {}) => {
+    const svgForExport = cloneSvgForExport(options);
+    if (!svgForExport || !targetCanvas || !targetCtx) return false;
+    const serializer = new XMLSerializer();
+    const svgMarkup = serializer.serializeToString(svgForExport);
+    const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    try {
+      await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          targetCtx.drawImage(image, 0, 0);
+          resolve();
+        };
+        image.onerror = () => reject(new Error("SVG overlay export failed."));
+        image.src = svgUrl;
+      });
+      return true;
+    } finally {
+      URL.revokeObjectURL(svgUrl);
+    }
+  };
+
+  const writeBakeArtifactMeta = (layerId, dependencies, canvas, dirtyFlag) => {
+    const exportUi = ensureExportWorkbenchUiState();
+    const entry = {
+      layerId,
+      updatedAt: Date.now(),
+      dependencies: [...dependencies],
+      canvasSize: {
+        width: Math.max(0, Math.round(Number(canvas?.width) || 0)),
+        height: Math.max(0, Math.round(Number(canvas?.height) || 0)),
+      },
+      dirtyFlag: !!dirtyFlag,
+    };
+    const nextArtifacts = Array.isArray(exportUi.bakeArtifacts) ? [...exportUi.bakeArtifacts] : [];
+    const existingIndex = nextArtifacts.findIndex((artifact) => artifact?.layerId === layerId);
+    if (existingIndex >= 0) {
+      nextArtifacts[existingIndex] = entry;
+    } else {
+      nextArtifacts.push(entry);
+    }
+    exportUi.bakeArtifacts = nextArtifacts;
+    return entry;
+  };
+
+  const drawRenderPassCanvasToBakeTarget = (passName, targetCtx) => {
+    const renderPassCache = runtimeState.renderPassCache && typeof runtimeState.renderPassCache === "object"
+      ? runtimeState.renderPassCache
+      : null;
+    if (!renderPassCache || !targetCtx) return false;
+    const passCanvas = renderPassCache.canvases?.[passName];
+    if (!passCanvas) return false;
+    const layout = renderPassCache.layouts?.[passName] || {};
+    const dpr = Math.max(Number(runtimeState.dpr) || 1, 1);
+    const referenceTransform = renderPassCache.referenceTransforms?.[passName] || null;
+    const currentTransform = runtimeState.zoomTransform && typeof runtimeState.zoomTransform === "object"
+      ? runtimeState.zoomTransform
+      : { k: 1, x: 0, y: 0 };
+    const hasReferenceTransform = referenceTransform
+      && Number.isFinite(Number(referenceTransform.k))
+      && Number.isFinite(Number(referenceTransform.x))
+      && Number.isFinite(Number(referenceTransform.y));
+    const hasCurrentTransform = Number.isFinite(Number(currentTransform.k))
+      && Number.isFinite(Number(currentTransform.x))
+      && Number.isFinite(Number(currentTransform.y));
+    if (!hasReferenceTransform || !hasCurrentTransform) {
+      const offsetX = Math.round(-Number(layout.offsetX || 0) * dpr);
+      const offsetY = Math.round(-Number(layout.offsetY || 0) * dpr);
+      targetCtx.drawImage(passCanvas, offsetX, offsetY);
+      return true;
+    }
+    const referenceK = Math.max(Number(referenceTransform.k) || 1, 0.0001);
+    const currentK = Math.max(Number(currentTransform.k) || 1, 0.0001);
+    const scaleRatio = currentK / referenceK;
+    const dx = Number(currentTransform.x || 0) - (Number(referenceTransform.x || 0) * scaleRatio);
+    const dy = Number(currentTransform.y || 0) - (Number(referenceTransform.y || 0) * scaleRatio);
+    targetCtx.save();
+    targetCtx.setTransform(1, 0, 0, 1, 0, 0);
+    targetCtx.translate(
+      (dx - Number(layout.offsetX || 0) * scaleRatio) * dpr,
+      (dy - Number(layout.offsetY || 0) * scaleRatio) * dpr,
+    );
+    targetCtx.scale(scaleRatio, scaleRatio);
+    targetCtx.drawImage(passCanvas, 0, 0);
+    targetCtx.restore();
+    return true;
+  };
+
+  const bakeLayer = async (layerId, exportUiOverride = null) => {
+    const exportUi = exportUiOverride && typeof exportUiOverride === "object"
+      ? exportUiOverride
+      : ensureExportWorkbenchUiState();
+    const normalizedLayerId = String(layerId || "").trim().toLowerCase();
+    if (!["color", "line", "text", "composite"].includes(normalizedLayerId)) {
+      throw new Error(`Unsupported bake layer: ${layerId}`);
+    }
+    const width = runtimeState.colorCanvas?.width || runtimeState.lineCanvas?.width || 0;
+    const height = runtimeState.colorCanvas?.height || runtimeState.lineCanvas?.height || 0;
+    const dependencies = getLayerDependencyRevision(normalizedLayerId, exportUi);
+    const hash = computeBakeHash([normalizedLayerId, `${width}x${height}`, ...dependencies]);
+    const cacheEntry = exportUi.bakeCache.get(normalizedLayerId);
+    if (
+      cacheEntry
+      && cacheEntry.hash === hash
+      && cacheEntry.canvas
+      && cacheEntry.canvas.width === width
+      && cacheEntry.canvas.height === height
+    ) {
+      writeBakeArtifactMeta(normalizedLayerId, dependencies, cacheEntry.canvas, false);
+      return cacheEntry.canvas;
+    }
+    const bakeCanvas = document.createElement("canvas");
+    bakeCanvas.width = width;
+    bakeCanvas.height = height;
+    const bakeCtx = bakeCanvas.getContext("2d");
+    if (!bakeCtx) {
+      throw new Error("Canvas bake context unavailable.");
+    }
+    const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi);
+    if (normalizedLayerId === "composite") {
+      const compositeCanvas = await buildCompositeSourceCanvas(exportUi);
+      bakeCtx.drawImage(compositeCanvas, 0, 0);
+    } else {
+      if (bakePassNames.length) {
+        const passCanvas = renderExportPassesToCanvas(bakePassNames);
+        if (passCanvas) {
+          bakeCtx.drawImage(passCanvas, 0, 0);
+        }
+      }
+      if (normalizedLayerId === "text" && exportUi.textVisibility?.["svg-annotations"]) {
+        await drawSvgLayerToCanvas(bakeCanvas, bakeCtx, {
+          onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR,
+        });
+      }
+      if (normalizedLayerId === "text" && exportUi.textVisibility?.["special-zones"]) {
+        await drawSvgLayerToCanvas(bakeCanvas, bakeCtx, { onlyViewportSelector: ".special-zones-layer" });
+      }
+    }
+    const version = cacheEntry ? Number(cacheEntry.version || 0) + 1 : 1;
+    exportUi.bakeCache.set(normalizedLayerId, {
+      hash,
+      version,
+      canvas: bakeCanvas,
+      updatedAt: Date.now(),
+      dependencies,
+      canvasSize: { width, height },
+      dirtyFlag: true,
+    });
+    writeBakeArtifactMeta(normalizedLayerId, dependencies, bakeCanvas, true);
+    return bakeCanvas;
+  };
+
+  const buildExportAdjustmentFilter = (exportUi) => {
+    const adjustments = exportUi?.adjustments || {};
+    const brightness = Math.max(0, Number(adjustments.brightness || 100)) / 100;
+    const saturation = Math.max(0, Number(adjustments.saturation || 100)) / 100;
+    const contrast = (Math.max(0, Number(adjustments.contrast || 100)) / 100)
+      * (0.88 + (Math.max(0, Number(adjustments.clarity || 100)) / 100) * 0.12);
+    return `brightness(${brightness.toFixed(3)}) contrast(${contrast.toFixed(3)}) saturate(${saturation.toFixed(3)})`;
+  };
+
+  const applyExportAdjustmentsToCanvas = (sourceCanvas, exportUi, { width = sourceCanvas?.width, height = sourceCanvas?.height } = {}) => {
+    if (!sourceCanvas) {
+      throw createExportError("invalid-params", "Missing export source canvas.");
+    }
+    const targetWidth = Math.max(1, Math.round(Number(width) || 0));
+    const targetHeight = Math.max(1, Math.round(Number(height) || 0));
+    const adjustedCanvas = document.createElement("canvas");
+    adjustedCanvas.width = targetWidth;
+    adjustedCanvas.height = targetHeight;
+    const adjustedCtx = adjustedCanvas.getContext("2d");
+    if (!adjustedCtx) {
+      throw createExportError("invalid-params", "Canvas export context unavailable.");
+    }
+    adjustedCtx.imageSmoothingEnabled = true;
+    adjustedCtx.imageSmoothingQuality = "high";
+    adjustedCtx.filter = buildExportAdjustmentFilter(exportUi);
+    adjustedCtx.drawImage(sourceCanvas, 0, 0, targetWidth, targetHeight);
+    adjustedCtx.filter = "none";
+    return adjustedCanvas;
+  };
+
+  const cloneCanvas = (sourceCanvas) => {
+    if (!sourceCanvas) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = sourceCanvas.width || 0;
+    canvas.height = sourceCanvas.height || 0;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(sourceCanvas, 0, 0);
+    return canvas;
+  };
+
+  const buildSvgAnnotationCanvas = async (options = {}) => {
+    const width = runtimeState.colorCanvas?.width || runtimeState.lineCanvas?.width || 0;
+    const height = runtimeState.colorCanvas?.height || runtimeState.lineCanvas?.height || 0;
+    if (!(width > 0) || !(height > 0)) {
+      throw createExportError("invalid-params", "SVG annotation canvas unavailable.");
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw createExportError("invalid-params", "SVG annotation context unavailable.");
+    }
+    await drawSvgLayerToCanvas(canvas, ctx, options);
+    return canvas;
+  };
+
+  const buildSpecialZonesExportCanvas = async () => buildSvgAnnotationCanvas({
+    onlyViewportSelector: ".special-zones-layer",
+  });
+
+  const getBakePassNamesForLayer = (layerId, exportUi) => {
+    const visibility = exportUi?.visibility || {};
+    const textVisibility = exportUi?.textVisibility || {};
+    if (layerId === "color") {
+      return [
+        ...(visibility.background === false ? [] : ["background"]),
+        ...(visibility.political === false ? [] : ["physicalBase", "political"]),
+        ...(visibility.context === false ? [] : ["contextBase", "contextScenario"]),
+        ...(visibility.effects === false ? [] : ["effects", "dayNight"]),
+      ];
+    }
+    if (layerId === "line") {
+      return visibility.effects === false ? [] : ["lineEffects", "borders"];
+    }
+    if (layerId === "text") {
+      return textVisibility["render-labels"] === false ? [] : ["labels"];
+    }
+    if (layerId === "composite") {
+      return resolveExportPassSequence({
+        ...exportUi,
+        visibility,
+      }, RENDER_PASS_NAMES).filter((passName) => textVisibility["render-labels"] !== false || passName !== "labels");
+    }
+    return [];
+  };
+
+  const buildCompositeSourceCanvas = async (exportUi) => {
+    const passNames = resolveExportPassSequence({
+      ...exportUi,
+      visibility: exportUi.visibility,
+    }, RENDER_PASS_NAMES).filter((passName) => exportUi.textVisibility?.["render-labels"] || passName !== "labels");
+    const compositeCanvas = renderExportPassesToCanvas(passNames);
+    if (!compositeCanvas) {
+      throw createExportError("invalid-params", "Composite export canvas unavailable.");
+    }
+    const workingCanvas = cloneCanvas(compositeCanvas) || compositeCanvas;
+    if (exportUi.textVisibility?.["svg-annotations"]) {
+      const workingCtx = workingCanvas.getContext("2d");
+      if (!workingCtx) {
+        throw createExportError("invalid-params", "Composite export context unavailable.");
+      }
+      await drawSvgLayerToCanvas(workingCanvas, workingCtx, {
+        onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR,
+      });
+    }
+    if (exportUi.textVisibility?.["special-zones"]) {
+      const workingCtx = workingCanvas.getContext("2d");
+      if (!workingCtx) {
+        throw createExportError("invalid-params", "Composite export context unavailable.");
+      }
+      await drawSvgLayerToCanvas(workingCanvas, workingCtx, { onlyViewportSelector: ".special-zones-layer" });
+    }
+    return workingCanvas;
+  };
+
+  const buildSingleExportSourceCanvas = async (exportUi, sourceId) => {
+    const normalizedSourceId = String(sourceId || "").trim();
+    if (EXPORT_MAIN_LAYER_MODEL_BY_ID.has(normalizedSourceId)) {
+      const model = EXPORT_MAIN_LAYER_MODEL_BY_ID.get(normalizedSourceId);
+      const canvas = renderExportPassesToCanvas(model?.passNames || []);
+      if (!canvas) {
+        throw createExportError("invalid-params", `Layer export canvas unavailable for ${normalizedSourceId}.`);
+      }
+      return canvas;
+    }
+    if (normalizedSourceId === "render-labels") {
+      const canvas = renderExportPassesToCanvas(["labels"]);
+      if (!canvas) {
+        throw createExportError("invalid-params", "Render-pass label canvas unavailable.");
+      }
+      return canvas;
+    }
+    if (normalizedSourceId === "svg-annotations") {
+      return buildSvgAnnotationCanvas({ onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR });
+    }
+    if (normalizedSourceId === "special-zones") {
+      return buildSpecialZonesExportCanvas();
+    }
+    throw createExportError("invalid-params", `Unsupported preview source: ${normalizedSourceId}`);
+  };
+
+  const getBakePackLayerIds = (exportUi) => {
+    const visibleMainLayers = exportUi.layerOrder.filter((layerId) => exportUi.visibility?.[layerId] !== false);
+    const hasVisibleMainLayers = visibleMainLayers.length > 0;
+    const hasEffectsLayer = visibleMainLayers.includes("effects");
+    const hasTextLayer = Object.values(exportUi.textVisibility || {}).some(Boolean);
+    const next = [];
+    if (hasVisibleMainLayers) next.push("color");
+    if (hasEffectsLayer) next.push("line");
+    if (hasTextLayer) next.push("text");
+    if (hasVisibleMainLayers || hasTextLayer) next.push("composite");
+    return next;
+  };
+
+  const getSelectedExportScale = () => {
+    const rawValue = String(exportScale?.value || ensureExportWorkbenchUiState().scale || "2").trim();
+    return ["1", "1.5", "2", "4"].includes(rawValue) ? Number(rawValue) : 2;
+  };
+
+  const scaleCanvasForExport = (sourceCanvas, scaleMultiplier, exportUi) => {
+    if (!sourceCanvas) {
+      throw createExportError("invalid-params", "Missing export source canvas.");
+    }
+    const { width: baseWidth, height: baseHeight } = resolveExportBaseDimensions();
+    if (!(baseWidth > 0) || !(baseHeight > 0)) {
+      throw createExportError("invalid-params", "Missing preview canvas dimensions.");
+    }
+    const targetWidth = Math.round(baseWidth * scaleMultiplier);
+    const targetHeight = Math.round(baseHeight * scaleMultiplier);
+    if (targetWidth > EXPORT_MAX_DIMENSION_PX || targetHeight > EXPORT_MAX_DIMENSION_PX) {
+      throw createExportError("invalid-params", `Export size exceeds 8K cap (${targetWidth}x${targetHeight}).`);
+    }
+    if (targetWidth * targetHeight > EXPORT_MAX_PIXELS) {
+      throw createExportError("invalid-params", `Export pixel budget exceeded (${targetWidth}x${targetHeight}).`);
+    }
+    return applyExportAdjustmentsToCanvas(sourceCanvas, exportUi, {
+      width: targetWidth,
+      height: targetHeight,
+    });
+  };
+
+  const buildCompositeExportCanvas = async (exportUi, scaleMultiplier) => {
+    const compositeCanvas = await buildCompositeSourceCanvas(exportUi);
+    return scaleCanvasForExport(compositeCanvas, scaleMultiplier, exportUi);
+  };
+
+  const buildPerLayerExportOutputs = async (exportUi, scaleMultiplier) => {
+    const outputs = [];
+    exportUi.layerOrder.forEach((layerId) => {
+      if (exportUi.visibility?.[layerId] === false) return;
+      if (layerId === "labels" && exportUi.textVisibility?.["render-labels"] === false) return;
+      outputs.push({ id: layerId });
+    });
+    if (exportUi.textVisibility?.["svg-annotations"]) {
+      outputs.push({ id: "svg-annotations" });
+    }
+    if (exportUi.textVisibility?.["special-zones"]) {
+      outputs.push({ id: "special-zones" });
+    }
+    for (const output of outputs) {
+      const layerCanvas = await buildSingleExportSourceCanvas(exportUi, output.id);
+      output.canvas = scaleCanvasForExport(layerCanvas, scaleMultiplier, exportUi);
+    }
+    if (!outputs.length) {
+      throw createExportError("invalid-params", "No visible export layers are available for per-layer export.");
+    }
+    return outputs;
+  };
+
+  const buildExportArtifactScenarioContext = () => {
+    const scenarioId = String(runtimeState.activeScenarioId || "").trim();
+    if (!scenarioId) return null;
+    return {
+      id: scenarioId,
+      version: Number(runtimeState.activeScenarioManifest?.version || 1) || 1,
+      baselineHash: String(runtimeState.scenarioBaselineHash || "").trim(),
+    };
+  };
+
+  const buildExportArtifactProjectContext = () => ({
+    dirtyRevision: Number(runtimeState.dirtyRevision || 0) || 0,
+    colorRevision: Number(runtimeState.colorRevision || 0) || 0,
+    topologyRevision: Number(runtimeState.topologyRevision || 0) || 0,
+  });
+
+  const buildExportUiManifestSnapshot = (exportUi) => ({
+    target: exportUi.target,
+    format: exportUi.format,
+    scale: exportUi.scale,
+    layerOrder: [...(exportUi.layerOrder || [])],
+    visibility: { ...(exportUi.visibility || {}) },
+    textVisibility: { ...(exportUi.textVisibility || {}) },
+    adjustments: { ...(exportUi.adjustments || {}) },
+    bakeArtifacts: Array.isArray(exportUi.bakeArtifacts) ? exportUi.bakeArtifacts : [],
+  });
+
+  const buildPerLayerExportPackage = async (exportUi, scaleMultiplier) => {
+    const outputs = await buildPerLayerExportOutputs(exportUi, scaleMultiplier);
+    return buildExportArtifactPackage({
+      artifactKind: "per-layer",
+      fileStem: "map_layers",
+      scenario: buildExportArtifactScenarioContext(),
+      project: buildExportArtifactProjectContext(),
+      exportUi: buildExportUiManifestSnapshot(exportUi),
+      files: outputs.map((output) => ({
+        path: `layers/map_layer_${output.id}.png`,
+        role: "layer",
+        mime: "image/png",
+        canvas: output.canvas,
+      })),
+    });
+  };
+
+  const buildBakePackOutputs = async (exportUi, scaleMultiplier) => {
+    const outputs = [];
+    const bakeLayerIds = getBakePackLayerIds(exportUi);
+    for (const layerId of bakeLayerIds) {
+      const bakedCanvas = await bakeLayer(layerId, exportUi);
+      outputs.push({
+        id: layerId,
+        canvas: scaleCanvasForExport(bakedCanvas, scaleMultiplier, exportUi),
+      });
+    }
+    const metadata = {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      exportUi: {
+        target: exportUi.target,
+        format: exportUi.format,
+        scale: exportUi.scale,
+        layerOrder: [...exportUi.layerOrder],
+        visibility: { ...(exportUi.visibility || {}) },
+        textVisibility: { ...(exportUi.textVisibility || {}) },
+        adjustments: { ...(exportUi.adjustments || {}) },
+      },
+      bakeArtifacts: Array.isArray(exportUi.bakeArtifacts) ? exportUi.bakeArtifacts : [],
+      files: outputs.map((output) => `map_bake_${output.id}.png`),
+    };
+    outputs.push({
+      id: "metadata",
+      blob: new Blob([JSON.stringify(metadata, null, 2)], { type: "application/json" }),
+      extension: "json",
+      fileStem: "map_bake_manifest",
+    });
+    return outputs;
+  };
+
+  const buildBakePackPackage = async (exportUi, scaleMultiplier) => {
+    const outputs = await buildBakePackOutputs(exportUi, scaleMultiplier);
+    return buildExportArtifactPackage({
+      artifactKind: "bake-pack",
+      fileStem: "map_bake_pack",
+      scenario: buildExportArtifactScenarioContext(),
+      project: buildExportArtifactProjectContext(),
+      exportUi: buildExportUiManifestSnapshot(exportUi),
+      files: outputs.map((output) => {
+        if (output.canvas) {
+          return {
+            path: `layers/map_bake_${output.id}.png`,
+            role: "bake-layer",
+            mime: "image/png",
+            canvas: output.canvas,
+          };
+        }
+        return {
+          path: `${output.fileStem || output.id}.${output.extension || "json"}`,
+          role: "legacy-metadata",
+          mime: "application/json",
+          blob: output.blob,
+        };
+      }),
+    });
+  };
+
+  const triggerCanvasDownload = (canvas, extension, fileStem) => {
+    const format = extension === "jpg" ? "image/jpeg" : "image/png";
+    const dataUrl = canvas.toDataURL(format, 0.92);
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `${fileStem}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const triggerBlobDownload = (blob, extension, fileStem) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `${fileStem}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  };
 
   const syncExportWorkbenchControlsFromState = () => {
     return exportWorkbenchController?.syncExportWorkbenchControlsFromState() || ensureExportWorkbenchUiState();

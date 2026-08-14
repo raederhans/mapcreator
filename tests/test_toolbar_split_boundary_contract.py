@@ -18,7 +18,6 @@ SPECIAL_ZONE_EDITOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zone_edi
 SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
 STYLE_CSS = REPO_ROOT / "css" / "style.css"
 EXPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_workbench_controller.js"
-EXPORT_ARTIFACT_PIPELINE_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_artifact_pipeline.js"
 TRANSPORT_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_controller.js"
 TRANSPORT_WORKBENCH_STATE_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_state_owner.js"
 TRANSPORT_WORKBENCH_CONFIG_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_config_owner.js"
@@ -54,7 +53,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 I18N_CATALOG_JS = REPO_ROOT / "js" / "core" / "i18n_catalog.js"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 
-TOOLBAR_SHELL_MAX_LINES = 2600
+TOOLBAR_SHELL_MAX_LINES = 3100
 SCENARIO_CONTEXT_BAR_CONTROLLER_MAX_LINES = 240
 
 
@@ -116,16 +115,13 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
 
         self.assertIn('./toolbar/export_failure_handler.js', content)
         self.assertIn('./toolbar/palette_library_panel.js', content)
-        self.assertIn("showExportFailureToast", content)
+        self.assertIn("createExportError,", content)
+        self.assertIn("showExportFailureToast,", content)
         self.assertIn("createPaletteLibraryPanelController", content)
         self.assertIn('./toolbar/scenario_guide_popover.js', content)
         self.assertIn("createScenarioGuidePopoverController", content)
         self.assertIn('./toolbar/export_workbench_controller.js', content)
         self.assertIn("createExportWorkbenchController", content)
-        self.assertIn('./toolbar/export_artifact_pipeline.js', content)
-        self.assertIn("createExportArtifactPipeline", content)
-        pipeline_content = EXPORT_ARTIFACT_PIPELINE_JS.read_text(encoding="utf-8")
-        self.assertIn("createExportError", pipeline_content)
         self.assertIn('./toolbar/transport_workbench_controller.js', content)
         self.assertIn("createTransportWorkbenchController", content)
         self.assertIn('./toolbar/workspace_chrome_support_surface_controller.js', content)
@@ -194,53 +190,41 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_export_workbench_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         owner_content = EXPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
-        contract_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "export_workbench_contract.js").read_text(encoding="utf-8")
 
         self.assertIn("function createExportWorkbenchController", owner_content)
-        self.assertIn("function ensureExportWorkbenchUiState", contract_content)
-        self.assertIn("function resolveExportPassSequence", contract_content)
+        self.assertIn("function ensureExportWorkbenchUiState", owner_content)
+        self.assertIn("function resolveExportPassSequence", owner_content)
         self.assertIn("const renderExportWorkbenchPreview = async () => {", owner_content)
         self.assertIn("const renderExportWorkbenchUi = (isOpen) => {", owner_content)
         self.assertIn("const bindExportWorkbenchEvents = () => {", owner_content)
         self.assertIn("return exportWorkbenchController?.renderExportWorkbenchPreview();", toolbar_content)
         self.assertIn("return exportWorkbenchController?.renderExportWorkbenchBakeArtifactList();", toolbar_content)
         self.assertIn("return exportWorkbenchController?.syncExportPreviewSourceOptions();", toolbar_content)
-        self.assertIn('id: "background"', contract_content)
-        self.assertIn('id: "political"', contract_content)
-        self.assertIn('id: "context"', contract_content)
-        self.assertIn('id: "effects"', contract_content)
-        self.assertIn('id: "labels"', contract_content)
-        self.assertIn('passNames: ["background"]', contract_content)
-        self.assertIn('passNames: ["physicalBase", "political"]', contract_content)
-        self.assertIn('passNames: ["contextBase", "contextScenario"]', contract_content)
-        self.assertIn('passNames: ["effects", "lineEffects", "contextMarkers", "dayNight", "borders", "textureLabels"]', contract_content)
+        self.assertIn('id: "background"', owner_content)
+        self.assertIn('id: "political"', owner_content)
+        self.assertIn('id: "context"', owner_content)
+        self.assertIn('id: "effects"', owner_content)
+        self.assertIn('id: "labels"', owner_content)
+        self.assertIn('passNames: ["background"]', owner_content)
+        self.assertIn('passNames: ["physicalBase", "political"]', owner_content)
+        self.assertIn('passNames: ["contextBase", "contextScenario"]', owner_content)
+        self.assertIn('passNames: ["effects", "lineEffects", "contextMarkers", "dayNight", "borders", "textureLabels"]', owner_content)
 
     def test_export_pipeline_relies_on_controller_pass_flow(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        pipeline_content = EXPORT_ARTIFACT_PIPELINE_JS.read_text(encoding="utf-8")
-        self.assertIn('from "./export_workbench_contract.js";', pipeline_content)
-        self.assertNotIn('from "./export_workbench_controller.js";', pipeline_content)
-        self.assertIn("const main = EXPORT_MAIN_LAYER_IDS", pipeline_content)
-        self.assertIn("const text = EXPORT_TEXT_LAYER_IDS", pipeline_content)
 
         self.assertNotIn("const drawLineLayerToCanvas = (targetCtx) => {", toolbar_content)
         self.assertNotIn("const drawColorLayerToCanvas = (targetCtx) => {", toolbar_content)
         self.assertNotIn("const drawCompositeLayerToCanvas = (targetCtx) => {", toolbar_content)
-        self.assertNotIn("const computeBakeHash", toolbar_content)
-        self.assertNotIn("const bakeLayer", toolbar_content)
-        self.assertNotIn("const buildCompositeExportCanvas", toolbar_content)
-        self.assertNotIn("const triggerBlobDownload", toolbar_content)
-        self.assertNotIn("drawRenderPassCanvasToBakeTarget", pipeline_content)
-        self.assertIn("const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi);", pipeline_content)
-        self.assertIn("buildCompositeSourceCanvas(exportUi)", pipeline_content)
-        self.assertIn("const passCanvas = renderExportPassesToCanvas(bakePassNames);", pipeline_content)
-        self.assertIn("artifactPipeline,", self._controller_call_body(toolbar_content, "createExportWorkbenchController"))
+        self.assertIn("const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi);", toolbar_content)
+        self.assertIn("const compositeCanvas = await buildCompositeSourceCanvas(exportUi);", toolbar_content)
+        self.assertIn("const passCanvas = renderExportPassesToCanvas(bakePassNames);", toolbar_content)
+        self.assertEqual(toolbar_content.count("}, RENDER_PASS_NAMES).filter((passName) =>"), 2)
 
     def test_svg_annotation_export_uses_strategic_annotation_layers_only(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        pipeline_content = EXPORT_ARTIFACT_PIPELINE_JS.read_text(encoding="utf-8")
 
-        self.assertIn("const SVG_ANNOTATION_VIEWPORT_SELECTOR = [", pipeline_content)
+        self.assertIn("const SVG_ANNOTATION_VIEWPORT_SELECTOR = [", toolbar_content)
         for selector in [
             ".frontline-overlay-layer",
             ".frontline-labels-layer",
@@ -248,9 +232,9 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
             ".operation-graphics-layer",
             ".unit-counters-layer",
         ]:
-            self.assertIn(selector, pipeline_content)
-        self.assertIn("onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR", pipeline_content)
-        self.assertNotIn('buildSvgAnnotationCanvas({ removeSelectors: [".special-zones-layer"] })', pipeline_content)
+            self.assertIn(selector, toolbar_content)
+        self.assertIn("onlyViewportSelector: SVG_ANNOTATION_VIEWPORT_SELECTOR", toolbar_content)
+        self.assertNotIn('buildSvgAnnotationCanvas({ removeSelectors: [".special-zones-layer"] })', toolbar_content)
 
     def test_toolbar_keeps_export_workbench_facade_and_url_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
