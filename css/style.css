@@ -7183,6 +7183,24 @@ body.counter-editor-modal-open {
   }
 }
 
+@media (min-width: 921px) {
+  .export-workbench-grid {
+    overflow: hidden;
+  }
+
+  .export-workbench-column {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+}
+
+@media (min-width: 921px) and (max-height: 780px) {
+  .export-workbench-preview-canvas {
+    min-height: clamp(180px, calc(100vh - 480px), 300px);
+  }
+}
+
 @media (max-width: 920px) {
   .transport-workbench-overlay {
     padding: 20px;

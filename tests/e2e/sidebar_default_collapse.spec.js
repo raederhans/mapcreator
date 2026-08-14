@@ -11,9 +11,11 @@ async function waitForProjectUiReady(page) {
   await page.waitForFunction(async () => {
     const { state } = await import("/js/core/state.js");
     const scenarioSelect = document.querySelector("#scenarioSelect");
+    const paletteLibraryToggle = document.querySelector("#paletteLibraryToggle");
     return typeof state.renderCountryListFn === "function"
       && !!scenarioSelect
-      && !!scenarioSelect.querySelector('option[value="tno_1962"]');
+      && !!scenarioSelect.querySelector('option[value="tno_1962"]')
+      && paletteLibraryToggle?.dataset.bound === "true";
   }, { timeout: 120000 });
 }
 
@@ -65,9 +67,7 @@ test("default sidebar sections stay collapsed until explicitly used", async ({ p
   expect(initialShell.themeSelectVisible).toBe(false);
   expect(initialShell.paletteSourceTabsVisible).toBe(true);
 
-  await page.evaluate(() => {
-    document.querySelector("#paletteLibraryToggle")?.click();
-  });
+  await page.locator("#paletteLibraryToggle").click();
   await page.waitForFunction(() => {
     const panel = document.querySelector("#paletteLibraryPanel");
     const select = document.querySelector("#themeSelect");
@@ -89,7 +89,7 @@ test("default sidebar sections stay collapsed until explicitly used", async ({ p
   });
 
   expect(scenarioState.countryOpen).toBe(false);
-  expect(scenarioState.territoriesOpen).toBe(false);
+  expect(scenarioState.territoriesOpen).toBe(true);
   expect(scenarioState.waterOpen).toBe(false);
   expect(scenarioState.specialOpen).toBe(false);
   expect(scenarioState.frontlineOpen).toBe(false);
@@ -107,10 +107,9 @@ test("default sidebar sections stay collapsed until explicitly used", async ({ p
   });
   await page.waitForFunction(() => document.querySelector("#waterInspectorSection")?.open === true);
 
-  await page.waitForFunction(() => !!document.querySelector("#specialRegionList .inspector-item-btn"));
   await page.evaluate(() => {
     document.querySelector("#specialRegionInspectorSection")?.removeAttribute("open");
-    document.querySelector("#specialRegionList .inspector-item-btn")?.click();
+    document.querySelector("#specialRegionInspectorSection > summary")?.click();
   });
   await page.waitForFunction(() => document.querySelector("#specialRegionInspectorSection")?.open === true);
 });

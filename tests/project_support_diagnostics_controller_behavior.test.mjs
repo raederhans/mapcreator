@@ -44,6 +44,28 @@ function createButtonNode() {
   };
 }
 
+function createAccountPopoverControls() {
+  const backendAccountToggleBtn = {
+    ...createButtonNode(),
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    focus() {},
+  };
+  const backendAccountPopover = {
+    dataset: {},
+    hiddenClass: true,
+    classList: {
+      contains: () => backendAccountPopover.hiddenClass,
+      toggle: (_name, hidden) => {
+        backendAccountPopover.hiddenClass = hidden;
+      },
+    },
+  };
+  return { backendAccountToggleBtn, backendAccountPopover };
+}
+
 function createListNode() {
   return {
     children: [],
@@ -767,6 +789,93 @@ test("community load source opens account popover and refreshes community saves"
   }
 });
 
+test("backend auth session probe waits for first account popover open and runs once", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
+  const backendCloudSection = { hidden: true };
+  const backendCloudStatus = createStatusNode();
+  const backendCloudUsername = { value: "", disabled: false, focus() {} };
+  const backendCloudPassword = { value: "", disabled: false };
+  const backendCloudSaveTitle = { value: "", disabled: false };
+  const backendCloudRegisterBtn = createButtonNode();
+  const backendCloudLoginBtn = createButtonNode();
+  const backendCloudLogoutBtn = createButtonNode();
+  const backendCloudSaveBtn = createButtonNode();
+  const backendCloudPublishBtn = createButtonNode();
+  const backendCommunityRefreshBtn = createButtonNode();
+  const { backendAccountToggleBtn, backendAccountPopover } = createAccountPopoverControls();
+  let authProbeCount = 0;
+
+  globalThis.document = {
+    body: { classList: { toggle: () => {} } },
+    createElement: createElementNode,
+    addEventListener: () => {},
+    getElementById: () => null,
+  };
+  globalThis.window = { requestAnimationFrame: (callback) => callback() };
+  globalThis.fetch = async (url) => {
+    if (String(url).endsWith("/auth/me")) {
+      authProbeCount += 1;
+      return {
+        ok: false,
+        status: 401,
+        json: async () => ({ code: "auth_required", message: "Login is required." }),
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  try {
+    const controller = createController(createStatusNode(), {
+      elements: {
+        backendCloudSection,
+        backendCloudStatus,
+        backendCloudUsername,
+        backendCloudPassword,
+        backendCloudSaveTitle,
+        backendCloudRegisterBtn,
+        backendCloudLoginBtn,
+        backendCloudLogoutBtn,
+        backendCloudSaveBtn,
+        backendCloudPublishBtn,
+        backendCommunityRefreshBtn,
+        backendAccountToggleBtn,
+        backendAccountPopover,
+      },
+    });
+    controller.bindEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(authProbeCount, 0);
+
+    backendAccountToggleBtn.listeners.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(authProbeCount, 1);
+    assert.equal(backendCloudSection.hidden, false);
+    assert.equal(backendCloudUsername.disabled, false);
+    assert.equal(backendCloudPassword.disabled, false);
+    assert.equal(backendCloudRegisterBtn.disabled, false);
+    assert.equal(backendCloudLoginBtn.disabled, false);
+    assert.equal(backendCommunityRefreshBtn.disabled, false);
+    assert.equal(backendCloudSaveTitle.disabled, true);
+    assert.equal(backendCloudLogoutBtn.disabled, true);
+    assert.equal(backendCloudSaveBtn.disabled, true);
+    assert.equal(backendCloudPublishBtn.disabled, true);
+
+    backendAccountToggleBtn.listeners.click();
+    backendAccountToggleBtn.listeners.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(authProbeCount, 1);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+    globalThis.window = previousWindow;
+  }
+});
+
 test("community load waits for import callback before showing loaded status", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
@@ -1261,6 +1370,7 @@ test("register clears previous cloud save before publishing", async () => {
 test("anonymous backend probe enables only public cloud actions", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
   const backendCloudSection = { hidden: true };
   const backendCloudStatus = createStatusNode();
   const backendCloudUsername = { value: "", disabled: false };
@@ -1273,11 +1383,15 @@ test("anonymous backend probe enables only public cloud actions", async () => {
   const backendCloudPublishBtn = createButtonNode();
   const backendCommunityRefreshBtn = createButtonNode();
   const backendCommunityList = createListNode();
+  const { backendAccountToggleBtn, backendAccountPopover } = createAccountPopoverControls();
 
   globalThis.document = {
+    body: { classList: { toggle: () => {} } },
     createElement: createElementNode,
+    addEventListener: () => {},
     getElementById: () => null,
   };
+  globalThis.window = { requestAnimationFrame: (callback) => callback() };
   globalThis.fetch = async (url) => ({
     ok: !String(url).endsWith("/auth/me"),
     status: String(url).endsWith("/auth/me") ? 401 : 200,
@@ -1307,9 +1421,12 @@ test("anonymous backend probe enables only public cloud actions", async () => {
         backendCloudPublishBtn,
         backendCommunityRefreshBtn,
         backendCommunityList,
+        backendAccountToggleBtn,
+        backendAccountPopover,
       },
     });
     controller.bindEvents();
+    backendAccountToggleBtn.listeners.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     assert.equal(backendCloudSection.hidden, false);
@@ -1331,6 +1448,7 @@ test("anonymous backend probe enables only public cloud actions", async () => {
   } finally {
     globalThis.document = previousDocument;
     globalThis.fetch = previousFetch;
+    globalThis.window = previousWindow;
   }
 });
 
@@ -1401,6 +1519,7 @@ test("community action buttons refresh after anonymous user logs in", async () =
 test("backend session probe disables cloud controls when local backend fails unexpectedly", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
   const backendCloudSection = { hidden: true };
   const backendCloudStatus = createStatusNode();
   const backendCloudUsername = { value: "" };
@@ -1412,11 +1531,15 @@ test("backend session probe disables cloud controls when local backend fails une
   const backendCloudSaveBtn = createButtonNode();
   const backendCloudPublishBtn = createButtonNode();
   const backendCommunityRefreshBtn = createButtonNode();
+  const { backendAccountToggleBtn, backendAccountPopover } = createAccountPopoverControls();
 
   globalThis.document = {
+    body: { classList: { toggle: () => {} } },
     createElement: createElementNode,
+    addEventListener: () => {},
     getElementById: () => null,
   };
+  globalThis.window = { requestAnimationFrame: (callback) => callback() };
   globalThis.fetch = async () => ({
     ok: false,
     status: 500,
@@ -1437,9 +1560,12 @@ test("backend session probe disables cloud controls when local backend fails une
         backendCloudSaveBtn,
         backendCloudPublishBtn,
         backendCommunityRefreshBtn,
+        backendAccountToggleBtn,
+        backendAccountPopover,
       },
     });
     controller.bindEvents();
+    backendAccountToggleBtn.listeners.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     assert.equal(backendCloudStatus.textContent, "Local backend unavailable. Start the local dev server to use Cloud Saves.");
@@ -1449,21 +1575,27 @@ test("backend session probe disables cloud controls when local backend fails une
   } finally {
     globalThis.document = previousDocument;
     globalThis.fetch = previousFetch;
+    globalThis.window = previousWindow;
   }
 });
 
 test("backend session probe hides cloud section for non backend success payloads", async () => {
   const previousDocument = globalThis.document;
   const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
   const backendCloudSection = { hidden: true };
   const backendCloudStatus = createStatusNode();
   const backendCloudRegisterBtn = createButtonNode();
   const backendCommunityRefreshBtn = createButtonNode();
+  const { backendAccountToggleBtn, backendAccountPopover } = createAccountPopoverControls();
 
   globalThis.document = {
+    body: { classList: { toggle: () => {} } },
     createElement: createElementNode,
+    addEventListener: () => {},
     getElementById: () => null,
   };
+  globalThis.window = { requestAnimationFrame: (callback) => callback() };
   globalThis.fetch = async () => ({
     ok: true,
     status: 200,
@@ -1477,9 +1609,12 @@ test("backend session probe hides cloud section for non backend success payloads
         backendCloudStatus,
         backendCloudRegisterBtn,
         backendCommunityRefreshBtn,
+        backendAccountToggleBtn,
+        backendAccountPopover,
       },
     });
     controller.bindEvents();
+    backendAccountToggleBtn.listeners.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     assert.equal(backendCloudSection.hidden, true);
@@ -1488,5 +1623,6 @@ test("backend session probe hides cloud section for non backend success payloads
   } finally {
     globalThis.document = previousDocument;
     globalThis.fetch = previousFetch;
+    globalThis.window = previousWindow;
   }
 });

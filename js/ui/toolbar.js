@@ -1890,6 +1890,7 @@ function initToolbar({ render } = {}) {
   exportWorkbenchController = createExportWorkbenchController({
     state,
     t,
+    showToast,
     showExportFailureToast,
     normalizeExportWorkbenchUiState,
     renderPassNames: RENDER_PASS_NAMES,

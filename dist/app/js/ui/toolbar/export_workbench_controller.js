@@ -39,6 +39,12 @@ function identityT(key) {
   return String(key || "");
 }
 
+function assertRequiredCallableDependency(value, name) {
+  if (typeof value !== "function") {
+    throw new TypeError(`createExportWorkbenchController requires ${name} to be a function.`);
+  }
+}
+
 function localize(t, key) {
   return (typeof t === "function" ? t : identityT)(key, "ui");
 }
@@ -219,6 +225,9 @@ function createExportWorkbenchController({
   bakeLayer,
   exportMaxConcurrentJobs = 1,
 } = {}) {
+  assertRequiredCallableDependency(showToast, "showToast");
+  assertRequiredCallableDependency(showExportFailureToast, "showExportFailureToast");
+
   let exportWorkbenchDraggedLayerId = "";
   let exportWorkbenchPreviewRenderToken = 0;
   let exportJobsInFlight = 0;

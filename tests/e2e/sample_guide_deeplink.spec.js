@@ -66,6 +66,154 @@ async function expectNoHorizontalOverflow(page, selectors) {
   expect(overflow).toEqual([]);
 }
 
+function installExportActionIssueTracker(page) {
+  const pageErrors = [];
+  const actionableConsoleIssues = [];
+  page.on("pageerror", (error) => {
+    pageErrors.push(String(error?.stack || error?.message || error));
+  });
+  page.on("console", (message) => {
+    const type = message.type();
+    if (type === "error" || type === "warning") {
+      actionableConsoleIssues.push({ type, text: message.text() });
+    }
+  });
+  return {
+    pageErrors,
+    actionableConsoleIssues,
+    reset() {
+      pageErrors.length = 0;
+      actionableConsoleIssues.length = 0;
+    },
+  };
+}
+
+function installGoldenRuntimeIssueTracker(page) {
+  const unexpectedIssues = [];
+  const expectedIssues = [];
+  page.on("pageerror", (error) => {
+    unexpectedIssues.push({ kind: "pageerror", text: String(error?.stack || error?.message || error) });
+  });
+  page.on("console", (message) => {
+    const type = message.type();
+    if (type !== "error" && type !== "warning") return;
+    const text = message.text();
+    if (/^\[map_renderer\] Removed 2 D3-unsafe water geometry part\(s\): marine_arctic_ocean, marine_southern_ocean$/.test(text)) {
+      expectedIssues.push({ kind: `console:${type}`, text });
+      return;
+    }
+    unexpectedIssues.push({ kind: `console:${type}`, text });
+  });
+  page.on("response", (response) => {
+    if (response.status() < 400) return;
+    unexpectedIssues.push({ kind: "response", status: response.status(), url: response.url() });
+  });
+  page.on("requestfailed", (request) => {
+    unexpectedIssues.push({
+      kind: "requestfailed",
+      text: request.failure()?.errorText || "unknown request failure",
+      url: request.url(),
+    });
+  });
+  return { expectedIssues, unexpectedIssues };
+}
+
+async function readDownloadBuffer(download) {
+  const stream = await download.createReadStream();
+  expect(stream).toBeTruthy();
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+async function expectExportWorkbenchLayoutReachable(page) {
+  const selectors = {
+    panel: "#exportWorkbenchPanel",
+    footer: ".export-workbench-footer",
+    preview: "#exportWorkbenchPreviewCanvas",
+    textLayer: "#exportWorkbenchTextElementList",
+  };
+  const layout = await page.evaluate((targetSelectors) => {
+    const elements = Object.fromEntries(Object.entries(targetSelectors).map(([key, selector]) => (
+      [key, document.querySelector(selector)]
+    )));
+    const rects = Object.fromEntries(Object.entries(elements).map(([key, element]) => {
+      const rect = element?.getBoundingClientRect?.();
+      return [key, rect ? {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      } : null];
+    }));
+    const intersectRects = (first, second) => {
+      if (!first || !second) return null;
+      const left = Math.max(first.left, second.left);
+      const top = Math.max(first.top, second.top);
+      const right = Math.min(first.right, second.right);
+      const bottom = Math.min(first.bottom, second.bottom);
+      if (right <= left || bottom <= top) return null;
+      return { left, top, right, bottom, width: right - left, height: bottom - top };
+    };
+    const readVisibleRect = (element) => {
+      if (!(element instanceof HTMLElement)) return null;
+      const viewportRect = {
+        left: 0,
+        top: 0,
+        right: window.innerWidth,
+        bottom: window.innerHeight,
+      };
+      let visibleRect = intersectRects(element.getBoundingClientRect(), viewportRect);
+      for (let ancestor = element.parentElement; visibleRect && ancestor; ancestor = ancestor.parentElement) {
+        const style = window.getComputedStyle(ancestor);
+        const clips = [style.overflow, style.overflowX, style.overflowY]
+          .some((value) => /^(auto|clip|hidden|scroll)$/.test(value));
+        if (clips) {
+          visibleRect = intersectRects(visibleRect, ancestor.getBoundingClientRect());
+        }
+      }
+      return visibleRect;
+    };
+    const visibleRects = Object.fromEntries(Object.entries(elements).map(([key, element]) => (
+      [key, readVisibleRect(element)]
+    )));
+    const overlapArea = (first, second) => {
+      if (!first || !second) return 0;
+      const width = Math.max(0, Math.min(first.right, second.right) - Math.max(first.left, second.left));
+      const height = Math.max(0, Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top));
+      return width * height;
+    };
+    return {
+      rects,
+      overlaps: {
+        footerPreview: overlapArea(visibleRects.footer, visibleRects.preview),
+        footerTextLayer: overlapArea(visibleRects.footer, visibleRects.textLayer),
+        previewTextLayer: overlapArea(visibleRects.preview, visibleRects.textLayer),
+      },
+    };
+  }, selectors);
+
+  expect(layout.rects.panel?.width).toBeGreaterThan(0);
+  expect(layout.rects.panel?.height).toBeGreaterThan(0);
+  expect(layout.rects.footer?.height).toBeGreaterThan(0);
+  expect(layout.rects.preview?.height).toBeGreaterThan(0);
+  expect(layout.rects.textLayer?.height).toBeGreaterThan(0);
+  expect(layout.overlaps).toEqual({
+    footerPreview: 0,
+    footerTextLayer: 0,
+    previewTextLayer: 0,
+  });
+  for (const selector of [selectors.preview, selectors.textLayer, selectors.footer]) {
+    const locator = page.locator(selector);
+    await locator.scrollIntoViewIfNeeded();
+    await expect(locator).toBeInViewport();
+  }
+}
+
 async function isSelectorInViewport(page, selector) {
   return page.evaluate((targetSelector) => {
     const element = document.querySelector(targetSelector);
@@ -164,6 +312,8 @@ test("sample guide default route shows starter choices without sample state", as
 });
 
 test("sample guide card opens export from the TNO sample deeplink", async ({ page }, testInfo) => {
+  const runtimeIssues = installGoldenRuntimeIssueTracker(page);
+  const exportActionIssues = installExportActionIssueTracker(page);
   try {
     await gotoApp(page, "/app/?sample=tno-1962-atlantropa-briefing&view=guide", { waitUntil: "domcontentloaded" });
     await waitForShellReady(page, { timeout: 120000, requireCanvas: true });
@@ -205,7 +355,27 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
     await expect(page.locator("[data-export-workbench-sample-context]")).toBeVisible();
     await expect(page.locator("[data-export-workbench-sample-title]")).toContainText(/Exporting sample: TNO 1962 Atlantropa briefing/i);
     await expect(page.locator("[data-export-workbench-sample-recommendation]")).toContainText(/Recommended: PNG · 2x · Composite image/i);
-    await expect(page.locator("#exportWorkbenchSnapshotBtn")).toBeVisible();
+    const snapshotButton = page.locator("#exportWorkbenchSnapshotBtn");
+    await expect(snapshotButton).toBeVisible();
+    exportActionIssues.reset();
+    const downloadPromise = page.waitForEvent("download", { timeout: 120000 });
+    await snapshotButton.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("map_snapshot.png");
+    expect(await download.failure()).toBeNull();
+    const pngBuffer = await readDownloadBuffer(download);
+    expect(pngBuffer.length).toBeGreaterThan(1024);
+    expect(pngBuffer.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+    await expect(page.locator("#toastViewport .toast-message")).toContainText("Map snapshot downloaded.");
+    await page.waitForTimeout(500);
+    expect(runtimeIssues.unexpectedIssues).toEqual([]);
+    expect({
+      pageErrors: [...exportActionIssues.pageErrors],
+      actionableConsoleIssues: [...exportActionIssues.actionableConsoleIssues],
+    }).toEqual({
+      pageErrors: [],
+      actionableConsoleIssues: [],
+    });
     await page.locator("#exportWorkbenchCloseBtn").click();
     await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
     await expectActiveElement(page, { id: /^(scenarioGuideBtn|utilitiesGuideBtn)$/ });
@@ -290,6 +460,8 @@ test("sample guide remains usable across public mobile and desktop widths", asyn
     for (const viewport of [
       { width: 375, height: 760 },
       { width: 768, height: 900 },
+      { width: 1280, height: 720 },
+      { width: 1366, height: 768 },
       { width: 1366, height: 900 },
     ]) {
       await page.setViewportSize(viewport);
@@ -311,6 +483,7 @@ test("sample guide remains usable across public mobile and desktop widths", asyn
         "#exportWorkbenchPanel",
         "[data-export-workbench-sample-context]",
       ]);
+      await expectExportWorkbenchLayoutReachable(page);
       await page.locator("#exportWorkbenchCloseBtn").click();
       await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
 

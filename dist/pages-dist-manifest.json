@@ -12,7 +12,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 291478,
+      "size_bytes": 291836,
       "source_kind": "dist"
     },
     {
@@ -45517,7 +45517,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 270585,
+      "size_bytes": 269166,
       "source_kind": "dist"
     },
     {
@@ -46802,7 +46802,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 58070,
+      "size_bytes": 58363,
       "source_kind": "dist"
     },
     {
@@ -46847,7 +46847,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 135476,
+      "size_bytes": 135491,
       "source_kind": "dist"
     },
     {
@@ -46912,7 +46912,7 @@
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 34950,
+      "size_bytes": 35293,
       "source_kind": "dist"
     },
     {
@@ -47654,7 +47654,7 @@
     {
       "file_count": 9444,
       "path": "app",
-      "size_bytes": 965857295
+      "size_bytes": 965856885
     },
     {
       "file_count": 57,
@@ -47687,5 +47687,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972426223
+  "total_bytes": 972425813
 }

@@ -90,6 +90,7 @@ export function createProjectSupportDiagnosticsController({
   let latestCloudSaveUserKey = "";
   let latestCommunitySaves = [];
   let backendCloudSessionMode = "hidden";
+  let backendSessionProbePromise = null;
   let lastExpandedSpecialZoneDiagnosticsKey = "";
 
   const setBackendCloudStatus = (message) => {
@@ -104,6 +105,34 @@ export function createProjectSupportDiagnosticsController({
     }
   };
 
+  const ensureBackendSessionProbed = () => {
+    if (backendSessionProbePromise) return backendSessionProbePromise;
+
+    setBackendCloudSessionState("probing");
+    backendSessionProbePromise = refreshBackendSession()
+      .then((payload) => {
+        updateActiveCloudUser(payload?.user);
+        setBackendCloudSessionState("authenticated");
+        setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || payload?.user?.username || ""}`);
+      })
+      .catch((error) => {
+        if (error?.code === "auth_required" || error?.status === 401) {
+          clearActiveCloudUser();
+          setBackendCloudSessionState("anonymous");
+          return;
+        }
+        clearActiveCloudUser();
+        setBackendCloudSessionState(error?.payload?.code ? "unavailable" : "hidden");
+        setBackendCloudStatus(t("Local backend unavailable. Start the local dev server to use Cloud Saves.", "ui"));
+      })
+      .finally(() => {
+        if (backendCloudStatus?.dataset) {
+          backendCloudStatus.dataset.sessionChecked = "true";
+        }
+      });
+    return backendSessionProbePromise;
+  };
+
   const setBackendAccountPopoverOpen = (isOpen) => {
     if (!backendAccountPopover || !backendAccountToggleBtn) return;
     backendAccountPopover.classList.toggle("hidden", !isOpen);
@@ -111,6 +140,7 @@ export function createProjectSupportDiagnosticsController({
     document.body?.classList.toggle("project-account-dialog-open", !!isOpen);
     backendAccountToggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
     if (isOpen) {
+      void ensureBackendSessionProbed();
       window.requestAnimationFrame?.(() => backendCloudUsername?.focus?.());
     } else {
       backendAccountToggleBtn.focus?.();
@@ -1279,7 +1309,11 @@ export function createProjectSupportDiagnosticsController({
     if (backendAccountToggleBtn && backendAccountPopover && !backendAccountToggleBtn.dataset.bound) {
       backendAccountToggleBtn.addEventListener("click", () => {
         const isOpen = !backendAccountPopover.classList.contains("hidden");
-        setBackendAccountPopoverOpen(!isOpen);
+        if (isOpen) {
+          setBackendAccountPopoverOpen(false);
+        } else {
+          openBackendAccountPopover();
+        }
       });
       backendAccountToggleBtn.dataset.bound = "true";
     }
@@ -1413,29 +1447,6 @@ export function createProjectSupportDiagnosticsController({
         }, restoreBackendCloudControls);
       });
       backendCommunityRefreshBtn.dataset.bound = "true";
-    }
-
-    if (backendCloudStatus && !backendCloudStatus.dataset.sessionChecked) {
-      setBackendCloudSessionState("probing");
-      refreshBackendSession()
-        .then((payload) => {
-          updateActiveCloudUser(payload?.user);
-          setBackendCloudSessionState("authenticated");
-          setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || payload?.user?.username || ""}`);
-        })
-        .catch((error) => {
-          if (error?.code === "auth_required" || error?.status === 401) {
-            clearActiveCloudUser();
-            setBackendCloudSessionState("anonymous");
-            return;
-          }
-          clearActiveCloudUser();
-          setBackendCloudSessionState(error?.payload?.code ? "unavailable" : "hidden");
-          setBackendCloudStatus(t("Local backend unavailable. Start the local dev server to use Cloud Saves.", "ui"));
-        })
-        .finally(() => {
-          backendCloudStatus.dataset.sessionChecked = "true";
-        });
     }
 
   };

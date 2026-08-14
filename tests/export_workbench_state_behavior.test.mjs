@@ -11,11 +11,31 @@ import {
 import { normalizeExportWorkbenchUiState } from "../js/core/state_defaults.js";
 import { replaceExportWorkbenchUiState } from "../js/core/state/ui_state.js";
 import {
+  createExportWorkbenchController,
   ensureExportWorkbenchUiState,
   getExportAnnotationCountSummary,
   getExportAnnotationFamilyCounts,
   resolveExportPassSequence,
 } from "../js/ui/toolbar/export_workbench_controller.js";
+
+test("export workbench controller validates required notification dependencies at construction", () => {
+  assert.throws(
+    () => createExportWorkbenchController({ showExportFailureToast() {} }),
+    /createExportWorkbenchController requires showToast to be a function\./,
+  );
+  assert.throws(
+    () => createExportWorkbenchController({ showToast() {} }),
+    /createExportWorkbenchController requires showExportFailureToast to be a function\./,
+  );
+
+  const controller = createExportWorkbenchController({
+    showToast() {},
+    showExportFailureToast() {},
+  });
+
+  assert.equal(typeof controller.bindExportWorkbenchEvents, "function");
+  assert.equal(typeof controller.renderExportWorkbenchUi, "function");
+});
 
 test("export workbench state normalizes legacy visibility and text aliases", () => {
   const normalized = normalizeExportWorkbenchUiState({

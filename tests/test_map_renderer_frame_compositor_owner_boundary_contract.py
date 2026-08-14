@@ -179,7 +179,7 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
             "setInteractionCompositeRejectedReason: (reason) => {",
             "getRenderPassCacheState().interactionComposite.rejectedReason = reason;",
             "setPendingExactPoliticalFastFrame: (value) => {",
-            "runtimeState.pendingExactPoliticalFastFrame = value;",
+            "setPendingExactPoliticalFastFrameState(runtimeState, value);",
         ]:
             self.assertIn(token, transformed_owner_getter)
 

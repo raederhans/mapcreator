@@ -28,6 +28,7 @@ HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer"
 DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
 DIST_APP_JS = REPO_ROOT / "dist" / "app.js"
 DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
+EDITOR_INDEX = REPO_ROOT / "index.html"
 DIST_APP_INDEX = REPO_ROOT / "dist" / "app" / "index.html"
 DIST_APP_JS_ROOT = REPO_ROOT / "dist" / "app" / "js"
 DIST_MANIFEST = REPO_ROOT / "dist" / "pages-dist-manifest.json"
@@ -1505,6 +1506,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
             re.compile(r"\.work-card__media\s*\{[^}]*aspect-ratio:\s*16\s*/\s*9;", re.S),
         )
 
+    def test_editor_source_index_keeps_pages_startup_contract(self) -> None:
+        html = EDITOR_INDEX.read_text(encoding="utf-8")
+
+        self.assertIn('<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />', html)
+        self.assertIn('<link rel="alternate icon" href="../assets/favicon.png" type="image/png" />', html)
+        self.assertIn('<link rel="modulepreload" href="js/main.js" />', html)
+        self.assertIn('<link rel="preload" href="data/scenarios/index.json" as="fetch" crossorigin />', html)
+        self.assertNotIn('data-startup-bundle-preload', html)
+        self.assertNotIn('startup.bundle.${language}', html)
+
     def test_dist_app_index_keeps_pages_startup_contract(self) -> None:
         if not DIST_APP_INDEX.exists():
             self.skipTest("dist/app/index.html is only available after build_pages_dist runs")
@@ -1512,8 +1523,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
         self.assertIn('<meta name="default-scenario" content="tno_1962" />', html)
         self.assertIn('<meta name="robots" content="noindex,nofollow" />', html)
+        self.assertIn('<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />', html)
+        self.assertIn('<link rel="alternate icon" href="../assets/favicon.png" type="image/png" />', html)
         self.assertIn('<link rel="modulepreload" href="js/main.js" />', html)
         self.assertIn('<link rel="preload" href="data/scenarios/index.json" as="fetch" crossorigin />', html)
+        self.assertNotIn('data-startup-bundle-preload', html)
+        self.assertNotIn('startup.bundle.${language}', html)
         self.assertNotIn('<link rel="preload" href="data/europe_topology.json" as="fetch" crossorigin />', html)
         self.assertNotIn('href="data/locales.startup.json"', html)
         self.assertNotIn('href="data/geo_aliases.startup.json"', html)

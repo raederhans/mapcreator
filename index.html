@@ -6,6 +6,8 @@
     <meta name="robots" content="noindex,nofollow" />
     <meta name="default-scenario" content="tno_1962" />
     <title data-i18n="Scenario Forge">Scenario Forge</title>
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="../assets/favicon.png" type="image/png" />
     <script type="importmap">
       {
         "imports": {
@@ -17,45 +19,6 @@
     <link rel="stylesheet" href="css/style.css" />
     <link rel="preload" href="data/scenarios/index.json" as="fetch" crossorigin />
     <link rel="modulepreload" href="js/main.js" />
-    <script>
-      (() => {
-        let queryOverride = "";
-        try {
-          const params = typeof URLSearchParams === "function"
-            ? new URLSearchParams(globalThis.location?.search || "")
-            : null;
-          queryOverride = String(params?.get("default_scenario") || "").trim();
-        } catch (_error) {
-          queryOverride = "";
-        }
-        if (queryOverride) return;
-        const defaultScenario = queryOverride || document
-          .querySelector('meta[name="default-scenario"]')
-          ?.getAttribute("content");
-        const scenarioId = String(defaultScenario || "").trim();
-        if (!scenarioId) return;
-        let language = "en";
-        try {
-          const storedLanguage = String(localStorage.getItem("map_lang") || "").trim().toLowerCase();
-          if (storedLanguage.startsWith("zh")) {
-            language = "zh";
-          }
-        } catch (_error) {
-          language = "en";
-        }
-        const preload = document.createElement("link");
-        preload.rel = "preload";
-        preload.as = "fetch";
-        preload.crossOrigin = "anonymous";
-        preload.fetchPriority = "high";
-        const supportsClientGzip = typeof DecompressionStream === "function";
-        preload.href = supportsClientGzip
-          ? `data/scenarios/${scenarioId}/startup.bundle.${language}.json.gz`
-          : `data/scenarios/${scenarioId}/startup.bundle.${language}.json`;
-        preload.setAttribute("data-startup-bundle-preload", "true");
-        document.head.appendChild(preload);
-      })();
-    </script>
   </head>
   <body class="app-booting">
     <div id="appShell" class="app-layout">
