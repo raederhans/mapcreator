@@ -4,6 +4,8 @@ import gzip
 import hashlib
 import json
 import os
+import posixpath
+import re
 import shutil
 import sys
 import time
@@ -25,6 +27,22 @@ GITHUB_PAGES_HARD_MAX_BYTES = 1024 * 1024 * 1024
 PAGES_DIST_WARNING_BYTES = 950 * 1024 * 1024
 MAX_PAGES_DIST_BYTES = GITHUB_PAGES_HARD_MAX_BYTES
 DIST_MANIFEST_LARGEST_FILE_LIMIT = 20
+PAGES_DIST_MANIFEST_SCHEMA_VERSION = 2
+PAGES_REACHABILITY_SCHEMA_VERSION = 2
+STARTUP_REACHABILITY_CATEGORIES = (
+    "startup-critical",
+    "startup-deferred-runtime",
+    "on-demand-product",
+    "scenario-specific",
+    "export-only",
+    "developer-only",
+    "unknown",
+)
+PAGES_MODULE_ENTRYPOINT = "app/js/main.js"
+PAGES_HTML_ENTRYPOINTS = (
+    ("landing", "index.html"),
+    ("editor", "app/index.html"),
+)
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",
@@ -149,6 +167,226 @@ BYTE_EXACT_APP_DATA_PATHS = {
 }
 GENERATED_IGNORED_DIST_DIRS = (
     Path("app") / "data",
+)
+
+MODULE_STATIC_IMPORT_RE = re.compile(
+    r"(?m)^\s*import\s+(?:[^;\"']+?\s+from\s+)?[\"'](?P<reference>[^\"']+)[\"']"
+)
+MODULE_REEXPORT_RE = re.compile(
+    r"(?ms)^\s*export\s+(?:\*|\{.*?\})\s+from\s+[\"'](?P<reference>[^\"']+)[\"']"
+)
+MODULE_URL_REFERENCE_RE = re.compile(
+    r"new\s+URL\(\s*[\"'](?P<reference>[^\"']+)[\"']\s*,\s*"
+    r"(?:import\.meta\.url|self\.location\.href)\s*\)"
+)
+HTML_RESOURCE_REFERENCE_RE = re.compile(
+    r"<(?:script|link|img|source)\b[^>]*?\b(?:src|href)=[\"'](?P<reference>[^\"']+)[\"']",
+    re.I,
+)
+
+PAGES_DYNAMIC_IMPORT_REGISTRY = (
+    {
+        "id": "deferred-ui-bootstrap",
+        "source": "app/js/bootstrap/deferred_ui_bootstrap.js",
+        "expression_index": 0,
+        "expected_expression": "path",
+        "targets": (
+            "app/js/ui/toolbar.js",
+            "app/js/ui/sidebar.js",
+            "app/js/ui/scenario_controls.js",
+            "app/js/ui/styled_selects.js",
+            "app/js/ui/shortcuts.js",
+        ),
+    },
+    {
+        "id": "data-service-runtime-modules",
+        "source": "app/js/core/data_service.js",
+        "expression_index": 0,
+        "expected_expression": "specifier",
+        "targets": (
+            "app/js/core/city_lights_historical_1930_asset.js",
+            "app/js/core/city_lights_modern_asset.js",
+        ),
+    },
+)
+
+LANDING_PRODUCT_ASSET_PATHS = (
+    "assets/atlas-physical.webp",
+    "assets/europe-1936-showcase.json",
+    "assets/europe-1936-showcase.svg",
+    "assets/favicon.png",
+    "assets/favicon.svg",
+    "assets/logo-mark.png",
+    "assets/night-lights-political.webp",
+    "assets/sample-runs.json",
+    "assets/showcase-final-map.svg",
+    "assets/showcase-final-map.webp",
+    "assets/social-preview.png",
+    "assets/social-preview.svg",
+    "assets/workspace-overview.webp",
+)
+
+PAGES_PRODUCT_INVENTORY_RULES = (
+    {
+        "id": "developer-modules",
+        "category": "developer-only",
+        "owner": "development-tools",
+        "override_reachability": True,
+        "paths": (
+            "app/js/bootstrap/main_runtime_diagnostics.js",
+            "app/js/bootstrap/ui_shell_boot.js",
+            "app/js/bootstrap/ui_shell_debug_seed.js",
+            "app/js/core/state/dev_state.js",
+            "app/js/ui/dev_workspace.js",
+        ),
+        "prefixes": ("app/js/ui/dev_workspace/",),
+    },
+    {
+        "id": "export-modules",
+        "category": "export-only",
+        "owner": "export-capability",
+        "override_reachability": True,
+        "paths": (
+            "app/js/core/export_artifact_package.js",
+            "app/js/core/sample_export_recommendation.js",
+        ),
+        "prefixes": ("app/js/ui/toolbar/export_",),
+    },
+    {
+        "id": "scenario-modules",
+        "category": "scenario-specific",
+        "owner": "scenario-runtime",
+        "override_reachability": True,
+        "paths": (
+            "app/js/bootstrap/deferred_detail_promotion.js",
+            "app/js/bootstrap/startup_scenario_boot.js",
+            "app/js/core/state/scenario_runtime_state.js",
+            "app/js/ui/scenario_controls.js",
+            "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
+        ),
+        "prefixes": (
+            "app/js/core/hgo_",
+            "app/js/core/map_renderer/hgo_",
+            "app/js/core/map_renderer/scenario_",
+            "app/js/core/renderer/scenario_",
+            "app/js/core/scenario/",
+            "app/js/core/scenario_",
+            "app/js/core/state/actions/scenario_",
+            "app/js/ui/toolbar/scenario_",
+        ),
+    },
+    {
+        "id": "scenario-runtime-data",
+        "category": "scenario-specific",
+        "owner": "scenario-runtime",
+        "override_reachability": True,
+        "prefixes": (
+            "app/data/scenario-rules/",
+            "app/data/scenarios/",
+        ),
+    },
+    {
+        "id": "hgo-runtime-data",
+        "category": "scenario-specific",
+        "owner": "hgo-scenario-runtime",
+        "override_reachability": True,
+        "prefixes": (
+            "app/data/hgo_catalogs/",
+            "app/data/hgo_runtime/",
+        ),
+    },
+    {
+        "id": "on-demand-module-entries",
+        "category": "on-demand-product",
+        "owner": "editor-on-demand-features",
+        "paths": (
+            "app/js/core/thematic_admin_metrics_loader.js",
+            "app/js/ui/i18n_catalog.js",
+        ),
+    },
+    {
+        "id": "transport-product-data",
+        "category": "on-demand-product",
+        "owner": "transport-workbench",
+        "prefixes": ("app/data/transport_layers/",),
+    },
+    {
+        "id": "thematic-product-data",
+        "category": "on-demand-product",
+        "owner": "thematic-workbench",
+        "prefixes": ("app/data/thematic_layers/",),
+    },
+    {
+        "id": "unit-counter-product-data",
+        "category": "on-demand-product",
+        "owner": "unit-counter-workbench",
+        "prefixes": ("app/data/unit_counter_libraries/",),
+    },
+    {
+        "id": "editor-product-data",
+        "category": "on-demand-product",
+        "owner": "editor-data-runtime",
+        "paths": tuple(f"app/data/{file_name}" for file_name in DATA_RUNTIME_FILES),
+        "prefixes": tuple(
+            f"app/data/{directory_name}/"
+            for directory_name in DATA_RUNTIME_DIRS
+            if directory_name not in {"scenario-rules", "thematic_layers", "unit_counter_libraries"}
+        ),
+    },
+    {
+        "id": "landing-sample-projects",
+        "category": "on-demand-product",
+        "owner": "landing-sample-projects",
+        "prefixes": ("assets/sample-projects/",),
+    },
+    {
+        "id": "landing-product-assets",
+        "category": "on-demand-product",
+        "owner": "landing-assets",
+        "paths": LANDING_PRODUCT_ASSET_PATHS,
+        "prefixes": (
+            "assets/hero-",
+            "assets/japan-preview",
+            "assets/template-",
+            "assets/work-",
+        ),
+    },
+    {
+        "id": "milsymbol-deferred-vendor",
+        "category": "startup-deferred-runtime",
+        "owner": "editor-vendor",
+        "paths": ("app/vendor/milsymbol.js",),
+    },
+    {
+        "id": "editor-vendor-product",
+        "category": "on-demand-product",
+        "owner": "editor-vendor",
+        "paths": (
+            "app/vendor/d3.v7.min.js",
+            "app/vendor/fflate.LICENSE.txt",
+            "app/vendor/fflate.browser.js",
+            "app/vendor/textures/README.md",
+            "app/vendor/textures/paper_vintage_01.svg",
+            "app/vendor/topojson-client.min.js",
+        ),
+    },
+    {
+        "id": "editor-styles",
+        "category": "on-demand-product",
+        "owner": "editor-startup",
+        "paths": ("app/css/style.css",),
+    },
+    {
+        "id": "pages-release-files",
+        "category": "on-demand-product",
+        "owner": "pages-release",
+        "paths": (
+            ".nojekyll",
+            "app.js",
+            "pages-dist-manifest.json",
+            "styles.css",
+        ),
+    },
 )
 
 
@@ -1128,6 +1366,862 @@ def dist_record_source_kind(relative_path: Path) -> str:
     return "dist"
 
 
+def _published_dist_paths(dist_root: Path) -> set[str]:
+    return {
+        path.relative_to(dist_root).as_posix()
+        for path in dist_root.rglob("*")
+        if path.is_file() and not should_skip_disposable_dist_path(path.relative_to(dist_root))
+    }
+
+
+def _resolve_dist_reference(
+    source_path: str,
+    reference: str,
+    available_paths: set[str],
+    *,
+    allow_document_relative: bool = False,
+) -> tuple[bool, str | None]:
+    value = str(reference or "").strip().split("#", 1)[0].split("?", 1)[0]
+    if not value or value.startswith(("#", "//", "data:", "blob:", "http://", "https://")):
+        return False, None
+
+    if value.startswith("/"):
+        absolute_value = value.lstrip("/")
+        if absolute_value.startswith(("js/", "vendor/", "data/", "css/")):
+            normalized = f"app/{absolute_value}"
+        else:
+            normalized = absolute_value
+    elif value.startswith(("./", "../")) or allow_document_relative:
+        normalized = posixpath.normpath(posixpath.join(posixpath.dirname(source_path), value))
+    else:
+        return False, None
+
+    candidates = [normalized]
+    if not posixpath.splitext(normalized)[1]:
+        candidates.extend((f"{normalized}.js", f"{normalized}/index.js"))
+    for candidate in candidates:
+        if candidate in available_paths:
+            return True, candidate
+    return True, candidates[0]
+
+
+def _scan_js_string(source_text: str, start: int) -> int:
+    quote = source_text[start]
+    index = start + 1
+    while index < len(source_text):
+        if source_text[index] == "\\":
+            index += 2
+            continue
+        if source_text[index] == quote:
+            return index + 1
+        index += 1
+    return len(source_text)
+
+
+def _scan_dynamic_import_call_end(source_text: str, open_paren_index: int) -> int | None:
+    depth = 1
+    index = open_paren_index + 1
+    while index < len(source_text):
+        character = source_text[index]
+        next_character = source_text[index + 1] if index + 1 < len(source_text) else ""
+        if character in {'"', "'", "`"}:
+            index = _scan_js_string(source_text, index)
+            continue
+        if character == "/" and next_character == "/":
+            newline_index = source_text.find("\n", index + 2)
+            index = len(source_text) if newline_index < 0 else newline_index + 1
+            continue
+        if character == "/" and next_character == "*":
+            comment_end = source_text.find("*/", index + 2)
+            index = len(source_text) if comment_end < 0 else comment_end + 2
+            continue
+        if character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return None
+
+
+def _iter_dynamic_import_expressions(source_text: str) -> list[dict[str, int | str]]:
+    expressions: list[dict[str, int | str]] = []
+    index = 0
+    while index < len(source_text):
+        character = source_text[index]
+        next_character = source_text[index + 1] if index + 1 < len(source_text) else ""
+        if character in {'"', "'", "`"}:
+            index = _scan_js_string(source_text, index)
+            continue
+        if character == "/" and next_character == "/":
+            newline_index = source_text.find("\n", index + 2)
+            index = len(source_text) if newline_index < 0 else newline_index + 1
+            continue
+        if character == "/" and next_character == "*":
+            comment_end = source_text.find("*/", index + 2)
+            index = len(source_text) if comment_end < 0 else comment_end + 2
+            continue
+        if source_text.startswith("import", index):
+            previous_character = source_text[index - 1] if index else ""
+            after_identifier = index + len("import")
+            following_character = source_text[after_identifier] if after_identifier < len(source_text) else ""
+            if (
+                (not previous_character or not (previous_character.isalnum() or previous_character in "_$"))
+                and (not following_character or not (following_character.isalnum() or following_character in "_$"))
+            ):
+                open_paren_index = after_identifier
+                while open_paren_index < len(source_text) and source_text[open_paren_index].isspace():
+                    open_paren_index += 1
+                if open_paren_index < len(source_text) and source_text[open_paren_index] == "(":
+                    close_paren_index = _scan_dynamic_import_call_end(source_text, open_paren_index)
+                    if close_paren_index is not None:
+                        expression = source_text[open_paren_index + 1:close_paren_index].strip()
+                        expressions.append(
+                            {
+                                "expression_index": len(expressions),
+                                "expression": expression,
+                                "line": source_text.count("\n", 0, index) + 1,
+                                "column": index - source_text.rfind("\n", 0, index),
+                            }
+                        )
+                        index = close_paren_index + 1
+                        continue
+        index += 1
+    return expressions
+
+
+def _literal_dynamic_import_reference(expression: str) -> str | None:
+    value = str(expression or "").strip()
+    if len(value) < 2 or value[0] not in {'"', "'"} or value[-1] != value[0]:
+        return None
+    body = value[1:-1]
+    if "\\" in body or value[0] in body:
+        return None
+    return body
+
+
+def _extract_module_reference_groups(source_text: str) -> dict[str, object]:
+    static_references = {
+        match.group("reference")
+        for pattern in (MODULE_STATIC_IMPORT_RE, MODULE_REEXPORT_RE)
+        for match in pattern.finditer(source_text)
+    }
+    dynamic_references: set[str] = set()
+    dynamic_import_expressions = []
+    for expression_record in _iter_dynamic_import_expressions(source_text):
+        expression = str(expression_record["expression"])
+        literal_reference = _literal_dynamic_import_reference(expression)
+        if literal_reference is None:
+            dynamic_import_expressions.append(
+                {
+                    **expression_record,
+                    "kind": "unresolved_dynamic_expression",
+                    "resolution": "unresolved",
+                }
+            )
+        else:
+            dynamic_references.add(literal_reference)
+            dynamic_import_expressions.append(
+                {
+                    **expression_record,
+                    "kind": "literal_dynamic_import",
+                    "reference": literal_reference,
+                    "resolution": "literal",
+                }
+            )
+    resource_references = {
+        match.group("reference")
+        for match in MODULE_URL_REFERENCE_RE.finditer(source_text)
+    }
+    return {
+        "static_imports": sorted(static_references),
+        "dynamic_imports": sorted(dynamic_references),
+        "resource_references": sorted(resource_references),
+        "dynamic_import_expressions": dynamic_import_expressions,
+    }
+
+
+def _normalize_dynamic_import_registry(
+    declarations: tuple[dict, ...] | list[dict],
+) -> tuple[dict[tuple[str, int], dict], list[dict]]:
+    declarations_by_key: dict[tuple[str, int], dict] = {}
+    normalized_declarations = []
+    for declaration in declarations:
+        normalized = {
+            "id": str(declaration.get("id") or "").strip(),
+            "source": str(declaration.get("source") or "").replace("\\", "/").strip(),
+            "expression_index": int(declaration.get("expression_index") or 0),
+            "expected_expression": str(declaration.get("expected_expression") or "").strip(),
+            "targets": sorted({
+                str(target or "").replace("\\", "/").strip()
+                for target in declaration.get("targets", ())
+                if str(target or "").strip()
+            }),
+        }
+        if not normalized["id"] or not normalized["source"] or not normalized["expected_expression"]:
+            raise ValueError(f"Invalid Pages dynamic import registry declaration: {normalized}")
+        key = (str(normalized["source"]), int(normalized["expression_index"]))
+        if key in declarations_by_key:
+            raise ValueError(f"Duplicate Pages dynamic import registry key: {key[0]}#{key[1]}")
+        declarations_by_key[key] = normalized
+        normalized_declarations.append(normalized)
+    normalized_declarations.sort(key=lambda item: (item["source"], item["expression_index"], item["id"]))
+    return declarations_by_key, normalized_declarations
+
+
+def _walk_module_graph(
+    roots: set[str],
+    nodes_by_path: dict[str, dict],
+    *,
+    include_dynamic: bool,
+) -> set[str]:
+    visited: set[str] = set()
+    pending = sorted(roots, reverse=True)
+    while pending:
+        module_path = pending.pop()
+        if module_path in visited or module_path not in nodes_by_path:
+            continue
+        visited.add(module_path)
+        node = nodes_by_path[module_path]
+        edge_names = ["static_imports", "resource_references"]
+        if include_dynamic:
+            edge_names.append("dynamic_imports")
+        targets = {
+            target
+            for edge_name in edge_names
+            for target in node[edge_name]
+            if target.endswith(".js") and target in nodes_by_path
+        }
+        pending.extend(sorted(targets - visited, reverse=True))
+    return visited
+
+
+def build_pages_module_graph(
+    *,
+    dist_root: Path | None = None,
+    available_paths: set[str] | None = None,
+    dynamic_import_registry: tuple[dict, ...] | list[dict] | None = None,
+) -> dict:
+    selected_dist_root = (dist_root or DIST_ROOT).resolve()
+    selected_available_paths = (
+        set(available_paths)
+        if available_paths is not None
+        else _published_dist_paths(selected_dist_root)
+    )
+    module_paths = sorted(
+        path
+        for path in selected_available_paths
+        if path.startswith("app/js/") and path.endswith(".js")
+    )
+    nodes_by_path: dict[str, dict] = {}
+    unresolved_references: list[dict[str, object]] = []
+    registry_by_key, registry_declarations = _normalize_dynamic_import_registry(
+        PAGES_DYNAMIC_IMPORT_REGISTRY if dynamic_import_registry is None else dynamic_import_registry
+    )
+    consumed_registry_keys: set[tuple[str, int]] = set()
+    registry_resolutions: list[dict] = []
+
+    for module_path in module_paths:
+        source_text = (selected_dist_root / module_path).read_text(encoding="utf-8")
+        reference_groups = _extract_module_reference_groups(source_text)
+        dynamic_import_expressions = list(reference_groups.pop("dynamic_import_expressions"))
+        resolved_groups: dict[str, list[str]] = {}
+        for edge_name, references in reference_groups.items():
+            resolved_targets: set[str] = set()
+            for reference in references:
+                is_local, target = _resolve_dist_reference(module_path, reference, selected_available_paths)
+                if not is_local:
+                    continue
+                if target not in selected_available_paths:
+                    unresolved_references.append(
+                        {
+                            "source": module_path,
+                            "kind": edge_name,
+                            "reference": reference,
+                            "resolved_path": str(target or ""),
+                        }
+                    )
+                    continue
+                resolved_targets.add(str(target))
+            resolved_groups[edge_name] = sorted(resolved_targets)
+
+        for expression_record in dynamic_import_expressions:
+            if expression_record["kind"] != "unresolved_dynamic_expression":
+                continue
+            expression_index = int(expression_record["expression_index"])
+            registry_key = (module_path, expression_index)
+            declaration = registry_by_key.get(registry_key)
+            if declaration is None:
+                unresolved_references.append(
+                    {
+                        "source": module_path,
+                        "kind": "unresolved_dynamic_expression",
+                        "expression_index": expression_index,
+                        "expression": expression_record["expression"],
+                        "line": expression_record["line"],
+                        "column": expression_record["column"],
+                        "reason": "no-declarative-registry-entry",
+                    }
+                )
+                continue
+            consumed_registry_keys.add(registry_key)
+            expected_expression = str(declaration["expected_expression"])
+            if str(expression_record["expression"]) != expected_expression:
+                expression_record["resolution"] = "registry-expression-mismatch"
+                expression_record["registry_id"] = declaration["id"]
+                unresolved_references.append(
+                    {
+                        "source": module_path,
+                        "kind": "unresolved_dynamic_expression",
+                        "expression_index": expression_index,
+                        "expression": expression_record["expression"],
+                        "expected_expression": expected_expression,
+                        "line": expression_record["line"],
+                        "column": expression_record["column"],
+                        "registry_id": declaration["id"],
+                        "reason": "registry-expression-mismatch",
+                    }
+                )
+                continue
+            missing_targets = [
+                target
+                for target in declaration["targets"]
+                if target not in selected_available_paths
+            ]
+            for target in missing_targets:
+                unresolved_references.append(
+                    {
+                        "source": module_path,
+                        "kind": "dynamic_import_registry_target",
+                        "reference": target,
+                        "resolved_path": target,
+                        "registry_id": declaration["id"],
+                    }
+                )
+            declared_targets = [
+                target
+                for target in declaration["targets"]
+                if target in selected_available_paths
+            ]
+            resolved_groups["dynamic_imports"] = sorted(
+                set(resolved_groups["dynamic_imports"]) | set(declared_targets)
+            )
+            expression_record.update(
+                {
+                    "resolution": "declarative-registry" if not missing_targets else "registry-target-missing",
+                    "registry_id": declaration["id"],
+                    "declared_targets": list(declaration["targets"]),
+                }
+            )
+            registry_resolutions.append(
+                {
+                    "id": declaration["id"],
+                    "source": module_path,
+                    "expression_index": expression_index,
+                    "expression": expression_record["expression"],
+                    "targets": list(declaration["targets"]),
+                    "status": "resolved" if not missing_targets else "target-missing",
+                }
+            )
+        nodes_by_path[module_path] = {
+            "path": module_path,
+            **resolved_groups,
+            "dynamic_import_expressions": dynamic_import_expressions,
+        }
+
+    for registry_key, declaration in registry_by_key.items():
+        if registry_key in consumed_registry_keys:
+            continue
+        unresolved_references.append(
+            {
+                "source": declaration["source"],
+                "kind": "dynamic_import_registry_entry_unmatched",
+                "expression_index": declaration["expression_index"],
+                "expression": declaration["expected_expression"],
+                "registry_id": declaration["id"],
+                "reason": "source-or-expression-missing",
+            }
+        )
+
+    initial_module_paths = _walk_module_graph(
+        {PAGES_MODULE_ENTRYPOINT},
+        nodes_by_path,
+        include_dynamic=False,
+    )
+    deferred_roots = {
+        target
+        for module_path in initial_module_paths
+        for target in nodes_by_path[module_path]["dynamic_imports"]
+        if target.endswith(".js")
+    }
+    deferred_module_paths = _walk_module_graph(
+        deferred_roots,
+        nodes_by_path,
+        include_dynamic=True,
+    ) - initial_module_paths
+    untraversed_module_paths = set(module_paths) - initial_module_paths - deferred_module_paths
+
+    entrypoints = []
+    entrypoint_reference_paths: dict[str, set[str]] = {}
+    for entrypoint_id, html_path in PAGES_HTML_ENTRYPOINTS:
+        resolved_references: set[str] = set()
+        html_file = selected_dist_root / html_path
+        if not html_file.is_file():
+            unresolved_references.append(
+                {
+                    "source": html_path,
+                    "kind": "entrypoint",
+                    "reference": html_path,
+                    "resolved_path": html_path,
+                }
+            )
+        else:
+            html_text = html_file.read_text(encoding="utf-8")
+            for match in HTML_RESOURCE_REFERENCE_RE.finditer(html_text):
+                reference = match.group("reference")
+                is_local, target = _resolve_dist_reference(
+                    html_path,
+                    reference,
+                    selected_available_paths,
+                    allow_document_relative=True,
+                )
+                if not is_local:
+                    continue
+                if target not in selected_available_paths:
+                    unresolved_references.append(
+                        {
+                            "source": html_path,
+                            "kind": "html-resource",
+                            "reference": reference,
+                            "resolved_path": str(target or ""),
+                        }
+                    )
+                    continue
+                resolved_references.add(str(target))
+        entrypoint_reference_paths[entrypoint_id] = resolved_references
+        entrypoints.append(
+            {
+                "id": entrypoint_id,
+                "path": html_path,
+                "resource_references": sorted(resolved_references),
+            }
+        )
+
+    initial_resource_paths = set(entrypoint_reference_paths.get("editor", set()))
+    for module_path in initial_module_paths:
+        node = nodes_by_path[module_path]
+        initial_resource_paths.update(
+            target
+            for edge_name in ("static_imports", "resource_references")
+            for target in node[edge_name]
+            if target not in nodes_by_path
+        )
+    deferred_resource_paths: set[str] = set()
+    for module_path in deferred_module_paths:
+        node = nodes_by_path[module_path]
+        deferred_resource_paths.update(
+            target
+            for edge_name in ("static_imports", "dynamic_imports", "resource_references")
+            for target in node[edge_name]
+            if target not in nodes_by_path
+        )
+    deferred_resource_paths -= initial_resource_paths
+
+    graph_nodes = []
+    for module_path in module_paths:
+        if module_path in initial_module_paths:
+            load_phase = "initial"
+        elif module_path in deferred_module_paths:
+            load_phase = "deferred-runtime"
+        else:
+            load_phase = "untraversed"
+        graph_nodes.append({**nodes_by_path[module_path], "load_phase": load_phase})
+
+    unresolved_references.sort(
+        key=lambda record: (
+            str(record.get("source") or ""),
+            str(record.get("kind") or ""),
+            int(record.get("expression_index") or 0),
+            str(record.get("reference") or ""),
+            str(record.get("expression") or ""),
+            str(record.get("resolved_path") or ""),
+        )
+    )
+    registry_resolutions.sort(key=lambda item: (item["source"], item["expression_index"], item["id"]))
+    return {
+        "schema_version": PAGES_REACHABILITY_SCHEMA_VERSION,
+        "module_entrypoint": PAGES_MODULE_ENTRYPOINT,
+        "entrypoints": entrypoints,
+        "summary": {
+            "module_count": len(module_paths),
+            "initial_module_count": len(initial_module_paths),
+            "deferred_module_count": len(deferred_module_paths),
+            "untraversed_module_count": len(untraversed_module_paths),
+            "initial_resource_count": len(initial_resource_paths),
+            "deferred_resource_count": len(deferred_resource_paths),
+            "unresolved_dynamic_expression_count": sum(
+                1
+                for record in unresolved_references
+                if record.get("kind") == "unresolved_dynamic_expression"
+            ),
+            "registry_resolved_dynamic_expression_count": sum(
+                1 for record in registry_resolutions if record["status"] == "resolved"
+            ),
+        },
+        "initial_resource_paths": sorted(initial_resource_paths),
+        "deferred_resource_paths": sorted(deferred_resource_paths),
+        "nodes": graph_nodes,
+        "dynamic_import_registry": {
+            "declarations": registry_declarations,
+            "resolutions": registry_resolutions,
+        },
+        "unresolved_references": unresolved_references,
+    }
+
+
+def _match_product_inventory_rule(path: str) -> dict | None:
+    matches = []
+    for rule in PAGES_PRODUCT_INVENTORY_RULES:
+        if path in rule.get("paths", ()) or any(path.startswith(prefix) for prefix in rule.get("prefixes", ())):
+            matches.append(rule)
+    if len(matches) > 1:
+        rule_ids = ", ".join(str(rule["id"]) for rule in matches)
+        raise ValueError(f"Ambiguous Pages product inventory rules for {path}: {rule_ids}")
+    return matches[0] if matches else None
+
+
+def _reachability_owner(path: str, category: str) -> str:
+    if not path.startswith("app/"):
+        return "landing"
+    if path.startswith("app/data/scenarios/") or path.startswith("app/data/scenario-rules/"):
+        return "scenario-runtime"
+    if path.startswith("app/data/hgo_"):
+        return "hgo-scenario-runtime"
+    if path.startswith("app/data/transport_layers/"):
+        return "transport-workbench"
+    if path.startswith("app/data/thematic_layers/"):
+        return "thematic-workbench"
+    if path.startswith("app/data/unit_counter_libraries/"):
+        return "unit-counter-workbench"
+    if path.startswith("app/data/"):
+        return "editor-data-runtime"
+    if path.startswith("app/vendor/"):
+        return "editor-vendor"
+    if category == "scenario-specific":
+        return "scenario-runtime"
+    if category == "export-only":
+        return "export-capability"
+    if category == "developer-only":
+        return "development-tools"
+    if category == "startup-deferred-runtime":
+        return "editor-deferred-features"
+    return "editor-startup"
+
+
+def _build_graph_reachability_index(graph: dict) -> dict[str, set[str]]:
+    nodes_by_path = {node["path"]: node for node in graph.get("nodes", [])}
+    return {
+        "entrypoint_paths": {str(entrypoint.get("path") or "") for entrypoint in graph.get("entrypoints", [])},
+        "entrypoint_references": {
+            reference
+            for entrypoint in graph.get("entrypoints", [])
+            for reference in entrypoint.get("resource_references", [])
+        },
+        "initial_modules": {
+            path_value
+            for path_value, node in nodes_by_path.items()
+            if node.get("load_phase") == "initial"
+        },
+        "deferred_modules": {
+            path_value
+            for path_value, node in nodes_by_path.items()
+            if node.get("load_phase") == "deferred-runtime"
+        },
+        "initial_resources": set(graph.get("initial_resource_paths", [])),
+        "deferred_resources": set(graph.get("deferred_resource_paths", [])),
+    }
+
+
+def _path_reachability_evidence(path: str, reachability_index: dict[str, set[str]]) -> tuple[str, str]:
+    if path in reachability_index["entrypoint_paths"]:
+        return "startup-critical", "html-entrypoint"
+    if path in reachability_index["initial_modules"]:
+        return "startup-critical", "startup-module-graph"
+    if path in reachability_index["initial_resources"]:
+        return "startup-critical", "startup-resource-graph"
+    if path in reachability_index["entrypoint_references"]:
+        return "startup-critical", "entrypoint-reference"
+    if path in reachability_index["deferred_modules"]:
+        return "startup-deferred-runtime", "deferred-module-graph"
+    if path in reachability_index["deferred_resources"]:
+        return "startup-deferred-runtime", "deferred-resource-graph"
+    return "untraversed", "untraversed"
+
+
+def _classify_pages_dist_path(
+    path: str,
+    graph: dict,
+    *,
+    reachability_index: dict[str, set[str]] | None = None,
+) -> tuple[str, str, str]:
+    selected_index = reachability_index or _build_graph_reachability_index(graph)
+    reachability_status, reachability_basis = _path_reachability_evidence(path, selected_index)
+    product_rule = _match_product_inventory_rule(path)
+
+    if product_rule and product_rule.get("override_reachability"):
+        category = str(product_rule["category"])
+        return category, str(product_rule["owner"]), f"product-registry:{product_rule['id']}"
+    if reachability_status != "untraversed":
+        return reachability_status, _reachability_owner(path, reachability_status), reachability_basis
+    if product_rule:
+        category = str(product_rule["category"])
+        return category, str(product_rule["owner"]), f"product-registry:{product_rule['id']}"
+    return "unknown", "unclassified", "no-declarative-owner"
+
+
+def _path_directory_prefixes(path: str) -> list[str]:
+    parts = path.split("/")
+    return ["/".join(parts[:index]) + "/" for index in range(1, len(parts))]
+
+
+def _compact_ownership_group_paths(
+    group_paths: set[str],
+    *,
+    all_paths: set[str],
+    size_by_path: dict[str, int],
+) -> tuple[list[dict], list[dict]]:
+    descendants_by_prefix: dict[str, set[str]] = {}
+    for path in all_paths:
+        for prefix in _path_directory_prefixes(path):
+            descendants_by_prefix.setdefault(prefix, set()).add(path)
+    candidates = [
+        (prefix, descendants)
+        for prefix, descendants in descendants_by_prefix.items()
+        if len(descendants) >= 2 and descendants <= group_paths
+    ]
+    candidates.sort(key=lambda item: (item[0].count("/"), len(item[0]), item[0]))
+    covered_paths: set[str] = set()
+    prefix_records = []
+    for prefix, descendants in candidates:
+        uncovered_descendants = descendants - covered_paths
+        if len(uncovered_descendants) < 2:
+            continue
+        prefix_records.append(
+            {
+                "prefix": prefix,
+                "file_count": len(uncovered_descendants),
+                "size_bytes": sum(size_by_path[path] for path in uncovered_descendants),
+            }
+        )
+        covered_paths.update(uncovered_descendants)
+    exception_records = [
+        {"path": path, "size_bytes": size_by_path[path]}
+        for path in sorted(group_paths - covered_paths)
+    ]
+    return prefix_records, exception_records
+
+
+def _product_registry_summary(classifications: list[dict], size_by_path: dict[str, int]) -> list[dict]:
+    summaries = []
+    for rule in PAGES_PRODUCT_INVENTORY_RULES:
+        basis = f"product-registry:{rule['id']}"
+        matched_paths = sorted(
+            record["path"]
+            for record in classifications
+            if record["basis"] == basis
+        )
+        summaries.append(
+            {
+                "id": rule["id"],
+                "category": rule["category"],
+                "owner": rule["owner"],
+                "match": {
+                    "prefixes": list(rule.get("prefixes", ())),
+                    "path_exceptions": list(rule.get("paths", ())),
+                },
+                "file_count": len(matched_paths),
+                "size_bytes": sum(size_by_path[path] for path in matched_paths),
+            }
+        )
+    return summaries
+
+
+def build_pages_reachability_inventory(records: list[dict], *, module_graph: dict) -> dict:
+    ordered_records = sorted((dict(record) for record in records), key=lambda record: str(record.get("path") or ""))
+    paths = [str(record.get("path") or "") for record in ordered_records]
+    if len(set(paths)) != len(paths):
+        raise ValueError("Pages dist inventory contains duplicate paths")
+    size_by_path = {
+        str(record.get("path") or ""): int(record.get("size_bytes") or 0)
+        for record in ordered_records
+    }
+    all_paths = set(size_by_path)
+    reachability_index = _build_graph_reachability_index(module_graph)
+    category_totals = {
+        category: {"id": category, "file_count": 0, "size_bytes": 0}
+        for category in STARTUP_REACHABILITY_CATEGORIES
+    }
+    classifications = []
+    ownership_groups: dict[tuple[str, str, str], dict] = {}
+    traversed_file_count = 0
+
+    for record in ordered_records:
+        path = str(record.get("path") or "")
+        size_bytes = int(record.get("size_bytes") or 0)
+        reachability_status, reachability_basis = _path_reachability_evidence(path, reachability_index)
+        category, owner, basis = _classify_pages_dist_path(
+            path,
+            module_graph,
+            reachability_index=reachability_index,
+        )
+        classification = {
+            "path": path,
+            "category": category,
+            "owner": owner,
+            "basis": basis,
+            "reachability_status": reachability_status,
+            "reachability_basis": reachability_basis,
+        }
+        classifications.append(classification)
+        category_totals[category]["file_count"] += 1
+        category_totals[category]["size_bytes"] += size_bytes
+        if reachability_status != "untraversed":
+            traversed_file_count += 1
+        group_key = (category, owner, basis)
+        group = ownership_groups.setdefault(
+            group_key,
+            {
+                "category": category,
+                "owner": owner,
+                "basis": basis,
+                "file_count": 0,
+                "size_bytes": 0,
+                "_paths": set(),
+            },
+        )
+        group["file_count"] += 1
+        group["size_bytes"] += size_bytes
+        group["_paths"].add(path)
+
+    category_order = {category: index for index, category in enumerate(STARTUP_REACHABILITY_CATEGORIES)}
+    ordered_groups = sorted(
+        ownership_groups.values(),
+        key=lambda group: (
+            category_order[group["category"]],
+            group["owner"],
+            group["basis"],
+        ),
+    )
+    for group in ordered_groups:
+        path_prefixes, path_exceptions = _compact_ownership_group_paths(
+            set(group.pop("_paths")),
+            all_paths=all_paths,
+            size_by_path=size_by_path,
+        )
+        group["path_prefixes"] = path_prefixes
+        group["path_exceptions"] = path_exceptions
+
+    initial_module_paths = set(reachability_index["initial_modules"])
+    editor_entrypoint_references = {
+        reference
+        for entrypoint in module_graph.get("entrypoints", [])
+        if entrypoint.get("id") == "editor"
+        for reference in entrypoint.get("resource_references", [])
+    }
+    initial_script_paths = initial_module_paths | {
+        path for path in editor_entrypoint_references if path.endswith(".js")
+    }
+    initial_graph_paths = (
+        initial_module_paths
+        | set(module_graph.get("initial_resource_paths", []))
+        | {"app/index.html"}
+    )
+    deferred_graph_paths = {
+        node["path"]
+        for node in module_graph.get("nodes", [])
+        if node.get("load_phase") == "deferred-runtime"
+    } | set(module_graph.get("deferred_resource_paths", []))
+    category_by_path = {record["path"]: record["category"] for record in classifications}
+    graph_copy = {
+        **module_graph,
+        "byte_measurement": "published-uncompressed-file-bytes",
+        "summary": {
+            **module_graph.get("summary", {}),
+            "initial_script_count": len(initial_script_paths),
+            "initial_script_bytes": sum(size_by_path.get(path, 0) for path in initial_script_paths),
+            "initial_graph_file_count": len(initial_graph_paths),
+            "initial_graph_bytes": sum(size_by_path.get(path, 0) for path in initial_graph_paths),
+            "deferred_graph_file_count": len(deferred_graph_paths),
+            "deferred_graph_bytes": sum(size_by_path.get(path, 0) for path in deferred_graph_paths),
+            "untraversed_dist_file_count": len(ordered_records) - traversed_file_count,
+            "untraversed_dist_bytes": sum(
+                size_by_path[record["path"]]
+                for record in classifications
+                if record["reachability_status"] == "untraversed"
+            ),
+        },
+        "nodes": [
+            {
+                **node,
+                "product_category": category_by_path.get(node["path"], "unknown"),
+            }
+            for node in module_graph.get("nodes", [])
+        ],
+    }
+    unresolved_references = graph_copy.get("unresolved_references", [])
+    unknown_paths = sorted(
+        record["path"]
+        for record in classifications
+        if record["category"] == "unknown"
+    )
+    reachability_status = "complete" if not unresolved_references else "incomplete"
+    product_inventory_status = "complete" if not unknown_paths else "incomplete"
+    return {
+        "schema_version": PAGES_REACHABILITY_SCHEMA_VERSION,
+        "generator": "tools/build_pages_dist.py::build_pages_reachability_inventory",
+        "category_ids": list(STARTUP_REACHABILITY_CATEGORIES),
+        "classification_axes": {
+            "product_category": "exclusive product inventory classification",
+            "reachability_status": "startup-critical, startup-deferred-runtime, or untraversed evidence",
+        },
+        "admission": {
+            "status": "complete"
+            if reachability_status == "complete" and product_inventory_status == "complete"
+            else "incomplete",
+            "blocking_unknown_file_count": len(unknown_paths),
+            "blocking_unresolved_reference_count": len(unresolved_references),
+        },
+        "reachability_evidence": {
+            "status": reachability_status,
+            "total_file_count": len(ordered_records),
+            "traversed_file_count": traversed_file_count,
+            "untraversed_file_count": len(ordered_records) - traversed_file_count,
+            "unresolved_reference_count": len(unresolved_references),
+            "unresolved_dynamic_expression_count": sum(
+                1
+                for record in unresolved_references
+                if record.get("kind") == "unresolved_dynamic_expression"
+            ),
+            "registry_resolved_dynamic_expression_count": graph_copy.get("summary", {}).get(
+                "registry_resolved_dynamic_expression_count",
+                0,
+            ),
+        },
+        "product_inventory": {
+            "status": product_inventory_status,
+            "total_file_count": len(ordered_records),
+            "classified_file_count": len(ordered_records) - len(unknown_paths),
+            "unknown_file_count": len(unknown_paths),
+            "unknown_paths": unknown_paths,
+            "registry_rules": _product_registry_summary(classifications, size_by_path),
+        },
+        "categories": [category_totals[category] for category in STARTUP_REACHABILITY_CATEGORIES],
+        "ownership_groups": ordered_groups,
+        "module_graph": graph_copy,
+    }
+
+
 def get_dist_file_records() -> tuple[list[dict[str, int | str]], int]:
     for attempt in range(5):
         records: list[dict[str, int | str]] = []
@@ -1186,22 +2280,42 @@ def validate_required_dist_files() -> None:
         raise FileNotFoundError(f"Pages dist is missing required file(s): {missing_text}")
 
 
+def build_dist_manifest_payload(
+    records: list[dict[str, int | str]],
+    total_bytes: int,
+    *,
+    module_graph: dict,
+) -> dict:
+    ordered_records = sorted((dict(record) for record in records), key=lambda record: str(record["path"]))
+    reachability_inventory = build_pages_reachability_inventory(ordered_records, module_graph=module_graph)
+    admission = reachability_inventory["admission"]
+    if admission["status"] != "complete":
+        raise ValueError(
+            "Pages dist inventory admission is incomplete: "
+            f"unknown_files={admission['blocking_unknown_file_count']}, "
+            f"unresolved_references={admission['blocking_unresolved_reference_count']}"
+        )
+    return {
+        "schema_version": PAGES_DIST_MANIFEST_SCHEMA_VERSION,
+        "total_bytes": total_bytes,
+        "max_allowed_bytes": MAX_PAGES_DIST_BYTES,
+        "size_gate": get_dist_size_gate(total_bytes),
+        "required_files": list(REQUIRED_DIST_FILES),
+        "largest_files": get_largest_dist_files(ordered_records),
+        "top_level_directories": get_top_level_directory_records(ordered_records),
+        "reachability_inventory": reachability_inventory,
+        "files": ordered_records,
+    }
+
+
 def write_dist_manifest() -> int:
     DIST_MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
     last_manifest_text = ""
+    module_graph = build_pages_module_graph()
     # manifest 会记录自己；首次写入会改变自身大小，所以要迭代到文本稳定。
     for _ in range(20):
         records, total_bytes = get_dist_file_records()
-        payload = {
-            "schema_version": 1,
-            "total_bytes": total_bytes,
-            "max_allowed_bytes": MAX_PAGES_DIST_BYTES,
-            "size_gate": get_dist_size_gate(total_bytes),
-            "required_files": list(REQUIRED_DIST_FILES),
-            "largest_files": get_largest_dist_files(records),
-            "top_level_directories": get_top_level_directory_records(records),
-            "files": records,
-        }
+        payload = build_dist_manifest_payload(records, total_bytes, module_graph=module_graph)
         manifest_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
         if manifest_text == last_manifest_text:
             break

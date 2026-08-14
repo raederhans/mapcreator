@@ -73,7 +73,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "dist/pages-dist-manifest.json is a checked-in Pages dist contract",
         )
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
-        self.assertEqual(payload.get("schema_version"), 1)
+        self.assertEqual(payload.get("schema_version"), build_pages_dist.PAGES_DIST_MANIFEST_SCHEMA_VERSION)
         self.assertIsInstance(payload.get("files"), list)
         self.assertGreater(len(payload.get("files", [])), 0)
         for field_name in ("total_bytes", "max_allowed_bytes", "size_gate", "required_files"):
@@ -755,6 +755,421 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 )
             finally:
                 build_pages_dist.DIST_ROOT = previous_dist_root
+
+    def test_pages_dist_reachability_inventory_rebuilds_from_manifest_records(self) -> None:
+        manifest_payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        records = manifest_payload["files"]
+        available_paths = {record["path"] for record in records}
+        module_graph = build_pages_dist.build_pages_module_graph(
+            dist_root=REPO_ROOT / "dist",
+            available_paths=available_paths,
+        )
+        rebuilt_payload = build_pages_dist.build_dist_manifest_payload(
+            records,
+            manifest_payload["total_bytes"],
+            module_graph=module_graph,
+        )
+        inventory = rebuilt_payload["reachability_inventory"]
+        admission = inventory["admission"]
+        reachability = inventory["reachability_evidence"]
+        product_inventory = inventory["product_inventory"]
+
+        self.assertEqual(rebuilt_payload["schema_version"], 2)
+        self.assertEqual(inventory["schema_version"], build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION)
+        self.assertEqual(
+            inventory["category_ids"],
+            list(build_pages_dist.STARTUP_REACHABILITY_CATEGORIES),
+        )
+        self.assertEqual(
+            set(inventory["classification_axes"]),
+            {"product_category", "reachability_status"},
+        )
+        self.assertEqual(admission["status"], "complete")
+        self.assertEqual(admission["blocking_unknown_file_count"], 0)
+        self.assertEqual(admission["blocking_unresolved_reference_count"], 0)
+        self.assertEqual(reachability["status"], "complete")
+        self.assertEqual(reachability["total_file_count"], len(records))
+        self.assertGreater(reachability["untraversed_file_count"], 0)
+        self.assertEqual(
+            reachability["traversed_file_count"] + reachability["untraversed_file_count"],
+            len(records),
+        )
+        self.assertEqual(reachability["unresolved_reference_count"], 0)
+        self.assertEqual(reachability["unresolved_dynamic_expression_count"], 0)
+        self.assertEqual(reachability["registry_resolved_dynamic_expression_count"], 2)
+        self.assertEqual(product_inventory["status"], "complete")
+        self.assertEqual(product_inventory["classified_file_count"], len(records))
+        self.assertEqual(product_inventory["unknown_file_count"], 0)
+        self.assertEqual(product_inventory["unknown_paths"], [])
+        graph_summary = inventory["module_graph"]["summary"]
+        self.assertEqual(
+            inventory["module_graph"]["byte_measurement"],
+            "published-uncompressed-file-bytes",
+        )
+        self.assertGreaterEqual(graph_summary["initial_script_count"], graph_summary["initial_module_count"])
+        self.assertGreaterEqual(graph_summary["initial_graph_bytes"], graph_summary["initial_script_bytes"])
+        self.assertEqual(
+            sum(category["file_count"] for category in inventory["categories"]),
+            len(records),
+        )
+        self.assertEqual(
+            sum(category["size_bytes"] for category in inventory["categories"]),
+            manifest_payload["total_bytes"],
+        )
+
+        def group_matches_path(group: dict, path: str) -> bool:
+            return any(path.startswith(record["prefix"]) for record in group["path_prefixes"]) or any(
+                path == record["path"] for record in group["path_exceptions"]
+            )
+
+        for group in inventory["ownership_groups"]:
+            self.assertNotIn("paths", group)
+            self.assertEqual(
+                sum(record["file_count"] for record in group["path_prefixes"])
+                + len(group["path_exceptions"]),
+                group["file_count"],
+            )
+            self.assertEqual(
+                sum(record["size_bytes"] for record in group["path_prefixes"])
+                + sum(record["size_bytes"] for record in group["path_exceptions"]),
+                group["size_bytes"],
+            )
+        self.assertLess(
+            sum(len(group["path_exceptions"]) for group in inventory["ownership_groups"]),
+            len(records) // 2,
+        )
+
+        classified_by_path = {}
+        for record in records:
+            path = record["path"]
+            matching_groups = [
+                group
+                for group in inventory["ownership_groups"]
+                if group_matches_path(group, path)
+            ]
+            self.assertEqual(len(matching_groups), 1, path)
+            group = matching_groups[0]
+            classified_by_path[path] = (group["category"], group["owner"], group["basis"])
+        expected_classifications = {
+            "app/js/main.js": ("startup-critical", "editor-startup", "startup-module-graph"),
+            "app/js/ui/toolbar.js": (
+                "startup-deferred-runtime",
+                "editor-deferred-features",
+                "deferred-module-graph",
+            ),
+            "app/js/bootstrap/startup_scenario_boot.js": (
+                "scenario-specific",
+                "scenario-runtime",
+                "product-registry:scenario-modules",
+            ),
+            "app/js/ui/toolbar/export_workbench_controller.js": (
+                "export-only",
+                "export-capability",
+                "product-registry:export-modules",
+            ),
+            "app/js/bootstrap/ui_shell_debug_seed.js": (
+                "developer-only",
+                "development-tools",
+                "product-registry:developer-modules",
+            ),
+        }
+        for path, expected in expected_classifications.items():
+            with self.subTest(path=path):
+                self.assertEqual(classified_by_path[path], expected)
+
+    def test_pages_module_graph_tracks_owner_declared_dynamic_and_worker_edges(self) -> None:
+        manifest_payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        graph = build_pages_dist.build_pages_module_graph(
+            dist_root=REPO_ROOT / "dist",
+            available_paths={record["path"] for record in manifest_payload["files"]},
+        )
+        nodes_by_path = {node["path"]: node for node in graph["nodes"]}
+
+        self.assertEqual(graph["module_entrypoint"], "app/js/main.js")
+        self.assertEqual(graph["unresolved_references"], [])
+        self.assertEqual(graph["summary"]["registry_resolved_dynamic_expression_count"], 2)
+        self.assertEqual(
+            graph["summary"]["module_count"],
+            sum(
+                graph["summary"][field_name]
+                for field_name in (
+                    "initial_module_count",
+                    "deferred_module_count",
+                    "untraversed_module_count",
+                )
+            ),
+        )
+        self.assertEqual(
+            nodes_by_path["app/js/bootstrap/deferred_ui_bootstrap.js"]["dynamic_imports"],
+            [
+                "app/js/ui/scenario_controls.js",
+                "app/js/ui/shortcuts.js",
+                "app/js/ui/sidebar.js",
+                "app/js/ui/styled_selects.js",
+                "app/js/ui/toolbar.js",
+            ],
+        )
+        deferred_ui_expressions = nodes_by_path["app/js/bootstrap/deferred_ui_bootstrap.js"][
+            "dynamic_import_expressions"
+        ]
+        self.assertEqual(
+            [record["registry_id"] for record in deferred_ui_expressions if record["kind"] == "unresolved_dynamic_expression"],
+            ["deferred-ui-bootstrap"],
+        )
+        self.assertEqual(
+            [record["resolution"] for record in deferred_ui_expressions if record["kind"] == "unresolved_dynamic_expression"],
+            ["declarative-registry"],
+        )
+        data_service_expressions = nodes_by_path["app/js/core/data_service.js"]["dynamic_import_expressions"]
+        self.assertEqual(
+            [record["registry_id"] for record in data_service_expressions if record["kind"] == "unresolved_dynamic_expression"],
+            ["data-service-runtime-modules"],
+        )
+        self.assertEqual(
+            nodes_by_path["app/js/core/startup_worker_client.js"]["resource_references"],
+            ["app/js/workers/startup_boot.worker.js"],
+        )
+        self.assertEqual(
+            nodes_by_path["app/js/workers/startup_boot.worker.js"]["resource_references"],
+            ["app/js/core/feature_identity_shared.js", "app/vendor/topojson-client.min.js"],
+        )
+
+    def test_pages_module_graph_reports_unregistered_dynamic_expressions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dist_root = Path(tmpdir)
+            source_paths = {
+                "index.html": '<script type="module" src="./app/js/main.js"></script>',
+                "app/index.html": '<script type="module" src="./js/main.js"></script>',
+                "app/js/main.js": """
+                    const specifier = './feature.js';
+                    const name = 'feature';
+                    export const load = () => Promise.all([
+                      import(specifier),
+                      import(`./${name}.js`),
+                    ]);
+                """,
+                "app/js/feature.js": "export const feature = true;",
+            }
+            for relative_path, source_text in source_paths.items():
+                path = dist_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(source_text, encoding="utf-8")
+
+            graph = build_pages_dist.build_pages_module_graph(
+                dist_root=dist_root,
+                available_paths=set(source_paths),
+                dynamic_import_registry=(),
+            )
+
+        unresolved_dynamic = [
+            record
+            for record in graph["unresolved_references"]
+            if record["kind"] == "unresolved_dynamic_expression"
+        ]
+        self.assertEqual([record["expression"] for record in unresolved_dynamic], ["specifier", "`./${name}.js`"])
+        self.assertEqual([record["expression_index"] for record in unresolved_dynamic], [0, 1])
+        self.assertTrue(all(record["reason"] == "no-declarative-registry-entry" for record in unresolved_dynamic))
+        self.assertTrue(all(record["line"] > 0 and record["column"] > 0 for record in unresolved_dynamic))
+        records = [
+            {"path": path, "size_bytes": len(source_paths[path].encode("utf-8")), "source_kind": "dist"}
+            for path in ("index.html", "app/index.html", "app/js/main.js")
+        ]
+        with self.assertRaisesRegex(
+            ValueError,
+            "unknown_files=0, unresolved_references=2",
+        ):
+            build_pages_dist.build_dist_manifest_payload(
+                records,
+                sum(record["size_bytes"] for record in records),
+                module_graph=graph,
+            )
+
+    def test_pages_dynamic_import_registry_survives_deferred_list_rename(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dist_root = Path(tmpdir)
+            deferred_source = """
+                const RENAMED_RUNTIME_TARGETS = Object.freeze(['../ui/first.js', '../ui/second.js']);
+                export const boot = (loadModule = (target) => import(target)) =>
+                  Promise.all(RENAMED_RUNTIME_TARGETS.map((target) => loadModule(target)));
+            """
+            source_paths = {
+                "index.html": '<script type="module" src="./app/js/main.js"></script>',
+                "app/index.html": '<script type="module" src="./js/main.js"></script>',
+                "app/js/main.js": 'import "./bootstrap/deferred_ui_bootstrap.js";',
+                "app/js/bootstrap/deferred_ui_bootstrap.js": deferred_source,
+                "app/js/ui/first.js": "export const first = true;",
+                "app/js/ui/second.js": "export const second = true;",
+            }
+            for relative_path, source_text in source_paths.items():
+                path = dist_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(source_text, encoding="utf-8")
+            registry = (
+                {
+                    "id": "renamed-deferred-list",
+                    "source": "app/js/bootstrap/deferred_ui_bootstrap.js",
+                    "expression_index": 0,
+                    "expected_expression": "target",
+                    "targets": ("app/js/ui/first.js", "app/js/ui/second.js"),
+                },
+            )
+            graph = build_pages_dist.build_pages_module_graph(
+                dist_root=dist_root,
+                available_paths=set(source_paths),
+                dynamic_import_registry=registry,
+            )
+
+        self.assertNotIn("DEFERRED_UI_MODULE_PATHS", deferred_source)
+        self.assertEqual(graph["unresolved_references"], [])
+        node = next(
+            node
+            for node in graph["nodes"]
+            if node["path"] == "app/js/bootstrap/deferred_ui_bootstrap.js"
+        )
+        self.assertEqual(node["dynamic_imports"], ["app/js/ui/first.js", "app/js/ui/second.js"])
+        self.assertEqual(
+            [record["resolution"] for record in node["dynamic_import_expressions"]],
+            ["declarative-registry"],
+        )
+
+    def test_pages_dist_inventory_rejects_orphan_and_typo_counterexamples(self) -> None:
+        empty_graph = {
+            "schema_version": build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION,
+            "module_entrypoint": build_pages_dist.PAGES_MODULE_ENTRYPOINT,
+            "entrypoints": [],
+            "summary": {},
+            "initial_resource_paths": [],
+            "deferred_resource_paths": [],
+            "nodes": [],
+            "unresolved_references": [],
+        }
+        records = [
+            {"path": path, "size_bytes": 1, "source_kind": "dist"}
+            for path in (
+                "app/js/orphan.js",
+                "app/data/typo.json",
+                "app/vendor/unused.bin",
+                "assets/unused.webp",
+            )
+        ]
+        inventory = build_pages_dist.build_pages_reachability_inventory(records, module_graph=empty_graph)
+        self.assertEqual(inventory["admission"]["status"], "incomplete")
+        self.assertEqual(inventory["reachability_evidence"]["untraversed_file_count"], 4)
+        self.assertEqual(inventory["product_inventory"]["unknown_file_count"], 4)
+        self.assertEqual(
+            inventory["product_inventory"]["unknown_paths"],
+            sorted(record["path"] for record in records),
+        )
+        self.assertEqual(next(item for item in inventory["categories"] if item["id"] == "unknown")["file_count"], 4)
+        with self.assertRaisesRegex(ValueError, "unknown_files=4"):
+            build_pages_dist.build_dist_manifest_payload(
+                records,
+                4,
+                module_graph=empty_graph,
+            )
+
+    def test_pages_dist_manifest_payload_rejects_missing_static_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dist_root = Path(tmpdir)
+            source_paths = {
+                "index.html": '<script type="module" src="./app/js/main.js"></script>',
+                "app/index.html": '<script type="module" src="./js/main.js"></script>',
+                "app/js/main.js": 'import "./missing.js";',
+            }
+            for relative_path, source_text in source_paths.items():
+                path = dist_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(source_text, encoding="utf-8")
+            unresolved_graph = build_pages_dist.build_pages_module_graph(
+                dist_root=dist_root,
+                available_paths=set(source_paths),
+                dynamic_import_registry=(),
+            )
+        records = [
+            {"path": path, "size_bytes": len(source_text.encode("utf-8")), "source_kind": "dist"}
+            for path, source_text in source_paths.items()
+        ]
+        with self.assertRaisesRegex(ValueError, "unresolved_references=1"):
+            build_pages_dist.build_dist_manifest_payload(
+                records,
+                sum(record["size_bytes"] for record in records),
+                module_graph=unresolved_graph,
+            )
+
+    def test_pages_dist_manifest_self_record_stabilizes_deterministically(self) -> None:
+        graph = {
+            "schema_version": build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION,
+            "module_entrypoint": build_pages_dist.PAGES_MODULE_ENTRYPOINT,
+            "entrypoints": [
+                {"id": "landing", "path": "index.html", "resource_references": []},
+                {"id": "editor", "path": "app/index.html", "resource_references": []},
+            ],
+            "summary": {
+                "module_count": 1,
+                "initial_module_count": 1,
+                "deferred_module_count": 0,
+                "untraversed_module_count": 0,
+                "initial_resource_count": 0,
+                "deferred_resource_count": 0,
+                "unresolved_dynamic_expression_count": 0,
+                "registry_resolved_dynamic_expression_count": 0,
+            },
+            "initial_resource_paths": [],
+            "deferred_resource_paths": [],
+            "nodes": [
+                {
+                    "path": "app/js/main.js",
+                    "static_imports": [],
+                    "dynamic_imports": [],
+                    "resource_references": [],
+                    "dynamic_import_expressions": [],
+                    "load_phase": "initial",
+                }
+            ],
+            "dynamic_import_registry": {"declarations": [], "resolutions": []},
+            "unresolved_references": [],
+        }
+
+        def stabilize(starting_self_size: int | None) -> str:
+            records = [
+                {"path": ".nojekyll", "size_bytes": 0, "source_kind": "dist"},
+                {"path": "app/index.html", "size_bytes": 10, "source_kind": "dist"},
+                {"path": "app/js/main.js", "size_bytes": 20, "source_kind": "dist"},
+                {"path": "index.html", "size_bytes": 10, "source_kind": "dist"},
+            ]
+            if starting_self_size is not None:
+                records.append({
+                    "path": "pages-dist-manifest.json",
+                    "size_bytes": starting_self_size,
+                    "source_kind": "dist",
+                })
+            for _ in range(40):
+                total_bytes = sum(record["size_bytes"] for record in records)
+                payload = build_pages_dist.build_dist_manifest_payload(
+                    list(reversed(records)),
+                    total_bytes,
+                    module_graph=graph,
+                )
+                manifest_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+                next_size = len(manifest_text.encode("utf-8"))
+                self_record = next(
+                    (record for record in records if record["path"] == "pages-dist-manifest.json"),
+                    None,
+                )
+                if self_record is not None and self_record["size_bytes"] == next_size:
+                    return manifest_text
+                if self_record is None:
+                    records.append({
+                        "path": "pages-dist-manifest.json",
+                        "size_bytes": next_size,
+                        "source_kind": "dist",
+                    })
+                else:
+                    self_record["size_bytes"] = next_size
+            self.fail("self manifest size did not stabilize")
+
+        self.assertEqual(stabilize(None), stabilize(0))
+        self.assertEqual(stabilize(0), stabilize(999_999))
 
     def test_landing_source_keeps_landing_contract(self) -> None:
         html = LANDING_INDEX.read_text(encoding="utf-8")
@@ -1537,7 +1952,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
-        self.assertEqual(payload.get("schema_version"), 1)
+        self.assertEqual(payload.get("schema_version"), build_pages_dist.PAGES_DIST_MANIFEST_SCHEMA_VERSION)
         self.assertIsInstance(payload.get("files"), list)
         self.assertGreater(len(payload["files"]), 0)
         paths = {record["path"] for record in payload["files"]}
