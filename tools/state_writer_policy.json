@@ -55252,7 +55252,7 @@
       "migrationPhase": "P4.3",
       "bindings": [
         {
-          "id": "parameter:clearSphericalFeatureDiagnosticsCacheState:0:09fc96082d34:109:68",
+          "id": "parameter:clearSphericalFeatureDiagnosticsCacheState:0:09fc96082d34:153:68",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "clearSphericalFeatureDiagnosticsCacheState",
@@ -55260,7 +55260,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 109,
+            "line": 153,
             "column": 68
           },
           "authority": "domain-action",
@@ -55288,7 +55288,7 @@
           ]
         },
         {
-          "id": "parameter:commitProjectedBoundsCacheState:0:09fc96082d34:97:3",
+          "id": "parameter:commitProjectedBoundsCacheState:0:09fc96082d34:124:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "commitProjectedBoundsCacheState",
@@ -55296,7 +55296,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 97,
+            "line": 124,
             "column": 3
           },
           "authority": "domain-action",
@@ -55338,8 +55338,8 @@
                   ],
                   "operation": "assign",
                   "key": "projectedBoundsById",
-                  "line": 33,
-                  "column": 5,
+                  "line": 55,
+                  "column": 7,
                   "sourceFingerprint": "55cc6aad20070cc01b490b4dd41ed99fef2397cc107ecfdee28d32cb617dde7f"
                 },
                 {
@@ -55349,9 +55349,9 @@
                   ],
                   "operation": "define-property",
                   "key": "projectedBoundsById",
-                  "line": 36,
+                  "line": 59,
                   "column": 3,
-                  "sourceFingerprint": "c2484b6bad32fef582c4ed58f12dcb421ec6bb19735ca9c885b1ff4a6e9f956b"
+                  "sourceFingerprint": "213f626328b74bcf8a39c8694a3b731be96ed545e18341a879a0f3419a738a34"
                 },
                 {
                   "alias": "target",
@@ -55360,8 +55360,8 @@
                   ],
                   "operation": "assign",
                   "key": "sphericalFeatureDiagnosticsById",
-                  "line": 50,
-                  "column": 5,
+                  "line": 70,
+                  "column": 7,
                   "sourceFingerprint": "664e9f747682e1c18bcfb2b9a74be297b01f2aa1a829b1abf28430dc3fbedb45"
                 },
                 {
@@ -55371,9 +55371,9 @@
                   ],
                   "operation": "define-property",
                   "key": "sphericalFeatureDiagnosticsById",
-                  "line": 53,
+                  "line": 74,
                   "column": 3,
-                  "sourceFingerprint": "d997b95beef9d27cd11ebdefbaec8bbdb83b278ecfa3be8c491d8cc513eca438"
+                  "sourceFingerprint": "aecfd5604229f4c6c9f7c5baae1c32a1645921acccccd763e513aa10c1567bb7"
                 }
               ],
               "dynamicSites": [],
@@ -55383,7 +55383,7 @@
           ]
         },
         {
-          "id": "parameter:commitRenderPassCacheState:0:09fc96082d34:85:69",
+          "id": "parameter:commitRenderPassCacheState:0:09fc96082d34:106:69",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "commitRenderPassCacheState",
@@ -55391,7 +55391,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 85,
+            "line": 106,
             "column": 69
           },
           "authority": "domain-action",
@@ -55424,8 +55424,8 @@
                   ],
                   "operation": "assign",
                   "key": "renderPassCache",
-                  "line": 19,
-                  "column": 5,
+                  "line": 40,
+                  "column": 7,
                   "sourceFingerprint": "bd12a7a64539d83647b1517cd48d5588088da7e87fae0d7559c02a5cde1416e2"
                 },
                 {
@@ -55435,9 +55435,9 @@
                   ],
                   "operation": "define-property",
                   "key": "renderPassCache",
-                  "line": 22,
+                  "line": 44,
                   "column": 3,
-                  "sourceFingerprint": "7210b4b4084f17fdb992920740630bd65582c109573338c2cb32c3b954dca7bf"
+                  "sourceFingerprint": "df223f487ffdcd6a2c2116438a95ac42f28d37dec5c417a3b85bb4b84409ec35"
                 }
               ],
               "dynamicSites": [],
@@ -55447,7 +55447,7 @@
           ]
         },
         {
-          "id": "parameter:setSphericalFeatureDiagnosticsCacheEntryState:0:09fc96082d34:133:3",
+          "id": "parameter:setSphericalFeatureDiagnosticsCacheEntryState:0:09fc96082d34:177:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setSphericalFeatureDiagnosticsCacheEntryState",
@@ -55455,7 +55455,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 133,
+            "line": 177,
             "column": 3
           },
           "authority": "domain-action",
