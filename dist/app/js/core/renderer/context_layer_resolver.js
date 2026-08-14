@@ -7,6 +7,9 @@ export function createContextLayerResolverOwner({
   const {
     layerResolverCache = null,
   } = caches;
+  let cachedPoliticalChunkFeatureCount = -1;
+  let cachedLandDataFullFeatureCount = -1;
+  let cachedScenarioDataGeneration = -1;
 
   const {
     contextLayerMinScore = 0.08,
@@ -409,11 +412,19 @@ export function createContextLayerResolverOwner({
 
     const activeScenarioId = String(runtimeState.activeScenarioId || "").trim();
     const activeChunkScenarioId = String(runtimeState.activeScenarioChunks?.scenarioId || "").trim();
+    const politicalChunkFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+      ? runtimeState.scenarioPoliticalChunkData.features.length
+      : 0;
+    const landDataFullFeatureCount = Array.isArray(runtimeState.landDataFull?.features)
+      ? runtimeState.landDataFull.features.length
+      : 0;
+    const scenarioDataGeneration = Math.max(0, Number(runtimeState.scenarioDataGeneration || 0));
     const sameSource =
       layerResolverCache.primaryRef === primaryTopology &&
       layerResolverCache.detailRef === runtimeState.topologyDetail &&
-      layerResolverCache.politicalChunkRef === runtimeState.scenarioPoliticalChunkData &&
-      layerResolverCache.landDataFullRef === runtimeState.landDataFull &&
+      cachedPoliticalChunkFeatureCount === politicalChunkFeatureCount &&
+      cachedLandDataFullFeatureCount === landDataFullFeatureCount &&
+      cachedScenarioDataGeneration === scenarioDataGeneration &&
       layerResolverCache.activeScenarioId === activeScenarioId &&
       layerResolverCache.activeChunkScenarioId === activeChunkScenarioId &&
       layerResolverCache.bundleMode === runtimeState.topologyBundleMode &&
@@ -459,8 +470,7 @@ export function createContextLayerResolverOwner({
     const hasActiveScenarioPoliticalChunkAuthority = !!(
       activeScenarioId
       && activeChunkScenarioId === activeScenarioId
-      && Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-      && runtimeState.scenarioPoliticalChunkData.features.length > 0
+      && politicalChunkFeatureCount > 0
     );
     if (
       runtimeState.topologyBundleMode !== "composite"
@@ -485,8 +495,11 @@ export function createContextLayerResolverOwner({
 
     layerResolverCache.primaryRef = primaryTopology;
     layerResolverCache.detailRef = runtimeState.topologyDetail;
-    layerResolverCache.politicalChunkRef = runtimeState.scenarioPoliticalChunkData;
-    layerResolverCache.landDataFullRef = runtimeState.landDataFull;
+    cachedPoliticalChunkFeatureCount = politicalChunkFeatureCount;
+    cachedLandDataFullFeatureCount = Array.isArray(runtimeState.landDataFull?.features)
+      ? runtimeState.landDataFull.features.length
+      : 0;
+    cachedScenarioDataGeneration = scenarioDataGeneration;
     layerResolverCache.activeScenarioId = activeScenarioId;
     layerResolverCache.activeChunkScenarioId = activeChunkScenarioId;
     layerResolverCache.bundleMode = runtimeState.topologyBundleMode;

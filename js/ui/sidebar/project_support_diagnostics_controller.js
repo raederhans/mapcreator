@@ -19,6 +19,30 @@ import {
 } from "../../api/backend_client.js";
 import { prepareProjectImportFile } from "../../core/project_package_io.js";
 
+function createBackendSessionProbe({
+  onProbing = () => {},
+  onAuthenticated = () => {},
+  onAnonymous = () => {},
+  onUnavailable = () => {},
+  onSettled = () => {},
+} = {}) {
+  let probePromise = null;
+  return function ensureProbed() {
+    if (probePromise) return;
+    onProbing();
+    probePromise = refreshBackendSession()
+      .then(onAuthenticated)
+      .catch((error) => {
+        if (error?.code === "auth_required" || error?.status === 401) {
+          onAnonymous();
+          return;
+        }
+        onUnavailable(error);
+      })
+      .finally(onSettled);
+  };
+}
+
 /**
  * Owns the project support and diagnostics panels inside the sidebar:
  * - scenario audit panel rendering and load/hide actions
@@ -90,7 +114,6 @@ export function createProjectSupportDiagnosticsController({
   let latestCloudSaveUserKey = "";
   let latestCommunitySaves = [];
   let backendCloudSessionMode = "hidden";
-  let backendSessionProbePromise = null;
   let lastExpandedSpecialZoneDiagnosticsKey = "";
 
   const setBackendCloudStatus = (message) => {
@@ -104,50 +127,6 @@ export function createProjectSupportDiagnosticsController({
       backendCloudSection.hidden = !visible;
     }
   };
-
-  const ensureBackendSessionProbed = () => {
-    if (backendSessionProbePromise) return backendSessionProbePromise;
-
-    setBackendCloudSessionState("probing");
-    backendSessionProbePromise = refreshBackendSession()
-      .then((payload) => {
-        updateActiveCloudUser(payload?.user);
-        setBackendCloudSessionState("authenticated");
-        setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || payload?.user?.username || ""}`);
-      })
-      .catch((error) => {
-        if (error?.code === "auth_required" || error?.status === 401) {
-          clearActiveCloudUser();
-          setBackendCloudSessionState("anonymous");
-          return;
-        }
-        clearActiveCloudUser();
-        setBackendCloudSessionState(error?.payload?.code ? "unavailable" : "hidden");
-        setBackendCloudStatus(t("Local backend unavailable. Start the local dev server to use Cloud Saves.", "ui"));
-      })
-      .finally(() => {
-        if (backendCloudStatus?.dataset) {
-          backendCloudStatus.dataset.sessionChecked = "true";
-        }
-      });
-    return backendSessionProbePromise;
-  };
-
-  const setBackendAccountPopoverOpen = (isOpen) => {
-    if (!backendAccountPopover || !backendAccountToggleBtn) return;
-    backendAccountPopover.classList.toggle("hidden", !isOpen);
-    backendAccountBackdrop?.classList.toggle("hidden", !isOpen);
-    document.body?.classList.toggle("project-account-dialog-open", !!isOpen);
-    backendAccountToggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    if (isOpen) {
-      void ensureBackendSessionProbed();
-      window.requestAnimationFrame?.(() => backendCloudUsername?.focus?.());
-    } else {
-      backendAccountToggleBtn.focus?.();
-    }
-  };
-
-  const openBackendAccountPopover = () => setBackendAccountPopoverOpen(true);
 
   const setDisabled = (element, disabled) => {
     if (element && typeof element === "object") {
@@ -191,6 +170,45 @@ export function createProjectSupportDiagnosticsController({
     latestCloudSaveId = "";
     latestCloudSaveUserKey = "";
   };
+
+  const ensureBackendSessionProbed = createBackendSessionProbe({
+    onProbing: () => setBackendCloudSessionState("probing"),
+    onAuthenticated: (payload) => {
+      updateActiveCloudUser(payload?.user);
+      setBackendCloudSessionState("authenticated");
+      setBackendCloudStatus(`${t("Logged in as", "ui")} ${payload?.user?.displayName || payload?.user?.username || ""}`);
+    },
+    onAnonymous: () => {
+      clearActiveCloudUser();
+      setBackendCloudSessionState("anonymous");
+    },
+    onUnavailable: (error) => {
+      clearActiveCloudUser();
+      setBackendCloudSessionState(error?.payload?.code ? "unavailable" : "hidden");
+      setBackendCloudStatus(t("Local backend unavailable. Start the local dev server to use Cloud Saves.", "ui"));
+    },
+    onSettled: () => {
+      if (backendCloudStatus?.dataset) {
+        backendCloudStatus.dataset.sessionChecked = "true";
+      }
+    },
+  });
+
+  const setBackendAccountPopoverOpen = (isOpen) => {
+    if (!backendAccountPopover || !backendAccountToggleBtn) return;
+    backendAccountPopover.classList.toggle("hidden", !isOpen);
+    backendAccountBackdrop?.classList.toggle("hidden", !isOpen);
+    document.body?.classList.toggle("project-account-dialog-open", !!isOpen);
+    backendAccountToggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    if (isOpen) {
+      void ensureBackendSessionProbed();
+      window.requestAnimationFrame?.(() => backendCloudUsername?.focus?.());
+    } else {
+      backendAccountToggleBtn.focus?.();
+    }
+  };
+
+  const openBackendAccountPopover = () => setBackendAccountPopoverOpen(true);
 
   const getBackendCredentials = () => ({
     username: String(backendCloudUsername?.value || "").trim(),

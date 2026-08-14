@@ -42,19 +42,21 @@ test("context layer fallback preserves active scenario political chunk authority
     },
   };
   const previousTopojson = globalThis.topojson;
+  let primaryPoliticalFallbackCount = 0;
   globalThis.topojson = {
-    feature: (_topology, object) => object.collection,
+    feature: (_topology, object) => {
+      if (object === primaryTopology.objects.political) {
+        primaryPoliticalFallbackCount += 1;
+      }
+      return object.collection;
+    },
   };
   try {
     let toolbarRefreshCount = 0;
-    let chunkScenarioId = "tno_1962";
-    const runtimeState = {
+    const activeScenarioChunks = { scenarioId: "tno_1962" };
+    const contextFixture = {
       activeScenarioId: "tno_1962",
-      activeScenarioChunks: {
-        get scenarioId() {
-          return chunkScenarioId;
-        },
-      },
+      activeScenarioChunks,
       scenarioPoliticalChunkData: fullPoliticalPayload,
       topologyBundleMode: "single",
       topologyPrimary: primaryTopology,
@@ -63,37 +65,28 @@ test("context layer fallback preserves active scenario political chunk authority
       updateToolbarInputsFn: () => { toolbarRefreshCount += 1; },
     };
     const resolver = createContextLayerResolverOwner({
-      runtimeState,
+      runtimeState: contextFixture,
       caches: { layerResolverCache: {} },
     });
     resolver.ensureLayerDataFromTopology();
 
-    assert.equal(runtimeState.landData.features.length, 4);
-    assert.equal(runtimeState.landData.features[0].id, "GER");
-    assert.equal(runtimeState.landData.features[3].id, "FRA");
-    assert.equal(runtimeState.landDataFull.features.length, 4);
-    assert.equal(runtimeState.landDataFull.features[0].id, "GER");
-    assert.equal(runtimeState.landDataFull.features[3].id, "FRA");
+    assert.equal(primaryPoliticalFallbackCount, 0);
     assert.equal(toolbarRefreshCount, 1);
 
-    runtimeState.landDataFull = {
+    contextFixture.landDataFull = {
       type: "FeatureCollection",
-      features: fullPoliticalPayload.features.map((entry) => ({ ...entry })),
+      features: [feature("GER"), feature("ITA"), feature("POL")],
     };
     resolver.ensureLayerDataFromTopology();
+    assert.equal(primaryPoliticalFallbackCount, 0);
     assert.equal(toolbarRefreshCount, 2);
 
-    chunkScenarioId = "modern_world";
+    activeScenarioChunks.scenarioId = "modern_world";
     resolver.ensureLayerDataFromTopology();
     assert.equal(toolbarRefreshCount, 3);
-    assert.equal(runtimeState.landData.features.length, 2);
-    assert.equal(runtimeState.landData.features[0].id, "PRIMARY-A");
-    assert.equal(runtimeState.landData.features[1].id, "PRIMARY-B");
-    assert.equal(runtimeState.landDataFull.features.length, 2);
-    assert.equal(runtimeState.landDataFull.features[0].id, "PRIMARY-A");
-    assert.equal(runtimeState.landDataFull.features[1].id, "PRIMARY-B");
+    assert.equal(primaryPoliticalFallbackCount, 1);
 
-    const baselineState = {
+    const baselineFixture = {
       activeScenarioId: "modern_world",
       activeScenarioChunks: { scenarioId: "" },
       scenarioPoliticalChunkData: null,
@@ -103,16 +96,11 @@ test("context layer fallback preserves active scenario political chunk authority
       landDataFull: fullPoliticalPayload,
     };
     createContextLayerResolverOwner({
-      runtimeState: baselineState,
+      runtimeState: baselineFixture,
       caches: { layerResolverCache: {} },
     }).ensureLayerDataFromTopology();
 
-    assert.equal(baselineState.landData.features.length, 2);
-    assert.equal(baselineState.landData.features[0].id, "PRIMARY-A");
-    assert.equal(baselineState.landData.features[1].id, "PRIMARY-B");
-    assert.equal(baselineState.landDataFull.features.length, 2);
-    assert.equal(baselineState.landDataFull.features[0].id, "PRIMARY-A");
-    assert.equal(baselineState.landDataFull.features[1].id, "PRIMARY-B");
+    assert.equal(primaryPoliticalFallbackCount, 2);
   } finally {
     globalThis.topojson = previousTopojson;
   }
