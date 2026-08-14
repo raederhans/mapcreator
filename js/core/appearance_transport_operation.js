@@ -236,7 +236,7 @@ function normalizeRecoverableError(value) {
   });
 }
 
-function normalizeRecoveryExpectation(value, state) {
+function normalizeRecoveryExpectation(value, operation) {
   if (!isPlainRecord(value)) {
     fail(
       APPEARANCE_TRANSPORT_CHANGE_SET_ERROR.TRANSITION_INVALID,
@@ -252,9 +252,9 @@ function normalizeRecoveryExpectation(value, state) {
     value.expectedRecoveryRevision,
     "operation.recoveryExpectation.expectedRecoveryRevision",
   );
-  const operationRecoveryRevision = state.action === APPEARANCE_TRANSPORT_CHANGE_SET_ACTION.UNDO
-    ? state.appliedRecord?.appliedRevision
-    : state.intent?.baseRevision;
+  const operationRecoveryRevision = operation.action === APPEARANCE_TRANSPORT_CHANGE_SET_ACTION.UNDO
+    ? operation.appliedRecord?.appliedRevision
+    : operation.intent?.baseRevision;
   if (expectedRecoveryRevision !== operationRecoveryRevision) {
     fail(
       APPEARANCE_TRANSPORT_CHANGE_SET_ERROR.TRANSITION_INVALID,
@@ -308,7 +308,7 @@ function createAppliedRecordIdentity(record) {
   });
 }
 
-function resolveTrustedApplyReceipt(state, resolver) {
+function resolveTrustedApplyReceipt(operation, resolver) {
   if (typeof resolver !== "function") {
     fail(
       APPEARANCE_TRANSPORT_CHANGE_SET_ERROR.HISTORY_INVALID,
@@ -318,11 +318,11 @@ function resolveTrustedApplyReceipt(state, resolver) {
   let value;
   try {
     value = resolver(deepFreeze({
-      exactChangeSetIdentity: state.intent.exactChangeSetIdentity,
-      changeSetId: state.changeSetId,
-      operationId: state.operationId,
-      generation: state.generation,
-      baseRevision: state.intent.baseRevision,
+      exactChangeSetIdentity: operation.intent.exactChangeSetIdentity,
+      changeSetId: operation.changeSetId,
+      operationId: operation.operationId,
+      generation: operation.generation,
+      baseRevision: operation.intent.baseRevision,
     }));
   } catch (error) {
     fail(
@@ -354,24 +354,24 @@ function resolveTrustedApplyReceipt(state, resolver) {
   const appliedRevision = typeof receipt.appliedRevision === "string"
     ? receipt.appliedRevision.trim()
     : "";
-  if (receipt.exactChangeSetIdentity !== state.intent.exactChangeSetIdentity
-    || receipt.changeSetId !== state.changeSetId
-    || receipt.operationId !== state.operationId
-    || receipt.generation !== state.generation
-    || receipt.baseRevision !== state.intent.baseRevision
+  if (receipt.exactChangeSetIdentity !== operation.intent.exactChangeSetIdentity
+    || receipt.changeSetId !== operation.changeSetId
+    || receipt.operationId !== operation.operationId
+    || receipt.generation !== operation.generation
+    || receipt.baseRevision !== operation.intent.baseRevision
     || !appliedRevision
-    || appliedRevision === state.intent.baseRevision
+    || appliedRevision === operation.intent.baseRevision
     || receipt.status !== "applied") {
     fail(
       APPEARANCE_TRANSPORT_CHANGE_SET_ERROR.HISTORY_INVALID,
       "The trusted Apply receipt does not match the operation.",
-      { receipt, operationId: state.operationId, generation: state.generation },
+      { receipt, operationId: operation.operationId, generation: operation.generation },
     );
   }
   return deepFreeze({ ...receipt, appliedRevision });
 }
 
-function resolveTrustedUndoReceipt(state, resolver) {
+function resolveTrustedUndoReceipt(operation, resolver) {
   if (typeof resolver !== "function") {
     fail(
       APPEARANCE_TRANSPORT_CHANGE_SET_ERROR.HISTORY_INVALID,
@@ -381,14 +381,14 @@ function resolveTrustedUndoReceipt(state, resolver) {
   let value;
   try {
     value = resolver(deepFreeze({
-      recordIdentity: state.appliedRecord.recordIdentity,
-      exactChangeSetIdentity: state.appliedRecord.exactChangeSetIdentity,
-      changeSetId: state.appliedRecord.changeSetId,
-      applyOperationId: state.appliedRecord.applyOperationId,
-      applyGeneration: state.appliedRecord.applyGeneration,
-      appliedRevision: state.appliedRecord.appliedRevision,
-      undoOperationId: state.operationId,
-      undoGeneration: state.generation,
+      recordIdentity: operation.appliedRecord.recordIdentity,
+      exactChangeSetIdentity: operation.appliedRecord.exactChangeSetIdentity,
+      changeSetId: operation.appliedRecord.changeSetId,
+      applyOperationId: operation.appliedRecord.applyOperationId,
+      applyGeneration: operation.appliedRecord.applyGeneration,
+      appliedRevision: operation.appliedRecord.appliedRevision,
+      undoOperationId: operation.operationId,
+      undoGeneration: operation.generation,
     }));
   } catch (error) {
     fail(
@@ -422,22 +422,22 @@ function resolveTrustedUndoReceipt(state, resolver) {
   );
   const receipt = deepFreeze(cloneContractValue(value, "operation.undoReceipt"));
   const undoRevision = typeof receipt.undoRevision === "string" ? receipt.undoRevision.trim() : "";
-  if (receipt.recordIdentity !== state.appliedRecord.recordIdentity
-    || receipt.exactChangeSetIdentity !== state.appliedRecord.exactChangeSetIdentity
-    || receipt.changeSetId !== state.appliedRecord.changeSetId
-    || receipt.applyOperationId !== state.appliedRecord.applyOperationId
-    || receipt.applyGeneration !== state.appliedRecord.applyGeneration
-    || receipt.appliedRevision !== state.appliedRecord.appliedRevision
-    || receipt.undoOperationId !== state.operationId
-    || receipt.undoGeneration !== state.generation
+  if (receipt.recordIdentity !== operation.appliedRecord.recordIdentity
+    || receipt.exactChangeSetIdentity !== operation.appliedRecord.exactChangeSetIdentity
+    || receipt.changeSetId !== operation.appliedRecord.changeSetId
+    || receipt.applyOperationId !== operation.appliedRecord.applyOperationId
+    || receipt.applyGeneration !== operation.appliedRecord.applyGeneration
+    || receipt.appliedRevision !== operation.appliedRecord.appliedRevision
+    || receipt.undoOperationId !== operation.operationId
+    || receipt.undoGeneration !== operation.generation
     || !undoRevision
-    || undoRevision === state.appliedRecord.appliedRevision
+    || undoRevision === operation.appliedRecord.appliedRevision
     || receipt.status !== "undone"
     || receipt.consumed !== true) {
     fail(
       APPEARANCE_TRANSPORT_CHANGE_SET_ERROR.HISTORY_INVALID,
       "The trusted Undo consume receipt does not match the applied record.",
-      { receipt, recordIdentity: state.appliedRecord.recordIdentity },
+      { receipt, recordIdentity: operation.appliedRecord.recordIdentity },
     );
   }
   return deepFreeze({ ...receipt, undoRevision });
