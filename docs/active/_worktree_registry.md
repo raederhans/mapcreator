@@ -1,35 +1,32 @@
 # Worktree Registry
 
-Last updated: 2026-07-30 P4.2c functional checkpoint `784885f6`, tree `d6dbbdf2`, is acceptance-complete. Exact phase verification passes 5/5 with Node 122/122, Python 43/43 and policy 306/306; route coverage is 42 changed / 23 P4-owned / 0 unmatched / 0 gaps; Pages/dist passes at 927.33 MiB; non-browser core passes 86/86; focused browser recovery/ready/resilience passes 3/3 + 5/5 + 3/3. The protected parent checkout and retained audit/recovery worktree remain untouched; P4.3 begins after this closeout is published and integrated and fresh renderer browser, `verify:core:main-thread` and standard perf admission are green.
+Last updated: 2026-08-14. Local `main@a4f18020` is the single checked-out worktree and contains the integrated P4.3 verification-runner lineage, Windows Job V2 containment, projected-bounds cache atomicity repair, P4 policy test parallelization, and resolved archive cleanup. Refreshed `origin/main@5461c24a` is an ancestor of local main by 65 commits. The final clean-main full P4 admission and `origin/main` push remain in progress under the primary integration owner.
 
 ## Integration Owner
 
-- Owner: primary Codex agent for `codex/state-action-ownership-p4-20260719`; scope is P4 task records, shared verification policy/configuration, phase commits, exact-SHA verification, integration, push, registry sync and eligible cleanup.
-- Live resources: primary Codex agent exclusively owns browser/dev-server/Playwright, dist, `.runtime-output`, policy reports, perf, scenario-data and heavy-geo lanes. P4.2c live acceptance is complete; no task-owned live process remains.
-- Shared P4.4 files: `index.html`, `css/style.css`, and `js/ui/toolbar.js` remain serial main-thread integration surfaces.
-- Parent WIP recovery: `codex/parent-wip-recovery-20260715@549cd350dcc565b7c4343e764f96da3050b991d4`, pushed to the matching remote branch. It preserves all 87 recovered WIP paths.
-- Binary parent backup: `.runtime/cleanup-backups/parent-wip-20260715.patch`, 148080 bytes, SHA256 `00b2734f7bcf58ff67773333ad02dbd6c03a66f617ee85d4f2d1f543fe302a7d`.
-- Functional verification: P4.2c exact gate 5/5; Node 122/122; Python 43/43; state policy 306/306; `verify:core` 86/86; focused browser 11/11; Pages/dist 927.33 MiB with zero drift.
-- Independent review: P4.2c architecture and code review both return CLEAR with zero actionable findings. The retained audit worktree remains recovery evidence and stays outside direct integration.
-- P4.2c exact route covers 42 changed / 23 P4-owned / 0 unmatched / 0 gaps.
+- Owner: primary Codex agent on `main`; scope is final short gates, the single full P4 admission, push, registry truth, and merged-branch cleanup.
+- Live resources: no task-owned process remains. The next full P4 policy command has one owner and one `.runtime/reports/generated/p4-state-actions/P4.0` output lane.
+- Recovery bundle: `C:\Users\raede\.codex\recovery\mapcreator-pre-convergence-20260814.bundle`, verified complete with 11 refs. It preserves the three detached tips, two historical P4 lines, the P4.4/P4.5 future line, and five recovery branches.
+- Future P4.4/P4.5 line: `codex/state-action-ownership-p4-20260719@65335370` remains as a local and remote branch while its dedicated checkout has been retired.
+- Published candidate: `origin/codex/audit-20260814-verification-runner@a4f18020` contains the exact local-main candidate before the registry closeout commit.
+- Fresh performance evidence: the five focused policy tests pass in `358589 ms`; the old sequential scan/proof hotspot pair measured about `685602 ms`, yielding a `47.7%` critical-path reduction while preserving the canonical rebuild and closed-world checker contracts.
+- Fresh adjacent evidence: worker/cache fakes 13/13; reviewer CLEAR; metadata 30/30; renderer cache 15/15; Pages 47/47 + 18/18 + 18/18; P4 quick 259/259; route schema 367 with zero unmatched changed files.
 
 ## Recommended Order
 
-1. Treat `origin/main` containing functional checkpoint `18d6ffae` and archived closeout `3dbe88da` as the completed post-P3 audit baseline.
-2. Keep `codex/parent-wip-recovery-20260715`, `codex/stale-main-wip-preserve-20260708`, and other unique recovery refs until their dedicated replay reviews are complete.
-3. Use `docs/archive/post-p3-audit-cleanup-20260715/` as the durable audit and cleanup handoff.
-4. Publish and integrate the verified P4.2c lineage, then continue P4.3 renderer state action ownership in the same isolated worktree under fresh browser/main-thread/perf admission.
-5. Keep specialized Williams measurement in its dedicated research lane; ordinary repository acceptance continues to use the schema-2 standard performance gate.
+1. Commit this topology closeout on local main.
+2. Run the final short control-plane checks and one clean-main full P4 policy admission.
+3. Push local main to `origin/main` and verify exact local/remote SHA equality.
+4. Delete merged temporary local and remote branches after ancestry checks.
+5. Retain the P4.4/P4.5 future branch and the five named recovery branches until their own replay decisions are complete.
 
 ## Current Worktrees
 
-Current truth contains the user-owned parent checkout, the active P4 execution worktree and one retained P4.2b audit/recovery worktree. The active branch contains the accepted P4.2c functional lineage; this closeout is the publication boundary before P4.3. Completed P3 worktrees remain removed.
+Current truth contains one long-lived checkout. Eleven clean auxiliary worktrees were removed after exact-path validation and recovery-bundle verification.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@68a62e54` | behind `origin/main`; exact gap re-evaluated before each integration | protected parent checkout; dirty user WIP; intentionally pinned behind remote | selected `docs/archive/**` deletions and `lessons learned.md` | `git status --short --branch` recaptured 2026-07-30 | Red for any direct edit, stage, stash, restore, reset, move or cleanup. | Preserve exactly; continue all P4 work in the isolated worktree. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | local `codex/state-action-ownership-p4-20260719@784885f6` plus P4.2c closeout docs | functional checkpoint `784885f6`, tree `d6dbbdf2` | P4 active / P4.2c acceptance-complete / P4.3 next | Scenario health/presentation actions, state policy/scanner, exact routes, package runners, generated dist and P4 task records | Exact gate 5/5; Node 122/122; Python 43/43; policy 306/306; route 42/23/0/0; core 86/86; focused browser 11/11; Pages/dist 927.33 MiB | Red for concurrent state-policy, renderer state/action or shared P4.4 edits; browser/dist/runtime outputs remain main-owner lanes | Commit/push this closeout, integrate to main, retain worktree for P4.3. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260723-p4` | `codex/audit-20260723-p4@cc65e6dd` | diverged from current `origin/main`: 9 audit-only / 8 main-only commits | tracked-clean retained audit/recovery worktree | overlaps Scenario chunk/actions, policy, tests, dist and P4 control docs | `git status` clean; branch is outside current `origin/main` | Red for direct integration or concurrent edits; its findings informed the accepted continuation branch | Preserve as recovery evidence; perform a separate coverage/cleanup decision at P4 closeout. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@a4f18020` plus this registry closeout | `origin/main@5461c24a` ancestor | tracked-clean before registry edit; final integration owner | registry closeout only | worktree list contains exactly one entry; candidate branch is published at `a4f18020` | Shared output lanes remain single-owner during final admission | Commit registry, run final admission, push main, verify two-end equality. |
 
 ## P3.1 Visual-Effects Pass Delivery Package 2026-07-14
 
