@@ -60,6 +60,7 @@ import {
   hasCanonicalStateMutationFinding,
   normalizeStateActionDelegations,
   readStateWriterPolicy,
+  readStateWriterPolicyAtRevision,
   resolveCachedHistoricalDerivedAliasProof,
   resolveCachedStateWriterRepositoryScan,
   resolveAcceptedStateWriterPolicyCheckpoint,
@@ -133,6 +134,8 @@ class ExactHistoricalProofSeedCache extends Map {
 
 const SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE =
   new ExactHistoricalProofSeedCache();
+const SHARED_CHECKER_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE =
+  new Map();
 
 function createHistoricalProofWorkerEnvelopeFixture() {
   const fixture = createHistoricalDerivedAliasProofCacheFixture();
@@ -219,6 +222,40 @@ function buildCurrentHistoricalProofInputs(checkedIn) {
   };
 }
 
+function readCheckerPreviousPolicy() {
+  const status = spawnSync(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+  assert.equal(
+    status.status,
+    0,
+    String(status.stderr || "Unable to inspect the policy worktree."),
+  );
+  return readStateWriterPolicyAtRevision(
+    String(status.stdout || "").trim() === "" ? "HEAD^1" : "HEAD",
+  );
+}
+
+function reuseHistoricalProofSeedForExactIdentity({
+  sourceCache,
+  targetCache,
+  sourceIdentity,
+  targetIdentity,
+}) {
+  const sourceKey = JSON.stringify(sourceIdentity);
+  const targetKey = JSON.stringify(targetIdentity);
+  if (sourceKey !== targetKey) return false;
+  assert.equal(sourceCache.has(sourceKey), true);
+  targetCache.set(targetKey, sourceCache.get(sourceKey));
+  return true;
+}
+
 const prepareSharedCurrentPhasePolicyInputs = createReadOnlySingleFlight(
   async () => {
     const checkedIn = await readSharedRepositoryPolicy();
@@ -279,6 +316,17 @@ const prepareSharedCurrentPhasePolicyInputs = createReadOnlySingleFlight(
     assert.deepEqual(historicalProof, checkedIn.baselines.derivedAliasTaint);
     const expectedCacheKey = JSON.stringify(identity);
     SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE.seal(expectedCacheKey);
+
+    const checkerIdentity = buildHistoricalDerivedAliasProofIdentity({
+      ...identityInputs,
+      previousPolicy: readCheckerPreviousPolicy(),
+    });
+    reuseHistoricalProofSeedForExactIdentity({
+      sourceCache: SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
+      targetCache: SHARED_CHECKER_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
+      sourceIdentity: identity,
+      targetIdentity: checkerIdentity,
+    });
     return { inventory, historicalProof };
   },
 );
@@ -486,6 +534,69 @@ test("sealed historical proof cache rejects identity drift before scheduling pro
   await Promise.resolve();
   assert.equal(proofCalls, 0);
   assert.equal(cache.size, 1);
+});
+
+test("checker proof cache reuses only an exact builder proof identity", async () => {
+  const fixture = createHistoricalDerivedAliasProofCacheFixture();
+  const builderIdentity = buildHistoricalDerivedAliasProofIdentity(fixture);
+  const builderCache = new ExactHistoricalProofSeedCache();
+  const seeded = Promise.resolve({ proof: "seeded" });
+  builderCache.set(JSON.stringify(builderIdentity), seeded);
+  builderCache.seal(JSON.stringify(builderIdentity));
+
+  const exactCheckerCache = new Map();
+  assert.equal(
+    reuseHistoricalProofSeedForExactIdentity({
+      sourceCache: builderCache,
+      targetCache: exactCheckerCache,
+      sourceIdentity: builderIdentity,
+      targetIdentity: buildHistoricalDerivedAliasProofIdentity(fixture),
+    }),
+    true,
+  );
+  assert.equal(exactCheckerCache.get(JSON.stringify(builderIdentity)), seeded);
+
+  const checkerFixture = {
+    ...fixture,
+    previousPolicy: {
+      ...fixture.previousPolicy,
+      fixtureRevision: "previous",
+    },
+  };
+  const checkerIdentity = buildHistoricalDerivedAliasProofIdentity(
+    checkerFixture,
+  );
+  assert.notEqual(
+    checkerIdentity.previousPolicySha256,
+    builderIdentity.previousPolicySha256,
+  );
+  const independentCheckerCache = new Map();
+  assert.equal(
+    reuseHistoricalProofSeedForExactIdentity({
+      sourceCache: builderCache,
+      targetCache: independentCheckerCache,
+      sourceIdentity: builderIdentity,
+      targetIdentity: checkerIdentity,
+    }),
+    false,
+  );
+
+  let proofCalls = 0;
+  const prove = async () => ({ proof: `checker-${++proofCalls}` });
+  const first = await resolveCachedHistoricalDerivedAliasProof({
+    historicalDerivedAliasProofCache: independentCheckerCache,
+    ...checkerFixture,
+    prove,
+  });
+  const second = await resolveCachedHistoricalDerivedAliasProof({
+    historicalDerivedAliasProofCache: independentCheckerCache,
+    ...checkerFixture,
+    prove,
+  });
+  assert.deepEqual(first, { proof: "checker-1" });
+  assert.deepEqual(second, first);
+  assert.equal(proofCalls, 1);
+  assert.equal(independentCheckerCache.size, 1);
 });
 
 test("explicit repository scan cache deduplicates work and returns isolated values", async () => {
@@ -7356,11 +7467,12 @@ test("P4.5b closeout turns missed frozen targets into policy violations", () => 
 
 test("repository checker reports a passing closed-world policy and default-state shape", async () => {
   const policy = await readSharedRepositoryPolicy();
+  await prepareSharedCurrentPhasePolicyInputs();
   const report = await buildStateWriterPolicyReport({
     policy,
     repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
     historicalDerivedAliasProofCache:
-      SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
+      SHARED_CHECKER_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
   });
   const currentCheckpoint = policy.progress.checkpoints.find(
     ({ phase }) => phase === policy.progress.latestPhase,
@@ -7422,7 +7534,7 @@ test("checker rejects a requested phase that has no matching policy checkpoint",
     policy,
     repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
     historicalDerivedAliasProofCache:
-      SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
+      SHARED_CHECKER_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
   });
   assert.equal(report.phase, missingPhase);
   assert.equal(report.verdict, "fail");
