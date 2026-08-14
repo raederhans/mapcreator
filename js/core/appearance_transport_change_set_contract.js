@@ -133,11 +133,13 @@ function cloneContractValue(value, path = "$", ancestors = new WeakSet()) {
         { path, poisonKeys },
       );
     }
-    result = keys
-      .reduce((target, key) => {
-        target[key] = cloneContractValue(value[key], `${path}.${key}`, ancestors);
-        return target;
-      }, Object.create(null));
+    result = Object.assign(
+      Object.create(null),
+      Object.fromEntries(keys.map((key) => [
+        key,
+        cloneContractValue(value[key], `${path}.${key}`, ancestors),
+      ])),
+    );
   }
   ancestors.delete(value);
   return deepFreeze(result);
