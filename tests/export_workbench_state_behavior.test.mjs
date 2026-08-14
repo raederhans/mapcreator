@@ -18,23 +18,146 @@ import {
   resolveExportPassSequence,
 } from "../js/ui/toolbar/export_workbench_controller.js";
 
+function createArtifactPipelineStub() {
+  return Object.fromEntries([
+    "applyExportAdjustmentsToCanvas",
+    "bakeLayer",
+    "buildBakePackPackage",
+    "buildCompositeExportCanvas",
+    "buildCompositeSourceCanvas",
+    "buildPerLayerExportPackage",
+    "buildSingleExportSourceCanvas",
+    "getBakePackLayerIds",
+    "getSelectedExportScale",
+    "triggerBlobDownload",
+    "triggerCanvasDownload",
+  ].map((methodName) => [methodName, () => {}]));
+}
+
+function createButtonHarness() {
+  const listeners = new Map();
+  return {
+    dataset: {},
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    async dispatch(type) { return listeners.get(type)?.(); },
+  };
+}
+
 test("export workbench controller validates required notification dependencies at construction", () => {
   assert.throws(
     () => createExportWorkbenchController({ showExportFailureToast() {} }),
     /createExportWorkbenchController requires showToast to be a function\./,
   );
   assert.throws(
-    () => createExportWorkbenchController({ showToast() {} }),
+    () => createExportWorkbenchController({ showToast() {}, artifactPipeline: createArtifactPipelineStub() }),
     /createExportWorkbenchController requires showExportFailureToast to be a function\./,
+  );
+  assert.throws(
+    () => createExportWorkbenchController({
+      showToast() {},
+      showExportFailureToast() {},
+      artifactPipeline: {},
+    }),
+    /createExportWorkbenchController requires artifactPipeline\.applyExportAdjustmentsToCanvas to be a function\./,
   );
 
   const controller = createExportWorkbenchController({
     showToast() {},
     showExportFailureToast() {},
+    artifactPipeline: createArtifactPipelineStub(),
   });
 
   assert.equal(typeof controller.bindExportWorkbenchEvents, "function");
   assert.equal(typeof controller.renderExportWorkbenchUi, "function");
+});
+
+test("Bake Visible uses the pipeline visibility contract and bakes every selected output", async () => {
+  const previousHtmlInputElement = globalThis.HTMLInputElement;
+  globalThis.HTMLInputElement = class {};
+  const bakeButton = createButtonHarness();
+  const bakeCalls = [];
+  const toasts = [];
+  let selectedExportUi = null;
+  const exportUi = {
+    ...normalizeExportWorkbenchUiState({
+      visibility: { background: true, effects: true },
+      textVisibility: { "render-labels": false, "special-zones": false, "svg-annotations": false },
+    }),
+    bakeCache: new Map(),
+  };
+  const artifactPipeline = {
+    ...createArtifactPipelineStub(),
+    getBakePackLayerIds(value) {
+      selectedExportUi = value;
+      return ["color", "line", "composite"];
+    },
+    async bakeLayer(layerId, value) {
+      bakeCalls.push([layerId, value]);
+    },
+  };
+  const controller = createExportWorkbenchController({
+    state: { exportWorkbenchUi: exportUi },
+    t: (key) => key,
+    showToast(message, options) { toasts.push([message, options]); },
+    showExportFailureToast() { assert.fail("success path must not show a failure toast"); },
+    normalizeExportWorkbenchUiState,
+    renderPassNames: [],
+    exportWorkbenchBakeVisibleBtn: bakeButton,
+    artifactPipeline,
+  });
+
+  try {
+    controller.bindExportWorkbenchEvents();
+    await bakeButton.dispatch("click");
+  } finally {
+    if (previousHtmlInputElement === undefined) delete globalThis.HTMLInputElement;
+    else globalThis.HTMLInputElement = previousHtmlInputElement;
+  }
+
+  assert.deepEqual(bakeCalls.map(([layerId]) => layerId), ["color", "line", "composite"]);
+  assert.ok(bakeCalls.every(([, value]) => value === selectedExportUi));
+  assert.deepEqual(toasts, [["Bake outputs updated.", { title: "Bake ready", tone: "success" }]]);
+});
+
+test("Bake Visible reports pipeline failures and stops the remaining bake sequence", async () => {
+  const previousHtmlInputElement = globalThis.HTMLInputElement;
+  globalThis.HTMLInputElement = class {};
+  const bakeButton = createButtonHarness();
+  const failure = new Error("bake failed");
+  const bakeCalls = [];
+  const failures = [];
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    const artifactPipeline = {
+      ...createArtifactPipelineStub(),
+      getBakePackLayerIds() { return ["color", "line", "composite"]; },
+      async bakeLayer(layerId) {
+        bakeCalls.push(layerId);
+        if (layerId === "line") throw failure;
+      },
+    };
+    const controller = createExportWorkbenchController({
+      state: { exportWorkbenchUi: { ...normalizeExportWorkbenchUiState({}), bakeCache: new Map() } },
+      t: (key) => key,
+      showToast() { assert.fail("failure path must not show a success toast"); },
+      showExportFailureToast(error) { failures.push(error); },
+      normalizeExportWorkbenchUiState,
+      renderPassNames: [],
+      exportWorkbenchBakeVisibleBtn: bakeButton,
+      artifactPipeline,
+    });
+
+    controller.bindExportWorkbenchEvents();
+    await bakeButton.dispatch("click");
+  } finally {
+    console.error = originalConsoleError;
+    if (previousHtmlInputElement === undefined) delete globalThis.HTMLInputElement;
+    else globalThis.HTMLInputElement = previousHtmlInputElement;
+  }
+
+  assert.deepEqual(bakeCalls, ["color", "line"]);
+  assert.deepEqual(failures, [failure]);
 });
 
 test("export workbench state normalizes legacy visibility and text aliases", () => {

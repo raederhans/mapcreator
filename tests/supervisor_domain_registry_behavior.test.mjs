@@ -117,6 +117,24 @@ test("every domain has required fields with expected shapes", () => {
   }
 });
 
+test("project IO routes every export workbench owner through the focused artifact pipeline check", () => {
+  const registry = readRegistry();
+  const domain = registry.domains.find((entry) => entry.id === "project-io");
+
+  assert.ok(domain);
+  for (const sourcePath of [
+    "js/ui/toolbar/export_artifact_pipeline.js",
+    "js/ui/toolbar/export_workbench_contract.js",
+    "js/ui/toolbar/export_workbench_controller.js",
+    "tests/export_artifact_pipeline_behavior.test.mjs",
+    "tests/export_workbench_state_behavior.test.mjs",
+  ]) {
+    assert.ok(domain.typicalSourceGlobs.includes(sourcePath), `${sourcePath} must remain in project-io.`);
+  }
+  assert.ok(domain.preferredChildSafeChecks.includes("npm run test:node:export-artifact-pipeline"));
+  assert.ok(domain.preferredChildSafeChecks.includes("npm run test:node:annotation-productization"));
+});
+
 test("registry covers important lane and evidence concepts", () => {
   const registry = readRegistry();
 

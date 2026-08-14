@@ -468,11 +468,18 @@
       "typicalSourceGlobs": [
         "js/**project**",
         "js/**file**",
+        "js/ui/toolbar/export_artifact_pipeline.js",
+        "js/ui/toolbar/export_workbench_contract.js",
+        "js/ui/toolbar/export_workbench_controller.js",
         "tests/file_manager_project_roundtrip_behavior.test.mjs",
+        "tests/export_artifact_pipeline_behavior.test.mjs",
         "tests/export_workbench_state_behavior.test.mjs",
         "tests/e2e/project_save_load_roundtrip.spec.js"
       ],
-      "preferredChildSafeChecks": ["npm run test:node:annotation-productization"],
+      "preferredChildSafeChecks": [
+        "npm run test:node:export-artifact-pipeline",
+        "npm run test:node:annotation-productization"
+      ],
       "preferredMainThreadChecks": ["npm run test:e2e:project-save-load"],
       "mainRiskSignals": [
         "project roundtrip data loss",
