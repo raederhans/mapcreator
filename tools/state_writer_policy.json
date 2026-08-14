@@ -29193,7 +29193,7 @@
               "aliasSites": [],
               "dynamicSites": [
                 {
-                  "line": 267,
+                  "line": 270,
                   "column": 7,
                   "operation": "assign",
                   "key": "contextLayerSourceByName",
@@ -29201,7 +29201,7 @@
                   "sourceFingerprint": "60acbad6c4d90ef425b7651c1248a4308b8e486ce256762bbda1f67b9e84a23c"
                 },
                 {
-                  "line": 268,
+                  "line": 271,
                   "column": 7,
                   "operation": "assign",
                   "key": "layerDataDiagnostics",
@@ -29209,7 +29209,7 @@
                   "sourceFingerprint": "dcd0f9751637ef51a1cc110d1d404dadb8d494a9c7b4e43aa41893a286cc9fbb"
                 },
                 {
-                  "line": 299,
+                  "line": 302,
                   "column": 7,
                   "operation": "assign",
                   "key": "contextLayerSourceByName",
@@ -29217,7 +29217,7 @@
                   "sourceFingerprint": "60acbad6c4d90ef425b7651c1248a4308b8e486ce256762bbda1f67b9e84a23c"
                 },
                 {
-                  "line": 300,
+                  "line": 303,
                   "column": 7,
                   "operation": "assign",
                   "key": "layerDataDiagnostics",
@@ -29225,7 +29225,7 @@
                   "sourceFingerprint": "dcd0f9751637ef51a1cc110d1d404dadb8d494a9c7b4e43aa41893a286cc9fbb"
                 },
                 {
-                  "line": 338,
+                  "line": 341,
                   "column": 5,
                   "operation": "assign",
                   "key": "contextLayerSourceByName",
@@ -29233,7 +29233,7 @@
                   "sourceFingerprint": "60acbad6c4d90ef425b7651c1248a4308b8e486ce256762bbda1f67b9e84a23c"
                 },
                 {
-                  "line": 339,
+                  "line": 342,
                   "column": 5,
                   "operation": "assign",
                   "key": "layerDataDiagnostics",
@@ -29241,7 +29241,7 @@
                   "sourceFingerprint": "dcd0f9751637ef51a1cc110d1d404dadb8d494a9c7b4e43aa41893a286cc9fbb"
                 },
                 {
-                  "line": 370,
+                  "line": 373,
                   "column": 7,
                   "operation": "assign",
                   "key": "contextLayerSourceByName",
@@ -29249,7 +29249,7 @@
                   "sourceFingerprint": "60acbad6c4d90ef425b7651c1248a4308b8e486ce256762bbda1f67b9e84a23c"
                 },
                 {
-                  "line": 371,
+                  "line": 374,
                   "column": 7,
                   "operation": "assign",
                   "key": "layerDataDiagnostics",
@@ -29260,7 +29260,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 32,
+                  "line": 35,
                   "column": 54,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29268,7 +29268,7 @@
                   "sourceFingerprint": "e6e2b826e31fca5c36125c48f130dcb6f961e698ff8a8776a1f290cf0892e8e6"
                 },
                 {
-                  "line": 32,
+                  "line": 35,
                   "column": 64,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29276,7 +29276,7 @@
                   "sourceFingerprint": "2958d416d08aa5a472d7b509036cb7eafd542add84527e66a145ea64cb4cdc75"
                 },
                 {
-                  "line": 47,
+                  "line": 50,
                   "column": 76,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29284,7 +29284,7 @@
                   "sourceFingerprint": "fa7496e4ae840306df41bd658800392e24db8ac4767159d6bdf8a23b28c44ea0"
                 },
                 {
-                  "line": 271,
+                  "line": 274,
                   "column": 22,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29292,7 +29292,7 @@
                   "sourceFingerprint": "d4c8fadcbae8e10b8bc5b80ef23db10e920f7ab7f0e9df7ceaa1e953ede12186"
                 },
                 {
-                  "line": 275,
+                  "line": 278,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29300,7 +29300,7 @@
                   "sourceFingerprint": "384bacf529f5e2c1bb56548f90b5ee23bbe93ca5e2d8a26fc0a1460bf74ec362"
                 },
                 {
-                  "line": 319,
+                  "line": 322,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29308,7 +29308,7 @@
                   "sourceFingerprint": "75e8ccd8c3f0fa44a09074d6c2310153d572b3a659abae01063c40eacdc05410"
                 },
                 {
-                  "line": 374,
+                  "line": 377,
                   "column": 22,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29316,7 +29316,7 @@
                   "sourceFingerprint": "b8c394407d2b253d388b3bad5fbf5d078fd362a9f84fd827f5b22bf5e7571e0b"
                 },
                 {
-                  "line": 389,
+                  "line": 392,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29324,7 +29324,7 @@
                   "sourceFingerprint": "75e8ccd8c3f0fa44a09074d6c2310153d572b3a659abae01063c40eacdc05410"
                 },
                 {
-                  "line": 426,
+                  "line": 443,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29332,7 +29332,7 @@
                   "sourceFingerprint": "8edd070d7210a8201b16b65ba20c261acc7c4fe661a79b5e1245731ef6c9bc39"
                 },
                 {
-                  "line": 427,
+                  "line": 444,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29340,7 +29340,7 @@
                   "sourceFingerprint": "f9f42b25b7ec54d1d024250dab2f2ba4c977756ec143bba60e77c547a0d951d8"
                 },
                 {
-                  "line": 428,
+                  "line": 445,
                   "column": 15,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29348,7 +29348,7 @@
                   "sourceFingerprint": "26ef3e60ece8bd8d33533cd80ca086a1c3edca3c64c31f73901877746134b555"
                 },
                 {
-                  "line": 471,
+                  "line": 497,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29356,7 +29356,7 @@
                   "sourceFingerprint": "8edd070d7210a8201b16b65ba20c261acc7c4fe661a79b5e1245731ef6c9bc39"
                 },
                 {
-                  "line": 472,
+                  "line": 505,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29375,7 +29375,7 @@
               "dynamicSites": [],
               "ambiguousSites": [
                 {
-                  "line": 121,
+                  "line": 124,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "cba63493eb7a96e17415068290d268250533c7b0fcc26c1b9cc4a4875bd4ff5c"
@@ -29383,7 +29383,7 @@
               ],
               "unsupportedSites": [
                 {
-                  "line": 121,
+                  "line": 124,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -29391,7 +29391,7 @@
                   "sourceFingerprint": "9f5d37bc8f586e2fce4e0d15eaa484cce1a2db777438c959998209a6f5c4ee6c"
                 },
                 {
-                  "line": 138,
+                  "line": 141,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29399,7 +29399,7 @@
                   "sourceFingerprint": "706e446c2833510d8e051606658bb2c89c4063a9015fd03a4641795ded482ad2"
                 },
                 {
-                  "line": 280,
+                  "line": 283,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29407,7 +29407,7 @@
                   "sourceFingerprint": "a9c29a78d27ec33a732646e4026040b736b20d2df34fd45792b6d83b3b5d4b0c"
                 },
                 {
-                  "line": 306,
+                  "line": 309,
                   "column": 24,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29415,7 +29415,15 @@
                   "sourceFingerprint": "4deeb8757a375a47e40911746d14336752efda923904dbf9e286a6b7b5deaf54"
                 },
                 {
-                  "line": 425,
+                  "line": 441,
+                  "column": 89,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "81b01319a3376231a3ced862d1bb125033fe92d482e8503102b5fa9c2b89ab72"
+                },
+                {
+                  "line": 442,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29423,7 +29431,7 @@
                   "sourceFingerprint": "a9c29a78d27ec33a732646e4026040b736b20d2df34fd45792b6d83b3b5d4b0c"
                 },
                 {
-                  "line": 450,
+                  "line": 467,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -29431,7 +29439,7 @@
                   "sourceFingerprint": "fdfeb8dc66b87378099da79af1c88e99b6463e583719a535d04a637037ae6cc7"
                 },
                 {
-                  "line": 464,
+                  "line": 490,
                   "column": 63,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29439,7 +29447,7 @@
                   "sourceFingerprint": "a9c29a78d27ec33a732646e4026040b736b20d2df34fd45792b6d83b3b5d4b0c"
                 },
                 {
-                  "line": 464,
+                  "line": 490,
                   "column": 80,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29447,7 +29455,7 @@
                   "sourceFingerprint": "8f2330723c9429fe0f74f524747f4e0f946c3ff8bf1700058ec6a6fa8346d51d"
                 },
                 {
-                  "line": 470,
+                  "line": 496,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -29455,7 +29463,7 @@
                   "sourceFingerprint": "a9c29a78d27ec33a732646e4026040b736b20d2df34fd45792b6d83b3b5d4b0c"
                 },
                 {
-                  "line": 476,
+                  "line": 509,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -43754,7 +43762,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 880,
+                  "line": 882,
                   "column": 51,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43774,7 +43782,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 169,
+                  "line": 170,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43782,7 +43790,7 @@
                   "sourceFingerprint": "fc2a6d2633b7c937ee480accbfe7777677be1d33d7bcf040e811f26ed373eaa4"
                 },
                 {
-                  "line": 173,
+                  "line": 174,
                   "column": 55,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43790,7 +43798,7 @@
                   "sourceFingerprint": "e5b4ed6d7be2eecb284c74f3f65df6c8e8c30feb407b23af6fec8376d09221d6"
                 },
                 {
-                  "line": 188,
+                  "line": 189,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43798,7 +43806,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 195,
+                  "line": 196,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43806,7 +43814,7 @@
                   "sourceFingerprint": "d1d146e47e995e20c1c7263952d29b4c983e3272c0739f8659eedc47f4cc45e7"
                 },
                 {
-                  "line": 200,
+                  "line": 201,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43814,7 +43822,7 @@
                   "sourceFingerprint": "dd8a6d56cac2cc444944fa3ea82dff15252426cd89be347e7e456d365ecae22d"
                 },
                 {
-                  "line": 201,
+                  "line": 202,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43822,7 +43830,7 @@
                   "sourceFingerprint": "71522ad525c704fa210b14a9b141e058035b7f94b3f88a5b349cf8baccb4ac84"
                 },
                 {
-                  "line": 204,
+                  "line": 205,
                   "column": 56,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43830,7 +43838,7 @@
                   "sourceFingerprint": "e5b4ed6d7be2eecb284c74f3f65df6c8e8c30feb407b23af6fec8376d09221d6"
                 },
                 {
-                  "line": 206,
+                  "line": 207,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43838,7 +43846,7 @@
                   "sourceFingerprint": "2efe97bf8eb2b436a735af99d8ceadf3937289e4fdfd227ca7a1251434b5347c"
                 },
                 {
-                  "line": 243,
+                  "line": 244,
                   "column": 52,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43846,7 +43854,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 262,
+                  "line": 263,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43854,7 +43862,7 @@
                   "sourceFingerprint": "e8f71237d470ee7f8f32cbf3c33a9833da3620f722ecdd0583b1cf7f8fe7e998"
                 },
                 {
-                  "line": 285,
+                  "line": 286,
                   "column": 41,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43862,7 +43870,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 293,
+                  "line": 294,
                   "column": 3,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43870,7 +43878,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 304,
+                  "line": 305,
                   "column": 3,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43878,7 +43886,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 335,
+                  "line": 336,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43886,7 +43894,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 339,
+                  "line": 340,
                   "column": 45,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43894,7 +43902,7 @@
                   "sourceFingerprint": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
                 },
                 {
-                  "line": 369,
+                  "line": 370,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43902,7 +43910,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 373,
+                  "line": 374,
                   "column": 43,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43910,7 +43918,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 377,
+                  "line": 378,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43918,7 +43926,7 @@
                   "sourceFingerprint": "05b3abf2579a5eb66403cd78be557fd860633a1fe2103c7642030defe32c657f"
                 },
                 {
-                  "line": 382,
+                  "line": 383,
                   "column": 52,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43926,7 +43934,7 @@
                   "sourceFingerprint": "aeac65f1d02a7e63056139f660981f6a31cbab077f4892bf560184d2a9185376"
                 },
                 {
-                  "line": 383,
+                  "line": 384,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43934,7 +43942,7 @@
                   "sourceFingerprint": "a9bbf6b8fdc3dd0acc669d83f6a8109d91d64dcd52b0119228e219fa0e724761"
                 },
                 {
-                  "line": 393,
+                  "line": 394,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43942,7 +43950,7 @@
                   "sourceFingerprint": "23345250dcd26359cd12eff317110972e0ef385819ab262d989a8bec151aaee0"
                 },
                 {
-                  "line": 397,
+                  "line": 398,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43950,7 +43958,7 @@
                   "sourceFingerprint": "aae6517357faf8620cbbcd8c7c3c16f72b4b58ea1182db9ef9eb75127f458acd"
                 },
                 {
-                  "line": 420,
+                  "line": 421,
                   "column": 52,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43958,7 +43966,7 @@
                   "sourceFingerprint": "aeac65f1d02a7e63056139f660981f6a31cbab077f4892bf560184d2a9185376"
                 },
                 {
-                  "line": 422,
+                  "line": 423,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43966,7 +43974,7 @@
                   "sourceFingerprint": "9b24fac487b783f1681cf2262650d716eafa297ce15d5376c41fc2c561370766"
                 },
                 {
-                  "line": 538,
+                  "line": 539,
                   "column": 17,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43974,7 +43982,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 609,
+                  "line": 610,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43982,7 +43990,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 618,
+                  "line": 619,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43990,7 +43998,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 640,
+                  "line": 641,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -43998,7 +44006,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 659,
+                  "line": 660,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44006,7 +44014,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 680,
+                  "line": 681,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44014,7 +44022,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 721,
+                  "line": 722,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44022,7 +44030,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 734,
+                  "line": 735,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44030,7 +44038,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 771,
+                  "line": 772,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44038,7 +44046,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 818,
+                  "line": 820,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44046,7 +44054,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 966,
+                  "line": 973,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -44054,7 +44062,7 @@
                   "sourceFingerprint": "18d7242ac88e1c379cec79c7239b169cb8e572a4f95646f7017b23e120a32848"
                 },
                 {
-                  "line": 982,
+                  "line": 989,
                   "column": 28,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44062,7 +44070,7 @@
                   "sourceFingerprint": "fbf708660a368b6e37ddb222d78f66940478c44381d3c65f9c84dd5a76fe721c"
                 },
                 {
-                  "line": 987,
+                  "line": 994,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44070,7 +44078,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1002,
+                  "line": 1009,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44078,7 +44086,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1028,
+                  "line": 1035,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44086,7 +44094,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1056,
+                  "line": 1063,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44094,7 +44102,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1079,
+                  "line": 1086,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44102,7 +44110,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1119,
+                  "line": 1126,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44110,7 +44118,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1137,
+                  "line": 1144,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44118,7 +44126,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1178,
+                  "line": 1185,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44126,7 +44134,7 @@
                   "sourceFingerprint": "8539205f4feb1b91e8334f8b6ea9bd399196e10d12761dfb07697a2a600e270d"
                 },
                 {
-                  "line": 1180,
+                  "line": 1187,
                   "column": 15,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44134,7 +44142,7 @@
                   "sourceFingerprint": "2c197c573c72352e17092f6b316aa92de327d3688e428d60843a4fbfd5e4474d"
                 },
                 {
-                  "line": 1181,
+                  "line": 1188,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44142,7 +44150,7 @@
                   "sourceFingerprint": "9f94425f99c5e9afa8b9df55ec7a6378334c95cb08dc5623e519f20cd89bdff3"
                 },
                 {
-                  "line": 1193,
+                  "line": 1200,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44150,7 +44158,7 @@
                   "sourceFingerprint": "8d7a2cffdc326702b8813050360dcd6a57a5f76a81d45b5e472876f5c2877852"
                 },
                 {
-                  "line": 1203,
+                  "line": 1210,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44158,7 +44166,7 @@
                   "sourceFingerprint": "5f06fe42b6c16d1dd7e55255d891914c797ac49404e7dafa6b79bb1441e60205"
                 },
                 {
-                  "line": 1212,
+                  "line": 1219,
                   "column": 41,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44166,7 +44174,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1214,
+                  "line": 1221,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44174,7 +44182,7 @@
                   "sourceFingerprint": "be072be45fee976e54f7068290d1e9c2636feb09859f235b899c360be2a60c56"
                 },
                 {
-                  "line": 1215,
+                  "line": 1222,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44182,7 +44190,7 @@
                   "sourceFingerprint": "2efe97bf8eb2b436a735af99d8ceadf3937289e4fdfd227ca7a1251434b5347c"
                 },
                 {
-                  "line": 1216,
+                  "line": 1223,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44190,7 +44198,7 @@
                   "sourceFingerprint": "f9cf08b257451e8dda2c052943b2ba9285bbf97e9b02ece4202417dd13b17bb5"
                 },
                 {
-                  "line": 1232,
+                  "line": 1239,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44198,7 +44206,7 @@
                   "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
                 },
                 {
-                  "line": 1234,
+                  "line": 1241,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44206,7 +44214,7 @@
                   "sourceFingerprint": "e5805c70809aece3813837ac2174af4cec3f47710094373b43cff596437e56ce"
                 },
                 {
-                  "line": 1235,
+                  "line": 1242,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44214,7 +44222,7 @@
                   "sourceFingerprint": "1c2dc7a815b065b67250a0de0c58bb45cdbe33d928cffc81f7a6399adb00b3c8"
                 },
                 {
-                  "line": 1243,
+                  "line": 1250,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44222,7 +44230,7 @@
                   "sourceFingerprint": "17228588be977c274f548083c05c5355800ca19aae49a1d1b8ce0fe695243626"
                 },
                 {
-                  "line": 1243,
+                  "line": 1250,
                   "column": 62,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44230,7 +44238,7 @@
                   "sourceFingerprint": "1c2dc7a815b065b67250a0de0c58bb45cdbe33d928cffc81f7a6399adb00b3c8"
                 },
                 {
-                  "line": 1244,
+                  "line": 1251,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44238,7 +44246,7 @@
                   "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
                 },
                 {
-                  "line": 1246,
+                  "line": 1253,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44246,7 +44254,7 @@
                   "sourceFingerprint": "e5805c70809aece3813837ac2174af4cec3f47710094373b43cff596437e56ce"
                 },
                 {
-                  "line": 1247,
+                  "line": 1254,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44254,32 +44262,8 @@
                   "sourceFingerprint": "1c2dc7a815b065b67250a0de0c58bb45cdbe33d928cffc81f7a6399adb00b3c8"
                 },
                 {
-                  "line": 1255,
+                  "line": 1262,
                   "column": 42,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
-                },
-                {
-                  "line": 1257,
-                  "column": 17,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "e5805c70809aece3813837ac2174af4cec3f47710094373b43cff596437e56ce"
-                },
-                {
-                  "line": 1258,
-                  "column": 29,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "1c2dc7a815b065b67250a0de0c58bb45cdbe33d928cffc81f7a6399adb00b3c8"
-                },
-                {
-                  "line": 1263,
-                  "column": 51,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
@@ -44287,14 +44271,6 @@
                 },
                 {
                   "line": 1264,
-                  "column": 42,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
-                },
-                {
-                  "line": 1266,
                   "column": 17,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44302,7 +44278,7 @@
                   "sourceFingerprint": "e5805c70809aece3813837ac2174af4cec3f47710094373b43cff596437e56ce"
                 },
                 {
-                  "line": 1267,
+                  "line": 1265,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44311,6 +44287,38 @@
                 },
                 {
                   "line": 1270,
+                  "column": 51,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
+                },
+                {
+                  "line": 1271,
+                  "column": 42,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
+                },
+                {
+                  "line": 1273,
+                  "column": 17,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "e5805c70809aece3813837ac2174af4cec3f47710094373b43cff596437e56ce"
+                },
+                {
+                  "line": 1274,
+                  "column": 29,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "1c2dc7a815b065b67250a0de0c58bb45cdbe33d928cffc81f7a6399adb00b3c8"
+                },
+                {
+                  "line": 1277,
                   "column": 54,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44318,7 +44326,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 1274,
+                  "line": 1281,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44326,7 +44334,7 @@
                   "sourceFingerprint": "962612ae09a6747a24dd6efce5297d17e0f179d704a6b8374825df7938469506"
                 },
                 {
-                  "line": 1306,
+                  "line": 1313,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44334,7 +44342,7 @@
                   "sourceFingerprint": "17228588be977c274f548083c05c5355800ca19aae49a1d1b8ce0fe695243626"
                 },
                 {
-                  "line": 1320,
+                  "line": 1327,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44342,7 +44350,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1334,
+                  "line": 1341,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44350,7 +44358,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1340,
+                  "line": 1347,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44358,7 +44366,7 @@
                   "sourceFingerprint": "552f947f6c582a9d231b79225b4e520a444aa30f53e5f99501067f7a0866f153"
                 },
                 {
-                  "line": 1342,
+                  "line": 1349,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44366,7 +44374,7 @@
                   "sourceFingerprint": "d17442160b62102fe63856b7b13f84563caebca022c64a7c1890d67b3478f809"
                 },
                 {
-                  "line": 1350,
+                  "line": 1357,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44374,7 +44382,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1357,
+                  "line": 1364,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44382,7 +44390,7 @@
                   "sourceFingerprint": "f18ba429422ea878c352147e22c9eea7b01f4d0c0815bc931dc0c51b41ae0410"
                 },
                 {
-                  "line": 1359,
+                  "line": 1366,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44390,7 +44398,7 @@
                   "sourceFingerprint": "d17442160b62102fe63856b7b13f84563caebca022c64a7c1890d67b3478f809"
                 },
                 {
-                  "line": 1362,
+                  "line": 1369,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44398,7 +44406,7 @@
                   "sourceFingerprint": "17228588be977c274f548083c05c5355800ca19aae49a1d1b8ce0fe695243626"
                 },
                 {
-                  "line": 1367,
+                  "line": 1374,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44406,7 +44414,7 @@
                   "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
                 },
                 {
-                  "line": 1371,
+                  "line": 1378,
                   "column": 11,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44414,7 +44422,7 @@
                   "sourceFingerprint": "8d7f25ef1d36e587b0ce007c6e9269567196b4107c26e6cdd59c04049fca6857"
                 },
                 {
-                  "line": 1372,
+                  "line": 1379,
                   "column": 18,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44422,7 +44430,7 @@
                   "sourceFingerprint": "38de5c7d431a5a5581cb29292653015a2cd1da87b97153641b1991a47bc1df36"
                 },
                 {
-                  "line": 1374,
+                  "line": 1381,
                   "column": 41,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44430,7 +44438,7 @@
                   "sourceFingerprint": "dd8a6d56cac2cc444944fa3ea82dff15252426cd89be347e7e456d365ecae22d"
                 },
                 {
-                  "line": 1377,
+                  "line": 1384,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44438,7 +44446,7 @@
                   "sourceFingerprint": "52cf25f25369113c3f68494c8ce26fe26aa8c06e33ef43665e072950604ed1d9"
                 },
                 {
-                  "line": 1379,
+                  "line": 1386,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44446,7 +44454,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1383,
+                  "line": 1390,
                   "column": 16,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44454,7 +44462,7 @@
                   "sourceFingerprint": "2de99eb25131deae3b8da5c2d4827c1d20c7f8c73d7f84fa25053ea91148dfc2"
                 },
                 {
-                  "line": 1384,
+                  "line": 1391,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44462,7 +44470,7 @@
                   "sourceFingerprint": "71522ad525c704fa210b14a9b141e058035b7f94b3f88a5b349cf8baccb4ac84"
                 },
                 {
-                  "line": 1385,
+                  "line": 1392,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44470,7 +44478,7 @@
                   "sourceFingerprint": "dd8a6d56cac2cc444944fa3ea82dff15252426cd89be347e7e456d365ecae22d"
                 },
                 {
-                  "line": 1387,
+                  "line": 1394,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44478,7 +44486,7 @@
                   "sourceFingerprint": "d17442160b62102fe63856b7b13f84563caebca022c64a7c1890d67b3478f809"
                 },
                 {
-                  "line": 1392,
+                  "line": 1399,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44486,7 +44494,7 @@
                   "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
                 },
                 {
-                  "line": 1393,
+                  "line": 1400,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44494,7 +44502,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1397,
+                  "line": 1404,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44502,7 +44510,7 @@
                   "sourceFingerprint": "f9cf08b257451e8dda2c052943b2ba9285bbf97e9b02ece4202417dd13b17bb5"
                 },
                 {
-                  "line": 1400,
+                  "line": 1407,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44510,7 +44518,7 @@
                   "sourceFingerprint": "8d7d0f3c002ad11c17601dba1603f7e3f89312750bfd2cb7e2bc74f020e6b6c5"
                 },
                 {
-                  "line": 1402,
+                  "line": 1409,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44518,7 +44526,7 @@
                   "sourceFingerprint": "d17442160b62102fe63856b7b13f84563caebca022c64a7c1890d67b3478f809"
                 },
                 {
-                  "line": 1403,
+                  "line": 1410,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44526,7 +44534,7 @@
                   "sourceFingerprint": "71522ad525c704fa210b14a9b141e058035b7f94b3f88a5b349cf8baccb4ac84"
                 },
                 {
-                  "line": 1404,
+                  "line": 1411,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44534,7 +44542,7 @@
                   "sourceFingerprint": "dd8a6d56cac2cc444944fa3ea82dff15252426cd89be347e7e456d365ecae22d"
                 },
                 {
-                  "line": 1405,
+                  "line": 1412,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44542,7 +44550,7 @@
                   "sourceFingerprint": "1c2dc7a815b065b67250a0de0c58bb45cdbe33d928cffc81f7a6399adb00b3c8"
                 },
                 {
-                  "line": 1410,
+                  "line": 1417,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44550,7 +44558,7 @@
                   "sourceFingerprint": "ff22162e1b73f05e9bc7808be772a98578ba3d775100efa20479479f10f217d9"
                 },
                 {
-                  "line": 1413,
+                  "line": 1420,
                   "column": 34,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44558,7 +44566,7 @@
                   "sourceFingerprint": "1f58b9145b24d108d7ac38887338b3ea3229833b9c1e418250343f907bfd1047"
                 },
                 {
-                  "line": 1435,
+                  "line": 1442,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44566,7 +44574,7 @@
                   "sourceFingerprint": "3a93847d53ba8bce48e4aae24a1e92fb9801fc8be3257e3b723c4fc863190e4f"
                 },
                 {
-                  "line": 1485,
+                  "line": 1492,
                   "column": 85,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44574,7 +44582,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 1491,
+                  "line": 1498,
                   "column": 83,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44582,7 +44590,7 @@
                   "sourceFingerprint": "fb0d7fc4691d8ae31834ef075e360c8702375dfc26c1c87f465de52a728a4899"
                 },
                 {
-                  "line": 1492,
+                  "line": 1499,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44602,7 +44610,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 231,
+                  "line": 232,
                   "column": 30,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44729,7 +44737,15 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 91,
+                  "line": 125,
+                  "column": 42,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
+                },
+                {
+                  "line": 178,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44737,32 +44753,8 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 126,
-                  "column": 35,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
-                },
-                {
-                  "line": 177,
+                  "line": 263,
                   "column": 37,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
-                },
-                {
-                  "line": 219,
-                  "column": 41,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
-                },
-                {
-                  "line": 247,
-                  "column": 41,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
@@ -44770,6 +44762,22 @@
                 },
                 {
                   "line": 306,
+                  "column": 41,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
+                },
+                {
+                  "line": 336,
+                  "column": 41,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
+                },
+                {
+                  "line": 395,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44777,7 +44785,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 353,
+                  "line": 442,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44785,7 +44793,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 403,
+                  "line": 492,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44793,7 +44801,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 444,
+                  "line": 533,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44801,7 +44809,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 487,
+                  "line": 576,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44809,7 +44817,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 536,
+                  "line": 625,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44817,7 +44825,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 555,
+                  "line": 644,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44825,7 +44833,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 570,
+                  "line": 659,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44833,7 +44841,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 609,
+                  "line": 698,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44841,7 +44849,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 624,
+                  "line": 713,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44849,7 +44857,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 638,
+                  "line": 727,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44857,7 +44865,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 678,
+                  "line": 767,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44865,7 +44873,7 @@
                   "sourceFingerprint": "66298144360f2c13ed7fa3610b29fdbf9836978601279614f1d4c717e75ea69b"
                 },
                 {
-                  "line": 696,
+                  "line": 786,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44873,7 +44881,7 @@
                   "sourceFingerprint": "66298144360f2c13ed7fa3610b29fdbf9836978601279614f1d4c717e75ea69b"
                 },
                 {
-                  "line": 716,
+                  "line": 809,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44881,7 +44889,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 721,
+                  "line": 814,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -44889,7 +44897,7 @@
                   "sourceFingerprint": "cee9ce00a388b1513e98d1c405ad1eb3f6cecba95aa6d5926e83468c18d39483"
                 },
                 {
-                  "line": 726,
+                  "line": 819,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92604,7 +92612,7 @@
       "migrationPhase": "multi-phase",
       "bindings": [
         {
-          "id": "parameter:appendSpecialZoneLegendRows:1:09fc96082d34:494:110",
+          "id": "parameter:appendSpecialZoneLegendRows:1:09fc96082d34:542:110",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "appendSpecialZoneLegendRows",
@@ -92612,7 +92620,7 @@
           "parameterIndex": 1,
           "parameterPath": "$",
           "locator": {
-            "line": 494,
+            "line": 542,
             "column": 110
           },
           "authority": "legacy-target",
@@ -92628,7 +92636,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 517,
+                  "line": 565,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -92640,7 +92648,7 @@
           ]
         },
         {
-          "id": "parameter:createProjectSupportDiagnosticsController:0:f980a917b31b:37:4",
+          "id": "parameter:createProjectSupportDiagnosticsController:0:f980a917b31b:61:4",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "createProjectSupportDiagnosticsController",
@@ -92648,7 +92656,7 @@
           "parameterIndex": 0,
           "parameterPath": "$/property:state",
           "locator": {
-            "line": 37,
+            "line": 61,
             "column": 4
           },
           "authority": "legacy-target",
@@ -92664,7 +92672,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 669,
+                  "line": 717,
                   "column": 70,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -92683,19 +92691,19 @@
               "dynamicSites": [],
               "ambiguousSites": [
                 {
-                  "line": 423,
+                  "line": 471,
                   "column": 28,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "891b2c47f7e1ada1191f73a16f837498051f7e71c7796bd64444ec42b73b6c51"
                 },
                 {
-                  "line": 435,
+                  "line": 483,
                   "column": 41,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "1cb95e7b116937d026ecd84facc7a2088615b10cbf16a83a8af4bf3aac1ca82f"
                 },
                 {
-                  "line": 758,
+                  "line": 806,
                   "column": 9,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "208c92652da788e137f0e7ed737600b2a2eb518734bbffd93dc5559c63a228cf"
@@ -92703,7 +92711,7 @@
               ],
               "unsupportedSites": [
                 {
-                  "line": 86,
+                  "line": 110,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92711,7 +92719,7 @@
                   "sourceFingerprint": "94ab9d875b21df9694668955d2827ed114a4676e5ba6a8f74fa3b9c2aea11d7b"
                 },
                 {
-                  "line": 142,
+                  "line": 151,
                   "column": 26,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92719,7 +92727,7 @@
                   "sourceFingerprint": "e051120249e69d346120116b7348fc7e6febe352aa4323a2f843742aa3124bde"
                 },
                 {
-                  "line": 207,
+                  "line": 255,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92727,7 +92735,7 @@
                   "sourceFingerprint": "eaa76d4b3ec7adce286bc520805e2a019ea69bb1a97147ffd1dd61ef09e63411"
                 },
                 {
-                  "line": 242,
+                  "line": 290,
                   "column": 84,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92735,7 +92743,7 @@
                   "sourceFingerprint": "98a54e29d7e78f30131c77d64781c23fec44e125b740aa3b715a9b845d6e8d3b"
                 },
                 {
-                  "line": 423,
+                  "line": 471,
                   "column": 28,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -92743,7 +92751,7 @@
                   "sourceFingerprint": "3f6a291ed78fa9535ca1a86c471d96aef75be432192cbeb3d9125d4c0e30087a"
                 },
                 {
-                  "line": 435,
+                  "line": 483,
                   "column": 41,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -92751,7 +92759,7 @@
                   "sourceFingerprint": "ef8a6fa0ababdc21c6fd4eae16f236c72f309bec26cc96549e6241f8da54bda2"
                 },
                 {
-                  "line": 457,
+                  "line": 505,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92759,7 +92767,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 522,
+                  "line": 570,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92767,7 +92775,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 577,
+                  "line": 625,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92775,7 +92783,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 582,
+                  "line": 630,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92783,7 +92791,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 583,
+                  "line": 631,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92791,7 +92799,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 586,
+                  "line": 634,
                   "column": 64,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92799,7 +92807,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 586,
+                  "line": 634,
                   "column": 96,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92807,7 +92815,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 597,
+                  "line": 645,
                   "column": 54,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92815,7 +92823,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 598,
+                  "line": 646,
                   "column": 53,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92823,7 +92831,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 644,
+                  "line": 692,
                   "column": 65,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92831,7 +92839,7 @@
                   "sourceFingerprint": "b0a241e16af5220b96d0231d40b59cd3e84acbd7c45ec51407202af07ba1a2a6"
                 },
                 {
-                  "line": 655,
+                  "line": 703,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92839,7 +92847,7 @@
                   "sourceFingerprint": "6a8f893ffe046e3d3d769789dd90504eaa22de1623212b468728c0023b8be41b"
                 },
                 {
-                  "line": 659,
+                  "line": 707,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92847,7 +92855,7 @@
                   "sourceFingerprint": "a5835ab28f720327bcc3bcc5bd54391d0546050489cee40bf1f4ad6a800ab82f"
                 },
                 {
-                  "line": 663,
+                  "line": 711,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92855,7 +92863,7 @@
                   "sourceFingerprint": "af0e8701311293bf1ed4c3e1c47a8871af9c59ca45bdfbf5cc3e7359892f03ee"
                 },
                 {
-                  "line": 667,
+                  "line": 715,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92863,7 +92871,95 @@
                   "sourceFingerprint": "15ff1a133e7c1d28748b6bfbbd5b187fcedc20395ff9cd3c24ca9d3dcbe6e841"
                 },
                 {
+                  "line": 740,
+                  "column": 26,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "8b88767a2d4b225489b52d0f8d1b199eda911644731d0718cfad37a624f156c7"
+                },
+                {
+                  "line": 744,
+                  "column": 26,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "898e43f6df6fea21818f5b291257d50aaee9ad7571f6b324894c5b4a8ccc2271"
+                },
+                {
+                  "line": 749,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "2d851d4b904407f28b517eba315f37b9e7fd0a463fb7d1f21d45fa69f4f7b85b"
+                },
+                {
+                  "line": 750,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "f03413b5280ba22d90e7cc8099995fb0ac99c5aad4aa673ecb552291387fd800"
+                },
+                {
                   "line": 758,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "e05757f27ad57b99d136284c2d5e55125b435c19668e4db6e81837b334a1017c"
+                },
+                {
+                  "line": 759,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "747df4044691e935b470b11a570379f64ea37fcb806f981a4b99e9d9f9461140"
+                },
+                {
+                  "line": 767,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "aeb77b8963d3af485e9f110915a09250ad683ff4120d68c6bd248bed8ff6bcee"
+                },
+                {
+                  "line": 768,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "2ac82298e5987803baf1a994a65df5a0d71e8c77ea032d5a2058c3f9f5723e27"
+                },
+                {
+                  "line": 775,
+                  "column": 36,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "9ab8881a5a29fd6fcab00d7d537ab7589a3e357db307e70fae7c47f644241a7d"
+                },
+                {
+                  "line": 780,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "11e846a669ba466e29e2c530825d7bb93c06d018be2bf6ce0aac0b423544d3be"
+                },
+                {
+                  "line": 781,
+                  "column": 9,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "fa162b8f1fed6bc397689f6640ef15cf8476972f4ff41a453f4564c7239eb6a7"
+                },
+                {
+                  "line": 806,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -92871,7 +92967,7 @@
                   "sourceFingerprint": "b5de6e5ba778b650f6cc5331d705787f238395d90dd2881d077ea50bfcd2d168"
                 },
                 {
-                  "line": 813,
+                  "line": 861,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92879,7 +92975,7 @@
                   "sourceFingerprint": "63271fc0a4a9b9f19b7d1b05ff1161e753478ed32c9479350517ad0d999c29a5"
                 },
                 {
-                  "line": 837,
+                  "line": 885,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92887,7 +92983,23 @@
                   "sourceFingerprint": "fa939cb41b022ec9c39dfb0fb486c9b5f1e61ada7d4e67baa6c612eecf53e57d"
                 },
                 {
-                  "line": 871,
+                  "line": 918,
+                  "column": 18,
+                  "reason": "unsupported-call-mutation",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "78d7fd08cd18afcb66d63d7761ddd649e25611e269ccb6f89e32736259239a65"
+                },
+                {
+                  "line": 919,
+                  "column": 7,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "25646884215c01498e83217e4f2658de695e4aba67d6fca2280f42d7da0a1dc0"
+                },
+                {
+                  "line": 919,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92895,7 +93007,15 @@
                   "sourceFingerprint": "b0314c861b4ebce9621b0c7f8a07f445908b709b9fb7f193587f067165e1c325"
                 },
                 {
-                  "line": 872,
+                  "line": 920,
+                  "column": 7,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "90055e38138e71b805a0fb0953d6305e8c38c9915a8f35aeff076d20d7e97e3e"
+                },
+                {
+                  "line": 920,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92903,7 +93023,15 @@
                   "sourceFingerprint": "aa32d8de80219df97e13eca3ec790dd502b8e31457d9aee16698406429832dd6"
                 },
                 {
-                  "line": 873,
+                  "line": 921,
+                  "column": 7,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "8d72f5ec2cb4ecc9619e46b39afd0ae0893daf3e497375b7d7f531b455f57cb5"
+                },
+                {
+                  "line": 921,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92911,7 +93039,15 @@
                   "sourceFingerprint": "fb85b268cbf1224bbda3ede3b3a593144676978ea0ef9357e70af97eeeb4c136"
                 },
                 {
-                  "line": 874,
+                  "line": 922,
+                  "column": 7,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "9590e315d1b239c03bbaa262f9a941f84c4a6b09b20c4217916cc8a4f6804256"
+                },
+                {
+                  "line": 922,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92919,7 +93055,7 @@
                   "sourceFingerprint": "cb0026142080369304d95bf5240c84149dde44e145fdb86e4ab3ed4475630642"
                 },
                 {
-                  "line": 988,
+                  "line": 1036,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92927,7 +93063,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 992,
+                  "line": 1040,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92935,7 +93071,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1003,
+                  "line": 1051,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92943,7 +93079,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1014,
+                  "line": 1062,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92951,7 +93087,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1035,
+                  "line": 1083,
                   "column": 30,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92959,7 +93095,7 @@
                   "sourceFingerprint": "903efcfcda571d3b04b108261a8d55f533cd0d3d4319754fe480ca58b7d1cb0d"
                 },
                 {
-                  "line": 1052,
+                  "line": 1100,
                   "column": 86,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92967,7 +93103,7 @@
                   "sourceFingerprint": "5f5025dc8a8cbdfaf340be734f4a3dd6e3380e3b92645394e033b7987c485a4b"
                 },
                 {
-                  "line": 1087,
+                  "line": 1135,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92975,7 +93111,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1089,
+                  "line": 1137,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92983,7 +93119,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1091,
+                  "line": 1139,
                   "column": 64,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92991,7 +93127,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1138,
+                  "line": 1186,
                   "column": 50,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -92999,7 +93135,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1140,
+                  "line": 1188,
                   "column": 72,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -93007,7 +93143,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1145,
+                  "line": 1193,
                   "column": 47,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -93015,7 +93151,7 @@
                   "sourceFingerprint": "4efebd682b3e2570b560dc65455ff72b5ecf7383adc91cdac8512e2f699fec67"
                 },
                 {
-                  "line": 1156,
+                  "line": 1204,
                   "column": 46,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -93023,7 +93159,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1197,
+                  "line": 1245,
                   "column": 60,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -93031,12 +93167,20 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1369,
+                  "line": 1421,
                   "column": 63,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 1445,
+                  "column": 38,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "e4ae4c64c71e9adfe3d10fbed2123f45457fa6dda9df904257ac3ef66e4ed3f1"
                 }
               ]
             }
@@ -95454,7 +95598,7 @@
                   "sourceFingerprint": "44f205f7b042beac7faa6d0be234297e11f83fddafd1ad9e1fb29daedca94437"
                 },
                 {
-                  "line": 2962,
+                  "line": 2963,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95462,7 +95606,7 @@
                   "sourceFingerprint": "f866919c505937b65a15beec643e3896de2de4d27a633193466a133681d8257d"
                 },
                 {
-                  "line": 2976,
+                  "line": 2977,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95961,7 +96105,7 @@
                   "sourceFingerprint": "6febdf09edbe911a80d3cb53d8e9319f40733ae88d0ccd7ad1e2785a84221545"
                 },
                 {
-                  "line": 2900,
+                  "line": 2901,
                   "column": 12,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "af118a89e306bc0607927ed10df41e335326b52043fc0cd8ff32a865905b16d1"
@@ -96657,7 +96801,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1948,
+                  "line": 1949,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96665,15 +96809,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1967,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 2053,
+                  "line": 1968,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96721,7 +96857,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 2060,
+                  "line": 2059,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96729,7 +96865,15 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 2065,
+                  "line": 2061,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 2066,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96737,7 +96881,7 @@
                   "sourceFingerprint": "2fdd68cd608b08034d165e3de8d2251bce4dd779a2a42acaf0b3264c0e0299b5"
                 },
                 {
-                  "line": 2077,
+                  "line": 2078,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96745,7 +96889,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 2193,
+                  "line": 2194,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96753,7 +96897,7 @@
                   "sourceFingerprint": "c6abc8f3f1bad77dbd9c3f83ec19f4c89bc2bf94c804c786f6ac217b6c413cf4"
                 },
                 {
-                  "line": 2209,
+                  "line": 2210,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96761,7 +96905,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2233,
+                  "line": 2234,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96769,7 +96913,7 @@
                   "sourceFingerprint": "56ac33358827cb6235d69355db6e397a0b60484550174170b1f9e70311109670"
                 },
                 {
-                  "line": 2236,
+                  "line": 2237,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96777,7 +96921,7 @@
                   "sourceFingerprint": "2aa4fc90ecb1283d16b98bf06b66e7e591296658f6a1b2907f8eb46744642967"
                 },
                 {
-                  "line": 2273,
+                  "line": 2274,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96785,7 +96929,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2477,
+                  "line": 2478,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96793,7 +96937,7 @@
                   "sourceFingerprint": "7db00bf28ad06d7a353ad6be169014f30864a8f5bb4f06ea2f599e163286ffe2"
                 },
                 {
-                  "line": 2492,
+                  "line": 2493,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96801,7 +96945,7 @@
                   "sourceFingerprint": "7db00bf28ad06d7a353ad6be169014f30864a8f5bb4f06ea2f599e163286ffe2"
                 },
                 {
-                  "line": 2521,
+                  "line": 2522,
                   "column": 24,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96809,7 +96953,7 @@
                   "sourceFingerprint": "dec0f004eaa07c2a283ea326df8f00c2c3c60b002c9bb8d452b1dcff5ba795cb"
                 },
                 {
-                  "line": 2522,
+                  "line": 2523,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96817,7 +96961,15 @@
                   "sourceFingerprint": "39e0f5efdc39ec10992833ad019f0ddf2b42b49b098313df991b8229a37aed21"
                 },
                 {
-                  "line": 2554,
+                  "line": 2555,
+                  "column": 19,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "28e8bf456230dadee3a13d1bd0b3dd58cc98411dec259b893d3d899408987871"
+                },
+                {
+                  "line": 2555,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96825,7 +96977,7 @@
                   "sourceFingerprint": "dec0f004eaa07c2a283ea326df8f00c2c3c60b002c9bb8d452b1dcff5ba795cb"
                 },
                 {
-                  "line": 2554,
+                  "line": 2555,
                   "column": 28,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96833,7 +96985,7 @@
                   "sourceFingerprint": "39e0f5efdc39ec10992833ad019f0ddf2b42b49b098313df991b8229a37aed21"
                 },
                 {
-                  "line": 2609,
+                  "line": 2610,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96841,7 +96993,7 @@
                   "sourceFingerprint": "dec0f004eaa07c2a283ea326df8f00c2c3c60b002c9bb8d452b1dcff5ba795cb"
                 },
                 {
-                  "line": 2610,
+                  "line": 2611,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96849,7 +97001,7 @@
                   "sourceFingerprint": "39e0f5efdc39ec10992833ad019f0ddf2b42b49b098313df991b8229a37aed21"
                 },
                 {
-                  "line": 2900,
+                  "line": 2901,
                   "column": 12,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96857,7 +97009,7 @@
                   "sourceFingerprint": "da74571437ea7ab5a1a68d3c2eca5b3e43ca57c16df1f77b2e0bff8fcecc573a"
                 },
                 {
-                  "line": 2947,
+                  "line": 2948,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96865,7 +97017,7 @@
                   "sourceFingerprint": "2fdd68cd608b08034d165e3de8d2251bce4dd779a2a42acaf0b3264c0e0299b5"
                 },
                 {
-                  "line": 2970,
+                  "line": 2971,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96873,7 +97025,7 @@
                   "sourceFingerprint": "b1bc6f18510d7d13232b4629ffdf02570051b9aec8859c322a7ac2914ccae018"
                 },
                 {
-                  "line": 2978,
+                  "line": 2979,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96881,7 +97033,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2988,
+                  "line": 2989,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96889,7 +97041,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2998,
+                  "line": 2999,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96897,7 +97049,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 3004,
+                  "line": 3005,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96905,7 +97057,7 @@
                   "sourceFingerprint": "88ff02785053f782228bdedc1c1cbdb35c86abcb33a0d72bf516a1ada6d72865"
                 },
                 {
-                  "line": 3016,
+                  "line": 3017,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96913,7 +97065,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 3130,
+                  "line": 3131,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98454,7 +98606,7 @@
       "migrationPhase": "P4.4",
       "bindings": [
         {
-          "id": "parameter:createExportWorkbenchController:0:f980a917b31b:221:9",
+          "id": "parameter:createExportWorkbenchController:0:f980a917b31b:227:9",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "createExportWorkbenchController",
@@ -98462,7 +98614,7 @@
           "parameterIndex": 0,
           "parameterPath": "$/property:state",
           "locator": {
-            "line": 221,
+            "line": 227,
             "column": 9
           },
           "authority": "legacy-target",
@@ -98491,10 +98643,35 @@
               ],
               "aliasSites": [],
               "dynamicSites": [],
-              "ambiguousSites": [],
+              "ambiguousSites": [
+                {
+                  "line": 358,
+                  "column": 30,
+                  "reason": "ambiguous-alias-flow",
+                  "sourceFingerprint": "d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9"
+                },
+                {
+                  "line": 359,
+                  "column": 29,
+                  "reason": "ambiguous-alias-flow",
+                  "sourceFingerprint": "d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9"
+                },
+                {
+                  "line": 361,
+                  "column": 9,
+                  "reason": "ambiguous-alias-flow",
+                  "sourceFingerprint": "2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f"
+                },
+                {
+                  "line": 362,
+                  "column": 9,
+                  "reason": "ambiguous-alias-flow",
+                  "sourceFingerprint": "2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f"
+                }
+              ],
               "unsupportedSites": [
                 {
-                  "line": 54,
+                  "line": 60,
                   "column": 60,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98502,7 +98679,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 120,
+                  "line": 126,
                   "column": 59,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98510,7 +98687,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 120,
+                  "line": 126,
                   "column": 66,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98518,7 +98695,7 @@
                   "sourceFingerprint": "e75f95c59867f4d7d7db752f393ed742054f97251b0d93dfc1a394ae2181899d"
                 },
                 {
-                  "line": 151,
+                  "line": 157,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98526,7 +98703,7 @@
                   "sourceFingerprint": "4a650b012837fca1d6bdc74f3e4496eb7bf510af1cddcb16b270da075497674b"
                 },
                 {
-                  "line": 348,
+                  "line": 357,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98534,7 +98711,15 @@
                   "sourceFingerprint": "4ca4aed29b7c5f92b065ce4fbdcb95231bcfec06d28c2561cc520f3b81beca5a"
                 },
                 {
-                  "line": 349,
+                  "line": 358,
+                  "column": 30,
+                  "reason": "unsupported-call-mutation",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "94c439091d00737964aad85fb06b6f55af14598f0f20aa7fe4b621a6c78cef0a"
+                },
+                {
+                  "line": 358,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98542,19 +98727,51 @@
                   "sourceFingerprint": "a926520d2164a4e9cbaf4edff0c629de4166c0b165e5a2a8850b15c743794dd5"
                 },
                 {
-                  "line": 353,
+                  "line": 359,
+                  "column": 29,
+                  "reason": "unsupported-call-mutation",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "69a03e0da90280bd459f9919d507f50a6780dc534165bb7ac8688afc6c5a1e5f"
+                },
+                {
+                  "line": 361,
+                  "column": 9,
+                  "reason": "unsupported-call-mutation",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "82aba2c6cade4be6b06b4de8c98272e7572d034102a3dd81b233e148ddeaf8d2"
+                },
+                {
+                  "line": 362,
+                  "column": 9,
+                  "reason": "unsupported-call-mutation",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "0b9320a90b268015c7b666b8c40c4616e62efbae1cd43a6b74f8eff49338e59b"
+                },
+                {
+                  "line": 362,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
                   "sourceFingerprint": "a926520d2164a4e9cbaf4edff0c629de4166c0b165e5a2a8850b15c743794dd5"
+                },
+                {
+                  "line": 363,
+                  "column": 81,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "dbb921750f5375e81e858eb5fabd330c61dd05153a04c416fb57824e6094aa42"
                 }
               ]
             }
           ]
         },
         {
-          "id": "parameter:ensureExportWorkbenchUiState:0:09fc96082d34:116:79",
+          "id": "parameter:ensureExportWorkbenchUiState:0:09fc96082d34:122:79",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "ensureExportWorkbenchUiState",
@@ -98562,7 +98779,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 116,
+            "line": 122,
             "column": 79
           },
           "authority": "legacy-target",
@@ -98578,7 +98795,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 120,
+                  "line": 126,
                   "column": 59,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98586,7 +98803,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 120,
+                  "line": 126,
                   "column": 66,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98594,7 +98811,7 @@
                   "sourceFingerprint": "e75f95c59867f4d7d7db752f393ed742054f97251b0d93dfc1a394ae2181899d"
                 },
                 {
-                  "line": 151,
+                  "line": 157,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98606,7 +98823,7 @@
           ]
         },
         {
-          "id": "parameter:resolveExportWorkbenchSampleContext:0:09fc96082d34:53:84",
+          "id": "parameter:resolveExportWorkbenchSampleContext:0:09fc96082d34:59:84",
           "kind": "function-parameter",
           "name": "runtimeState",
           "functionName": "resolveExportWorkbenchSampleContext",
@@ -98614,7 +98831,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 53,
+            "line": 59,
             "column": 84
           },
           "authority": "legacy-target",
@@ -98630,7 +98847,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 54,
+                  "line": 60,
                   "column": 60,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -105844,7 +106061,7 @@
               "aliasSites": [],
               "dynamicSites": [
                 {
-                  "line": 166,
+                  "line": 168,
                   "column": 7,
                   "operation": "assign",
                   "key": "*",
@@ -105852,7 +106069,7 @@
                   "sourceFingerprint": "2e4c8dff23c13722cad9864241433e209171dd01ff20c21d54bcc2b5d6ff66b3"
                 },
                 {
-                  "line": 173,
+                  "line": 175,
                   "column": 5,
                   "operation": "assign",
                   "key": "*",
@@ -105860,7 +106077,7 @@
                   "sourceFingerprint": "2e4c8dff23c13722cad9864241433e209171dd01ff20c21d54bcc2b5d6ff66b3"
                 },
                 {
-                  "line": 179,
+                  "line": 181,
                   "column": 5,
                   "operation": "delete",
                   "key": "*",
@@ -105868,7 +106085,7 @@
                   "sourceFingerprint": "ccf4c9f17c5388e82144b85d35b44b5848e9842173ab931c460f55ae61945bab"
                 },
                 {
-                  "line": 213,
+                  "line": 215,
                   "column": 7,
                   "operation": "assign",
                   "key": "*",
@@ -105876,7 +106093,7 @@
                   "sourceFingerprint": "2e4c8dff23c13722cad9864241433e209171dd01ff20c21d54bcc2b5d6ff66b3"
                 },
                 {
-                  "line": 240,
+                  "line": 242,
                   "column": 7,
                   "operation": "assign",
                   "key": "*",
@@ -116716,6 +116933,7 @@
         "js/core/map_renderer/exact_after_settle_scheduler.js",
         "js/core/map_renderer/scenario_refresh_runtime.js",
         "js/core/palette_manager.js",
+        "js/core/renderer/context_layer_resolver.js",
         "js/core/renderer/render_pass_cache_state_normalizer.js",
         "js/core/renderer/render_perf_metrics_runtime_owner.js",
         "js/core/sample_project_import_workflow.js",
@@ -116751,7 +116969,10 @@
         "js/core/state/content_state.js",
         "js/core/state/renderer_runtime_state.js",
         "js/core/state/scenario_runtime_state.js",
-        "js/main.js"
+        "js/main.js",
+        "js/ui/sidebar/project_support_diagnostics_controller.js",
+        "js/ui/toolbar.js",
+        "js/ui/toolbar/export_workbench_controller.js"
       ],
       "diagnosticDelta": {
         "ambiguousSites": [
@@ -116913,7 +117134,11 @@
           "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|ambiguous-alias-flow|38ae5baaa12681ccae1e642b297aea8a1d6cd2597c08f7efbbefb178cfdc2a22",
           "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|ambiguous-alias-flow|9aeb2774c955672354e459f7aabbf0e40d87debb555f91aacb0f35165b35545f",
           "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|ambiguous-alias-flow|e2a80391b6d895f7e10f1e1e4b31a158f57827915f326a1019f7bf1c596cdecd",
-          "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|ambiguous-alias-flow|fcb3a9af9abd08fc5b5ff84409758c2c07f0ea4d991638e7d73bc7a43e2c88d2"
+          "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|ambiguous-alias-flow|fcb3a9af9abd08fc5b5ff84409758c2c07f0ea4d991638e7d73bc7a43e2c88d2",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9"
         ],
         "unsupportedSites": [
           "js/bootstrap/deferred_detail_promotion.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createDeferredDetailPromotionOwner\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|140e0f5ea9dd9738fa5393f177c3c1f0b256f396c34d0291a5891c13ffa59333",
@@ -117669,6 +117894,7 @@
           "js/core/map_renderer/scenario_refresh_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"recordScenarioPoliticalDerivedStateCoverage\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|fccf1217a08d81391ea7a96b2637a0ee38af95b8312cdaf314d772d34f7fb664",
           "js/core/palette_manager.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|appearance|P4.4|state-alias-escape|unsupported|*|a3b83ca65e394668db39c5cf7d83c5f6c60fc75054365539c37d5ee817c71484",
           "js/core/palette_manager.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|appearance|P4.4|state-alias-escape|unsupported|*|f42c4fca61a99a087779c949ffab25a9b8ed2ab9e7366e7bb3d71a71cac3dd94",
+          "js/core/renderer/context_layer_resolver.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createContextLayerResolverOwner\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|renderer|P4.3|state-alias-escape|unsupported|*|81b01319a3376231a3ced862d1bb125033fe92d482e8503102b5fa9c2b89ab72",
           "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"loadPublicSampleProjectIntoRuntime\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|state-alias-escape|unsupported|*|5b9871ba3e9752634a4fbfe11de2d721211b0fcc696472023b65a1f64963c145",
           "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"loadPublicSampleProjectIntoRuntime\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|state-alias-escape|unsupported|*|fc58f0f152aee27eea5745babe5da12f47a35692ee32b221ab0fd2cb4dc1387d",
           "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"writeSampleProjectState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|state-alias-escape|unsupported|*|5b9871ba3e9752634a4fbfe11de2d721211b0fcc696472023b65a1f64963c145",
@@ -118099,7 +118325,42 @@
           "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|unsupported-call-mutation|unsupported|*|e1d91c5363b76b0d2e15fb7c61134642c77a3eafeedbcd1211b2b4a824421a89",
           "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|unsupported-call-mutation|unsupported|*|e1e61ddee60182c22947dc5933f62bd454eb869ef1719d9912789a1fe788fe14",
           "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|unsupported-call-mutation|unsupported|*|e2bf40294702d8fe7844a61444019013eb90cd8dcab65896a445ba039c9f085c",
-          "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|unsupported-call-mutation|unsupported|*|e91e363f893e007897c68dd40ddd84002f8f0f58cfa0fd14eebc31aa2f38061e"
+          "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|unsupported-call-mutation|unsupported|*|e91e363f893e007897c68dd40ddd84002f8f0f58cfa0fd14eebc31aa2f38061e",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|11e846a669ba466e29e2c530825d7bb93c06d018be2bf6ce0aac0b423544d3be",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|25646884215c01498e83217e4f2658de695e4aba67d6fca2280f42d7da0a1dc0",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|2ac82298e5987803baf1a994a65df5a0d71e8c77ea032d5a2058c3f9f5723e27",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|2d851d4b904407f28b517eba315f37b9e7fd0a463fb7d1f21d45fa69f4f7b85b",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|747df4044691e935b470b11a570379f64ea37fcb806f981a4b99e9d9f9461140",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|898e43f6df6fea21818f5b291257d50aaee9ad7571f6b324894c5b4a8ccc2271",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|8b88767a2d4b225489b52d0f8d1b199eda911644731d0718cfad37a624f156c7",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|8d72f5ec2cb4ecc9619e46b39afd0ae0893daf3e497375b7d7f531b455f57cb5",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|90055e38138e71b805a0fb0953d6305e8c38c9915a8f35aeff076d20d7e97e3e",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|9590e315d1b239c03bbaa262f9a941f84c4a6b09b20c4217916cc8a4f6804256",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|9ab8881a5a29fd6fcab00d7d537ab7589a3e357db307e70fae7c47f644241a7d",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|aeb77b8963d3af485e9f110915a09250ad683ff4120d68c6bd248bed8ff6bcee",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|e05757f27ad57b99d136284c2d5e55125b435c19668e4db6e81837b334a1017c",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|e4ae4c64c71e9adfe3d10fbed2123f45457fa6dda9df904257ac3ef66e4ed3f1",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|f03413b5280ba22d90e7cc8099995fb0ac99c5aad4aa673ecb552291387fd800",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|fa162b8f1fed6bc397689f6640ef15cf8476972f4ff41a453f4564c7239eb6a7",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|78d7fd08cd18afcb66d63d7761ddd649e25611e269ccb6f89e32736259239a65",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|28e8bf456230dadee3a13d1bd0b3dd58cc98411dec259b893d3d899408987871",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|dbb921750f5375e81e858eb5fabd330c61dd05153a04c416fb57824e6094aa42",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|0b9320a90b268015c7b666b8c40c4616e62efbae1cd43a6b74f8eff49338e59b",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|69a03e0da90280bd459f9919d507f50a6780dc534165bb7ac8688afc6c5a1e5f",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|82aba2c6cade4be6b06b4de8c98272e7572d034102a3dd81b233e148ddeaf8d2",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|94c439091d00737964aad85fb06b6f55af14598f0f20aa7fe4b621a6c78cef0a"
         ]
       },
       "transitionSemanticDelta": {
@@ -118161,7 +118422,11 @@
           "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpScenarioDataGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|ambiguous-alias-flow|0c738aa63f7e2e82b780b5431e00fc158acb8212f2c614b5744c9b5149194ea3",
           "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpScenarioDataGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|ambiguous-alias-flow|8f1b09cd983b0fb42fd041070c997fbe3ead44b1a19ef8b37e0c10d5bfdeeea3",
           "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpSceneGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|ambiguous-alias-flow|ab70ed220e9d8bf76f97e839b488f692c6b616189f92f3fc8a8349ebe66d9dd0",
-          "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpSceneGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|ambiguous-alias-flow|f818ef843a2a713f33aa00eff13a61f361b0b63e11e13495dfa6d83bb6780c84"
+          "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpSceneGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|ambiguous-alias-flow|f818ef843a2a713f33aa00eff13a61f361b0b63e11e13495dfa6d83bb6780c84",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|ambiguous-alias-flow|d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9"
         ],
         "unsupportedSites": [
           "js/core/map_renderer.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|renderer|P4.3|state-alias-escape|unsupported|*|2240daf050b55e2bbe78980f569c37353c05632d298accc8b265e5f4f651d69b",
@@ -118849,8 +119114,44 @@
           "js/core/map_renderer.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|styleConfig|8c1ecdcd16e7701f64921dee8e5c3800282d352bb6c2d8730a008d67a41b0cd2",
           "js/core/map_renderer.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|styleConfig|b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
           "js/core/map_renderer.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|styleConfig|b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+          "js/core/renderer/context_layer_resolver.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createContextLayerResolverOwner\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|renderer|P4.3|state-alias-escape|unsupported|*|81b01319a3376231a3ced862d1bb125033fe92d482e8503102b5fa9c2b89ab72",
           "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpScenarioDataGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|state-alias-escape|unsupported|*|8f1b09cd983b0fb42fd041070c997fbe3ead44b1a19ef8b37e0c10d5bfdeeea3",
-          "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpSceneGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|state-alias-escape|unsupported|*|f818ef843a2a713f33aa00eff13a61f361b0b63e11e13495dfa6d83bb6780c84"
+          "js/core/state/renderer_runtime_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"bumpSceneGenerationState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|state-alias-escape|unsupported|*|f818ef843a2a713f33aa00eff13a61f361b0b63e11e13495dfa6d83bb6780c84",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|11e846a669ba466e29e2c530825d7bb93c06d018be2bf6ce0aac0b423544d3be",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|25646884215c01498e83217e4f2658de695e4aba67d6fca2280f42d7da0a1dc0",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|2ac82298e5987803baf1a994a65df5a0d71e8c77ea032d5a2058c3f9f5723e27",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|2d851d4b904407f28b517eba315f37b9e7fd0a463fb7d1f21d45fa69f4f7b85b",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|747df4044691e935b470b11a570379f64ea37fcb806f981a4b99e9d9f9461140",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|898e43f6df6fea21818f5b291257d50aaee9ad7571f6b324894c5b4a8ccc2271",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|8b88767a2d4b225489b52d0f8d1b199eda911644731d0718cfad37a624f156c7",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|8d72f5ec2cb4ecc9619e46b39afd0ae0893daf3e497375b7d7f531b455f57cb5",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|90055e38138e71b805a0fb0953d6305e8c38c9915a8f35aeff076d20d7e97e3e",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|9590e315d1b239c03bbaa262f9a941f84c4a6b09b20c4217916cc8a4f6804256",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|9ab8881a5a29fd6fcab00d7d537ab7589a3e357db307e70fae7c47f644241a7d",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|aeb77b8963d3af485e9f110915a09250ad683ff4120d68c6bd248bed8ff6bcee",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|e05757f27ad57b99d136284c2d5e55125b435c19668e4db6e81837b334a1017c",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|e4ae4c64c71e9adfe3d10fbed2123f45457fa6dda9df904257ac3ef66e4ed3f1",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|f03413b5280ba22d90e7cc8099995fb0ac99c5aad4aa673ecb552291387fd800",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|fa162b8f1fed6bc397689f6640ef15cf8476972f4ff41a453f4564c7239eb6a7",
+          "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createProjectSupportDiagnosticsController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|78d7fd08cd18afcb66d63d7761ddd649e25611e269ccb6f89e32736259239a65",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|28e8bf456230dadee3a13d1bd0b3dd58cc98411dec259b893d3d899408987871",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|dbb921750f5375e81e858eb5fabd330c61dd05153a04c416fb57824e6094aa42",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|0b9320a90b268015c7b666b8c40c4616e62efbae1cd43a6b74f8eff49338e59b",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|69a03e0da90280bd459f9919d507f50a6780dc534165bb7ac8688afc6c5a1e5f",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|82aba2c6cade4be6b06b4de8c98272e7572d034102a3dd81b233e148ddeaf8d2",
+          "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createExportWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|unsupported-call-mutation|unsupported|*|94c439091d00737964aad85fb06b6f55af14598f0f20aa7fe4b621a6c78cef0a"
         ]
       },
       "transitionCheckpoints": [
@@ -118868,6 +119169,16 @@
             "js/core/state/actions/renderer_interaction_actions.js",
             "js/core/state/actions/renderer_phase_actions.js",
             "js/core/state/renderer_runtime_state.js"
+          ]
+        },
+        {
+          "sourceSha": "e17ed8a2785b3881ce8c011d039074265d00d812",
+          "policyBlobSha256": "b55f4fe493c9147ddacb16bbc3a4f258156eaef84f83a211111e428ee3115d42",
+          "paths": [
+            "js/core/renderer/context_layer_resolver.js",
+            "js/ui/sidebar/project_support_diagnostics_controller.js",
+            "js/ui/toolbar.js",
+            "js/ui/toolbar/export_workbench_controller.js"
           ]
         }
       ]
@@ -122441,6 +122752,18 @@
         "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"appendSpecialZoneLegendRows\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|e051120249e69d346120116b7348fc7e6febe352aa4323a2f843742aa3124bde",
         "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"appendSpecialZoneLegendRows\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|eaa76d4b3ec7adce286bc520805e2a019ea69bb1a97147ffd1dd61ef09e63411",
         "js/ui/sidebar/strategic_overlay_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createStrategicOverlayController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|strategic-overlay|P4.4|state-alias-escape|unsupported|*|6ae73125c4bbac214dd6eb79a9af7daa8082a54f3ac09e29235783bed56420c4",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/ui/toolbar.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
         "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"ensureExportWorkbenchUiState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|a926520d2164a4e9cbaf4edff0c629de4166c0b165e5a2a8850b15c743794dd5",
         "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"ensureExportWorkbenchUiState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|a926520d2164a4e9cbaf4edff0c629de4166c0b165e5a2a8850b15c743794dd5",
         "js/ui/toolbar/export_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"resolveExportWorkbenchSampleContext\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|a926520d2164a4e9cbaf4edff0c629de4166c0b165e5a2a8850b15c743794dd5",
