@@ -8,6 +8,7 @@ const {
   writeFailureContextArtifact,
 } = require("./support/playwright-app");
 const { mergeSmokeFailureSelectors } = require("./support/playwright-selectors");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(120000);
 const HOI4_SMOKE_PATH = '/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1&default_scenario=hoi4_1939';
@@ -20,6 +21,7 @@ function readScenarioJson(...relativePath) {
 test('hoi4 1939 owner-sync smoke', async ({ page }, testInfo) => {
   const consoleIssues = [];
   const networkFailures = [];
+  const expectedConsolePatterns = getConsoleIgnorePatterns(__filename);
 
   page.on('console', (msg) => {
     const type = msg.type();
@@ -79,12 +81,19 @@ test('hoi4 1939 owner-sync smoke', async ({ page }, testInfo) => {
     fs.mkdirSync(path.dirname(shotPath), { recursive: true });
     await page.screenshot({ path: shotPath, fullPage: true });
 
+    const actionableConsoleIssues = consoleIssues.filter(
+      (issue) => !expectedConsolePatterns.some((pattern) => pattern.test(issue.text)),
+    );
+    expect(actionableConsoleIssues, `Console issues: ${JSON.stringify(consoleIssues, null, 2)}`).toEqual([]);
+    expect(networkFailures, `Network failures: ${JSON.stringify(networkFailures, null, 2)}`).toEqual([]);
+
     console.log(JSON.stringify({
       scenarioStatus,
       scenarioAuditHint,
       selectedScenarioId,
       controllerOnlyCount: controllerOnlyCountries.length,
       consoleIssueCount: consoleIssues.length,
+      actionableConsoleIssueCount: actionableConsoleIssues.length,
       networkFailureCount: networkFailures.length,
       consoleIssues,
       networkFailures,

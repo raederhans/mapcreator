@@ -9,6 +9,7 @@ const {
   writeFailureContextArtifact,
 } = require("./support/playwright-app");
 const { mergeSmokeFailureSelectors } = require("./support/playwright-selectors");
+const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(120000);
 const SCENARIO_ID = 'tno_1962';
@@ -34,6 +35,7 @@ async function readScenarioShellRuntime(page) {
 test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
   const consoleIssues = [];
   const networkFailures = [];
+  const expectedConsolePatterns = getConsoleIgnorePatterns(__filename);
   const bathymetryRequests = [];
   const bathymetryResponses = [];
   const geoLocalePatchRequests = [];
@@ -180,6 +182,12 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
     fs.mkdirSync(path.dirname(shotPath), { recursive: true });
     await page.screenshot({ path: shotPath, fullPage: true });
 
+    const actionableConsoleIssues = consoleIssues.filter(
+      (issue) => !expectedConsolePatterns.some((pattern) => pattern.test(issue.text)),
+    );
+    expect(actionableConsoleIssues, `Console issues: ${JSON.stringify(consoleIssues, null, 2)}`).toEqual([]);
+    expect(networkFailures, `Network failures: ${JSON.stringify(networkFailures, null, 2)}`).toEqual([]);
+
     console.log(JSON.stringify({
       initialScenarioId,
       scenarioStatus,
@@ -194,6 +202,7 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
       scenarioShellRuntime,
       geoLocalePatchRequests,
       consoleIssueCount: consoleIssues.length,
+      actionableConsoleIssueCount: actionableConsoleIssues.length,
       networkFailureCount: networkFailures.length,
       consoleIssues,
       networkFailures,

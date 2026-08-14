@@ -51,12 +51,12 @@
         "specCount": 51
       },
       {
-        "dependency": "tests/e2e/support/playwright-selectors.js",
+        "dependency": "tests/e2e/support/expectations/console-allowlist.js",
         "specCount": 9
       },
       {
-        "dependency": "tests/e2e/support/expectations/console-allowlist.js",
-        "specCount": 7
+        "dependency": "tests/e2e/support/playwright-selectors.js",
+        "specCount": 9
       },
       {
         "dependency": "js/bootstrap/startup_bootstrap_support.js",
@@ -466,6 +466,7 @@
     },
     "tests/e2e/hoi4_1939_ui_smoke.spec.js": {
       "directDependencies": [
+        "tests/e2e/support/expectations/console-allowlist.js",
         "tests/e2e/support/playwright-app.js",
         "tests/e2e/support/playwright-selectors.js"
       ],
@@ -475,6 +476,7 @@
         "js/core/scenario_dispatcher.js",
         "js/core/state.js",
         "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
         "tests/e2e/support/playwright-app-paths.js",
         "tests/e2e/support/playwright-app.js",
         "tests/e2e/support/playwright-frontline-panel.js",
@@ -1242,6 +1244,7 @@
     "tests/e2e/tno_1962_ui_smoke.spec.js": {
       "directDependencies": [
         "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
         "tests/e2e/support/playwright-app.js",
         "tests/e2e/support/playwright-selectors.js"
       ],
@@ -1251,6 +1254,7 @@
         "js/core/scenario_dispatcher.js",
         "js/core/state.js",
         "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
         "tests/e2e/support/playwright-app-paths.js",
         "tests/e2e/support/playwright-app.js",
         "tests/e2e/support/playwright-frontline-panel.js",
@@ -2083,7 +2087,9 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
-      "tests/e2e/river_layer_regression.spec.js"
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js"
     ],
     "tests/e2e/support/fixtures.js": [
       "tests/e2e/city_label_i18n_redraw.spec.js",
