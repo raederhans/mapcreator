@@ -28,7 +28,8 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - [x] Stage 6H: cache source-analysis-owned scanner preparation and retain independent per-binding analysis.
 - [x] Stage 6I: add explicit official-runner admission to the policy manifest.
 - [x] Stage 6J-A: add observable partial progress to the policy runner with atomic final evidence.
-- [ ] Stage 6J-B / J2: add verified Windows descendant containment and cleanup evidence.
+- [x] Stage 6J-B / J2a: extract the Williams-compatible shared Job Object core and exact source-set identity.
+- [ ] Stage 6J-C / J2b: add parent-death/control semantics and P4 verified descendant cleanup.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
 ## Validation evidence
@@ -72,6 +73,8 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 | Stage 6J-A real quick run | Official quick path passed 253/253 in 2,272.1 ms Node duration and 3.45 s wall time. Its completed artifact records `root-only`, `cleanupVerified=false`, `admissionCandidate=false`, and `admissionEligible=false`; only canonical TAP plus completed JSON remain after success. |
 | Stage 6J-A short integration gates | Streaming plus reachability passed 28/28; metadata 29/29; verify-core runner 34/34; supervisor aggregate passed schemas 41 domains/3 schemas and Node 18/18; click/draw boundaries passed Node 32/32 plus Python 6/6; import graph covered 51 specs; E2E layering covered 47 specs; route schema covered 363 routes; SF-ATS matched all 9 changed files with zero unmatched files and zero route gaps. |
 | Stage 6J-B / J2 readiness | `READY_WITH_REQUIRED_WILLIAMS_IDENTITY_MIGRATION`. J2a will extract a shared Job Object core and preserve Williams V1 behavior/evidence with source-set identity migration. J2b will add parent-death/control protocol, require zero remaining or unverified descendants, and wire `tree-contained` P4 admission. |
+| Stage 6J-B / J2a shared Job core | Integrated as `69b17903`. The original C# runner and extracted core are algorithm-equivalent after the expected class/protocol parameterization. `compileWindowsJobRunner` reads the ordered source set once, computes identity from those bytes, writes exclusive build snapshots, compiles only the snapshots, and returns the actual source set. Official Williams execution compares that set with both current and candidate identities before any workload. |
+| Stage 6J-B / J2a verification | Williams contracts passed 58/58; metadata 29/29; Python perf gate 26/26; verify-core runner 34/34; supervisor plan 17/17 and contracts/routing 18/18; bounded Windows detached-descendant integration passed 1/1 in 1.18 s; route schema covered 363 routes; SF-ATS matched all 10 changed files with zero unmatched and reserved six main-thread/live gates. |
 
 ## Open risks and remaining work
 
@@ -79,7 +82,7 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - Schema-1 core reports remain intentionally ineligible because they lack revision identity.
 - Full browser, Pages dist, performance, TNO corpus, and full core validation remain held outside the implementation loop. Full P4 policy passed at commit `58e6d350`; later performance experiments were bounded to focused patterns.
 - The exact policy rebuild still spends roughly 18 minutes in the older focused baseline. Stage 6A now reuses identical historical proofs within one producer; a frozen-candidate live run remains required to measure the new wall time.
-- Windows P4 policy runs currently have asynchronous root-child lifecycle control with `cleanupVerified=false`; J2 descendant containment remains the production admission blocker.
+- Windows P4 policy runs currently have asynchronous root-child lifecycle control with `cleanupVerified=false`. J2a supplies the reusable V1-equivalent Job core; J2b parent-death/control wiring and verified zero-descendant evidence remain the production admission blocker.
 - Full wall-clock savings remain unmeasured until the frozen-candidate Core/P4 admission run; current Stage 6C evidence proves command and test-file closure only.
 - Full Core wall-clock savings remain unmeasured. Stage 6D established that recursive descriptor audit/deep freeze is unsuitable for the real scan graph; Stage 6E established that fewer scanner invocations do not imply lower wall time when multi-binding analysis changes internal complexity; Stage 6G showed that a large isolated Git-read win did not translate into the frozen full-policy wall-clock gate. Stage 6H has paired scanner-local evidence, while its repository-scale effect requires a same-environment control or CI admission run.
 - The streaming wrapper bounds synthesized output at 64 MiB and may also retain the prior canonical/completed pair plus final serialization during rollback-safe publication. J2 must keep that bounded artifact contract while adding Job Object descendant teardown.

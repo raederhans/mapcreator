@@ -51,6 +51,8 @@
 | 2026-08-14 | Integrate the Stage 6J-A lifecycle as `2a8d49f2` plus route closure `a69b7c3c`. | The P4-specific async runner publishes mode-isolated running/failure diagnostics and an atomic canonical/completed pair only after close and stream drain; authoritative consumers bind the exact full plan, command, target, bytes, and clean identity. |
 | 2026-08-14 | Keep Stage 6J-A preparatory on Windows. | Current production termination covers the root child and records `containmentScope=root-only`, `cleanupVerified=false`, and `admissionEligible=false`. Stage 6J-B/J2 must provide Job Object descendant containment before production admission. |
 | 2026-08-14 | Split J2 into compatibility-first J2a and production wiring J2b. | J2a extracts a shared Windows Job Object core while preserving Williams V1 evidence and source identity; J2b adds parent-death/control semantics and wires the P4 runner only after J2a equivalence is frozen. |
+| 2026-08-14 | Integrate J2a as `69b17903`. | The nine-line Williams V1 entrypoint delegates to an algorithm-equivalent shared Job Object core. The compiler reads each source once, compiles frozen copies, and binds the actual binary to a canonical ordered source-set carried through preparation, preregistration, block, and manifest evidence. |
+| 2026-08-14 | Bind the source identity helper itself into Williams tool identity. | Helper drift now invalidates current, candidate, block, and raw-manifest evidence; the new helper/core route to governance, job-runner, and live perf lanes with zero unmatched files. |
 
 ## Live process ownership
 
@@ -70,6 +72,7 @@
 | Stage 6J streaming implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | runner-owned isolated artifacts only; no manifest/full policy | delivered `08fdb7fc`; integrated by root as `2a8d49f2` plus route closure `a69b7c3c` |
 | Stage 6J Windows lifecycle audit | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | read-only; no `.runtime` writes | complete; J2 readiness is `READY_WITH_REQUIRED_WILLIAMS_IDENTITY_MIGRATION` |
 | Stage 6J evidence/adversarial audit | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | read-only; no `.runtime` writes | complete; final verdict `J_C_FINAL_REVIEW_CLEAR` |
+| Stage 6J-B/J2a shared Job core | root plus three bounded native subagents, integration worktree `ded1` | short fake/contract tests plus one bounded Windows integration | integrated as `69b17903`; Williams V1 compatibility and exact compiled-source identity clear |
 
 ## Handoff
 
@@ -77,4 +80,4 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Freeze the exact Stage 6J-A integration revision, then implement J2a as a compatibility-preserving shared Job Object core for the Williams runtime. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until J2 containment and a same-environment control or CI run admit the newer candidate.
+Design J2b from exact base `69b17903`: add a V2 parent-death/control protocol beside the preserved Williams V1 entrypoint, then wire verified descendant cleanup into the P4 lifecycle. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until J2b containment and a same-environment control or CI run admit the newer candidate.

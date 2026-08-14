@@ -41,7 +41,8 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 6H: Reuse source-analysis-owned immutable scanner preparation while preserving per-binding dataflow.
 - [x] Stage 6I: Require explicit official-runner admission before the repository-scale manifest suite can start.
 - [x] Stage 6J-A: Expose durable partial progress and atomic terminal artifacts for long policy runs.
-- [ ] Stage 6J-B / J2: Add Windows Job Object descendant containment and verified cleanup before production admission.
+- [x] Stage 6J-B / J2a: Extract a Williams-compatible shared Windows Job Object core with exact source-set identity.
+- [ ] Stage 6J-C / J2b: Add parent-death/control semantics and wire verified descendant cleanup into P4 production admission.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
 ## Acceptance criteria
@@ -62,7 +63,8 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Stage 6G preserves ordered exact blob bytes, missing-path semantics, bounded buffering, SHA/path provenance, and reader selection while reducing historical source-reader Git processes; frozen full-policy wall time remains the admission gate.
 - Stage 6H keeps resolution, target-owner closure, taint mode, current-contract recognition, traversal state, findings, diagnostics, and delegations binding-local while reusing only analysis-identity invariants.
 - Stage 6J-A keeps the canonical full/quick/focused TAP as terminal complete evidence, exposes mode-isolated running and failed/interrupted artifacts, never promotes stale or partial output to pass evidence, and records the current Windows lifecycle honestly as `root-only` with unverified cleanup.
-- Stage 6J-B requires assign-before-resume Windows Job Object containment, parent-death and explicit-cancel control, and terminal evidence showing zero remaining or unverified descendants before production admission becomes eligible.
+- Stage 6J-B/J2a preserves Williams V1 assign-before-resume, kill-on-job-close, no-breakaway, timeout, argv, and cleanup evidence while binding the compiled binary to the exact ordered entrypoint/core bytes.
+- Stage 6J-C/J2b requires parent-death and explicit-cancel control plus terminal evidence showing zero remaining or unverified descendants before P4 production admission becomes eligible.
 
 ## Non-goals
 
