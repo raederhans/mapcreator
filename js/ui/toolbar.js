@@ -52,7 +52,6 @@ import {
 import { markDirty, updateDirtyIndicator } from "../core/dirty_state.js";
 import { showExportFailureToast } from "./toolbar/export_failure_handler.js";
 import {
-  createExportArtifactPipeline,
   EXPORT_MAX_CONCURRENT_JOBS,
 } from "./toolbar/export_artifact_pipeline.js";
 import { createOceanLakeControlsController } from "./toolbar/ocean_lake_controls_controller.js";
@@ -1858,13 +1857,6 @@ function initToolbar({ render } = {}) {
     showToast,
     t,
   });
-  const artifactPipeline = createExportArtifactPipeline({
-    state,
-    normalizeExportWorkbenchUiState,
-    renderPassNames: RENDER_PASS_NAMES,
-    renderExportPassesToCanvas,
-    exportScale,
-  });
   exportWorkbenchController = createExportWorkbenchController({
     state,
     t,
@@ -1905,7 +1897,7 @@ function initToolbar({ render } = {}) {
     onRequestClose: ({ restoreFocus = true } = {}) => {
       callRuntimeHook(state, "closeExportWorkbenchFn", { restoreFocus });
     },
-    artifactPipeline,
+    renderExportPassesToCanvas,
     exportMaxConcurrentJobs: EXPORT_MAX_CONCURRENT_JOBS,
   });
 

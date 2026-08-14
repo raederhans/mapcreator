@@ -123,8 +123,10 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('./toolbar/export_workbench_controller.js', content)
         self.assertIn("createExportWorkbenchController", content)
         self.assertIn('./toolbar/export_artifact_pipeline.js', content)
-        self.assertIn("createExportArtifactPipeline", content)
         pipeline_content = EXPORT_ARTIFACT_PIPELINE_JS.read_text(encoding="utf-8")
+        controller_content = EXPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        self.assertIn('from "./export_artifact_pipeline.js";', controller_content)
+        self.assertIn("createExportArtifactPipeline", controller_content)
         self.assertIn("createExportError", pipeline_content)
         self.assertIn('./toolbar/transport_workbench_controller.js', content)
         self.assertIn("createTransportWorkbenchController", content)
@@ -234,7 +236,9 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi);", pipeline_content)
         self.assertIn("buildCompositeSourceCanvas(exportUi)", pipeline_content)
         self.assertIn("const passCanvas = renderExportPassesToCanvas(bakePassNames);", pipeline_content)
-        self.assertIn("artifactPipeline,", self._controller_call_body(toolbar_content, "createExportWorkbenchController"))
+        self.assertIn("renderExportPassesToCanvas,", self._controller_call_body(toolbar_content, "createExportWorkbenchController"))
+        controller_content = EXPORT_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
+        self.assertIn("artifactPipeline || createExportArtifactPipeline({", controller_content)
 
     def test_svg_annotation_export_uses_strategic_annotation_layers_only(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
