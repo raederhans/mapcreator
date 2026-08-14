@@ -23,6 +23,37 @@ class MainBootstrapSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("createStartupDataPipelineOwner", content)
         self.assertIn("createStartupScenarioBootOwner", content)
 
+    def test_main_lazily_loads_startup_scenario_and_sample_deeplink_modules(self):
+        content = MAIN_JS.read_text(encoding="utf-8")
+
+        self.assertNotIn('from "./bootstrap/startup_scenario_boot.js";', content)
+        self.assertNotIn('from "./bootstrap/startup_sample_project_deeplink.js";', content)
+        self.assertEqual(content.count('import("./bootstrap/startup_scenario_boot.js")'), 1)
+        self.assertEqual(content.count('import("./bootstrap/startup_sample_project_deeplink.js")'), 1)
+        self.assertIn("startupScenarioBootOwnerLoader.loadValueOnce();", content)
+        self.assertIn("startupScenarioBootOwnerLoader.preload();", content)
+        self.assertIn("return runOptionalStartupTask({", content)
+        self.assertLess(
+            content.index("if (isUiShellDebugMode()) {"),
+            content.index("startupScenarioBootOwnerLoader.preload();"),
+        )
+        self.assertLess(
+            content.index("startupScenarioBootOwnerLoader.preload();"),
+            content.index("await startupDataPipeline.loadStartupBaseData({"),
+        )
+        self.assertLess(
+            content.index('assertStartupFirstVisibleFrameAccepted("bootstrap-first-political-frame");'),
+            content.index("void scheduleStartupSampleProjectDeeplinkAfterReady();"),
+        )
+        self.assertLess(
+            content.index("await startupUiBootstrapPromise;"),
+            content.index("void scheduleStartupSampleProjectDeeplinkAfterReady();"),
+        )
+        self.assertLess(
+            content.index("await finalizeReadyState(renderDispatcher);"),
+            content.index("void scheduleStartupSampleProjectDeeplinkAfterReady();"),
+        )
+
     def test_startup_bootstrap_support_owns_startup_helpers(self):
         donor_content = MAIN_JS.read_text(encoding="utf-8")
         owner_content = STARTUP_BOOTSTRAP_SUPPORT_JS.read_text(encoding="utf-8")
@@ -50,7 +81,7 @@ class MainBootstrapSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const bootOverlayController = createStartupBootOverlayController();", content)
         self.assertIn("const startupDataPipeline = getStartupDataPipelineOwner();", content)
         self.assertIn("const deferredDetailPromotion = getDeferredDetailPromotionOwner();", content)
-        self.assertIn("const startupScenarioBoot = getStartupScenarioBootOwner();", content)
+        self.assertIn("const startupScenarioBoot = await getStartupScenarioBootOwner();", content)
         self.assertIn("startupDataPipeline.resolveStartupScenarioBootstrap({ d3Client });", content)
         self.assertIn("startupDataPipeline.loadStartupBaseData({", content)
         self.assertIn("startupDataPipeline.hydrateStartupBaseState({", content)

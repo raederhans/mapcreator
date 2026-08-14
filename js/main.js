@@ -17,8 +17,7 @@ import { handleStartupFailure } from "./bootstrap/startup_failure_recovery.js";
 import { isUiShellDebugMode, runUiShellDebugBoot } from "./bootstrap/ui_shell_boot.js";
 import { createDeferredMilsymbolLoader } from "./bootstrap/deferred_vendor_loader.js";
 import { createDeferredUiBootstrapper } from "./bootstrap/deferred_ui_bootstrap.js";
-import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
-import { scheduleStartupSampleProjectDeeplink } from "./bootstrap/startup_sample_project_deeplink.js";
+import { createPageLifetimeModuleLoader, runOptionalStartupTask } from "./bootstrap/startup_lazy_module_loader.js";
 import {
   configureStartupSupportKeyUsageAudit,
   getBootLanguage,
@@ -86,8 +85,22 @@ const {
 registerRuntimeHook(state, "setStartupReadonlyStateFn", setStartupReadonlyState);
 let startupDataPipelineOwner = null;
 let deferredDetailPromotionOwner = null;
-let startupScenarioBootOwner = null;
 let startupReadyHandoffOwner = null;
+const startupScenarioBootOwnerLoader = createPageLifetimeModuleLoader({
+  importModule: () => import("./bootstrap/startup_scenario_boot.js"),
+  createValue: ({ createStartupScenarioBootOwner }) => createStartupScenarioBootOwner({
+    runtimeState: state,
+    helpers: {
+      finishBootMetric,
+      setBootState,
+      startBootMetric,
+      warnOnStartupBundleIntegrity,
+    },
+  }),
+});
+const startupSampleProjectDeeplinkModuleLoader = createPageLifetimeModuleLoader({
+  importModule: () => import("./bootstrap/startup_sample_project_deeplink.js"),
+});
 
 function checkpointFirstVisibleFrameMetrics() {
   if (!state.firstVisibleFramePainted) {
@@ -135,19 +148,30 @@ function getStartupDataPipelineOwner() {
 }
 
 function getStartupScenarioBootOwner() {
-  if (startupScenarioBootOwner) {
-    return startupScenarioBootOwner;
-  }
-  startupScenarioBootOwner = createStartupScenarioBootOwner({
-    runtimeState: state,
-    helpers: {
-      finishBootMetric,
-      setBootState,
-      startBootMetric,
-      warnOnStartupBundleIntegrity,
-    },
+  return startupScenarioBootOwnerLoader.loadValueOnce();
+}
+
+async function scheduleStartupSampleProjectDeeplinkAfterReady() {
+  return runOptionalStartupTask({
+    loadModule: startupSampleProjectDeeplinkModuleLoader.loadModuleOnce,
+    run: ({ scheduleStartupSampleProjectDeeplink }) => scheduleStartupSampleProjectDeeplink({
+      targetState: state,
+      postReadyScheduler,
+      helpers: {
+        fetchImpl: typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : null,
+        ui: {
+          t,
+          showToast: (message, options) => callRuntimeHook(state, "showToastFn", message, options),
+          showAppDialog: async () => false,
+        },
+        hooks: {
+          refreshColorState: (options) => callRuntimeHook(state, "refreshColorStateFn", options),
+        },
+        showToast: (message, options) => callRuntimeHook(state, "showToastFn", message, options),
+      },
+    }),
+    onError: (error) => console.warn("[boot] Startup sample project deeplink scheduling failed:", error),
   });
-  return startupScenarioBootOwner;
 }
 
 function getStartupReadyHandoffOwner() {
@@ -466,6 +490,7 @@ async function bootstrap() {
     setBootState("base-data");
     startBootMetric("base-data");
     const d3Client = globalThis.d3;
+    startupScenarioBootOwnerLoader.preload();
     const startupDataPipeline = getStartupDataPipelineOwner();
     const {
       configuredDefaultScenarioId,
@@ -525,7 +550,7 @@ async function bootstrap() {
 
     // Phase: 应用启动场景 | Input: scenarioBundlePromise + UI bootstrap promise | Output: active scenario state + source/recovery metadata。
     // UI bootstrap 与 scenario apply 并行启动，但 post-scenario UI replay 必须等 UI 绑定完成，避免控件用旧状态覆盖刚应用的场景。
-    const startupScenarioBoot = getStartupScenarioBootOwner();
+    const startupScenarioBoot = await getStartupScenarioBootOwner();
     const {
       defaultScenarioBundle,
       scenarioBundleSource,
@@ -566,22 +591,7 @@ async function bootstrap() {
 
     // Phase: 触发 detail promotion | Input: 当前 scenario/state/renderDispatcher | Output: ready state 或 readonly 解锁调度。
     await finalizeReadyState(renderDispatcher);
-    scheduleStartupSampleProjectDeeplink({
-      targetState: state,
-      postReadyScheduler,
-      helpers: {
-        fetchImpl: typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : null,
-        ui: {
-          t,
-          showToast: (message, options) => callRuntimeHook(state, "showToastFn", message, options),
-          showAppDialog: async () => false,
-        },
-        hooks: {
-          refreshColorState: (options) => callRuntimeHook(state, "refreshColorStateFn", options),
-        },
-        showToast: (message, options) => callRuntimeHook(state, "showToastFn", message, options),
-      },
-    });
+    void scheduleStartupSampleProjectDeeplinkAfterReady();
     void postStartupSupportKeyUsageReport({
       scenarioId: String(runtimeState.activeScenarioId || defaultScenarioBundle?.manifest?.scenario_id || "").trim(),
       source: scenarioBundleSource,

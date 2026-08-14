@@ -4,6 +4,10 @@ import test from "node:test";
 import {
   handleStartupFailure,
 } from "../js/bootstrap/startup_failure_recovery.js";
+import {
+  createPageLifetimeModuleLoader,
+  runOptionalStartupTask,
+} from "../js/bootstrap/startup_lazy_module_loader.js";
 
 const REQUIRED_HELPER_NAMES = [
   "finalizeReadyState",
@@ -365,4 +369,68 @@ test("base-map continuation requires land features and a render flush function",
     assert.equal(harness.getContinueHandler(), null);
     assert.ok(harness.calls.includes("setBootContinueHandler:null"));
   }
+});
+
+test("page-lifetime startup module loading is single-flight for concurrent callers", async () => {
+  let importCount = 0;
+  let factoryCount = 0;
+  let resolveModule;
+  const modulePromise = new Promise((resolve) => { resolveModule = resolve; });
+  const loader = createPageLifetimeModuleLoader({
+    importModule: () => {
+      importCount += 1;
+      return modulePromise;
+    },
+    createValue: (module) => {
+      factoryCount += 1;
+      return { module };
+    },
+  });
+
+  const first = loader.loadValueOnce();
+  const second = loader.loadValueOnce();
+  resolveModule({ id: "startup-module" });
+
+  const [firstValue, secondValue] = await Promise.all([first, second]);
+  assert.equal(importCount, 1);
+  assert.equal(factoryCount, 1);
+  assert.strictEqual(firstValue, secondValue);
+});
+
+test("startup module preload observes one sticky rejection without an unhandled event", async () => {
+  const sentinel = new Error("startup module unavailable");
+  let importCount = 0;
+  const unhandled = [];
+  const onUnhandled = (error) => unhandled.push(error);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const loader = createPageLifetimeModuleLoader({
+      importModule: async () => {
+        importCount += 1;
+        throw sentinel;
+      },
+    });
+    loader.preload();
+    await new Promise((resolve) => setImmediate(resolve));
+    await assert.rejects(loader.loadModuleOnce(), (error) => error === sentinel);
+    await assert.rejects(loader.loadModuleOnce(), (error) => error === sentinel);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(importCount, 1);
+    assert.deepEqual(unhandled, []);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+});
+
+test("optional startup work converts an asynchronous rejection into one diagnostic and false", async () => {
+  const sentinel = new Error("sample scheduling failed");
+  const diagnostics = [];
+  const result = await runOptionalStartupTask({
+    loadModule: async () => ({ schedule: async () => { throw sentinel; } }),
+    run: (module) => module.schedule(),
+    onError: (error) => diagnostics.push(error),
+  });
+
+  assert.equal(result, false);
+  assert.deepEqual(diagnostics, [sentinel]);
 });

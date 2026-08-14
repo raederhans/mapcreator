@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 STARTUP_SCENARIO_BOOT_JS = REPO_ROOT / "js" / "bootstrap" / "startup_scenario_boot.js"
+STARTUP_READY_HANDOFF_JS = REPO_ROOT / "js" / "bootstrap" / "startup_ready_handoff.js"
 DEFERRED_DETAIL_PROMOTION_JS = REPO_ROOT / "js" / "bootstrap" / "deferred_detail_promotion.js"
 MAIN_RUNTIME_DIAGNOSTICS_JS = REPO_ROOT / "js" / "bootstrap" / "main_runtime_diagnostics.js"
 
@@ -83,7 +84,7 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
             donor_content,
             r"function assertStartupFirstVisibleFrameAccepted\([\s\S]*?const metrics = checkpointFirstVisibleFrameMetrics\(\);[\s\S]*?if \(metrics\) return metrics;[\s\S]*?firstVisibleFrameBlocked[\s\S]*?throw new Error",
         )
-        self.assertIn("const startupScenarioBoot = getStartupScenarioBootOwner();", donor_content)
+        self.assertIn("const startupScenarioBoot = await getStartupScenarioBootOwner();", donor_content)
         self.assertIn("startupScenarioBoot.runStartupScenarioBoot({", donor_content)
         self.assertIn('invalidateAllRenderPasses("bootstrap-first-political-frame");', donor_content)
         self.assertLess(
@@ -96,24 +97,20 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
             donor_content,
             r"setBootState\(\"warmup\"\);\s*invalidateAllRenderPasses\(\"bootstrap-first-political-frame\"\);\s*renderDispatcher\.flush\(\);\s*assertStartupFirstVisibleFrameAccepted\(\"bootstrap-first-political-frame\"\);",
         )
-        self.assertRegex(
-            donor_content,
-            r"setBootState\(\"warmup\", \{[\s\S]*?canContinueWithoutScenario: false,[\s\S]*?\}\);\s*invalidateAllRenderPasses\(\"bootstrap-first-frame\"\);\s*renderDispatcher\.flush\(\);",
-        )
         self.assertIsNone(re.search(r"await applyScenarioBundleCommand\s*\(", donor_content))
         self.assertIsNone(re.search(r"defaultScenarioBundle\s*=\s*await loadScenarioBundle\s*\(", donor_content))
 
     def test_main_keeps_deferred_physical_atlas_and_contour_pending_paths(self):
-        donor_content = MAIN_JS.read_text(encoding="utf-8")
+        owner_content = STARTUP_READY_HANDOFF_JS.read_text(encoding="utf-8")
         diagnostics_content = MAIN_RUNTIME_DIAGNOSTICS_JS.read_text(encoding="utf-8")
 
-        self.assertIn("function schedulePostReadyDeferredContextWarmup()", donor_content)
-        self.assertIn("requestedLayerNames.push(\"physical-set\");", donor_content)
-        self.assertIn("requestedContourLayerNames.push(\"physical-contours-set\");", donor_content)
-        self.assertIn("postReadyScheduler.scheduleTask(\"post-ready-context-warmup\"", donor_content)
-        self.assertIn("postReadyScheduler.scheduleTask(\"post-ready-contour-warmup\"", donor_content)
-        self.assertIn("ensureContextLayerDataReady(requestedContourLayerNames, {", donor_content)
-        self.assertIn('reason: "post-ready-contours"', donor_content)
+        self.assertIn("function schedulePostReadyDeferredContextWarmup()", owner_content)
+        self.assertIn("requestedLayerNames.push(\"physical-set\");", owner_content)
+        self.assertIn("requestedContourLayerNames.push(\"physical-contours-set\");", owner_content)
+        self.assertIn("postReadyScheduler.scheduleTask(\"post-ready-context-warmup\"", owner_content)
+        self.assertIn("postReadyScheduler.scheduleTask(\"post-ready-contour-warmup\"", owner_content)
+        self.assertIn("ensureContextLayerDataReady(requestedContourLayerNames, {", owner_content)
+        self.assertIn('reason: "post-ready-contours"', owner_content)
         self.assertIn("postReadyScheduler: cloneSnapshotValue(state.postReadyTaskDiagnostics, {})", diagnostics_content)
 
 
