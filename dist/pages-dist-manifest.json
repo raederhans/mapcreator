@@ -46017,7 +46017,7 @@
     },
     {
       "path": "app/js/core/renderer/context_layer_resolver.js",
-      "size_bytes": 19956,
+      "size_bytes": 21696,
       "source_kind": "dist"
     },
     {
@@ -46437,7 +46437,7 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 56150,
+      "size_bytes": 56674,
       "source_kind": "dist"
     },
     {
@@ -46447,7 +46447,7 @@
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 30421,
+      "size_bytes": 33853,
       "source_kind": "dist"
     },
     {
@@ -46802,7 +46802,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 58363,
+      "size_bytes": 58691,
       "source_kind": "dist"
     },
     {
@@ -47654,7 +47654,7 @@
     {
       "file_count": 9444,
       "path": "app",
-      "size_bytes": 965856885
+      "size_bytes": 965862909
     },
     {
       "file_count": 57,
@@ -47687,5 +47687,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972425813
+  "total_bytes": 972431837
 }
