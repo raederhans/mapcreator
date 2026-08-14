@@ -46,6 +46,7 @@ import {
   runPostScenarioApplyEffects,
   runPostScenarioClearEffects,
   runPostScenarioResetEffects,
+  shouldSuppressChunkedPostApplyDataHealthSignals,
 } from "./scenario_post_apply_effects.js";
 import {
   setScenarioAuditUiState,
@@ -805,6 +806,7 @@ async function applyScenarioBundle(
       chunkPrewarmAwaited = true,
       chunkPrewarmDeferred = false,
       coarsePrewarmCommitted = false,
+      prewarmFailed = false,
     } = await runPostScenarioApplyEffects({
       bundle,
       scenarioId: staged.scenarioId,
@@ -940,13 +942,18 @@ async function applyScenarioBundle(
     }
     const shouldExposeDetailVisibilityWarning =
       !!dataHealth.warning
+      && !shouldSuppressChunkedPostApplyDataHealthSignals({
+        hasChunkedRuntime,
+        prewarmFailed,
+        chunkErrorCount: Object.keys(runtimeState.runtimeChunkLoadState?.errorByChunkId || {}).length,
+      })
       && !bundle?.loadDiagnostics?.startupBundle
       && !runtimeState.startupReadonly
       && !runtimeState.startupReadonlyUnlockInFlight
       && !runtimeState.detailPromotionInFlight;
     if (shouldExposeDetailVisibilityWarning) {
       console.warn(
-        `[scenario] Detail visibility gate triggered for ${staged.scenarioId}: runtime=${dataHealth.runtimeFeatureCount}, expected=${dataHealth.expectedFeatureCount}, ratio=${dataHealth.ratio.toFixed(3)} (min=${dataHealth.minRatio}).`
+        `[scenario] Detail visibility gate triggered for ${staged.scenarioId}: runtime=${dataHealth.runtimeFeatureCount}, expected=${dataHealth.expectedFeatureCount}, ratio=${dataHealth.ratio.toFixed(3)} (min=${dataHealth.minRatio}); hasChunkedRuntime=${!!hasChunkedRuntime}, chunkPrewarmAwaited=${!!chunkPrewarmAwaited}, chunkPrewarmDeferred=${!!chunkPrewarmDeferred}, coarsePrewarmCommitted=${!!coarsePrewarmCommitted}, prewarmFailed=${!!prewarmFailed}.`
       );
     }
     const applyConsistency = validateScenarioRuntimeConsistency({
@@ -1492,7 +1499,7 @@ function formatScenarioStatusText() {
   const liveHealth = evaluateScenarioDataHealth(runtimeState.activeScenarioManifest, {
     minRatio: Number(runtimeState.scenarioDataHealth?.minRatio || SCENARIO_DETAIL_MIN_RATIO_STRICT),
   });
-  const warning = String(liveHealth?.warning || runtimeState.scenarioDataHealth?.warning || "").trim();
+  const warning = String(liveHealth?.warning ?? runtimeState.scenarioDataHealth?.warning ?? "").trim();
   if (
     runtimeState.scenarioHydrationHealthGate?.status === "degraded"
     && String(runtimeState.scenarioHydrationHealthGate?.reason || "").startsWith("runtime-overlay-")

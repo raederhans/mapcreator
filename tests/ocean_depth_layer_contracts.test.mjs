@@ -49,9 +49,9 @@ test("background render pass composes ocean depth mask after ocean style", () =>
   assert.ok(drawBackgroundBody.indexOf("drawOceanStyle();") < drawBackgroundBody.indexOf("drawOceanDepthMaskLayer();"));
   assert.match(depthLayerBody, /getIntensityFieldMaskOwner\(\)\.getMaskCanvas\("oceanDepth"/);
   assert.match(depthLayerBody, /applyOceanClipMask\(runtimeState\.oceanMaskMode \|\| OCEAN_MASK_MODE_TOPOLOGY\)/);
-  assert.match(depthLayerBody, /context\.globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE/);
-  assert.match(depthLayerBody, /context\.setTransform\(1, 0, 0, 1, 0, 0\)/);
-  assert.match(depthLayerBody, /context\.drawImage\(maskResult\.canvas, 0, 0\)/);
+  assert.match(depthLayerBody, /rendererSurfaceHost\.getContext\(\)\.globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE/);
+  assert.match(depthLayerBody, /rendererSurfaceHost\.getContext\(\)\.setTransform\(1, 0, 0, 1, 0, 0\)/);
+  assert.match(depthLayerBody, /rendererSurfaceHost\.getContext\(\)\.drawImage\(maskResult\.canvas, 0, 0\)/);
 });
 
 test("ocean appearance panel binds depth field editor to oceanDepth", () => {

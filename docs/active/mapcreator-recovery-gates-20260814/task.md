@@ -2,7 +2,7 @@
 
 ## Current status
 
-`GATE_2_IN_PROGRESS` — Gate 1 已完成 Export download、runtime taxonomy、responsive layout、Pages mirror 与 Golden Demo 5/5；Gate 2 开始整合 changed-file PR selector、Demo profile 和 supersession evidence。Frozen source baseline 为 `7ddcee0d613b0210a37e287c77e49c90443bd415`，Gate 1 candidate identity 由包含本记录的 Git commit 标识。
+`GATE_3_IN_PROGRESS` — Gate 0、Gate 1、Gate 2 已完成。Gate 2 建立四个 canonical verification entrypoints，关闭 changed-file false-green，Demo canonical 进入 3 分钟预算，代表性单 UI PR 组合 5-run 本机 p95 为 35.615 秒。最终 `verify:pr` 实际执行 204 条 child-safe 命令并显式 deferred 47 条 main-thread/full 命令，失败 0、production unmatched 0。当前开始 P4.3 A admission → P4.4 B replay/admission → capability seam 的串行 Gate 3 工作。
 
 ## Checklist
 
@@ -28,11 +28,13 @@
 
 ### Gate 2
 
-- [ ] 完成 319 scripts 的 canonical/internal/superseded inventory。
-- [ ] 建立 PR / Demo / Nightly / Release canonical entrypoints。
-- [ ] 将 full state-writer policy 放入 Nightly / Release 组合。
-- [ ] smoke issue arrays 与 SF-ATS behavior capability 进入确定性契约。
-- [ ] 验证 PR 与 Demo 预算。
+- [x] 完成 325 scripts 的 canonical/internal/superseded inventory：4 canonical、292 internal、29 superseded。
+- [x] 建立 PR / Demo / Nightly / Release canonical entrypoints。
+- [x] 将 full state-writer policy 放入 Nightly / Release 组合。
+- [x] smoke issue arrays 与 SF-ATS behavior capability 进入确定性契约。
+- [x] 将 P4.1/P4.2a/P4.2b/P4.2c/P4.3 Python state-writer phase boundaries 标记为 `main-thread` / `heavy` / `full` / `.runtime-output`；action-route focused contracts 保持 child-safe。
+- [x] 验证 PR 与 Demo 预算：代表性单 UI PR 本机 5-run p95 35.615 秒；canonical Demo 139.480 秒。
+- [x] 最终 canonical `verify:pr`：204 条实际命令全部通过，47 条 main-thread 命令 deferred，执行结果失败 0、unmatched 0。
 
 ### Gate 3
 
@@ -87,13 +89,25 @@
 | Golden Demo 5× | PASS 5/5，4.5m；每次真实 `map_snapshot.png`、PNG signature、success toast，零未分类 pageerror/console/request failure/4xx-5xx；日志 `.runtime/tests/playwright/recovery-gate1-golden-5x.log`。 |
 | `verify:pages-dist` | PASS；builder 输出 927.38 MiB manifest；Pages startup shell 48/48、landing 18/18、sample contracts 18/18；日志 `.runtime/tests/recovery-gate1-pages-dist.log`。 |
 | Gate 1 selected UI matrix | 初次 27/28；`sidebar_default_collapse` 暴露 deferred listener、既有 scenario auto-open 与 Special Regions empty-state 三项 stale test assumptions。确定性修复后 focused 1/1，合并证据 28/28；日志 `.runtime/tests/playwright/recovery-gate1-selected-ui-regressions.log` 与 `recovery-gate1-sidebar-collapse-rerun3.log`。 |
+| Gate 2 portfolio contracts | PASS；325 scripts 全部唯一归类，4 canonical、292 internal、29 exact-superseded；core runner 39/39、portfolio 9/9、metadata 30/30、structural 43/43、369 routes、47 E2E manifest 全部通过。 |
+| Gate 2 smoke profile | PASS 4/4，37.8s；HOI4 两次、TNO 一次 exact polar-water expected issue，actionable console 0、network failure 0；日志 `.runtime/tests/playwright/recovery-gate2-smoke.log`。 |
+| Gate 2 full sample-guide regression | PASS 5/5，4.4m；真实 Snapshot、五视口、中文路径和 recoverable bad deeplink 全部通过；日志 `.runtime/tests/playwright/recovery-gate2-demo-attempt3.log`。 |
+| `verify:demo` canonical | PASS 1/1，139.480s；只执行 `@golden-demo` 核心产品旅程，满足 180s 预算；日志 `.runtime/tests/playwright/recovery-gate2-demo-canonical.log`。 |
+| Gate 2 representative PR budget | PASS 5/5；33.567s、31.561s 日志跨度、35.615s、32.406s、32.683s，nearest-rank p95 35.615s。每次固定门禁、127 Python tests、TNO strict、4 adaptive child-safe 均通过，7 browser commands deferred，production unmatched 0；日志 `.runtime/tests/recovery-gate2-pr-budget*.log`，报告 `.runtime/reports/generated/recovery-gate2-pr-budget*.{json,md}`。 |
+| Gate 2 integrated SF-ATS history dry-run | PASS；37 changed files，249 recommendations，208 retained、32 main-thread blocked；production unmatched 0，三个本任务记录 docs 为允许的非生产 unmatched；artifact `.runtime/reports/generated/recovery-gate2-main-selection.{json,md}`。 |
+| Gate 2 independent reviews | 最终 CLEAR；已闭合 deferred Demo consumer、exact history failure、execute empty set、unknown workflow profile、blank command 和 mixed-owner evidence 问题。YAML parser dependency 当前不可用，workflow 由 43 项 structural contracts 覆盖。 |
+| Gate 2 final `npm run verify:pr` | PASS，exit 0；204 条 child-safe 命令全部通过，47 条 main-thread/full 命令以结构化 evidence deferred，失败 0、`unmatchedChangedFiles=[]`；artifact `.runtime/reports/generated/test-adaptive-selection.{json,md}`。 |
+| Gate 2 post-edit SF-ATS dry-run | PASS，exit 0；260 recommendations、204 retained、47 main-thread blocked，production unmatched 0。 |
+| Gate 2 P4-ready focused closure | PASS；scenario chunk/lifecycle/refresh 138/138，state-writer quick contracts 259/259；post-apply diagnostics direct-call budget恢复至既有 multiplicity，resolver authority fixture改为 scanner 可证明的纯读合同。 |
 
 ## Open risks and remaining work
 
-- 当前任务记录本身是首批 tracked change；主线程负责后续 diff、stage、commit 与 integration decision。
 - P4.3、test-reform 和 Appearance/Transport 现有记录包含旧 revision 历史；本目录记录当前总控状态。
 - Gate 0 standard perf 已完成并发现 5 个 enforced regressions；该结果进入 Gate 4，Gate 1 需保持指标可比较。
 - Gate 1 修复会触及共享 `js/ui/toolbar.js` 与 `css/style.css`，只能由主线程串行编辑。
 - Gate 1 当前已完成共享文件串行编辑与唯一 live lane；提交后 source/dist mirror 应保持同一 revision。
 - D3 unsafe-water 根因位于 primary topology 生成链的 Arctic/Southern polar geometry；需要重生成 topology、startup bundle、Pages mirrors 并验证绘制/hit testing，作为独立高风险数据工作包进入 Gate 4。
-- Gate 2、Gate 3、Gate 4 已分别排队为隔离 Codex 任务；主线程按 Gate 顺序审查、串行整合并复跑 live gates。
+- PR p95 的本轮证据来自同机、同一代表性 UI changed-file 的 5 次样本；真实 GitHub runner p95 将由后续 timing artifacts 持续累积。
+- P4 Python phase boundary 实测单条曾耗时 734.191 秒并进入 full state-writer 扫描；Gate 2 已修正 route metadata，正式执行归属 Gate 3 admission / Nightly / Release 主线程。
+- 当前 P4.3 policy artifact来自 dirty `dff0b800` 诊断运行，无法用于 A admission；Gate 3 将在 Gate 2 clean commit 上生成同阶段 observation refresh，并在最终 policy commit 上运行 clean-identity full/exact gates。
+- Gate 3 pure domain seam candidate 位于隔离 worktree `8288`，需要正式 B admission 后重放；Gate 4 startup/dist candidate 保持隔离。

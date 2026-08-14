@@ -26,18 +26,18 @@
 
 ## Stages
 
-- [ ] Gate 0 — Frozen baseline and control plane
+- [x] Gate 0 — Frozen baseline and control plane
   - exact `HEAD == origin/main`、clean status、单一 worktree。
   - Golden Demo 场景、语言、视口、导出参数与错误分类冻结。
   - current status artifact、任务记录和 live-process registry 可重建。
   - 3 cold + 3 warm 性能样本契约确定；正式运行由主线程独占。
-- [ ] Gate 1 — Golden Demo admission
+- [x] Gate 1 — Golden Demo admission
   - 修复 Export Workbench required dependency 装配和下载完成事务。
   - Golden Demo 实际点击 Snapshot、校验 PNG 和成功 UI。
   - 1280×720、1366×768、1440×900、768×900、375×760 关键区域重叠面积为 0。
   - pageerror、unhandled console error、required-resource 4xx/5xx 为 0；guest auth 使用明确契约。
   - frozen SHA 串行 5/5 通过。
-- [ ] Gate 2 — Verification portfolio
+- [x] Gate 2 — Verification portfolio
   - 建立 `verify:pr`、`verify:demo`、`verify:nightly`、`verify:release` canonical entrypoints。
   - 每个现有 script 归类为 canonical、internal 或 superseded。
   - PR p95 `<=10 min`，Demo `<=3 min`；full policy 保留 Nightly / Release 证据。
@@ -84,4 +84,3 @@
 - 当前 first-visible 数据来自单次 localhost 诊断；Gate 0 的 3 cold + 3 warm 样本将形成正式比较基线。
 - 现有 active docs 含历史 SHA 和 pending 状态；generated current status 优先表达机器事实。
 - 子代理共享同一工作目录；文件所有权、Git/index/refs 和 live-process 限制对所有子代理生效。
-

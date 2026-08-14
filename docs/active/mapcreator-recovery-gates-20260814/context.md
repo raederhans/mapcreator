@@ -2,7 +2,7 @@
 
 ## Current truth
 
-- 2026-08-14 frozen source：`HEAD == origin/main == 7ddcee0d613b0210a37e287c77e49c90443bd415`。
+- 2026-08-14 frozen origin baseline：`origin/main == 7ddcee0d613b0210a37e287c77e49c90443bd415`；当前 `main` 已串行集成 Gate 1 与 Gate 2，保持本地 ahead、remote 未改。
 - 当前 checkout：`C:\Users\raede\Desktop\dev\mapcreator`，`main`；另有 Gate 2/3/4 三个 detached candidate worktree，均从 `7ddcee0d` 创建。
 - 用户已授权依次执行 Gate 0 至 Gate 5，并要求多个独立协作子代理与主线程总监督。
 - 当前项目优先级仍为 Appearance + Transport 平台化；Gate 0–4 是其产品准入、反馈经济性、架构和性能前置条件。
@@ -24,6 +24,13 @@
 | 2026-08-14 | 用户授权额外 Codex 对话并行；已排队 Gate 2、Gate 3、Gate 4 三个隔离任务 | 主线程保持 integration owner，Gate 1 验证与后续 worktree 合并串行执行。 |
 | 2026-08-14 | Gate 1 Golden Demo 5/5 与 responsive 五视口通过；Pages source/dist mirror 完成 canonical build | Gate 1 可以形成独立提交；D3 polar water 与 927.38 MiB dist 进入 Gate 4。 |
 | 2026-08-14 | Gate 2 candidate 在 `c294` source-final；Gate 3 domain seam 在 `8288` source-final | Gate 2 路径与 Gate 1 零重叠，可在 Gate 1 提交后独立 commit/cherry-pick；Gate 3 等待 B admission。 |
+| 2026-08-14 | Gate 2 verification portfolio 已集成，独立复核最终 CLEAR | PR workflow 串行为 `pr-fast → pr-smoke → demo`；history/profile/empty-set/deferred consumer 均 fail-closed。 |
+| 2026-08-14 | 完整 sample-guide 进入 Nightly，canonical `verify:demo` 只执行 `@golden-demo` 核心旅程 | 完整覆盖 5/5、4.4m；PR Demo 1/1、139.480s，满足 3 分钟反馈预算；Demo route 的 commandRef 与 PR consumer 均为 `verify:demo`。 |
+| 2026-08-14 | 代表性单 UI PR 组合执行 5 次 | 本机 nearest-rank p95 35.615s；GitHub runner 的真实 p95 由后续 timing artifacts 累积。 |
+| 2026-08-14 | P4.1 Python boundary 在 PR adaptive lane 中实测 734.191s，并执行完整 state-writer policy 扫描 | P4.1/P4.2a/P4.2b/P4.2c/P4.3 Python boundaries 统一归入 `main-thread` / `heavy` / `full` / `.runtime-output`；focused action-route contracts继续由 child-safe lane 执行。 |
+| 2026-08-14 | 最终 canonical `verify:pr` 执行 204 条 child-safe 命令，47 条主线程命令 deferred | 全部执行结果通过，production unmatched 0；Gate 2 验证组合形成正式闭环。 |
+| 2026-08-14 | Gate 2 文档更新后的 SF-ATS dry-run 推荐 260、保留 204、阻塞 47 | route gaps 0、production unmatched 0；最终 canonical 将在同一内容候选上重放并刷新执行 artifact。 |
+| 2026-08-14 | P4 policy delta 将 Gate 2 测试 fixture 与 post-apply diagnostics 识别为 A admission 前置 | 测试改用只读 getter/索引断言，diagnostics 经局部 wrapper 收拢；focused scenario 138/138 与 state-writer quick 259/259 通过。 |
 
 ## Agent ownership
 
@@ -37,7 +44,7 @@
 | Gate 1 Golden E2E | `/root/golden_e2e_executor` | Snapshot download、PNG、short-height layout regressions | completed；changes present，待主线程 Playwright |
 | Gate 1 auth probe | `/root/auth_probe_executor` | project-support session lazy probe 与 focused regression | active；禁止 live/Git/shared files |
 | Gate 1 shell contracts | `/root/shell_contract_executor` | source/dist favicon 与 startup preload 静态合同 | active；仅修改 pages startup shell tests |
-| Gate 2 candidate task | `019fff60-fdf6-7a21-9237-389d3a42c2d9` / `c294` | PR/Demo/Nightly/Release verification portfolio | completed；8-file unstaged candidate，待 integration review |
+| Gate 2 candidate task | `019fff60-fdf6-7a21-9237-389d3a42c2d9` / `c294` | PR/Demo/Nightly/Release verification portfolio | completed；candidate committed and cherry-picked，independent review CLEAR |
 | Gate 3 candidate task | `019fff61-035e-70f2-8346-02bf82fbfa51` / `8288` | Appearance/Transport versioned seam contract | completed；pure contract candidate，等待 B admission |
 | Gate 4 candidate task | `019fff61-72d8-72d3-8b73-e35268a38c31` / `1d67` | startup/dist inventory contract | active；隔离 worktree |
 
@@ -53,6 +60,9 @@
 | Standard performance | `/root` | `npm run -s perf:gate`；cwd 当前 repo；日志 `.runtime/output/perf/recovery-gate0-perf-gate-attempt2.log`；artifact `.runtime/output/perf/baseline_2026-07-30/perf-gate-current.json` | released；environment admitted、generation fence stable、5 enforced regressions、exit 1 |
 | Gate 1 Playwright | `/root` | `sample_guide_deeplink.spec.js`、responsive focused、Golden `--repeat-each=5`；outputs `.runtime/tests/playwright/` | released；responsive PASS，Golden 5/5，port 8810 released |
 | Gate 1 Pages/dist | `/root` | `npm run -s verify:pages-dist`；log `.runtime/tests/recovery-gate1-pages-dist.log` | released；builder + 48 Python + 18 landing + 18 sample PASS |
+| Gate 2 Demo | `/root` | `npm run -s verify:demo`；log `.runtime/tests/playwright/recovery-gate2-demo-canonical.log` | released；1/1 PASS，139.480s，port 8810 released |
+| Gate 2 PR budget | `/root` | fixed PR guards + explicit single-UI adaptive execute/defer；logs `.runtime/tests/recovery-gate2-pr-budget*.log` | released；5/5 PASS，local p95 35.615s |
+| Gate 2 final PR gate | `/root` | `npm run verify:pr`；adaptive report `.runtime/reports/generated/test-adaptive-selection.{json,md}` | released；204 executed PASS，47 deferred，unmatched 0 |
 
 ## Handoff
 
@@ -63,7 +73,9 @@
 - Gate 1 SF-ATS dry-run exit 0，risk high、route gaps empty；6 个 child-safe commands exit 0。`verify:toolbar-split-boundary` 在 frozen HEAD 已超 3100-line budget，当前一行 wiring 将 3185 增至 3186，Gate 3 必须通过真实拆分恢复 ratchet。
 - Gate 1 的正式 runtime tracker仅放行 exact polar-water warning；favicon、preload、guest auth 401、Snapshot false-failure 均从 Golden 基础旅程移除。D3 warning仍代表被丢弃的 Arctic/Southern geometry，等待生成链修复。
 - Gate 1 横向 28-test UI selection 的唯一初始失败来自 `sidebar_default_collapse` stale assumptions；测试现等待 toolbar listener、接受 scenario apply 的明确 auto-open，并以 summary click覆盖允许 empty-state 的 Special Regions。focused rerun 1/1。
+- Gate 2 将动态遍历全部 Node scripts 的 PR-fast 替换为 canonical fixed guards + changed-file adaptive execution；exact supersession 和 deferred evidence 保持可追踪。
+- Gate 2 Demo workflow 现在调用 canonical `verify:demo`，核心 journey 具备真实 PNG、success lifecycle 与 runtime issue assertions；完整 sample-guide 套件继续作为更深回归。
 
 ## Next step
 
-提交 Gate 1；审查 Gate 2 八文件候选并在其 worktree 创建独立 Lore commit，cherry-pick 到 main 后执行 focused、SF-ATS 与 CI workflow结构验证。
+提交 Gate 2 收口；以当前 exact main identity 审计 P4.3 admission 输入，完成 A checkpoint 后再处理 P4.4 B replay/admission，随后重放 Gate 3 Appearance/Transport pure contract candidate。

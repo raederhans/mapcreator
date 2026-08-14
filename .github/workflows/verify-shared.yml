@@ -231,7 +231,7 @@ jobs:
 
       - name: Run Golden Demo E2E
         if: inputs.profile == 'demo'
-        run: npm run test:e2e:sample-guide
+        run: npm run verify:demo
 
       - name: Write Demo timing summary
         if: always() && inputs.profile == 'demo'

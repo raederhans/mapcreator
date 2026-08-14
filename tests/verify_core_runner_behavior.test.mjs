@@ -1269,9 +1269,13 @@ test("verification portfolio exposes four canonical entrypoints with full policy
   assert.match(scripts["verify:pr"], /tests\.test_e2e_structural_tooling/);
   assert.match(scripts["verify:pr"], /verify:scenario-contracts:strict/);
   assert.match(scripts["verify:pr"], /run_adaptive_tests\.mjs --execute --defer-main-thread --history-base origin\/main/);
-  assert.equal(scripts["verify:demo"], "npm run test:e2e:sample-guide");
+  assert.equal(
+    scripts["verify:demo"],
+    "node node_modules/@playwright/test/cli.js test tests/e2e/sample_guide_deeplink.spec.js --grep @golden-demo --workers=1 --retries=0",
+  );
   assert.match(scripts["verify:nightly"], /^npm run verify:core\b/);
   assert.match(scripts["verify:nightly"], /unittest discover/);
+  assert.match(scripts["verify:nightly"], /npm run test:e2e:sample-guide/);
   assert.match(scripts["verify:release"], /^npm run verify:core:main-thread\b/);
   assert.match(scripts["verify:release"], /npm run verify:demo/);
   assert.match(scripts["verify:release"], /npm run test:e2e:pages-public-release-gate/);

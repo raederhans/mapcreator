@@ -105,18 +105,18 @@ class FakeSocket extends EventEmitter {
 }
 
 function createHarness({ evidenceBytes, readError = null } = {}) {
-  const state = { pipeName: null, server: null, socket: null, child: null, bootstrap: null, spawnOptions: null, evidenceBytes };
+  const harnessState = { pipeName: null, server: null, socket: null, child: null, bootstrap: null, spawnOptions: null, evidenceBytes };
   const createServerFn = (listener) => {
     const server = new EventEmitter();
     server.listen = (pipeName, callback) => {
-      state.pipeName = pipeName;
-      state.server = server;
+      harnessState.pipeName = pipeName;
+      harnessState.server = server;
       queueMicrotask(callback);
     };
     server.close = () => {};
     server.accept = () => {
       const socket = new FakeSocket();
-      state.socket = socket;
+      harnessState.socket = socket;
       listener(socket);
       return socket;
     };
@@ -128,21 +128,24 @@ function createHarness({ evidenceBytes, readError = null } = {}) {
     child.stdout = new PassThrough();
     child.stderr = new PassThrough();
     child.stdin = new EventEmitter();
-    child.stdin.end = (bootstrap) => { state.bootstrap = bootstrap; };
+    child.stdin.end = (bootstrap) => { harnessState.bootstrap = bootstrap; };
     child.kill = () => { child.killCount = (child.killCount || 0) + 1; return true; };
-    state.child = child;
-    state.spawnOptions = options;
+    harnessState.child = child;
+    harnessState.spawnOptions = options;
     return child;
   };
   return {
-    state,
+    state: harnessState,
+    setEvidenceBytes: (value) => {
+      harnessState.evidenceBytes = value;
+    },
     seams: {
       createServerFn,
       spawnFn,
       rmFn: async () => {},
       readFileFn: async () => {
         if (readError) throw readError;
-        return Buffer.from(state.evidenceBytes || "", "utf8");
+        return Buffer.from(harnessState.evidenceBytes || "", "utf8");
       },
       randomBytesFn: (size) => Buffer.alloc(size, size),
       setTimeoutFn: () => ({ fake: true }),
@@ -373,7 +376,7 @@ test("first cancel wins and authenticated token is absent from cancel", async ()
     "cause", "protocolId", "reasonCode", "requestId", "requestedAt", "requestedSignal", "runId", "schemaVersion", "sequence", "type",
   ]);
   evidence.control.cancelRequestId = cancel.requestId;
-  harness.state.evidenceBytes = JSON.stringify(evidence);
+  harness.setEvidenceBytes(JSON.stringify(evidence));
   socket.send({ ...commonMessage("cancel-accepted", 5), requestId: cancel.requestId, accepted: true, primaryCause: "cancel-requested" });
   socket.send({
     ...commonMessage("terminal", 7), status: "complete", primaryCause: "cancel-requested",

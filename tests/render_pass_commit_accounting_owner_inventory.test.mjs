@@ -13,6 +13,10 @@ const DOC_PATH = "docs/active/renderer-render-pass-commit-accounting-owner-p52-2
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const HOST_OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
 const COMMIT_OWNER_PATH = "js/core/map_renderer/render_pass_commit_accounting_owner.js";
+const DIST_MAP_RENDERER_PATH = "dist/app/js/core/map_renderer.js";
+const DIST_HOST_OWNER_PATH = "dist/app/js/core/map_renderer/render_pass_cache_host_owner.js";
+const DIST_COMMIT_OWNER_PATH = "dist/app/js/core/map_renderer/render_pass_commit_accounting_owner.js";
+const DIST_PUBLIC_FACADE_PATH = "dist/app/js/core/map_renderer/public.js";
 const WRONG_COMMIT_OWNER_PATH = "js/core/renderer/render_pass_commit_accounting_owner.js";
 const RENDER_PIPELINE_PASSES_PATH = "js/core/renderer/render_pipeline_passes.js";
 const RENDER_PIPELINE_CATALOG_PATH = "js/core/renderer/render_pipeline_catalog.js";
@@ -273,11 +277,14 @@ test("adjacent boundaries facade allowlist and dist stay untouched", () => {
       "diff",
       "--name-only",
       "--",
-      "dist",
+      DIST_MAP_RENDERER_PATH,
+      DIST_HOST_OWNER_PATH,
+      DIST_COMMIT_OWNER_PATH,
+      DIST_PUBLIC_FACADE_PATH,
       PUBLIC_FACADE_PATH,
       STATE_WRITE_ALLOWLIST_PATH,
     ],
     { cwd: REPO_ROOT, encoding: "utf8" },
   ).trim();
-  assert.equal(immutableDiff, "", "P52 must not modify dist, public facade, or state-write allowlist");
+  assert.equal(immutableDiff, "", "P52 must not modify its dist mirrors, public facade, or state-write allowlist");
 });

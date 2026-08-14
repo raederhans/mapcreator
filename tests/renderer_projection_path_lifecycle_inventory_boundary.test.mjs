@@ -96,11 +96,11 @@ const FIT_PROJECTION_RENDERER_ANCHORS = Object.freeze([
 
 const FIT_PROJECTION_WIRING_ANCHORS = Object.freeze([
   "rendererFitProjectionOwner = createRendererFitProjectionOwner({",
-  "surfaceHost: rendererSurfaceHost",
-  "state,",
-  "projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO",
-  "getLogicalCanvasDimensions,",
-  "getRenderableLandFeatures,",
+  "surfaceHost,",
+  "state: runtime,",
+  "projectionFitPaddingRatio: viewportContext.constants.projectionFitPaddingRatio",
+  "getLogicalCanvasDimensions: viewportHelpers.getLogicalCanvasDimensions",
+  "getRenderableLandFeatures: viewportHelpers.getRenderableLandFeatures",
   "resetCityAnchorCache: () => {",
   "cityAnchorCache = new WeakMap();",
   "rebuildProjectedBoundsCache,",

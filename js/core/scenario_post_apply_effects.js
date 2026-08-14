@@ -28,7 +28,7 @@ import {
   syncResolvedDefaultCountryPalette,
 } from "./palette_manager.js";
 import { refreshScenarioShellOverlays } from "./scenario_shell_overlay.js";
-import { syncCountryUi } from "./scenario_ui_sync.js";
+import { syncCountryUi, syncScenarioUi } from "./scenario_ui_sync.js";
 import { requestRender } from "./render_boundary.js";
 
 function runPaletteAndToolbarRefreshCallbacks() {
@@ -87,6 +87,93 @@ function scheduleAfterFirstFrame(callback) {
   runAsync();
 }
 
+function shouldSuppressChunkedPostApplyDataHealthSignals({
+  hasChunkedRuntime = false,
+  prewarmFailed = false,
+  chunkErrorCount = 0,
+} = {}) {
+  return hasChunkedRuntime === true
+    && prewarmFailed !== true
+    && Math.max(0, Number(chunkErrorCount || 0)) === 0;
+}
+
+function getScenarioChunkLoadErrorCount() {
+  return Object.keys(runtimeState.runtimeChunkLoadState?.errorByChunkId || {}).length;
+}
+
+function hasPendingScenarioChunkWork(loadState = runtimeState.runtimeChunkLoadState) {
+  return !!(
+    String(loadState?.shellStatus || "") === "loading"
+    || String(loadState?.pendingReason || "").trim()
+    || loadState?.refreshScheduled
+    || loadState?.pendingPromotion
+    || loadState?.pendingVisualPromotion
+    || loadState?.pendingInfraPromotion
+    || loadState?.promotionScheduled
+    || loadState?.promotionCommitInFlight
+    || loadState?.pendingPostCommitRefresh
+    || Object.keys(loadState?.inFlightByChunkId || {}).length
+  );
+}
+
+function recordScenarioPostApplySnapshot({
+  phase = "",
+  reason = "scenario-post-apply",
+  expectedScenarioId = "",
+  extra = {},
+} = {}) {
+  return recordRenderTransactionSnapshot(runtimeState, {
+    phase,
+    reason,
+    expectedScenarioId,
+    source: "scenario_post_apply_effects",
+    extra,
+  });
+}
+
+function scheduleScenarioDataHealthSyncAfterChunkSettle(context, attempt = 0) {
+  if (!shouldContinueScenarioApplyContext(context, "detail-prewarm-health-sync")) return;
+  if (hasPendingScenarioChunkWork()) {
+    if (attempt >= 120) {
+      recordScenarioPostApplySnapshot({
+        phase: "scenario-detail-health-settle-timeout",
+        reason: context.reason,
+        expectedScenarioId: context.scenarioId,
+        extra: {
+          attempt,
+          scenarioApplyEpoch: context.scenarioApplyEpoch,
+          scenarioApplyRequestId: context.scenarioApplyRequestId,
+          shellStatus: String(runtimeState.runtimeChunkLoadState?.shellStatus || ""),
+          pendingReason: String(runtimeState.runtimeChunkLoadState?.pendingReason || ""),
+        },
+      });
+      return;
+    }
+    globalThis.setTimeout(() => {
+      scheduleScenarioDataHealthSyncAfterChunkSettle(context, attempt + 1);
+    }, 100);
+    return;
+  }
+  const chunkErrorCount = getScenarioChunkLoadErrorCount();
+  const dataHealth = refreshScenarioDataHealth({
+    showWarningToast: chunkErrorCount > 0,
+    showErrorToast: chunkErrorCount > 0,
+  });
+  syncScenarioUi();
+  recordScenarioPostApplySnapshot({
+    phase: "scenario-detail-health-settled",
+    reason: context.reason,
+    expectedScenarioId: context.scenarioId,
+    extra: {
+      attempt,
+      chunkErrorCount,
+      scenarioApplyEpoch: context.scenarioApplyEpoch,
+      scenarioApplyRequestId: context.scenarioApplyRequestId,
+      warning: String(dataHealth?.warning || ""),
+    },
+  });
+}
+
 function updateChunkedFirstFramePrewarmMetric(details = {}, { replace = false } = {}) {
   return setScenarioPerfMetricState(runtimeState, "chunkedFirstFramePrewarm", {
     ...details,
@@ -123,11 +210,10 @@ function recordScenarioApplyStaleCallbackSkipped({
   scenarioApplyRequestId = 0,
   extra = {},
 } = {}) {
-  recordRenderTransactionSnapshot(runtimeState, {
+  recordScenarioPostApplySnapshot({
     phase: "scenario-apply-stale-callback-skipped",
     reason,
     expectedScenarioId: scenarioId,
-    source: "scenario_post_apply_effects",
     extra: {
       ...extra,
       allowScenarioMismatch: true,
@@ -208,6 +294,7 @@ function scheduleScenarioDetailChunkPrewarm({
           refreshSourceStartedAtMs: prewarmStartedAt,
           scenarioApplyRequestId: transactionScenarioApplyRequestId,
         });
+        scheduleScenarioDataHealthSyncAfterChunkSettle(currentnessContext);
         updateChunkedFirstFramePrewarmMetric({
           scenarioId: normalizedScenarioId,
           mode: "async",
@@ -234,6 +321,8 @@ function scheduleScenarioDetailChunkPrewarm({
         if (!shouldContinueScenarioApplyContext(currentnessContext, "detail-prewarm-failed")) {
           return;
         }
+        refreshScenarioDataHealth({ showWarningToast: true, showErrorToast: true });
+        syncScenarioUi();
         updateChunkedFirstFramePrewarmMetric({
           scenarioId: normalizedScenarioId,
           mode: "async",
@@ -681,6 +770,7 @@ async function runPostScenarioApplyEffects({
       chunkPrewarmAwaited: chunkPrewarmResult?.chunkPrewarmAwaited !== false,
       chunkPrewarmDeferred: chunkPrewarmResult?.chunkPrewarmDeferred === true,
       coarsePrewarmCommitted: chunkPrewarmResult?.coarsePrewarmCommitted === true,
+      prewarmFailed: chunkPrewarmResult?.prewarmFailed === true,
     };
   }
   await syncVisibleScenarioOptionalLayersForPostApply({
@@ -699,6 +789,7 @@ async function runPostScenarioApplyEffects({
       chunkPrewarmAwaited: chunkPrewarmResult?.chunkPrewarmAwaited !== false,
       chunkPrewarmDeferred: chunkPrewarmResult?.chunkPrewarmDeferred === true,
       coarsePrewarmCommitted: chunkPrewarmResult?.coarsePrewarmCommitted === true,
+      prewarmFailed: chunkPrewarmResult?.prewarmFailed === true,
     };
   }
   const shouldExposeScenarioDataHealthSignals =
@@ -706,12 +797,14 @@ async function runPostScenarioApplyEffects({
     && !runtimeState.startupReadonly
     && !runtimeState.startupReadonlyUnlockInFlight
     && !runtimeState.detailPromotionInFlight;
-  const suppressChunkedCoarseDataHealthToast =
-    scenarioSupportsChunkedRuntime(bundle)
-    && chunkPrewarmResult?.coarsePrewarmCommitted === true;
+  const suppressChunkedPostApplyDataHealthSignals = shouldSuppressChunkedPostApplyDataHealthSignals({
+    hasChunkedRuntime: scenarioSupportsChunkedRuntime(bundle),
+    prewarmFailed: chunkPrewarmResult?.prewarmFailed === true,
+    chunkErrorCount: getScenarioChunkLoadErrorCount(),
+  });
   const dataHealth = refreshScenarioDataHealth({
-    showWarningToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,
-    showErrorToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,
+    showWarningToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedPostApplyDataHealthSignals,
+    showErrorToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedPostApplyDataHealthSignals,
   });
   recordRenderTransactionSnapshot(runtimeState, {
     phase: "scenario-data-health-refreshed",
@@ -741,6 +834,7 @@ async function runPostScenarioApplyEffects({
       chunkPrewarmAwaited: chunkPrewarmResult?.chunkPrewarmAwaited !== false,
       chunkPrewarmDeferred: chunkPrewarmResult?.chunkPrewarmDeferred === true,
       coarsePrewarmCommitted: chunkPrewarmResult?.coarsePrewarmCommitted === true,
+      prewarmFailed: chunkPrewarmResult?.prewarmFailed === true,
     };
   }
   syncCountryUi({ renderNow: useSingleFinalRender ? true : (renderNow && !suppressRender) });
@@ -751,6 +845,7 @@ async function runPostScenarioApplyEffects({
     chunkPrewarmAwaited: chunkPrewarmResult?.chunkPrewarmAwaited !== false,
     chunkPrewarmDeferred: chunkPrewarmResult?.chunkPrewarmDeferred === true,
     coarsePrewarmCommitted: chunkPrewarmResult?.coarsePrewarmCommitted === true,
+    prewarmFailed: chunkPrewarmResult?.prewarmFailed === true,
   };
 }
 
@@ -794,4 +889,6 @@ export {
   runPostScenarioApplyEffects,
   runPostScenarioClearEffects,
   runPostScenarioResetEffects,
+  hasPendingScenarioChunkWork,
+  shouldSuppressChunkedPostApplyDataHealthSignals,
 };

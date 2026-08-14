@@ -238,7 +238,7 @@ test("owner getters read surface handles through rendererSurfaceHost or runtime 
     rendererSource,
     "function getViewportResizeLifecycleOwner() {",
     "function getZoomInteractionLifecycleOwner() {",
-    ["getMapContainer: () => rendererSurfaceHost.getMapContainer()"],
+    ["getMapContainer: viewportContext.getMapContainer"],
     "viewport resize lifecycle owner must receive the map container handle",
   );
   assertFunctionIncludes(

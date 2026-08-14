@@ -277,6 +277,51 @@ async function writeSampleGuideFailureArtifact(page, testInfo) {
     "[data-export-workbench-sample-context]",
     "#scenarioStatus",
   ]);
+  try {
+    snapshot.scenarioRuntimeState = await page.evaluate(async () => {
+    const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
+    const { state } = await import(stateModuleUrl);
+    const countFeatures = (payload) => (
+      Array.isArray(payload?.features) ? payload.features.length : 0
+    );
+    const loadState = state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === "object"
+      ? state.runtimeChunkLoadState
+      : {};
+    return {
+      scenarioPoliticalChunkFeatureCount: countFeatures(state.scenarioPoliticalChunkData),
+      scenarioPoliticalVisibleFeatureCount: Array.isArray(state.scenarioPoliticalVisibleChunkData?.features)
+        ? state.scenarioPoliticalVisibleChunkData.features.length
+        : null,
+      mergedPoliticalFeatureCount: countFeatures(state.activeScenarioChunks?.mergedLayerPayloads?.political),
+      cachedMergedPoliticalFeatureCount: countFeatures(loadState.mergedLayerPayloadCache?.political),
+      landDataFullFeatureCount: countFeatures(state.landDataFull),
+      landDataFeatureCount: countFeatures(state.landData),
+      runtimePoliticalTopologyFeatureCount: Array.isArray(state.runtimePoliticalTopology?.objects?.political?.geometries)
+        ? state.runtimePoliticalTopology.objects.political.geometries.length
+        : 0,
+      colorCount: Object.keys(state.colors || {}).length,
+      loadedChunkCount: Array.isArray(state.activeScenarioChunks?.loadedChunkIds)
+        ? state.activeScenarioChunks.loadedChunkIds.length
+        : 0,
+      selectionVersion: Number(loadState.selectionVersion || 0),
+      lastSelection: {
+        requiredChunkIds: Array.isArray(loadState.lastSelection?.requiredChunkIds)
+          ? loadState.lastSelection.requiredChunkIds
+          : [],
+        cacheOnlyChunkIds: Array.isArray(loadState.lastSelection?.cacheOnlyChunkIds)
+          ? loadState.lastSelection.cacheOnlyChunkIds
+          : [],
+        retainedActiveChunkIds: Array.isArray(loadState.lastSelection?.retainedActiveChunkIds)
+          ? loadState.lastSelection.retainedActiveChunkIds
+          : [],
+      },
+    };
+    });
+  } catch (error) {
+    snapshot.scenarioRuntimeState = {
+      snapshotError: String(error?.message || error || "Unknown scenario runtime snapshot error"),
+    };
+  }
   await writeFailureContextArtifact(testInfo, snapshot, {
     fileName: "sample-guide-deeplink-failure-context.json",
     attachmentName: "sample-guide-deeplink-failure-context",
@@ -311,7 +356,7 @@ test("sample guide default route shows starter choices without sample state", as
   }
 });
 
-test("sample guide card opens export from the TNO sample deeplink", async ({ page }, testInfo) => {
+test("@golden-demo sample guide card opens export from the TNO sample deeplink", async ({ page }, testInfo) => {
   const runtimeIssues = installGoldenRuntimeIssueTracker(page);
   const exportActionIssues = installExportActionIssueTracker(page);
   try {
@@ -361,13 +406,17 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
     const downloadPromise = page.waitForEvent("download", { timeout: 120000 });
     await snapshotButton.click();
     const download = await downloadPromise;
+    const snapshotSuccessToast = page
+      .locator("#toastViewport .toast-message")
+      .filter({ hasText: "Map snapshot downloaded." })
+      .last();
+    await expect(snapshotSuccessToast).toBeVisible();
     expect(download.suggestedFilename()).toBe("map_snapshot.png");
     expect(await download.failure()).toBeNull();
     const pngBuffer = await readDownloadBuffer(download);
     expect(pngBuffer.length).toBeGreaterThan(1024);
     expect(pngBuffer.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
-    await expect(page.locator("#toastViewport .toast-message")).toContainText("Map snapshot downloaded.");
-    await page.waitForTimeout(500);
+    await expect(snapshotSuccessToast).toBeHidden({ timeout: 10000 });
     expect(runtimeIssues.unexpectedIssues).toEqual([]);
     expect({
       pageErrors: [...exportActionIssues.pageErrors],
@@ -434,11 +483,15 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
       "aria-current",
       "true",
     );
+    await expect(page.locator("#scenarioStatus")).not.toContainText(
+      /Detail topology not fully loaded/i,
+    );
     await expectActiveElement(page, { sampleChoice: "tno-1962-atlantropa-briefing" });
 
     await page.keyboard.press("Escape");
     await expect(page.locator("#scenarioGuidePopover")).toBeHidden({ timeout: 30000 });
     await expectActiveElement(page, { id: /^(scenarioGuideBtn|utilitiesGuideBtn)$/ });
+    expect(runtimeIssues.unexpectedIssues).toEqual([]);
   } catch (error) {
     await writeSampleGuideFailureArtifact(page, testInfo);
     throw error;

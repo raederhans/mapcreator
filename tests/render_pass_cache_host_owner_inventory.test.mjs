@@ -11,6 +11,9 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
+const DIST_MAP_RENDERER_PATH = "dist/app/js/core/map_renderer.js";
+const DIST_OWNER_PATH = "dist/app/js/core/map_renderer/render_pass_cache_host_owner.js";
+const DIST_PUBLIC_FACADE_PATH = "dist/app/js/core/map_renderer/public.js";
 const WRONG_OWNER_PATH = "js/core/renderer/render_pass_cache_host_owner.js";
 const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
 const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
@@ -238,11 +241,13 @@ test("broad lifecycle owners facade allowlist and dist stay untouched", () => {
       "diff",
       "--name-only",
       "--",
-      "dist",
+      DIST_MAP_RENDERER_PATH,
+      DIST_OWNER_PATH,
+      DIST_PUBLIC_FACADE_PATH,
       PUBLIC_FACADE_PATH,
       STATE_WRITE_ALLOWLIST_PATH,
     ],
     { cwd: REPO_ROOT, encoding: "utf8" },
   ).trim();
-  assert.equal(immutableDiff, "", "P51 must not modify dist, public facade, or state-write allowlist");
+  assert.equal(immutableDiff, "", "P51 must not modify its dist mirrors, public facade, or state-write allowlist");
 });

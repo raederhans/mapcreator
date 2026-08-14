@@ -4,6 +4,9 @@ import {
   createScenarioRefreshRuntime,
 } from "../js/core/map_renderer/scenario_refresh_runtime.js";
 import {
+  createContextLayerResolverOwner,
+} from "../js/core/renderer/context_layer_resolver.js";
+import {
   createFrameGraphInvalidation,
   createScenarioApplyRefreshPlan,
   createScenarioChunkPromotionRefreshPlan,
@@ -19,6 +22,101 @@ import {
   resolveFirstFrameTargetResources,
   resolveScenarioChunkPromotionRendererRefreshDescriptor,
 } from "../js/core/map_renderer/scenario_refresh_plans.js";
+
+test("context layer fallback preserves active scenario political chunk authority", () => {
+  const feature = (id) => ({ type: "Feature", id, properties: { id }, geometry: null });
+  const primaryPoliticalPayload = {
+    type: "FeatureCollection",
+    features: ["PRIMARY-A", "PRIMARY-B"].map(feature),
+  };
+  const fullPoliticalPayload = {
+    type: "FeatureCollection",
+    features: ["GER", "ITA", "POL", "FRA"].map(feature),
+  };
+  const primaryTopology = {
+    objects: {
+      political: {
+        geometries: [{}, {}],
+        collection: primaryPoliticalPayload,
+      },
+    },
+  };
+  const previousTopojson = globalThis.topojson;
+  globalThis.topojson = {
+    feature: (_topology, object) => object.collection,
+  };
+  try {
+    let toolbarRefreshCount = 0;
+    let chunkScenarioId = "tno_1962";
+    const runtimeState = {
+      activeScenarioId: "tno_1962",
+      activeScenarioChunks: {
+        get scenarioId() {
+          return chunkScenarioId;
+        },
+      },
+      scenarioPoliticalChunkData: fullPoliticalPayload,
+      topologyBundleMode: "single",
+      topologyPrimary: primaryTopology,
+      landData: fullPoliticalPayload,
+      landDataFull: fullPoliticalPayload,
+      updateToolbarInputsFn: () => { toolbarRefreshCount += 1; },
+    };
+    const resolver = createContextLayerResolverOwner({
+      runtimeState,
+      caches: { layerResolverCache: {} },
+    });
+    resolver.ensureLayerDataFromTopology();
+
+    assert.equal(runtimeState.landData.features.length, 4);
+    assert.equal(runtimeState.landData.features[0].id, "GER");
+    assert.equal(runtimeState.landData.features[3].id, "FRA");
+    assert.equal(runtimeState.landDataFull.features.length, 4);
+    assert.equal(runtimeState.landDataFull.features[0].id, "GER");
+    assert.equal(runtimeState.landDataFull.features[3].id, "FRA");
+    assert.equal(toolbarRefreshCount, 1);
+
+    runtimeState.landDataFull = {
+      type: "FeatureCollection",
+      features: fullPoliticalPayload.features.map((entry) => ({ ...entry })),
+    };
+    resolver.ensureLayerDataFromTopology();
+    assert.equal(toolbarRefreshCount, 2);
+
+    chunkScenarioId = "modern_world";
+    resolver.ensureLayerDataFromTopology();
+    assert.equal(toolbarRefreshCount, 3);
+    assert.equal(runtimeState.landData.features.length, 2);
+    assert.equal(runtimeState.landData.features[0].id, "PRIMARY-A");
+    assert.equal(runtimeState.landData.features[1].id, "PRIMARY-B");
+    assert.equal(runtimeState.landDataFull.features.length, 2);
+    assert.equal(runtimeState.landDataFull.features[0].id, "PRIMARY-A");
+    assert.equal(runtimeState.landDataFull.features[1].id, "PRIMARY-B");
+
+    const baselineState = {
+      activeScenarioId: "modern_world",
+      activeScenarioChunks: { scenarioId: "" },
+      scenarioPoliticalChunkData: null,
+      topologyBundleMode: "single",
+      topologyPrimary: primaryTopology,
+      landData: fullPoliticalPayload,
+      landDataFull: fullPoliticalPayload,
+    };
+    createContextLayerResolverOwner({
+      runtimeState: baselineState,
+      caches: { layerResolverCache: {} },
+    }).ensureLayerDataFromTopology();
+
+    assert.equal(baselineState.landData.features.length, 2);
+    assert.equal(baselineState.landData.features[0].id, "PRIMARY-A");
+    assert.equal(baselineState.landData.features[1].id, "PRIMARY-B");
+    assert.equal(baselineState.landDataFull.features.length, 2);
+    assert.equal(baselineState.landDataFull.features[0].id, "PRIMARY-A");
+    assert.equal(baselineState.landDataFull.features[1].id, "PRIMARY-B");
+  } finally {
+    globalThis.topojson = previousTopojson;
+  }
+});
 
 test("scenario apply refresh plan declares complete baseline render passes", () => {
   const plan = createScenarioApplyRefreshPlan({ refreshOpeningOwnerBorders: false });

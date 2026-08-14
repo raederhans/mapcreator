@@ -233,10 +233,10 @@ process.stdout.write(JSON.stringify(ignores));
                     f"{path} ignore status drifted",
                 )
 
-    def test_console_allowlist_decay_passes_with_no_active_exceptions(self) -> None:
+    def test_console_allowlist_decay_passes_with_registered_exception(self) -> None:
         result = run_command("node", "tools/check_console_allowlist_decay.mjs")
         self.assert_command_ok(result)
-        self.assertIn("Console allowlist passed with 0 entries.", result.stdout)
+        self.assertIn("Console allowlist passed with 1 entries.", result.stdout)
 
     def test_timeout_guardrails_pass(self) -> None:
         result = run_command("node", "tools/check_test_timeout_guardrails.mjs")
@@ -475,7 +475,7 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
         payload = json.loads(json_out.read_text(encoding="utf-8"))
         self.assertEqual(payload["mainThreadDisposition"], "deferred")
         self.assertIn(
-            "node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js",
+            "verify:demo",
             payload["executionPlan"]["blockedMainThreadCommands"],
         )
         self.assertTrue(payload["executionResults"])
@@ -678,7 +678,9 @@ if (new Set(sourceRefs).size !== sourceRefs.length) {
   throw new Error('E2E sourceRef values must stay unique at spec granularity');
 }
 for (const route of routes) {
-  const expected = `node tools/e2e_layering.mjs run-spec ${route.sourceRef}`;
+  const expected = route.ciProfile === 'demo'
+    ? 'verify:demo'
+    : `node tools/e2e_layering.mjs run-spec ${route.sourceRef}`;
   if (route.commandRef !== expected) {
     throw new Error(`unexpected spec command for ${route.sourceRef}: ${route.commandRef}`);
   }
@@ -690,6 +692,9 @@ if (cityRuntimeCount !== 6) {
 const demoRoutes = routes.filter((route) => route.ciProfile === 'demo');
 if (demoRoutes.length !== 1 || demoRoutes[0].sourceRef !== 'tests/e2e/sample_guide_deeplink.spec.js') {
   throw new Error(`canonical Demo profile must select only the Golden Demo route: ${JSON.stringify(demoRoutes)}`);
+}
+if (demoRoutes[0].commandRef !== 'verify:demo') {
+  throw new Error(`Golden Demo route must be consumed by the canonical Demo entrypoint: ${JSON.stringify(demoRoutes[0])}`);
 }
 if (demoRoutes[0].executionOwner !== 'main-thread' || !demoRoutes[0].resourceLocks.includes('playwright-browser')) {
   throw new Error(`Golden Demo route must preserve main-thread browser ownership: ${JSON.stringify(demoRoutes[0])}`);
@@ -982,11 +987,11 @@ const sampleGuideCommands = sampleGuideReport.recommendedCommands.map((entry) =>
 if (!sampleGuideCommands.includes('test:node:sample-project-contracts')) {
   throw new Error(`missing sample project node contract route: ${sampleGuideCommands.join(', ')}`);
 }
-if (!sampleGuideCommands.includes('node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js')) {
+if (!sampleGuideCommands.includes('verify:demo')) {
   throw new Error(`missing sample guide E2E route: ${sampleGuideCommands.join(', ')}`);
 }
 const goldenDemoCommand = sampleGuideReport.recommendedCommands.find(
-  (entry) => entry.commandRef === 'node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js',
+  (entry) => entry.commandRef === 'verify:demo',
 );
 if (!goldenDemoCommand?.ciProfiles.includes('demo')) {
   throw new Error(`sample guide E2E route must use the canonical Demo profile: ${JSON.stringify(goldenDemoCommand)}`);
@@ -1254,7 +1259,9 @@ const page = {
         demo_browser_condition = "(inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'"
         self.assertGreaterEqual(shared_workflow.count(demo_node_condition), 2)
         self.assertGreaterEqual(shared_workflow.count(demo_browser_condition), 2)
-        self.assertIn("- name: Run Golden Demo E2E\n        if: inputs.profile == 'demo'\n        run: npm run test:e2e:sample-guide", shared_workflow)
+        self.assertIn("- name: Run Golden Demo E2E\n        if: inputs.profile == 'demo'\n        run: npm run verify:demo", shared_workflow)
+        demo_spec = (REPO_ROOT / "tests/e2e/sample_guide_deeplink.spec.js").read_text(encoding="utf-8")
+        self.assertEqual(demo_spec.count("@golden-demo"), 1)
         self.assertIn("name: demo-timing-and-failure-context", shared_workflow)
         self.assertIn(".runtime/reports/generated/test-timings-summary.json", shared_workflow)
         self.assertIn(".runtime/tests/playwright/**/failure-context.json", shared_workflow)

@@ -18,7 +18,9 @@ import {
   setActivePaletteSource,
 } from "../js/core/palette_manager.js";
 import {
+  hasPendingScenarioChunkWork,
   publishScenarioPaletteAndToolbarState,
+  shouldSuppressChunkedPostApplyDataHealthSignals,
 } from "../js/core/scenario_post_apply_effects.js";
 import {
   createDefaultScenarioHydrationHealthGate,
@@ -250,6 +252,43 @@ function createFeatures(count) {
     geometry: null,
   }));
 }
+
+test("chunked coarse data health signals remain internal until full derived state settles", () => {
+  assert.equal(shouldSuppressChunkedPostApplyDataHealthSignals({
+    hasChunkedRuntime: true,
+    prewarmFailed: false,
+    chunkErrorCount: 0,
+  }), true);
+  assert.equal(shouldSuppressChunkedPostApplyDataHealthSignals({
+    hasChunkedRuntime: true,
+    prewarmFailed: true,
+    chunkErrorCount: 0,
+  }), false);
+  assert.equal(shouldSuppressChunkedPostApplyDataHealthSignals({
+    hasChunkedRuntime: true,
+    prewarmFailed: false,
+    chunkErrorCount: 1,
+  }), false);
+  assert.equal(shouldSuppressChunkedPostApplyDataHealthSignals({
+    hasChunkedRuntime: false,
+    prewarmFailed: false,
+    chunkErrorCount: 0,
+  }), false);
+});
+
+test("chunk health settle waits for scheduler loading deferred and post-commit states", () => {
+  assert.equal(hasPendingScenarioChunkWork({ shellStatus: "loading" }), true);
+  assert.equal(hasPendingScenarioChunkWork({ shellStatus: "ready", pendingReason: "zoom-end" }), true);
+  assert.equal(hasPendingScenarioChunkWork({ shellStatus: "ready", pendingPostCommitRefresh: {} }), true);
+  assert.equal(hasPendingScenarioChunkWork({
+    shellStatus: "ready",
+    pendingReason: "",
+    refreshScheduled: false,
+    promotionScheduled: false,
+    promotionCommitInFlight: false,
+    inFlightByChunkId: {},
+  }), false);
+});
 
 function createRenderableScenarioTopology() {
   return {
@@ -2204,6 +2243,39 @@ test("scenario data health uses chunked political payload as the expected featur
   assert.ok(health.ratio >= 1);
   assert.equal(health.warning, "");
   assert.equal(health.severity, "");
+});
+
+test("scenario status uses a healthy live evaluation after a coarse warning settles", async () => {
+  const { formatScenarioStatusText } = await import("../js/core/scenario_manager.js");
+  withAppStatePatch({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: {
+      scenario_id: "tno_1962",
+      display_name: "TNO 1962",
+      detail_chunk_manifest_url: "data/scenarios/tno_1962/detail_chunks.manifest.json",
+      summary: { feature_count: 1200 },
+    },
+    landDataFull: { type: "FeatureCollection", features: createFeatures(1210) },
+    landData: { type: "FeatureCollection", features: createFeatures(1200) },
+    runtimePoliticalTopology: null,
+    scenarioPoliticalChunkData: { type: "FeatureCollection", features: createFeatures(1200) },
+    scenarioPoliticalVisibleChunkData: null,
+    activeScenarioChunks: {
+      scenarioId: "tno_1962",
+      mergedLayerPayloads: {
+        political: { type: "FeatureCollection", features: createFeatures(1200) },
+      },
+    },
+    scenarioDataHealth: {
+      warning: "Detail topology not fully loaded; scenario is shown in coarse mode.",
+      minRatio: 0.7,
+    },
+    scenarioHydrationHealthGate: null,
+    scenarioGeneratedColorTags: [],
+  }, () => {
+    const status = formatScenarioStatusText();
+    assert.doesNotMatch(status, /Detail topology not fully loaded/);
+  });
 });
 
 test("scenario rollback restores visible political data and advances scene data identity", () => withAppStateRestored(() => {

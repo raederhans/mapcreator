@@ -174,7 +174,7 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
   assert.ok(boundaryEntry);
   assert.ok(exactPhaseEntry);
 
-  for (const entry of [actionEntry, boundaryEntry]) {
+  for (const entry of [actionEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
     assert.equal(entry.executionOwner, "child-safe");
@@ -182,6 +182,11 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
   }
+  assert.equal(boundaryEntry.executionOwner, "main-thread");
+  assert.equal(boundaryEntry.cost, "heavy");
+  assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(boundaryEntry.ciProfile, "full");
+  assert.equal(boundaryEntry.routeRegistry, true);
   assert.equal(exactPhaseEntry.executionOwner, "main-thread");
   assert.equal(exactPhaseEntry.cost, "heavy");
   assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);
@@ -236,6 +241,13 @@ test("P4.3 routes include the render perf owner and its behavior contract", () =
   }
 
   const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");
+  const boundaryEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-3-renderer-boundary"
+  ));
+  assert.equal(boundaryEntry.executionOwner, "main-thread");
+  assert.equal(boundaryEntry.cost, "heavy");
+  assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(boundaryEntry.ciProfile, "full");
   assert.ok(
     exactEntry.sourceRefs.includes(
       "tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs",
@@ -292,7 +304,7 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
   assert.ok(boundaryEntry);
   assert.ok(exactPhaseEntry);
 
-  for (const entry of [actionEntry, boundaryEntry]) {
+  for (const entry of [actionEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
     assert.equal(entry.executionOwner, "child-safe");
@@ -300,6 +312,11 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
   }
+  assert.equal(boundaryEntry.executionOwner, "main-thread");
+  assert.equal(boundaryEntry.cost, "heavy");
+  assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(boundaryEntry.ciProfile, "full");
+  assert.equal(boundaryEntry.routeRegistry, true);
   assert.equal(exactPhaseEntry.executionOwner, "main-thread");
   assert.equal(exactPhaseEntry.cost, "heavy");
   assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);
@@ -337,13 +354,18 @@ test("P4.2b scenario chunk actions keep focused checks child-safe and exact veri
     entry.id === "p4:p4-2b-exact-phase"
   ));
 
-  for (const entry of [actionEntry, boundaryEntry]) {
+  for (const entry of [actionEntry]) {
     assert.ok(entry);
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
     assert.equal(entry.executionOwner, "child-safe");
     assert.equal(entry.routeRegistry, true);
   }
+  assert.equal(boundaryEntry.executionOwner, "main-thread");
+  assert.equal(boundaryEntry.cost, "heavy");
+  assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(boundaryEntry.ciProfile, "full");
+  assert.equal(boundaryEntry.routeRegistry, true);
   assert.equal(exactPhaseEntry.executionOwner, "main-thread");
   assert.equal(exactPhaseEntry.cost, "heavy");
   assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);
@@ -390,7 +412,7 @@ test("P4.2c Scenario health actions keep focused checks child-safe and exact ver
     entry.id === "p4:p4-2c-exact-phase"
   ));
 
-  for (const entry of [actionEntry, boundaryEntry]) {
+  for (const entry of [actionEntry]) {
     assert.ok(entry);
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
@@ -399,6 +421,11 @@ test("P4.2c Scenario health actions keep focused checks child-safe and exact ver
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
   }
+  assert.equal(boundaryEntry.executionOwner, "main-thread");
+  assert.equal(boundaryEntry.cost, "heavy");
+  assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(boundaryEntry.ciProfile, "full");
+  assert.equal(boundaryEntry.routeRegistry, true);
   assert.equal(exactPhaseEntry.executionOwner, "main-thread");
   assert.equal(exactPhaseEntry.cost, "heavy");
   assert.deepEqual(exactPhaseEntry.resourceLocks, [".runtime-output"]);

@@ -746,7 +746,7 @@ test("chunk runtime source preserves scenario apply epoch on async promotion sna
   [
     "scenarioApplyEpochBySelectionVersion",
     "selectionScenarioApplyEpoch",
-    "pendingPromotion.scenarioApplyEpoch",
+    "pendingPromotion?.scenarioApplyEpoch",
     "promotionScenarioApplyEpoch",
     "recordRenderTransactionSnapshotBase",
   ].forEach((token) => assert.ok(chunkRuntime.includes(token), `chunk runtime should include ${token}`));

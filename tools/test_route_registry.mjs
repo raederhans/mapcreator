@@ -109,7 +109,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:core-verification-runner",
     commandRef: "test:node:verify-core-runner",
-    sourceRef: "tools/run_core_verification.mjs,tools/verification/resumable_verification.mjs,tools/verification/command_supersession.mjs,tests/verify_core_runner_behavior.test.mjs,docs/testing/verify-core.md,docs/active/test-verification-reform-20260813,package.json",
+    sourceRef: "tools/run_core_verification.mjs,tools/verification/resumable_verification.mjs,tools/verification/command_supersession.mjs,tests/verify_core_runner_behavior.test.mjs,docs/testing/verify-core.md,docs/active/test-verification-reform-20260813,docs/active/mapcreator-recovery-gates-20260814,package.json",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -716,7 +716,7 @@ export function buildE2eRoutes() {
   const specs = Array.isArray(manifest?.specs) ? manifest.specs : [];
   return specs.map((spec) => ({
     id: `e2e:${spec.specPath}`,
-    commandRef: `node tools/e2e_layering.mjs run-spec ${spec.specPath}`,
+    commandRef: spec.commandRef ?? `node tools/e2e_layering.mjs run-spec ${spec.specPath}`,
     sourceRef: spec.specPath,
     domain: spec.domain,
     ownerHint: spec.ownerHint,
