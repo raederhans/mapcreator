@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "generated_at": "2026-06-03T16:28:29.249685+00:00",
+  "generated_at": "2026-08-14T20:52:35.840939+00:00",
   "outputs": {
     "europe_topology.json": {
       "role": "primary_topology",
       "artifact_class": "derived",
       "owner": "init_map_data.primary_topology_bundle",
       "description": "Primary political topology emitted by the coarse GIS pipeline.",
-      "size_bytes": 4860961,
-      "sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+      "size_bytes": 4865136,
+      "sha256": "fb14c9f83cc27fd9884ecffbb3624debea5f5f86fc2be269e2c0bc645f5bacd9",
       "schema_ref": "schema://topology/political_bundle_v1",
       "simplification": "coarse_publish_v1",
       "target_zoom_range": [
@@ -28,8 +28,8 @@
       ],
       "political_geometries": 209,
       "has_computed_neighbors": true,
-      "arc_count": 67765,
-      "arc_point_count": 421346,
+      "arc_count": 67795,
+      "arc_point_count": 422483,
       "world_bounds_geometries": 0,
       "raw_world_bounds_geometries": 0
     },
@@ -243,8 +243,8 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8463198,
-      "sha256": "08a080618db3144b12992b22570c86d03bf06390e8468e2ba3b04e38fe0cdc56",
+      "size_bytes": 8466309,
+      "sha256": "60ad7a0f9e6fcce5113ef981992f87d22c2bc1bd8b22f3dd8fa118836c530a27",
       "type": "locales",
       "geo_entry_count": 73684,
       "ui_entry_count": 1847
@@ -1490,4 +1490,4 @@
       "political_wgi_state_capacity_v1": "thematic_layer:political_wgi_state_capacity_v1"
     }
   }
-}
+}\n
