@@ -3,7 +3,6 @@
 // toolbar.js 继续保留 overlay 外壳、跨面板仲裁、URL/focus 协调和 open/close facade。
 
 import { resolveSampleExportRecommendationContext } from "../../core/sample_export_recommendation.js";
-import { createExportArtifactPipeline } from "./export_artifact_pipeline.js";
 import {
   EXPORT_BAKE_OUTPUT_MODELS,
   EXPORT_BAKE_OUTPUT_MODEL_BY_ID,
@@ -142,20 +141,12 @@ function createExportWorkbenchController({
   exportSectionSummaryFormat = null,
   exportSectionSummaryScale = null,
   onRequestClose = null,
-  artifactPipeline = null,
-  renderExportPassesToCanvas = null,
+  artifactPipeline,
   exportMaxConcurrentJobs = 1,
 } = {}) {
   assertRequiredCallableDependency(showToast, "showToast");
   assertRequiredCallableDependency(showExportFailureToast, "showExportFailureToast");
-  const resolvedArtifactPipeline = artifactPipeline || createExportArtifactPipeline({
-    state,
-    normalizeExportWorkbenchUiState,
-    renderPassNames,
-    renderExportPassesToCanvas,
-    exportScale,
-  });
-  assertArtifactPipeline(resolvedArtifactPipeline);
+  assertArtifactPipeline(artifactPipeline);
 
   const {
     applyExportAdjustmentsToCanvas,
@@ -169,7 +160,7 @@ function createExportWorkbenchController({
     getSelectedExportScale,
     triggerBlobDownload,
     triggerCanvasDownload,
-  } = resolvedArtifactPipeline;
+  } = artifactPipeline;
 
   let exportWorkbenchDraggedLayerId = "";
   let exportWorkbenchPreviewRenderToken = 0;
