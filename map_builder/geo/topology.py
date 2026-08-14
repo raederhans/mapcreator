@@ -10,6 +10,13 @@ import geopandas as gpd
 import topojson as tp
 
 from map_builder import config as cfg
+from map_builder.geo.spherical_safety import (
+    PRIMARY_POLAR_WATER_IDS,
+    prepare_primary_polar_water_regions,
+    repair_primary_polar_water_topology_orientation,
+    validate_primary_polar_water_gdf,
+    validate_primary_polar_water_topology,
+)
 from map_builder.geo.utils import round_geometries
 
 URBAN_CORRUPT_BOUNDS_WIDTH_DEG = 300.0
@@ -407,7 +414,6 @@ def build_topology(
         write_layer_geojson(special_zones, "special_zones")
         candidates.append(("special_zones", special_zones))
     if water_regions is not None:
-        write_layer_geojson(water_regions, "water_regions")
         candidates.append(("water_regions", water_regions))
     candidates.extend(
         [
@@ -430,6 +436,15 @@ def build_topology(
         gdf = round_geometries(gdf)
         # Rounding can create self-intersections on tight rings; scrub again.
         gdf = scrub_geometry(gdf)
+        if name == "water_regions":
+            gdf = prepare_primary_polar_water_regions(gdf)
+            present_ids = set(gdf["id"].fillna("").astype(str).str.strip())
+            validate_primary_polar_water_gdf(
+                gdf,
+                require_all=bool(PRIMARY_POLAR_WATER_IDS.intersection(present_ids)),
+                stage_label="primary_topology.pre_encode",
+            )
+            write_layer_geojson(gdf, "water_regions")
         if name == "urban":
             _validate_urban_layer_input(gdf)
         if not has_valid_bounds(gdf):
@@ -575,6 +590,30 @@ def build_topology(
             f"id mismatches={mismatch_id_count}"
         )
     _validate_urban_topology_output(topo_dict)
+    water_object = topo_dict.get("objects", {}).get("water_regions")
+    if isinstance(water_object, dict):
+        water_geometries = water_object.get("geometries", [])
+        water_ids = {
+            str((geometry.get("properties") or {}).get("id") or geometry.get("id") or "").strip()
+            for geometry in water_geometries
+            if isinstance(geometry, dict)
+        }
+        require_all_polar_ids = bool(PRIMARY_POLAR_WATER_IDS.intersection(water_ids))
+        try:
+            validate_primary_polar_water_topology(
+                topo_dict,
+                require_all=require_all_polar_ids,
+                stage_label="primary_topology.round_trip",
+            )
+        except ValueError:
+            modified_part_count = repair_primary_polar_water_topology_orientation(topo_dict)
+            if modified_part_count == 0:
+                raise
+            validate_primary_polar_water_topology(
+                topo_dict,
+                require_all=require_all_polar_ids,
+                stage_label="primary_topology.round_trip_repaired",
+            )
 
     # Verify top-level IDs are strings, not numeric indices
     sample_ids = [g.get("id") for g in geometries[:5]]

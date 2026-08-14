@@ -1575,6 +1575,17 @@ def build_water_regions(
         )
         water_regions = _build_water_region_records_gdf(water_regions.to_dict("records"))
     water_regions = _compute_water_region_neighbors(water_regions)
+    from map_builder.geo.spherical_safety import (
+        prepare_primary_polar_water_regions,
+        validate_primary_polar_water_gdf,
+    )
+
+    water_regions = prepare_primary_polar_water_regions(water_regions)
+    validate_primary_polar_water_gdf(
+        water_regions,
+        require_all=True,
+        stage_label="build_water_regions",
+    )
     print(f"[Water Regions] Built {len(water_regions)} named water regions.")
     return water_regions
 

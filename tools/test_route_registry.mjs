@@ -402,6 +402,23 @@ const INFRASTRUCTURE_ROUTES = [
 
 const PYTHON_FAST_CONTRACTS = [
   {
+    id: "python:polar-water-spherical-safety",
+    commandRef: "python -m pytest tests/test_polar_water_spherical_safety.py -q",
+    sourceRef: [
+      "init_map_data.py",
+      "map_builder/geo/topology.py",
+      "map_builder/geo/spherical_safety.py",
+      "tests/test_polar_water_spherical_safety.py",
+    ].join(","),
+    domain: "geo-contract",
+    ownerHint: "polar-water-spherical-safety",
+    layer: "heavy",
+    cost: "heavy",
+    resourceLocks: ["heavy-geo", ".runtime-output"],
+    executionOwner: "main-thread",
+    ciProfile: "full",
+  },
+  {
     id: "python:backend-cloud-support",
     commandRef: "test:py:backend-cloud-support",
     sourceRef: "map_backend,tools/dev_server.py,tests/test_backend_service.py,tests/test_backend_routes.py,tests/test_dev_server.py",
