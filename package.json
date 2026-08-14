@@ -22,6 +22,7 @@
     "test:node:appearance-parent-border-owner": "node --test tests/appearance_parent_border_owner_behavior.test.mjs",
     "test:node:appearance-physical-owner": "node --test tests/appearance_physical_owner_behavior.test.mjs",
     "test:node:appearance-presets": "node --test tests/appearance_preset_state.node.test.mjs tests/appearance_presets_owner_behavior.test.mjs tests/appearance_preset_history.node.test.mjs",
+    "test:node:appearance-transport-change-set": "node --test tests/appearance_transport_change_set_contract_behavior.test.mjs tests/appearance_transport_operation_behavior.test.mjs",
     "test:node:appearance-reference-owner": "node --test tests/appearance_reference_owner_behavior.test.mjs",
     "test:node:appearance-rivers-owner": "node --test tests/appearance_rivers_owner_behavior.test.mjs",
     "test:node:appearance-texture-owner": "node --test tests/appearance_texture_owner_behavior.test.mjs",

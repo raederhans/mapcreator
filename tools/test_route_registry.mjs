@@ -659,6 +659,7 @@ function resolveNodeRouteDomain(scriptName, sourceRefs) {
   ) return "state-ownership";
   if (haystack.includes("supervisor") || haystack.includes("ai_test_supervisor") || haystack.includes("sf-ats")) return "test-routing";
   if (haystack.includes("backend")) return "backend-cloud-support";
+  if (haystack.includes("appearance_transport") || haystack.includes("appearance-transport")) return "transport-workbench";
   if (haystack.includes("city") || haystack.includes("urban")) return "city-runtime";
   if (haystack.includes("startup")) return "startup";
   if (haystack.includes("scenario") || haystack.includes("lifecycle_runtime")) return "scenario-runtime";
