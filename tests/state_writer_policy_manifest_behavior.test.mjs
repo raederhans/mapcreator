@@ -5018,6 +5018,68 @@ test("same-phase policy rebuild refreshes live caller evidence", () => {
   );
 });
 
+test("later same-phase policy rebuild freezes earlier-phase caller evidence", () => {
+  const entry = createCallerActionLedgerEntry(0);
+  const initialEdge = createActionDelegationObservation(entry);
+  const [normalizedInitialEdge] =
+    normalizeStateActionDelegations([initialEdge]);
+  Object.assign(entry, {
+    actionCallEdgeIdentity:
+      normalizedInitialEdge.actionCallEdgeIdentity,
+    occurrenceIndex: normalizedInitialEdge.occurrenceIndex,
+  });
+  const previousPolicy = createCallerActionLedgerPolicy([entry]);
+  previousPolicy.progress.latestPhase = "P4.3";
+  const movedEdge = {
+    ...initialEdge,
+    callerBindingId: "module:runtimeState:shifted",
+    start: initialEdge.start + 500,
+    end: initialEdge.end + 500,
+    line: initialEdge.line + 17,
+    column: initialEdge.column + 2,
+    sourceFingerprint: "e".repeat(64),
+  };
+
+  const ledger = buildCallerToActionLedger({
+    phase: "P4.3",
+    previousPolicy,
+    writers: previousPolicy.writers,
+    retiredLegacySemanticAuthority:
+      previousPolicy.progress.retiredLegacySemanticAuthority,
+    actionDelegations: [movedEdge],
+  });
+
+  assert.deepEqual(
+    {
+      callerBindingId: ledger.entries[0].callerBindingId,
+      start: ledger.entries[0].start,
+      end: ledger.entries[0].end,
+      line: ledger.entries[0].line,
+      column: ledger.entries[0].column,
+      sourceFingerprint: ledger.entries[0].sourceFingerprint,
+    },
+    {
+      callerBindingId: entry.callerBindingId,
+      start: entry.start,
+      end: entry.end,
+      line: entry.line,
+      column: entry.column,
+      sourceFingerprint: entry.sourceFingerprint,
+    },
+  );
+  assert.throws(
+    () => buildCallerToActionLedger({
+      phase: "P4.3",
+      previousPolicy,
+      writers: previousPolicy.writers,
+      retiredLegacySemanticAuthority:
+        previousPolicy.progress.retiredLegacySemanticAuthority,
+      actionDelegations: [],
+    }),
+    (error) => error?.code === "caller-action-ledger-proof-missing",
+  );
+});
+
 test("state action policy bindings admit only explicitly registered dynamic state paths", () => {
   const modulePath = "js/core/state/actions/renderer_diagnostics_actions.js";
   const dynamicSite = {
@@ -5668,6 +5730,68 @@ test("checker proves added transition provenance against the previous accepted p
       "derived-alias-taint-transition-canonical-checkpoint-mismatch",
       "derived-alias-taint-transition-policy-blob-mismatch",
       "progress-accepted-policy-checkpoint-mismatch",
+    ],
+  );
+});
+
+test("same-phase transition checkpoint keeps the committed progress checkpoint frozen", () => {
+  const sourceSha = "2".repeat(40);
+  const previousPolicy = {
+    schemaVersion: 2,
+    baselines: {
+      derivedAliasTaint: { transitionCheckpoints: [] },
+    },
+    progress: {
+      latestPhase: "P4.3",
+      checkpoints: [{
+        phase: "P4.3",
+        previousAcceptedSourceSha: "4".repeat(40),
+        previousAcceptedPolicyBlobSha256: "5".repeat(64),
+      }],
+    },
+  };
+  const source = `${JSON.stringify(previousPolicy, null, 2)}\n`;
+  const policyBlobSha256 = createHash("sha256")
+    .update(source)
+    .digest("hex");
+  const currentPolicy = structuredClone(previousPolicy);
+  currentPolicy.baselines.derivedAliasTaint.transitionCheckpoints.push({
+    sourceSha,
+    policyBlobSha256,
+    paths: ["js/fixture.js"],
+  });
+
+  assert.deepEqual(
+    validateDerivedAliasTaintTransitionCheckpointProof({
+      previousPolicy,
+      currentPolicy,
+      acceptedPolicyCheckpoint: {
+        sourceSha,
+        policyBlobSha256,
+      },
+      readPolicySourceAtRevision: () => source,
+      isSourceAncestor: () => true,
+    }),
+    [],
+  );
+
+  const tampered = structuredClone(currentPolicy);
+  tampered.baselines.derivedAliasTaint.transitionCheckpoints[0]
+    .policyBlobSha256 = "3".repeat(64);
+  assert.deepEqual(
+    validateDerivedAliasTaintTransitionCheckpointProof({
+      previousPolicy,
+      currentPolicy: tampered,
+      acceptedPolicyCheckpoint: {
+        sourceSha,
+        policyBlobSha256,
+      },
+      readPolicySourceAtRevision: () => source,
+      isSourceAncestor: () => true,
+    }).map(({ code }) => code),
+    [
+      "derived-alias-taint-transition-canonical-checkpoint-mismatch",
+      "derived-alias-taint-transition-policy-blob-mismatch",
     ],
   );
 });

@@ -2364,6 +2364,9 @@ export function buildCallerToActionLedger({
   const normalizedEdges =
     normalizeStateActionDelegations(actionDelegations);
   const actionMembershipIndex = buildActionMembershipIndex(writers);
+  const previousPhase = String(
+    previousPolicy?.progress?.latestPhase || "",
+  );
   const missingProofs = [];
   for (const entry of entriesByRetiredIdentity.values()) {
     const retiredMembership =
@@ -2468,19 +2471,24 @@ export function buildCallerToActionLedger({
         // first exact call site while distinct action owners remain ambiguous.
         [liveEdge] = successorEdges;
       }
-      Object.assign(proof, {
-        callerBindingId: liveEdge.callerBindingId,
-        actionModulePath: liveEdge.actionModulePath,
-        actionExportName: liveEdge.actionExportName,
-        targetArgumentIndex: liveEdge.targetArgumentIndex,
-        actionCallEdgeIdentity: liveEdge.actionCallEdgeIdentity,
-        occurrenceIndex: liveEdge.occurrenceIndex,
-        start: liveEdge.start,
-        end: liveEdge.end,
-        line: liveEdge.line,
-        column: liveEdge.column,
-        sourceFingerprint: liveEdge.sourceFingerprint,
-      });
+      const refreshLiveObservation =
+        previousPhase !== normalizedPhase
+        || String(entry?.recordedInPhase || "") === normalizedPhase;
+      if (refreshLiveObservation) {
+        Object.assign(proof, {
+          callerBindingId: liveEdge.callerBindingId,
+          actionModulePath: liveEdge.actionModulePath,
+          actionExportName: liveEdge.actionExportName,
+          targetArgumentIndex: liveEdge.targetArgumentIndex,
+          actionCallEdgeIdentity: liveEdge.actionCallEdgeIdentity,
+          occurrenceIndex: liveEdge.occurrenceIndex,
+          start: liveEdge.start,
+          end: liveEdge.end,
+          line: liveEdge.line,
+          column: liveEdge.column,
+          sourceFingerprint: liveEdge.sourceFingerprint,
+        });
+      }
     }
   }
   for (const retiredMembershipIdentity of retiredMembershipIdentities) {

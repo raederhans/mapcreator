@@ -814,6 +814,9 @@ export function validateDerivedAliasTaintTransitionCheckpointProof({
     }
   }
   if (addedCheckpoints.length) {
+    const previousPhase = String(
+      previousPolicy?.progress?.latestPhase || "",
+    );
     const latestPhase = String(
       currentPolicy?.progress?.latestPhase || "",
     );
@@ -821,11 +824,14 @@ export function validateDerivedAliasTaintTransitionCheckpointProof({
       currentPolicy?.progress?.checkpoints || []
     ).find(({ phase }) => String(phase || "") === latestPhase);
     if (
-      addedCheckpoints.length !== 1
-      || progressCheckpoint?.previousAcceptedSourceSha
-        !== addedCheckpoints[0]?.sourceSha
-      || progressCheckpoint?.previousAcceptedPolicyBlobSha256
-        !== addedCheckpoints[0]?.policyBlobSha256
+      previousPhase !== latestPhase
+      && (
+        addedCheckpoints.length !== 1
+        || progressCheckpoint?.previousAcceptedSourceSha
+          !== addedCheckpoints[0]?.sourceSha
+        || progressCheckpoint?.previousAcceptedPolicyBlobSha256
+          !== addedCheckpoints[0]?.policyBlobSha256
+      )
     ) {
       violations.push({
         code: "progress-accepted-policy-checkpoint-mismatch",
