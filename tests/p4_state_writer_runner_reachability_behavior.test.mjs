@@ -25,6 +25,7 @@ const EXPECTED_DEFAULT_SUITES = Object.freeze([
   "tests/state_writer_policy_evidence_behavior.test.mjs",
   "tests/p4_state_action_routes_behavior.test.mjs",
   "tests/p4_state_writer_runner_reachability_behavior.test.mjs",
+  "tests/p4_state_writer_streaming_runner_behavior.test.mjs",
 ]);
 
 test("named P4 policy gate delegates to the complete runner default suite", () => {
