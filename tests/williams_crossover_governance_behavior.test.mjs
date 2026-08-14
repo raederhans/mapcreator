@@ -34,6 +34,9 @@ import {
   validateWilliamsOutputPolicy,
   WilliamsInvalidExperimentError,
 } from "../tools/perf/run_williams_crossover.mjs";
+import {
+  buildOrderedContainmentSourceSet,
+} from "../tools/process_containment/ordered_source_set_identity.mjs";
 
 const CONTROL_HEAD = "a".repeat(40);
 const CANDIDATE_HEAD = "b".repeat(40);
@@ -151,6 +154,23 @@ function artifactDescriptor(relativePath = "artifact") {
   return { path: relativePath, gitBlob: "d".repeat(40), lfNormalizedSha256: HASH };
 }
 
+function jobRunnerSourceSet(overrides = {}) {
+  const sources = [
+    artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
+    artifactDescriptor("tools/process_containment/windows_job_runner_core.cs"),
+  ].map((descriptor, index) => ({ ...descriptor, ...(overrides[index] || {}) }));
+  return structuredClone(buildOrderedContainmentSourceSet(sources));
+}
+
+function refreshSourceSetDigest(sourceSet) {
+  const refreshed = structuredClone(buildOrderedContainmentSourceSet(sourceSet.sources));
+  sourceSet.schemaVersion = refreshed.schemaVersion;
+  sourceSet.kind = refreshed.kind;
+  sourceSet.sha256 = refreshed.sha256;
+  sourceSet.sources = refreshed.sources;
+  return sourceSet;
+}
+
 function jobRunnerBinaryDescriptor() {
   return {
     path: JOB_RUNNER_EVIDENCE_PATH,
@@ -192,7 +212,10 @@ function jobObjectEvidence(rootPid = 4242, {
   };
 }
 
-function jobRunnerPreparation(source = artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs")) {
+function jobRunnerPreparation(
+  source = artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
+  sourceSet = jobRunnerSourceSet(),
+) {
   const capabilityCommand = {
     bin: process.execPath,
     args: ["-e", "process.stdout.write('williams-job-runner-ready')"],
@@ -205,6 +228,7 @@ function jobRunnerPreparation(source = artifactDescriptor("tools/perf/williams_c
     compiledAt: "2026-07-10T23:59:00.000Z",
     capabilityProbedAt: "2026-07-10T23:59:30.000Z",
     source: structuredClone(source),
+    sourceSet: structuredClone(sourceSet),
     binary: jobRunnerBinaryDescriptor(),
     capabilityCommand,
     capabilityEvidence: jobObjectEvidence(3999, {
@@ -289,6 +313,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     expectedPowerSchemeGuid: EXPECTED_POWER_SCHEME_GUID,
     powerSchemeHelper: artifactDescriptor("tools/perf/williams_crossover_power_scheme.ps1"),
     jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
+    jobRunnerSources: jobRunnerSourceSet(),
     jobRunnerBinary: jobRunnerBinaryDescriptor(),
   });
   const blocks = WILLIAMS_BLOCK_SEQUENCE.map((block) => {
@@ -347,7 +372,9 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
           analyzer: artifactDescriptor("tools/perf/run_williams_crossover.mjs"),
           policy: artifactDescriptor("tools/perf/williams_crossover_policy.mjs"),
           windowsRuntime: artifactDescriptor("tools/perf/williams_crossover_windows_runtime.mjs"),
+          containmentIdentityHelper: artifactDescriptor("tools/process_containment/ordered_source_set_identity.mjs"),
           jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
+          jobRunnerSources: jobRunnerSourceSet(),
           powerSchemeHelper: artifactDescriptor("tools/perf/williams_crossover_power_scheme.ps1"),
           jobRunnerBinary: jobRunnerBinaryDescriptor(),
         },
@@ -401,7 +428,10 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
   });
   return {
     preregistration,
-    jobRunnerPreparation: jobRunnerPreparation(preregistration.workloadContract.processContainment.identity.source),
+    jobRunnerPreparation: jobRunnerPreparation(
+      preregistration.workloadContract.processContainment.identity.source,
+      preregistration.workloadContract.processContainment.identity.sourceSet,
+    ),
     powerSchemeLifecycle: powerSchemeLifecycle(),
     blocks,
     manifestValidation: { status: "valid", errors: [], measuredRawFileCount: 32 },
@@ -425,6 +455,7 @@ async function materializeEvidenceRoot(evidence) {
   currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   evidence.preregistration.workloadContract.processContainment.identity = {
     source: currentToolIdentity.jobRunnerSource,
+    sourceSet: currentToolIdentity.jobRunnerSources,
     binary: currentToolIdentity.jobRunnerBinary,
   };
   evidence.preregistration.telemetry.powerSchemeHelper = currentToolIdentity.powerSchemeHelper;
@@ -432,12 +463,14 @@ async function materializeEvidenceRoot(evidence) {
     block.identity.artifacts.analyzer = currentToolIdentity.analyzer;
     block.identity.artifacts.policy = currentToolIdentity.policy;
     block.identity.artifacts.windowsRuntime = currentToolIdentity.windowsRuntime;
+    block.identity.artifacts.containmentIdentityHelper = currentToolIdentity.containmentIdentityHelper;
     block.identity.artifacts.jobRunnerSource = currentToolIdentity.jobRunnerSource;
+    block.identity.artifacts.jobRunnerSources = currentToolIdentity.jobRunnerSources;
     block.identity.artifacts.powerSchemeHelper = currentToolIdentity.powerSchemeHelper;
     block.identity.artifacts.jobRunnerBinary = currentToolIdentity.jobRunnerBinary;
   }
   await writeJson(path.join(root, "preregistration.json"), evidence.preregistration);
-  const preparation = jobRunnerPreparation(currentToolIdentity.jobRunnerSource);
+  const preparation = jobRunnerPreparation(currentToolIdentity.jobRunnerSource, currentToolIdentity.jobRunnerSources);
   preparation.binary = currentToolIdentity.jobRunnerBinary;
   evidence.jobRunnerPreparation = preparation;
   await writeJson(path.join(root, "harness", "job-runner-preparation.json"), preparation);
@@ -1309,7 +1342,9 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   const extraRoot = await materializeEvidenceRoot(createEvidence());
   const tamperRoot = await materializeEvidenceRoot(createEvidence());
   const toolRoot = await materializeEvidenceRoot(createEvidence());
-  t.after(() => Promise.all([extraRoot, tamperRoot, toolRoot].map((root) => fs.rm(root, { recursive: true, force: true }))));
+  const identityHelperRoot = await materializeEvidenceRoot(createEvidence());
+  t.after(() => Promise.all([extraRoot, tamperRoot, toolRoot, identityHelperRoot]
+    .map((root) => fs.rm(root, { recursive: true, force: true }))));
 
   const extraManifestPath = path.join(extraRoot, "raw-sha256-manifest.json");
   const extraManifest = JSON.parse(await fs.readFile(extraManifestPath, "utf8"));
@@ -1329,6 +1364,14 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   const toolReport = await analyzeWilliamsCrossoverRawRoot(toolRoot);
   assert.ok(toolReport.manifestValidation.errors.includes("manifest.toolIdentity.policy.current"));
   assert.equal(toolReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+
+  const identityHelperManifestPath = path.join(identityHelperRoot, "raw-sha256-manifest.json");
+  const identityHelperManifest = JSON.parse(await fs.readFile(identityHelperManifestPath, "utf8"));
+  identityHelperManifest.toolIdentity.containmentIdentityHelper.lfNormalizedSha256 = "f".repeat(64);
+  await writeJson(identityHelperManifestPath, identityHelperManifest);
+  const identityHelperReport = await analyzeWilliamsCrossoverRawRoot(identityHelperRoot);
+  assert.ok(identityHelperReport.manifestValidation.errors.includes("manifest.toolIdentity.containmentIdentityHelper.current"));
+  assert.equal(identityHelperReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
 });
 
 test("Windows Job cleanup evidence fails admission closed for any unverified process", () => {
@@ -1425,6 +1468,35 @@ test("Job runner preparation fails closed on schema, timestamp, identity, and ca
   }
 });
 
+test("Williams V1 identity binds the ordered entrypoint and shared-core source set", () => {
+  const entrypointDrift = createEvidence();
+  entrypointDrift.blocks[0].identity.artifacts.jobRunnerSources.sources[0].lfNormalizedSha256 = "e".repeat(64);
+  refreshSourceSetDigest(entrypointDrift.blocks[0].identity.artifacts.jobRunnerSources);
+  let report = analyzeWilliamsCrossoverEvidence(entrypointDrift);
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.ok(report.decision.invalidReasons.some((reason) => reason.includes("jobRunnerSources")));
+
+  const coreDrift = createEvidence();
+  coreDrift.jobRunnerPreparation.sourceSet.sources[1].lfNormalizedSha256 = "e".repeat(64);
+  refreshSourceSetDigest(coreDrift.jobRunnerPreparation.sourceSet);
+  report = analyzeWilliamsCrossoverEvidence(coreDrift);
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.ok(report.decision.invalidReasons.includes("job-runner-preparation.sourceSet"));
+
+  for (const mutate of [
+    (sourceSet) => { sourceSet.sources.pop(); },
+    (sourceSet) => { sourceSet.sources.push(artifactDescriptor("tools/process_containment/unexpected.cs")); },
+    (sourceSet) => { sourceSet.sources.reverse(); },
+  ]) {
+    const evidence = createEvidence();
+    mutate(evidence.preregistration.workloadContract.processContainment.identity.sourceSet);
+    refreshSourceSetDigest(evidence.preregistration.workloadContract.processContainment.identity.sourceSet);
+    const invalid = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.equal(invalid.decision.status, "invalid-experiment");
+    assert.ok(invalid.decision.invalidReasons.some((reason) => reason.includes("sourceSet")));
+  }
+});
+
 test("canonical block Job evidence validates schema, root exit, and command identity", () => {
   const cases = [
     ["schemaVersion", 0],
@@ -1444,8 +1516,17 @@ test("canonical block Job evidence validates schema, root exit, and command iden
 });
 
 test("Job runner compile, readiness, and capability failures map to typed invalid exit 3", () => {
-  const available = Object.freeze({ status: "available" });
+  const expectedSourceSet = jobRunnerSourceSet();
+  const available = Object.freeze({ status: "available", sourceSet: expectedSourceSet });
   assert.equal(requireWilliamsJobRunnerReady(available), available);
+  assert.equal(requireWilliamsJobRunnerReady(available, { expectedSourceSet }), available);
+  const driftedSourceSet = jobRunnerSourceSet({ 1: { lfNormalizedSha256: "e".repeat(64) } });
+  assert.throws(
+    () => requireWilliamsJobRunnerReady(available, { expectedSourceSet: driftedSourceSet }),
+    (error) => error instanceof WilliamsInvalidExperimentError
+      && error.code === "job-runner-source-set-mismatch"
+      && getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment,
+  );
   for (const status of ["compile-error", "ready-error", "capability-error", "required-capability-missing"]) {
     assert.throws(
       () => requireWilliamsJobRunnerReady({ status, error: "unavailable" }),

@@ -8,11 +8,26 @@ import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
 
 import { WILLIAMS_TELEMETRY_CADENCE } from "./williams_crossover_policy.mjs";
+import {
+  buildContainmentSourceDescriptor,
+  buildOrderedContainmentSourceSet,
+} from "../process_containment/ordered_source_set_identity.mjs";
 
 export const WINDOWS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
 export const WINDOWS_JOB_RUNNER_SOURCE_PATH = fileURLToPath(
   new URL("./williams_crossover_windows_job_runner.cs", import.meta.url),
 );
+export const WINDOWS_JOB_RUNNER_CORE_SOURCE_PATH = fileURLToPath(
+  new URL("../process_containment/windows_job_runner_core.cs", import.meta.url),
+);
+export const WINDOWS_JOB_RUNNER_SOURCE_PATHS = Object.freeze([
+  WINDOWS_JOB_RUNNER_SOURCE_PATH,
+  WINDOWS_JOB_RUNNER_CORE_SOURCE_PATH,
+]);
+export const WINDOWS_JOB_RUNNER_SOURCE_IDENTITY_PATHS = Object.freeze([
+  "tools/perf/williams_crossover_windows_job_runner.cs",
+  "tools/process_containment/windows_job_runner_core.cs",
+]);
 
 const WINDOWS_JOB_RUNNER_BINARY_NAME = "williams_crossover_windows_job_runner.exe";
 const WINDOWS_JOB_RUNNER_DESCRIPTOR_PATH = `runtime-compiled/${WINDOWS_JOB_RUNNER_BINARY_NAME}`;
@@ -361,60 +376,105 @@ export function encodeWindowsJobRunnerSpec({
 
 export async function compileWindowsJobRunner({
   platform = process.platform,
-  sourcePath = WINDOWS_JOB_RUNNER_SOURCE_PATH,
+  sourcePath = null,
+  sourcePaths = WINDOWS_JOB_RUNNER_SOURCE_PATHS,
+  sourceIdentityPath = null,
+  sourceIdentityPaths = null,
   buildRoot = DEFAULT_JOB_RUNNER_BUILD_ROOT,
   spawnSyncFn = spawnSync,
+  readFileFn = fs.readFile,
+  writeFileFn = fs.writeFile,
 } = {}) {
   if (platform !== "win32") throw new Error(`Windows Job Object capability required; platform=${platform}`);
+  const requestedSourcePath = sourcePath ? path.resolve(sourcePath) : null;
+  const officialEntrypointPath = path.resolve(WINDOWS_JOB_RUNNER_SOURCE_PATH);
+  const requestedOfficialEntrypoint = requestedSourcePath?.toLowerCase() === officialEntrypointPath.toLowerCase();
+  const selectedSourcePaths = requestedOfficialEntrypoint
+    ? WINDOWS_JOB_RUNNER_SOURCE_PATHS
+    : sourcePath
+      ? [sourcePath]
+      : sourcePaths;
+  const resolvedSourcePaths = selectedSourcePaths.map((entry) => path.resolve(entry));
+  if (resolvedSourcePaths.length === 0) throw new TypeError("sourcePaths must contain at least one C# source file");
+  const officialSourceSet = resolvedSourcePaths.length === WINDOWS_JOB_RUNNER_SOURCE_PATHS.length
+    && resolvedSourcePaths.every((entry, index) => (
+      entry.toLowerCase() === path.resolve(WINDOWS_JOB_RUNNER_SOURCE_PATHS[index]).toLowerCase()
+    ));
+  const resolvedIdentityPaths = sourceIdentityPaths
+    ? [...sourceIdentityPaths]
+    : sourceIdentityPath
+      ? [sourceIdentityPath]
+      : officialSourceSet
+        ? [...WINDOWS_JOB_RUNNER_SOURCE_IDENTITY_PATHS]
+        : resolvedSourcePaths.map((entry) => entry.replaceAll("\\", "/"));
+  if (resolvedIdentityPaths.length !== resolvedSourcePaths.length) {
+    throw new TypeError("source identity paths must match the ordered source input count");
+  }
+  const sourceBuffers = await Promise.all(resolvedSourcePaths.map((entry) => readFileFn(entry)));
+  const sourceSet = buildOrderedContainmentSourceSet(sourceBuffers.map((buffer, index) => (
+    buildContainmentSourceDescriptor(resolvedIdentityPaths[index], buffer)
+  )));
   await fs.mkdir(buildRoot, { recursive: true });
   const buildDirectory = await fs.mkdtemp(path.join(buildRoot, "build-"));
   const executablePath = path.join(buildDirectory, WINDOWS_JOB_RUNNER_BINARY_NAME);
-  const sourceEncoded = base64Line(path.resolve(sourcePath));
-  const outputEncoded = base64Line(executablePath);
-  const script = [
-    "$ErrorActionPreference = 'Stop'",
-    `$source = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${sourceEncoded}'))`,
-    `$output = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${outputEncoded}'))`,
-    "Add-Type -Path $source -OutputAssembly $output -OutputType ConsoleApplication -ErrorAction Stop",
-  ].join("\n");
-  const result = spawnSyncFn(
-    "powershell.exe",
-    ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodePowerShellCommand(script)],
-    {
-      encoding: "utf8",
-      windowsHide: true,
-      maxBuffer: 16 * 1024 * 1024,
-      timeout: WINDOWS_JOB_RUNNER_COMPILE_TIMEOUT_MS,
-    },
-  );
-  if (result.error || result.status !== 0) {
-    await fs.rm(buildDirectory, { recursive: true, force: true });
-    if (result.error?.code === "ETIMEDOUT") {
-      throw new WilliamsWindowsRuntimeError(
-        `Windows Job runner compilation exceeded ${WINDOWS_JOB_RUNNER_COMPILE_TIMEOUT_MS} ms`,
-        "job-runner-compile-timeout",
-        result.error,
+  try {
+    const compiledSourcePaths = await Promise.all(sourceBuffers.map(async (buffer, index) => {
+      const snapshotPath = path.join(buildDirectory, `source-${String(index).padStart(2, "0")}.cs`);
+      await writeFileFn(snapshotPath, buffer, { flag: "wx" });
+      return snapshotPath;
+    }));
+    const sourcesEncoded = compiledSourcePaths.map(base64Line);
+    const outputEncoded = base64Line(executablePath);
+    const script = [
+      "$ErrorActionPreference = 'Stop'",
+      `$sources = @(${sourcesEncoded.map((encoded) => `'${encoded}'`).join(",")}) | ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }`,
+      `$output = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${outputEncoded}'))`,
+      "Add-Type -Path $sources -OutputAssembly $output -OutputType ConsoleApplication -ErrorAction Stop",
+    ].join("\n");
+    const result = spawnSyncFn(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodePowerShellCommand(script)],
+      {
+        encoding: "utf8",
+        windowsHide: true,
+        maxBuffer: 16 * 1024 * 1024,
+        timeout: WINDOWS_JOB_RUNNER_COMPILE_TIMEOUT_MS,
+      },
+    );
+    if (result.error || result.status !== 0) {
+      if (result.error?.code === "ETIMEDOUT") {
+        throw new WilliamsWindowsRuntimeError(
+          `Windows Job runner compilation exceeded ${WINDOWS_JOB_RUNNER_COMPILE_TIMEOUT_MS} ms`,
+          "job-runner-compile-timeout",
+          result.error,
+        );
+      }
+      throw result.error || new Error(
+        `Windows Job runner compilation exited ${result.status}: ${String(result.stderr || result.stdout || "").trim()}`,
       );
     }
-    throw result.error || new Error(
-      `Windows Job runner compilation exited ${result.status}: ${String(result.stderr || result.stdout || "").trim()}`,
-    );
+    const binary = await fs.readFile(executablePath);
+    return Object.freeze({
+      status: "compiled",
+      compiledAt: new Date().toISOString(),
+      buildDirectory,
+      executablePath,
+      sourcePaths: Object.freeze([...resolvedSourcePaths]),
+      compiledSourcePaths: Object.freeze([...compiledSourcePaths]),
+      sourceSet,
+      binary: Object.freeze({
+        path: WINDOWS_JOB_RUNNER_DESCRIPTOR_PATH,
+        sha256: sha256(binary),
+        bytes: binary.length,
+      }),
+      async cleanup() {
+        await fs.rm(buildDirectory, { recursive: true, force: true });
+      },
+    });
+  } catch (error) {
+    await fs.rm(buildDirectory, { recursive: true, force: true });
+    throw error;
   }
-  const binary = await fs.readFile(executablePath);
-  return Object.freeze({
-    status: "compiled",
-    compiledAt: new Date().toISOString(),
-    buildDirectory,
-    executablePath,
-    binary: Object.freeze({
-      path: WINDOWS_JOB_RUNNER_DESCRIPTOR_PATH,
-      sha256: sha256(binary),
-      bytes: binary.length,
-    }),
-    async cleanup() {
-      await fs.rm(buildDirectory, { recursive: true, force: true });
-    },
-  });
 }
 
 export async function runWindowsJobCommand(command, {

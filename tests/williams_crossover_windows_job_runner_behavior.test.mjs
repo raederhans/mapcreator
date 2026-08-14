@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { writeFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -10,6 +11,10 @@ import * as windowsRuntime from "../tools/perf/williams_crossover_windows_runtim
 
 const JOB_RUNNER_SOURCE_URL = new URL(
   "../tools/perf/williams_crossover_windows_job_runner.cs",
+  import.meta.url,
+);
+const JOB_RUNNER_CORE_SOURCE_URL = new URL(
+  "../tools/process_containment/windows_job_runner_core.cs",
   import.meta.url,
 );
 const WINDOWS_RUNTIME_SOURCE_URL = new URL(
@@ -166,7 +171,11 @@ test("job runner protocol preserves empty, spaced, quoted, and trailing-backslas
 });
 
 test("tracked job runner source locks suspended assign-before-resume containment", async () => {
-  const source = await fs.readFile(JOB_RUNNER_SOURCE_URL, "utf8");
+  const entrypoint = await fs.readFile(JOB_RUNNER_SOURCE_URL, "utf8");
+  const core = await fs.readFile(JOB_RUNNER_CORE_SOURCE_URL, "utf8");
+  const source = `${entrypoint}\n${core}`;
+  assert.match(entrypoint, /ScenarioForgeWindowsJobRunnerCore\.Run\(ProtocolId\)/);
+  assert.match(entrypoint, /SF_WILLIAMS_JOB_V1/);
   for (const token of [
     "CREATE_SUSPENDED",
     "CREATE_NO_WINDOW",
@@ -178,8 +187,8 @@ test("tracked job runner source locks suspended assign-before-resume containment
   ]) {
     assert.match(source, new RegExp(token));
   }
-  const mainStart = source.indexOf("public static int Main()");
-  const mainSource = source.slice(mainStart);
+  const mainStart = core.indexOf("public static int Run(string protocolId)");
+  const mainSource = core.slice(mainStart);
   const createIndex = mainSource.indexOf("CreateProcessW(");
   const assignIndex = mainSource.indexOf("AssignProcessToJobObject(", createIndex);
   const membershipIndex = mainSource.indexOf("IsProcessInJob(", assignIndex);
@@ -345,7 +354,7 @@ test("preparation probes and returns the immutable evidence binary copy", async 
 });
 
 test("job runner cleanup evidence stays fail-closed until every contained process is verified gone", async () => {
-  const source = await fs.readFile(JOB_RUNNER_SOURCE_URL, "utf8");
+  const source = await fs.readFile(JOB_RUNNER_CORE_SOURCE_URL, "utf8");
   for (const token of [
     "STARTUPINFOEX",
     "PROC_THREAD_ATTRIBUTE_HANDLE_LIST",
@@ -358,6 +367,73 @@ test("job runner cleanup evidence stays fail-closed until every contained proces
   }
   assert.match(source, /AssignProcessToJobObject[\s\S]+assignError[\s\S]+TerminateProcess[\s\S]+WAIT_OBJECT_0/);
   assert.doesNotMatch(source, /if \(IsInvalidHandle\(processHandle\)\) continue;/);
+});
+
+test("compiler binds the explicit Williams entrypoint and shared Job Object core source set", async (t) => {
+  assert.deepEqual(
+    windowsRuntime.WINDOWS_JOB_RUNNER_SOURCE_PATHS,
+    [windowsRuntime.WINDOWS_JOB_RUNNER_SOURCE_PATH, windowsRuntime.WINDOWS_JOB_RUNNER_CORE_SOURCE_PATH],
+  );
+  const buildRoot = await fs.mkdtemp(path.join(os.tmpdir(), "williams-job-source-set-"));
+  t.after(() => fs.rm(buildRoot, { recursive: true, force: true }));
+  const sourceBytes = [Buffer.from("entrypoint-v1", "utf8"), Buffer.from("shared-core-v1", "utf8")];
+  const readPaths = [];
+  const writtenSnapshots = [];
+  let encodedCommand = null;
+  const compiled = await windowsRuntime.compileWindowsJobRunner({
+    platform: "win32",
+    sourcePath: windowsRuntime.WINDOWS_JOB_RUNNER_SOURCE_PATH,
+    buildRoot,
+    readFileFn: async (sourcePath) => {
+      readPaths.push(path.resolve(sourcePath));
+      return Buffer.from(sourceBytes[readPaths.length - 1]);
+    },
+    writeFileFn: async (snapshotPath, bytes, options) => {
+      writtenSnapshots.push({ snapshotPath, bytes: Buffer.from(bytes), options });
+      await fs.writeFile(snapshotPath, bytes, options);
+    },
+    spawnSyncFn: (_command, args) => {
+      encodedCommand = args.at(-1);
+      const script = Buffer.from(encodedCommand, "base64").toString("utf16le");
+      const outputMatch = script.match(/\$output = .*FromBase64String\('([^']+)'\)/);
+      assert.ok(outputMatch);
+      writeFileSync(Buffer.from(outputMatch[1], "base64").toString("utf8"), Buffer.from("MZ-fixture", "utf8"));
+      return { error: null, status: 0, stdout: "", stderr: "" };
+    },
+  });
+  t.after(() => compiled.cleanup());
+  assert.deepEqual(readPaths, windowsRuntime.WINDOWS_JOB_RUNNER_SOURCE_PATHS.map((entry) => path.resolve(entry)));
+  assert.equal(writtenSnapshots.length, 2);
+  assert.deepEqual(writtenSnapshots.map((entry) => entry.bytes), sourceBytes);
+  assert.ok(writtenSnapshots.every((entry) => entry.options?.flag === "wx"));
+  assert.deepEqual(compiled.sourceSet.sources.map((entry) => entry.path), windowsRuntime.WINDOWS_JOB_RUNNER_SOURCE_IDENTITY_PATHS);
+  assert.equal(compiled.sourceSet.sources.length, 2);
+  const script = Buffer.from(encodedCommand, "base64").toString("utf16le");
+  assert.match(script, /Add-Type -Path \$sources/);
+  for (const snapshot of writtenSnapshots) {
+    assert.match(script, new RegExp(Buffer.from(snapshot.snapshotPath, "utf8").toString("base64")));
+  }
+  for (const sourcePath of windowsRuntime.WINDOWS_JOB_RUNNER_SOURCE_PATHS) {
+    assert.doesNotMatch(script, new RegExp(Buffer.from(path.resolve(sourcePath), "utf8").toString("base64")));
+  }
+
+  const customSourcePath = path.join(buildRoot, "custom-standalone.cs");
+  const customCompiled = await windowsRuntime.compileWindowsJobRunner({
+    platform: "win32",
+    sourcePath: customSourcePath,
+    sourceIdentityPath: "fixtures/custom-standalone.cs",
+    buildRoot,
+    readFileFn: async () => Buffer.from("standalone", "utf8"),
+    spawnSyncFn: (_command, args) => {
+      const customScript = Buffer.from(args.at(-1), "base64").toString("utf16le");
+      const outputMatch = customScript.match(/\$output = .*FromBase64String\('([^']+)'\)/);
+      assert.ok(outputMatch);
+      writeFileSync(Buffer.from(outputMatch[1], "base64").toString("utf8"), Buffer.from("MZ-custom", "utf8"));
+      return { error: null, status: 0, stdout: "", stderr: "" };
+    },
+  });
+  t.after(() => customCompiled.cleanup());
+  assert.deepEqual(customCompiled.sourceSet.sources.map((entry) => entry.path), ["fixtures/custom-standalone.cs"]);
 });
 
 test("measurement command path excludes process-start tracing and system process polling", async () => {

@@ -1221,6 +1221,10 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   assert.equal(jobRunnerEntry.commandRef, "test:node:williams-crossover-job-runner");
   assert.equal(jobRunnerEntry.executionOwner, "child-safe");
   assert.equal(jobRunnerEntry.verifyCoreDefaultGroup, "infra");
+  assert.ok(policyEntry.sourceRefs.includes("tools/process_containment/windows_job_runner_core.cs"));
+  assert.ok(jobRunnerEntry.sourceRefs.includes("tools/process_containment/windows_job_runner_core.cs"));
+  assert.ok(policyEntry.sourceRefs.includes("tools/process_containment/ordered_source_set_identity.mjs"));
+  assert.ok(jobRunnerEntry.sourceRefs.includes("tools/process_containment/ordered_source_set_identity.mjs"));
   assert.deepEqual(liveEntry, {
     ...liveEntry,
     commandRef: "perf:williams-crossover:run",
@@ -1240,6 +1244,8 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     "tools/perf/run_williams_crossover.mjs",
     "tools/perf/williams_crossover_windows_runtime.mjs",
     "tools/perf/williams_crossover_windows_job_runner.cs",
+    "tools/process_containment/windows_job_runner_core.cs",
+    "tools/process_containment/ordered_source_set_identity.mjs",
     "tools/perf/williams_crossover_power_scheme.ps1",
     "tools/perf/run_baseline.mjs",
     "tools/perf/render_sample_role_policy.mjs",
@@ -1272,6 +1278,18 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   assert.ok(runtimeReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
   assert.ok(runtimeReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"));
   assert.ok(runtimeReport.mainThreadSerialVerification.some((command) => command.commandRef === "test:node:williams-crossover-telemetry-live"));
+
+  const sharedCoreReport = buildRecommendation(["tools/process_containment/windows_job_runner_core.cs"]);
+  assert.deepEqual(sharedCoreReport.unmatchedChangedFiles, []);
+  assert.ok(sharedCoreReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
+  assert.ok(sharedCoreReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
+  assert.ok(sharedCoreReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"));
+
+  const sourceIdentityReport = buildRecommendation(["tools/process_containment/ordered_source_set_identity.mjs"]);
+  assert.deepEqual(sourceIdentityReport.unmatchedChangedFiles, []);
+  assert.ok(sourceIdentityReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
+  assert.ok(sourceIdentityReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
+  assert.ok(sourceIdentityReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"));
 
   const staticReport = buildRecommendation([
     "tests/williams_crossover_governance_behavior.test.mjs",

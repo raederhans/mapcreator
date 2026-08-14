@@ -24,6 +24,11 @@ import {
   prepareWindowsJobRunner,
   runWindowsJobCommand,
 } from "./williams_crossover_windows_runtime.mjs";
+import {
+  buildOrderedContainmentSourceSet,
+  isValidOrderedContainmentSourceSet,
+  orderedContainmentSourceSetsEqual,
+} from "../process_containment/ordered_source_set_identity.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_RAW_ROOT = path.join(REPO_ROOT, ".runtime", "output", "perf", "p2-williams-crossover");
@@ -35,7 +40,10 @@ const ROLE_POLICY_PATH = "tools/perf/render_sample_role_policy.mjs";
 const ANALYZER_PATH = "tools/perf/run_williams_crossover.mjs";
 const POLICY_PATH = "tools/perf/williams_crossover_policy.mjs";
 const WINDOWS_RUNTIME_PATH = "tools/perf/williams_crossover_windows_runtime.mjs";
+const CONTAINMENT_IDENTITY_HELPER_PATH = "tools/process_containment/ordered_source_set_identity.mjs";
 const JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
+const JOB_RUNNER_CORE_SOURCE_PATH = "tools/process_containment/windows_job_runner_core.cs";
+const JOB_RUNNER_SOURCE_PATHS = Object.freeze([JOB_RUNNER_SOURCE_PATH, JOB_RUNNER_CORE_SOURCE_PATH]);
 const POWER_SCHEME_HELPER_PATH = "tools/perf/williams_crossover_power_scheme.ps1";
 const POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH = "harness/power-scheme-lifecycle.json";
 const PACKAGE_LOCK_PATH = "package-lock.json";
@@ -203,6 +211,7 @@ export function buildWilliamsExecutionPlan(options = {}) {
     candidateWorktree: options.candidateWorktree,
     generatedAt: null,
     jobRunnerSource: options.jobRunnerSource || null,
+    jobRunnerSources: options.jobRunnerSources || null,
     jobRunnerBinary: options.jobRunnerBinary || null,
     powerSchemeHelper: options.powerSchemeHelper || null,
     expectedPowerSchemeGuid: options.expectedPowerSchemeGuid || "",
@@ -453,11 +462,15 @@ async function currentArtifactDescriptor(relativePath) {
 }
 
 export async function buildCurrentHarnessArtifacts() {
+  const jobRunnerSourceDescriptors = await Promise.all(JOB_RUNNER_SOURCE_PATHS.map(currentArtifactDescriptor));
+  const jobRunnerSources = buildOrderedContainmentSourceSet(jobRunnerSourceDescriptors);
   return {
     analyzer: await currentArtifactDescriptor(ANALYZER_PATH),
     policy: await currentArtifactDescriptor(POLICY_PATH),
     windowsRuntime: await currentArtifactDescriptor(WINDOWS_RUNTIME_PATH),
-    jobRunnerSource: await currentArtifactDescriptor(JOB_RUNNER_SOURCE_PATH),
+    containmentIdentityHelper: await currentArtifactDescriptor(CONTAINMENT_IDENTITY_HELPER_PATH),
+    jobRunnerSource: jobRunnerSourceDescriptors[0],
+    jobRunnerSources,
     powerSchemeHelper: await currentArtifactDescriptor(POWER_SCHEME_HELPER_PATH),
   };
 }
@@ -510,7 +523,9 @@ async function collectBlockIdentity(block, harnessArtifacts) {
       analyzer: harnessArtifacts.analyzer,
       policy: harnessArtifacts.policy,
       windowsRuntime: harnessArtifacts.windowsRuntime,
+      containmentIdentityHelper: harnessArtifacts.containmentIdentityHelper,
       jobRunnerSource: harnessArtifacts.jobRunnerSource,
+      jobRunnerSources: harnessArtifacts.jobRunnerSources,
       powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
       jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
     },
@@ -862,7 +877,9 @@ export async function buildWilliamsRawManifest(rawRoot, harnessArtifacts) {
       analyzer: harnessArtifacts.analyzer,
       policy: harnessArtifacts.policy,
       windowsRuntime: harnessArtifacts.windowsRuntime,
+      containmentIdentityHelper: harnessArtifacts.containmentIdentityHelper,
       jobRunnerSource: harnessArtifacts.jobRunnerSource,
+      jobRunnerSources: harnessArtifacts.jobRunnerSources,
       powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
       jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
       sides: sideIdentity,
@@ -936,7 +953,7 @@ async function validateRawManifest(
   for (const actualPath of actualRaw) if (!expectedRaw.has(actualPath)) errors.push(`raw.extra:${actualPath}`);
   if (actualRaw.size !== 32) errors.push(`raw.count.expected-32-actual-${actualRaw.size}`);
   if (manifest.measuredRawFileCount !== 32) errors.push(`manifest.raw-count.expected-32-actual-${manifest.measuredRawFileCount}`);
-  for (const field of ["analyzer", "policy", "windowsRuntime", "jobRunnerSource", "powerSchemeHelper"]) {
+  for (const field of ["analyzer", "policy", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
     if (!/^[a-f0-9]{40}$/i.test(String(manifest.toolIdentity?.[field]?.gitBlob || ""))) {
       errors.push(`manifest.toolIdentity.${field}.gitBlob`);
     }
@@ -974,6 +991,20 @@ async function validateRawManifest(
   }
   if (!artifactDescriptorsEqual(manifest.toolIdentity?.jobRunnerSource, jobRunnerPreparation?.source)) {
     errors.push("manifest.toolIdentity.jobRunnerSource.preparation");
+  }
+  if (!isValidOrderedContainmentSourceSet(manifest.toolIdentity?.jobRunnerSources)) {
+    errors.push("manifest.toolIdentity.jobRunnerSources");
+  }
+  if (!orderedContainmentSourceSetsEqual(manifest.toolIdentity?.jobRunnerSources, currentToolIdentity?.jobRunnerSources)) {
+    errors.push("manifest.toolIdentity.jobRunnerSources.current");
+  }
+  for (const block of blocks) {
+    if (!orderedContainmentSourceSetsEqual(manifest.toolIdentity?.jobRunnerSources, block?.identity?.artifacts?.jobRunnerSources)) {
+      errors.push(`manifest.toolIdentity.jobRunnerSources.${block?.id || "unknown-block"}`);
+    }
+  }
+  if (!orderedContainmentSourceSetsEqual(manifest.toolIdentity?.jobRunnerSources, jobRunnerPreparation?.sourceSet)) {
+    errors.push("manifest.toolIdentity.jobRunnerSources.preparation");
   }
   for (const block of blocks) {
     if (!binaryDescriptorsEqual(binaryDescriptor, block?.identity?.artifacts?.jobRunnerBinary)) {
@@ -1175,11 +1206,17 @@ export async function validateWilliamsOutputPolicy(options, { reserveRawRoot = f
 
 async function collectHarnessArtifacts(options) {
   const candidate = options.candidateWorktree;
+  const jobRunnerSourceDescriptors = await Promise.all(
+    JOB_RUNNER_SOURCE_PATHS.map((relativePath) => trackedArtifactDescriptor(candidate, relativePath)),
+  );
+  const jobRunnerSources = buildOrderedContainmentSourceSet(jobRunnerSourceDescriptors);
   const artifacts = {
     analyzer: await trackedArtifactDescriptor(candidate, ANALYZER_PATH),
     policy: await trackedArtifactDescriptor(candidate, POLICY_PATH),
     windowsRuntime: await trackedArtifactDescriptor(candidate, WINDOWS_RUNTIME_PATH),
-    jobRunnerSource: await trackedArtifactDescriptor(candidate, JOB_RUNNER_SOURCE_PATH),
+    containmentIdentityHelper: await trackedArtifactDescriptor(candidate, CONTAINMENT_IDENTITY_HELPER_PATH),
+    jobRunnerSource: jobRunnerSourceDescriptors[0],
+    jobRunnerSources,
     powerSchemeHelper: await trackedArtifactDescriptor(candidate, POWER_SCHEME_HELPER_PATH),
   };
   const current = await buildCurrentHarnessArtifacts();
@@ -1187,6 +1224,7 @@ async function collectHarnessArtifacts(options) {
     ["analyzer", ANALYZER_PATH],
     ["policy", POLICY_PATH],
     ["windowsRuntime", WINDOWS_RUNTIME_PATH],
+    ["containmentIdentityHelper", CONTAINMENT_IDENTITY_HELPER_PATH],
     ["jobRunnerSource", JOB_RUNNER_SOURCE_PATH],
     ["powerSchemeHelper", POWER_SCHEME_HELPER_PATH],
   ]) {
@@ -1197,14 +1235,26 @@ async function collectHarnessArtifacts(options) {
       );
     }
   }
+  if (!orderedContainmentSourceSetsEqual(current.jobRunnerSources, artifacts.jobRunnerSources)) {
+    throw new WilliamsInvalidExperimentError(
+      `Executing ${JOB_RUNNER_SOURCE_PATHS.join(", ")} differs from candidate HEAD; commit tooling and recreate the exact detached candidate worktree.`,
+      "tool-identity-mismatch",
+    );
+  }
   return artifacts;
 }
 
-export function requireWilliamsJobRunnerReady(preparation) {
+export function requireWilliamsJobRunnerReady(preparation, { expectedSourceSet = null } = {}) {
   if (preparation?.status !== "available") {
     throw new WilliamsInvalidExperimentError(
       `Windows Job runner preparation failed (${preparation?.status || "missing"}): ${preparation?.error || "unknown error"}`,
       `job-runner-${preparation?.status || "missing"}`,
+    );
+  }
+  if (expectedSourceSet && !orderedContainmentSourceSetsEqual(preparation.sourceSet, expectedSourceSet)) {
+    throw new WilliamsInvalidExperimentError(
+      "Compiled Windows Job runner source set differs from the exact candidate/current tooling identity.",
+      "job-runner-source-set-mismatch",
     );
   }
   return preparation;
@@ -1221,18 +1271,34 @@ async function executeExperiment(options) {
     evidenceBinaryPath: path.join(options.rawRoot, WINDOWS_JOB_RUNNER_EVIDENCE_PATH),
     evidenceBinaryDescriptorPath: WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
   });
+  const preparationSourceSetMatches = orderedContainmentSourceSetsEqual(
+    preparationResult.sourceSet,
+    harnessArtifacts.jobRunnerSources,
+  );
+  const preparationIdentityMismatch = preparationResult.status === "available" && !preparationSourceSetMatches;
   await writeJson(path.join(options.rawRoot, "harness", "job-runner-preparation.json"), {
     schemaVersion: 1,
-    status: preparationResult.status,
-    error: preparationResult.error || null,
+    status: preparationIdentityMismatch ? "identity-error" : preparationResult.status,
+    error: preparationIdentityMismatch
+      ? "compiled source set differs from the exact candidate/current tooling identity"
+      : (preparationResult.error || null),
     compiledAt: preparationResult.compiledAt || null,
     capabilityProbedAt: preparationResult.capabilityProbedAt || null,
     source: harnessArtifacts.jobRunnerSource,
+    sourceSet: preparationResult.sourceSet || null,
     binary: preparationResult.binary || null,
     capabilityCommand: preparationResult.capabilityCommand || null,
     capabilityEvidence: preparationResult.capabilityEvidence || preparationResult.probeResult?.jobEvidence || null,
   });
-  const preparation = requireWilliamsJobRunnerReady(preparationResult);
+  let preparation;
+  try {
+    preparation = requireWilliamsJobRunnerReady(preparationResult, {
+      expectedSourceSet: harnessArtifacts.jobRunnerSources,
+    });
+  } catch (error) {
+    await preparationResult.cleanup?.();
+    throw error;
+  }
   harnessArtifacts.jobRunnerBinary = preparation.binary;
   try {
     const lifecyclePath = path.join(options.rawRoot, POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH);
@@ -1246,6 +1312,7 @@ async function executeExperiment(options) {
           ...options,
           expectedPowerSchemeGuid,
           jobRunnerSource: harnessArtifacts.jobRunnerSource,
+          jobRunnerSources: harnessArtifacts.jobRunnerSources,
           jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
           powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
         });
