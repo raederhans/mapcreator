@@ -48,6 +48,9 @@
 | 2026-08-14 | Integrate the Stage 6I guard as `267511a`. | Direct manifest execution now fails in under one second with the official focused command; full and focused wrappers remain admitted, quick remains manifest-free, and mechanical ordering keeps the guard before repository setup. |
 | 2026-08-14 | Split streaming progress into Stage 6J. | Moving from `spawnSync` to streaming changes signal and process-tree behavior; final TAP atomicity, running/failed artifacts, stderr framing, and Windows teardown require one dedicated contract. |
 | 2026-08-14 | Freeze Stage 6J implementation baseline at `69733e43`. | Lane A owns the streaming policy runner and runner regressions; lane B audits Windows lifecycle/termination read-only; lane C audits artifact identity, atomicity, and adversarial cases read-only. Root retains integration and every live-test/process-stop decision. |
+| 2026-08-14 | Integrate the Stage 6J-A lifecycle as `2a8d49f2` plus route closure `a69b7c3c`. | The P4-specific async runner publishes mode-isolated running/failure diagnostics and an atomic canonical/completed pair only after close and stream drain; authoritative consumers bind the exact full plan, command, target, bytes, and clean identity. |
+| 2026-08-14 | Keep Stage 6J-A preparatory on Windows. | Current production termination covers the root child and records `containmentScope=root-only`, `cleanupVerified=false`, and `admissionEligible=false`. Stage 6J-B/J2 must provide Job Object descendant containment before production admission. |
+| 2026-08-14 | Split J2 into compatibility-first J2a and production wiring J2b. | J2a extracts a shared Windows Job Object core while preserving Williams V1 evidence and source identity; J2b adds parent-death/control semantics and wires the P4 runner only after J2a equivalence is frozen. |
 
 ## Live process ownership
 
@@ -64,9 +67,9 @@
 | Hotspot G implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | focused tests only; full TAP owned by root | correctness clear; frozen performance rejected, candidate reverted as `13c355e9` |
 | Hotspot H implementation | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | short isolated tests and microbench only | delivered `faf66e53`; integrated and revalidated by root as `ed735709` |
 | Hotspot H independent review | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | read-only diff and short checks | one fresh-oracle blocker fixed; final verdict `H_FINAL_REVIEW_CLEAR` |
-| Stage 6J streaming implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | runner-owned isolated artifacts only; no manifest/full policy | active on two-file runner scope; root owns integration |
-| Stage 6J Windows lifecycle audit | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | read-only; no `.runtime` writes | active; must report termination and orphan-process blockers to lane A/root |
-| Stage 6J evidence/adversarial audit | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | read-only; no `.runtime` writes | active; must report schema/atomicity blockers to lane A/root |
+| Stage 6J streaming implementation | thread `019ffb53-af53-70f3-9a33-89e6a9a4ecb5`, worktree `cc70` | runner-owned isolated artifacts only; no manifest/full policy | delivered `08fdb7fc`; integrated by root as `2a8d49f2` plus route closure `a69b7c3c` |
+| Stage 6J Windows lifecycle audit | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | read-only; no `.runtime` writes | complete; J2 readiness is `READY_WITH_REQUIRED_WILLIAMS_IDENTITY_MIGRATION` |
+| Stage 6J evidence/adversarial audit | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | read-only; no `.runtime` writes | complete; final verdict `J_C_FINAL_REVIEW_CLEAR` |
 
 ## Handoff
 
@@ -74,4 +77,4 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Design Stage 6J before another local full-policy attempt: retain the canonical full TAP as terminal complete evidence, write observable running/failed artifacts, and preserve exact Windows process-tree teardown. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until a same-environment control or CI run admits the newer candidate.
+Freeze the exact Stage 6J-A integration revision, then implement J2a as a compatibility-preserving shared Job Object core for the Williams runtime. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until J2 containment and a same-environment control or CI run admit the newer candidate.

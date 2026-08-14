@@ -40,7 +40,8 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [x] Stage 6G: Evaluate batched historical Git source reads and reject the frozen full-policy regression.
 - [x] Stage 6H: Reuse source-analysis-owned immutable scanner preparation while preserving per-binding dataflow.
 - [x] Stage 6I: Require explicit official-runner admission before the repository-scale manifest suite can start.
-- [ ] Stage 6J: Expose durable partial progress for long policy runs without weakening final TAP atomicity or process-tree teardown.
+- [x] Stage 6J-A: Expose durable partial progress and atomic terminal artifacts for long policy runs.
+- [ ] Stage 6J-B / J2: Add Windows Job Object descendant containment and verified cleanup before production admission.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
 ## Acceptance criteria
@@ -60,14 +61,15 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Stage 6F records bounded real-module scaling for single-binding and multi-binding paths, and any follow-up must improve that measured mechanism without weakening the exact policy oracle.
 - Stage 6G preserves ordered exact blob bytes, missing-path semantics, bounded buffering, SHA/path provenance, and reader selection while reducing historical source-reader Git processes; frozen full-policy wall time remains the admission gate.
 - Stage 6H keeps resolution, target-owner closure, taint mode, current-contract recognition, traversal state, findings, diagnostics, and delegations binding-local while reusing only analysis-identity invariants.
-- Stage 6J keeps the canonical full/quick/focused TAP as terminal complete evidence, exposes mode-isolated running and failed/interrupted artifacts, never promotes stale or partial output to pass evidence, and preserves explicit single-owner cancellation plus Windows child-tree containment.
+- Stage 6J-A keeps the canonical full/quick/focused TAP as terminal complete evidence, exposes mode-isolated running and failed/interrupted artifacts, never promotes stale or partial output to pass evidence, and records the current Windows lifecycle honestly as `root-only` with unverified cleanup.
+- Stage 6J-B requires assign-before-resume Windows Job Object containment, parent-death and explicit-cancel control, and terminal evidence showing zero remaining or unverified descendants before production admission becomes eligible.
 
 ## Non-goals
 
 - Removing deterministic admission coverage solely to improve elapsed time.
 - Broadening timeout, console, or route allowlists.
 - Running browser, dist, performance, or full policy suites before the candidate and live-test lane are stable.
-- Replacing the existing Williams Windows Job Object runtime with a generalized process-containment layer in the same diff.
+- Replacing the existing Williams Windows Job Object runtime inside the Stage 6J-A streaming diff.
 - Expanding Stage 6C beyond mechanically proven command closure before frozen-candidate timing evidence exists.
 
 ## Risks and constraints
