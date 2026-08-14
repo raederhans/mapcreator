@@ -135,9 +135,13 @@ test("manifest guard admits official full and focused modes only", () => {
     "assertP4StateWriterPolicyManifestRunMode();",
   );
   const repositoryWorkIndex = manifestSource.indexOf(
-    "const SHARED_REPOSITORY_POLICY_PROMISE",
+    "const SHARED_REPOSITORY_SCAN_CACHE",
   );
   assert.ok(guardIndex >= 0, "manifest must invoke the official runner guard");
+  assert.ok(
+    repositoryWorkIndex >= 0,
+    "manifest must retain an identifiable repository-scale setup boundary",
+  );
   assert.ok(
     guardIndex < repositoryWorkIndex,
     "manifest guard must run before repository-scale setup",

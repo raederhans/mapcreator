@@ -34,6 +34,7 @@ const P4_POLICY_SOURCE_REFS = Object.freeze([
   "tools/p4_state_action_phases.mjs",
   "tools/run_p4_state_writer_policy_tests.mjs",
   "tools/verification/p4_state_writer_policy_test_lifecycle.mjs",
+  "tools/verification/p4_state_writer_historical_proof_worker.mjs",
   "tools/process_containment/windows_job_runtime.mjs",
   "tools/process_containment/windows_job_runner_v2.cs",
   "tools/process_containment/windows_job_runner_core.cs",

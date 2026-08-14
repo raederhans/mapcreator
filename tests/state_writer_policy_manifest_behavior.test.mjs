@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import fsPromises from "node:fs/promises";
 import os from "node:os";
@@ -44,6 +45,8 @@ import {
   buildCallerToActionLedger,
   buildDerivedAliasTaintDiagnosticDelta,
   buildFrozenDerivedAliasTaintBaseline,
+  buildHistoricalDerivedAliasProofCheckpoint,
+  buildHistoricalDerivedAliasProofIdentity,
   buildIncrementalDerivedAliasTaintBaseline,
   buildUnbaselinedLegacyDiagnosticCounts,
   buildLegacyStateWriterSemanticAuthority,
@@ -86,34 +89,404 @@ import {
 import {
   assertP4StateWriterPolicyManifestRunMode,
 } from "../tools/run_p4_state_writer_policy_tests.mjs";
+import {
+  hashP4StateWriterHistoricalProofJson,
+  startP4StateWriterHistoricalProofWorker,
+} from "../tools/verification/p4_state_writer_historical_proof_worker.mjs";
 
 assertP4StateWriterPolicyManifestRunMode();
 
-const SHARED_REPOSITORY_POLICY_PROMISE = readStateWriterPolicy();
 const SHARED_REPOSITORY_SCAN_CACHE = new Map();
-const SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE = new Map();
-let sharedCurrentPhasePolicyPromise = null;
 
-function readSharedRepositoryPolicy() {
-  return SHARED_REPOSITORY_POLICY_PROMISE;
-}
+class ExactHistoricalProofSeedCache extends Map {
+  #expectedKey = null;
 
-function buildSharedCurrentPhasePolicy() {
-  // Consumers must treat this expensive canonical rebuild as read-only.
-  if (!sharedCurrentPhasePolicyPromise) {
-    sharedCurrentPhasePolicyPromise = readSharedRepositoryPolicy()
-      .then((checkedIn) => buildStateWriterPolicySnapshot({
-        phase: checkedIn.progress.latestPhase,
-        baseSha: checkedIn.baseline.sourceBaseSha,
-        generatedAt: checkedIn.baseline.generatedAt,
-        previousPolicy: checkedIn,
-        repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
-        historicalDerivedAliasProofCache:
-          SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
-      }));
+  seal(expectedKey) {
+    if (this.size !== 1 || !this.has(expectedKey)) {
+      throw new Error("Historical proof cache must contain its exact seeded identity before sealing.");
+    }
+    this.#expectedKey = expectedKey;
   }
-  return sharedCurrentPhasePolicyPromise;
+
+  has(key) {
+    if (this.#expectedKey !== null && key !== this.#expectedKey) {
+      const error = new Error("Canonical policy builder requested an unseeded historical proof identity.");
+      error.code = "p4-state-writer-historical-proof-cache-identity-mismatch";
+      error.expected = this.#expectedKey;
+      error.actual = key;
+      throw error;
+    }
+    return super.has(key);
+  }
+
+  set(key, value) {
+    if (this.#expectedKey !== null && key !== this.#expectedKey) {
+      const error = new Error("Canonical policy builder requested an unseeded historical proof identity.");
+      error.code = "p4-state-writer-historical-proof-cache-identity-mismatch";
+      error.expected = this.#expectedKey;
+      error.actual = key;
+      throw error;
+    }
+    return super.set(key, value);
+  }
 }
+
+const SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE =
+  new ExactHistoricalProofSeedCache();
+
+function createHistoricalProofWorkerEnvelopeFixture() {
+  const fixture = createHistoricalDerivedAliasProofCacheFixture();
+  const identity = buildHistoricalDerivedAliasProofIdentity(fixture);
+  return {
+    kind: "p4-state-writer-historical-proof",
+    schemaVersion: 1,
+    status: "passed",
+    identity,
+    identitySha256: hashP4StateWriterHistoricalProofJson(identity),
+    policySha256: identity.policySha256,
+    proofSha256: hashP4StateWriterHistoricalProofJson({ proof: "fixture" }),
+    sourceSha: identity.sourceSha,
+    phase: identity.phase,
+    candidatePaths: [...identity.candidatePaths],
+    matches: true,
+  };
+}
+
+function createHistoricalProofWorkerCtor(run) {
+  return class FakeHistoricalProofWorker extends EventEmitter {
+    constructor(workerUrl, options) {
+      super();
+      this.workerUrl = workerUrl;
+      this.options = options;
+      this.terminateCalls = 0;
+      queueMicrotask(() => run(this));
+    }
+
+    terminate() {
+      this.terminateCalls += 1;
+      queueMicrotask(() => this.emit("exit", 1));
+      return Promise.resolve(1);
+    }
+  };
+}
+
+function deepFreezeSharedJson(value, seen = new WeakSet()) {
+  if (!value || typeof value !== "object" || seen.has(value)) return value;
+  seen.add(value);
+  for (const key of Reflect.ownKeys(value)) {
+    deepFreezeSharedJson(value[key], seen);
+  }
+  return Object.freeze(value);
+}
+
+function createReadOnlySingleFlight(load) {
+  let pending = null;
+  return () => {
+    if (!pending) {
+      pending = Promise.resolve()
+        .then(load)
+        .then((value) => deepFreezeSharedJson(value));
+    }
+    return pending;
+  };
+}
+
+const readSharedRepositoryPolicy = createReadOnlySingleFlight(
+  () => readStateWriterPolicy(),
+);
+
+function buildCurrentHistoricalProofInputs(checkedIn) {
+  const phase = checkedIn.progress.latestPhase;
+  const candidatePaths = [
+    ...(checkedIn.baselines.derivedAliasTaint?.paths || []),
+  ].sort((left, right) => left.localeCompare(right));
+  const identityInputs = {
+    sourceSha: checkedIn.baseline.sourceBaseSha,
+    candidatePaths,
+    phase,
+    taintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+    checkpoint: buildHistoricalDerivedAliasProofCheckpoint({
+      phase,
+      policy: checkedIn,
+    }),
+    previousPolicy: checkedIn,
+    policy: checkedIn,
+  };
+  return {
+    candidatePaths,
+    identityInputs,
+    identity: buildHistoricalDerivedAliasProofIdentity(identityInputs),
+  };
+}
+
+const prepareSharedCurrentPhasePolicyInputs = createReadOnlySingleFlight(
+  async () => {
+    const checkedIn = await readSharedRepositoryPolicy();
+    const {
+      candidatePaths: strictProductionPaths,
+      identityInputs,
+      identity,
+    } = buildCurrentHistoricalProofInputs(checkedIn);
+    const workerSession = startP4StateWriterHistoricalProofWorker();
+    const inventoryPromise = scanStateWriterPolicySnapshot(checkedIn, {
+      repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+    });
+    const guardedInventoryPromise = inventoryPromise.catch(async (error) => {
+      await workerSession.terminate();
+      throw error;
+    });
+    const [inventoryResult, workerResult] = await Promise.allSettled([
+      guardedInventoryPromise,
+      workerSession.result,
+    ]);
+    if (inventoryResult.status === "rejected") {
+      throw inventoryResult.reason;
+    }
+    if (workerResult.status === "rejected") {
+      throw workerResult.reason;
+    }
+    const inventory = inventoryResult.value;
+    const workerSummary = workerResult.value;
+    const scannedStrictProductionPaths = Object.entries(
+      inventory.derivedAliasTaintModeManifest.modeByPath,
+    )
+      .filter(([, mode]) => mode === DERIVED_ALIAS_TAINT_MODES.STRICT)
+      .map(([relativePath]) => relativePath)
+      .sort((left, right) => left.localeCompare(right));
+
+    assert.deepEqual(scannedStrictProductionPaths, strictProductionPaths);
+    assert.equal(workerSummary.status, "passed");
+    assert.deepEqual(workerSummary.identity, identity);
+    assert.equal(
+      workerSummary.identitySha256,
+      hashP4StateWriterHistoricalProofJson(identity),
+    );
+    assert.equal(workerSummary.policySha256, identity.policySha256);
+    assert.equal(
+      workerSummary.proofSha256,
+      hashP4StateWriterHistoricalProofJson(
+        checkedIn.baselines.derivedAliasTaint,
+      ),
+    );
+    assert.equal(workerSummary.matches, true);
+
+    const historicalProof = await resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache:
+        SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
+      ...identityInputs,
+      prove: async () => checkedIn.baselines.derivedAliasTaint,
+    });
+    assert.deepEqual(historicalProof, checkedIn.baselines.derivedAliasTaint);
+    const expectedCacheKey = JSON.stringify(identity);
+    SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE.seal(expectedCacheKey);
+    return { inventory, historicalProof };
+  },
+);
+
+const buildSharedCurrentPhasePolicy = createReadOnlySingleFlight(
+  async () => {
+    const checkedIn = await readSharedRepositoryPolicy();
+    await prepareSharedCurrentPhasePolicyInputs();
+    const rebuilt = await buildStateWriterPolicySnapshot({
+      phase: checkedIn.progress.latestPhase,
+      baseSha: checkedIn.baseline.sourceBaseSha,
+      generatedAt: checkedIn.baseline.generatedAt,
+      previousPolicy: checkedIn,
+      repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
+      historicalDerivedAliasProofCache:
+        SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
+    });
+    assert.equal(SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE.size, 1);
+    return rebuilt;
+  },
+);
+
+test("read-only single-flight fixtures start once and freeze shared results", async () => {
+  let calls = 0;
+  const load = createReadOnlySingleFlight(async () => {
+    calls += 1;
+    return { nested: { values: [1, 2, 3] } };
+  });
+
+  const first = load();
+  assert.equal(load(), first);
+  const value = await first;
+
+  assert.equal(calls, 1);
+  assert.equal(load(), first);
+  assert.ok(Object.isFrozen(value));
+  assert.ok(Object.isFrozen(value.nested));
+  assert.ok(Object.isFrozen(value.nested.values));
+  assert.throws(() => value.nested.values.push(4), TypeError);
+});
+
+test("read-only single-flight fixtures preserve one rejected attempt", async () => {
+  const failure = new Error("fixture failed");
+  let calls = 0;
+  const load = createReadOnlySingleFlight(async () => {
+    calls += 1;
+    throw failure;
+  });
+
+  const first = load();
+  assert.equal(load(), first);
+  await assert.rejects(first, (error) => error === failure);
+  await assert.rejects(load(), (error) => error === failure);
+  assert.equal(calls, 1);
+});
+
+test("historical proof worker session requires one passed message followed by exit zero", async () => {
+  const expected = createHistoricalProofWorkerEnvelopeFixture();
+  let fakeWorker = null;
+  const WorkerCtor = createHistoricalProofWorkerCtor((worker) => {
+    fakeWorker = worker;
+    worker.emit("message", expected);
+    worker.emit("exit", 0);
+  });
+  const session = startP4StateWriterHistoricalProofWorker(
+    {},
+    { WorkerCtor, workerUrl: new URL("file:///fixture-worker.mjs") },
+  );
+
+  assert.deepEqual(await session.result, expected);
+  assert.equal(fakeWorker.listenerCount("message"), 0);
+  assert.equal(fakeWorker.listenerCount("messageerror"), 0);
+  assert.equal(fakeWorker.listenerCount("error"), 0);
+  assert.equal(fakeWorker.listenerCount("exit"), 0);
+});
+
+test("historical proof worker session fails closed for invalid terminal sequences", async (t) => {
+  const passed = createHistoricalProofWorkerEnvelopeFixture();
+  const cases = [
+    {
+      name: "missing message",
+      code: "p4-historical-proof-worker-message-missing",
+      run: (worker) => worker.emit("exit", 0),
+    },
+    {
+      name: "duplicate message",
+      code: "p4-historical-proof-worker-message-duplicate",
+      run: (worker) => {
+        worker.emit("message", passed);
+        worker.emit("message", passed);
+        worker.emit("exit", 0);
+      },
+    },
+    {
+      name: "failed envelope",
+      code: "p4-historical-proof-worker-envelope-invalid",
+      run: (worker) => {
+        worker.emit("message", {
+          kind: passed.kind,
+          schemaVersion: passed.schemaVersion,
+          status: "failed",
+          error: { code: "fixture", message: "fixture failed" },
+        });
+        worker.emit("exit", 0);
+      },
+    },
+    {
+      name: "unverified proof match",
+      code: "p4-historical-proof-worker-envelope-invalid",
+      run: (worker) => {
+        worker.emit("message", { ...passed, matches: false });
+        worker.emit("exit", 0);
+      },
+    },
+    {
+      name: "nonzero exit after passed message",
+      code: "p4-historical-proof-worker-exit-nonzero",
+      run: (worker) => {
+        worker.emit("message", passed);
+        worker.emit("exit", 2);
+      },
+    },
+    {
+      name: "worker error",
+      code: "p4-historical-proof-worker-error",
+      run: (worker) => worker.emit("error", new Error("fixture error")),
+    },
+    {
+      name: "message error",
+      code: "p4-historical-proof-worker-message-error",
+      run: (worker) => worker.emit("messageerror", new Error("fixture decode")),
+    },
+  ];
+
+  for (const fixture of cases) {
+    await t.test(fixture.name, async () => {
+      const WorkerCtor = createHistoricalProofWorkerCtor(fixture.run);
+      const session = startP4StateWriterHistoricalProofWorker(
+        {},
+        { WorkerCtor, workerUrl: new URL("file:///fixture-worker.mjs") },
+      );
+      await assert.rejects(
+        session.result,
+        (error) => error?.code === fixture.code,
+      );
+    });
+  }
+});
+
+test("historical proof worker termination and exact seed cache are bounded", async () => {
+  let fakeWorker = null;
+  const WorkerCtor = createHistoricalProofWorkerCtor((worker) => {
+    fakeWorker = worker;
+  });
+  const session = startP4StateWriterHistoricalProofWorker(
+    {},
+    { WorkerCtor, workerUrl: new URL("file:///fixture-worker.mjs") },
+  );
+
+  assert.equal(await session.terminate(), 1);
+  assert.equal(await session.terminate(), 1);
+  await assert.rejects(
+    session.result,
+    (error) => error?.code === "p4-historical-proof-worker-exit-nonzero",
+  );
+  assert.equal(fakeWorker.terminateCalls, 1);
+
+  const cache = new ExactHistoricalProofSeedCache();
+  cache.set("expected", Promise.resolve({ proof: "fixture" }));
+  cache.seal("expected");
+  assert.throws(
+    () => cache.set("drifted", Promise.resolve({ proof: "drifted" })),
+    (error) => (
+      error?.code === "p4-state-writer-historical-proof-cache-identity-mismatch"
+    ),
+  );
+  assert.equal(cache.size, 1);
+});
+
+test("sealed historical proof cache rejects identity drift before scheduling proof work", async () => {
+  const fixture = createHistoricalDerivedAliasProofCacheFixture();
+  const identity = buildHistoricalDerivedAliasProofIdentity(fixture);
+  const cache = new ExactHistoricalProofSeedCache();
+  cache.set(
+    JSON.stringify(identity),
+    Promise.resolve({ proof: "seeded" }),
+  );
+  cache.seal(JSON.stringify(identity));
+  let proofCalls = 0;
+
+  await assert.rejects(
+    resolveCachedHistoricalDerivedAliasProof({
+      historicalDerivedAliasProofCache: cache,
+      ...fixture,
+      phase: "P4.2c",
+      prove: async () => {
+        proofCalls += 1;
+        return { proof: "drifted" };
+      },
+    }),
+    (error) => (
+      error?.code === "p4-state-writer-historical-proof-cache-identity-mismatch"
+    ),
+  );
+  await Promise.resolve();
+  assert.equal(proofCalls, 0);
+  assert.equal(cache.size, 1);
+});
 
 test("explicit repository scan cache deduplicates work and returns isolated values", async () => {
   const cache = new Map();
@@ -2911,9 +3284,7 @@ test("global state import discovery resolves exact local aliases only", () => {
 
 test("checked-in repository policy is a closed binding-scoped snapshot", async () => {
   const policy = await readSharedRepositoryPolicy();
-  const inventory = await scanStateWriterPolicySnapshot(policy, {
-    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
-  });
+  const { inventory } = await prepareSharedCurrentPhasePolicyInputs();
   const result = validateStateWriterPolicySnapshot({
     policy,
     legacyAllowlistPaths: inventory.legacyAllowlistPaths,
@@ -2927,6 +3298,17 @@ test("checked-in repository policy is a closed binding-scoped snapshot", async (
     test: 43,
     total: 118,
   });
+  assert.equal(inventory.unknownCandidateBindings.length, 0);
+});
+
+test("repository policy builder is deterministic and never auto-grants during verification", async () => {
+  const rebuildPromise = buildSharedCurrentPhasePolicy();
+  const [policy, rebuilt] = await Promise.all([
+    readSharedRepositoryPolicy(),
+    rebuildPromise,
+  ]);
+
+  assert.deepEqual(rebuilt, policy);
   assert.equal(policy.baselines.defaultState.factoryGroups, 16);
   assert.equal(policy.baselines.defaultState.explicitKeys, 9);
   assert.equal(policy.baselines.defaultState.preCompatKeys, 402);
@@ -2970,7 +3352,6 @@ test("checked-in repository policy is a closed binding-scoped snapshot", async (
     policy.baselines.bindingScopedSites.ambiguous.test.testFixture,
     17,
   );
-  assert.equal(inventory.unknownCandidateBindings.length, 0);
 });
 
 test("candidate discovery covers every production JavaScript module", async () => {
@@ -3082,23 +3463,10 @@ test("previous binding ordinals survive state-target parameter renaming", async 
   );
 });
 
-test("repository policy builder is deterministic and never auto-grants during verification", async () => {
-  const checkedIn = await readSharedRepositoryPolicy();
-  const rebuilt = await buildSharedCurrentPhasePolicy();
-
-  assert.deepEqual(rebuilt, checkedIn);
-});
-
-test("later policy builds preserve the frozen P4.0 denominator", async () => {
+test("current policy build preserves the frozen P4.0 denominator", async () => {
   const checkedIn = await readSharedRepositoryPolicy();
   const currentPhase = checkedIn.progress.latestPhase;
-  const rebuilt = await buildStateWriterPolicySnapshot({
-    phase: currentPhase,
-    previousPolicy: checkedIn,
-    repositoryScanCache: SHARED_REPOSITORY_SCAN_CACHE,
-    historicalDerivedAliasProofCache:
-      SHARED_HISTORICAL_DERIVED_ALIAS_PROOF_CACHE,
-  });
+  const rebuilt = await buildSharedCurrentPhasePolicy();
 
   assert.deepEqual(rebuilt.baseline, checkedIn.baseline);
   assert.deepEqual(rebuilt.baselines, checkedIn.baselines);
@@ -7002,6 +7370,11 @@ test("repository checker reports a passing closed-world policy and default-state
   assert.equal(report.phase, policy.progress.latestPhase);
   assert.equal(report.metrics.unknownCandidateBindings, 0);
   assert.equal(report.metrics.stalePolicyBindings, 0);
+  assert.deepEqual(report.metrics.legacyDirectFiles, {
+    production: 75,
+    test: 43,
+    total: 118,
+  });
   assert.equal(
     report.metrics.legacyMemberships.production,
     currentCheckpoint.productionLegacyMemberships,
