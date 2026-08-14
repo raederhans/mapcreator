@@ -41807,7 +41807,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3819758,
+      "size_bytes": 3825168,
       "source_kind": "generated_ignored"
     },
     {
@@ -41877,22 +41877,22 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json",
-      "size_bytes": 6206480,
+      "size_bytes": 6198045,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1378902,
+      "size_bytes": 1375724,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
-      "size_bytes": 6206480,
+      "size_bytes": 6198045,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1378902,
+      "size_bytes": 1375725,
       "source_kind": "generated_ignored"
     },
     {
@@ -47692,7 +47692,7 @@
       {
         "file_count": 8390,
         "id": "scenario-specific",
-        "size_bytes": 710906966
+        "size_bytes": 710889151
       },
       {
         "file_count": 6,
@@ -61753,7 +61753,7 @@
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 963708720,
+        "untraversed_dist_bytes": 963690905,
         "untraversed_dist_file_count": 9145,
         "untraversed_module_count": 5
       },
@@ -63616,7 +63616,7 @@
           {
             "file_count": 927,
             "prefix": "app/data/scenarios/",
-            "size_bytes": 697462020
+            "size_bytes": 697444205
           },
           {
             "file_count": 9,
@@ -63624,7 +63624,7 @@
             "size_bytes": 118248
           }
         ],
-        "size_bytes": 697580268
+        "size_bytes": 697562453
       },
       {
         "basis": "product-registry:export-modules",
@@ -63828,7 +63828,7 @@
             ]
           },
           "owner": "scenario-runtime",
-          "size_bytes": 697580268
+          "size_bytes": 697562453
         },
         {
           "category": "scenario-specific",
@@ -64096,7 +64096,7 @@
     {
       "file_count": 9450,
       "path": "app",
-      "size_bytes": 965911679
+      "size_bytes": 965893864
     },
     {
       "file_count": 57,
@@ -64129,5 +64129,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973072881
+  "total_bytes": 973055066
 }
