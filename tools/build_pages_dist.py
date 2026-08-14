@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -519,12 +520,6 @@ SCENARIO_PRODUCT_MODULE_PATHS = (
     "app/js/ui/toolbar/scenario_guide_popover.js",
 )
 
-PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS = (
-    "app/data/scenarios/modern_world/runtime_topology.topo.json",
-    "app/data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
-    "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
-)
-
 PAGES_PRODUCT_INVENTORY_RULES = (
     {
         "id": "developer-modules",
@@ -565,6 +560,17 @@ PAGES_PRODUCT_INVENTORY_RULES = (
         "prefixes": (
             "app/data/hgo_catalogs/",
             "app/data/hgo_runtime/",
+        ),
+    },
+    {
+        "id": "appearance-transport-contract-modules",
+        "category": "on-demand-product",
+        "owner": "appearance-transport-contract",
+        "override_reachability": True,
+        "paths": (
+            "app/js/core/appearance_transport_change_set.js",
+            "app/js/core/appearance_transport_change_set_contract.js",
+            "app/js/core/appearance_transport_operation.js",
         ),
     },
     {
@@ -660,6 +666,80 @@ PAGES_PRODUCT_INVENTORY_RULES = (
         ),
     },
 )
+
+
+@dataclass(frozen=True)
+class PagesProductionPublicationPolicy:
+    chunked_scenario_full_topology_paths: frozenset[Path] = frozenset()
+
+    def allows(self, path: str | Path) -> bool:
+        normalized = Path(str(path).replace("\\", "/"))
+        parts = normalized.parts
+        if parts and parts[0] == "app":
+            normalized = Path(*parts[1:])
+            parts = normalized.parts
+
+        scenario_prefix = ("data", "scenarios")
+        if parts[:2] == scenario_prefix:
+            relative_path = Path(*parts[2:])
+            if not relative_path.parts:
+                return False
+            if relative_path.parts[0] in PAGES_LOCAL_PREVIEW_SCENARIO_IDS:
+                return False
+            if relative_path in SCENARIO_PUBLISHED_DERIVED_RELATIVE_FILES:
+                return True
+            if set(relative_path.parts).intersection(SCENARIO_EXCLUDED_DIR_NAMES):
+                return False
+            if relative_path.name in SCENARIO_EXCLUDED_FILE_NAMES:
+                return False
+            if relative_path in SCENARIO_EXCLUDED_RELATIVE_FILES:
+                return False
+            if relative_path in self.chunked_scenario_full_topology_paths:
+                return False
+            return True
+
+        transport_prefix = ("data", "transport_layers")
+        if parts[:2] == transport_prefix:
+            relative_path = Path(*parts[2:])
+            if relative_path in TRANSPORT_LOCAL_ONLY_PREVIEW_FILES:
+                return False
+            repo_relative = normalized.as_posix()
+            if repo_relative in TRANSPORT_SMALL_DIRECT_RUNTIME_FILES:
+                return True
+            if relative_path.name == "industrial_zones.open.geojson":
+                return False
+            if relative_path.name in TRANSPORT_METADATA_FILE_NAMES:
+                return True
+            if ".preview." in relative_path.name:
+                return True
+            if "overrides" in relative_path.parts and relative_path.suffix.lower() == ".json":
+                return True
+            return False
+
+        return True
+
+
+def build_pages_production_publication_policy(
+    scenario_source_dir: Path | None = None,
+) -> PagesProductionPublicationPolicy:
+    source_dir = scenario_source_dir or ROOT / "data" / "scenarios"
+    chunked_full_topology_paths: set[Path] = set()
+    if source_dir.is_dir():
+        for manifest_path in source_dir.glob("*/manifest.json"):
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict) and str(payload.get("detail_chunk_manifest_url") or "").strip():
+                chunked_full_topology_paths.add(
+                    manifest_path.parent.relative_to(source_dir) / "runtime_topology.topo.json"
+                )
+    return PagesProductionPublicationPolicy(frozenset(chunked_full_topology_paths))
+
+
+def is_pages_production_publication_path(
+    path: str | Path,
+    *,
+    policy: PagesProductionPublicationPolicy | None = None,
+) -> bool:
+    return (policy or build_pages_production_publication_policy()).allows(path)
 
 
 def write_text_lf(path: Path, text: str) -> None:
@@ -875,27 +955,13 @@ def build_editor_dist(editor_entry: Path) -> None:
 def copy_scenario_runtime_data() -> None:
     source_dir = ROOT / "data" / "scenarios"
     destination_dir = APP_DIST_ROOT / "data" / "scenarios"
-    chunked_full_topology_excludes = set()
-    # 只要场景 manifest 已声明 chunk runtime，Pages 包里就不再复制完整 runtime_topology。
-    # 发布面要保持“运行时真实会加载什么，就只运什么”，避免 dist 体积和 metadata 一起漂移。
-    for manifest_path in source_dir.glob("*/manifest.json"):
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if isinstance(payload, dict) and str(payload.get("detail_chunk_manifest_url") or "").strip():
-            chunked_full_topology_excludes.add(manifest_path.parent.relative_to(source_dir) / "runtime_topology.topo.json")
+    publication_policy = build_pages_production_publication_policy(source_dir)
 
-    def should_copy_file(relative_path: Path, _source_file: Path) -> bool:
-        if relative_path.parts and relative_path.parts[0] in PAGES_LOCAL_PREVIEW_SCENARIO_IDS:
-            return False
-        if relative_path in SCENARIO_PUBLISHED_DERIVED_RELATIVE_FILES:
-            return True
-        parts = set(relative_path.parts)
-        if parts.intersection(SCENARIO_EXCLUDED_DIR_NAMES):
-            return False
-        if relative_path.name in SCENARIO_EXCLUDED_FILE_NAMES:
-            return False
-        if relative_path in SCENARIO_EXCLUDED_RELATIVE_FILES or relative_path in chunked_full_topology_excludes:
-            return False
-        return True
+    def should_copy_file(_relative_path: Path, source_file: Path) -> bool:
+        return is_pages_production_publication_path(
+            source_file.relative_to(ROOT),
+            policy=publication_policy,
+        )
 
     copy_tree_filtered(source_dir, destination_dir, should_copy_file)
     strip_scenario_publish_audit_urls(destination_dir)
@@ -1079,23 +1145,13 @@ def copy_transport_runtime_data() -> None:
     source_dir = ROOT / "data" / "transport_layers"
     destination_dir = APP_DIST_ROOT / "data" / "transport_layers"
 
-    def should_copy_file(relative_path: Path, source_file: Path) -> bool:
-        # transport dist 只发布主运行时所需的小直载资产、metadata、preview 和 overrides。
-        # 这样 Pages 既能保留 workbench/overview 所需最小面，又不会把全量 builder 中间产物带上去。
-        if relative_path in TRANSPORT_LOCAL_ONLY_PREVIEW_FILES:
-            return False
-        repo_relative = source_file.relative_to(ROOT).as_posix()
-        if repo_relative in TRANSPORT_SMALL_DIRECT_RUNTIME_FILES:
-            return True
-        if relative_path.name == "industrial_zones.open.geojson":
-            return False
-        if relative_path.name in TRANSPORT_METADATA_FILE_NAMES:
-            return True
-        if ".preview." in relative_path.name:
-            return True
-        if "overrides" in relative_path.parts and relative_path.suffix.lower() == ".json":
-            return True
-        return False
+    publication_policy = build_pages_production_publication_policy()
+
+    def should_copy_file(_relative_path: Path, source_file: Path) -> bool:
+        return is_pages_production_publication_path(
+            source_file.relative_to(ROOT),
+            policy=publication_policy,
+        )
 
     copy_tree_filtered(source_dir, destination_dir, should_copy_file)
     prune_transport_manifests_to_published_paths(destination_dir)
@@ -2297,8 +2353,6 @@ def build_pages_module_graph(
 
 
 def _match_product_inventory_rule(path: str) -> dict | None:
-    if path in PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS:
-        return None
     matches = []
     for rule in PAGES_PRODUCT_INVENTORY_RULES:
         if path in rule.get("paths", ()) or any(path.startswith(prefix) for prefix in rule.get("prefixes", ())):
@@ -2382,10 +2436,12 @@ def _classify_pages_dist_path(
     graph: dict,
     *,
     reachability_index: dict[str, set[str]] | None = None,
+    publication_policy: PagesProductionPublicationPolicy | None = None,
 ) -> tuple[str, str, str]:
     selected_index = reachability_index or _build_graph_reachability_index(graph)
+    selected_publication_policy = publication_policy or build_pages_production_publication_policy()
     reachability_status, reachability_basis = _path_reachability_evidence(path, selected_index)
-    if path in PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS:
+    if not is_pages_production_publication_path(path, policy=selected_publication_policy):
         return "unknown", "unclassified", "publication-registry:exact-exclusion"
     product_rule = _match_product_inventory_rule(path)
 
@@ -2467,7 +2523,12 @@ def _product_registry_summary(classifications: list[dict], size_by_path: dict[st
     return summaries
 
 
-def build_pages_reachability_inventory(records: list[dict], *, module_graph: dict) -> dict:
+def build_pages_reachability_inventory(
+    records: list[dict],
+    *,
+    module_graph: dict,
+    publication_policy: PagesProductionPublicationPolicy | None = None,
+) -> dict:
     ordered_records = sorted((dict(record) for record in records), key=lambda record: str(record.get("path") or ""))
     paths = [str(record.get("path") or "") for record in ordered_records]
     if len(set(paths)) != len(paths):
@@ -2478,6 +2539,7 @@ def build_pages_reachability_inventory(records: list[dict], *, module_graph: dic
     }
     all_paths = set(size_by_path)
     reachability_index = _build_graph_reachability_index(module_graph)
+    selected_publication_policy = publication_policy or build_pages_production_publication_policy()
     category_totals = {
         category: {"id": category, "file_count": 0, "size_bytes": 0}
         for category in STARTUP_REACHABILITY_CATEGORIES
@@ -2494,6 +2556,7 @@ def build_pages_reachability_inventory(records: list[dict], *, module_graph: dic
             path,
             module_graph,
             reachability_index=reachability_index,
+            publication_policy=selected_publication_policy,
         )
         classification = {
             "path": path,
@@ -2595,6 +2658,11 @@ def build_pages_reachability_inventory(records: list[dict], *, module_graph: dic
         for record in classifications
         if record["category"] == "unknown"
     )
+    exact_exclusions = sorted(
+        record["path"]
+        for record in classifications
+        if record["basis"] == "publication-registry:exact-exclusion"
+    )
     untraversed_owned_file_count = sum(
         1
         for record in classifications
@@ -2648,7 +2716,7 @@ def build_pages_reachability_inventory(records: list[dict], *, module_graph: dic
             "classified_file_count": len(ordered_records) - len(unknown_paths),
             "unknown_file_count": len(unknown_paths),
             "unknown_paths": unknown_paths,
-            "exact_exclusions": list(PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS),
+            "exact_exclusions": exact_exclusions,
             "registry_rules": _product_registry_summary(classifications, size_by_path),
         },
         "categories": [category_totals[category] for category in STARTUP_REACHABILITY_CATEGORIES],

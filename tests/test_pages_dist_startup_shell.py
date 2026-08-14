@@ -1323,6 +1323,123 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 module_graph=empty_graph,
             )
 
+    def test_appearance_transport_contract_modules_have_exact_product_ownership(self) -> None:
+        reachable_graph = {
+            "schema_version": build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION,
+            "module_entrypoint": build_pages_dist.PAGES_MODULE_ENTRYPOINT,
+            "entrypoints": [],
+            "summary": {},
+            "initial_resource_paths": [],
+            "deferred_resource_paths": [],
+            "nodes": [
+                {
+                    "path": "app/js/core/appearance_transport_change_set.js",
+                    "load_phase": "initial",
+                },
+                {
+                    "path": "app/js/core/appearance_transport_change_set_contract.js",
+                    "load_phase": "deferred-runtime",
+                },
+                {
+                    "path": "app/js/core/appearance_transport_operation.js",
+                    "load_phase": "deferred-runtime",
+                },
+            ],
+            "unresolved_references": [],
+        }
+        expected_paths = {
+            "app/js/core/appearance_transport_change_set.js",
+            "app/js/core/appearance_transport_change_set_contract.js",
+            "app/js/core/appearance_transport_operation.js",
+        }
+        rule = next(
+            rule
+            for rule in build_pages_dist.PAGES_PRODUCT_INVENTORY_RULES
+            if rule["id"] == "appearance-transport-contract-modules"
+        )
+        self.assertEqual(set(rule["paths"]), expected_paths)
+        self.assertEqual(rule["category"], "on-demand-product")
+        self.assertEqual(rule["owner"], "appearance-transport-contract")
+        self.assertTrue(rule["override_reachability"])
+
+        for path in sorted(expected_paths):
+            with self.subTest(path=path):
+                self.assertEqual(
+                    build_pages_dist._classify_pages_dist_path(path, reachable_graph),
+                    (
+                        "on-demand-product",
+                        "appearance-transport-contract",
+                        "product-registry:appearance-transport-contract-modules",
+                    ),
+                )
+
+    def test_shared_production_publication_policy_rejects_scenario_and_transport_nonproducts(self) -> None:
+        empty_graph = {
+            "schema_version": build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION,
+            "module_entrypoint": build_pages_dist.PAGES_MODULE_ENTRYPOINT,
+            "entrypoints": [],
+            "summary": {},
+            "initial_resource_paths": [],
+            "deferred_resource_paths": [],
+            "nodes": [],
+            "unresolved_references": [],
+        }
+        policy = build_pages_dist.PagesProductionPublicationPolicy(frozenset({
+            Path("tno_1962") / "runtime_topology.topo.json",
+        }))
+        rejected_repo_paths = (
+            "data/scenarios/tno_1962/audit.json",
+            "data/scenarios/tno_1962/derived/marine_regions_named_waters.snapshot.geojson",
+            "data/scenarios/hgo_1936/manifest.json",
+            "data/scenarios/tno_1962/runtime_topology.topo.json",
+            "data/transport_layers/japan_industrial_zones/industrial_zones.open.geojson",
+            "data/transport_layers/global_road/shards/w120_w090/roads.topo.json",
+        )
+        rejected_dist_paths = tuple(f"app/{path}" for path in rejected_repo_paths)
+        for path in (*rejected_repo_paths, *rejected_dist_paths):
+            with self.subTest(rejected_path=path):
+                self.assertFalse(
+                    build_pages_dist.is_pages_production_publication_path(path, policy=policy)
+                )
+
+        self.assertFalse(
+            build_pages_dist.is_pages_production_publication_path(
+                r"app\data\scenarios\tno_1962\audit.json",
+                policy=policy,
+            )
+        )
+
+        for path in (
+            "data/scenarios/tno_1962/derived/atlantropa_donor_ledger.json",
+            "data/scenarios/tno_1962/derived/geometry_drop_audit.json",
+            "data/transport_layers/global_road/catalog.json",
+            "data/transport_layers/japan_road/roads.preview.topo.json",
+            "data/transport_layers/global_airport/airports.geojson",
+            "data/transport_layers/japan_road/overrides/manual.json",
+        ):
+            with self.subTest(published_path=path):
+                self.assertTrue(
+                    build_pages_dist.is_pages_production_publication_path(path, policy=policy)
+                )
+
+        records = [
+            {"path": path, "size_bytes": 1, "source_kind": "dist"}
+            for path in rejected_dist_paths
+        ]
+        inventory = build_pages_dist.build_pages_reachability_inventory(
+            records,
+            module_graph=empty_graph,
+            publication_policy=policy,
+        )
+        self.assertEqual(
+            inventory["product_inventory"]["exact_exclusions"],
+            sorted(rejected_dist_paths),
+        )
+        self.assertEqual(
+            inventory["product_inventory"]["unknown_paths"],
+            sorted(rejected_dist_paths),
+        )
+
     def test_pages_dist_manifest_payload_rejects_missing_static_import(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             dist_root = Path(tmpdir)
