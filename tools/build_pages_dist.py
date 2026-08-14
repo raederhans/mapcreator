@@ -5,10 +5,11 @@ import hashlib
 import json
 import os
 import posixpath
-import re
 import shutil
+import subprocess
 import sys
 import time
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -169,20 +170,221 @@ GENERATED_IGNORED_DIST_DIRS = (
     Path("app") / "data",
 )
 
-MODULE_STATIC_IMPORT_RE = re.compile(
-    r"(?m)^\s*import\s+(?:[^;\"']+?\s+from\s+)?[\"'](?P<reference>[^\"']+)[\"']"
-)
-MODULE_REEXPORT_RE = re.compile(
-    r"(?ms)^\s*export\s+(?:\*|\{.*?\})\s+from\s+[\"'](?P<reference>[^\"']+)[\"']"
-)
-MODULE_URL_REFERENCE_RE = re.compile(
-    r"new\s+URL\(\s*[\"'](?P<reference>[^\"']+)[\"']\s*,\s*"
-    r"(?:import\.meta\.url|self\.location\.href)\s*\)"
-)
-HTML_RESOURCE_REFERENCE_RE = re.compile(
-    r"<(?:script|link|img|source)\b[^>]*?\b(?:src|href)=[\"'](?P<reference>[^\"']+)[\"']",
-    re.I,
-)
+PAGES_JS_REFERENCE_EXTRACTOR = r"""
+"use strict";
+
+const fs = require("fs");
+const acorn = require("acorn");
+const walk = require("acorn-walk");
+const walkPackage = JSON.parse(
+  fs.readFileSync(require.resolve("acorn-walk/package.json"), "utf8"),
+);
+
+if (acorn.version !== "8.17.0" || walkPackage.version !== "8.3.5") {
+  throw new Error(
+    `Pages reference extractor requires acorn@8.17.0 and acorn-walk@8.3.5; ` +
+      `loaded acorn@${acorn.version} and acorn-walk@${walkPackage.version}`,
+  );
+}
+
+const payload = JSON.parse(fs.readFileSync(0, "utf8"));
+
+function sourceLocation(node) {
+  return {
+    line: node.loc.start.line,
+    column: node.loc.start.column + 1,
+  };
+}
+
+function literalString(node) {
+  if (node?.type === "Literal" && typeof node.value === "string") {
+    return node.value;
+  }
+  if (node?.type === "TemplateLiteral" && node.expressions.length === 0) {
+    return node.quasis[0]?.value?.cooked ?? node.quasis[0]?.value?.raw ?? "";
+  }
+  return null;
+}
+
+function isIdentifier(node, name) {
+  return node?.type === "Identifier" && node.name === name;
+}
+
+function isNamedMember(node, objectName, propertyName) {
+  return (
+    node?.type === "MemberExpression" &&
+    !node.computed &&
+    isIdentifier(node.object, objectName) &&
+    isIdentifier(node.property, propertyName)
+  );
+}
+
+function isImportMetaUrl(node) {
+  return (
+    node?.type === "MemberExpression" &&
+    !node.computed &&
+    node.object?.type === "MetaProperty" &&
+    isIdentifier(node.object.meta, "import") &&
+    isIdentifier(node.object.property, "meta") &&
+    isIdentifier(node.property, "url")
+  );
+}
+
+function isSelfLocationHref(node) {
+  return (
+    node?.type === "MemberExpression" &&
+    !node.computed &&
+    isNamedMember(node.object, "self", "location") &&
+    isIdentifier(node.property, "href")
+  );
+}
+
+function unwrapLiteralCollection(node) {
+  let current = node;
+  if (
+    current?.type === "CallExpression" &&
+    isNamedMember(current.callee, "Object", "freeze") &&
+    current.arguments.length === 1
+  ) {
+    current = current.arguments[0];
+  }
+  if (
+    current?.type === "NewExpression" &&
+    isIdentifier(current.callee, "Set") &&
+    current.arguments.length === 1
+  ) {
+    current = current.arguments[0];
+  }
+  if (current?.type !== "ArrayExpression") {
+    return { status: "non-literal-collection", targets: [] };
+  }
+  const targets = [];
+  for (const element of current.elements) {
+    const value = literalString(element);
+    if (value === null) {
+      return { status: "non-literal-collection", targets: [] };
+    }
+    targets.push(value);
+  }
+  return {
+    status: new Set(targets).size === targets.length ? "literal-string-collection" : "duplicate-targets",
+    targets,
+  };
+}
+
+function extractModule(moduleRecord) {
+  const source = String(moduleRecord.source || "");
+  const requestedBindings = new Set(moduleRecord.source_bindings || []);
+  const ast = acorn.parse(source, {
+    ecmaVersion: "latest",
+    sourceType: "module",
+    locations: true,
+    allowHashBang: true,
+  });
+  const staticImports = [];
+  const dynamicImports = [];
+  const resourceReferences = [];
+  const dynamicExpressions = [];
+  const sourceBindings = [];
+
+  function addStaticReference(node, kind) {
+    const reference = literalString(node.source);
+    if (reference !== null) {
+      staticImports.push({ reference, kind, ...sourceLocation(node) });
+    }
+  }
+
+  walk.simple(ast, {
+    ImportDeclaration(node) {
+      addStaticReference(node, "import-declaration");
+    },
+    ExportNamedDeclaration(node) {
+      if (node.source) addStaticReference(node, "export-named-source");
+    },
+    ExportAllDeclaration(node) {
+      addStaticReference(node, "export-all-source");
+    },
+    ImportExpression(node) {
+      const reference = literalString(node.source);
+      const expression = source.slice(node.source.start, node.source.end);
+      const baseRecord = {
+        expression,
+        start: node.start,
+        ...sourceLocation(node),
+      };
+      if (reference === null) {
+        dynamicExpressions.push({
+          ...baseRecord,
+          kind: "unresolved_dynamic_expression",
+          resolution: "unresolved",
+        });
+      } else {
+        dynamicImports.push({
+          reference,
+          kind: "literal-dynamic-import",
+          ...sourceLocation(node),
+        });
+        dynamicExpressions.push({
+          ...baseRecord,
+          kind: "literal_dynamic_import",
+          reference,
+          resolution: "literal",
+        });
+      }
+    },
+    NewExpression(node) {
+      if (!isIdentifier(node.callee, "URL") || node.arguments.length < 2) return;
+      if (!isImportMetaUrl(node.arguments[1]) && !isSelfLocationHref(node.arguments[1])) return;
+      const reference = literalString(node.arguments[0]);
+      if (reference === null) return;
+      resourceReferences.push({
+        reference,
+        kind: "new-url-reference",
+        ...sourceLocation(node),
+      });
+    },
+    VariableDeclarator(node) {
+      if (node.id?.type !== "Identifier" || !requestedBindings.has(node.id.name)) return;
+      sourceBindings.push({
+        name: node.id.name,
+        ...unwrapLiteralCollection(node.init),
+        ...sourceLocation(node),
+      });
+    },
+  });
+
+  dynamicExpressions.sort((left, right) => left.start - right.start);
+  dynamicExpressions.forEach((record, expressionIndex) => {
+    record.expression_index = expressionIndex;
+    delete record.start;
+  });
+  const compareReferenceRecords = (left, right) =>
+    left.line - right.line || left.column - right.column || left.reference.localeCompare(right.reference);
+  staticImports.sort(compareReferenceRecords);
+  dynamicImports.sort(compareReferenceRecords);
+  resourceReferences.sort(compareReferenceRecords);
+  sourceBindings.sort((left, right) =>
+    left.name.localeCompare(right.name) || left.line - right.line || left.column - right.column,
+  );
+  return {
+    path: moduleRecord.path,
+    static_imports: staticImports,
+    dynamic_imports: dynamicImports,
+    resource_references: resourceReferences,
+    dynamic_import_expressions: dynamicExpressions,
+    source_bindings: sourceBindings,
+  };
+}
+
+const modules = (payload.modules || []).map((moduleRecord) => {
+  try {
+    return extractModule(moduleRecord);
+  } catch (error) {
+    throw new Error(`${moduleRecord.path}: ${error.message}`);
+  }
+});
+process.stdout.write(JSON.stringify({ modules }));
+"""
 
 PAGES_DYNAMIC_IMPORT_REGISTRY = (
     {
@@ -190,6 +392,8 @@ PAGES_DYNAMIC_IMPORT_REGISTRY = (
         "source": "app/js/bootstrap/deferred_ui_bootstrap.js",
         "expression_index": 0,
         "expected_expression": "path",
+        "source_binding": "DEFERRED_UI_MODULE_PATHS",
+        "source_binding_resolution": "module-relative",
         "targets": (
             "app/js/ui/toolbar.js",
             "app/js/ui/sidebar.js",
@@ -203,6 +407,8 @@ PAGES_DYNAMIC_IMPORT_REGISTRY = (
         "source": "app/js/core/data_service.js",
         "expression_index": 0,
         "expected_expression": "specifier",
+        "source_binding": "ALLOWED_RUNTIME_MODULE_PATHS",
+        "source_binding_resolution": "app-root",
         "targets": (
             "app/js/core/city_lights_historical_1930_asset.js",
             "app/js/core/city_lights_modern_asset.js",
@@ -226,54 +432,120 @@ LANDING_PRODUCT_ASSET_PATHS = (
     "assets/workspace-overview.webp",
 )
 
+DEVELOPER_PRODUCT_MODULE_PATHS = (
+    "app/js/bootstrap/main_runtime_diagnostics.js",
+    "app/js/bootstrap/ui_shell_boot.js",
+    "app/js/bootstrap/ui_shell_debug_seed.js",
+    "app/js/core/state/dev_state.js",
+    "app/js/ui/dev_workspace.js",
+    "app/js/ui/dev_workspace/dev_mutation_service.js",
+    "app/js/ui/dev_workspace/dev_workspace_normalizers.js",
+    "app/js/ui/dev_workspace/dev_workspace_shell_builder.js",
+    "app/js/ui/dev_workspace/district_editor_controller.js",
+    "app/js/ui/dev_workspace/scenario_tag_creator_controller.js",
+    "app/js/ui/dev_workspace/scenario_text_editors_controller.js",
+    "app/js/ui/dev_workspace/selection_ownership_controller.js",
+)
+
+EXPORT_PRODUCT_MODULE_PATHS = (
+    "app/js/core/export_artifact_package.js",
+    "app/js/core/sample_export_recommendation.js",
+    "app/js/ui/toolbar/export_artifact_pipeline.js",
+    "app/js/ui/toolbar/export_failure_handler.js",
+    "app/js/ui/toolbar/export_workbench_contract.js",
+    "app/js/ui/toolbar/export_workbench_controller.js",
+)
+
+SCENARIO_PRODUCT_MODULE_PATHS = (
+    "app/js/bootstrap/deferred_detail_promotion.js",
+    "app/js/bootstrap/startup_scenario_boot.js",
+    "app/js/core/hgo_identity_resolver.js",
+    "app/js/core/hgo_projection_model.js",
+    "app/js/core/hgo_raster_renderer.js",
+    "app/js/core/hgo_runtime_asset_loader.js",
+    "app/js/core/hgo_runtime_index.js",
+    "app/js/core/hgo_runtime_preview.js",
+    "app/js/core/map_renderer/hgo_runtime_preview_frame_commit.js",
+    "app/js/core/map_renderer/hgo_runtime_preview_render_owner.js",
+    "app/js/core/map_renderer/scenario_refresh_plans.js",
+    "app/js/core/map_renderer/scenario_refresh_runtime.js",
+    "app/js/core/map_renderer/scenario_visual_invalidation_executor.js",
+    "app/js/core/renderer/scenario_chunk_promotion_helpers.js",
+    "app/js/core/renderer/scenario_relief_overlay_render_owner.js",
+    "app/js/core/renderer/scenario_water_cache_policy_owner.js",
+    "app/js/core/scenario/bundle_loader.js",
+    "app/js/core/scenario/bundle_runtime.js",
+    "app/js/core/scenario/chunk_runtime.js",
+    "app/js/core/scenario/lifecycle_runtime.js",
+    "app/js/core/scenario/locale_asset_contract.js",
+    "app/js/core/scenario/presentation_display_restore.js",
+    "app/js/core/scenario/presentation_hint_helpers.js",
+    "app/js/core/scenario/presentation_ocean_fill_restore.js",
+    "app/js/core/scenario/presentation_runtime.js",
+    "app/js/core/scenario/pure_helpers.js",
+    "app/js/core/scenario/scenario_renderer_bridge.js",
+    "app/js/core/scenario/shared.js",
+    "app/js/core/scenario/startup_hydration.js",
+    "app/js/core/scenario/strategic_values.js",
+    "app/js/core/scenario_apply_pipeline.js",
+    "app/js/core/scenario_chunk_manager.js",
+    "app/js/core/scenario_country_display.js",
+    "app/js/core/scenario_data_health.js",
+    "app/js/core/scenario_dispatcher.js",
+    "app/js/core/scenario_districts.js",
+    "app/js/core/scenario_localization_state.js",
+    "app/js/core/scenario_manager.js",
+    "app/js/core/scenario_ownership_editor.js",
+    "app/js/core/scenario_post_apply_effects.js",
+    "app/js/core/scenario_recovery.js",
+    "app/js/core/scenario_resources.js",
+    "app/js/core/scenario_rollback.js",
+    "app/js/core/scenario_runtime_queries.js",
+    "app/js/core/scenario_shell_overlay.js",
+    "app/js/core/scenario_ui_sync.js",
+    "app/js/core/state/actions/scenario_activation_actions.js",
+    "app/js/core/state/actions/scenario_apply_request_actions.js",
+    "app/js/core/state/actions/scenario_chunk_promotion_actions.js",
+    "app/js/core/state/actions/scenario_chunk_runtime_actions.js",
+    "app/js/core/state/actions/scenario_health_actions.js",
+    "app/js/core/state/actions/scenario_palette_actions.js",
+    "app/js/core/state/actions/scenario_presentation_actions.js",
+    "app/js/core/state/actions/scenario_readiness_actions.js",
+    "app/js/core/state/actions/scenario_transaction_rollback_actions.js",
+    "app/js/core/state/scenario_runtime_state.js",
+    "app/js/ui/scenario_controls.js",
+    "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
+    "app/js/ui/toolbar/scenario_context_bar_controller.js",
+    "app/js/ui/toolbar/scenario_guide_popover.js",
+)
+
+PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS = (
+    "app/data/scenarios/modern_world/runtime_topology.topo.json",
+    "app/data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
+    "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
+)
+
 PAGES_PRODUCT_INVENTORY_RULES = (
     {
         "id": "developer-modules",
         "category": "developer-only",
         "owner": "development-tools",
         "override_reachability": True,
-        "paths": (
-            "app/js/bootstrap/main_runtime_diagnostics.js",
-            "app/js/bootstrap/ui_shell_boot.js",
-            "app/js/bootstrap/ui_shell_debug_seed.js",
-            "app/js/core/state/dev_state.js",
-            "app/js/ui/dev_workspace.js",
-        ),
-        "prefixes": ("app/js/ui/dev_workspace/",),
+        "paths": DEVELOPER_PRODUCT_MODULE_PATHS,
     },
     {
         "id": "export-modules",
         "category": "export-only",
         "owner": "export-capability",
         "override_reachability": True,
-        "paths": (
-            "app/js/core/export_artifact_package.js",
-            "app/js/core/sample_export_recommendation.js",
-        ),
-        "prefixes": ("app/js/ui/toolbar/export_",),
+        "paths": EXPORT_PRODUCT_MODULE_PATHS,
     },
     {
         "id": "scenario-modules",
         "category": "scenario-specific",
         "owner": "scenario-runtime",
         "override_reachability": True,
-        "paths": (
-            "app/js/bootstrap/deferred_detail_promotion.js",
-            "app/js/bootstrap/startup_scenario_boot.js",
-            "app/js/core/state/scenario_runtime_state.js",
-            "app/js/ui/scenario_controls.js",
-            "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
-        ),
-        "prefixes": (
-            "app/js/core/hgo_",
-            "app/js/core/map_renderer/hgo_",
-            "app/js/core/map_renderer/scenario_",
-            "app/js/core/renderer/scenario_",
-            "app/js/core/scenario/",
-            "app/js/core/scenario_",
-            "app/js/core/state/actions/scenario_",
-            "app/js/ui/toolbar/scenario_",
-        ),
+        "paths": SCENARIO_PRODUCT_MODULE_PATHS,
     },
     {
         "id": "scenario-runtime-data",
@@ -1405,141 +1677,128 @@ def _resolve_dist_reference(
     return True, candidates[0]
 
 
-def _scan_js_string(source_text: str, start: int) -> int:
-    quote = source_text[start]
-    index = start + 1
-    while index < len(source_text):
-        if source_text[index] == "\\":
-            index += 2
-            continue
-        if source_text[index] == quote:
-            return index + 1
-        index += 1
-    return len(source_text)
+def _node_extractor_environment() -> dict[str, str]:
+    environment = dict(os.environ)
+    module_directories = [ROOT / "node_modules"]
+    git_marker = ROOT / ".git"
+    if git_marker.is_file():
+        marker_text = git_marker.read_text(encoding="utf-8").strip()
+        if marker_text.startswith("gitdir:"):
+            git_directory = Path(marker_text.removeprefix("gitdir:").strip())
+            if not git_directory.is_absolute():
+                git_directory = (ROOT / git_directory).resolve()
+            common_directory_marker = git_directory / "commondir"
+            if common_directory_marker.is_file():
+                common_directory = (
+                    git_directory / common_directory_marker.read_text(encoding="utf-8").strip()
+                ).resolve()
+                module_directories.append(common_directory.parent / "node_modules")
+    existing_node_path = environment.get("NODE_PATH", "")
+    module_search_paths = [
+        str(path)
+        for path in module_directories
+        if path.is_dir()
+    ]
+    if existing_node_path:
+        module_search_paths.extend(
+            path
+            for path in existing_node_path.split(os.pathsep)
+            if path
+        )
+    environment["NODE_PATH"] = os.pathsep.join(dict.fromkeys(module_search_paths))
+    return environment
 
 
-def _scan_dynamic_import_call_end(source_text: str, open_paren_index: int) -> int | None:
-    depth = 1
-    index = open_paren_index + 1
-    while index < len(source_text):
-        character = source_text[index]
-        next_character = source_text[index + 1] if index + 1 < len(source_text) else ""
-        if character in {'"', "'", "`"}:
-            index = _scan_js_string(source_text, index)
-            continue
-        if character == "/" and next_character == "/":
-            newline_index = source_text.find("\n", index + 2)
-            index = len(source_text) if newline_index < 0 else newline_index + 1
-            continue
-        if character == "/" and next_character == "*":
-            comment_end = source_text.find("*/", index + 2)
-            index = len(source_text) if comment_end < 0 else comment_end + 2
-            continue
-        if character == "(":
-            depth += 1
-        elif character == ")":
-            depth -= 1
-            if depth == 0:
-                return index
-        index += 1
-    return None
-
-
-def _iter_dynamic_import_expressions(source_text: str) -> list[dict[str, int | str]]:
-    expressions: list[dict[str, int | str]] = []
-    index = 0
-    while index < len(source_text):
-        character = source_text[index]
-        next_character = source_text[index + 1] if index + 1 < len(source_text) else ""
-        if character in {'"', "'", "`"}:
-            index = _scan_js_string(source_text, index)
-            continue
-        if character == "/" and next_character == "/":
-            newline_index = source_text.find("\n", index + 2)
-            index = len(source_text) if newline_index < 0 else newline_index + 1
-            continue
-        if character == "/" and next_character == "*":
-            comment_end = source_text.find("*/", index + 2)
-            index = len(source_text) if comment_end < 0 else comment_end + 2
-            continue
-        if source_text.startswith("import", index):
-            previous_character = source_text[index - 1] if index else ""
-            after_identifier = index + len("import")
-            following_character = source_text[after_identifier] if after_identifier < len(source_text) else ""
-            if (
-                (not previous_character or not (previous_character.isalnum() or previous_character in "_$"))
-                and (not following_character or not (following_character.isalnum() or following_character in "_$"))
-            ):
-                open_paren_index = after_identifier
-                while open_paren_index < len(source_text) and source_text[open_paren_index].isspace():
-                    open_paren_index += 1
-                if open_paren_index < len(source_text) and source_text[open_paren_index] == "(":
-                    close_paren_index = _scan_dynamic_import_call_end(source_text, open_paren_index)
-                    if close_paren_index is not None:
-                        expression = source_text[open_paren_index + 1:close_paren_index].strip()
-                        expressions.append(
-                            {
-                                "expression_index": len(expressions),
-                                "expression": expression,
-                                "line": source_text.count("\n", 0, index) + 1,
-                                "column": index - source_text.rfind("\n", 0, index),
-                            }
-                        )
-                        index = close_paren_index + 1
-                        continue
-        index += 1
-    return expressions
-
-
-def _literal_dynamic_import_reference(expression: str) -> str | None:
-    value = str(expression or "").strip()
-    if len(value) < 2 or value[0] not in {'"', "'"} or value[-1] != value[0]:
-        return None
-    body = value[1:-1]
-    if "\\" in body or value[0] in body:
-        return None
-    return body
-
-
-def _extract_module_reference_groups(source_text: str) -> dict[str, object]:
-    static_references = {
-        match.group("reference")
-        for pattern in (MODULE_STATIC_IMPORT_RE, MODULE_REEXPORT_RE)
-        for match in pattern.finditer(source_text)
+def _extract_module_reference_groups(
+    module_sources: dict[str, str],
+    *,
+    source_bindings_by_path: dict[str, set[str]],
+) -> dict[str, dict[str, object]]:
+    extractor_input = {
+        "modules": [
+            {
+                "path": module_path,
+                "source": module_sources[module_path],
+                "source_bindings": sorted(source_bindings_by_path.get(module_path, set())),
+            }
+            for module_path in sorted(module_sources)
+        ]
     }
-    dynamic_references: set[str] = set()
-    dynamic_import_expressions = []
-    for expression_record in _iter_dynamic_import_expressions(source_text):
-        expression = str(expression_record["expression"])
-        literal_reference = _literal_dynamic_import_reference(expression)
-        if literal_reference is None:
-            dynamic_import_expressions.append(
+    try:
+        completed = subprocess.run(
+            ["node", "-e", PAGES_JS_REFERENCE_EXTRACTOR],
+            cwd=ROOT,
+            env=_node_extractor_environment(),
+            input=json.dumps(extractor_input, separators=(",", ":")),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+    except OSError as error:
+        raise RuntimeError(f"Unable to start Pages JavaScript reference extractor: {error}") from error
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip() or f"exit {completed.returncode}"
+        raise RuntimeError(f"Pages JavaScript reference extractor failed: {detail}")
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("Pages JavaScript reference extractor returned invalid JSON") from error
+    extracted_modules = payload.get("modules")
+    if not isinstance(extracted_modules, list):
+        raise RuntimeError("Pages JavaScript reference extractor omitted modules")
+    extracted_by_path = {
+        str(record.get("path") or ""): record
+        for record in extracted_modules
+        if isinstance(record, dict)
+    }
+    if set(extracted_by_path) != set(module_sources):
+        missing_paths = sorted(set(module_sources) - set(extracted_by_path))
+        unexpected_paths = sorted(set(extracted_by_path) - set(module_sources))
+        raise RuntimeError(
+            "Pages JavaScript reference extractor path mismatch: "
+            f"missing={missing_paths}, unexpected={unexpected_paths}"
+        )
+    return extracted_by_path
+
+
+class _PagesHtmlResourceParser(HTMLParser):
+    RESOURCE_ATTRIBUTES = {
+        "script": "src",
+        "link": "href",
+        "img": "src",
+        "source": "src",
+    }
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.references: list[dict[str, int | str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        expected_attribute = self.RESOURCE_ATTRIBUTES.get(tag.lower())
+        if expected_attribute is None:
+            return
+        for attribute_name, attribute_value in attrs:
+            if attribute_name.lower() != expected_attribute or not attribute_value:
+                continue
+            line, zero_based_column = self.getpos()
+            self.references.append(
                 {
-                    **expression_record,
-                    "kind": "unresolved_dynamic_expression",
-                    "resolution": "unresolved",
+                    "reference": attribute_value,
+                    "line": line,
+                    "column": zero_based_column + 1,
                 }
             )
-        else:
-            dynamic_references.add(literal_reference)
-            dynamic_import_expressions.append(
-                {
-                    **expression_record,
-                    "kind": "literal_dynamic_import",
-                    "reference": literal_reference,
-                    "resolution": "literal",
-                }
-            )
-    resource_references = {
-        match.group("reference")
-        for match in MODULE_URL_REFERENCE_RE.finditer(source_text)
-    }
-    return {
-        "static_imports": sorted(static_references),
-        "dynamic_imports": sorted(dynamic_references),
-        "resource_references": sorted(resource_references),
-        "dynamic_import_expressions": dynamic_import_expressions,
-    }
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+
+
+def _extract_html_resource_references(source_text: str) -> list[dict[str, int | str]]:
+    parser = _PagesHtmlResourceParser()
+    parser.feed(source_text)
+    parser.close()
+    return parser.references
 
 
 def _normalize_dynamic_import_registry(
@@ -1548,18 +1807,32 @@ def _normalize_dynamic_import_registry(
     declarations_by_key: dict[tuple[str, int], dict] = {}
     normalized_declarations = []
     for declaration in declarations:
+        raw_targets = [
+            str(target or "").replace("\\", "/").strip()
+            for target in declaration.get("targets", ())
+            if str(target or "").strip()
+        ]
+        if len(raw_targets) != len(set(raw_targets)):
+            raise ValueError(f"Duplicate Pages dynamic import registry targets: {raw_targets}")
         normalized = {
             "id": str(declaration.get("id") or "").strip(),
             "source": str(declaration.get("source") or "").replace("\\", "/").strip(),
             "expression_index": int(declaration.get("expression_index") or 0),
             "expected_expression": str(declaration.get("expected_expression") or "").strip(),
-            "targets": sorted({
-                str(target or "").replace("\\", "/").strip()
-                for target in declaration.get("targets", ())
-                if str(target or "").strip()
-            }),
+            "source_binding": str(declaration.get("source_binding") or "").strip(),
+            "source_binding_resolution": str(
+                declaration.get("source_binding_resolution") or "module-relative"
+            ).strip(),
+            "targets": sorted(raw_targets),
         }
-        if not normalized["id"] or not normalized["source"] or not normalized["expected_expression"]:
+        if (
+            not normalized["id"]
+            or not normalized["source"]
+            or not normalized["expected_expression"]
+            or not normalized["source_binding"]
+            or normalized["expression_index"] < 0
+            or normalized["source_binding_resolution"] not in {"module-relative", "app-root"}
+        ):
             raise ValueError(f"Invalid Pages dynamic import registry declaration: {normalized}")
         key = (str(normalized["source"]), int(normalized["expression_index"]))
         if key in declarations_by_key:
@@ -1568,6 +1841,32 @@ def _normalize_dynamic_import_registry(
         normalized_declarations.append(normalized)
     normalized_declarations.sort(key=lambda item: (item["source"], item["expression_index"], item["id"]))
     return declarations_by_key, normalized_declarations
+
+
+def _resolve_registry_binding_target(
+    source_path: str,
+    reference: str,
+    resolution_mode: str,
+    available_paths: set[str],
+) -> tuple[bool, str | None]:
+    if resolution_mode == "module-relative":
+        return _resolve_dist_reference(source_path, reference, available_paths)
+    value = str(reference or "").strip().split("#", 1)[0].split("?", 1)[0].lstrip("/")
+    if not value:
+        return False, None
+    if value.startswith("app/"):
+        normalized = value
+    elif value.startswith(("js/", "vendor/", "data/", "css/")):
+        normalized = f"app/{value}"
+    else:
+        return False, None
+    candidates = [normalized]
+    if not posixpath.splitext(normalized)[1]:
+        candidates.extend((f"{normalized}.js", f"{normalized}/index.js"))
+    for candidate in candidates:
+        if candidate in available_paths:
+            return True, candidate
+    return True, candidates[0]
 
 
 def _walk_module_graph(
@@ -1621,16 +1920,41 @@ def build_pages_module_graph(
     )
     consumed_registry_keys: set[tuple[str, int]] = set()
     registry_resolutions: list[dict] = []
+    source_bindings_by_path: dict[str, set[str]] = {}
+    for declaration in registry_declarations:
+        source_bindings_by_path.setdefault(str(declaration["source"]), set()).add(
+            str(declaration["source_binding"])
+        )
+    module_sources = {
+        module_path: (selected_dist_root / module_path).read_text(encoding="utf-8")
+        for module_path in module_paths
+    }
+    extracted_modules = _extract_module_reference_groups(
+        module_sources,
+        source_bindings_by_path=source_bindings_by_path,
+    )
 
     for module_path in module_paths:
-        source_text = (selected_dist_root / module_path).read_text(encoding="utf-8")
-        reference_groups = _extract_module_reference_groups(source_text)
-        dynamic_import_expressions = list(reference_groups.pop("dynamic_import_expressions"))
+        reference_groups = dict(extracted_modules[module_path])
+        reference_groups.pop("path", None)
+        dynamic_import_expressions = list(reference_groups.pop("dynamic_import_expressions", []))
+        source_binding_records = list(reference_groups.pop("source_bindings", []))
         resolved_groups: dict[str, list[str]] = {}
-        for edge_name, references in reference_groups.items():
+        reference_locations: dict[str, list[dict]] = {}
+        for edge_name in ("static_imports", "dynamic_imports", "resource_references"):
+            reference_records = list(reference_groups.get(edge_name, []))
             resolved_targets: set[str] = set()
-            for reference in references:
+            located_references = []
+            for reference_record in reference_records:
+                reference = str(reference_record.get("reference") or "")
                 is_local, target = _resolve_dist_reference(module_path, reference, selected_available_paths)
+                located_references.append(
+                    {
+                        **reference_record,
+                        "resolved_path": str(target or ""),
+                        "local": is_local,
+                    }
+                )
                 if not is_local:
                     continue
                 if target not in selected_available_paths:
@@ -1640,11 +1964,14 @@ def build_pages_module_graph(
                             "kind": edge_name,
                             "reference": reference,
                             "resolved_path": str(target or ""),
+                            "line": int(reference_record.get("line") or 0),
+                            "column": int(reference_record.get("column") or 0),
                         }
                     )
                     continue
                 resolved_targets.add(str(target))
             resolved_groups[edge_name] = sorted(resolved_targets)
+            reference_locations[edge_name] = located_references
 
         for expression_record in dynamic_import_expressions:
             if expression_record["kind"] != "unresolved_dynamic_expression":
@@ -1667,7 +1994,8 @@ def build_pages_module_graph(
                 continue
             consumed_registry_keys.add(registry_key)
             expected_expression = str(declaration["expected_expression"])
-            if str(expression_record["expression"]) != expected_expression:
+            expression_matches = str(expression_record["expression"]) == expected_expression
+            if not expression_matches:
                 expression_record["resolution"] = "registry-expression-mismatch"
                 expression_record["registry_id"] = declaration["id"]
                 unresolved_references.append(
@@ -1683,35 +2011,101 @@ def build_pages_module_graph(
                         "reason": "registry-expression-mismatch",
                     }
                 )
-                continue
-            missing_targets = [
-                target
-                for target in declaration["targets"]
-                if target not in selected_available_paths
+
+            matching_binding_records = [
+                record
+                for record in source_binding_records
+                if record.get("name") == declaration["source_binding"]
             ]
-            for target in missing_targets:
+            source_binding_status = "missing"
+            runtime_targets: list[str] = []
+            unresolved_binding_targets: list[str] = []
+            if len(matching_binding_records) == 1:
+                binding_record = matching_binding_records[0]
+                source_binding_status = str(binding_record.get("status") or "invalid")
+                if source_binding_status == "literal-string-collection":
+                    for binding_target in binding_record.get("targets", []):
+                        is_local, target = _resolve_registry_binding_target(
+                            module_path,
+                            str(binding_target),
+                            str(declaration["source_binding_resolution"]),
+                            selected_available_paths,
+                        )
+                        if not is_local or not target:
+                            unresolved_binding_targets.append(str(binding_target))
+                            continue
+                        runtime_targets.append(str(target))
+            elif len(matching_binding_records) > 1:
+                source_binding_status = "duplicate-binding-declarations"
+
+            declared_target_set = set(declaration["targets"])
+            runtime_target_set = set(runtime_targets)
+            missing_from_registry = sorted(runtime_target_set - declared_target_set)
+            missing_from_runtime_binding = sorted(declared_target_set - runtime_target_set)
+            unpublished_targets = sorted(
+                target
+                for target in declared_target_set | runtime_target_set
+                if target not in selected_available_paths
+            )
+            target_sets_match = (
+                source_binding_status == "literal-string-collection"
+                and not unresolved_binding_targets
+                and not missing_from_registry
+                and not missing_from_runtime_binding
+            )
+            if not target_sets_match:
                 unresolved_references.append(
                     {
                         "source": module_path,
-                        "kind": "dynamic_import_registry_target",
-                        "reference": target,
-                        "resolved_path": target,
+                        "kind": "dynamic_import_registry_target_set_mismatch",
+                        "expression_index": expression_index,
+                        "expression": expression_record["expression"],
                         "registry_id": declaration["id"],
+                        "source_binding": declaration["source_binding"],
+                        "source_binding_status": source_binding_status,
+                        "source_binding_resolution": declaration["source_binding_resolution"],
+                        "registry_targets": list(declaration["targets"]),
+                        "runtime_targets": sorted(runtime_target_set),
+                        "missing_from_registry": missing_from_registry,
+                        "missing_from_runtime_binding": missing_from_runtime_binding,
+                        "unresolved_binding_targets": sorted(unresolved_binding_targets),
+                        "line": expression_record["line"],
+                        "column": expression_record["column"],
+                        "reason": "registry-runtime-target-set-mismatch",
                     }
                 )
-            declared_targets = [
-                target
-                for target in declaration["targets"]
-                if target in selected_available_paths
-            ]
-            resolved_groups["dynamic_imports"] = sorted(
-                set(resolved_groups["dynamic_imports"]) | set(declared_targets)
-            )
+            if target_sets_match and unpublished_targets:
+                for target in unpublished_targets:
+                    unresolved_references.append(
+                        {
+                            "source": module_path,
+                            "kind": "dynamic_import_registry_target",
+                            "reference": target,
+                            "resolved_path": target,
+                            "registry_id": declaration["id"],
+                            "source_binding": declaration["source_binding"],
+                        }
+                    )
+
+            registry_status = "resolved"
+            if not expression_matches:
+                registry_status = "expression-mismatch"
+            elif not target_sets_match:
+                registry_status = "target-set-mismatch"
+            elif unpublished_targets:
+                registry_status = "target-missing"
+            if registry_status == "resolved":
+                resolved_groups["dynamic_imports"] = sorted(
+                    set(resolved_groups["dynamic_imports"]) | declared_target_set
+                )
             expression_record.update(
                 {
-                    "resolution": "declarative-registry" if not missing_targets else "registry-target-missing",
+                    "resolution": "declarative-registry" if registry_status == "resolved" else registry_status,
                     "registry_id": declaration["id"],
                     "declared_targets": list(declaration["targets"]),
+                    "runtime_targets": sorted(runtime_target_set),
+                    "source_binding": declaration["source_binding"],
+                    "source_binding_status": source_binding_status,
                 }
             )
             registry_resolutions.append(
@@ -1720,14 +2114,24 @@ def build_pages_module_graph(
                     "source": module_path,
                     "expression_index": expression_index,
                     "expression": expression_record["expression"],
+                    "source_binding": declaration["source_binding"],
+                    "source_binding_resolution": declaration["source_binding_resolution"],
+                    "source_binding_status": source_binding_status,
+                    "registry_targets": list(declaration["targets"]),
                     "targets": list(declaration["targets"]),
-                    "status": "resolved" if not missing_targets else "target-missing",
+                    "runtime_targets": sorted(runtime_target_set),
+                    "missing_from_registry": missing_from_registry,
+                    "missing_from_runtime_binding": missing_from_runtime_binding,
+                    "unpublished_targets": unpublished_targets,
+                    "status": registry_status,
                 }
             )
         nodes_by_path[module_path] = {
             "path": module_path,
             **resolved_groups,
+            "reference_locations": reference_locations,
             "dynamic_import_expressions": dynamic_import_expressions,
+            "source_bindings": source_binding_records,
         }
 
     for registry_key, declaration in registry_by_key.items():
@@ -1778,8 +2182,8 @@ def build_pages_module_graph(
             )
         else:
             html_text = html_file.read_text(encoding="utf-8")
-            for match in HTML_RESOURCE_REFERENCE_RE.finditer(html_text):
-                reference = match.group("reference")
+            for reference_record in _extract_html_resource_references(html_text):
+                reference = str(reference_record["reference"])
                 is_local, target = _resolve_dist_reference(
                     html_path,
                     reference,
@@ -1795,6 +2199,8 @@ def build_pages_module_graph(
                             "kind": "html-resource",
                             "reference": reference,
                             "resolved_path": str(target or ""),
+                            "line": int(reference_record["line"]),
+                            "column": int(reference_record["column"]),
                         }
                     )
                     continue
@@ -1852,6 +2258,13 @@ def build_pages_module_graph(
     return {
         "schema_version": PAGES_REACHABILITY_SCHEMA_VERSION,
         "module_entrypoint": PAGES_MODULE_ENTRYPOINT,
+        "javascript_extractor": {
+            "parser": "acorn",
+            "parser_version": "8.17.0",
+            "walker": "acorn-walk",
+            "walker_version": "8.3.5",
+            "location_columns": "one-based",
+        },
         "entrypoints": entrypoints,
         "summary": {
             "module_count": len(module_paths),
@@ -1868,6 +2281,9 @@ def build_pages_module_graph(
             "registry_resolved_dynamic_expression_count": sum(
                 1 for record in registry_resolutions if record["status"] == "resolved"
             ),
+            "registry_target_set_mismatch_count": sum(
+                1 for record in registry_resolutions if record["status"] == "target-set-mismatch"
+            ),
         },
         "initial_resource_paths": sorted(initial_resource_paths),
         "deferred_resource_paths": sorted(deferred_resource_paths),
@@ -1881,6 +2297,8 @@ def build_pages_module_graph(
 
 
 def _match_product_inventory_rule(path: str) -> dict | None:
+    if path in PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS:
+        return None
     matches = []
     for rule in PAGES_PRODUCT_INVENTORY_RULES:
         if path in rule.get("paths", ()) or any(path.startswith(prefix) for prefix in rule.get("prefixes", ())):
@@ -1967,6 +2385,8 @@ def _classify_pages_dist_path(
 ) -> tuple[str, str, str]:
     selected_index = reachability_index or _build_graph_reachability_index(graph)
     reachability_status, reachability_basis = _path_reachability_evidence(path, selected_index)
+    if path in PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS:
+        return "unknown", "unclassified", "publication-registry:exact-exclusion"
     product_rule = _match_product_inventory_rule(path)
 
     if product_rule and product_rule.get("override_reachability"):
@@ -2038,7 +2458,7 @@ def _product_registry_summary(classifications: list[dict], size_by_path: dict[st
                 "owner": rule["owner"],
                 "match": {
                     "prefixes": list(rule.get("prefixes", ())),
-                    "path_exceptions": list(rule.get("paths", ())),
+                    "exact_paths": list(rule.get("paths", ())),
                 },
                 "file_count": len(matched_paths),
                 "size_bytes": sum(size_by_path[path] for path in matched_paths),
@@ -2175,11 +2595,19 @@ def build_pages_reachability_inventory(records: list[dict], *, module_graph: dic
         for record in classifications
         if record["category"] == "unknown"
     )
-    reachability_status = "complete" if not unresolved_references else "incomplete"
-    product_inventory_status = "complete" if not unknown_paths else "incomplete"
+    untraversed_owned_file_count = sum(
+        1
+        for record in classifications
+        if record["reachability_status"] == "untraversed" and record["category"] != "unknown"
+    )
+    graph_scan_status = "complete" if not unresolved_references else "incomplete"
+    publication_ownership_status = "complete" if not unknown_paths else "incomplete"
     return {
         "schema_version": PAGES_REACHABILITY_SCHEMA_VERSION,
         "generator": "tools/build_pages_dist.py::build_pages_reachability_inventory",
+        "graph_scan_status": graph_scan_status,
+        "publication_ownership_status": publication_ownership_status,
+        "untraversed_owned_file_count": untraversed_owned_file_count,
         "category_ids": list(STARTUP_REACHABILITY_CATEGORIES),
         "classification_axes": {
             "product_category": "exclusive product inventory classification",
@@ -2187,16 +2615,21 @@ def build_pages_reachability_inventory(records: list[dict], *, module_graph: dic
         },
         "admission": {
             "status": "complete"
-            if reachability_status == "complete" and product_inventory_status == "complete"
+            if graph_scan_status == "complete" and publication_ownership_status == "complete"
             else "incomplete",
+            "graph_scan_status": graph_scan_status,
+            "publication_ownership_status": publication_ownership_status,
+            "untraversed_owned_file_count": untraversed_owned_file_count,
             "blocking_unknown_file_count": len(unknown_paths),
             "blocking_unresolved_reference_count": len(unresolved_references),
         },
         "reachability_evidence": {
-            "status": reachability_status,
+            "status": graph_scan_status,
+            "graph_scan_status": graph_scan_status,
             "total_file_count": len(ordered_records),
             "traversed_file_count": traversed_file_count,
             "untraversed_file_count": len(ordered_records) - traversed_file_count,
+            "untraversed_owned_file_count": untraversed_owned_file_count,
             "unresolved_reference_count": len(unresolved_references),
             "unresolved_dynamic_expression_count": sum(
                 1
@@ -2209,11 +2642,13 @@ def build_pages_reachability_inventory(records: list[dict], *, module_graph: dic
             ),
         },
         "product_inventory": {
-            "status": product_inventory_status,
+            "status": publication_ownership_status,
+            "publication_ownership_status": publication_ownership_status,
             "total_file_count": len(ordered_records),
             "classified_file_count": len(ordered_records) - len(unknown_paths),
             "unknown_file_count": len(unknown_paths),
             "unknown_paths": unknown_paths,
+            "exact_exclusions": list(PAGES_PRODUCT_INVENTORY_EXACT_EXCLUSIONS),
             "registry_rules": _product_registry_summary(classifications, size_by_path),
         },
         "categories": [category_totals[category] for category in STARTUP_REACHABILITY_CATEGORIES],

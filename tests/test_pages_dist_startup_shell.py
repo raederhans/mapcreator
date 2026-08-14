@@ -785,9 +785,19 @@ class PagesDistStartupShellTest(unittest.TestCase):
             {"product_category", "reachability_status"},
         )
         self.assertEqual(admission["status"], "complete")
+        self.assertEqual(inventory["graph_scan_status"], "complete")
+        self.assertEqual(inventory["publication_ownership_status"], "complete")
+        self.assertGreater(inventory["untraversed_owned_file_count"], 0)
+        self.assertEqual(admission["graph_scan_status"], "complete")
+        self.assertEqual(admission["publication_ownership_status"], "complete")
+        self.assertEqual(
+            admission["untraversed_owned_file_count"],
+            inventory["untraversed_owned_file_count"],
+        )
         self.assertEqual(admission["blocking_unknown_file_count"], 0)
         self.assertEqual(admission["blocking_unresolved_reference_count"], 0)
         self.assertEqual(reachability["status"], "complete")
+        self.assertEqual(reachability["graph_scan_status"], "complete")
         self.assertEqual(reachability["total_file_count"], len(records))
         self.assertGreater(reachability["untraversed_file_count"], 0)
         self.assertEqual(
@@ -798,6 +808,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(reachability["unresolved_dynamic_expression_count"], 0)
         self.assertEqual(reachability["registry_resolved_dynamic_expression_count"], 2)
         self.assertEqual(product_inventory["status"], "complete")
+        self.assertEqual(product_inventory["publication_ownership_status"], "complete")
         self.assertEqual(product_inventory["classified_file_count"], len(records))
         self.assertEqual(product_inventory["unknown_file_count"], 0)
         self.assertEqual(product_inventory["unknown_paths"], [])
@@ -925,6 +936,27 @@ class PagesDistStartupShellTest(unittest.TestCase):
             [record["registry_id"] for record in data_service_expressions if record["kind"] == "unresolved_dynamic_expression"],
             ["data-service-runtime-modules"],
         )
+        data_service_binding = nodes_by_path["app/js/core/data_service.js"]["source_bindings"][0]
+        self.assertEqual(
+            {key: data_service_binding[key] for key in ("name", "status", "targets")},
+            {
+                "name": "ALLOWED_RUNTIME_MODULE_PATHS",
+                "status": "literal-string-collection",
+                "targets": [
+                    "js/core/city_lights_historical_1930_asset.js",
+                    "js/core/city_lights_modern_asset.js",
+                ],
+            },
+        )
+        self.assertGreater(data_service_binding["line"], 0)
+        self.assertGreater(data_service_binding["column"], 0)
+        self.assertTrue(
+            all(
+                resolution["registry_targets"] == resolution["runtime_targets"]
+                and resolution["source_binding_status"] == "literal-string-collection"
+                for resolution in graph["dynamic_import_registry"]["resolutions"]
+            )
+        )
         self.assertEqual(
             nodes_by_path["app/js/core/startup_worker_client.js"]["resource_references"],
             ["app/js/workers/startup_boot.worker.js"],
@@ -933,6 +965,120 @@ class PagesDistStartupShellTest(unittest.TestCase):
             nodes_by_path["app/js/workers/startup_boot.worker.js"]["resource_references"],
             ["app/js/core/feature_identity_shared.js", "app/vendor/topojson-client.min.js"],
         )
+
+    def test_pages_module_graph_uses_acorn_for_imports_exports_templates_comments_and_regex(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dist_root = Path(tmpdir)
+            source_paths = {
+                "index.html": '<script type="module" src="./app/js/main.js"></script>',
+                "app/index.html": '<script type="module" src="./js/main.js"></script>',
+                "app/js/main.js": r'''
+                    import /* comment-separated */ "./commented-static.js";
+                    export { named } from "./named.js";
+                    export * from "./all.js";
+                    const fakeImportText = /import\("\.\/regex-fake\.js"\)/;
+                    export const loadOuter = () => import(`./${import("./nested.js")}.js`);
+                    export const loadCommented = () => import /* comment-separated */ ("./commented.js");
+                    export const workerUrl = new URL("./worker.js", import.meta.url);
+                ''',
+                "app/js/commented-static.js": "export const commentedStatic = true;",
+                "app/js/named.js": "export const named = true;",
+                "app/js/all.js": "export const all = true;",
+                "app/js/nested.js": "export const nested = true;",
+                "app/js/commented.js": "export const commented = true;",
+                "app/js/worker.js": "export const worker = true;",
+            }
+            for relative_path, source_text in source_paths.items():
+                path = dist_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(source_text, encoding="utf-8")
+
+            graph = build_pages_dist.build_pages_module_graph(
+                dist_root=dist_root,
+                available_paths=set(source_paths),
+                dynamic_import_registry=(),
+            )
+
+        self.assertEqual(
+            graph["javascript_extractor"],
+            {
+                "parser": "acorn",
+                "parser_version": "8.17.0",
+                "walker": "acorn-walk",
+                "walker_version": "8.3.5",
+                "location_columns": "one-based",
+            },
+        )
+        main_node = next(node for node in graph["nodes"] if node["path"] == "app/js/main.js")
+        self.assertEqual(
+            main_node["static_imports"],
+            [
+                "app/js/all.js",
+                "app/js/commented-static.js",
+                "app/js/named.js",
+            ],
+        )
+        self.assertEqual(
+            main_node["dynamic_imports"],
+            ["app/js/commented.js", "app/js/nested.js"],
+        )
+        self.assertEqual(main_node["resource_references"], ["app/js/worker.js"])
+        self.assertTrue(
+            all(
+                record["line"] > 0 and record["column"] > 0
+                for records in main_node["reference_locations"].values()
+                for record in records
+            )
+        )
+        unresolved_dynamic = [
+            record
+            for record in graph["unresolved_references"]
+            if record["kind"] == "unresolved_dynamic_expression"
+        ]
+        self.assertEqual(
+            [record["expression"] for record in unresolved_dynamic],
+            ['`./${import("./nested.js")}.js`'],
+        )
+        serialized_graph = json.dumps(graph, sort_keys=True)
+        self.assertNotIn("regex-fake.js", serialized_graph)
+
+    def test_pages_html_resource_parser_requires_exact_src_and_href_attributes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dist_root = Path(tmpdir)
+            source_paths = {
+                "index.html": '<script type="module" src="./app/js/main.js"></script>',
+                "app/index.html": '''
+                    <script data-src="./js/data-only.js" src="./js/main.js"></script>
+                    <link data-href="./css/data-only.css" href="./css/real.css">
+                    <img data-src="./images/data-only.png"
+                         srcset="./images/srcset-only.png 1x"
+                         src="./images/real.png">
+                ''',
+                "app/js/main.js": "export const main = true;",
+                "app/js/data-only.js": "export const dataOnly = true;",
+                "app/css/real.css": "body {}",
+                "app/css/data-only.css": "body {}",
+                "app/images/real.png": "real",
+                "app/images/data-only.png": "data-only",
+                "app/images/srcset-only.png": "srcset-only",
+            }
+            for relative_path, source_text in source_paths.items():
+                path = dist_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(source_text, encoding="utf-8")
+
+            graph = build_pages_dist.build_pages_module_graph(
+                dist_root=dist_root,
+                available_paths=set(source_paths),
+                dynamic_import_registry=(),
+            )
+
+        editor_entrypoint = next(item for item in graph["entrypoints"] if item["id"] == "editor")
+        self.assertEqual(
+            editor_entrypoint["resource_references"],
+            ["app/css/real.css", "app/images/real.png", "app/js/main.js"],
+        )
+        self.assertEqual(graph["unresolved_references"], [])
 
     def test_pages_module_graph_reports_unregistered_dynamic_expressions(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1010,6 +1156,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     "source": "app/js/bootstrap/deferred_ui_bootstrap.js",
                     "expression_index": 0,
                     "expected_expression": "target",
+                    "source_binding": "RENAMED_RUNTIME_TARGETS",
+                    "source_binding_resolution": "module-relative",
                     "targets": ("app/js/ui/first.js", "app/js/ui/second.js"),
                 },
             )
@@ -1032,6 +1180,85 @@ class PagesDistStartupShellTest(unittest.TestCase):
             ["declarative-registry"],
         )
 
+    def test_pages_dynamic_import_registry_requires_runtime_binding_exact_set(self) -> None:
+        cases = (
+            {
+                "name": "runtime-typo",
+                "runtime_literals": ("../ui/first.js", "../ui/typo.js"),
+                "published_modules": ("first.js", "second.js"),
+                "missing_from_registry": ["app/js/ui/typo.js"],
+                "missing_from_runtime_binding": ["app/js/ui/second.js"],
+                "unpublished_targets": ["app/js/ui/typo.js"],
+            },
+            {
+                "name": "existing-module-added-without-registry-update",
+                "runtime_literals": ("../ui/first.js", "../ui/second.js", "../ui/third.js"),
+                "published_modules": ("first.js", "second.js", "third.js"),
+                "missing_from_registry": ["app/js/ui/third.js"],
+                "missing_from_runtime_binding": [],
+                "unpublished_targets": [],
+            },
+        )
+        for case in cases:
+            with self.subTest(case=case["name"]), tempfile.TemporaryDirectory() as tmpdir:
+                dist_root = Path(tmpdir)
+                runtime_literal_source = ", ".join(json.dumps(value) for value in case["runtime_literals"])
+                source_paths = {
+                    "index.html": '<script type="module" src="./app/js/main.js"></script>',
+                    "app/index.html": '<script type="module" src="./js/main.js"></script>',
+                    "app/js/main.js": 'import "./bootstrap/deferred_ui_bootstrap.js";',
+                    "app/js/bootstrap/deferred_ui_bootstrap.js": f'''
+                        const RUNTIME_TARGETS = Object.freeze([{runtime_literal_source}]);
+                        export const boot = (loadModule = (target) => import(target)) =>
+                          Promise.all(RUNTIME_TARGETS.map((target) => loadModule(target)));
+                    ''',
+                }
+                for module_name in case["published_modules"]:
+                    source_paths[f"app/js/ui/{module_name}"] = "export const loaded = true;"
+                for relative_path, source_text in source_paths.items():
+                    path = dist_root / relative_path
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(source_text, encoding="utf-8")
+                registry = (
+                    {
+                        "id": "runtime-binding-exact-set",
+                        "source": "app/js/bootstrap/deferred_ui_bootstrap.js",
+                        "expression_index": 0,
+                        "expected_expression": "target",
+                        "source_binding": "RUNTIME_TARGETS",
+                        "source_binding_resolution": "module-relative",
+                        "targets": ("app/js/ui/first.js", "app/js/ui/second.js"),
+                    },
+                )
+
+                graph = build_pages_dist.build_pages_module_graph(
+                    dist_root=dist_root,
+                    available_paths=set(source_paths),
+                    dynamic_import_registry=registry,
+                )
+
+            mismatch = next(
+                record
+                for record in graph["unresolved_references"]
+                if record["kind"] == "dynamic_import_registry_target_set_mismatch"
+            )
+            self.assertEqual(mismatch["source_binding"], "RUNTIME_TARGETS")
+            self.assertEqual(mismatch["source_binding_status"], "literal-string-collection")
+            self.assertEqual(mismatch["missing_from_registry"], case["missing_from_registry"])
+            self.assertEqual(
+                mismatch["missing_from_runtime_binding"],
+                case["missing_from_runtime_binding"],
+            )
+            resolution = graph["dynamic_import_registry"]["resolutions"][0]
+            self.assertEqual(resolution["status"], "target-set-mismatch")
+            self.assertEqual(resolution["unpublished_targets"], case["unpublished_targets"])
+            node = next(
+                node
+                for node in graph["nodes"]
+                if node["path"] == "app/js/bootstrap/deferred_ui_bootstrap.js"
+            )
+            self.assertEqual(node["dynamic_imports"], [])
+
     def test_pages_dist_inventory_rejects_orphan_and_typo_counterexamples(self) -> None:
         empty_graph = {
             "schema_version": build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION,
@@ -1047,24 +1274,52 @@ class PagesDistStartupShellTest(unittest.TestCase):
             {"path": path, "size_bytes": 1, "source_kind": "dist"}
             for path in (
                 "app/js/orphan.js",
+                "app/js/core/scenario_typo.js",
+                "app/js/ui/dev_workspace/orphan.js",
+                "app/js/ui/toolbar/export_typo.js",
                 "app/data/typo.json",
                 "app/vendor/unused.bin",
                 "assets/unused.webp",
+                "app/data/scenarios/new_scenario/runtime.json",
+                "app/data/scenarios/modern_world/runtime_topology.topo.json",
             )
         ]
         inventory = build_pages_dist.build_pages_reachability_inventory(records, module_graph=empty_graph)
         self.assertEqual(inventory["admission"]["status"], "incomplete")
-        self.assertEqual(inventory["reachability_evidence"]["untraversed_file_count"], 4)
-        self.assertEqual(inventory["product_inventory"]["unknown_file_count"], 4)
+        self.assertEqual(inventory["graph_scan_status"], "complete")
+        self.assertEqual(inventory["publication_ownership_status"], "incomplete")
+        self.assertEqual(inventory["reachability_evidence"]["untraversed_file_count"], 9)
+        self.assertEqual(inventory["untraversed_owned_file_count"], 1)
+        self.assertEqual(inventory["product_inventory"]["unknown_file_count"], 8)
+        unknown_paths = {
+            record["path"]
+            for record in records
+            if record["path"] != "app/data/scenarios/new_scenario/runtime.json"
+        }
         self.assertEqual(
             inventory["product_inventory"]["unknown_paths"],
-            sorted(record["path"] for record in records),
+            sorted(unknown_paths),
         )
-        self.assertEqual(next(item for item in inventory["categories"] if item["id"] == "unknown")["file_count"], 4)
-        with self.assertRaisesRegex(ValueError, "unknown_files=4"):
+        self.assertIn(
+            "app/data/scenarios/modern_world/runtime_topology.topo.json",
+            inventory["product_inventory"]["exact_exclusions"],
+        )
+        self.assertEqual(
+            next(item for item in inventory["categories"] if item["id"] == "unknown")["file_count"],
+            8,
+        )
+        self.assertFalse(
+            [
+                prefix
+                for rule in build_pages_dist.PAGES_PRODUCT_INVENTORY_RULES
+                for prefix in rule.get("prefixes", ())
+                if prefix.startswith("app/js/")
+            ]
+        )
+        with self.assertRaisesRegex(ValueError, "unknown_files=8"):
             build_pages_dist.build_dist_manifest_payload(
                 records,
-                4,
+                9,
                 module_graph=empty_graph,
             )
 
