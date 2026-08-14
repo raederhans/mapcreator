@@ -1,7 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { getAppUrl, waitForAppInteractive } = require("./support/playwright-app");
 
-test.setTimeout(180_000);
+// Three cold scenario-apply queue contracts share one page so diagnostic sequence evidence stays continuous.
+test.setTimeout(300_000);
 
 const APP_URL = getAppUrl('/?render_profile=balanced&startup_interaction=full&startup_worker=0&startup_cache=1&default_scenario=hoi4_1939&render_diag=1');
 
@@ -254,7 +255,11 @@ test('scenario apply is single-flight and english ui uses entry.en overrides', a
 
   const middleStartedResult = await page.evaluate(async () => {
     const diagnosticsBefore = globalThis.__scenarioForgeRenderTransactions || {};
-    const sequenceStart = Number(diagnosticsBefore.sequence || 0);
+    const sequenceStart = Number(
+      diagnosticsBefore.state?.sequence
+      || diagnosticsBefore.latest?.sequence
+      || 0
+    );
     globalThis.__scenarioTestJsonDelays = {
       ...(globalThis.__scenarioTestJsonDelays || {}),
       "data/scenarios/hgo_1936/manifest.json": 500,
@@ -273,9 +278,9 @@ test('scenario apply is single-flight and english ui uses entry.en overrides', a
       showToastOnComplete: false,
     };
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    const waitForQueueDrainStarted = async (scenarioId, timeoutMs = 15_000) => {
+    const waitForQueueDrainStarted = async (scenarioId, timeoutMs = 60_000) => {
       const startedAt = Date.now();
-      while (Date.now() - startedAt < timeoutMs) {
+      while (true) {
         const diagnostics = globalThis.__scenarioForgeRenderTransactions || {};
         const snapshots = Array.isArray(diagnostics.snapshots) ? diagnostics.snapshots : [];
         const found = snapshots.some((snapshot) => (
@@ -284,9 +289,11 @@ test('scenario apply is single-flight and english ui uses entry.en overrides', a
           && snapshot.requestedScenarioId === scenarioId
         ));
         if (found) return true;
+        // A cold scenario prepare can hold the main thread past the wall-clock budget
+        // after the drain marker is recorded, so inspect once before declaring timeout.
+        if (Date.now() - startedAt >= timeoutMs) return false;
         await sleep(25);
       }
-      return false;
     };
     const first = applyScenarioByIdCommand("hgo_1936", commandOptions);
     await sleep(30);
@@ -326,9 +333,16 @@ test('scenario apply is single-flight and english ui uses entry.en overrides', a
 
   expect(middleStartedResult.middleStarted).toBe(true);
   expect(middleStartedResult.results.every((result) => result.status === "fulfilled")).toBe(true);
+  expect(middleStartedResult.results.map((result) => result.valueScenarioId)).toEqual([
+    "hgo_1936",
+    "modern_world",
+    "modern_world",
+  ]);
   expect(middleStartedResult.activeScenarioId).toBe("modern_world");
   expect(middleStartedResult.scenarioApplyInFlight).toBe(false);
   expect(middleStartedResult.blankBaseCommitted).toBe(false);
   expect(middleStartedResult.staleBlankBaseSkipped).toBe(true);
   expect(middleStartedResult.modernDrainComplete).toBe(true);
+  expect(pageErrors).toEqual([]);
+  expect(unhandledConsoleErrors).toEqual([]);
 });
