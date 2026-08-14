@@ -8,9 +8,11 @@ const {
 const { mergeSmokeFailureSelectors } = require("./support/playwright-selectors");
 
 test("ui contract foundation exposes shared rules and focus helpers", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+
   try {
     await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
-    await waitForAppInteractive(page, { timeout: 90_000 });
+    await waitForAppInteractive(page, { timeout: 45_000 });
     await page.waitForFunction(() => !!document.querySelector("#toastViewport"), { timeout: 15_000 });
 
     const snapshot = await page.evaluate(async () => {

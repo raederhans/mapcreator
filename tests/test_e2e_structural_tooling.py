@@ -243,6 +243,11 @@ process.stdout.write(JSON.stringify(ignores));
         self.assert_command_ok(result)
         self.assertIn("Test timeout guardrails passed", result.stdout)
 
+    def test_ui_contract_smoke_wait_budget_fits_inside_test_timeout(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "ui_contract_foundation.spec.js").read_text(encoding="utf-8")
+        self.assertIn("test.setTimeout(60_000);", source)
+        self.assertIn("waitForAppInteractive(page, { timeout: 45_000 });", source)
+
     def test_verification_selector_routes_bootstrap_detail_promotion_changes(self) -> None:
         script = """
 const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
