@@ -8,6 +8,7 @@ import {
 } from "../tools/test_route_registry.mjs";
 import {
   buildRecommendation,
+  classifyExecutionOwners,
 } from "../tools/select_verification_targets.mjs";
 import {
   buildCoreVerificationPlan,
@@ -25,8 +26,11 @@ import {
   decideResume,
 } from "../tools/verification/resumable_verification.mjs";
 import {
+  assertAdaptiveExecutionInput,
   buildExecutionPlan,
+  discoverChangedFiles,
   executeAdaptivePlan,
+  parseArgs as parseAdaptiveArgs,
 } from "../tools/run_adaptive_tests.mjs";
 import {
   buildCommandSupersessionPlan,
@@ -55,6 +59,7 @@ const PACKAGE_SCRIPTS = {
   "test:python:p4:p4-3-boundary": "npm run python -- -m unittest tests.test_renderer_control_actions_boundary_contract tests.test_renderer_exact_refresh_actions_boundary_contract tests.test_renderer_cache_actions_boundary_contract tests.test_renderer_diagnostics_actions_boundary_contract tests.test_renderer_runtime_state_boundary_contract tests.test_map_renderer_interaction_context_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_state_write_guardrail_contract -q",
   "verify:test-console-allowlist": "node tools/check_console_allowlist_decay.mjs",
   "verify:test-timeout-guardrails": "node tools/check_test_timeout_guardrails.mjs",
+  "verify:script-portfolio": "node tools/verification/script_portfolio.mjs check",
   "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
   "verify:supervisor-plan": "npm run test:node:supervisor-plan && node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tests/supervisor_plan_behavior.test.mjs",
   "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
@@ -277,10 +282,10 @@ test("default core plan applies strict command closure without changing test cov
     )),
   )].sort();
 
-  assert.equal(rawPlan.commandsToRun.length, 88);
-  assert.equal(plan.commandsToRun.length, 81);
-  assert.equal(rawLeaves.length, 104);
-  assert.equal(retainedLeaves.length, 96);
+  assert.equal(rawPlan.commandsToRun.length, 89);
+  assert.equal(plan.commandsToRun.length, 82);
+  assert.equal(rawLeaves.length, 105);
+  assert.equal(retainedLeaves.length, 97);
   assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 71);
   assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 63);
   assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
@@ -1013,6 +1018,10 @@ test("adaptive command supersession removes covered TNO and Pages commands", () 
     mainThreadSerialVerification: [],
   });
   assert.deepEqual(plan.commandsToRun, ["verify:tno-coverage-chain"]);
+  assert.deepEqual(plan.supersededCommands, [{
+    commandRef: "verify:tno-coverage-ledger",
+    supersededBy: "verify:tno-coverage-chain",
+  }]);
 });
 
 test("command supersession preserves current policy evidence beside historical exact phases", () => {
@@ -1251,6 +1260,96 @@ test("adaptive child-safe execution substitutes quick coverage for the full P4 p
   assert.ok(mainThreadPlan.commandsToRun.some((commandRef) => (
     commandRef === "verify:p4:state-writer-policy" || commandRef === "verify:p4:p4-3"
   )));
+});
+
+test("verification portfolio exposes four canonical entrypoints with full policy in deep lanes", () => {
+  const scripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  assert.match(scripts["verify:pr"], /verify:script-portfolio/);
+  assert.match(scripts["verify:pr"], /select_verification_targets\.mjs --check/);
+  assert.match(scripts["verify:pr"], /tests\.test_e2e_structural_tooling/);
+  assert.match(scripts["verify:pr"], /verify:scenario-contracts:strict/);
+  assert.match(scripts["verify:pr"], /run_adaptive_tests\.mjs --execute --defer-main-thread --history-base origin\/main/);
+  assert.equal(scripts["verify:demo"], "npm run test:e2e:sample-guide");
+  assert.match(scripts["verify:nightly"], /^npm run verify:core\b/);
+  assert.match(scripts["verify:nightly"], /unittest discover/);
+  assert.match(scripts["verify:release"], /^npm run verify:core:main-thread\b/);
+  assert.match(scripts["verify:release"], /npm run verify:demo/);
+  assert.match(scripts["verify:release"], /npm run test:e2e:pages-public-release-gate/);
+
+  const nightlyPlan = buildCoreVerificationPlan({ packageScripts: scripts });
+  const releasePlan = buildCoreVerificationPlan({ packageScripts: scripts, includeMainThread: true });
+  for (const plan of [nightlyPlan, releasePlan]) {
+    assert.ok(plan.commandsToRun.some((entry) => entry.commandRef === "verify:p4:state-writer-policy"));
+    assert.ok(plan.commandsToRun.some((entry) => entry.commandRef === "verify:pages-dist-and-drift"));
+  }
+});
+
+test("adaptive history discovery requires its exact base and rejects last-commit fallback", () => {
+  assert.deepEqual(parseAdaptiveArgs(["--execute", "--history-base", "origin/main"]), {
+    changedFiles: [],
+    dryRun: false,
+    includeBranchHistory: true,
+    historyBase: "origin/main",
+    includeMainThread: false,
+    deferMainThread: false,
+    jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-selection.json"),
+    mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-selection.md"),
+  });
+  assert.throws(() => parseAdaptiveArgs(["--history-base", ""]), /requires a non-empty Git revision/);
+
+  const calls = [];
+  const rejectedBroadHistory = (args) => {
+    const joined = args.join(" ");
+    calls.push(joined);
+    if (joined.includes("origin/main...HEAD")) return { status: 9, stdout: "" };
+    if (joined.includes("HEAD^ HEAD")) return { status: 0, stdout: "package.json\0" };
+    return { status: 0, stdout: "" };
+  };
+  assert.throws(
+    () => discoverChangedFiles({ runner: (_bin, args) => rejectedBroadHistory(args), includeBranchHistory: true }),
+    /adaptive-history-discovery-failed:all-fallbacks/,
+  );
+  assert.equal(calls.some((entry) => entry.includes("HEAD^ HEAD")), false);
+  assert.throws(
+    () => discoverChangedFiles({
+      runner: (_bin, args) => args.join(" ").includes("origin/main HEAD")
+        ? { status: 7, stdout: "" }
+        : { status: 0, stdout: "" },
+      historyBase: "origin/main",
+    }),
+    /adaptive-history-discovery-failed:origin\/main/,
+  );
+  assert.doesNotThrow(() => assertAdaptiveExecutionInput([], { dryRun: true }));
+  assert.throws(
+    () => assertAdaptiveExecutionInput([], { dryRun: false }),
+    /adaptive-execution-empty-changed-files/,
+  );
+});
+
+test("adaptive execution reconciles duplicate route safety metadata before PR execution", () => {
+  const report = buildRecommendation(["tools/verification/verification_domains.mjs"]);
+  const telemetryCommand = "test:node:williams-crossover-telemetry-live";
+  const telemetryEntry = report.recommendedCommands.find((entry) => entry.commandRef === telemetryCommand);
+  assert.ok(telemetryEntry);
+  assert.deepEqual(telemetryEntry.executionOwners, ["child-safe", "main-thread"]);
+  assert.deepEqual(telemetryEntry.ciProfiles, ["perf-pr-gate", "pr-fast"]);
+  assert.deepEqual(telemetryEntry.resourceLocks, ["perf-dev-server"]);
+  assert.ok(telemetryEntry.safetyContributorRouteIds.length > telemetryEntry.routeIds.length);
+  assert.ok(telemetryEntry.safetyContributorRouteIds.includes("node:test:node:williams-crossover-telemetry-live"));
+  assert.ok(telemetryEntry.safetyContributorRouteIds.includes("perf:williams-crossover-telemetry-live"));
+
+  const executionPlan = buildExecutionPlan(report);
+  assert.equal(executionPlan.commandsToRun.includes(telemetryCommand), false);
+  assert.ok(executionPlan.blockedMainThreadCommands.includes(telemetryCommand));
+});
+
+test("adaptive execution owner precedence classifies every mixed owner set", () => {
+  assert.equal(classifyExecutionOwners(["child-safe"]), "child-safe");
+  assert.equal(classifyExecutionOwners(["child-safe", "main-thread"]), "main-thread");
+  assert.equal(classifyExecutionOwners(["child-safe", "ci-only"]), "ci-only");
+  assert.equal(classifyExecutionOwners(["main-thread", "ci-only"]), "ci-only");
+  assert.equal(classifyExecutionOwners(["child-safe", "main-thread", "ci-only"]), "ci-only");
+  assert.equal(classifyExecutionOwners([]), "blocked");
 });
 
 test("adaptive execution checkpoints running and terminal results with timings", () => {

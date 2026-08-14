@@ -330,12 +330,14 @@ const { discoverChangedFiles } = await import('./tools/run_adaptive_tests.mjs');
 discoverChangedFiles({ runner: fakeRunner, includeBranchHistory: true });
 const requiredCalls = [
   'diff --name-only origin/main...HEAD --diff-filter=ACMRD -z',
-  'diff --name-only HEAD^ HEAD --diff-filter=ACMRD -z',
 ];
 for (const expected of requiredCalls) {
   if (!calls.some((entry) => entry.includes(expected))) {
     throw new Error(`missing history diff-filter call ${expected}: ${calls.join(' | ')}`);
   }
+}
+if (calls.some((entry) => entry.includes('HEAD^ HEAD'))) {
+  throw new Error(`branch history must not shrink to the latest commit: ${calls.join(' | ')}`);
 }
 """
         result = run_command("node", "--input-type=module", "-e", script)
@@ -454,6 +456,32 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
         self.assertIn("docs/active/unrelated-task/context.md", payload["unmatchedChangedFiles"])
         self.assertIsNone(payload["executionResults"])
 
+    def test_adaptive_execute_can_defer_main_thread_routes_with_evidence(self) -> None:
+        json_out = TMP_ROOT / "test-adaptive-deferred-main-thread.json"
+        md_out = TMP_ROOT / "test-adaptive-deferred-main-thread.md"
+        result = run_command(
+            "node",
+            "tools/run_adaptive_tests.mjs",
+            "--execute",
+            "--defer-main-thread",
+            "--changed-file",
+            "tests/e2e/sample_guide_deeplink.spec.js",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        )
+        self.assert_command_ok(result)
+        payload = json.loads(json_out.read_text(encoding="utf-8"))
+        self.assertEqual(payload["mainThreadDisposition"], "deferred")
+        self.assertIn(
+            "node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js",
+            payload["executionPlan"]["blockedMainThreadCommands"],
+        )
+        self.assertTrue(payload["executionResults"])
+        self.assertTrue(all(entry["exitCode"] == 0 for entry in payload["executionResults"]))
+        self.assertIn("mainThreadDisposition: deferred", md_out.read_text(encoding="utf-8"))
+
     def test_route_registry_includes_every_package_test_node_script(self) -> None:
         script = """
 import fs from 'node:fs';
@@ -467,8 +495,19 @@ const missing = expectedScripts.filter((name) => !actualScripts.includes(name));
 if (missing.length) {
   throw new Error(`missing node routes: ${missing.join(', ')}`);
 }
-if (nodeRoutes.some((route) => route.executionOwner !== 'child-safe' || route.resourceLocks.length > 0 || route.ciProfile !== 'pr-fast')) {
-  throw new Error('node routes must stay child-safe, lock-free, and pr-fast');
+const fullP4PolicyRoute = nodeRoutes.find((route) => route.commandRef === 'test:node:p4:state-writer-policy');
+if (
+  !fullP4PolicyRoute
+  || fullP4PolicyRoute.executionOwner !== 'main-thread'
+  || fullP4PolicyRoute.cost !== 'heavy'
+  || fullP4PolicyRoute.ciProfile !== 'full'
+  || !fullP4PolicyRoute.resourceLocks.includes('.runtime-output')
+) {
+  throw new Error(`full P4 policy route must preserve its serialized lane: ${JSON.stringify(fullP4PolicyRoute)}`);
+}
+const prNodeRoutes = nodeRoutes.filter((route) => route !== fullP4PolicyRoute);
+if (prNodeRoutes.some((route) => route.executionOwner !== 'child-safe' || route.resourceLocks.length > 0 || route.ciProfile !== 'pr-fast')) {
+  throw new Error('focused node routes must stay child-safe, lock-free, and pr-fast');
 }
 const observabilityRoute = routes.find((route) => route.id === 'infra:playwright-observability');
 if (!observabilityRoute) {
@@ -647,6 +686,13 @@ for (const route of routes) {
 const cityRuntimeCount = routes.filter((route) => route.domain === 'city-runtime').length;
 if (cityRuntimeCount !== 6) {
   throw new Error(`expected 6 city-runtime spec routes, got ${cityRuntimeCount}`);
+}
+const demoRoutes = routes.filter((route) => route.ciProfile === 'demo');
+if (demoRoutes.length !== 1 || demoRoutes[0].sourceRef !== 'tests/e2e/sample_guide_deeplink.spec.js') {
+  throw new Error(`canonical Demo profile must select only the Golden Demo route: ${JSON.stringify(demoRoutes)}`);
+}
+if (demoRoutes[0].executionOwner !== 'main-thread' || !demoRoutes[0].resourceLocks.includes('playwright-browser')) {
+  throw new Error(`Golden Demo route must preserve main-thread browser ownership: ${JSON.stringify(demoRoutes[0])}`);
 }
 """
         result = run_command("node", "--input-type=module", "-e", script)
@@ -939,6 +985,12 @@ if (!sampleGuideCommands.includes('test:node:sample-project-contracts')) {
 if (!sampleGuideCommands.includes('node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js')) {
   throw new Error(`missing sample guide E2E route: ${sampleGuideCommands.join(', ')}`);
 }
+const goldenDemoCommand = sampleGuideReport.recommendedCommands.find(
+  (entry) => entry.commandRef === 'node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js',
+);
+if (!goldenDemoCommand?.ciProfiles.includes('demo')) {
+  throw new Error(`sample guide E2E route must use the canonical Demo profile: ${JSON.stringify(goldenDemoCommand)}`);
+}
 const sampleAssetReport = buildRecommendation(['landing/assets/sample-runs.json']);
 const sampleAssetCommands = sampleAssetReport.recommendedCommands.map((entry) => entry.commandRef);
 if (!sampleAssetCommands.includes('test:node:sample-project-contracts')) {
@@ -1171,12 +1223,50 @@ const page = {
         self.assertIn(".runtime/reports/generated/test-import-graph.json", workflow)
         self.assertIn(".runtime/tmp/verification-selector-changed-files.txt", workflow)
 
-    def test_verify_shared_pr_fast_runner_covers_dynamic_node_and_python_fast_contracts(self) -> None:
+    def test_verify_shared_pr_fast_runner_executes_the_adaptive_child_safe_plan(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
         self.assertIn("tests.test_main_deferred_detail_promotion_boundary_contract", workflow)
         self.assertIn("tests.test_perf_gate_contract", workflow)
-        self.assertIn("name.startsWith('test:node:')", workflow)
-        self.assertIn("spawnSync('npm', ['run', name]", workflow)
+        self.assertIn("node tools/run_adaptive_tests.mjs", workflow)
+        self.assertIn("--changed-files-list .runtime/tmp/verification-selector-changed-files.txt", workflow)
+        self.assertIn("--execute", workflow)
+        self.assertIn("--defer-main-thread", workflow)
+        self.assertIn("verification-selector-execution.json", workflow)
+        self.assertIn('test -s "$changed_files"', workflow)
+        self.assertIn("npm run verify:script-portfolio", workflow)
+        self.assertNotIn("name.startsWith('test:node:')", workflow)
+        self.assertNotIn("spawnSync('npm', ['run', name]", workflow)
+
+    def test_pr_required_chain_consumes_the_canonical_golden_demo_profile(self) -> None:
+        shared_workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        pr_workflow = (REPO_ROOT / ".github" / "workflows" / "pr-verify.yml").read_text(encoding="utf-8")
+
+        fast_job_index = pr_workflow.index("  pr-verify-fast:")
+        smoke_job_index = pr_workflow.index("  pr-verify-smoke:")
+        demo_job_index = pr_workflow.index("  pr-verify-demo:")
+        self.assertLess(fast_job_index, smoke_job_index)
+        self.assertLess(smoke_job_index, demo_job_index)
+        self.assertIn("needs: pr-verify-fast", pr_workflow[smoke_job_index:demo_job_index])
+        self.assertIn("needs: pr-verify-smoke", pr_workflow[demo_job_index:])
+        self.assertIn("profile: demo", pr_workflow[demo_job_index:])
+
+        demo_node_condition = "inputs.profile == 'full' || inputs.profile == 'pr-fast' || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'"
+        demo_browser_condition = "(inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'"
+        self.assertGreaterEqual(shared_workflow.count(demo_node_condition), 2)
+        self.assertGreaterEqual(shared_workflow.count(demo_browser_condition), 2)
+        self.assertIn("- name: Run Golden Demo E2E\n        if: inputs.profile == 'demo'\n        run: npm run test:e2e:sample-guide", shared_workflow)
+        self.assertIn("name: demo-timing-and-failure-context", shared_workflow)
+        self.assertIn(".runtime/reports/generated/test-timings-summary.json", shared_workflow)
+        self.assertIn(".runtime/tests/playwright/**/failure-context.json", shared_workflow)
+
+    def test_verify_shared_rejects_unknown_profiles_before_profile_steps(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        validation_index = workflow.index("- name: Validate verification profile")
+        setup_python_index = workflow.index("- name: Setup Python")
+        self.assertLess(validation_index, setup_python_index)
+        self.assertIn("full|pr-fast|pr-smoke|demo|deploy-minimal", workflow)
+        self.assertIn("unknown verification profile", workflow)
+        self.assertIn("exit 2", workflow[validation_index:setup_python_index])
 
     def test_failure_context_reporter_tracks_failure_context_attachment(self) -> None:
         script = """

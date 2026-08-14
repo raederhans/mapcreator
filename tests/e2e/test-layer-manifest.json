@@ -133,7 +133,8 @@
       "primaryLayer": "feature",
       "executionMode": "browser",
       "domain": "public-sample",
-      "ownerHint": "sample-guide"
+      "ownerHint": "sample-guide",
+      "ciProfile": "demo"
     },
     {
       "specPath": "tests/e2e/scenario_apply_concurrency.spec.js",

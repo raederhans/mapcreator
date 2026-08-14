@@ -392,8 +392,22 @@ function compareCommandEntries(left, right) {
     || leftCommand.localeCompare(rightCommand);
 }
 
+export function classifyExecutionOwners(executionOwners) {
+  const owners = new Set(executionOwners || []);
+  if (owners.has("ci-only")) return "ci-only";
+  if (owners.has("main-thread")) return "main-thread";
+  if (owners.size > 0 && [...owners].every((owner) => owner === "child-safe")) return "child-safe";
+  return "blocked";
+}
+
 function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
   const byCommand = new Map();
+  const allRoutesByCommand = new Map();
+  for (const route of allRoutes) {
+    const commandRoutes = allRoutesByCommand.get(route.commandRef) || [];
+    commandRoutes.push(route);
+    allRoutesByCommand.set(route.commandRef, commandRoutes);
+  }
   for (const route of routes) {
     const existing = byCommand.get(route.commandRef) || {
       commandRef: route.commandRef,
@@ -403,17 +417,21 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
       executionOwners: new Set(),
       ciProfiles: new Set(),
       routeIds: new Set(),
+      safetyContributorRouteIds: new Set(),
       expandedSpecs: new Set(expandedSpecsForCommand(route.commandRef, allRoutes)),
       matchedFiles: new Set(),
       guidance: { ...createGuidanceSets(), status: new Set() },
     };
     existing.domains.add(route.domain);
     existing.ownerHints.add(route.ownerHint);
-    existing.executionOwners.add(route.executionOwner);
-    existing.ciProfiles.add(route.ciProfile);
     existing.routeIds.add(route.id);
-    for (const lock of route.resourceLocks) {
-      existing.resourceLocks.add(lock);
+    for (const commandRoute of allRoutesByCommand.get(route.commandRef) || [route]) {
+      existing.safetyContributorRouteIds.add(commandRoute.id);
+      existing.executionOwners.add(commandRoute.executionOwner);
+      existing.ciProfiles.add(commandRoute.ciProfile);
+      for (const lock of commandRoute.resourceLocks) {
+        existing.resourceLocks.add(lock);
+      }
     }
     collectRouteGuidance(existing.guidance, route.guidance);
     byCommand.set(route.commandRef, existing);
@@ -427,6 +445,7 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
       executionOwners: [...entry.executionOwners].sort(),
       ciProfiles: [...entry.ciProfiles].sort(),
       routeIds: [...entry.routeIds].sort(),
+      safetyContributorRouteIds: [...entry.safetyContributorRouteIds].sort(),
       expandedSpecs: [...entry.expandedSpecs].sort(),
       matchedFiles: [...entry.matchedFiles].sort(),
       guidance: guidanceSetsToObject(entry.guidance),
@@ -491,9 +510,10 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
     const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes);
     entry.commandEntries = perFileCommandEntries;
   }
-  const childSafeRoutes = commandEntries.filter((entry) => entry.executionOwners.every((owner) => owner === "child-safe"));
-  const mainThreadRoutes = commandEntries.filter((entry) => entry.executionOwners.includes("main-thread"));
-  const ciOnlyRoutes = commandEntries.filter((entry) => entry.executionOwners.every((owner) => owner === "ci-only"));
+  const childSafeRoutes = commandEntries.filter((entry) => classifyExecutionOwners(entry.executionOwners) === "child-safe");
+  const mainThreadRoutes = commandEntries.filter((entry) => classifyExecutionOwners(entry.executionOwners) === "main-thread");
+  const ciOnlyRoutes = commandEntries.filter((entry) => classifyExecutionOwners(entry.executionOwners) === "ci-only");
+  const blockedRoutes = commandEntries.filter((entry) => classifyExecutionOwners(entry.executionOwners) === "blocked");
   const unmatchedChangedFiles = matchedRoutesByFile
     .filter((entry) => entry.routes.length === 0)
     .map((entry) => entry.changedFile);
@@ -512,6 +532,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
       ciProfiles: entry.ciProfiles,
       expandedSpecs: entry.expandedSpecs,
       routeIds: entry.routeIds,
+      safetyContributorRouteIds: entry.safetyContributorRouteIds,
       guidance: entry.guidance,
     })),
     coveredDomains: [...new Set(commandEntries.flatMap((entry) => entry.domains))].sort(),
@@ -530,6 +551,11 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
       guidance: entry.guidance,
     })),
     ciOnlyVerification: ciOnlyRoutes.map((entry) => ({ commandRef: entry.commandRef, reason: "reserved for CI profile" })),
+    blockedVerification: blockedRoutes.map((entry) => ({
+      commandRef: entry.commandRef,
+      executionOwners: entry.executionOwners,
+      reason: "execution owner metadata could not be classified",
+    })),
     matchedByFile: matchedRoutesByFile.map((entry) => ({
       changedFile: entry.changedFile,
       matchedRouteIds: entry.routes.map((route) => route.id).sort(),
@@ -540,6 +566,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
         resourceLocks: commandEntry.resourceLocks,
         executionOwners: commandEntry.executionOwners,
         routeIds: commandEntry.routeIds,
+        safetyContributorRouteIds: commandEntry.safetyContributorRouteIds,
         expandedSpecs: commandEntry.expandedSpecs,
         guidance: commandEntry.guidance,
       })),

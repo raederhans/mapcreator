@@ -727,8 +727,8 @@ test("verify-core default plan preserves metadata closure before command superse
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 88);
-  assert.equal(plan.commandsToRun.length, 81);
+  assert.equal(metadataDefaultRefs.length, 89);
+  assert.equal(plan.commandsToRun.length, 82);
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [

@@ -16,3 +16,10 @@ jobs:
     with:
       profile: pr-smoke
       run-e2e-smoke: true
+
+  pr-verify-demo:
+    needs: pr-verify-smoke
+    uses: ./.github/workflows/verify-shared.yml
+    with:
+      profile: demo
+      run-e2e-smoke: false

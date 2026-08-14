@@ -724,7 +724,7 @@ export function buildE2eRoutes() {
     cost: e2eCost(spec.primaryLayer),
     resourceLocks: ["browser-dev-server", "playwright-browser", ".runtime-output"],
     executionOwner: "main-thread",
-    ciProfile: spec.primaryLayer === "smoke" ? "pr-smoke" : "full",
+    ciProfile: spec.ciProfile ?? (spec.primaryLayer === "smoke" ? "pr-smoke" : "full"),
   }));
 }
 

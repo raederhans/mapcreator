@@ -4,7 +4,7 @@ import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { buildRecommendation } from "./select_verification_targets.mjs";
-import { collapseSupersededCommands } from "./verification/command_supersession.mjs";
+import { buildCommandSupersessionPlan } from "./verification/command_supersession.mjs";
 import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
 
 const REPO_ROOT = process.cwd();
@@ -17,7 +17,6 @@ const DEFAULT_DISCOVERY_COMMANDS = [
 ];
 const HISTORY_DISCOVERY_COMMANDS = [
   ["diff", "--name-only", "origin/main...HEAD", "--diff-filter=ACMRD", "-z"],
-  ["diff", "--name-only", "HEAD^", "HEAD", "--diff-filter=ACMRD", "-z"],
 ];
 
 export function parseArgs(argv) {
@@ -25,7 +24,9 @@ export function parseArgs(argv) {
     changedFiles: [],
     dryRun: true,
     includeBranchHistory: false,
+    historyBase: "",
     includeMainThread: false,
+    deferMainThread: false,
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
   };
@@ -40,7 +41,13 @@ export function parseArgs(argv) {
     } else if (token === "--dry-run") args.dryRun = true;
     else if (token === "--execute") args.dryRun = false;
     else if (token === "--include-branch-history") args.includeBranchHistory = true;
+    else if (token === "--history-base") {
+      args.historyBase = String(argv[++index] || "").trim();
+      if (!args.historyBase) throw new Error("--history-base requires a non-empty Git revision");
+      args.includeBranchHistory = true;
+    }
     else if (token === "--include-main-thread") args.includeMainThread = true;
+    else if (token === "--defer-main-thread") args.deferMainThread = true;
     else if (token === "--json-out") args.jsonOut = argv[++index];
     else if (token === "--md-out") args.mdOut = argv[++index];
     else args.changedFiles.push(token);
@@ -84,8 +91,7 @@ export function discoverChangedFiles({
     : includeBranchHistory
       ? HISTORY_DISCOVERY_COMMANDS
       : [];
-  const commands = [...DEFAULT_DISCOVERY_COMMANDS, ...historyCommands];
-  for (const gitArgs of commands) {
+  for (const gitArgs of DEFAULT_DISCOVERY_COMMANDS) {
     const result = runGitPathCommand(gitArgs, runner);
     if (result.status === 0) {
       const files = parseGitPathOutput(result.stdout);
@@ -93,6 +99,27 @@ export function discoverChangedFiles({
         discovered.add(file);
       }
     }
+  }
+  let successfulHistoryCommands = 0;
+  for (const gitArgs of historyCommands) {
+    const result = runGitPathCommand(gitArgs, runner);
+    if (result.status !== 0) {
+      if (normalizedHistoryBase) {
+        const error = new Error(`adaptive-history-discovery-failed:${normalizedHistoryBase}`);
+        error.code = "adaptive-history-discovery-failed";
+        error.historyBase = normalizedHistoryBase;
+        throw error;
+      }
+      continue;
+    }
+    successfulHistoryCommands += 1;
+    const files = parseGitPathOutput(result.stdout);
+    for (const file of files) discovered.add(file);
+  }
+  if (includeBranchHistory && !normalizedHistoryBase && historyCommands.length > 0 && successfulHistoryCommands === 0) {
+    const error = new Error("adaptive-history-discovery-failed:all-fallbacks");
+    error.code = "adaptive-history-discovery-failed";
+    throw error;
   }
   return [...discovered].sort();
 }
@@ -138,13 +165,14 @@ export function buildExecutionPlan(report, { includeMainThread = false } = {}) {
     .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
   const mainThreadCommands = [...new Set((report.mainThreadSerialVerification || []).map((entry) => entry.commandRef))]
     .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
-  const commandsToRun = collapseSupersededCommands(
+  const supersessionPlan = buildCommandSupersessionPlan(
     includeMainThread ? [...childSafeCommands, ...mainThreadCommands] : childSafeCommands,
   );
   return {
     childSafeCommands,
     mainThreadCommands,
-    commandsToRun,
+    commandsToRun: supersessionPlan.commandRefs,
+    supersededCommands: supersessionPlan.supersededCommands,
     blockedMainThreadCommands: includeMainThread ? [] : mainThreadCommands,
   };
 }
@@ -155,6 +183,7 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
     "",
     `- mode: ${report.adaptiveMode}`,
     `- discoveryMode: ${report.discoveryMode}`,
+    `- mainThreadDisposition: ${report.mainThreadDisposition}`,
     "",
     "## Changed files",
     ...(report.changedFiles.length ? report.changedFiles.map((file) => `- ${file}`) : ["- none"]),
@@ -181,6 +210,9 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
     lines.push("", "## Execution plan");
     lines.push(...(executionPlan.commandsToRun.length ? executionPlan.commandsToRun.map((commandRef) => `- run: ${commandRef}`) : ["- run: none"]));
     lines.push(...(executionPlan.blockedMainThreadCommands.length ? executionPlan.blockedMainThreadCommands.map((commandRef) => `- blocked-main-thread: ${commandRef}`) : ["- blocked-main-thread: none"]));
+    lines.push(...(executionPlan.supersededCommands.length
+      ? executionPlan.supersededCommands.map(({ commandRef, supersededBy }) => `- superseded: ${commandRef} by ${supersededBy}`)
+      : ["- superseded: none"]));
   }
   if (executionResults) {
     lines.push("", "## Execution results");
@@ -236,11 +268,26 @@ export function executeAdaptivePlan(executionPlan, {
   return executionResults;
 }
 
+export function assertAdaptiveExecutionInput(changedFiles, { dryRun = true } = {}) {
+  if (!dryRun && (!Array.isArray(changedFiles) || changedFiles.length === 0)) {
+    const error = new Error("adaptive-execution-empty-changed-files");
+    error.code = "adaptive-execution-empty-changed-files";
+    throw error;
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.includeMainThread && args.deferMainThread) {
+    throw new Error("--include-main-thread and --defer-main-thread are mutually exclusive");
+  }
   const changedFiles = args.changedFiles.length
     ? args.changedFiles
-    : discoverChangedFiles({ includeBranchHistory: args.includeBranchHistory });
+    : discoverChangedFiles({
+      includeBranchHistory: args.includeBranchHistory,
+      historyBase: args.historyBase,
+    });
+  assertAdaptiveExecutionInput(changedFiles, { dryRun: args.dryRun });
   const report = {
     ...buildRecommendation(changedFiles),
     adaptiveMode: args.dryRun ? "dry-run" : "execute",
@@ -249,6 +296,11 @@ function main() {
       : args.includeBranchHistory
         ? "workspace-plus-history"
         : "workspace-only",
+    mainThreadDisposition: args.includeMainThread
+      ? "included"
+      : args.deferMainThread
+        ? "deferred"
+        : "blocked",
   };
   const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
   if (args.dryRun) {
@@ -270,7 +322,7 @@ function main() {
     process.exit(2);
   }
 
-  if (executionPlan.blockedMainThreadCommands.length > 0) {
+  if (executionPlan.blockedMainThreadCommands.length > 0 && !args.deferMainThread) {
     writeOutputs(report, args, null, executionPlan);
     console.error(
       `Adaptive selection found ${executionPlan.blockedMainThreadCommands.length} main-thread commands. `
@@ -295,7 +347,10 @@ function main() {
     });
   }
   writeOutputs(report, args, executionResults, executionPlan);
-  console.log(`Adaptive selection executed ${executionResults.length} commands.`);
+  const deferredSummary = args.deferMainThread
+    ? `; deferred ${executionPlan.blockedMainThreadCommands.length} main-thread command(s)`
+    : "";
+  console.log(`Adaptive selection executed ${executionResults.length} commands${deferredSummary}.`);
 }
 
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
