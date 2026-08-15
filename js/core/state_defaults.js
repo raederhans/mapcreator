@@ -1388,7 +1388,8 @@ function normalizeExportWorkbenchBakeArtifacts(rawArtifacts) {
 }
 
 function normalizeExportWorkbenchAdjustment(value, fallback = 100) {
-  return Math.max(0, Math.min(200, Math.round(toFiniteNumber(value, fallback))));
+  const candidate = typeof value === "string" && value.trim() === "" ? fallback : value;
+  return Math.max(0, Math.min(200, Math.round(toFiniteNumber(candidate, fallback))));
 }
 
 function normalizeExportWorkbenchTextVisibility(rawVisibility, includeTextLayer = true) {

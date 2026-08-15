@@ -189,6 +189,23 @@ test("export workbench preserves explicit zero adjustment values", () => {
   });
 });
 
+test("export workbench restores defaults for empty adjustment values", () => {
+  const state = {
+    exportWorkbenchUi: {
+      adjustments: { brightness: "", contrast: "   ", saturation: null, clarity: undefined },
+    },
+  };
+
+  const normalized = ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState);
+
+  assert.deepEqual(normalized.adjustments, {
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    clarity: 100,
+  });
+});
+
 test("replaceExportWorkbenchUiState writes normalized export workbench state", () => {
   const target = {};
   const nextState = replaceExportWorkbenchUiState(target, {
