@@ -45612,12 +45612,12 @@
     },
     {
       "path": "app/js/core/appearance_transport_change_set_contract.js",
-      "size_bytes": 20324,
+      "size_bytes": 20336,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/appearance_transport_operation.js",
-      "size_bytes": 21023,
+      "size_bytes": 21171,
       "source_kind": "dist"
     },
     {
@@ -46867,7 +46867,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 108331,
+      "size_bytes": 130698,
       "source_kind": "dist"
     },
     {
@@ -46926,8 +46926,8 @@
       "source_kind": "dist"
     },
     {
-      "path": "app/js/ui/toolbar/export_artifact_pipeline.js",
-      "size_bytes": 25590,
+      "path": "app/js/ui/toolbar/export_artifact_model.js",
+      "size_bytes": 5983,
       "source_kind": "dist"
     },
     {
@@ -46936,13 +46936,8 @@
       "source_kind": "dist"
     },
     {
-      "path": "app/js/ui/toolbar/export_workbench_contract.js",
-      "size_bytes": 6480,
-      "source_kind": "dist"
-    },
-    {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 30718,
+      "size_bytes": 35293,
       "source_kind": "dist"
     },
     {
@@ -47552,7 +47547,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2062841,
+      "size_bytes": 2060913,
       "source_kind": "dist"
     },
     {
@@ -47680,14 +47675,14 @@
         "size_bytes": 6402413
       },
       {
-        "file_count": 84,
+        "file_count": 85,
         "id": "startup-deferred-runtime",
-        "size_bytes": 2527657
+        "size_bytes": 2556007
       },
       {
         "file_count": 815,
         "id": "on-demand-product",
-        "size_bytes": 252902991
+        "size_bytes": 252901223
       },
       {
         "file_count": 8390,
@@ -47695,9 +47690,9 @@
         "size_bytes": 710889151
       },
       {
-        "file_count": 6,
+        "file_count": 4,
         "id": "export-only",
-        "size_bytes": 78029
+        "size_bytes": 50534
       },
       {
         "file_count": 12,
@@ -58671,13 +58666,21 @@
                 "kind": "import-declaration",
                 "line": 34,
                 "local": true,
+                "reference": "../core/export_artifact_package.js",
+                "resolved_path": "app/js/core/export_artifact_package.js"
+              },
+              {
+                "column": 1,
+                "kind": "import-declaration",
+                "line": 35,
+                "local": true,
                 "reference": "../core/scenario_resources.js",
                 "resolved_path": "app/js/core/scenario_resources.js"
               },
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 35,
+                "line": 36,
                 "local": true,
                 "reference": "../core/scenario_dispatcher.js",
                 "resolved_path": "app/js/core/scenario_dispatcher.js"
@@ -58685,7 +58688,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 36,
+                "line": 37,
                 "local": true,
                 "reference": "./i18n.js",
                 "resolved_path": "app/js/ui/i18n.js"
@@ -58693,7 +58696,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 37,
+                "line": 38,
                 "local": true,
                 "reference": "../core/sovereignty_manager.js",
                 "resolved_path": "app/js/core/sovereignty_manager.js"
@@ -58701,7 +58704,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 38,
+                "line": 39,
                 "local": true,
                 "reference": "./toast.js",
                 "resolved_path": "app/js/ui/toast.js"
@@ -58709,7 +58712,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 39,
+                "line": 40,
                 "local": true,
                 "reference": "./app_dialog.js",
                 "resolved_path": "app/js/ui/app_dialog.js"
@@ -58717,7 +58720,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 40,
+                "line": 41,
                 "local": true,
                 "reference": "./ui_surface_url_state.js",
                 "resolved_path": "app/js/ui/ui_surface_url_state.js"
@@ -58725,7 +58728,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 41,
+                "line": 42,
                 "local": true,
                 "reference": "../core/sample_project_import_workflow.js",
                 "resolved_path": "app/js/core/sample_project_import_workflow.js"
@@ -58733,7 +58736,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 42,
+                "line": 43,
                 "local": true,
                 "reference": "../core/sample_project_registry.js",
                 "resolved_path": "app/js/core/sample_project_registry.js"
@@ -58741,7 +58744,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 43,
+                "line": 44,
                 "local": true,
                 "reference": "./ui_contract.js",
                 "resolved_path": "app/js/ui/ui_contract.js"
@@ -58749,7 +58752,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 52,
+                "line": 53,
                 "local": true,
                 "reference": "../core/dirty_state.js",
                 "resolved_path": "app/js/core/dirty_state.js"
@@ -58757,7 +58760,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 53,
+                "line": 54,
                 "local": true,
                 "reference": "./toolbar/export_failure_handler.js",
                 "resolved_path": "app/js/ui/toolbar/export_failure_handler.js"
@@ -58765,15 +58768,15 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 54,
+                "line": 58,
                 "local": true,
-                "reference": "./toolbar/export_artifact_pipeline.js",
-                "resolved_path": "app/js/ui/toolbar/export_artifact_pipeline.js"
+                "reference": "./toolbar/export_artifact_model.js",
+                "resolved_path": "app/js/ui/toolbar/export_artifact_model.js"
               },
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 58,
+                "line": 73,
                 "local": true,
                 "reference": "./toolbar/ocean_lake_controls_controller.js",
                 "resolved_path": "app/js/ui/toolbar/ocean_lake_controls_controller.js"
@@ -58781,7 +58784,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 59,
+                "line": 74,
                 "local": true,
                 "reference": "./toolbar/export_workbench_controller.js",
                 "resolved_path": "app/js/ui/toolbar/export_workbench_controller.js"
@@ -58789,7 +58792,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 67,
+                "line": 87,
                 "local": true,
                 "reference": "./toolbar/palette_library_panel.js",
                 "resolved_path": "app/js/ui/toolbar/palette_library_panel.js"
@@ -58797,7 +58800,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 68,
+                "line": 88,
                 "local": true,
                 "reference": "./toolbar/appearance_controls_controller.js",
                 "resolved_path": "app/js/ui/toolbar/appearance_controls_controller.js"
@@ -58805,7 +58808,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 69,
+                "line": 89,
                 "local": true,
                 "reference": "./toolbar/scenario_context_bar_controller.js",
                 "resolved_path": "app/js/ui/toolbar/scenario_context_bar_controller.js"
@@ -58813,7 +58816,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 70,
+                "line": 90,
                 "local": true,
                 "reference": "./toolbar/scenario_guide_popover.js",
                 "resolved_path": "app/js/ui/toolbar/scenario_guide_popover.js"
@@ -58821,7 +58824,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 71,
+                "line": 91,
                 "local": true,
                 "reference": "./toolbar/sample_project_banner_controller.js",
                 "resolved_path": "app/js/ui/toolbar/sample_project_banner_controller.js"
@@ -58829,7 +58832,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 75,
+                "line": 95,
                 "local": true,
                 "reference": "./toolbar/special_zone_editor.js",
                 "resolved_path": "app/js/ui/toolbar/special_zone_editor.js"
@@ -58837,7 +58840,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 76,
+                "line": 96,
                 "local": true,
                 "reference": "./toolbar/special_zones_workbench_controller.js",
                 "resolved_path": "app/js/ui/toolbar/special_zones_workbench_controller.js"
@@ -58845,7 +58848,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 77,
+                "line": 97,
                 "local": true,
                 "reference": "./toolbar/transport_workbench_controller.js",
                 "resolved_path": "app/js/ui/toolbar/transport_workbench_controller.js"
@@ -58853,7 +58856,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 81,
+                "line": 101,
                 "local": true,
                 "reference": "./toolbar/workspace_chrome_support_surface_controller.js",
                 "resolved_path": "app/js/ui/toolbar/workspace_chrome_support_surface_controller.js"
@@ -58861,7 +58864,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 82,
+                "line": 102,
                 "local": true,
                 "reference": "../core/hgo_runtime_asset_loader.js",
                 "resolved_path": "app/js/core/hgo_runtime_asset_loader.js"
@@ -58869,7 +58872,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 83,
+                "line": 103,
                 "local": true,
                 "reference": "./toolbar/hgo_runtime_preview_controller.js",
                 "resolved_path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js"
@@ -58880,6 +58883,7 @@
           "source_bindings": [],
           "static_imports": [
             "app/js/core/dirty_state.js",
+            "app/js/core/export_artifact_package.js",
             "app/js/core/hgo_runtime_asset_loader.js",
             "app/js/core/history_manager.js",
             "app/js/core/map_renderer/public.js",
@@ -58895,7 +58899,7 @@
             "app/js/ui/i18n.js",
             "app/js/ui/toast.js",
             "app/js/ui/toolbar/appearance_controls_controller.js",
-            "app/js/ui/toolbar/export_artifact_pipeline.js",
+            "app/js/ui/toolbar/export_artifact_model.js",
             "app/js/ui/toolbar/export_failure_handler.js",
             "app/js/ui/toolbar/export_workbench_controller.js",
             "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
@@ -59387,45 +59391,16 @@
           "dynamic_import_expressions": [],
           "dynamic_imports": [],
           "load_phase": "deferred-runtime",
-          "path": "app/js/ui/toolbar/export_artifact_pipeline.js",
-          "product_category": "export-only",
+          "path": "app/js/ui/toolbar/export_artifact_model.js",
+          "product_category": "startup-deferred-runtime",
           "reference_locations": {
             "dynamic_imports": [],
             "resource_references": [],
-            "static_imports": [
-              {
-                "column": 1,
-                "kind": "import-declaration",
-                "line": 4,
-                "local": true,
-                "reference": "../../core/export_artifact_package.js",
-                "resolved_path": "app/js/core/export_artifact_package.js"
-              },
-              {
-                "column": 1,
-                "kind": "import-declaration",
-                "line": 5,
-                "local": true,
-                "reference": "./export_failure_handler.js",
-                "resolved_path": "app/js/ui/toolbar/export_failure_handler.js"
-              },
-              {
-                "column": 1,
-                "kind": "import-declaration",
-                "line": 6,
-                "local": true,
-                "reference": "./export_workbench_contract.js",
-                "resolved_path": "app/js/ui/toolbar/export_workbench_contract.js"
-              }
-            ]
+            "static_imports": []
           },
           "resource_references": [],
           "source_bindings": [],
-          "static_imports": [
-            "app/js/core/export_artifact_package.js",
-            "app/js/ui/toolbar/export_failure_handler.js",
-            "app/js/ui/toolbar/export_workbench_contract.js"
-          ]
+          "static_imports": []
         },
         {
           "dynamic_import_expressions": [],
@@ -59466,32 +59441,6 @@
           "dynamic_import_expressions": [],
           "dynamic_imports": [],
           "load_phase": "deferred-runtime",
-          "path": "app/js/ui/toolbar/export_workbench_contract.js",
-          "product_category": "export-only",
-          "reference_locations": {
-            "dynamic_imports": [],
-            "resource_references": [],
-            "static_imports": [
-              {
-                "column": 1,
-                "kind": "import-declaration",
-                "line": 3,
-                "local": true,
-                "reference": "../../core/state/index.js",
-                "resolved_path": "app/js/core/state/index.js"
-              }
-            ]
-          },
-          "resource_references": [],
-          "source_bindings": [],
-          "static_imports": [
-            "app/js/core/state/index.js"
-          ]
-        },
-        {
-          "dynamic_import_expressions": [],
-          "dynamic_imports": [],
-          "load_phase": "deferred-runtime",
           "path": "app/js/ui/toolbar/export_workbench_controller.js",
           "product_category": "export-only",
           "reference_locations": {
@@ -59511,8 +59460,8 @@
                 "kind": "import-declaration",
                 "line": 6,
                 "local": true,
-                "reference": "./export_workbench_contract.js",
-                "resolved_path": "app/js/ui/toolbar/export_workbench_contract.js"
+                "reference": "../../core/state/index.js",
+                "resolved_path": "app/js/core/state/index.js"
               }
             ]
           },
@@ -59520,7 +59469,7 @@
           "source_bindings": [],
           "static_imports": [
             "app/js/core/sample_export_recommendation.js",
-            "app/js/ui/toolbar/export_workbench_contract.js"
+            "app/js/core/state/index.js"
           ]
         },
         {
@@ -61739,9 +61688,9 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 2211896,
-        "deferred_graph_file_count": 116,
-        "deferred_module_count": 115,
+        "deferred_graph_bytes": 2212751,
+        "deferred_graph_file_count": 115,
+        "deferred_module_count": 114,
         "deferred_resource_count": 1,
         "initial_graph_bytes": 6075996,
         "initial_graph_file_count": 234,
@@ -61749,11 +61698,11 @@
         "initial_resource_count": 14,
         "initial_script_bytes": 4718059,
         "initial_script_count": 222,
-        "module_count": 340,
+        "module_count": 339,
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 963690905,
+        "untraversed_dist_bytes": 963689137,
         "untraversed_dist_file_count": 9145,
         "untraversed_module_count": 5
       },
@@ -62643,7 +62592,7 @@
       {
         "basis": "deferred-module-graph",
         "category": "startup-deferred-runtime",
-        "file_count": 82,
+        "file_count": 83,
         "owner": "editor-deferred-features",
         "path_exceptions": [
           {
@@ -62692,7 +62641,7 @@
           },
           {
             "path": "app/js/ui/toolbar.js",
-            "size_bytes": 108331
+            "size_bytes": 130698
           },
           {
             "path": "app/js/ui/toolbar/appearance_border_owner.js",
@@ -62737,6 +62686,10 @@
           {
             "path": "app/js/ui/toolbar/appearance_transport_summary.js",
             "size_bytes": 10896
+          },
+          {
+            "path": "app/js/ui/toolbar/export_artifact_model.js",
+            "size_bytes": 5983
           },
           {
             "path": "app/js/ui/toolbar/intensity_field_editor_section.js",
@@ -62950,7 +62903,7 @@
             "size_bytes": 274769
           }
         ],
-        "size_bytes": 1662462
+        "size_bytes": 1690812
       },
       {
         "basis": "product-registry:milsymbol-deferred-vendor",
@@ -62992,15 +62945,15 @@
           },
           {
             "path": "app/js/core/appearance_transport_change_set_contract.js",
-            "size_bytes": 20324
+            "size_bytes": 20336
           },
           {
             "path": "app/js/core/appearance_transport_operation.js",
-            "size_bytes": 21023
+            "size_bytes": 21171
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 42141
+        "size_bytes": 42301
       },
       {
         "basis": "product-registry:editor-product-data",
@@ -63325,11 +63278,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2062841
+            "size_bytes": 2060913
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2062841
+        "size_bytes": 2060913
       },
       {
         "basis": "product-registry:thematic-product-data",
@@ -63629,7 +63582,7 @@
       {
         "basis": "product-registry:export-modules",
         "category": "export-only",
-        "file_count": 6,
+        "file_count": 4,
         "owner": "export-capability",
         "path_exceptions": [
           {
@@ -63641,24 +63594,16 @@
             "size_bytes": 6781
           },
           {
-            "path": "app/js/ui/toolbar/export_artifact_pipeline.js",
-            "size_bytes": 25590
-          },
-          {
             "path": "app/js/ui/toolbar/export_failure_handler.js",
             "size_bytes": 1861
           },
           {
-            "path": "app/js/ui/toolbar/export_workbench_contract.js",
-            "size_bytes": 6480
-          },
-          {
             "path": "app/js/ui/toolbar/export_workbench_controller.js",
-            "size_bytes": 30718
+            "size_bytes": 35293
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 78029
+        "size_bytes": 50534
       },
       {
         "basis": "product-registry:developer-modules",
@@ -63698,7 +63643,7 @@
       }
     ],
     "product_inventory": {
-      "classified_file_count": 9512,
+      "classified_file_count": 9511,
       "exact_exclusions": [],
       "publication_ownership_status": "complete",
       "registry_rules": [
@@ -63728,7 +63673,7 @@
         },
         {
           "category": "export-only",
-          "file_count": 6,
+          "file_count": 4,
           "id": "export-modules",
           "match": {
             "exact_paths": [
@@ -63742,7 +63687,7 @@
             "prefixes": []
           },
           "owner": "export-capability",
-          "size_bytes": 78029
+          "size_bytes": 50534
         },
         {
           "category": "scenario-specific",
@@ -63857,7 +63802,7 @@
             "prefixes": []
           },
           "owner": "appearance-transport-contract",
-          "size_bytes": 42141
+          "size_bytes": 42301
         },
         {
           "category": "on-demand-product",
@@ -64053,11 +63998,11 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2062841
+          "size_bytes": 2060913
         }
       ],
       "status": "complete",
-      "total_file_count": 9512,
+      "total_file_count": 9511,
       "unknown_file_count": 0,
       "unknown_paths": []
     },
@@ -64066,8 +64011,8 @@
       "graph_scan_status": "complete",
       "registry_resolved_dynamic_expression_count": 2,
       "status": "complete",
-      "total_file_count": 9512,
-      "traversed_file_count": 367,
+      "total_file_count": 9511,
+      "traversed_file_count": 366,
       "unresolved_dynamic_expression_count": 0,
       "unresolved_reference_count": 0,
       "untraversed_file_count": 9145,
@@ -64094,9 +64039,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9450,
+      "file_count": 9449,
       "path": "app",
-      "size_bytes": 965893864
+      "size_bytes": 965894879
     },
     {
       "file_count": 57,
@@ -64106,7 +64051,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2062841
+      "size_bytes": 2060913
     },
     {
       "file_count": 1,
@@ -64129,5 +64074,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973055066
+  "total_bytes": 973054153
 }

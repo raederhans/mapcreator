@@ -7,7 +7,7 @@
 - `merge-base(HEAD, origin/main)=5461c24aa5e40c3ea184dfee84db10630a199cbc`；source candidate 相对 `origin/main` 为 `0 behind / 21 ahead`。
 - schema 3 baseline 已提交；checked-in policy 的 latestPhase 已为 P4.3。review-fix source 位于 checkpoint 之后，当前静态 blocker 为新的 exact generator checkpoint。
 - 主 checkout 位于 `68a62e540104025e1b3e976f77589f8b3eff2f36`；本任务保持隔离，不读取其未归属 WIP 作为候选输入。
-- 2026-08-15 主监督已将 Gate 0–4 integrated/pre-A baseline 固定为 `c120da7fd6f9c7b1eb4dd5585d7311a9cdce2444`；A-specific delta 从该 SHA 起算，当前 P4.3 policy checkpoint 为 `dac80102a1c8bfbdf9a479e9a6866b6211afef90`。
+- 2026-08-15 主监督已将 Gate 0–4 integrated/pre-A baseline 固定为 `24794035204465922d201b068fdc66818aa9b5db`；A-specific delta 从该 SHA 起算；`dac80102` policy checkpoint 已被结构修复取代，新的 exact checkpoint pending。
 
 ## Decisions and deviations
 
@@ -23,9 +23,10 @@
 | 2026-08-13 | 主监督生成 schema 3 baseline，并修复 JSON round-trip 后的 CPU evidence drift | baseline 与 gate 使用同一持久化精度；raw runs、stored roles 与 recomputed role summary 由 validator 逐层绑定。 |
 | 2026-08-13 | 独立 B review 对 architecture-clean candidate 提出 1 个 P1、4 个 P2 | 主监督在 `21bfb35aeaa18ba1b35723f2f1972ce2e07a7f92` 关闭 accepted findings；Pages dist、SF-ATS route、focused contracts 与 architecture boundary 已重新验证。 |
 | 2026-08-13 | Final source review 发现 scenario summary canonical median 仍可脱离 raw runs，且 diagnostics missing-holder failure path 需要双写预检 | 主监督停止 obsolete-source generator，policy 文件保持原样；`2ee6653f812febd69148f659b5baee7fe1e3edf8` 绑定 recomputed median、补齐原子预检与 atomic writer order regression。 |
-| 2026-08-15 | Gate 0–4 integrated work 已进入 main lineage；`c120da7f` 固定为 pre-A baseline | Gate 1 的 `index.html`、`css/style.css`、`js/ui/toolbar.js` 变更作为 inherited upstream content；A-specific delta 对三条共享路径保持零变化。 |
+| 2026-08-15 | Gate 0–4 integrated work 与 A 前结构修复已进入 main lineage；`24794035` 固定为 pre-A baseline | Gate 1 的 `index.html`、`css/style.css`、`js/ui/toolbar.js` 变更作为 inherited upstream content；pure artifact model 将 toolbar 从 3186 行收敛到 3073 行；A-specific delta 对三条共享路径保持零变化。 |
 | 2026-08-15 | Appearance / Transport change-set seam 以 dormant contract 进入 integrated baseline | 三个 contract/operation 模块保持零 runtime writer、零 UI wiring、零 Apply bridge/history persistence；B 建立 actions，C 完成 wiring、lifecycle 与产品准入。 |
 | 2026-08-15 | Export Artifact Pipeline 在 A 前完成补偿性回退 | `78989887` 与 `7dce59d2` 恢复 P4.4-before-A ownership 边界；B actions 准入后按职责重放 pipeline。 |
+| 2026-08-15 | Export artifact deterministic projections 迁入纯 model | `24794035` 保持 DOM、runtime mutation、bake cache 与下载副作用在既有 owners；toolbar structural contract 恢复 54/54 green。 |
 
 ## Live process ownership
 
@@ -39,6 +40,7 @@
 | A exact `7319193e` review checkpoint generator | 本 A task delegated owner | 同一 canonical generator command；session `82779`，PID `468364` | released；start `2026-08-13T00:12:25.1501860+08:00`；end `2026-08-13T00:28:56.3897097+08:00`；exit 0；elapsed `991.240s`；207 writers；checkpoint commit `b66ebeaa700054a01129783a5ba956705e152d3d`。 |
 | A review-fix P4.3 generator at `08b470d9` | A task delegated owner，主监督授权 | canonical generator；PID `115400`；输出 `tools/state_writer_policy.json` | released as obsolete source；start `2026-08-13T01:09:50.9445305+08:00`；stop `2026-08-13T01:20:33.0443086+08:00`；duration `642.100s`；wrapper exit `-1`；policy length/mtime 均保持 `10928785` bytes / `2026-08-13T00:28:56.3113068+08:00`。 |
 | A final review-fix P4.3 generator | `/root` main supervisor | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；输出 `tools/state_writer_policy.json` | completed，exit 0；写入 207 writers；checkpoint commit `dac80102a1c8bfbdf9a479e9a6866b6211afef90`。 |
+| A post-structural P4.3 generator | `/root` main supervisor | 同一 canonical generator；输入为 `24794035` structural baseline 及随后 Pages/coordination candidate | pending；生成后形成新的唯一 exact checkpoint。 |
 | A canonical perf baseline generation | `/root` main supervisor | `npm run perf:baseline`；输入 `tno_1962,hoi4_1939`、runs `5`、warmups `3` | completed，exit 0；schema 3、admitted environment、stable generation fence、两场景各 5 个 canonical samples；commit `727108824362e373ee9cf6ba5abb04829aed4f04`。 |
 | A standard perf gate | `/root` main supervisor | baseline 提交后在 clean exact candidate 执行 `npm run perf:gate`；读取 `docs/perf/baseline_2026-07-30.json`；输出 `.runtime/output/perf/baseline_2026-07-30/perf-gate-current.json` 与 generation/admission evidence | requested；成功条件：exit 0、baseline schema/contract 可读、环境与 workload contract 一致、enforced regression gate pass。 |
 | A browser / Playwright | `/root` main supervisor | exact command、browser profile、output path 由主监督在取得唯一 lane 后落盘 | requested；成功条件：renderer ownership 路径无 page error、未处理 console error 与 network failure，具体 matrix 绑定 exact candidate SHA。 |
