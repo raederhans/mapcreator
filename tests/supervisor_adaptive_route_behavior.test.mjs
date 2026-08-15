@@ -98,6 +98,25 @@ test("Appearance Transport change-set modules and focused tests share the child-
   }
 });
 
+test("primary polar water outputs stay on the heavy spherical safety route", () => {
+  const changedFiles = [
+    "data/europe_topology.json",
+    "data/water_regions.geojson",
+  ];
+  const report = recommendationFor(changedFiles);
+  const route = routeForCommand(
+    report,
+    "python -m pytest tests/test_polar_water_spherical_safety.py -q",
+  );
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(route);
+  assert.deepEqual(route.domains, ["geo-contract"]);
+  assert.deepEqual(route.ownerHints, ["polar-water-spherical-safety"]);
+  assert.deepEqual(route.executionOwners, ["main-thread"]);
+  assert.deepEqual(route.resourceLocks, [".runtime-output", "heavy-geo"]);
+});
+
 test("SF-ATS docs route stays scoped to registry and work package docs", () => {
   const registryReport = recommendationFor("docs/active/_worktree_registry.md");
   const unrelatedActiveDocReport = recommendationFor("docs/active/unrelated-task/context.md");

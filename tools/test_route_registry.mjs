@@ -408,6 +408,8 @@ const PYTHON_FAST_CONTRACTS = [
       "init_map_data.py",
       "map_builder/geo/topology.py",
       "map_builder/geo/spherical_safety.py",
+      "data/europe_topology.json",
+      "data/water_regions.geojson",
       "tests/test_polar_water_spherical_safety.py",
     ].join(","),
     domain: "geo-contract",
