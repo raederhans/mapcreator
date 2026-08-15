@@ -46867,7 +46867,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 131750,
+      "size_bytes": 131679,
       "source_kind": "dist"
     },
     {
@@ -47677,7 +47677,7 @@
       {
         "file_count": 85,
         "id": "startup-deferred-runtime",
-        "size_bytes": 2557614
+        "size_bytes": 2557543
       },
       {
         "file_count": 815,
@@ -58792,7 +58792,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 87,
+                "line": 86,
                 "local": true,
                 "reference": "./toolbar/palette_library_panel.js",
                 "resolved_path": "app/js/ui/toolbar/palette_library_panel.js"
@@ -58800,7 +58800,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 88,
+                "line": 87,
                 "local": true,
                 "reference": "./toolbar/appearance_controls_controller.js",
                 "resolved_path": "app/js/ui/toolbar/appearance_controls_controller.js"
@@ -58808,7 +58808,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 89,
+                "line": 88,
                 "local": true,
                 "reference": "./toolbar/scenario_context_bar_controller.js",
                 "resolved_path": "app/js/ui/toolbar/scenario_context_bar_controller.js"
@@ -58816,7 +58816,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 90,
+                "line": 89,
                 "local": true,
                 "reference": "./toolbar/scenario_guide_popover.js",
                 "resolved_path": "app/js/ui/toolbar/scenario_guide_popover.js"
@@ -58824,7 +58824,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 91,
+                "line": 90,
                 "local": true,
                 "reference": "./toolbar/sample_project_banner_controller.js",
                 "resolved_path": "app/js/ui/toolbar/sample_project_banner_controller.js"
@@ -58832,7 +58832,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 95,
+                "line": 94,
                 "local": true,
                 "reference": "./toolbar/special_zone_editor.js",
                 "resolved_path": "app/js/ui/toolbar/special_zone_editor.js"
@@ -58840,7 +58840,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 96,
+                "line": 95,
                 "local": true,
                 "reference": "./toolbar/special_zones_workbench_controller.js",
                 "resolved_path": "app/js/ui/toolbar/special_zones_workbench_controller.js"
@@ -58848,7 +58848,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 97,
+                "line": 96,
                 "local": true,
                 "reference": "./toolbar/transport_workbench_controller.js",
                 "resolved_path": "app/js/ui/toolbar/transport_workbench_controller.js"
@@ -58856,7 +58856,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 101,
+                "line": 100,
                 "local": true,
                 "reference": "./toolbar/workspace_chrome_support_surface_controller.js",
                 "resolved_path": "app/js/ui/toolbar/workspace_chrome_support_surface_controller.js"
@@ -58864,7 +58864,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 102,
+                "line": 101,
                 "local": true,
                 "reference": "../core/hgo_runtime_asset_loader.js",
                 "resolved_path": "app/js/core/hgo_runtime_asset_loader.js"
@@ -58872,7 +58872,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 103,
+                "line": 102,
                 "local": true,
                 "reference": "./toolbar/hgo_runtime_preview_controller.js",
                 "resolved_path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js"
@@ -61697,7 +61697,7 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 2214320,
+        "deferred_graph_bytes": 2214249,
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
@@ -62650,7 +62650,7 @@
           },
           {
             "path": "app/js/ui/toolbar.js",
-            "size_bytes": 131750
+            "size_bytes": 131679
           },
           {
             "path": "app/js/ui/toolbar/appearance_border_owner.js",
@@ -62912,7 +62912,7 @@
             "size_bytes": 274769
           }
         ],
-        "size_bytes": 1692419
+        "size_bytes": 1692348
       },
       {
         "basis": "product-registry:milsymbol-deferred-vendor",
@@ -64050,7 +64050,7 @@
     {
       "file_count": 9449,
       "path": "app",
-      "size_bytes": 965896600
+      "size_bytes": 965896529
     },
     {
       "file_count": 57,
@@ -64083,5 +64083,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973056235
+  "total_bytes": 973056164
 }

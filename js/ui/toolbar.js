@@ -78,7 +78,6 @@ import {
   EXPORT_TEXT_LAYER_IDS,
   EXPORT_TEXT_LAYER_MODEL_BY_ID,
   createExportWorkbenchController,
-  ensureExportWorkbenchUiState as ensureExportWorkbenchUiStateFromController,
   normalizeExportWorkbenchLayerOrder as normalizeExportWorkbenchLayerOrderFromController,
   normalizeExportWorkbenchTextVisibility as normalizeExportWorkbenchTextVisibilityFromController,
   normalizeExportWorkbenchVisibility as normalizeExportWorkbenchVisibilityFromController,
@@ -574,10 +573,9 @@ function initToolbar({ render } = {}) {
   };
 
   let exportWorkbenchController = null;
-  const ensureExportWorkbenchUiState = () => (
-    exportWorkbenchController?.ensureExportWorkbenchUiState()
-    || ensureExportWorkbenchUiStateFromController(state, normalizeExportWorkbenchUiState)
-  );
+  let ensureExportWorkbenchUiState = () => {
+    throw new Error("Export workbench controller is not initialized.");
+  };
   const renderExportWorkbenchLayerList = () => exportWorkbenchController?.renderExportWorkbenchLayerList();
   const renderExportWorkbenchTextElementList = () => exportWorkbenchController?.renderExportWorkbenchTextElementList();
 
@@ -1949,6 +1947,7 @@ function initToolbar({ render } = {}) {
     bakeLayer: (...args) => bakeLayer(...args),
     exportMaxConcurrentJobs: EXPORT_MAX_CONCURRENT_JOBS,
   });
+  ensureExportWorkbenchUiState = exportWorkbenchController.ensureExportWorkbenchUiState;
 
   function updateHistoryUi() {
     if (undoBtn) undoBtn.disabled = !canUndoHistory();

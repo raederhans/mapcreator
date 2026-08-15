@@ -223,11 +223,21 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("return exportWorkbenchController?.renderExportWorkbenchPreview();", toolbar_content)
         self.assertIn("return exportWorkbenchController?.renderExportWorkbenchBakeArtifactList();", toolbar_content)
         self.assertIn("return exportWorkbenchController?.syncExportPreviewSourceOptions();", toolbar_content)
-        self.assertIn("const ensureExportWorkbenchUiState = () => (", toolbar_content)
-        self.assertIn("exportWorkbenchController?.ensureExportWorkbenchUiState()", toolbar_content)
         self.assertIn(
-            "ensureExportWorkbenchUiStateFromController(state, normalizeExportWorkbenchUiState)",
+            'throw new Error("Export workbench controller is not initialized.");',
             toolbar_content,
+        )
+        self.assertNotIn("ensureExportWorkbenchUiStateFromController", toolbar_content)
+        controller_assignment = toolbar_content.index(
+            "ensureExportWorkbenchUiState = exportWorkbenchController.ensureExportWorkbenchUiState;"
+        )
+        self.assertLess(
+            toolbar_content.index("exportWorkbenchController = createExportWorkbenchController({"),
+            controller_assignment,
+        )
+        self.assertLess(
+            controller_assignment,
+            toolbar_content.index("    syncExportWorkbenchControlsFromState();"),
         )
         self.assertIn('id: "background"', owner_content)
         self.assertIn('id: "political"', owner_content)
