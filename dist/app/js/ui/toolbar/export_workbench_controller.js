@@ -4,6 +4,7 @@
 
 import { resolveSampleExportRecommendationContext } from "../../core/sample_export_recommendation.js";
 import { replaceExportWorkbenchUiState } from "../../core/state/index.js";
+import { normalizeExportAdjustmentValue } from "./export_artifact_model.js";
 
 const EXPORT_MAIN_LAYER_VIEW_MODELS = Object.freeze([
   Object.freeze({ id: "background", name: "Background", summary: "Base frame", passNames: ["background"] }),
@@ -149,10 +150,10 @@ function ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState) {
     ? exportWorkbenchUi.adjustments
     : {};
   exportWorkbenchUi.adjustments = {
-    brightness: Math.max(0, Math.min(200, Math.round(Number(adjustments.brightness) || 100))),
-    contrast: Math.max(0, Math.min(200, Math.round(Number(adjustments.contrast) || 100))),
-    saturation: Math.max(0, Math.min(200, Math.round(Number(adjustments.saturation) || 100))),
-    clarity: Math.max(0, Math.min(200, Math.round(Number(adjustments.clarity) || 100))),
+    brightness: normalizeExportAdjustmentValue(adjustments.brightness),
+    contrast: normalizeExportAdjustmentValue(adjustments.contrast),
+    saturation: normalizeExportAdjustmentValue(adjustments.saturation),
+    clarity: normalizeExportAdjustmentValue(adjustments.clarity),
   };
   exportWorkbenchUi.bakeCache = existingBakeCache || new Map();
   return exportWorkbenchUi;
@@ -764,7 +765,7 @@ function createExportWorkbenchController({
       if (!(input instanceof HTMLInputElement) || input.dataset.bound === "true") return;
       input.addEventListener("input", () => {
         const exportUi = getExportUi();
-        exportUi.adjustments[key] = Math.max(0, Math.min(200, Math.round(Number(input.value) || 100)));
+        exportUi.adjustments[key] = normalizeExportAdjustmentValue(input.value);
         renderExportWorkbenchUi(true);
       });
       input.dataset.bound = "true";

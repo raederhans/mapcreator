@@ -36,6 +36,12 @@ test("export artifact model projects deterministic canvas and pass inputs", () =
   assert.equal(buildExportAdjustmentFilter({
     adjustments: { brightness: 125, contrast: 110, saturation: 80, clarity: 150 },
   }), "brightness(1.250) contrast(1.166) saturate(0.800)");
+  assert.equal(buildExportAdjustmentFilter({
+    adjustments: { brightness: 0, contrast: 0, saturation: 0, clarity: 0 },
+  }), "brightness(0.000) contrast(0.000) saturate(0.000)");
+  assert.equal(buildExportAdjustmentFilter({
+    adjustments: { brightness: null, contrast: "", saturation: undefined, clarity: "invalid" },
+  }), "brightness(1.000) contrast(1.000) saturate(1.000)");
 
   const exportUi = {
     visibility: { background: true, political: true, context: false, effects: true },
@@ -163,6 +169,23 @@ test("export workbench state normalizes legacy visibility and text aliases", () 
     contrast: 0,
     saturation: 143,
     clarity: 99,
+  });
+});
+
+test("export workbench preserves explicit zero adjustment values", () => {
+  const state = {
+    exportWorkbenchUi: {
+      adjustments: { brightness: 0, contrast: 0, saturation: 0, clarity: 0 },
+    },
+  };
+
+  const normalized = ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState);
+
+  assert.deepEqual(normalized.adjustments, {
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+    clarity: 0,
   });
 });
 

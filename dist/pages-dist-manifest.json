@@ -46927,7 +46927,7 @@
     },
     {
       "path": "app/js/ui/toolbar/export_artifact_model.js",
-      "size_bytes": 6012,
+      "size_bytes": 6538,
       "source_kind": "dist"
     },
     {
@@ -46937,7 +46937,7 @@
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 35293,
+      "size_bytes": 35255,
       "source_kind": "dist"
     },
     {
@@ -47547,7 +47547,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2060913,
+      "size_bytes": 2061274,
       "source_kind": "dist"
     },
     {
@@ -47677,12 +47677,12 @@
       {
         "file_count": 85,
         "id": "startup-deferred-runtime",
-        "size_bytes": 2556884
+        "size_bytes": 2557410
       },
       {
         "file_count": 815,
         "id": "on-demand-product",
-        "size_bytes": 252901223
+        "size_bytes": 252901584
       },
       {
         "file_count": 8390,
@@ -47692,7 +47692,7 @@
       {
         "file_count": 4,
         "id": "export-only",
-        "size_bytes": 50534
+        "size_bytes": 50496
       },
       {
         "file_count": 12,
@@ -59462,6 +59462,14 @@
                 "local": true,
                 "reference": "../../core/state/index.js",
                 "resolved_path": "app/js/core/state/index.js"
+              },
+              {
+                "column": 1,
+                "kind": "import-declaration",
+                "line": 7,
+                "local": true,
+                "reference": "./export_artifact_model.js",
+                "resolved_path": "app/js/ui/toolbar/export_artifact_model.js"
               }
             ]
           },
@@ -59469,7 +59477,8 @@
           "source_bindings": [],
           "static_imports": [
             "app/js/core/sample_export_recommendation.js",
-            "app/js/core/state/index.js"
+            "app/js/core/state/index.js",
+            "app/js/ui/toolbar/export_artifact_model.js"
           ]
         },
         {
@@ -61688,7 +61697,7 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 2213628,
+        "deferred_graph_bytes": 2214116,
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
@@ -61702,7 +61711,7 @@
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 963689137,
+        "untraversed_dist_bytes": 963689498,
         "untraversed_dist_file_count": 9145,
         "untraversed_module_count": 5
       },
@@ -62689,7 +62698,7 @@
           },
           {
             "path": "app/js/ui/toolbar/export_artifact_model.js",
-            "size_bytes": 6012
+            "size_bytes": 6538
           },
           {
             "path": "app/js/ui/toolbar/intensity_field_editor_section.js",
@@ -62903,7 +62912,7 @@
             "size_bytes": 274769
           }
         ],
-        "size_bytes": 1691689
+        "size_bytes": 1692215
       },
       {
         "basis": "product-registry:milsymbol-deferred-vendor",
@@ -63278,11 +63287,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2060913
+            "size_bytes": 2061274
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2060913
+        "size_bytes": 2061274
       },
       {
         "basis": "product-registry:thematic-product-data",
@@ -63599,11 +63608,11 @@
           },
           {
             "path": "app/js/ui/toolbar/export_workbench_controller.js",
-            "size_bytes": 35293
+            "size_bytes": 35255
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 50534
+        "size_bytes": 50496
       },
       {
         "basis": "product-registry:developer-modules",
@@ -63687,7 +63696,7 @@
             "prefixes": []
           },
           "owner": "export-capability",
-          "size_bytes": 50534
+          "size_bytes": 50496
         },
         {
           "category": "scenario-specific",
@@ -63998,7 +64007,7 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2060913
+          "size_bytes": 2061274
         }
       ],
       "status": "complete",
@@ -64041,7 +64050,7 @@
     {
       "file_count": 9449,
       "path": "app",
-      "size_bytes": 965895756
+      "size_bytes": 965896244
     },
     {
       "file_count": 57,
@@ -64051,7 +64060,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2060913
+      "size_bytes": 2061274
     },
     {
       "file_count": 1,
@@ -64074,5 +64083,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973055030
+  "total_bytes": 973055879
 }

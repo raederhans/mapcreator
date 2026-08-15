@@ -1,6 +1,18 @@
 export const EXPORT_MAX_DIMENSION_PX = 7680;
 export const EXPORT_MAX_PIXELS = 7680 * 4320;
 
+export function normalizeExportAdjustmentValue(value, fallback = 100) {
+  const hasExplicitValue = value !== null
+    && value !== undefined
+    && (typeof value !== "string" || value.trim() !== "");
+  const parsedValue = hasExplicitValue ? Number(value) : Number.NaN;
+  const parsedFallback = Number(fallback);
+  const finiteValue = Number.isFinite(parsedValue)
+    ? parsedValue
+    : (Number.isFinite(parsedFallback) ? parsedFallback : 100);
+  return Math.max(0, Math.min(200, Math.round(finiteValue)));
+}
+
 export function resolveExportBaseDimensions(
   dprInput,
   logicalWidth,
@@ -19,10 +31,10 @@ export function resolveExportBaseDimensions(
 
 export function buildExportAdjustmentFilter(exportUi) {
   const adjustments = exportUi?.adjustments || {};
-  const brightness = Math.max(0, Number(adjustments.brightness || 100)) / 100;
-  const saturation = Math.max(0, Number(adjustments.saturation || 100)) / 100;
-  const contrast = (Math.max(0, Number(adjustments.contrast || 100)) / 100)
-    * (0.88 + (Math.max(0, Number(adjustments.clarity || 100)) / 100) * 0.12);
+  const brightness = normalizeExportAdjustmentValue(adjustments.brightness) / 100;
+  const saturation = normalizeExportAdjustmentValue(adjustments.saturation) / 100;
+  const contrast = (normalizeExportAdjustmentValue(adjustments.contrast) / 100)
+    * (0.88 + (normalizeExportAdjustmentValue(adjustments.clarity) / 100) * 0.12);
   return `brightness(${brightness.toFixed(3)}) contrast(${contrast.toFixed(3)}) saturate(${saturation.toFixed(3)})`;
 }
 
