@@ -86954,45 +86954,39 @@
               "dynamicSites": [],
               "ambiguousSites": [
                 {
-                  "line": 328,
+                  "line": 352,
                   "column": 10,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "008225a766e2a616530787e145a88fff40380f507208d097ba738ab191ce8eaf"
                 },
                 {
-                  "line": 476,
+                  "line": 501,
                   "column": 9,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "0084a39b7c82d5dad7a7cca62b8c80fb5dcf491c062d013fed5b2d540029802c"
                 },
                 {
-                  "line": 478,
+                  "line": 503,
                   "column": 35,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "38ae5baaa12681ccae1e642b297aea8a1d6cd2597c08f7efbbefb178cfdc2a22"
                 },
                 {
-                  "line": 483,
+                  "line": 508,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "e2a80391b6d895f7e10f1e1e4b31a158f57827915f326a1019f7bf1c596cdecd"
                 },
                 {
-                  "line": 489,
+                  "line": 514,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "9aeb2774c955672354e459f7aabbf0e40d87debb555f91aacb0f35165b35545f"
-                },
-                {
-                  "line": 532,
-                  "column": 15,
-                  "reason": "ambiguous-alias-flow",
-                  "sourceFingerprint": "fcb3a9af9abd08fc5b5ff84409758c2c07f0ea4d991638e7d73bc7a43e2c88d2"
                 }
               ],
               "unsupportedSites": [
                 {
-                  "line": 55,
+                  "line": 54,
                   "column": 16,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87000,7 +86994,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 63,
+                  "line": 62,
                   "column": 68,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87008,7 +87002,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 86,
+                  "line": 85,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87016,7 +87010,15 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 100,
+                  "line": 92,
+                  "column": 19,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 113,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87024,7 +87026,7 @@
                   "sourceFingerprint": "b77076c9d0566dbdb2e824e1e51116fe6572853f5ba6da6d9fb2bd02c943080a"
                 },
                 {
-                  "line": 105,
+                  "line": 118,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87032,7 +87034,7 @@
                   "sourceFingerprint": "177a7ea3611fe6b138557deaf44941614b66c0ece1766308044c8b65c8ba2123"
                 },
                 {
-                  "line": 111,
+                  "line": 124,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87040,7 +87042,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 122,
+                  "line": 135,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87048,7 +87050,7 @@
                   "sourceFingerprint": "67a78c3ba2284260cc3f01b1d02499f0a828533f2ed9950172262b1841b12516"
                 },
                 {
-                  "line": 125,
+                  "line": 138,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87056,32 +87058,8 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 139,
-                  "column": 12,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "ae3b2d43938ea6a9bbe27db38d747d3e348210e00d236de02ed28cba9fa55ea7"
-                },
-                {
-                  "line": 142,
-                  "column": 19,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 155,
-                  "column": 12,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "866abcaf8b8ce1409dfe5830aebc2c17812a1fd32de99503c3ce26221a9f361a"
-                },
-                {
                   "line": 158,
-                  "column": 19,
+                  "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
@@ -87093,10 +87071,10 @@
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
-                  "sourceFingerprint": "dc9d76fe0ba58024633dc38a1139d708664d5872bfeea884c88a0020d54317cb"
+                  "sourceFingerprint": "866abcaf8b8ce1409dfe5830aebc2c17812a1fd32de99503c3ce26221a9f361a"
                 },
                 {
-                  "line": 183,
+                  "line": 182,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87104,7 +87082,23 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 184,
+                  "line": 203,
+                  "column": 12,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "dc9d76fe0ba58024633dc38a1139d708664d5872bfeea884c88a0020d54317cb"
+                },
+                {
+                  "line": 207,
+                  "column": 19,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 208,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87112,7 +87106,7 @@
                   "sourceFingerprint": "eb2865d156681434b4060c4096a0e939915a11745a48fe5b63b1f68c2ed44697"
                 },
                 {
-                  "line": 189,
+                  "line": 213,
                   "column": 51,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87120,7 +87114,7 @@
                   "sourceFingerprint": "578c92305aeaac072983aeefab2b866f2e251e13c678b3e521ab04ee84cc1aef"
                 },
                 {
-                  "line": 193,
+                  "line": 217,
                   "column": 47,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87128,7 +87122,7 @@
                   "sourceFingerprint": "05d57172f4281fc4ff2f869877783e63af52d013c24db89d4c37e3776e5dac17"
                 },
                 {
-                  "line": 194,
+                  "line": 218,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87136,7 +87130,7 @@
                   "sourceFingerprint": "42782ce19d9142903d70e83c78aecd370e57ec7b7d6f49618e9d9686dde8a004"
                 },
                 {
-                  "line": 195,
+                  "line": 219,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87144,7 +87138,7 @@
                   "sourceFingerprint": "5ca5c850d099632517a9de79359fdc93ab40d5c6e384723553fba5e6595009c5"
                 },
                 {
-                  "line": 196,
+                  "line": 220,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87152,7 +87146,7 @@
                   "sourceFingerprint": "1a8931950194a1e7c097d7f3c7596b40be12edfc7a9b98ad85209417c48be7e8"
                 },
                 {
-                  "line": 201,
+                  "line": 225,
                   "column": 56,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87160,7 +87154,7 @@
                   "sourceFingerprint": "f7d7539558293ebdc274f9319560e7356351475cf2ae458f013f6a0652d98564"
                 },
                 {
-                  "line": 223,
+                  "line": 247,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87168,7 +87162,7 @@
                   "sourceFingerprint": "e1d91c5363b76b0d2e15fb7c61134642c77a3eafeedbcd1211b2b4a824421a89"
                 },
                 {
-                  "line": 227,
+                  "line": 251,
                   "column": 24,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87176,7 +87170,7 @@
                   "sourceFingerprint": "00c1fc342414274cca365142a766064e61e9d7e88348043dde54cd8cab8e52ed"
                 },
                 {
-                  "line": 232,
+                  "line": 256,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87184,7 +87178,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 235,
+                  "line": 259,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87192,7 +87186,7 @@
                   "sourceFingerprint": "6687b8e4503d1c024687d644366c471dfd9a093a298462d74db3533894b4e964"
                 },
                 {
-                  "line": 239,
+                  "line": 263,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87200,7 +87194,7 @@
                   "sourceFingerprint": "08f61cc3be886762ab07d16567e7f4c09f8c896dd6886f1ff820b3aaec9f08cf"
                 },
                 {
-                  "line": 246,
+                  "line": 270,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87208,7 +87202,7 @@
                   "sourceFingerprint": "78b97f9e3ed06a588b406cac3f0b3f632a519e541b8078b768fa5aad292b0264"
                 },
                 {
-                  "line": 259,
+                  "line": 283,
                   "column": 24,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87216,7 +87210,7 @@
                   "sourceFingerprint": "beac1e2b823d4e3631330afc69840d9cae5c22d28f670572db4750bcfb5f8a72"
                 },
                 {
-                  "line": 288,
+                  "line": 312,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87224,7 +87218,7 @@
                   "sourceFingerprint": "2f1861bb717e6b1608f014e570e7797cb7aeba73828407fab3ef3f0725c20912"
                 },
                 {
-                  "line": 300,
+                  "line": 324,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87232,7 +87226,7 @@
                   "sourceFingerprint": "db6133853961978e109f6e0b02fbc706d4ee1f279be06e5ed1585b25498a4254"
                 },
                 {
-                  "line": 312,
+                  "line": 336,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87240,7 +87234,7 @@
                   "sourceFingerprint": "81299eb5fc7771a6ccc3b6916de19e19cc0b0201f3f2c29f9009d155802c4793"
                 },
                 {
-                  "line": 319,
+                  "line": 343,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87248,7 +87242,7 @@
                   "sourceFingerprint": "e1e61ddee60182c22947dc5933f62bd454eb869ef1719d9912789a1fe788fe14"
                 },
                 {
-                  "line": 328,
+                  "line": 352,
                   "column": 10,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87256,16 +87250,8 @@
                   "sourceFingerprint": "58916266b9ef06f35b9cb1c3bff66931225ee630a1230366a48892af2748aad4"
                 },
                 {
-                  "line": 368,
+                  "line": 392,
                   "column": 5,
-                  "reason": "unsupported-call-mutation",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "c5895580615185abf9503b70ed9dd28d47d2dbc409b64d5c0130fc040cc8bbac"
-                },
-                {
-                  "line": 390,
-                  "column": 3,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
                   "key": "*",
@@ -87277,10 +87263,18 @@
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
                   "key": "*",
+                  "sourceFingerprint": "c5895580615185abf9503b70ed9dd28d47d2dbc409b64d5c0130fc040cc8bbac"
+                },
+                {
+                  "line": 438,
+                  "column": 3,
+                  "reason": "unsupported-call-mutation",
+                  "operation": "unsupported",
+                  "key": "*",
                   "sourceFingerprint": "e91e363f893e007897c68dd40ddd84002f8f0f58cfa0fd14eebc31aa2f38061e"
                 },
                 {
-                  "line": 427,
+                  "line": 451,
                   "column": 22,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87288,7 +87282,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 476,
+                  "line": 501,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87296,7 +87290,7 @@
                   "sourceFingerprint": "2a2b3951f3525b6a041316f4cd94186d6faa8f5f80860dc28a3c8ab385b2c8ac"
                 },
                 {
-                  "line": 478,
+                  "line": 503,
                   "column": 35,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87304,7 +87298,7 @@
                   "sourceFingerprint": "e2bf40294702d8fe7844a61444019013eb90cd8dcab65896a445ba039c9f085c"
                 },
                 {
-                  "line": 483,
+                  "line": 508,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87312,7 +87306,7 @@
                   "sourceFingerprint": "dafe4d9cbae0b5aee2de21b37ba15bfb2a462e2bd3ab34b1082890050097fcfc"
                 },
                 {
-                  "line": 489,
+                  "line": 514,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -87320,7 +87314,7 @@
                   "sourceFingerprint": "c5f077b9402ba757bcf902f3da8a6b5e355218ec7248915c7764026caaa4d0b9"
                 },
                 {
-                  "line": 516,
+                  "line": 541,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87328,15 +87322,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 532,
-                  "column": 15,
-                  "reason": "unsupported-call-mutation",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "d896ea31933923110cb6302cd32b4e4ee5680c42755f6491595b91571c05d546"
-                },
-                {
-                  "line": 532,
+                  "line": 557,
                   "column": 58,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87344,7 +87330,7 @@
                   "sourceFingerprint": "6f02a00f5b02ef545b50c9164625ae87b9995a432e953820fe08ea51393e9c70"
                 },
                 {
-                  "line": 535,
+                  "line": 560,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -87352,15 +87338,7 @@
                   "sourceFingerprint": "d23c17ff95b9435745f8c9c911b6f2aece529fdd7e24c3961fa51f5cc89765a0"
                 },
                 {
-                  "line": 570,
-                  "column": 20,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 592,
+                  "line": 602,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -104404,7 +104382,7 @@
               "aliasSites": [],
               "dynamicSites": [
                 {
-                  "line": 267,
+                  "line": 272,
                   "column": 9,
                   "operation": "delete",
                   "key": "scenarioBundleCacheById",
@@ -116926,9 +116904,13 @@
         "js/bootstrap/post_ready_scheduler.js",
         "js/bootstrap/startup_boot_overlay.js",
         "js/bootstrap/startup_bootstrap_support.js",
+        "js/bootstrap/startup_lazy_module_loader.js",
         "js/bootstrap/startup_ready_handoff.js",
         "js/bootstrap/ui_shell_boot.js",
         "js/bootstrap/ui_shell_debug_seed.js",
+        "js/core/appearance_transport_change_set_contract.js",
+        "js/core/appearance_transport_change_set.js",
+        "js/core/appearance_transport_operation.js",
         "js/core/map_renderer.js",
         "js/core/map_renderer/exact_after_settle_scheduler.js",
         "js/core/map_renderer/scenario_refresh_runtime.js",
@@ -119180,6 +119162,16 @@
             "js/ui/toolbar.js",
             "js/ui/toolbar/export_workbench_controller.js"
           ]
+        },
+        {
+          "sourceSha": "49cdc3c13cb7a006a8491ada8bb953271fef9296",
+          "policyBlobSha256": "43e0189fc699a9eef7f5b2eb2750abef35cfd15c871d5b6cfc29e84b32485988",
+          "paths": [
+            "js/bootstrap/startup_lazy_module_loader.js",
+            "js/core/appearance_transport_change_set_contract.js",
+            "js/core/appearance_transport_change_set.js",
+            "js/core/appearance_transport_operation.js"
+          ]
         }
       ]
     }
@@ -119969,6 +119961,7 @@
         "js/core/scenario/lifecycle_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioLifecycleRuntime\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|ambiguous-alias-flow|9122fe922cc7fa557352e9377ba7197a09e986bf5f3c50bdcaf86bca85ec4f6b",
         "js/core/scenario/lifecycle_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioLifecycleRuntime\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|ambiguous-alias-flow|ab6675159a7fc26d98f0638ab77742d9d60d45a9ee6b7735dc91f2d6a5b3d983",
         "js/core/scenario/lifecycle_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioLifecycleRuntime\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|ambiguous-alias-flow|ab75910b82da938df2ad78c6da003d4330901bb85afaec57224e1e091dffcc21",
+        "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|ambiguous-alias-flow|fcb3a9af9abd08fc5b5ff84409758c2c07f0ea4d991638e7d73bc7a43e2c88d2",
         "js/ui/toolbar/palette_library_panel.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"buildPaletteLibraryGroups\",\"parameterName\":\"\",\"parameterIndex\":2,\"parameterPath\":\"$/property:appState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|appearance|P4.4|ambiguous-alias-flow|16224ce55f8e345ad7172b8d7a169f2e9e64e990bfb614876a1db2ef43cd71dc",
         "js/ui/toolbar/palette_library_panel.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"buildPaletteLibraryGroups\",\"parameterName\":\"\",\"parameterIndex\":2,\"parameterPath\":\"$/property:appState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|appearance|P4.4|ambiguous-alias-flow|9fe7916c1b05c4f2b17edf532a1c524da66a4e59333249b64822a8e04df5a05b",
         "js/ui/toolbar/palette_library_panel.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"buildPaletteLibraryGroups\",\"parameterName\":\"\",\"parameterIndex\":2,\"parameterPath\":\"$/property:appState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|appearance|P4.4|ambiguous-alias-flow|b9f8db6e13d8ced7b2a7cdf06347434b3de33e3f93296520c2a2ec03d99095c5",
@@ -122744,8 +122737,10 @@
         "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
         "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
         "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|ae3b2d43938ea6a9bbe27db38d747d3e348210e00d236de02ed28cba9fa55ea7",
         "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|dc0bfe592546db2ff4aa28a0106412c8c29879ff5154815f6deb8d262658c18c",
         "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|e3fb6daca639819af078c986143f162bc744d9004b3ef4556ebeb3f80b3f1239",
+        "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|unsupported-call-mutation|unsupported|*|d896ea31933923110cb6302cd32b4e4ee5680c42755f6491595b91571c05d546",
         "js/ui/dev_workspace.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|e22c9bb2220004ca21ea55f229fb1bea890e138f7a18f61b72ed675dd65bbef2",
         "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"appendSpecialZoneLegendRows\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|4efebd682b3e2570b560dc65455ff72b5ecf7383adc91cdac8512e2f699fec67",
         "js/ui/sidebar/project_support_diagnostics_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"appendSpecialZoneLegendRows\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|state-alias-escape|unsupported|*|98a54e29d7e78f30131c77d64781c23fec44e125b740aa3b715a9b845d6e8d3b",
