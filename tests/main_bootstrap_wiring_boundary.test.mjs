@@ -128,9 +128,11 @@ test("main top-level wiring order remains composition-root shaped", () => {
     'registerRuntimeHook(state, "setStartupReadonlyStateFn", setStartupReadonlyState);',
     "let startupDataPipelineOwner = null;",
     "let deferredDetailPromotionOwner = null;",
-    "let startupScenarioBootOwner = null;",
     "let startupReadyHandoffOwner = null;",
+    "const startupScenarioBootOwnerLoader = createPageLifetimeModuleLoader({",
+    "const startupSampleProjectDeeplinkModuleLoader = createPageLifetimeModuleLoader({",
     "function getStartupDataPipelineOwner()",
+    "function getStartupScenarioBootOwner()",
     "function getStartupReadyHandoffOwner()",
   ]);
 });
