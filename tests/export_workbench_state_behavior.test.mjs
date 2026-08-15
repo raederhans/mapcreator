@@ -204,6 +204,22 @@ test("export workbench restores defaults for empty adjustment values", () => {
     saturation: 100,
     clarity: 100,
   });
+
+  const legacyNormalized = ensureExportWorkbenchUiState({
+    exportWorkbenchUi: {
+      brightness: null,
+      contrast: undefined,
+      saturation: "",
+      clarity: "   ",
+    },
+  }, normalizeExportWorkbenchUiState);
+
+  assert.deepEqual(legacyNormalized.adjustments, {
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    clarity: 100,
+  });
 });
 
 test("replaceExportWorkbenchUiState writes normalized export workbench state", () => {

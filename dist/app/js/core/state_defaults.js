@@ -1388,7 +1388,11 @@ function normalizeExportWorkbenchBakeArtifacts(rawArtifacts) {
 }
 
 function normalizeExportWorkbenchAdjustment(value, fallback = 100) {
-  const candidate = typeof value === "string" && value.trim() === "" ? fallback : value;
+  const candidate = value === null
+    || value === undefined
+    || (typeof value === "string" && value.trim() === "")
+    ? fallback
+    : value;
   return Math.max(0, Math.min(200, Math.round(toFiniteNumber(candidate, fallback))));
 }
 

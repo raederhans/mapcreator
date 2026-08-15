@@ -46692,7 +46692,7 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 59425,
+      "size_bytes": 59484,
       "source_kind": "dist"
     },
     {
@@ -47672,7 +47672,7 @@
       {
         "file_count": 205,
         "id": "startup-critical",
-        "size_bytes": 6402506
+        "size_bytes": 6402565
       },
       {
         "file_count": 85,
@@ -61701,11 +61701,11 @@
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 6076089,
+        "initial_graph_bytes": 6076148,
         "initial_graph_file_count": 234,
         "initial_module_count": 220,
         "initial_resource_count": 14,
-        "initial_script_bytes": 4718152,
+        "initial_script_bytes": 4718211,
         "initial_script_count": 222,
         "module_count": 339,
         "registry_resolved_dynamic_expression_count": 2,
@@ -62390,7 +62390,7 @@
           },
           {
             "path": "app/js/core/state_defaults.js",
-            "size_bytes": 59425
+            "size_bytes": 59484
           },
           {
             "path": "app/js/core/transport_capability_registry.js",
@@ -62446,7 +62446,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 3682492
+        "size_bytes": 3682551
       },
       {
         "basis": "startup-resource-graph",
@@ -64050,7 +64050,7 @@
     {
       "file_count": 9449,
       "path": "app",
-      "size_bytes": 965896541
+      "size_bytes": 965896600
     },
     {
       "file_count": 57,
@@ -64083,5 +64083,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973056176
+  "total_bytes": 973056235
 }
