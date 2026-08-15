@@ -17,6 +17,108 @@ import {
   getExportAnnotationFamilyCounts,
   resolveExportPassSequence,
 } from "../js/ui/toolbar/export_workbench_controller.js";
+import {
+  buildBakePackMetadata,
+  buildBakePackPackageFiles,
+  buildExportAdjustmentFilter,
+  buildExportArtifactProjectContext,
+  buildExportArtifactScenarioContext,
+  buildExportUiManifestSnapshot,
+  buildPerLayerExportPlan,
+  buildPerLayerPackageFiles,
+  getBakePackLayerIds,
+  getBakePassNamesForLayer,
+  resolveExportBaseDimensions,
+} from "../js/ui/toolbar/export_artifact_model.js";
+
+test("export artifact model projects deterministic canvas and pass inputs", () => {
+  assert.deepEqual(resolveExportBaseDimensions({
+    dpr: 2,
+    colorCanvas: { width: 2400, height: 1200 },
+  }), { width: 1200, height: 600 });
+  assert.equal(buildExportAdjustmentFilter({
+    adjustments: { brightness: 125, contrast: 110, saturation: 80, clarity: 150 },
+  }), "brightness(1.250) contrast(1.166) saturate(0.800)");
+
+  const exportUi = {
+    visibility: { background: true, political: true, context: false, effects: true },
+    textVisibility: { "render-labels": false },
+  };
+  assert.deepEqual(getBakePassNamesForLayer("color", exportUi), [
+    "background",
+    "physicalBase",
+    "political",
+    "effects",
+    "dayNight",
+  ]);
+  assert.deepEqual(getBakePassNamesForLayer("composite", exportUi, {
+    resolvePassSequence: () => ["background", "labels", "borders"],
+    renderPassNames: ["background", "labels", "borders"],
+  }), ["background", "borders"]);
+});
+
+test("export artifact model builds defensive package projections", () => {
+  const exportUi = {
+    target: "composite",
+    format: "png",
+    scale: "2",
+    layerOrder: ["background", "effects"],
+    visibility: { background: true, effects: true },
+    textVisibility: { "render-labels": true, "svg-annotations": true },
+    adjustments: { brightness: 100 },
+    bakeArtifacts: [{ layerId: "color" }],
+  };
+  const runtimeView = {
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { version: 3 },
+    scenarioBaselineHash: "baseline-1",
+    dirtyRevision: 4,
+    colorRevision: 5,
+    topologyRevision: 6,
+  };
+
+  assert.deepEqual(getBakePackLayerIds(exportUi), ["color", "line", "text", "composite"]);
+  assert.deepEqual(buildPerLayerExportPlan(exportUi), [
+    { id: "background" },
+    { id: "effects" },
+    { id: "svg-annotations" },
+  ]);
+  assert.deepEqual(buildExportArtifactScenarioContext(runtimeView), {
+    id: "tno_1962",
+    version: 3,
+    baselineHash: "baseline-1",
+  });
+  assert.deepEqual(buildExportArtifactProjectContext(runtimeView), {
+    dirtyRevision: 4,
+    colorRevision: 5,
+    topologyRevision: 6,
+  });
+
+  const snapshot = buildExportUiManifestSnapshot(exportUi);
+  exportUi.layerOrder.push("political");
+  exportUi.visibility.background = false;
+  assert.deepEqual(snapshot.layerOrder, ["background", "effects"]);
+  assert.equal(snapshot.visibility.background, true);
+
+  const canvas = { width: 20, height: 10 };
+  const blob = { type: "application/json" };
+  assert.deepEqual(buildPerLayerPackageFiles([{ id: "background", canvas }]), [{
+    path: "layers/map_layer_background.png",
+    role: "layer",
+    mime: "image/png",
+    canvas,
+  }]);
+  assert.deepEqual(buildBakePackMetadata(exportUi, [{ id: "color" }], "2026-08-15T00:00:00.000Z").files, [
+    "map_bake_color.png",
+  ]);
+  assert.deepEqual(buildBakePackPackageFiles([
+    { id: "color", canvas },
+    { id: "metadata", blob, extension: "json", fileStem: "map_bake_manifest" },
+  ]), [
+    { path: "layers/map_bake_color.png", role: "bake-layer", mime: "image/png", canvas },
+    { path: "map_bake_manifest.json", role: "legacy-metadata", mime: "application/json", blob },
+  ]);
+});
 
 test("export workbench controller validates required notification dependencies at construction", () => {
   assert.throws(

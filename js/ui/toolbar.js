@@ -55,6 +55,21 @@ import {
   createExportError,
   showExportFailureToast,
 } from "./toolbar/export_failure_handler.js";
+import {
+  EXPORT_MAX_DIMENSION_PX,
+  EXPORT_MAX_PIXELS,
+  buildBakePackMetadata,
+  buildBakePackPackageFiles,
+  buildExportAdjustmentFilter,
+  buildExportArtifactProjectContext,
+  buildExportArtifactScenarioContext,
+  buildExportUiManifestSnapshot,
+  buildPerLayerExportPlan,
+  buildPerLayerPackageFiles,
+  getBakePackLayerIds,
+  getBakePassNamesForLayer,
+  resolveExportBaseDimensions,
+} from "./toolbar/export_artifact_model.js";
 import { createOceanLakeControlsController } from "./toolbar/ocean_lake_controls_controller.js";
 import {
   EXPORT_BAKE_OUTPUT_MODELS,
@@ -151,18 +166,7 @@ function populatePaletteSourceOptions(select) {
   select.value = runtimeState.currentPaletteTheme;
 }
 
-const EXPORT_MAX_DIMENSION_PX = 7680;
-const EXPORT_MAX_PIXELS = 7680 * 4320;
 const EXPORT_MAX_CONCURRENT_JOBS = 1;
-
-function resolveExportBaseDimensions() {
-  const dpr = Math.max(1, Number(runtimeState.dpr || globalThis.devicePixelRatio || 1));
-  const fallbackLogicalWidth = Number(runtimeState.colorCanvas?.width || 0) / dpr;
-  const fallbackLogicalHeight = Number(runtimeState.colorCanvas?.height || 0) / dpr;
-  const width = Math.round(Number(runtimeState.width || fallbackLogicalWidth || 0));
-  const height = Math.round(Number(runtimeState.height || fallbackLogicalHeight || 0));
-  return { width, height };
-}
 
 
 function initToolbar({ render } = {}) {
@@ -2525,7 +2529,10 @@ function initToolbar({ render } = {}) {
     if (!bakeCtx) {
       throw new Error("Canvas bake context unavailable.");
     }
-    const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi);
+    const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi, {
+      resolvePassSequence: resolveExportPassSequence,
+      renderPassNames: RENDER_PASS_NAMES,
+    });
     if (normalizedLayerId === "composite") {
       const compositeCanvas = await buildCompositeSourceCanvas(exportUi);
       bakeCtx.drawImage(compositeCanvas, 0, 0);
@@ -2557,15 +2564,6 @@ function initToolbar({ render } = {}) {
     });
     writeBakeArtifactMeta(normalizedLayerId, dependencies, bakeCanvas, true);
     return bakeCanvas;
-  };
-
-  const buildExportAdjustmentFilter = (exportUi) => {
-    const adjustments = exportUi?.adjustments || {};
-    const brightness = Math.max(0, Number(adjustments.brightness || 100)) / 100;
-    const saturation = Math.max(0, Number(adjustments.saturation || 100)) / 100;
-    const contrast = (Math.max(0, Number(adjustments.contrast || 100)) / 100)
-      * (0.88 + (Math.max(0, Number(adjustments.clarity || 100)) / 100) * 0.12);
-    return `brightness(${brightness.toFixed(3)}) contrast(${contrast.toFixed(3)}) saturate(${saturation.toFixed(3)})`;
   };
 
   const applyExportAdjustmentsToCanvas = (sourceCanvas, exportUi, { width = sourceCanvas?.width, height = sourceCanvas?.height } = {}) => {
@@ -2620,32 +2618,6 @@ function initToolbar({ render } = {}) {
   const buildSpecialZonesExportCanvas = async () => buildSvgAnnotationCanvas({
     onlyViewportSelector: ".special-zones-layer",
   });
-
-  const getBakePassNamesForLayer = (layerId, exportUi) => {
-    const visibility = exportUi?.visibility || {};
-    const textVisibility = exportUi?.textVisibility || {};
-    if (layerId === "color") {
-      return [
-        ...(visibility.background === false ? [] : ["background"]),
-        ...(visibility.political === false ? [] : ["physicalBase", "political"]),
-        ...(visibility.context === false ? [] : ["contextBase", "contextScenario"]),
-        ...(visibility.effects === false ? [] : ["effects", "dayNight"]),
-      ];
-    }
-    if (layerId === "line") {
-      return visibility.effects === false ? [] : ["lineEffects", "borders"];
-    }
-    if (layerId === "text") {
-      return textVisibility["render-labels"] === false ? [] : ["labels"];
-    }
-    if (layerId === "composite") {
-      return resolveExportPassSequence({
-        ...exportUi,
-        visibility,
-      }, RENDER_PASS_NAMES).filter((passName) => textVisibility["render-labels"] !== false || passName !== "labels");
-    }
-    return [];
-  };
 
   const buildCompositeSourceCanvas = async (exportUi) => {
     const passNames = resolveExportPassSequence({
@@ -2702,19 +2674,6 @@ function initToolbar({ render } = {}) {
     throw createExportError("invalid-params", `Unsupported preview source: ${normalizedSourceId}`);
   };
 
-  const getBakePackLayerIds = (exportUi) => {
-    const visibleMainLayers = exportUi.layerOrder.filter((layerId) => exportUi.visibility?.[layerId] !== false);
-    const hasVisibleMainLayers = visibleMainLayers.length > 0;
-    const hasEffectsLayer = visibleMainLayers.includes("effects");
-    const hasTextLayer = Object.values(exportUi.textVisibility || {}).some(Boolean);
-    const next = [];
-    if (hasVisibleMainLayers) next.push("color");
-    if (hasEffectsLayer) next.push("line");
-    if (hasTextLayer) next.push("text");
-    if (hasVisibleMainLayers || hasTextLayer) next.push("composite");
-    return next;
-  };
-
   const getSelectedExportScale = () => {
     const rawValue = String(exportScale?.value || ensureExportWorkbenchUiState().scale || "2").trim();
     return ["1", "1.5", "2", "4"].includes(rawValue) ? Number(rawValue) : 2;
@@ -2724,7 +2683,7 @@ function initToolbar({ render } = {}) {
     if (!sourceCanvas) {
       throw createExportError("invalid-params", "Missing export source canvas.");
     }
-    const { width: baseWidth, height: baseHeight } = resolveExportBaseDimensions();
+    const { width: baseWidth, height: baseHeight } = resolveExportBaseDimensions(runtimeState);
     if (!(baseWidth > 0) || !(baseHeight > 0)) {
       throw createExportError("invalid-params", "Missing preview canvas dimensions.");
     }
@@ -2748,18 +2707,7 @@ function initToolbar({ render } = {}) {
   };
 
   const buildPerLayerExportOutputs = async (exportUi, scaleMultiplier) => {
-    const outputs = [];
-    exportUi.layerOrder.forEach((layerId) => {
-      if (exportUi.visibility?.[layerId] === false) return;
-      if (layerId === "labels" && exportUi.textVisibility?.["render-labels"] === false) return;
-      outputs.push({ id: layerId });
-    });
-    if (exportUi.textVisibility?.["svg-annotations"]) {
-      outputs.push({ id: "svg-annotations" });
-    }
-    if (exportUi.textVisibility?.["special-zones"]) {
-      outputs.push({ id: "special-zones" });
-    }
+    const outputs = buildPerLayerExportPlan(exportUi);
     for (const output of outputs) {
       const layerCanvas = await buildSingleExportSourceCanvas(exportUi, output.id);
       output.canvas = scaleCanvasForExport(layerCanvas, scaleMultiplier, exportUi);
@@ -2770,47 +2718,15 @@ function initToolbar({ render } = {}) {
     return outputs;
   };
 
-  const buildExportArtifactScenarioContext = () => {
-    const scenarioId = String(runtimeState.activeScenarioId || "").trim();
-    if (!scenarioId) return null;
-    return {
-      id: scenarioId,
-      version: Number(runtimeState.activeScenarioManifest?.version || 1) || 1,
-      baselineHash: String(runtimeState.scenarioBaselineHash || "").trim(),
-    };
-  };
-
-  const buildExportArtifactProjectContext = () => ({
-    dirtyRevision: Number(runtimeState.dirtyRevision || 0) || 0,
-    colorRevision: Number(runtimeState.colorRevision || 0) || 0,
-    topologyRevision: Number(runtimeState.topologyRevision || 0) || 0,
-  });
-
-  const buildExportUiManifestSnapshot = (exportUi) => ({
-    target: exportUi.target,
-    format: exportUi.format,
-    scale: exportUi.scale,
-    layerOrder: [...(exportUi.layerOrder || [])],
-    visibility: { ...(exportUi.visibility || {}) },
-    textVisibility: { ...(exportUi.textVisibility || {}) },
-    adjustments: { ...(exportUi.adjustments || {}) },
-    bakeArtifacts: Array.isArray(exportUi.bakeArtifacts) ? exportUi.bakeArtifacts : [],
-  });
-
   const buildPerLayerExportPackage = async (exportUi, scaleMultiplier) => {
     const outputs = await buildPerLayerExportOutputs(exportUi, scaleMultiplier);
     return buildExportArtifactPackage({
       artifactKind: "per-layer",
       fileStem: "map_layers",
-      scenario: buildExportArtifactScenarioContext(),
-      project: buildExportArtifactProjectContext(),
+      scenario: buildExportArtifactScenarioContext(runtimeState),
+      project: buildExportArtifactProjectContext(runtimeState),
       exportUi: buildExportUiManifestSnapshot(exportUi),
-      files: outputs.map((output) => ({
-        path: `layers/map_layer_${output.id}.png`,
-        role: "layer",
-        mime: "image/png",
-        canvas: output.canvas,
-      })),
+      files: buildPerLayerPackageFiles(outputs),
     });
   };
 
@@ -2824,21 +2740,7 @@ function initToolbar({ render } = {}) {
         canvas: scaleCanvasForExport(bakedCanvas, scaleMultiplier, exportUi),
       });
     }
-    const metadata = {
-      version: 1,
-      generatedAt: new Date().toISOString(),
-      exportUi: {
-        target: exportUi.target,
-        format: exportUi.format,
-        scale: exportUi.scale,
-        layerOrder: [...exportUi.layerOrder],
-        visibility: { ...(exportUi.visibility || {}) },
-        textVisibility: { ...(exportUi.textVisibility || {}) },
-        adjustments: { ...(exportUi.adjustments || {}) },
-      },
-      bakeArtifacts: Array.isArray(exportUi.bakeArtifacts) ? exportUi.bakeArtifacts : [],
-      files: outputs.map((output) => `map_bake_${output.id}.png`),
-    };
+    const metadata = buildBakePackMetadata(exportUi, outputs);
     outputs.push({
       id: "metadata",
       blob: new Blob([JSON.stringify(metadata, null, 2)], { type: "application/json" }),
@@ -2853,25 +2755,10 @@ function initToolbar({ render } = {}) {
     return buildExportArtifactPackage({
       artifactKind: "bake-pack",
       fileStem: "map_bake_pack",
-      scenario: buildExportArtifactScenarioContext(),
-      project: buildExportArtifactProjectContext(),
+      scenario: buildExportArtifactScenarioContext(runtimeState),
+      project: buildExportArtifactProjectContext(runtimeState),
       exportUi: buildExportUiManifestSnapshot(exportUi),
-      files: outputs.map((output) => {
-        if (output.canvas) {
-          return {
-            path: `layers/map_bake_${output.id}.png`,
-            role: "bake-layer",
-            mime: "image/png",
-            canvas: output.canvas,
-          };
-        }
-        return {
-          path: `${output.fileStem || output.id}.${output.extension || "json"}`,
-          role: "legacy-metadata",
-          mime: "application/json",
-          blob: output.blob,
-        };
-      }),
+      files: buildBakePackPackageFiles(outputs),
     });
   };
 

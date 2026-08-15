@@ -468,6 +468,7 @@
       "typicalSourceGlobs": [
         "js/**project**",
         "js/**file**",
+        "js/ui/toolbar/export_artifact_model.js",
         "tests/file_manager_project_roundtrip_behavior.test.mjs",
         "tests/export_workbench_state_behavior.test.mjs",
         "tests/e2e/project_save_load_roundtrip.spec.js"

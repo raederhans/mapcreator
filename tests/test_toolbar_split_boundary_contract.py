@@ -9,6 +9,7 @@ TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 DIST_TOOLBAR_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "toolbar.js"
 INDEX_HTML = REPO_ROOT / "index.html"
 EXPORT_FAILURE_HANDLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_failure_handler.js"
+EXPORT_ARTIFACT_MODEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_artifact_model.js"
 PALETTE_LIBRARY_PANEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "palette_library_panel.js"
 SCENARIO_CONTEXT_BAR_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_context_bar_controller.js"
 SCENARIO_GUIDE_POPOVER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js"
@@ -114,6 +115,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
 
         self.assertIn('./toolbar/export_failure_handler.js', content)
+        self.assertIn('./toolbar/export_artifact_model.js', content)
         self.assertIn('./toolbar/palette_library_panel.js', content)
         self.assertIn("createExportError,", content)
         self.assertIn("showExportFailureToast,", content)
@@ -136,6 +138,27 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("createOceanLakeControlsController", content)
         self.assertIn('./toolbar/scenario_context_bar_controller.js', content)
         self.assertIn("createScenarioContextBarController", content)
+
+    def test_export_artifact_model_owns_pure_projection_helpers(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        model_content = EXPORT_ARTIFACT_MODEL_JS.read_text(encoding="utf-8")
+
+        for helper_name in [
+            "resolveExportBaseDimensions",
+            "buildExportAdjustmentFilter",
+            "getBakePassNamesForLayer",
+            "getBakePackLayerIds",
+            "buildExportArtifactScenarioContext",
+            "buildExportArtifactProjectContext",
+            "buildExportUiManifestSnapshot",
+            "buildPerLayerExportPlan",
+            "buildBakePackMetadata",
+        ]:
+            self.assertIn(f"export function {helper_name}", model_content)
+            self.assertNotIn(f"const {helper_name} =", toolbar_content)
+
+        self.assertNotIn("document.", model_content)
+        self.assertNotIn("runtimeState", model_content)
 
     def test_export_failure_owner_moves_out_of_toolbar(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -212,14 +235,18 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
 
     def test_export_pipeline_relies_on_controller_pass_flow(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        model_content = EXPORT_ARTIFACT_MODEL_JS.read_text(encoding="utf-8")
 
         self.assertNotIn("const drawLineLayerToCanvas = (targetCtx) => {", toolbar_content)
         self.assertNotIn("const drawColorLayerToCanvas = (targetCtx) => {", toolbar_content)
         self.assertNotIn("const drawCompositeLayerToCanvas = (targetCtx) => {", toolbar_content)
-        self.assertIn("const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi);", toolbar_content)
+        self.assertIn("const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi, {", toolbar_content)
+        self.assertIn("resolvePassSequence: resolveExportPassSequence,", toolbar_content)
+        self.assertIn("renderPassNames: RENDER_PASS_NAMES,", toolbar_content)
         self.assertIn("const compositeCanvas = await buildCompositeSourceCanvas(exportUi);", toolbar_content)
         self.assertIn("const passCanvas = renderExportPassesToCanvas(bakePassNames);", toolbar_content)
-        self.assertEqual(toolbar_content.count("}, RENDER_PASS_NAMES).filter((passName) =>"), 2)
+        self.assertEqual(toolbar_content.count("}, RENDER_PASS_NAMES).filter((passName) =>"), 1)
+        self.assertEqual(model_content.count("}, renderPassNames).filter((passName) =>"), 1)
 
     def test_svg_annotation_export_uses_strategic_annotation_layers_only(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
