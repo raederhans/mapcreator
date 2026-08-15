@@ -95109,7 +95109,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 1099,
+                  "line": 1101,
                   "column": 12,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95145,7 +95145,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 1040,
+                  "line": 1042,
                   "column": 22,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95153,7 +95153,7 @@
                   "sourceFingerprint": "15e35d51f421ec9a257c62743cedbf9d8b7c40523fdcc5aad18dfd8fff27c008"
                 },
                 {
-                  "line": 1041,
+                  "line": 1043,
                   "column": 36,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95161,7 +95161,7 @@
                   "sourceFingerprint": "9dbeac3f789a9773204248762d582ee0e6104dc393a86c71cabf91c7eaf3ceea"
                 },
                 {
-                  "line": 1045,
+                  "line": 1047,
                   "column": 20,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95169,7 +95169,7 @@
                   "sourceFingerprint": "fd140a6b105f7afff058343df6ea31ace9fdb7c5a419f9651fb3bfc8ea2215f6"
                 },
                 {
-                  "line": 1046,
+                  "line": 1048,
                   "column": 36,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95177,7 +95177,7 @@
                   "sourceFingerprint": "58177bf8aa61c71111bc0e015519e53cd1389e4adcddae1874c31deccf55bad5"
                 },
                 {
-                  "line": 1375,
+                  "line": 1377,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95185,7 +95185,7 @@
                   "sourceFingerprint": "c566ba100c95ffc203b1b7c0d1c333050e8aa0a36d27a0189841bc087d9e2b5c"
                 },
                 {
-                  "line": 1381,
+                  "line": 1383,
                   "column": 43,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95193,7 +95193,7 @@
                   "sourceFingerprint": "7cdf2dee7c9b23c3df8250d8c4c543b264fb855a1b9afcf524b75f7a9e3d6e27"
                 },
                 {
-                  "line": 1388,
+                  "line": 1390,
                   "column": 26,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95201,7 +95201,7 @@
                   "sourceFingerprint": "801e735bd59485faa59caebe1cb91699ed8ced05fe771cae103ee5fee53b25d2"
                 },
                 {
-                  "line": 1392,
+                  "line": 1394,
                   "column": 22,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95493,7 +95493,7 @@
               "aliasSites": [],
               "dynamicSites": [
                 {
-                  "line": 1419,
+                  "line": 1421,
                   "column": 9,
                   "operation": "assign",
                   "key": "visualOverrides",
@@ -95501,7 +95501,7 @@
                   "sourceFingerprint": "4e28b0d5b4826e5c5ba7363876d3d6d520178d98d78a2cdde75ec91bfb398163"
                 },
                 {
-                  "line": 1420,
+                  "line": 1422,
                   "column": 9,
                   "operation": "assign",
                   "key": "featureOverrides",
@@ -95509,7 +95509,7 @@
                   "sourceFingerprint": "e21732d0507db0f1747519a8478bdc4861937acbf2448d1fb815b8b432799247"
                 },
                 {
-                  "line": 1442,
+                  "line": 1444,
                   "column": 5,
                   "operation": "assign",
                   "key": "sovereignBaseColors",
@@ -95517,7 +95517,7 @@
                   "sourceFingerprint": "91c0810acb63a916b56ed661b0d9fec592c4731207d94ce879e00556b4647cf0"
                 },
                 {
-                  "line": 1443,
+                  "line": 1445,
                   "column": 5,
                   "operation": "assign",
                   "key": "countryBaseColors",
@@ -95528,7 +95528,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 138,
+                  "line": 137,
                   "column": 26,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95536,7 +95536,7 @@
                   "sourceFingerprint": "44f205f7b042beac7faa6d0be234297e11f83fddafd1ad9e1fb29daedca94437"
                 },
                 {
-                  "line": 166,
+                  "line": 165,
                   "column": 18,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95544,7 +95544,7 @@
                   "sourceFingerprint": "f813aa8d9047c88acbd362f417574ca24be378db6ee8919e75e24d6351d259ca"
                 },
                 {
-                  "line": 414,
+                  "line": 413,
                   "column": 76,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95552,7 +95552,7 @@
                   "sourceFingerprint": "92038673620a7c0346f6bd2fd4cb4647d5fe31cb337a1a032982bbd0e1e42afd"
                 },
                 {
-                  "line": 1370,
+                  "line": 1372,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -95560,7 +95560,7 @@
                   "sourceFingerprint": "aea9c5b578336e32d5775b08bbcfa488f13edec1adcc1e0ae4a08e297ed3e1c7"
                 },
                 {
-                  "line": 1747,
+                  "line": 1749,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95568,7 +95568,7 @@
                   "sourceFingerprint": "44f205f7b042beac7faa6d0be234297e11f83fddafd1ad9e1fb29daedca94437"
                 },
                 {
-                  "line": 1750,
+                  "line": 1752,
                   "column": 52,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95576,7 +95576,7 @@
                   "sourceFingerprint": "44f205f7b042beac7faa6d0be234297e11f83fddafd1ad9e1fb29daedca94437"
                 },
                 {
-                  "line": 2872,
+                  "line": 2875,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95584,7 +95584,7 @@
                   "sourceFingerprint": "f866919c505937b65a15beec643e3896de2de4d27a633193466a133681d8257d"
                 },
                 {
-                  "line": 2886,
+                  "line": 2889,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -95987,103 +95987,103 @@
               "dynamicSites": [],
               "ambiguousSites": [
                 {
-                  "line": 510,
+                  "line": 509,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "e9f642fac9c9a3d668dd8f6d06d3251c84232e67a48b20816b915cbc2d79e74c"
                 },
                 {
-                  "line": 577,
+                  "line": 579,
                   "column": 48,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "bd096a0069c26ca3fd2f3dbd29e5dcafc703eeeb75da1098270a22e52b2e6bd9"
                 },
                 {
-                  "line": 578,
+                  "line": 580,
                   "column": 54,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "6ded83be9bb04367665ad35c27c129bcd963df0173ba1bee4aab19a7263f8e1d"
                 },
                 {
-                  "line": 760,
+                  "line": 762,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "cc99b85461e26d34f58154efb2091b81af97a56306c3890abc870df2752e32e3"
                 },
                 {
-                  "line": 763,
+                  "line": 765,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "321e4b60f2536d27cfdc811327d56a2632c2606cdd85d04dd323a6919d366790"
                 },
                 {
-                  "line": 766,
+                  "line": 768,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "e9f642fac9c9a3d668dd8f6d06d3251c84232e67a48b20816b915cbc2d79e74c"
                 },
                 {
-                  "line": 769,
+                  "line": 771,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "650be6cc9b215d5a2ea430c473a734ee9aebc6f851a8ee6d13fd589ad6613e6f"
                 },
                 {
-                  "line": 772,
+                  "line": 774,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "e4b8927084590cc713c295b4fac96ee3633e76729e4dd3e7f06e440ad9e5481a"
                 },
                 {
-                  "line": 776,
+                  "line": 778,
                   "column": 12,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "8d8bd4284b5fe94e4784f94599f35f02ba8da53ace4673192e0682700c1ddc76"
                 },
                 {
-                  "line": 780,
+                  "line": 782,
                   "column": 12,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "505874391ede640f3f4e7f2b65e408f441cedee806cb13ffe01fbf343c3d2721"
                 },
                 {
-                  "line": 784,
+                  "line": 786,
                   "column": 12,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "068bcbb2be5a187762b3c75dd32078acf3c1276f5dbc596397d3453777489c94"
                 },
                 {
-                  "line": 793,
+                  "line": 795,
                   "column": 12,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "6807e4036b6b962237b24151645008fe7fa39caf348bf853e9864768b5f1237a"
                 },
                 {
-                  "line": 1264,
+                  "line": 1266,
                   "column": 11,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "159c247dfe5ba532b31485a76a115df11acc0a5ac404185e48d0fede810648ea"
                 },
                 {
-                  "line": 1271,
+                  "line": 1273,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "5d9362f27611705db0621ab53a89d2b266a61a8130ce919dde7abb0d9264a955"
                 },
                 {
-                  "line": 1727,
+                  "line": 1729,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "1ad3706c7df2c14e47a187718f1cee5e92f56d4e21e1d7f1ed5793ba727a6027"
                 },
                 {
-                  "line": 1728,
+                  "line": 1730,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "6febdf09edbe911a80d3cb53d8e9319f40733ae88d0ccd7ad1e2785a84221545"
                 },
                 {
-                  "line": 2810,
+                  "line": 2813,
                   "column": 12,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "af118a89e306bc0607927ed10df41e335326b52043fc0cd8ff32a865905b16d1"
@@ -96091,7 +96091,7 @@
               ],
               "unsupportedSites": [
                 {
-                  "line": 156,
+                  "line": 155,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96099,7 +96099,7 @@
                   "sourceFingerprint": "93979d1ddafa683e7260ae1ae6211bb0ed2444230b9a8ee8ff212a039276b306"
                 },
                 {
-                  "line": 429,
+                  "line": 428,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96107,7 +96107,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 510,
+                  "line": 509,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96115,7 +96115,7 @@
                   "sourceFingerprint": "dd70535a825725bffe36029dd2221cbcefd8c1cf41634fa3beac5f5ac02fd11f"
                 },
                 {
-                  "line": 535,
+                  "line": 534,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96123,7 +96123,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 537,
+                  "line": 536,
                   "column": 13,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96131,7 +96131,7 @@
                   "sourceFingerprint": "d23b90eb908ff266a77bd2cb6d52f6922efd136eb18eaffd0b59a157d84b915e"
                 },
                 {
-                  "line": 577,
+                  "line": 579,
                   "column": 48,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96139,7 +96139,7 @@
                   "sourceFingerprint": "3f176d308fde7e1a7f48aa252b85e2df0355ffab505e620699a11c04eaa864e6"
                 },
                 {
-                  "line": 578,
+                  "line": 580,
                   "column": 54,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96147,7 +96147,7 @@
                   "sourceFingerprint": "2c18eab5e34c73650d55795c8d0b13009fc609bd5fe2edfe3971c47eaf8c7005"
                 },
                 {
-                  "line": 638,
+                  "line": 640,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96155,7 +96155,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 673,
+                  "line": 675,
                   "column": 36,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96163,7 +96163,7 @@
                   "sourceFingerprint": "d4ac0c926595aa0071af7d07fb688039fe42ba60443be59ce900bfe28d4f6b96"
                 },
                 {
-                  "line": 674,
+                  "line": 676,
                   "column": 55,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96171,7 +96171,7 @@
                   "sourceFingerprint": "016304780c55cac4c0c2cea9b8c69ea2c2ec7431b0eb13fca43e53804b373627"
                 },
                 {
-                  "line": 675,
+                  "line": 677,
                   "column": 61,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96179,7 +96179,7 @@
                   "sourceFingerprint": "2cea9338bc64ceb3db4900ecb919a2d1f4ab8957575de1e8c53dc9bac5422f37"
                 },
                 {
-                  "line": 685,
+                  "line": 687,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96187,7 +96187,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 686,
+                  "line": 688,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96195,28 +96195,12 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 727,
+                  "line": 729,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "ui",
                   "sourceFingerprint": "5380696ea6bad1224008d5cf311fd974eda1f35cd0e08d1c598fd3b502df8731"
-                },
-                {
-                  "line": 730,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 731,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
                   "line": 732,
@@ -96243,7 +96227,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 759,
+                  "line": 735,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96251,7 +96235,23 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 760,
+                  "line": 736,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 761,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 762,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96259,7 +96259,7 @@
                   "sourceFingerprint": "eeff6f9fe9056b3d2d568d34a3749504278a7dc6cd562342b378915f4a50b806"
                 },
                 {
-                  "line": 762,
+                  "line": 764,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96267,7 +96267,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 763,
+                  "line": 765,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96275,7 +96275,7 @@
                   "sourceFingerprint": "1774a84afbd70e583dc93153e5d8e695c01a7ab1ae91fef36644595f9794ad03"
                 },
                 {
-                  "line": 765,
+                  "line": 767,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96283,7 +96283,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 766,
+                  "line": 768,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96291,7 +96291,7 @@
                   "sourceFingerprint": "dd70535a825725bffe36029dd2221cbcefd8c1cf41634fa3beac5f5ac02fd11f"
                 },
                 {
-                  "line": 768,
+                  "line": 770,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96299,7 +96299,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 769,
+                  "line": 771,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96307,7 +96307,7 @@
                   "sourceFingerprint": "86bbf6ec3f4d476008cbeb431db1dfe07134dd13de6d82ffdda5d26caafbda0b"
                 },
                 {
-                  "line": 771,
+                  "line": 773,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96315,7 +96315,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 772,
+                  "line": 774,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96323,7 +96323,7 @@
                   "sourceFingerprint": "d7f88d56583eae605a593f99b36ff954272e10343a11b5579d890aa094daffcd"
                 },
                 {
-                  "line": 776,
+                  "line": 778,
                   "column": 12,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96331,7 +96331,7 @@
                   "sourceFingerprint": "bdf28460a7bdf63b8ef777e6e52cf51d62ff9a96459f4f26d91c361c3b007f89"
                 },
                 {
-                  "line": 780,
+                  "line": 782,
                   "column": 12,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96339,7 +96339,7 @@
                   "sourceFingerprint": "0b936a4cfdcc0496c219b4fc41e95793e72dcc2071a925f1eece6ae0b8256eca"
                 },
                 {
-                  "line": 784,
+                  "line": 786,
                   "column": 12,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96347,7 +96347,7 @@
                   "sourceFingerprint": "4d3cf391aa5231981d89a924a0b29f7ef1c3bb591d765f7054214bd9af4c94d9"
                 },
                 {
-                  "line": 793,
+                  "line": 795,
                   "column": 12,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96355,7 +96355,7 @@
                   "sourceFingerprint": "cd0bc4ac74e5f5793a3f025de2400db73fd8d52cbd52b8af713bc088088d8e18"
                 },
                 {
-                  "line": 829,
+                  "line": 831,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96363,7 +96363,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 833,
+                  "line": 835,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96371,7 +96371,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 898,
+                  "line": 900,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96379,7 +96379,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 907,
+                  "line": 909,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96387,7 +96387,7 @@
                   "sourceFingerprint": "c8e6ce14c6f3176556a4b8f4d3655f566929bc03d086a0585c9bd87ec56bedd8"
                 },
                 {
-                  "line": 911,
+                  "line": 913,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96395,7 +96395,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 923,
+                  "line": 925,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96403,7 +96403,7 @@
                   "sourceFingerprint": "c8e6ce14c6f3176556a4b8f4d3655f566929bc03d086a0585c9bd87ec56bedd8"
                 },
                 {
-                  "line": 958,
+                  "line": 960,
                   "column": 22,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96411,7 +96411,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 993,
+                  "line": 995,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96419,7 +96419,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1008,
+                  "line": 1010,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96427,7 +96427,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1009,
+                  "line": 1011,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96435,7 +96435,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1012,
+                  "line": 1014,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96443,7 +96443,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1061,
+                  "line": 1063,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96451,7 +96451,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 1090,
+                  "line": 1092,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96459,7 +96459,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1094,
+                  "line": 1096,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96467,7 +96467,7 @@
                   "sourceFingerprint": "3e1cd64256f29615cbd1cd3ba0e3613e547bcc3ba26556876010e696accc374f"
                 },
                 {
-                  "line": 1196,
+                  "line": 1198,
                   "column": 63,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96475,7 +96475,7 @@
                   "sourceFingerprint": "80dc9bb1d213b118d322fa2c687a7ef85a0789f8baf1592cd2dd479e09f593f3"
                 },
                 {
-                  "line": 1264,
+                  "line": 1266,
                   "column": 11,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96483,7 +96483,7 @@
                   "sourceFingerprint": "d88e593b4c6919d48c0f14b6f41cf2cac91b688a9f042e80a69f9ca5723c1a8e"
                 },
                 {
-                  "line": 1271,
+                  "line": 1273,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96491,7 +96491,7 @@
                   "sourceFingerprint": "3b49a0e777cbc35834eab3c2cf56a53133692f86ed62deb776017ef621455d95"
                 },
                 {
-                  "line": 1276,
+                  "line": 1278,
                   "column": 45,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96499,7 +96499,7 @@
                   "sourceFingerprint": "539419c8cb677b516ac62669ac34f7b73e3de1a7c7b2c8b7196c9a38d8bce58a"
                 },
                 {
-                  "line": 1287,
+                  "line": 1289,
                   "column": 43,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96507,7 +96507,7 @@
                   "sourceFingerprint": "539419c8cb677b516ac62669ac34f7b73e3de1a7c7b2c8b7196c9a38d8bce58a"
                 },
                 {
-                  "line": 1290,
+                  "line": 1292,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96515,7 +96515,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1291,
+                  "line": 1293,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96523,7 +96523,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1299,
+                  "line": 1301,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96531,7 +96531,7 @@
                   "sourceFingerprint": "08732f49dbdec37488e588aa28afa58ebe41d6175fe8a08bf38cb85064ed20f3"
                 },
                 {
-                  "line": 1350,
+                  "line": 1352,
                   "column": 33,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96539,7 +96539,7 @@
                   "sourceFingerprint": "8f39af52fdccb4205aa52ed32f2e61c2970ae365154f3a1e346e8059b3e3949e"
                 },
                 {
-                  "line": 1353,
+                  "line": 1355,
                   "column": 33,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96547,7 +96547,7 @@
                   "sourceFingerprint": "962be89ed1cba92d40bc35be8333bcf75ab0edbfbd1b553862ef4743f0a7b99c"
                 },
                 {
-                  "line": 1476,
+                  "line": 1478,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96555,7 +96555,7 @@
                   "sourceFingerprint": "c1b03c6e03ed7efb757a22a469383b0d0c8004f67bec4a27ac391fd425a28be1"
                 },
                 {
-                  "line": 1493,
+                  "line": 1495,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96563,7 +96563,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1496,
+                  "line": 1498,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96571,7 +96571,7 @@
                   "sourceFingerprint": "88ff02785053f782228bdedc1c1cbdb35c86abcb33a0d72bf516a1ada6d72865"
                 },
                 {
-                  "line": 1507,
+                  "line": 1509,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96579,7 +96579,7 @@
                   "sourceFingerprint": "b1bc6f18510d7d13232b4629ffdf02570051b9aec8859c322a7ac2914ccae018"
                 },
                 {
-                  "line": 1530,
+                  "line": 1532,
                   "column": 30,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96587,7 +96587,7 @@
                   "sourceFingerprint": "cd42404d52ad55ccfa9aca4adc828aa5800ad9d385a0671fbcbf724118320619"
                 },
                 {
-                  "line": 1543,
+                  "line": 1545,
                   "column": 64,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96595,7 +96595,7 @@
                   "sourceFingerprint": "5059c98ffe4c34cf0daf894f399cc2bbd85cf8a10d8fbcb79d63efd32ad85e9c"
                 },
                 {
-                  "line": 1545,
+                  "line": 1547,
                   "column": 96,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96603,7 +96603,7 @@
                   "sourceFingerprint": "1ad2f63c0163f25b189d15ac4f94d86099d03751d7a0ce3200481938541effee"
                 },
                 {
-                  "line": 1602,
+                  "line": 1604,
                   "column": 61,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96611,15 +96611,7 @@
                   "sourceFingerprint": "58bdc068b59bd09e42cb5d55bd4b0d6a9be151d25048b6c0982b7b1ffcc108c4"
                 },
                 {
-                  "line": 1718,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 1719,
+                  "line": 1720,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96635,7 +96627,15 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1727,
+                  "line": 1723,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 1729,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96643,7 +96643,7 @@
                   "sourceFingerprint": "9afef5eb0dffc83d2d8e5fbc60dfb610b99da3da0aa76e7011d8d10176c89dea"
                 },
                 {
-                  "line": 1728,
+                  "line": 1730,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96651,7 +96651,7 @@
                   "sourceFingerprint": "5e4abdb79576c2e24550bb11a010ed4a071d0fcfd02a5ef95f46e7e1b09e3d1d"
                 },
                 {
-                  "line": 1731,
+                  "line": 1733,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96659,7 +96659,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1757,
+                  "line": 1759,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96667,7 +96667,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1780,
+                  "line": 1782,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96675,24 +96675,8 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1783,
+                  "line": 1785,
                   "column": 19,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 1811,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 1812,
-                  "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
@@ -96707,7 +96691,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1818,
+                  "line": 1814,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96715,24 +96699,24 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1821,
+                  "line": 1815,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 1820,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 1823,
                   "column": 5,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 1870,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 1871,
-                  "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
@@ -96755,7 +96739,23 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1876,
+                  "line": 1874,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 1875,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 1878,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96763,7 +96763,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1883,
+                  "line": 1885,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96771,7 +96771,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1895,
+                  "line": 1897,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96779,7 +96779,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1953,
+                  "line": 1956,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96787,31 +96787,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 1972,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 2058,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 2059,
-                  "column": 23,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 2060,
+                  "line": 1975,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96843,6 +96819,14 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
+                  "line": 2064,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
                   "line": 2065,
                   "column": 23,
                   "reason": "state-alias-escape",
@@ -96851,15 +96835,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 2070,
-                  "column": 31,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "2fdd68cd608b08034d165e3de8d2251bce4dd779a2a42acaf0b3264c0e0299b5"
-                },
-                {
-                  "line": 2082,
+                  "line": 2066,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96867,7 +96843,31 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 2198,
+                  "line": 2068,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 2073,
+                  "column": 31,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "2fdd68cd608b08034d165e3de8d2251bce4dd779a2a42acaf0b3264c0e0299b5"
+                },
+                {
+                  "line": 2085,
+                  "column": 23,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
+                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+                },
+                {
+                  "line": 2201,
                   "column": 7,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96875,20 +96875,12 @@
                   "sourceFingerprint": "c6abc8f3f1bad77dbd9c3f83ec19f4c89bc2bf94c804c786f6ac217b6c413cf4"
                 },
                 {
-                  "line": 2214,
+                  "line": 2217,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
                   "key": "*",
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
-                },
-                {
-                  "line": 2238,
-                  "column": 9,
-                  "reason": "unsupported-call-mutation",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "56ac33358827cb6235d69355db6e397a0b60484550174170b1f9e70311109670"
                 },
                 {
                   "line": 2241,
@@ -96896,10 +96888,18 @@
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
                   "key": "*",
+                  "sourceFingerprint": "56ac33358827cb6235d69355db6e397a0b60484550174170b1f9e70311109670"
+                },
+                {
+                  "line": 2244,
+                  "column": 9,
+                  "reason": "unsupported-call-mutation",
+                  "operation": "unsupported",
+                  "key": "*",
                   "sourceFingerprint": "2aa4fc90ecb1283d16b98bf06b66e7e591296658f6a1b2907f8eb46744642967"
                 },
                 {
-                  "line": 2278,
+                  "line": 2281,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96907,7 +96907,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2482,
+                  "line": 2485,
                   "column": 27,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96915,7 +96915,7 @@
                   "sourceFingerprint": "7db00bf28ad06d7a353ad6be169014f30864a8f5bb4f06ea2f599e163286ffe2"
                 },
                 {
-                  "line": 2497,
+                  "line": 2500,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96923,7 +96923,7 @@
                   "sourceFingerprint": "7db00bf28ad06d7a353ad6be169014f30864a8f5bb4f06ea2f599e163286ffe2"
                 },
                 {
-                  "line": 2526,
+                  "line": 2529,
                   "column": 24,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96931,7 +96931,7 @@
                   "sourceFingerprint": "dec0f004eaa07c2a283ea326df8f00c2c3c60b002c9bb8d452b1dcff5ba795cb"
                 },
                 {
-                  "line": 2527,
+                  "line": 2530,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96939,7 +96939,7 @@
                   "sourceFingerprint": "39e0f5efdc39ec10992833ad019f0ddf2b42b49b098313df991b8229a37aed21"
                 },
                 {
-                  "line": 2562,
+                  "line": 2565,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96947,7 +96947,7 @@
                   "sourceFingerprint": "28e8bf456230dadee3a13d1bd0b3dd58cc98411dec259b893d3d899408987871"
                 },
                 {
-                  "line": 2562,
+                  "line": 2565,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96955,7 +96955,7 @@
                   "sourceFingerprint": "dec0f004eaa07c2a283ea326df8f00c2c3c60b002c9bb8d452b1dcff5ba795cb"
                 },
                 {
-                  "line": 2562,
+                  "line": 2565,
                   "column": 28,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96963,7 +96963,7 @@
                   "sourceFingerprint": "39e0f5efdc39ec10992833ad019f0ddf2b42b49b098313df991b8229a37aed21"
                 },
                 {
-                  "line": 2608,
+                  "line": 2611,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96971,7 +96971,7 @@
                   "sourceFingerprint": "dec0f004eaa07c2a283ea326df8f00c2c3c60b002c9bb8d452b1dcff5ba795cb"
                 },
                 {
-                  "line": 2609,
+                  "line": 2612,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96979,7 +96979,7 @@
                   "sourceFingerprint": "39e0f5efdc39ec10992833ad019f0ddf2b42b49b098313df991b8229a37aed21"
                 },
                 {
-                  "line": 2810,
+                  "line": 2813,
                   "column": 12,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -96987,7 +96987,7 @@
                   "sourceFingerprint": "da74571437ea7ab5a1a68d3c2eca5b3e43ca57c16df1f77b2e0bff8fcecc573a"
                 },
                 {
-                  "line": 2857,
+                  "line": 2860,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -96995,7 +96995,7 @@
                   "sourceFingerprint": "2fdd68cd608b08034d165e3de8d2251bce4dd779a2a42acaf0b3264c0e0299b5"
                 },
                 {
-                  "line": 2880,
+                  "line": 2883,
                   "column": 36,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -97003,7 +97003,7 @@
                   "sourceFingerprint": "b1bc6f18510d7d13232b4629ffdf02570051b9aec8859c322a7ac2914ccae018"
                 },
                 {
-                  "line": 2888,
+                  "line": 2891,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -97011,7 +97011,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2898,
+                  "line": 2901,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -97019,7 +97019,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2908,
+                  "line": 2911,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -97027,7 +97027,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 2914,
+                  "line": 2917,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -97035,7 +97035,7 @@
                   "sourceFingerprint": "88ff02785053f782228bdedc1c1cbdb35c86abcb33a0d72bf516a1ada6d72865"
                 },
                 {
-                  "line": 2926,
+                  "line": 2929,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -97043,7 +97043,7 @@
                   "sourceFingerprint": "a2331698ae6f2b9585193fcbafe0c8126475c3cf229878e855213c0a1c8ec2e8"
                 },
                 {
-                  "line": 3040,
+                  "line": 3043,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98584,7 +98584,7 @@
       "migrationPhase": "P4.4",
       "bindings": [
         {
-          "id": "parameter:createExportWorkbenchController:0:f980a917b31b:227:9",
+          "id": "parameter:createExportWorkbenchController:0:f980a917b31b:228:9",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "createExportWorkbenchController",
@@ -98592,7 +98592,7 @@
           "parameterIndex": 0,
           "parameterPath": "$/property:state",
           "locator": {
-            "line": 227,
+            "line": 228,
             "column": 9
           },
           "authority": "legacy-target",
@@ -98623,25 +98623,25 @@
               "dynamicSites": [],
               "ambiguousSites": [
                 {
-                  "line": 358,
+                  "line": 359,
                   "column": 30,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9"
                 },
                 {
-                  "line": 359,
+                  "line": 360,
                   "column": 29,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "d3d7e81c39d2ddc7df6c0ebc264c7f381eea9b84193b42023c5980ea664543b9"
                 },
                 {
-                  "line": 361,
+                  "line": 362,
                   "column": 9,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f"
                 },
                 {
-                  "line": 362,
+                  "line": 363,
                   "column": 9,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "2ce84c450497b09c5872c5d78200af7b7b7f451033bdf5b0e9927311b5b8721f"
@@ -98649,7 +98649,7 @@
               ],
               "unsupportedSites": [
                 {
-                  "line": 60,
+                  "line": 61,
                   "column": 60,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98657,7 +98657,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 59,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98665,7 +98665,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 66,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98673,7 +98673,7 @@
                   "sourceFingerprint": "e75f95c59867f4d7d7db752f393ed742054f97251b0d93dfc1a394ae2181899d"
                 },
                 {
-                  "line": 157,
+                  "line": 158,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98681,7 +98681,7 @@
                   "sourceFingerprint": "4a650b012837fca1d6bdc74f3e4496eb7bf510af1cddcb16b270da075497674b"
                 },
                 {
-                  "line": 357,
+                  "line": 358,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98689,7 +98689,7 @@
                   "sourceFingerprint": "4ca4aed29b7c5f92b065ce4fbdcb95231bcfec06d28c2561cc520f3b81beca5a"
                 },
                 {
-                  "line": 358,
+                  "line": 359,
                   "column": 30,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -98697,7 +98697,7 @@
                   "sourceFingerprint": "94c439091d00737964aad85fb06b6f55af14598f0f20aa7fe4b621a6c78cef0a"
                 },
                 {
-                  "line": 358,
+                  "line": 359,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98705,7 +98705,7 @@
                   "sourceFingerprint": "a926520d2164a4e9cbaf4edff0c629de4166c0b165e5a2a8850b15c743794dd5"
                 },
                 {
-                  "line": 359,
+                  "line": 360,
                   "column": 29,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -98713,7 +98713,7 @@
                   "sourceFingerprint": "69a03e0da90280bd459f9919d507f50a6780dc534165bb7ac8688afc6c5a1e5f"
                 },
                 {
-                  "line": 361,
+                  "line": 362,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -98721,7 +98721,7 @@
                   "sourceFingerprint": "82aba2c6cade4be6b06b4de8c98272e7572d034102a3dd81b233e148ddeaf8d2"
                 },
                 {
-                  "line": 362,
+                  "line": 363,
                   "column": 9,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -98729,7 +98729,7 @@
                   "sourceFingerprint": "0b9320a90b268015c7b666b8c40c4616e62efbae1cd43a6b74f8eff49338e59b"
                 },
                 {
-                  "line": 362,
+                  "line": 363,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98737,7 +98737,7 @@
                   "sourceFingerprint": "a926520d2164a4e9cbaf4edff0c629de4166c0b165e5a2a8850b15c743794dd5"
                 },
                 {
-                  "line": 363,
+                  "line": 364,
                   "column": 81,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98749,7 +98749,7 @@
           ]
         },
         {
-          "id": "parameter:ensureExportWorkbenchUiState:0:09fc96082d34:122:79",
+          "id": "parameter:ensureExportWorkbenchUiState:0:09fc96082d34:123:79",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "ensureExportWorkbenchUiState",
@@ -98757,7 +98757,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 122,
+            "line": 123,
             "column": 79
           },
           "authority": "legacy-target",
@@ -98773,7 +98773,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 59,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98781,7 +98781,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 66,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98789,7 +98789,7 @@
                   "sourceFingerprint": "e75f95c59867f4d7d7db752f393ed742054f97251b0d93dfc1a394ae2181899d"
                 },
                 {
-                  "line": 157,
+                  "line": 158,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98801,7 +98801,7 @@
           ]
         },
         {
-          "id": "parameter:resolveExportWorkbenchSampleContext:0:09fc96082d34:59:84",
+          "id": "parameter:resolveExportWorkbenchSampleContext:0:09fc96082d34:60:84",
           "kind": "function-parameter",
           "name": "runtimeState",
           "functionName": "resolveExportWorkbenchSampleContext",
@@ -98809,7 +98809,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 59,
+            "line": 60,
             "column": 84
           },
           "authority": "legacy-target",
@@ -98825,7 +98825,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 60,
+                  "line": 61,
                   "column": 60,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -116932,6 +116932,7 @@
         "js/core/scenario/lifecycle_runtime.js",
         "js/core/scenario/presentation_display_restore.js",
         "js/core/scenario/startup_hydration.js",
+        "js/core/state_defaults.js",
         "js/core/state/actions/boot_actions.js",
         "js/core/state/actions/renderer_cache_actions.js",
         "js/core/state/actions/renderer_diagnostics_actions.js",
@@ -119179,6 +119180,13 @@
           "policyBlobSha256": "00d80c4182e3634e6bbf9ece132216888de1c5b93d440e5c1bd14df8ec96bdbb",
           "paths": [
             "js/ui/toolbar/export_artifact_model.js"
+          ]
+        },
+        {
+          "sourceSha": "1acab235a1039c6f051a1cdb1051e4514951d22e",
+          "policyBlobSha256": "7efb7dc2a8bb9f11f578aac03a211e02bf728de16e67a16f977c7e0fe46c33e7",
+          "paths": [
+            "js/core/state_defaults.js"
           ]
         }
       ]
