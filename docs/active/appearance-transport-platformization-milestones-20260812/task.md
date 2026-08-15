@@ -2,7 +2,7 @@
 
 ## Current status
 
-`A_POLICY_CHECKPOINT_READY` — P4.3 technical source `2ee6653f812febd69148f659b5baee7fe1e3edf8`；Gate 0–4 integrated/pre-A baseline `c9baa13c9feaff789cd5f1df101433fd1fb1ca0b`；post-structural exact policy checkpoint 由当前 Gate A candidate 承载；最终 live gates pending。`A_ADMITTED_SHA` pending；B、C 等待正式准入 SHA。
+`A_POLICY_CHECKPOINT_READY` — P4.3 technical source `2ee6653f812febd69148f659b5baee7fe1e3edf8`；包含 Gate 1 Export correctness hotfix 的 Gate 0–4 integrated/pre-A functional baseline `1e6ff40fa1f21f7dec9c6f68306adf6bb20dea08`；post-structural exact policy checkpoint 由当前 Gate A candidate 承载；最终 live gates pending。`A_ADMITTED_SHA` pending；B、C 等待正式准入 SHA。
 
 ## Checklist
 
@@ -19,8 +19,8 @@
 - [x] 交付 `ready-for-supervisor-validation` 包。
 - [x] 主监督生成并提交 schema 3 canonical baseline。
 - [x] 主监督完成首轮 independent review，并关闭 raw-run binding、diagnostics own-property、policy atomic write 与 direct route findings。
-- [x] 在 `c9baa13c` integrated/pre-A baseline 及其 Pages/coordination descendant 上生成新的唯一 P4.3 checkpoint，并由当前 Gate A candidate 同提交承载 policy 与 coordination evidence。
-- [x] 固定 `c9baa13c` integrated/pre-A baseline，并登记 inherited UI/demo/Pages、dormant change-set contract、pure export projection 与 detached scalar ownership 边界。
+- [x] 在 `1e6ff40f` integrated/pre-A functional baseline 及其 coordination descendant 上生成新的唯一 P4.3 checkpoint，并由当前 Gate A candidate 承载 policy 与 coordination evidence。
+- [x] 固定 `1e6ff40f` integrated/pre-A functional baseline，并登记 inherited UI/demo/Pages、dormant change-set contract、pure export projection、detached scalar ownership 与 Gate 1 Export zero/null/default/facade correctness 边界。
 - [ ] 主监督完成 browser、Pages/dist、core main-thread、standard perf 与最终 independent review。
 - [ ] 主监督写入 `A_ADMITTED_SHA` 并解除 B 阻塞。
 - [ ] B 完成 P4.4 replay/admission 并写入 `B_ADMITTED_SHA`。
@@ -83,10 +83,10 @@
 | final source review fixes | PASS；场景 `summary.canonicalRenderSampleMs` 与 raw-run recomputed median 强绑定；diagnostics missing-holder dual commit 全量 preflight；atomic writer测试锁定 `open → write → sync → close → readback → rename`。 |
 | final source review focused evidence | PASS；perf contract 51/51、diagnostics/delegation 41/41、diagnostics Python 6/6、state-writer focused 2/2、architecture boundary、SF-ATS dry-run 23 commands / 0 unmatched。 |
 | final source review-fix commit | PASS；`2ee6653f812febd69148f659b5baee7fe1e3edf8`，8 files，source/dist/manifest 同步。 |
-| integrated/pre-A baseline ratification | PASS；baseline `c9baa13c9feaff789cd5f1df101433fd1fb1ca0b`；toolbar 3095/3100、structural 54/54、project-IO 66/66、architecture PASS、state-writer quick 259/259、SF-ATS 5 child-safe PASS / 10 main-thread deferred / unmatched 0；export artifact helpers 接受 detached scalar；dormant change-set contract 保持零 runtime writer/UI wiring/Apply bridge/history persistence。 |
+| integrated/pre-A functional baseline ratification | PASS；baseline `1e6ff40fa1f21f7dec9c6f68306adf6bb20dea08`；toolbar 3098/3100、structural 54/54、Export focused 15/15、state-writer targeted multiset 251/17/93/154 且 delta/missing 为空、state-writer quick 260/260、SF-ATS child-safe PASS / unmatched 0；explicit zero 保留，null/undefined/blank 恢复默认值，facade fail-fast 后绑定 controller owner；dormant change-set contract 保持零 runtime writer/UI wiring/Apply bridge/history persistence。 |
 | pre-structural P4.3 checkpoint | SUPERSEDED；generator 写入 207 writers；commit `dac80102a1c8bfbdf9a479e9a6866b6211afef90`；随后 pure projection extraction 改变 source coordinates，需要新的 exact checkpoint。 |
 | canonical P4.3 runner attempt at `dac80102` | STOPPED after scope review；Node P4.3 258/258 passed；policy evidence scan运行 `1,196,355ms` 后由主监督停止；candidate 被 integrated baseline contract revision取代，未形成 admission evidence。 |
-| post-structural P4.3 checkpoint | PASS；输入 source baseline `c9baa13c`、published candidate `174be95d`；canonical generator exit 0，写入 207 writers；schema 2、`progress.latestPhase=P4.3`、唯一 P4.3 checkpoint；quick policy suite 259/259；policy 与本 coordination evidence 由同一 Gate A candidate commit 承载。 |
+| post-structural P4.3 checkpoint | PASS；输入 pre-A functional baseline `1e6ff40f`、published candidate `e77fdb89`；canonical generator exit 0，写入 207 writers；schema 2、`progress.latestPhase=P4.3`、唯一 P4.3 checkpoint；六项 legacy metrics 与六组 retired authority counts 逐项不变；quick policy suite 260/260；policy 与本 coordination evidence 由当前 Gate A candidate 承载。 |
 
 ## Open risks and remaining work
 
