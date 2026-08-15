@@ -1,12 +1,19 @@
 export const EXPORT_MAX_DIMENSION_PX = 7680;
 export const EXPORT_MAX_PIXELS = 7680 * 4320;
 
-export function resolveExportBaseDimensions(runtimeView, devicePixelRatio = globalThis.devicePixelRatio) {
-  const dpr = Math.max(1, Number(runtimeView?.dpr || devicePixelRatio || 1));
-  const fallbackLogicalWidth = Number(runtimeView?.colorCanvas?.width || 0) / dpr;
-  const fallbackLogicalHeight = Number(runtimeView?.colorCanvas?.height || 0) / dpr;
-  const width = Math.round(Number(runtimeView?.width || fallbackLogicalWidth || 0));
-  const height = Math.round(Number(runtimeView?.height || fallbackLogicalHeight || 0));
+export function resolveExportBaseDimensions(
+  dprInput,
+  logicalWidth,
+  logicalHeight,
+  colorCanvasWidth,
+  colorCanvasHeight,
+  devicePixelRatio = globalThis.devicePixelRatio,
+) {
+  const dpr = Math.max(1, Number(dprInput || devicePixelRatio || 1));
+  const fallbackLogicalWidth = Number(colorCanvasWidth || 0) / dpr;
+  const fallbackLogicalHeight = Number(colorCanvasHeight || 0) / dpr;
+  const width = Math.round(Number(logicalWidth || fallbackLogicalWidth || 0));
+  const height = Math.round(Number(logicalHeight || fallbackLogicalHeight || 0));
   return { width, height };
 }
 
@@ -66,21 +73,21 @@ export function getBakePackLayerIds(exportUi) {
   return next;
 }
 
-export function buildExportArtifactScenarioContext(runtimeView) {
-  const scenarioId = String(runtimeView?.activeScenarioId || "").trim();
+export function buildExportArtifactScenarioContext(scenarioIdInput, versionInput, baselineHashInput) {
+  const scenarioId = String(scenarioIdInput || "").trim();
   if (!scenarioId) return null;
   return {
     id: scenarioId,
-    version: Number(runtimeView?.activeScenarioManifest?.version || 1) || 1,
-    baselineHash: String(runtimeView?.scenarioBaselineHash || "").trim(),
+    version: Number(versionInput || 1) || 1,
+    baselineHash: String(baselineHashInput || "").trim(),
   };
 }
 
-export function buildExportArtifactProjectContext(runtimeView) {
+export function buildExportArtifactProjectContext(dirtyRevisionInput, colorRevisionInput, topologyRevisionInput) {
   return {
-    dirtyRevision: Number(runtimeView?.dirtyRevision || 0) || 0,
-    colorRevision: Number(runtimeView?.colorRevision || 0) || 0,
-    topologyRevision: Number(runtimeView?.topologyRevision || 0) || 0,
+    dirtyRevision: Number(dirtyRevisionInput || 0) || 0,
+    colorRevision: Number(colorRevisionInput || 0) || 0,
+    topologyRevision: Number(topologyRevisionInput || 0) || 0,
   };
 }
 

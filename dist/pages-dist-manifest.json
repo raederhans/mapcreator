@@ -46867,7 +46867,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 130698,
+      "size_bytes": 131546,
       "source_kind": "dist"
     },
     {
@@ -46927,7 +46927,7 @@
     },
     {
       "path": "app/js/ui/toolbar/export_artifact_model.js",
-      "size_bytes": 5983,
+      "size_bytes": 6012,
       "source_kind": "dist"
     },
     {
@@ -47677,7 +47677,7 @@
       {
         "file_count": 85,
         "id": "startup-deferred-runtime",
-        "size_bytes": 2556007
+        "size_bytes": 2556884
       },
       {
         "file_count": 815,
@@ -61688,7 +61688,7 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 2212751,
+        "deferred_graph_bytes": 2213628,
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
@@ -62641,7 +62641,7 @@
           },
           {
             "path": "app/js/ui/toolbar.js",
-            "size_bytes": 130698
+            "size_bytes": 131546
           },
           {
             "path": "app/js/ui/toolbar/appearance_border_owner.js",
@@ -62689,7 +62689,7 @@
           },
           {
             "path": "app/js/ui/toolbar/export_artifact_model.js",
-            "size_bytes": 5983
+            "size_bytes": 6012
           },
           {
             "path": "app/js/ui/toolbar/intensity_field_editor_section.js",
@@ -62903,7 +62903,7 @@
             "size_bytes": 274769
           }
         ],
-        "size_bytes": 1690812
+        "size_bytes": 1691689
       },
       {
         "basis": "product-registry:milsymbol-deferred-vendor",
@@ -64041,7 +64041,7 @@
     {
       "file_count": 9449,
       "path": "app",
-      "size_bytes": 965894879
+      "size_bytes": 965895756
     },
     {
       "file_count": 57,
@@ -64074,5 +64074,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973054153
+  "total_bytes": 973055030
 }
