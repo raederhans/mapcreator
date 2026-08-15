@@ -7,7 +7,7 @@
 - `merge-base(HEAD, origin/main)=5461c24aa5e40c3ea184dfee84db10630a199cbc`；source candidate 相对 `origin/main` 为 `0 behind / 21 ahead`。
 - schema 3 baseline 已提交；checked-in policy 的 latestPhase 已为 P4.3。review-fix source 位于 checkpoint 之后，当前静态 blocker 为新的 exact generator checkpoint。
 - 主 checkout 位于 `68a62e540104025e1b3e976f77589f8b3eff2f36`；本任务保持隔离，不读取其未归属 WIP 作为候选输入。
-- 2026-08-15 主监督已将 Gate 0–4 integrated/pre-A baseline 固定为 `c9baa13c9feaff789cd5f1df101433fd1fb1ca0b`；A-specific delta 从该 SHA 起算；`dac80102` policy checkpoint 已被结构修复取代，新的 exact checkpoint pending。
+- 2026-08-15 主监督已将 Gate 0–4 integrated/pre-A baseline 固定为 `c9baa13c9feaff789cd5f1df101433fd1fb1ca0b`；A-specific delta 从该 SHA 起算；`dac80102` policy checkpoint 已被结构修复取代，post-structural exact checkpoint 与当前 Gate A candidate 绑定。
 
 ## Decisions and deviations
 
@@ -40,7 +40,7 @@
 | A exact `7319193e` review checkpoint generator | 本 A task delegated owner | 同一 canonical generator command；session `82779`，PID `468364` | released；start `2026-08-13T00:12:25.1501860+08:00`；end `2026-08-13T00:28:56.3897097+08:00`；exit 0；elapsed `991.240s`；207 writers；checkpoint commit `b66ebeaa700054a01129783a5ba956705e152d3d`。 |
 | A review-fix P4.3 generator at `08b470d9` | A task delegated owner，主监督授权 | canonical generator；PID `115400`；输出 `tools/state_writer_policy.json` | released as obsolete source；start `2026-08-13T01:09:50.9445305+08:00`；stop `2026-08-13T01:20:33.0443086+08:00`；duration `642.100s`；wrapper exit `-1`；policy length/mtime 均保持 `10928785` bytes / `2026-08-13T00:28:56.3113068+08:00`。 |
 | A final review-fix P4.3 generator | `/root` main supervisor | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；输出 `tools/state_writer_policy.json` | completed，exit 0；写入 207 writers；checkpoint commit `dac80102a1c8bfbdf9a479e9a6866b6211afef90`。 |
-| A post-structural P4.3 generator | `/root` main supervisor | 同一 canonical generator；输入为 `c9baa13c` structural baseline 及随后 Pages/coordination candidate | pending；生成后形成新的唯一 exact checkpoint。 |
+| A post-structural P4.3 generator | `/root` main supervisor | 同一 canonical generator；输入为 `c9baa13c` structural baseline 与 `174be95d` published candidate | completed，exit 0；207 writers；schema 2、latestPhase P4.3、唯一 P4.3 checkpoint；policy 与 coordination evidence 由同一 Gate A candidate commit 承载。 |
 | A canonical perf baseline generation | `/root` main supervisor | `npm run perf:baseline`；输入 `tno_1962,hoi4_1939`、runs `5`、warmups `3` | completed，exit 0；schema 3、admitted environment、stable generation fence、两场景各 5 个 canonical samples；commit `727108824362e373ee9cf6ba5abb04829aed4f04`。 |
 | A standard perf gate | `/root` main supervisor | baseline 提交后在 clean exact candidate 执行 `npm run perf:gate`；读取 `docs/perf/baseline_2026-07-30.json`；输出 `.runtime/output/perf/baseline_2026-07-30/perf-gate-current.json` 与 generation/admission evidence | requested；成功条件：exit 0、baseline schema/contract 可读、环境与 workload contract 一致、enforced regression gate pass。 |
 | A browser / Playwright | `/root` main supervisor | exact command、browser profile、output path 由主监督在取得唯一 lane 后落盘 | requested；成功条件：renderer ownership 路径无 page error、未处理 console error 与 network failure，具体 matrix 绑定 exact candidate SHA。 |

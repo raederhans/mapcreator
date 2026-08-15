@@ -2,7 +2,7 @@
 
 ## Current status
 
-`A_INTEGRATED_BASELINE_RATIFIED` — P4.3 technical source `2ee6653f812febd69148f659b5baee7fe1e3edf8`；Gate 0–4 integrated/pre-A baseline `c9baa13c9feaff789cd5f1df101433fd1fb1ca0b`；post-structural exact policy checkpoint 与最终 live gates pending。`A_ADMITTED_SHA` pending；B、C 等待正式准入 SHA。
+`A_POLICY_CHECKPOINT_READY` — P4.3 technical source `2ee6653f812febd69148f659b5baee7fe1e3edf8`；Gate 0–4 integrated/pre-A baseline `c9baa13c9feaff789cd5f1df101433fd1fb1ca0b`；post-structural exact policy checkpoint 由当前 Gate A candidate 承载；最终 live gates pending。`A_ADMITTED_SHA` pending；B、C 等待正式准入 SHA。
 
 ## Checklist
 
@@ -19,7 +19,7 @@
 - [x] 交付 `ready-for-supervisor-validation` 包。
 - [x] 主监督生成并提交 schema 3 canonical baseline。
 - [x] 主监督完成首轮 independent review，并关闭 raw-run binding、diagnostics own-property、policy atomic write 与 direct route findings。
-- [ ] 在 `c9baa13c` integrated/pre-A baseline 及其 Pages/coordination descendant 上生成并提交新的唯一 P4.3 checkpoint。
+- [x] 在 `c9baa13c` integrated/pre-A baseline 及其 Pages/coordination descendant 上生成新的唯一 P4.3 checkpoint，并由当前 Gate A candidate 同提交承载 policy 与 coordination evidence。
 - [x] 固定 `c9baa13c` integrated/pre-A baseline，并登记 inherited UI/demo/Pages、dormant change-set contract、pure export projection 与 detached scalar ownership 边界。
 - [ ] 主监督完成 browser、Pages/dist、core main-thread、standard perf 与最终 independent review。
 - [ ] 主监督写入 `A_ADMITTED_SHA` 并解除 B 阻塞。
@@ -86,12 +86,13 @@
 | integrated/pre-A baseline ratification | PASS；baseline `c9baa13c9feaff789cd5f1df101433fd1fb1ca0b`；toolbar 3095/3100、structural 54/54、project-IO 66/66、architecture PASS、state-writer quick 259/259、SF-ATS 5 child-safe PASS / 10 main-thread deferred / unmatched 0；export artifact helpers 接受 detached scalar；dormant change-set contract 保持零 runtime writer/UI wiring/Apply bridge/history persistence。 |
 | pre-structural P4.3 checkpoint | SUPERSEDED；generator 写入 207 writers；commit `dac80102a1c8bfbdf9a479e9a6866b6211afef90`；随后 pure projection extraction 改变 source coordinates，需要新的 exact checkpoint。 |
 | canonical P4.3 runner attempt at `dac80102` | STOPPED after scope review；Node P4.3 258/258 passed；policy evidence scan运行 `1,196,355ms` 后由主监督停止；candidate 被 integrated baseline contract revision取代，未形成 admission evidence。 |
+| post-structural P4.3 checkpoint | PASS；输入 source baseline `c9baa13c`、published candidate `174be95d`；canonical generator exit 0，写入 207 writers；schema 2、`progress.latestPhase=P4.3`、唯一 P4.3 checkpoint；quick policy suite 259/259；policy 与本 coordination evidence 由同一 Gate A candidate commit 承载。 |
 
 ## Open risks and remaining work
 
 - canonical baseline 已推进到 schema 3；raw runs、stored roles、role summary 与 scenario canonical median 均由 validator 重新推导并绑定。
-- checked-in state-writer policy 已推进到 P4.3；`c9baa13c` structural baseline 需要新的 exact checkpoint。
+- checked-in state-writer policy 已推进到 P4.3；post-structural exact checkpoint 与当前 Gate A candidate 绑定。
 - 新 checkpoint 后重跑 exact P4.3 route；目标为 owned paths 全覆盖、production unmatched 0、route gaps 0。
 - pre-edit selector 报告三个新 coordination docs unmatched；这些路径只记录状态与交接，production unmatched count 为零。
-- browser、dev server、Playwright、core main-thread、standard perf、heavy-geo、scenario-data 和共享 `.runtime` locks 保留给主监督；post-Pages source changes 已形成 source/dist drift，正式候选需要 rebuild、提交生成产物并重跑完整 Pages gate。
+- browser、dev server、Playwright、core main-thread、standard perf、heavy-geo、scenario-data 和共享 `.runtime` locks 保留给主监督；Pages 生成产物已提交且 source/dist blob 精确一致，完整 Pages/dist gate 仍需绑定最终候选 SHA 重跑。
 - 当前 worktree 的 index、refs、branch topology 与 remote 保持不变；最终改动将保持未暂存。

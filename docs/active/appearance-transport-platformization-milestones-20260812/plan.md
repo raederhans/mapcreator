@@ -18,7 +18,7 @@
 
 ## Stages
 
-- [ ] A — P4.3 Admission Pack：review fixes committed；new exact checkpoint 与 final live gates pending；`A_ADMITTED_SHA` pending。
+- [ ] A — P4.3 Admission Pack：review fixes 与 exact checkpoint 由当前 Gate A candidate 承载；final live gates pending；`A_ADMITTED_SHA` pending。
 - [ ] B — P4.4 Replay and Admission Pack：blocked on `A_ADMITTED_SHA`，recovery source `65335370c50279c19c9074362567f9d2284e0c39`。
 - [ ] C — Appearance / Transport user-visible milestone：blocked on `B_ADMITTED_SHA`。
 
