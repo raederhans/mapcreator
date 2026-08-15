@@ -731,6 +731,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tests/test_state_write_guardrail_contract.py",
       "tests/verification_metadata_behavior.test.mjs",
       "docs/active/state-action-ownership-p4-20260719",
+      "docs/active/appearance-transport-platformization-milestones-20260812",
       "docs/active/_worktree_registry.md",
       "tools/verification/verification_domains.mjs",
       "package.json",

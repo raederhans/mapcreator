@@ -238,6 +238,28 @@ test("the current selector control plane has zero P4.3 route gaps", () => {
   assert.deepEqual(report.unmatchedChangedFiles, []);
 });
 
+test("Appearance and Transport milestone coordination stays on the exact P4.3 route", () => {
+  const changedFiles = [
+    "docs/active/appearance-transport-platformization-milestones-20260812/context.md",
+    "docs/active/appearance-transport-platformization-milestones-20260812/plan.md",
+    "docs/active/appearance-transport-platformization-milestones-20260812/task.md",
+  ];
+  const routes = buildRouteIndex();
+  const recommendation = buildRecommendation(changedFiles, routes);
+  const report = buildP4StateActionRouteReport({
+    phase: "P4.3",
+    changedFiles,
+    recommendation,
+    routes,
+  });
+
+  assert.equal(report.verdict, "pass");
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const matchedFile of recommendation.matchedByFile) {
+    assert.ok(matchedFile.matchedRouteIds.includes("p4:p4-3-exact-phase"));
+  }
+});
+
 test("generic selector-only coverage is rejected for P4-owned files", () => {
   const genericRoute = createRoute({
     id: "infra:verification-selector",
