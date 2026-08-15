@@ -574,6 +574,10 @@ function initToolbar({ render } = {}) {
   };
 
   let exportWorkbenchController = null;
+  const ensureExportWorkbenchUiState = () => (
+    exportWorkbenchController?.ensureExportWorkbenchUiState()
+    || ensureExportWorkbenchUiStateFromController(state, normalizeExportWorkbenchUiState)
+  );
   const renderExportWorkbenchLayerList = () => exportWorkbenchController?.renderExportWorkbenchLayerList();
   const renderExportWorkbenchTextElementList = () => exportWorkbenchController?.renderExportWorkbenchTextElementList();
 

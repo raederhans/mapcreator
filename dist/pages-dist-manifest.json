@@ -46867,7 +46867,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 131546,
+      "size_bytes": 131750,
       "source_kind": "dist"
     },
     {
@@ -47677,7 +47677,7 @@
       {
         "file_count": 85,
         "id": "startup-deferred-runtime",
-        "size_bytes": 2557410
+        "size_bytes": 2557614
       },
       {
         "file_count": 815,
@@ -61697,7 +61697,7 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 2214116,
+        "deferred_graph_bytes": 2214320,
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
@@ -62650,7 +62650,7 @@
           },
           {
             "path": "app/js/ui/toolbar.js",
-            "size_bytes": 131546
+            "size_bytes": 131750
           },
           {
             "path": "app/js/ui/toolbar/appearance_border_owner.js",
@@ -62912,7 +62912,7 @@
             "size_bytes": 274769
           }
         ],
-        "size_bytes": 1692215
+        "size_bytes": 1692419
       },
       {
         "basis": "product-registry:milsymbol-deferred-vendor",
@@ -64050,7 +64050,7 @@
     {
       "file_count": 9449,
       "path": "app",
-      "size_bytes": 965896337
+      "size_bytes": 965896541
     },
     {
       "file_count": 57,
@@ -64083,5 +64083,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973055972
+  "total_bytes": 973056176
 }
