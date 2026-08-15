@@ -32,10 +32,7 @@ import {
 } from "../js/ui/toolbar/export_artifact_model.js";
 
 test("export artifact model projects deterministic canvas and pass inputs", () => {
-  assert.deepEqual(resolveExportBaseDimensions({
-    dpr: 2,
-    colorCanvas: { width: 2400, height: 1200 },
-  }), { width: 1200, height: 600 });
+  assert.deepEqual(resolveExportBaseDimensions(2, 0, 0, 2400, 1200), { width: 1200, height: 600 });
   assert.equal(buildExportAdjustmentFilter({
     adjustments: { brightness: 125, contrast: 110, saturation: 80, clarity: 150 },
   }), "brightness(1.250) contrast(1.166) saturate(0.800)");
@@ -68,27 +65,18 @@ test("export artifact model builds defensive package projections", () => {
     adjustments: { brightness: 100 },
     bakeArtifacts: [{ layerId: "color" }],
   };
-  const runtimeView = {
-    activeScenarioId: "tno_1962",
-    activeScenarioManifest: { version: 3 },
-    scenarioBaselineHash: "baseline-1",
-    dirtyRevision: 4,
-    colorRevision: 5,
-    topologyRevision: 6,
-  };
-
   assert.deepEqual(getBakePackLayerIds(exportUi), ["color", "line", "text", "composite"]);
   assert.deepEqual(buildPerLayerExportPlan(exportUi), [
     { id: "background" },
     { id: "effects" },
     { id: "svg-annotations" },
   ]);
-  assert.deepEqual(buildExportArtifactScenarioContext(runtimeView), {
+  assert.deepEqual(buildExportArtifactScenarioContext("tno_1962", 3, "baseline-1"), {
     id: "tno_1962",
     version: 3,
     baselineHash: "baseline-1",
   });
-  assert.deepEqual(buildExportArtifactProjectContext(runtimeView), {
+  assert.deepEqual(buildExportArtifactProjectContext(4, 5, 6), {
     dirtyRevision: 4,
     colorRevision: 5,
     topologyRevision: 6,

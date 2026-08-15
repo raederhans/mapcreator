@@ -2683,7 +2683,13 @@ function initToolbar({ render } = {}) {
     if (!sourceCanvas) {
       throw createExportError("invalid-params", "Missing export source canvas.");
     }
-    const { width: baseWidth, height: baseHeight } = resolveExportBaseDimensions(runtimeState);
+    const { width: baseWidth, height: baseHeight } = resolveExportBaseDimensions(
+      Number(runtimeState.dpr || 0),
+      Number(runtimeState.width || 0),
+      Number(runtimeState.height || 0),
+      Number(runtimeState.colorCanvas?.width || 0),
+      Number(runtimeState.colorCanvas?.height || 0),
+    );
     if (!(baseWidth > 0) || !(baseHeight > 0)) {
       throw createExportError("invalid-params", "Missing preview canvas dimensions.");
     }
@@ -2723,8 +2729,16 @@ function initToolbar({ render } = {}) {
     return buildExportArtifactPackage({
       artifactKind: "per-layer",
       fileStem: "map_layers",
-      scenario: buildExportArtifactScenarioContext(runtimeState),
-      project: buildExportArtifactProjectContext(runtimeState),
+      scenario: buildExportArtifactScenarioContext(
+        String(runtimeState.activeScenarioId || ""),
+        Number(runtimeState.activeScenarioManifest?.version || 1),
+        String(runtimeState.scenarioBaselineHash || ""),
+      ),
+      project: buildExportArtifactProjectContext(
+        Number(runtimeState.dirtyRevision || 0),
+        Number(runtimeState.colorRevision || 0),
+        Number(runtimeState.topologyRevision || 0),
+      ),
       exportUi: buildExportUiManifestSnapshot(exportUi),
       files: buildPerLayerPackageFiles(outputs),
     });
@@ -2755,8 +2769,16 @@ function initToolbar({ render } = {}) {
     return buildExportArtifactPackage({
       artifactKind: "bake-pack",
       fileStem: "map_bake_pack",
-      scenario: buildExportArtifactScenarioContext(runtimeState),
-      project: buildExportArtifactProjectContext(runtimeState),
+      scenario: buildExportArtifactScenarioContext(
+        String(runtimeState.activeScenarioId || ""),
+        Number(runtimeState.activeScenarioManifest?.version || 1),
+        String(runtimeState.scenarioBaselineHash || ""),
+      ),
+      project: buildExportArtifactProjectContext(
+        Number(runtimeState.dirtyRevision || 0),
+        Number(runtimeState.colorRevision || 0),
+        Number(runtimeState.topologyRevision || 0),
+      ),
       exportUi: buildExportUiManifestSnapshot(exportUi),
       files: buildBakePackPackageFiles(outputs),
     });
