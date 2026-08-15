@@ -481,7 +481,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             "awaitInitialScenarioChunkVisualPromotion" in self.main_source,
             "startup must await the initial visual promotion gate before first visible and warmup checkpoints",
         )
-        boot_start = self.main_source.index("const startupScenarioBoot = getStartupScenarioBootOwner();")
+        boot_start = self.main_source.index("async function bootstrap() {")
         boot_end = self.main_source.index("await finalizeReadyState(renderDispatcher);", boot_start)
         boot_source = self.main_source[boot_start:boot_end]
         gate_index = boot_source.index("await ensureStartupInitialScenarioChunkVisualReady(")
