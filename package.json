@@ -293,6 +293,7 @@
     "verify:supervisor-plan": "npm run test:node:supervisor-plan && node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tests/supervisor_plan_behavior.test.mjs",
     "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
     "test:node:verify-core-runner": "node --test tests/verify_core_runner_behavior.test.mjs",
+    "test:node:verification-profile": "node --test tests/verification_profile_behavior.test.mjs",
     "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
     "test:node:verification-script-portfolio": "node --test tests/verification_script_portfolio_behavior.test.mjs",
     "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
