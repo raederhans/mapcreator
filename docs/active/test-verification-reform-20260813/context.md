@@ -81,3 +81,19 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 ## Next step
 
 Design J2b from exact base `69b17903`: add a V2 parent-death/control protocol beside the preserved Williams V1 entrypoint, then wire verified descendant cleanup into the P4 lifecycle. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until J2b containment and a same-environment control or CI run admit the newer candidate.
+
+## 2026-08-20 phase 0-3 coordination handoff
+
+| Fact or decision | Current evidence |
+| --- | --- |
+| User authority | Execute all phase 0-3 tasks from the `SC项目推进` diagnosis through separate Codex tasks, then open fresh audit and integration/reporting tasks. |
+| Source plan baseline | The Edge conversation diagnosed `origin/main@7ddcee0d613b0210a37e287c77e49c90443bd415`; current repository evidence outranks that snapshot. |
+| Root checkout | `main@9a5b25c6c07b05442c8c517457520e5ba610cd18`, ahead of `origin/main@7ddcee0d` by 46 commits. |
+| Preserved root WIP | Source/dist scenario presentation and workspace files plus scenario/E2E regression tests are modified. Phase work runs in isolated worktrees from committed `main`; those bytes stay untouched. |
+| Existing worktrees | `codex/gate4-pages-reachability-inventory@9fe902d5` is clean; `export-pipeline/mapcreator@de7c9815` is detached and clean. They remain outside phase ownership. |
+| Current phase 2 observation | `.github/workflows/verify-shared.yml` already invokes `run_adaptive_tests.mjs --execute --defer-main-thread`; the phase 2 worker must determine the remaining gap against the full phase contract and may deliver an evidence-backed no-op. |
+| Integration order | 0 -> 1 -> 2 -> 3, with explicit conflict and semantic-overlap review after each delivery. |
+| Live-process owner | None at dispatch. Workers may run short isolated checks. Windows Job integration, browser, dist, performance, full P4, and shared `.runtime` checks require an explicitly recorded single owner. |
+| Final authority | A fresh independent audit task reviews exact commits. A separate integration task owns refs, ordered integration, final validation, push, registry synchronization, and final report. |
+
+Each execution task must report base and head SHA, branch, status, owned paths, changed files, regression coverage, commands and exit status, artifacts, route gaps, skipped main-thread or CI gates, remaining risk, and recommended integration method. A no-op requires current code and targeted evidence proving the phase contract is already satisfied.

@@ -45,6 +45,17 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - [ ] Stage 6J-C / J2b: Add parent-death/control semantics and wire verified descendant cleanup into P4 production admission.
 - [ ] Stage 5b: Run one final admission suite on the frozen candidate.
 
+### 2026-08-20 governance execution baseline
+
+The user authorized coordinated execution of phases 0-3 from the `SC项目推进` diagnosis. The source conversation used `origin/main@7ddcee0d613b0210a37e287c77e49c90443bd415`; each lane must re-audit current `main@9a5b25c6c07b05442c8c517457520e5ba610cd18` before changing code because later local commits may already satisfy part of a phase.
+
+- [ ] Phase 0 / `verification-j2b-closeout`: finish J2b parent-death, explicit-cancel, and verified zero-descendant cleanup; then freeze verification-platform feature expansion.
+- [ ] Phase 1 / `chore/verification-baseline`: emit a thin stable profile for wall time, normalized executed files and counts, process starts, selector planned versus executed closure, cache outcomes, meta/product split, and top-ten slow commands/files without changing the selected execution set.
+- [ ] Phase 2 / `fix/pr-fast-use-selector`: audit the current adaptive `pr-fast` path, close remaining selector-to-execution gaps, preserve fail-closed unmatched/route-gap behavior, and retain heavy/full coverage as shadow, nightly, sampled, or main-thread work.
+- [ ] Phase 3 / `fix/test-leaf-deduplication`: establish canonical leaf expansion and structural duplicate rejection; converge test catalog sources only to the smallest phase-complete boundary supported by current code and tests.
+
+Execution order is phase 0, phase 1, phase 2, phase 3 for integration. Work may proceed in isolated worktrees when file ownership remains disjoint. Later phases must report overlap and dependency on earlier commits rather than silently absorbing them.
+
 ## Acceptance criteria
 
 - Interrupted same-tree runs resume without repeating passed commands.
@@ -65,6 +76,11 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 - Stage 6J-A keeps the canonical full/quick/focused TAP as terminal complete evidence, exposes mode-isolated running and failed/interrupted artifacts, never promotes stale or partial output to pass evidence, and records the current Windows lifecycle honestly as `root-only` with unverified cleanup.
 - Stage 6J-B/J2a preserves Williams V1 assign-before-resume, kill-on-job-close, no-breakaway, timeout, argv, and cleanup evidence while binding the compiled binary to the exact ordered entrypoint/core bytes.
 - Stage 6J-C/J2b requires parent-death and explicit-cancel control plus terminal evidence showing zero remaining or unverified descendants before P4 production admission becomes eligible.
+- Phase 0 interruption and cancel evidence records `remainingPids=[]`, `unverifiedPids=[]`, fail-closed cleanup uncertainty, mode-correct artifact identity, and a passing bounded Windows integration regression.
+- Phase 1 produces deterministic profile evidence while preserving the exact selected command set and exposing duplicate normalized leaf execution.
+- Phase 2 makes `pr-fast` execute current selector output with zero unmatched files and route gaps; selected and deferred/main-thread ownership remains explicit.
+- Phase 3 makes one normalized leaf appear at most once in a lane and fails during plan generation on duplicate, cyclic, or unresolved expansion.
+- Every phase runs or dry-runs SF-ATS adaptive selection, adds route coverage for any unmatched production file, and reports all main-thread or CI-only gates left open.
 
 ## Non-goals
 

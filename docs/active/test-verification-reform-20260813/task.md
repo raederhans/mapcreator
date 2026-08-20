@@ -32,6 +32,19 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - [ ] Stage 6J-C / J2b: add parent-death/control semantics and P4 verified descendant cleanup.
 - [ ] Freeze candidate and run the remaining full admission gates once.
 
+## 2026-08-20 coordinated phase 0-3 delivery
+
+- [x] Read and freeze the source diagnosis and phase contracts from the user-designated Edge tab.
+- [x] Recheck root ownership: `main@9a5b25c6`, `origin/main@7ddcee0d`, parent checkout ahead 46 with unrelated scenario/UI WIP preserved.
+- [ ] Phase 0 delivery: current-state audit, bounded J2b implementation, regression coverage, adaptive selection, Windows integration evidence, and ready-for-integration commit.
+- [ ] Phase 1 delivery: current-state audit, minimal stable profiling output, regression coverage, adaptive selection, and ready-for-integration commit.
+- [ ] Phase 2 delivery: current-state audit of the already-adaptive workflow, remaining selector execution repair, fail-closed regression coverage, adaptive selection, and ready-for-integration commit or evidence-backed no-op.
+- [ ] Phase 3 delivery: canonical leaf expansion/deduplication boundary, duplicate/cycle/unresolved regressions, adaptive selection, and ready-for-integration commit.
+- [ ] Independent audit of each exact delivery and their ordered combined diff.
+- [ ] Ordered integration, targeted verification, SF-ATS selector dry-run, authorized push, registry/task closeout, and final remote-state report.
+
+Phase workers own only their isolated worktrees and local commits. The final integration task owns merge/cherry-pick choice, target refs, push, shared `.runtime` outputs, long checks, and worktree cleanup.
+
 ## Validation evidence
 
 | Command or check | Result |
