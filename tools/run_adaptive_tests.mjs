@@ -9,6 +9,8 @@ import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
 import {
   buildVerificationProfile,
   DEFAULT_ADAPTIVE_VERIFICATION_PROFILE_OUT,
+  prepareVerificationProfilePlan,
+  publishVerificationProfileSafely,
 } from "./verification/verification_profile.mjs";
 
 const REPO_ROOT = process.cwd();
@@ -235,23 +237,61 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
   return `${lines.join("\n")}\n`;
 }
 
-function writeOutputs(report, args, executionResults = null, executionPlan = null, {
+export function writeAdaptiveOutputs(report, args, executionResults = null, executionPlan = null, {
   terminalState = "",
+  preparedProfilePlan = null,
+  profilePreparationError = null,
+  profileBuilder = buildVerificationProfile,
+  profileWriter = atomicWriteJsonSync,
+  packageScripts = null,
 } = {}) {
+  let currentPreparedPlan = preparedProfilePlan;
+  let currentPreparationError = profilePreparationError;
+  let currentPackageScripts = packageScripts;
+  if (!currentPackageScripts && !currentPreparationError) {
+    try {
+      currentPackageScripts = readPackageScriptsForProfile();
+    } catch (error) {
+      currentPreparationError = error;
+    }
+  }
+  if (!currentPreparedPlan && !currentPreparationError) {
+    try {
+      currentPreparedPlan = prepareVerificationProfilePlan({
+        selectorReport: report,
+        executionPlan,
+        packageScripts: currentPackageScripts,
+      });
+    } catch (error) {
+      currentPreparationError = error;
+    }
+  }
+  const publication = publishVerificationProfileSafely({
+    outputPath: args.profileOut,
+    previousDiagnostic: report.observerDiagnostics?.profile,
+    buildProfile() {
+      if (currentPreparationError) throw currentPreparationError;
+      return profileBuilder({
+        runnerId: "adaptive-verification",
+        selectorReport: report,
+        executionPlan,
+        executionResults: executionResults || [],
+        preparedPlan: currentPreparedPlan,
+        terminalState,
+      });
+    },
+    writeProfile: profileWriter,
+  });
+  report.observerDiagnostics = {
+    ...(report.observerDiagnostics || {}),
+    profile: publication.diagnostic,
+  };
   atomicWriteJsonSync(args.jsonOut, {
     ...report,
     executionResults,
     executionPlan,
     verificationProfilePath: args.profileOut,
   });
-  atomicWriteJsonSync(args.profileOut, buildVerificationProfile({
-    runnerId: "adaptive-verification",
-    selectorReport: report,
-    executionPlan,
-    executionResults: executionResults || [],
-    packageScripts: readPackageScriptsForProfile(),
-    terminalState,
-  }));
   fs.mkdirSync(path.dirname(args.mdOut), { recursive: true });
   fs.writeFileSync(args.mdOut, renderMarkdown(report, executionResults, executionPlan), "utf8");
 }
@@ -273,6 +313,7 @@ export function executeAdaptivePlan(executionPlan, {
       durationMs: null,
       exitCode: null,
       signal: null,
+      processStarted: false,
     };
     executionResults.push(entry);
     onCheckpoint(executionResults);
@@ -286,6 +327,7 @@ export function executeAdaptivePlan(executionPlan, {
         encoding: "utf8",
       })
       : { status: 1, error: "Command could not be resolved." };
+    entry.processStarted = Boolean(command && result && !result.error);
     const finishedAtDate = now();
     entry.finishedAt = finishedAtDate.toISOString();
     entry.durationMs = Math.max(0, finishedAtDate.getTime() - startedAtDate.getTime());
@@ -334,8 +376,29 @@ function main() {
         : "blocked",
   };
   const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
+  let packageScripts = null;
+  let preparedProfilePlan = null;
+  let profilePreparationError = null;
+  try {
+    packageScripts = readPackageScriptsForProfile();
+    preparedProfilePlan = prepareVerificationProfilePlan({
+      selectorReport: report,
+      executionPlan,
+      packageScripts,
+    });
+  } catch (error) {
+    profilePreparationError = error;
+  }
+  const profileOutputOptions = {
+    preparedProfilePlan,
+    profilePreparationError,
+    packageScripts,
+  };
   if (args.dryRun) {
-    writeOutputs(report, args, null, executionPlan, { terminalState: "planned" });
+    writeAdaptiveOutputs(report, args, null, executionPlan, {
+      ...profileOutputOptions,
+      terminalState: "planned",
+    });
     console.log(
       `Adaptive selection recommended ${report.recommendedCommands.length} commands; `
       + `execution plan keeps ${executionPlan.commandsToRun.length} and blocks ${executionPlan.blockedMainThreadCommands.length} `
@@ -345,7 +408,10 @@ function main() {
   }
 
   if ((report.unmatchedChangedFiles || []).length > 0) {
-    writeOutputs(report, args, null, executionPlan, { terminalState: "blocked" });
+    writeAdaptiveOutputs(report, args, null, executionPlan, {
+      ...profileOutputOptions,
+      terminalState: "blocked",
+    });
     console.error(
       `Adaptive selection found ${report.unmatchedChangedFiles.length} unmatched changed files. `
       + "Add route coverage before running --execute.",
@@ -354,7 +420,10 @@ function main() {
   }
 
   if (executionPlan.blockedMainThreadCommands.length > 0 && !args.deferMainThread) {
-    writeOutputs(report, args, null, executionPlan, { terminalState: "blocked" });
+    writeAdaptiveOutputs(report, args, null, executionPlan, {
+      ...profileOutputOptions,
+      terminalState: "blocked",
+    });
     console.error(
       `Adaptive selection found ${executionPlan.blockedMainThreadCommands.length} main-thread commands. `
       + "Re-run with --include-main-thread after reserving the live test lane.",
@@ -364,7 +433,7 @@ function main() {
 
   const executionResults = executeAdaptivePlan(executionPlan, {
     onCheckpoint(results) {
-      writeOutputs(report, args, results, executionPlan);
+      writeAdaptiveOutputs(report, args, results, executionPlan, profileOutputOptions);
     },
   });
   const failed = executionResults.find((entry) => entry.exitCode !== 0);
@@ -377,7 +446,10 @@ function main() {
       encoding: "utf8",
     });
   }
-  writeOutputs(report, args, executionResults, executionPlan, { terminalState: "passed" });
+  writeAdaptiveOutputs(report, args, executionResults, executionPlan, {
+    ...profileOutputOptions,
+    terminalState: "passed",
+  });
   const deferredSummary = args.deferMainThread
     ? `; deferred ${executionPlan.blockedMainThreadCommands.length} main-thread command(s)`
     : "";

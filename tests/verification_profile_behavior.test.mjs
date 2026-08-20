@@ -6,6 +6,8 @@ import {
   buildVerificationProfile,
   formatVerificationProfile,
   normalizeVerificationTestFile,
+  prepareVerificationProfilePlan,
+  publishVerificationProfileSafely,
 } from "../tools/verification/verification_profile.mjs";
 
 const PACKAGE_SCRIPTS = Object.freeze({
@@ -38,8 +40,8 @@ test("same profile input has stable bytes and leaves the execution plan unchange
     ]),
     executionPlan,
     executionResults: [
-      { commandRef: "meta", status: "passed", exitCode: 0, durationMs: 20 },
-      { commandRef: "product", status: "passed", exitCode: 0, durationMs: 30 },
+      { commandRef: "meta", status: "passed", exitCode: 0, durationMs: 20, processStarted: true },
+      { commandRef: "product", status: "passed", exitCode: 0, durationMs: 30, processStarted: true },
     ],
     packageScripts: PACKAGE_SCRIPTS,
     terminalState: "passed",
@@ -82,8 +84,8 @@ test("profile counts duplicate files, process classes, and meta versus product t
     ]),
     executionPlan: { commandsToRun: ["meta", "product"] },
     executionResults: [
-      { commandRef: "meta", status: "passed", exitCode: 0, durationMs: 100 },
-      { commandRef: "product", status: "passed", exitCode: 0, durationMs: 200 },
+      { commandRef: "meta", status: "passed", exitCode: 0, durationMs: 100, processStarted: true },
+      { commandRef: "product", status: "passed", exitCode: 0, durationMs: 200, processStarted: true },
     ],
     packageScripts: PACKAGE_SCRIPTS,
     terminalState: "passed",
@@ -130,7 +132,7 @@ test("execution-set comparison preserves duplicate command multiplicity", () => 
   const profile = buildVerificationProfile({
     runnerId: "duplicate-command",
     executionPlan: { commandsToRun: [commandRef, commandRef] },
-    executionResults: [{ commandRef, status: "passed", exitCode: 0, durationMs: 1 }],
+    executionResults: [{ commandRef, status: "passed", exitCode: 0, durationMs: 1, processStarted: true }],
   });
 
   assert.deepEqual(profile.selection.executionSetComparison, {
@@ -149,6 +151,7 @@ test("pre-spawn failures stay out of process-start counts", () => {
       status: "failed",
       exitCode: 2,
       durationMs: 5,
+      processStarted: false,
       externalEvidence: { status: "blocked" },
     }],
     packageScripts: PACKAGE_SCRIPTS,
@@ -169,6 +172,7 @@ test("slowest command and file lists are capped at ten with deterministic ties",
     status: "passed",
     exitCode: 0,
     durationMs: index < 2 ? 50 : index * 10,
+    processStarted: true,
   }));
   const profile = buildVerificationProfile({
     runnerId: "top-ten",
@@ -198,6 +202,7 @@ test("failure and interruption terminal states retain partial execution evidence
       status: "failed",
       exitCode: 7,
       durationMs: 25,
+      processStarted: true,
     }],
   });
   assert.deepEqual(failed.lifecycle, {
@@ -220,6 +225,7 @@ test("failure and interruption terminal states retain partial execution evidence
       status: "running",
       exitCode: null,
       durationMs: null,
+      processStarted: false,
     }],
     terminalState: "interrupted",
     interruptionSignal: "SIGINT",
@@ -248,6 +254,7 @@ test("cache hits remain accounted while process and file counts describe current
         exitCode: 0,
         durationMs: 200,
         evidenceDisposition: "current",
+        processStarted: true,
       },
     ],
     packageScripts: PACKAGE_SCRIPTS,
@@ -264,4 +271,134 @@ test("cache hits remain accounted while process and file counts describe current
   assert.deepEqual(profile.selection.processStartedCommands, ["product"]);
   assert.equal(profile.timings.totalCommandWallTimeMs, 200);
   assert.equal(profile.selection.actualFiles.includes("tests/verification_profile_behavior.test.mjs"), false);
+});
+
+test("grouped execution accounts for the normalized canonical leaf multiset", () => {
+  const preparedPlan = prepareVerificationProfilePlan({
+    executionPlan: { commandsToRun: ["root-suite"] },
+    executionProjection: [
+      {
+        rootCommandRef: "root-suite",
+        canonicalLeafRef: "node --test tests/a.test.mjs",
+        executionGroupRef: "group-suite",
+      },
+      {
+        rootCommandRef: "root-suite",
+        canonicalLeafRef: "node --test tests/b.test.mjs",
+        executionGroupRef: "group-suite",
+      },
+      {
+        rootCommandRef: "root-suite",
+        canonicalLeafRef: "node --test tests/a.test.mjs",
+        executionGroupRef: "group-suite",
+      },
+    ],
+  });
+  const profile = buildVerificationProfile({
+    runnerId: "grouped-execution",
+    preparedPlan,
+    executionResults: [{
+      commandRef: "group-suite",
+      status: "passed",
+      exitCode: 0,
+      durationMs: 12,
+      processStarted: true,
+    }],
+    terminalState: "passed",
+  });
+
+  assert.deepEqual(profile.selection.plannedCanonicalLeaves, [
+    "node --test tests/a.test.mjs",
+    "node --test tests/a.test.mjs",
+    "node --test tests/b.test.mjs",
+  ]);
+  assert.deepEqual(profile.selection.accountedCanonicalLeaves, [
+    "node --test tests/a.test.mjs",
+    "node --test tests/a.test.mjs",
+    "node --test tests/b.test.mjs",
+  ]);
+  assert.deepEqual(profile.selection.executionSetComparison, {
+    status: "equivalent",
+    missingCommands: [],
+    unexpectedCommands: [],
+  });
+  assert.deepEqual(profile.selection.actualFiles, ["tests/a.test.mjs", "tests/b.test.mjs"]);
+  assert.equal(profile.files.find((entry) => entry.file === "tests/a.test.mjs").executionCount, 2);
+});
+
+test("prepared profile plans parse commands once across repeated checkpoints", () => {
+  let analysisCount = 0;
+  const preparedPlan = prepareVerificationProfilePlan({
+    selectorReport: selectorReport([["root", ["tests/root.test.mjs"]]]),
+    executionPlan: { commandsToRun: ["root"] },
+    executionProjection: [{
+      rootCommandRef: "root",
+      canonicalLeafRef: "node --test tests/leaf.test.mjs",
+      executionGroupRef: "group",
+    }],
+    commandAnalyzer(commandRef, options) {
+      analysisCount += 1;
+      return analyzeVerificationCommand(commandRef, options);
+    },
+  });
+  const parsedCount = analysisCount;
+
+  for (const status of ["running", "passed"]) {
+    buildVerificationProfile({
+      runnerId: "checkpoint-many",
+      preparedPlan,
+      executionResults: [{
+        commandRef: "group",
+        status,
+        exitCode: status === "passed" ? 0 : null,
+        durationMs: status === "passed" ? 10 : null,
+        processStarted: status === "passed",
+      }],
+    });
+  }
+
+  assert.ok(parsedCount > 0);
+  assert.equal(analysisCount, parsedCount);
+});
+
+test("observer recovery retains the last profile failure diagnostic", () => {
+  const failed = publishVerificationProfileSafely({
+    outputPath: "profile.json",
+    buildProfile() {
+      throw Object.assign(new Error("builder failed"), { code: "builder-failed" });
+    },
+    writeProfile() {},
+  });
+  const recovered = publishVerificationProfileSafely({
+    outputPath: "profile.json",
+    previousDiagnostic: failed.diagnostic,
+    buildProfile() {
+      return { schemaVersion: 1 };
+    },
+    writeProfile() {},
+  });
+
+  assert.equal(recovered.diagnostic.status, "published");
+  assert.equal(recovered.diagnostic.failureCount, 1);
+  assert.equal(recovered.diagnostic.lastFailure.code, "builder-failed");
+});
+
+test("signal evidence infers interrupted lifecycle without counting a pre-spawn process", () => {
+  const profile = buildVerificationProfile({
+    runnerId: "pre-spawn-signal",
+    executionPlan: { commandsToRun: ["node missing.mjs"] },
+    executionResults: [{
+      commandRef: "node missing.mjs",
+      status: "interrupted",
+      exitCode: 1,
+      signal: "SIGINT",
+      processStarted: false,
+      durationMs: 1,
+    }],
+  });
+
+  assert.equal(profile.lifecycle.state, "interrupted");
+  assert.equal(profile.lifecycle.interruptionSignal, "SIGINT");
+  assert.equal(profile.processStarts.total, 0);
+  assert.deepEqual(profile.selection.actualFiles, []);
 });

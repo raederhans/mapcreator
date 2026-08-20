@@ -239,10 +239,7 @@ function cacheOutcome(entry) {
 }
 
 function processWasStarted(entry) {
-  if (typeof entry?.processStarted === "boolean") return entry.processStarted;
-  if (entry?.externalEvidence?.status === "blocked") return false;
-  if (/unresolvable|could not be resolved/iu.test(String(entry?.error || entry?.reason || ""))) return false;
-  return true;
+  return entry?.processStarted === true;
 }
 
 function entryFailed(entry) {
@@ -275,15 +272,76 @@ function slowestFirst(left, right, durationKey = "wallTimeMs", identityKey = "co
     || String(left[identityKey]).localeCompare(String(right[identityKey]));
 }
 
-export function buildVerificationProfile({
-  runnerId,
+function normalizeExecutionProjection(executionProjection, plannedCommands) {
+  const rows = [];
+  for (const entry of executionProjection || []) {
+    const rootCommandRef = commandRefOf(entry?.rootCommandRef);
+    const inheritedGroupRef = commandRefOf(entry?.executionGroupRef) || rootCommandRef;
+    const nestedLeaves = Array.isArray(entry?.canonicalLeaves) ? entry.canonicalLeaves : null;
+    if (nestedLeaves) {
+      for (const leaf of nestedLeaves) {
+        const canonicalLeafRef = commandRefOf(leaf?.canonicalLeafRef || leaf?.commandRef || leaf);
+        const executionGroupRef = commandRefOf(leaf?.executionGroupRef) || inheritedGroupRef;
+        if (rootCommandRef && canonicalLeafRef && executionGroupRef) {
+          rows.push({ rootCommandRef, canonicalLeafRef, executionGroupRef });
+        }
+      }
+      continue;
+    }
+    const canonicalLeafRef = commandRefOf(entry?.canonicalLeafRef);
+    const executionGroupRef = commandRefOf(entry?.executionGroupRef) || rootCommandRef;
+    if (rootCommandRef && canonicalLeafRef && executionGroupRef) {
+      rows.push({ rootCommandRef, canonicalLeafRef, executionGroupRef });
+    }
+  }
+  const projectedRoots = new Set(rows.map((entry) => entry.rootCommandRef));
+  for (const rootCommandRef of stableUnique(plannedCommands)) {
+    if (!projectedRoots.has(rootCommandRef)) {
+      rows.push({
+        rootCommandRef,
+        canonicalLeafRef: rootCommandRef,
+        executionGroupRef: rootCommandRef,
+      });
+    }
+  }
+  return rows.sort((left, right) => (
+    left.rootCommandRef.localeCompare(right.rootCommandRef)
+    || left.canonicalLeafRef.localeCompare(right.canonicalLeafRef)
+    || left.executionGroupRef.localeCompare(right.executionGroupRef)
+  ));
+}
+
+function plannedLeavesFromProjection(plannedCommands, projection) {
+  const leavesByRoot = new Map();
+  for (const entry of projection) {
+    const leaves = leavesByRoot.get(entry.rootCommandRef) || [];
+    leaves.push(entry.canonicalLeafRef);
+    leavesByRoot.set(entry.rootCommandRef, leaves);
+  }
+  return stableValues(plannedCommands.flatMap((rootCommandRef) => (
+    leavesByRoot.get(rootCommandRef) || [rootCommandRef]
+  )));
+}
+
+function defaultMissingAnalysis(commandRef) {
+  return {
+    commandRef,
+    leafCommands: [],
+    testFiles: [],
+    processStarts: { ...emptyProcessStarts(), total: 0 },
+    analysisIssues: commandRef ? [`profile-plan-missing-analysis:${commandRef}`] : [],
+  };
+}
+
+export function prepareVerificationProfilePlan({
   selectorReport = null,
   executionPlan = null,
+  executionProjection = executionPlan?.verificationProfileProjection
+    || executionPlan?.executionProjection
+    || [],
   executionResults = [],
   packageScripts = {},
-  runnerState = "",
-  terminalState = "",
-  interruptionSignal = null,
+  commandAnalyzer = analyzeVerificationCommand,
 } = {}) {
   const recommendedCommands = stableValues(
     (selectorReport?.recommendedCommands || []).map(commandRefOf).filter(Boolean),
@@ -291,6 +349,119 @@ export function buildVerificationProfile({
   const plannedCommands = stableValues(
     (executionPlan?.commandsToRun || []).map(commandRefOf).filter(Boolean),
   );
+  const projection = normalizeExecutionProjection(executionProjection, plannedCommands);
+  const observedCommands = stableValues(
+    (executionResults || []).map(commandRefOf).filter(Boolean),
+  );
+  const allCommandRefs = stableUnique([
+    ...recommendedCommands,
+    ...plannedCommands,
+    ...observedCommands,
+    ...projection.flatMap((entry) => [
+      entry.rootCommandRef,
+      entry.canonicalLeafRef,
+      entry.executionGroupRef,
+    ]),
+  ]);
+  const analysisByCommand = {};
+  const selectorFilesByCommand = {};
+  for (const commandRef of allCommandRefs) {
+    analysisByCommand[commandRef] = structuredClone(commandAnalyzer(commandRef, { packageScripts }));
+    selectorFilesByCommand[commandRef] = selectorFilesForCommand(selectorReport, commandRef);
+  }
+  const filesForCommand = (commandRef) => {
+    const analyzed = analysisByCommand[commandRef]?.testFiles || [];
+    return analyzed.length > 0 ? analyzed : selectorFilesByCommand[commandRef] || [];
+  };
+  const plannedCanonicalLeaves = plannedLeavesFromProjection(plannedCommands, projection);
+  const selectorRecommendedFiles = stableUnique(recommendedCommands.flatMap((commandRef) => (
+    (selectorFilesByCommand[commandRef] || []).length > 0
+      ? selectorFilesByCommand[commandRef]
+      : filesForCommand(commandRef)
+  )));
+
+  return {
+    schemaVersion: 1,
+    kind: "verification-profile-prepared-plan",
+    selectorAdaptiveMode: String(selectorReport?.adaptiveMode || ""),
+    recommendedCommands,
+    plannedCommands,
+    executionProjection: projection,
+    plannedCanonicalLeaves,
+    selectorRecommendedFiles,
+    plannedFiles: stableUnique(plannedCanonicalLeaves.flatMap(filesForCommand)),
+    analysisByCommand,
+    selectorFilesByCommand,
+  };
+}
+
+function profileObserverFailure(error, phase) {
+  return {
+    phase,
+    code: String(error?.code || "verification-profile-observer-error"),
+    message: String(error?.message || error),
+  };
+}
+
+export function publishVerificationProfileSafely({
+  outputPath,
+  buildProfile,
+  writeProfile,
+  previousDiagnostic = null,
+}) {
+  let profile = null;
+  let failure = null;
+  try {
+    profile = buildProfile();
+  } catch (error) {
+    failure = profileObserverFailure(error, "build");
+  }
+  if (!failure) {
+    try {
+      writeProfile(outputPath, profile);
+    } catch (error) {
+      failure = profileObserverFailure(error, "publish");
+    }
+  }
+  const previousFailureCount = Number(previousDiagnostic?.failureCount || 0);
+  return {
+    profile,
+    diagnostic: {
+      schemaVersion: 1,
+      kind: "verification-profile-observer-diagnostic",
+      outputPath: String(outputPath || ""),
+      status: failure ? "error" : "published",
+      attempts: Number(previousDiagnostic?.attempts || 0) + 1,
+      failureCount: previousFailureCount + (failure ? 1 : 0),
+      lastFailure: failure || previousDiagnostic?.lastFailure || null,
+    },
+  };
+}
+
+export function buildVerificationProfile({
+  runnerId,
+  selectorReport = null,
+  executionPlan = null,
+  executionProjection = executionPlan?.verificationProfileProjection
+    || executionPlan?.executionProjection
+    || [],
+  executionResults = [],
+  packageScripts = {},
+  preparedPlan = null,
+  runnerState = "",
+  terminalState = "",
+  interruptionSignal = null,
+} = {}) {
+  const prepared = preparedPlan || prepareVerificationProfilePlan({
+    selectorReport,
+    executionPlan,
+    executionProjection,
+    executionResults,
+    packageScripts,
+  });
+  const recommendedCommands = prepared.recommendedCommands || [];
+  const plannedCommands = prepared.plannedCommands || [];
+  const projection = prepared.executionProjection || [];
   const resultEntries = (executionResults || [])
     .filter((entry) => entry && entry.status !== "pending")
     .map((entry) => structuredClone(entry));
@@ -298,29 +469,48 @@ export function buildVerificationProfile({
   const cacheMissEntries = resultEntries.filter((entry) => cacheOutcome(entry) === "miss");
   const processStartedEntries = cacheMissEntries.filter(processWasStarted);
   const processStartedCommands = stableValues(processStartedEntries.map(commandRefOf).filter(Boolean));
-  const allCommandRefs = stableUnique([
-    ...recommendedCommands,
-    ...plannedCommands,
-    ...accountedCommands,
-  ]);
-  const analysisByCommand = new Map(allCommandRefs.map((commandRef) => [
-    commandRef,
-    analyzeVerificationCommand(commandRef, { packageScripts }),
-  ]));
+  const analysisByCommand = prepared.analysisByCommand || {};
   const filesForCommand = (commandRef) => {
-    const analyzed = analysisByCommand.get(commandRef)?.testFiles || [];
-    return analyzed.length > 0 ? analyzed : selectorFilesForCommand(selectorReport, commandRef);
+    const analyzed = analysisByCommand[commandRef]?.testFiles || [];
+    return analyzed.length > 0
+      ? analyzed
+      : prepared.selectorFilesByCommand?.[commandRef] || [];
   };
-  const selectorRecommendedFiles = stableUnique(recommendedCommands.flatMap((commandRef) => (
-    selectorFilesForCommand(selectorReport, commandRef).length > 0
-      ? selectorFilesForCommand(selectorReport, commandRef)
-      : filesForCommand(commandRef)
-  )));
-  const plannedFiles = stableUnique(plannedCommands.flatMap(filesForCommand));
-  const actualFiles = stableUnique(processStartedEntries.flatMap((entry) => filesForCommand(commandRefOf(entry))));
-  const missingCommands = multisetDifference(plannedCommands, accountedCommands);
-  const unexpectedCommands = multisetDifference(accountedCommands, plannedCommands);
-  const comparisonStatus = selectorReport?.adaptiveMode === "dry-run"
+  const leavesForExecutionCommand = (commandRef) => {
+    const projected = projection
+      .filter((entry) => entry.executionGroupRef === commandRef)
+      .map((entry) => entry.canonicalLeafRef);
+    return projected.length > 0 ? projected : [commandRef];
+  };
+  const rootsForExecutionCommand = (commandRef) => {
+    const projected = stableUnique(
+      projection
+        .filter((entry) => entry.executionGroupRef === commandRef)
+        .map((entry) => entry.rootCommandRef),
+    );
+    return projected.length > 0 ? projected : [commandRef];
+  };
+  const plannedCanonicalLeaves = prepared.plannedCanonicalLeaves
+    || plannedLeavesFromProjection(plannedCommands, projection);
+  const accountedCanonicalLeaves = stableValues(
+    resultEntries.flatMap((entry) => leavesForExecutionCommand(commandRefOf(entry))),
+  );
+  const filesForExecutionCommand = (commandRef) => (
+    leavesForExecutionCommand(commandRef).flatMap(filesForCommand)
+  );
+  const selectorRecommendedFiles = prepared.selectorRecommendedFiles || [];
+  const plannedFiles = prepared.plannedFiles || [];
+  const actualFiles = stableUnique(
+    processStartedEntries.flatMap((entry) => filesForExecutionCommand(commandRefOf(entry))),
+  );
+  const missingCommands = multisetDifference(plannedCanonicalLeaves, accountedCanonicalLeaves);
+  const unexpectedCommands = multisetDifference(accountedCanonicalLeaves, plannedCanonicalLeaves);
+  const accountedRootCommands = stableValues(
+    resultEntries.flatMap((entry) => rootsForExecutionCommand(commandRefOf(entry))),
+  );
+  const rootMissingCommands = multisetDifference(plannedCommands, accountedRootCommands);
+  const rootUnexpectedCommands = multisetDifference(accountedRootCommands, plannedCommands);
+  const comparisonStatus = prepared.selectorAdaptiveMode === "dry-run"
     || new Set(["listed", "planned"]).has(String(runnerState || "").toLowerCase())
     ? "not-executed"
     : missingCommands.length === 0 && unexpectedCommands.length === 0
@@ -334,11 +524,11 @@ export function buildVerificationProfile({
   let productTestWallTimeMs = 0;
   for (const entry of processStartedEntries) {
     const commandRef = commandRefOf(entry);
-    const analysis = analysisByCommand.get(commandRef) || analyzeVerificationCommand(commandRef, { packageScripts });
+    const analysis = analysisByCommand[commandRef] || defaultMissingAnalysis(commandRef);
     for (const key of Object.keys(processStarts)) {
       processStarts[key] += Number(analysis.processStarts[key] || 0);
     }
-    const files = filesForCommand(commandRef);
+    const files = filesForExecutionCommand(commandRef);
     const wallTimeMs = nonNegativeDuration(entry.durationMs);
     const classification = classifyCommand(commandRef, files);
     if (classification === "meta-verification") metaVerificationWallTimeMs += wallTimeMs;
@@ -375,6 +565,9 @@ export function buildVerificationProfile({
   const failedCommandRef = commandRefOf(
     resultEntries.find(entryFailed),
   ) || null;
+  const observedInterruptionSignal = interruptionSignal
+    || resultEntries.find((entry) => entry.signal)?.signal
+    || null;
 
   return {
     schemaVersion: VERIFICATION_PROFILE_SCHEMA_VERSION,
@@ -384,7 +577,7 @@ export function buildVerificationProfile({
       state,
       terminal: TERMINAL_PROFILE_STATES.has(state),
       failedCommandRef,
-      interruptionSignal: interruptionSignal ? String(interruptionSignal) : null,
+      interruptionSignal: observedInterruptionSignal ? String(observedInterruptionSignal) : null,
     },
     selection: {
       selectorRecommendedCommands: recommendedCommands,
@@ -393,10 +586,16 @@ export function buildVerificationProfile({
       selectorRecommendedUniqueFileCount: selectorRecommendedFiles.length,
       plannedCommands,
       plannedCommandCount: plannedCommands.length,
+      plannedCanonicalLeaves,
+      plannedCanonicalLeafCount: plannedCanonicalLeaves.length,
       plannedFiles,
       plannedUniqueFileCount: plannedFiles.length,
       accountedCommands,
       accountedCommandCount: accountedCommands.length,
+      accountedRootCommands,
+      accountedRootCommandCount: accountedRootCommands.length,
+      accountedCanonicalLeaves,
+      accountedCanonicalLeafCount: accountedCanonicalLeaves.length,
       processStartedCommands,
       processStartedCommandCount: processStartedCommands.length,
       actualFiles,
@@ -405,6 +604,15 @@ export function buildVerificationProfile({
         status: comparisonStatus,
         missingCommands,
         unexpectedCommands,
+      },
+      rootExecutionSetComparison: {
+        status: comparisonStatus === "not-executed"
+          ? "not-executed"
+          : rootMissingCommands.length === 0 && rootUnexpectedCommands.length === 0
+            ? "equivalent"
+            : "partial",
+        missingCommands: rootMissingCommands,
+        unexpectedCommands: rootUnexpectedCommands,
       },
     },
     processStarts: {
@@ -432,7 +640,7 @@ export function buildVerificationProfile({
     },
     files,
     analysisIssues: stableUnique(
-      [...analysisByCommand.values()].flatMap((analysis) => analysis.analysisIssues),
+      Object.values(analysisByCommand).flatMap((analysis) => analysis.analysisIssues),
     ),
   };
 }

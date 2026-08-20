@@ -31,11 +31,15 @@ import {
   discoverChangedFiles,
   executeAdaptivePlan,
   parseArgs as parseAdaptiveArgs,
+  writeAdaptiveOutputs,
 } from "../tools/run_adaptive_tests.mjs";
 import {
   buildCommandSupersessionPlan,
   collapseSupersededCommands,
 } from "../tools/verification/command_supersession.mjs";
+import {
+  buildVerificationProfile,
+} from "../tools/verification/verification_profile.mjs";
 
 const PACKAGE_SCRIPTS = {
   "test:node:city-points-render-owner": "node --test tests/city_points_render_owner_behavior.test.mjs tests/urban_city_policy_strategic_values_behavior.test.mjs",
@@ -410,6 +414,161 @@ test("--list writes reports and does not execute", () => {
   );
 });
 
+test("core observer publication failures preserve command order and original exit", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "verify-core-profile-failure-"));
+  const profileParent = path.join(tempDir, "profile-parent");
+  fs.writeFileSync(profileParent, "file blocks directory creation", "utf8");
+  const calls = [];
+  const result = runCoreVerification({
+    argv: {
+      ...parseArgs([]),
+      jsonOut: path.join(tempDir, "verify-core.json"),
+      mdOut: path.join(tempDir, "verify-core.md"),
+      profileOut: path.join(profileParent, "verify-core-profile.json"),
+    },
+    packageScripts: PACKAGE_SCRIPTS,
+    identityReader: () => cleanIdentity("profile-failure", "profile-failure-tree"),
+    stdio: "pipe",
+    stateWriterEvidenceEnsurer: ({ producer }) => fakeStateWriterEvidenceResult({
+      commandRef: producer.commandRef,
+    }),
+    runner(bin, args) {
+      calls.push([bin, ...args]);
+      return { status: calls.length === 2 ? 7 : 0 };
+    },
+  });
+
+  assert.equal(result.exitCode, 7);
+  assert.equal(calls.length, 2);
+  assert.equal(result.report.observerDiagnostics.profile.status, "error");
+  assert.equal(result.report.observerDiagnostics.profile.lastFailure.phase, "publish");
+  const persisted = JSON.parse(fs.readFileSync(path.join(tempDir, "verify-core.json"), "utf8"));
+  assert.equal(persisted.observerDiagnostics.profile.failureCount > 0, true);
+});
+
+test("core observer builder failures remain diagnostic across successful execution", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "verify-core-profile-builder-"));
+  let calls = 0;
+  const result = runCoreVerification({
+    argv: {
+      ...parseArgs([]),
+      jsonOut: path.join(tempDir, "verify-core.json"),
+      mdOut: path.join(tempDir, "verify-core.md"),
+      profileOut: path.join(tempDir, "verify-core-profile.json"),
+    },
+    packageScripts: PACKAGE_SCRIPTS,
+    identityReader: () => cleanIdentity("builder-failure", "builder-failure-tree"),
+    stdio: "pipe",
+    stateWriterEvidenceEnsurer: ({ producer }) => fakeStateWriterEvidenceResult({
+      commandRef: producer.commandRef,
+    }),
+    profileBuilder() {
+      throw Object.assign(new Error("profile builder exploded"), { code: "profile-builder-test" });
+    },
+    runner() {
+      calls += 1;
+      return { status: 0 };
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(calls, result.plan.commandsToRun.length);
+  assert.equal(result.report.observerDiagnostics.profile.lastFailure.code, "profile-builder-test");
+  assert.equal(fs.existsSync(path.join(tempDir, "verify-core-profile.json")), false);
+});
+
+test("core running checkpoints stay pre-spawn until the runner returns", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "verify-core-process-start-"));
+  const snapshots = [];
+  const result = runCoreVerification({
+    argv: {
+      ...parseArgs([]),
+      jsonOut: path.join(tempDir, "verify-core.json"),
+      mdOut: path.join(tempDir, "verify-core.md"),
+      profileOut: path.join(tempDir, "verify-core-profile.json"),
+    },
+    packageScripts: PACKAGE_SCRIPTS,
+    identityReader: () => cleanIdentity("process-start", "process-start-tree"),
+    stdio: "pipe",
+    profileBuilder(input) {
+      snapshots.push(input.executionResults.map((entry) => ({
+        status: entry.status,
+        processStarted: entry.processStarted,
+      })));
+      return buildVerificationProfile(input);
+    },
+    runner() {
+      return { status: 7 };
+    },
+  });
+
+  assert.equal(result.exitCode, 7);
+  assert.equal(snapshots[0][0].processStarted, false);
+  assert.deepEqual(snapshots[1][0], { status: "running", processStarted: false });
+  assert.deepEqual(snapshots[2][0], { status: "failed", processStarted: true });
+  assert.equal(result.report.commands[0].processStarted, true);
+});
+
+test("adaptive observer publication and builder failures stay in primary evidence", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-profile-failure-"));
+  const profileParent = path.join(tempDir, "profile-parent");
+  fs.writeFileSync(profileParent, "file blocks directory creation", "utf8");
+  const args = {
+    jsonOut: path.join(tempDir, "adaptive.json"),
+    mdOut: path.join(tempDir, "adaptive.md"),
+    profileOut: path.join(profileParent, "adaptive-profile.json"),
+  };
+  const report = {
+    adaptiveMode: "execute",
+    discoveryMode: "explicit-input",
+    mainThreadDisposition: "deferred",
+    changedFiles: [],
+    recommendedCommands: [],
+    unmatchedChangedFiles: [],
+  };
+  const executionPlan = {
+    commandsToRun: [],
+    blockedMainThreadCommands: [],
+    supersededCommands: [],
+  };
+  writeAdaptiveOutputs(report, args, [], executionPlan);
+  let persisted = JSON.parse(fs.readFileSync(args.jsonOut, "utf8"));
+  assert.equal(persisted.observerDiagnostics.profile.lastFailure.phase, "publish");
+
+  const calls = [];
+  const results = executeAdaptivePlan({
+    ...executionPlan,
+    commandsToRun: ["node first.mjs", "node second.mjs"],
+  }, {
+    runner() {
+      calls.push(calls.length + 1);
+      return { status: calls.length === 2 ? 7 : 0 };
+    },
+    onCheckpoint(entries) {
+      writeAdaptiveOutputs(report, args, entries, {
+        ...executionPlan,
+        commandsToRun: ["node first.mjs", "node second.mjs"],
+      });
+    },
+  });
+  assert.deepEqual(results.map((entry) => entry.exitCode), [0, 7]);
+  assert.equal(calls.length, 2);
+  persisted = JSON.parse(fs.readFileSync(args.jsonOut, "utf8"));
+  assert.equal(persisted.observerDiagnostics.profile.status, "error");
+
+  writeAdaptiveOutputs(report, {
+    ...args,
+    profileOut: path.join(tempDir, "adaptive-profile.json"),
+  }, [], executionPlan, {
+    profileBuilder() {
+      throw Object.assign(new Error("adaptive builder exploded"), { code: "adaptive-builder-test" });
+    },
+  });
+  persisted = JSON.parse(fs.readFileSync(args.jsonOut, "utf8"));
+  assert.equal(persisted.observerDiagnostics.profile.lastFailure.code, "adaptive-builder-test");
+  assert.equal(persisted.observerDiagnostics.profile.lastFailure.phase, "build");
+});
+
 test("execution records failure and stops on first failing command", () => {
   const plan = buildCoreVerificationPlan({
     packageScripts: { first: "node first.mjs", second: "node second.mjs", third: "node third.mjs" },
@@ -778,6 +937,7 @@ test("core runner blocks a boundary before spawn when evidence setup is blocked"
     boundary.externalEvidence.code,
     "state-writer-evidence-workspace-dirty",
   );
+  assert.equal(boundary.processStarted, false);
   assert.match(boundary.error, /disposition=blocked/);
 });
 
@@ -1385,8 +1545,11 @@ test("adaptive execution checkpoints running and terminal results with timings",
   });
   assert.equal(checkpoints.length, 4);
   assert.equal(checkpoints[0][0].status, "running");
+  assert.equal(checkpoints[0][0].processStarted, false);
   assert.equal(checkpoints[1][0].status, "passed");
+  assert.equal(checkpoints[1][0].processStarted, true);
   assert.equal(checkpoints[3][1].status, "failed");
+  assert.equal(checkpoints[3][1].processStarted, true);
   assert.deepEqual(results.map((entry) => entry.durationMs), [25, 25]);
   assert.deepEqual(results.map((entry) => entry.exitCode), [0, 7]);
 });
@@ -1408,5 +1571,35 @@ test("adaptive execution records an interrupted terminal result and stops", () =
   assert.equal(results[0].status, "interrupted");
   assert.equal(results[0].signal, "SIGINT");
   assert.equal(results[0].exitCode, 1);
+  assert.equal(results[0].processStarted, true);
   assert.equal(checkpoints.at(-1)[0].status, "interrupted");
+});
+
+test("adaptive pre-spawn ENOENT and interrupted evidence keep processStarted false", () => {
+  const missing = Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" });
+  const checkpoints = [];
+  const results = executeAdaptivePlan({
+    commandsToRun: ["node missing.mjs", "node later.mjs"],
+  }, {
+    runner() {
+      return { status: null, signal: "SIGINT", error: missing };
+    },
+    onCheckpoint(entries) {
+      checkpoints.push(structuredClone(entries));
+    },
+  });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].status, "interrupted");
+  assert.equal(results[0].processStarted, false);
+  assert.equal(checkpoints[0][0].processStarted, false);
+  assert.equal(checkpoints.at(-1)[0].processStarted, false);
+
+  const unresolved = executeAdaptivePlan({ commandsToRun: [""] }, {
+    runner() {
+      throw new Error("unresolved commands must stop before runner invocation");
+    },
+  });
+  assert.equal(unresolved[0].status, "failed");
+  assert.equal(unresolved[0].processStarted, false);
 });

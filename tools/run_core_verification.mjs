@@ -34,6 +34,8 @@ import {
 import {
   buildVerificationProfile,
   DEFAULT_CORE_VERIFICATION_PROFILE_OUT,
+  prepareVerificationProfilePlan,
+  publishVerificationProfileSafely,
 } from "./verification/verification_profile.mjs";
 
 const REPO_ROOT = process.cwd();
@@ -313,7 +315,10 @@ function writeExecutionReport(report, {
   jsonOut,
   mdOut,
   profileOut = null,
-  packageScripts = {},
+  preparedProfilePlan = null,
+  profilePreparationError = null,
+  profileBuilder = buildVerificationProfile,
+  profileWriter = atomicWriteJsonSync,
 }) {
   report.updatedAt = new Date().toISOString();
   report.summary = summarizeCommandStates(report.commands);
@@ -327,19 +332,33 @@ function writeExecutionReport(report, {
       durationMs: entry.durationMs,
       evidenceDisposition: entry.evidenceDisposition,
       externalEvidence: entry.externalEvidence || null,
+      processStarted: entry.processStarted === true,
+      signal: entry.signal || null,
+      error: entry.error || null,
     }));
-  atomicWriteJsonSync(jsonOut, report);
   if (profileOut) {
-    atomicWriteJsonSync(profileOut, buildVerificationProfile({
-      runnerId: report.runnerId,
-      executionPlan: {
-        commandsToRun: (report.planIdentity?.commands || []).map((entry) => entry.commandRef),
+    const interruptionSignal = report.commands.find((entry) => entry.signal)?.signal || null;
+    const publication = publishVerificationProfileSafely({
+      outputPath: profileOut,
+      previousDiagnostic: report.observerDiagnostics?.profile,
+      buildProfile() {
+        if (profilePreparationError) throw profilePreparationError;
+        return profileBuilder({
+          runnerId: report.runnerId,
+          preparedPlan: preparedProfilePlan,
+          executionResults: report.commands,
+          runnerState: interruptionSignal ? "interrupted" : report.verdict,
+          interruptionSignal,
+        });
       },
-      executionResults: report.commands,
-      packageScripts,
-      runnerState: report.verdict,
-    }));
+      writeProfile: profileWriter,
+    });
+    report.observerDiagnostics = {
+      ...(report.observerDiagnostics || {}),
+      profile: publication.diagnostic,
+    };
   }
+  atomicWriteJsonSync(jsonOut, report);
   fs.mkdirSync(path.dirname(mdOut), { recursive: true });
   fs.writeFileSync(mdOut, renderExecutionMarkdown(report), "utf8");
   return report;
@@ -429,12 +448,26 @@ export function runCoreVerification({
   changedFilesReader = (baseSha) => discoverChangedFilesBetween(baseSha, { cwd }),
   stateWriterEvidenceEnsurer = ensureStateWriterPolicyEvidence,
   baseEnv = process.env,
+  profileBuilder = buildVerificationProfile,
+  profileWriter = atomicWriteJsonSync,
 } = {}) {
   const args = Array.isArray(argv) ? parseArgs(argv) : argv;
   const liveFallbackSession = createStateWriterPolicyEvidenceSession();
   const plan = buildCoreVerificationPlan({ includeMainThread: args.includeMainThread, packageScripts });
   const runnerId = args.includeMainThread ? "verify-core-main-thread" : "verify-core";
   const planIdentity = buildPlanIdentity({ runnerId, entries: plan.commandsToRun });
+  let preparedProfilePlan = null;
+  let profilePreparationError = null;
+  try {
+    preparedProfilePlan = prepareVerificationProfilePlan({
+      executionPlan: {
+        commandsToRun: (planIdentity?.commands || []).map((entry) => entry.commandRef),
+      },
+      packageScripts,
+    });
+  } catch (error) {
+    profilePreparationError = error;
+  }
   const verificationIdentity = identityReader();
   let previousCheckpoint = null;
   let resumeDecision = {
@@ -485,9 +518,14 @@ export function runCoreVerification({
       checkpoint: previousCheckpoint,
       resumeDecision,
       verificationIdentity,
-    }),
+    }).map((entry) => ({
+      ...entry,
+      processStarted: false,
+      signal: null,
+    })),
     summary: null,
     results: [],
+    observerDiagnostics: {},
     reportPaths: {
       json: args.jsonOut,
       markdown: args.mdOut,
@@ -498,7 +536,10 @@ export function runCoreVerification({
     jsonOut: args.jsonOut,
     mdOut: args.mdOut,
     profileOut: args.profileOut || null,
-    packageScripts,
+    preparedProfilePlan,
+    profilePreparationError,
+    profileBuilder,
+    profileWriter,
   });
   if (args.list) {
     checkpoint();
@@ -557,13 +598,16 @@ export function runCoreVerification({
           };
         }
       }
-      return runner(command.bin, command.args, {
+      const result = runner(command.bin, command.args, {
         cwd,
         stdio,
         shell: false,
         encoding: "utf8",
         env,
       });
+      commandEntry.processStarted = Boolean(result && !result.error);
+      commandEntry.signal = result?.signal ? String(result.signal) : null;
+      return result;
     },
   });
   const failed = report.commands.find((entry) => entry.status === "failed");
