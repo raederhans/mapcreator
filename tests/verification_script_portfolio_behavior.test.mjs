@@ -19,6 +19,7 @@ import {
   formatScriptPortfolioSummary,
   parseScriptPortfolioArgs,
   normalizeVerificationPath,
+  sealVerificationCatalog,
 } from "../tools/verification/script_portfolio.mjs";
 import { buildRouteIndex } from "../tools/test_route_registry.mjs";
 import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
@@ -175,7 +176,9 @@ test("real package check enforces catalog consistency through the retained CLI e
 function route(commandRef, domain, overrides = {}) {
   return {
     commandRef,
+    sourceRef: "tests/fixture_authority.test.mjs",
     domain,
+    ownerHint: "fixture-authority",
     cost: "fast",
     executionOwner: "child-safe",
     platforms: ["linux", "win32"],
@@ -455,7 +458,7 @@ test("reports mechanical consistency gaps across catalog, scripts, and route rec
     selectorPlanFailures: [{ commandRef: "missing-route", error: "verification-plan-unresolved-ref:missing-route" }],
     supersessionMismatches: [],
     authorityMismatches: ["authority"],
-    catalogIdentityMismatches: ["sourceMode", "identity", "selectorCommandRefs"],
+    catalogIdentityMismatches: ["schemaVersion", "kind", "sourceMode", "identity", "selectorCommandRefs"],
     sourceIntegrityMismatches: ["sourceIntegrity"],
     unclassifiedCatalogEntries: [],
     targetlessDiscoveryEntries: [],
@@ -539,7 +542,7 @@ test("propagates suite metadata to leaf plans and detects root-specific metadata
       suite: "npm run leaf",
     },
     records: [
-      route("leaf", "leaf-domain", { cost: "fast", tier: undefined, ciProfile: "pr-fast" }),
+      route("leaf", "leaf-domain", { cost: "fast", ciProfile: "pr-fast" }),
       route("suite", "suite-domain", {
         cost: "heavy",
         executionOwner: "main-thread",
@@ -567,7 +570,7 @@ test("propagates suite metadata to leaf plans and detects root-specific metadata
     executionOwner: "main-thread",
     platforms: ["win32"],
     resourceLocks: [".runtime-output"],
-    tiers: ["heavy"],
+    tiers: ["contract", "heavy"],
     ciProfiles: ["full", "pr-fast"],
   });
   assert.throws(
@@ -786,6 +789,65 @@ test("reports deterministic command, target, and execution metadata drift", () =
   );
 });
 
+test("catalog schema and kind remain fixed after mutation and resealing", () => {
+  const inputs = {
+    packageScripts: { a: "node --test tests/a.test.mjs" },
+    records: [route("a", "a")],
+  };
+  const catalog = buildVerificationCatalog(inputs);
+  for (const [field, value] of [
+    ["schemaVersion", 2],
+    ["kind", "forged-verification-catalog"],
+  ]) {
+    const forged = sealVerificationCatalog({ ...structuredClone(catalog), [field]: value });
+    const consistency = checkVerificationCatalogConsistency(forged, inputs);
+    assert.equal(consistency.consistent, false);
+    assert.ok(consistency.catalogIdentityMismatches.includes(field));
+    assert.throws(
+      () => buildVerificationSelectionPlan(forged, ["a"]),
+      /verification-plan-catalog-identity/,
+    );
+  }
+});
+
+test("catalog authority preserves presence and every required field fails closed when removed", () => {
+  const implicitPlatformRoute = route("a", "a");
+  delete implicitPlatformRoute.platforms;
+  const inputs = {
+    packageScripts: { a: "node --test tests/a.test.mjs" },
+    records: [implicitPlatformRoute],
+  };
+  const catalog = buildVerificationCatalog(inputs);
+  assert.deepEqual(catalog.authority[0].platforms, ["all"]);
+  assert.equal(catalog.authority[0].presence.platforms, false);
+  assert.equal(catalog.authority[0].presence.resourceLocks, true);
+
+  for (const field of [
+    "routeIds",
+    "safetyContributorRouteIds",
+    "sourceRefs",
+    "domains",
+    "ownerHints",
+    "tiers",
+    "ciProfiles",
+    "platforms",
+    "cost",
+    "executionOwner",
+    "resourceLocks",
+    "presence",
+  ]) {
+    const forgedCatalog = structuredClone(catalog);
+    delete forgedCatalog.authority[0][field];
+    const forged = sealVerificationCatalog(forgedCatalog);
+    assert.equal(checkVerificationCatalogConsistency(forged, inputs).consistent, false, field);
+    assert.throws(
+      () => buildVerificationSelectionPlan(forged, ["a"]),
+      new RegExp(`verification-plan-authority-gap:a:${field === "presence" ? "presence" : field}`),
+      field,
+    );
+  }
+});
+
 test("fails closed for unsupported shell operators while preserving quoted script syntax", () => {
   for (const [operator, escaped] of [
     ["||", "\\|\\|"],
@@ -808,6 +870,26 @@ test("fails closed for unsupported shell operators while preserving quoted scrip
     records: [route("quoted", "shell")],
   });
   assert.equal(buildVerificationSelectionPlan(quoted, ["quoted"]).executions[0].runner, "opaque");
+});
+
+test("rejects unquoted command-separator controls including CR LF and CRLF", () => {
+  for (const [separator, code] of [
+    ["\r", "CR"],
+    ["\n", "LF"],
+    ["\r\n", "CR"],
+    ["\v", "VT"],
+    ["\f", "FF"],
+    ["\u2028", "LS"],
+  ]) {
+    assert.throws(
+      () => buildVerificationCatalog({ packageScripts: { unsafe: `node before.mjs${separator}node after.mjs` } }),
+      new RegExp(`verification-catalog-unsupported-shell-operator:unsafe:${code}`),
+    );
+  }
+  assert.doesNotThrow(() => buildVerificationCatalog({
+    packageScripts: { quoted: `node -e "console.log('before
+after')"` },
+  }));
 });
 
 test("uses repo-relative Windows identity with case folding and stable UNC handling", () => {
@@ -1056,6 +1138,7 @@ test("reconciled authority rejects route source drift mechanically", () => {
   const shared = {
     id: "shared-route",
     commandRef: "a",
+    sourceRef: "tests/a.test.mjs",
     domain: "a",
     ownerHint: "a",
     layer: "contract",

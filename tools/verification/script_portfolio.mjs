@@ -17,6 +17,7 @@ import { resolveP4StateWriterPolicyRun } from "../run_p4_state_writer_policy_tes
 
 export const SCRIPT_PORTFOLIO_SCHEMA_VERSION = 1;
 export const VERIFICATION_CATALOG_SCHEMA_VERSION = 1;
+export const VERIFICATION_CATALOG_KIND = "verification-test-catalog";
 export const CANONICAL_VERIFICATION_ENTRYPOINTS = Object.freeze([
   "verify:pr",
   "verify:demo",
@@ -55,11 +56,68 @@ function sourceIntegrityForCatalog(catalog) {
   };
 }
 
+export function sealVerificationCatalog(catalog) {
+  const sealedCatalog = { ...catalog };
+  delete sealedCatalog.sourceIntegrity;
+  return { ...sealedCatalog, sourceIntegrity: sourceIntegrityForCatalog(sealedCatalog) };
+}
+
+function assertCatalogAuthorityCompleteness(authority) {
+  if (!Array.isArray(authority)) throw new Error("verification-plan-authority-gap:<catalog>:authority");
+  for (const entry of authority) {
+    const commandRef = String(entry?.commandRef || "<unknown>");
+    for (const field of [
+      "routeIds",
+      "safetyContributorRouteIds",
+      "sourceRefs",
+      "domains",
+      "ownerHints",
+      "tiers",
+      "ciProfiles",
+      "platforms",
+    ]) {
+      if (!Array.isArray(entry?.[field]) || entry[field].length === 0) {
+        throw new Error(`verification-plan-authority-gap:${commandRef}:${field}`);
+      }
+    }
+    if (!COST_ORDER.includes(entry?.cost)) {
+      throw new Error(`verification-plan-authority-gap:${commandRef}:cost`);
+    }
+    if (!EXECUTION_OWNER_ORDER.includes(entry?.executionOwner)) {
+      throw new Error(`verification-plan-authority-gap:${commandRef}:executionOwner`);
+    }
+    if (!Object.hasOwn(entry, "resourceLocks") || !Array.isArray(entry.resourceLocks)) {
+      throw new Error(`verification-plan-authority-gap:${commandRef}:resourceLocks`);
+    }
+    const presenceFields = [
+      "sourceRefs",
+      "domains",
+      "ownerHints",
+      "tiers",
+      "costs",
+      "resourceLocks",
+      "executionOwners",
+      "ciProfiles",
+      "platforms",
+    ];
+    if (!entry.presence || presenceFields.some((field) => typeof entry.presence[field] !== "boolean")) {
+      throw new Error(`verification-plan-authority-gap:${commandRef}:presence`);
+    }
+    if (entry.presence.resourceLocks !== true) {
+      throw new Error(`verification-plan-authority-gap:${commandRef}:resourceLocks`);
+    }
+  }
+}
+
 function assertCatalogSourceIntegrity(catalog, { allowUnverifiedCatalog = false } = {}) {
   if (allowUnverifiedCatalog) return;
   if (!catalog?.sourceIntegrity?.digest || catalog.sourceIntegrity.algorithm !== "sha256") {
     throw new Error("verification-plan-unverified-catalog");
   }
+  if (catalog?.schemaVersion !== VERIFICATION_CATALOG_SCHEMA_VERSION || catalog?.kind !== VERIFICATION_CATALOG_KIND) {
+    throw new Error(`verification-plan-catalog-identity:${String(catalog?.schemaVersion)}:${String(catalog?.kind)}`);
+  }
+  assertCatalogAuthorityCompleteness(catalog?.authority);
   const actual = sourceIntegrityForCatalog(catalog);
   if (actual.digest !== catalog.sourceIntegrity.digest) {
     throw new Error("verification-plan-catalog-source-drift");
@@ -109,6 +167,19 @@ function assertSupportedShellOperators(command, id) {
     if (quote) {
       if (character === quote) quote = null;
       continue;
+    }
+    const commandSeparatorControl = {
+      "\0": "NUL",
+      "\r": "CR",
+      "\n": "LF",
+      "\v": "VT",
+      "\f": "FF",
+      "\u0085": "NEL",
+      "\u2028": "LS",
+      "\u2029": "PS",
+    }[character];
+    if (commandSeparatorControl) {
+      throw new Error(`verification-catalog-unsupported-shell-operator:${id}:${commandSeparatorControl}`);
     }
     if (character === "'" || character === '"') {
       quote = character;
@@ -446,7 +517,9 @@ function parseLeafDefinition(id, command, metadata, pathOptions = {}) {
 function catalogAuthority({ records = [], selectorRoutes = [], authority } = {}) {
   if (authority !== undefined) {
     if (!Array.isArray(authority)) throw new TypeError("verification-catalog-invalid-authority");
-    return authority.map((entry) => ({ ...entry })).sort((left, right) => compareText(left.commandRef, right.commandRef));
+    const provided = authority.map((entry) => ({ ...entry })).sort((left, right) => compareText(left.commandRef, right.commandRef));
+    assertCatalogAuthorityCompleteness(provided);
+    return provided;
   }
   const normalizedRecords = records.map((record, index) => ({
     ...record,
@@ -457,7 +530,9 @@ function catalogAuthority({ records = [], selectorRoutes = [], authority } = {})
     ...route,
     authoritySource: "selector-route",
   }));
-  return reconcileVerificationRouteAuthority([...normalizedRecords, ...normalizedRoutes]);
+  const reconciled = reconcileVerificationRouteAuthority([...normalizedRecords, ...normalizedRoutes]);
+  assertCatalogAuthorityCompleteness(reconciled);
+  return reconciled;
 }
 
 function selectorDiscoverySpecs(command, selectorRoutes) {
@@ -570,14 +645,14 @@ export function buildVerificationCatalog(input, options = {}) {
       : authority.map((entry) => entry.commandRef)));
   const catalog = {
     schemaVersion: VERIFICATION_CATALOG_SCHEMA_VERSION,
-    kind: "verification-test-catalog",
+    kind: VERIFICATION_CATALOG_KIND,
     sourceMode: input?.sourceMode || "fixture",
     identity: { repoRoot: normalizeVerificationPath(repoRoot, { repoRoot: "", platform }), platform },
     authority,
     selectorCommandRefs,
     entries,
   };
-  return { ...catalog, sourceIntegrity: sourceIntegrityForCatalog(catalog) };
+  return sealVerificationCatalog(catalog);
 }
 
 /** Build the repository catalog from package scripts, metadata, and every selector route. */
@@ -714,7 +789,7 @@ export function checkVerificationCatalogConsistency(catalog, {
   const authorityMismatches = JSON.stringify(actualAuthority) === JSON.stringify(expectedCatalog.authority)
     ? []
     : ["authority"];
-  const catalogIdentityMismatches = ["sourceMode", "identity", "selectorCommandRefs"]
+  const catalogIdentityMismatches = ["schemaVersion", "kind", "sourceMode", "identity", "selectorCommandRefs"]
     .filter((field) => JSON.stringify(catalog?.[field]) !== JSON.stringify(expectedCatalog[field]));
   const expectedSourceIntegrity = sourceIntegrityForCatalog(catalog);
   const sourceIntegrityMismatches = catalog?.sourceIntegrity?.algorithm === "sha256"

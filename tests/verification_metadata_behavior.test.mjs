@@ -1465,6 +1465,7 @@ test("selector and catalog authority share contributor owner, lock, and CI recon
   assert.deepEqual(directPython.ciProfiles, ["pr-fast"]);
 
   const report = buildRecommendation(["tests/williams_crossover_windows_job_runner_integration.test.mjs"]);
+  assert.deepEqual(report.routeAuthority, authority);
   const selectedTelemetry = report.recommendedCommands
     .find((entry) => entry.commandRef === telemetry.commandRef);
   assert.ok(selectedTelemetry);

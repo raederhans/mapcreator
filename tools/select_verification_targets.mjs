@@ -445,10 +445,11 @@ function selectionContributor(entry, disposition, extra = {}) {
   };
 }
 
-function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
+function buildCommandEntries(routes, allRoutes = buildRouteIndex(), reconciledAuthority = null) {
   const byCommand = new Map();
   const authorityByCommand = new Map(
-    reconcileVerificationRouteAuthority(allRoutes).map((entry) => [entry.commandRef, entry]),
+    (reconciledAuthority || reconcileVerificationRouteAuthority(allRoutes))
+      .map((entry) => [entry.commandRef, entry]),
   );
   for (const route of routes) {
     const existing = byCommand.get(route.commandRef) || {
@@ -544,6 +545,7 @@ function skippedHeavyRoutes(allRoutes, selectedRoutes) {
 
 function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
   validateRouteIndex(allRoutes);
+  const routeAuthority = reconcileVerificationRouteAuthority(allRoutes);
   const p4ExactPhaseSelection = resolveP4ExactPhaseSelection(allRoutes);
   const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
   const importGraph = readImportGraph();
@@ -552,9 +554,9 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
     routes: currentPhaseRoutesForChangedFile(allRoutes, file, importGraph, p4ExactPhaseSelection),
   }));
   const matchedRoutes = matchedRoutesByFile.flatMap((entry) => entry.routes);
-  const commandEntries = buildCommandEntries(matchedRoutes, allRoutes);
+  const commandEntries = buildCommandEntries(matchedRoutes, allRoutes, routeAuthority);
   for (const entry of matchedRoutesByFile) {
-    const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes);
+    const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes, routeAuthority);
     entry.commandEntries = perFileCommandEntries;
   }
   const childSafeRoutes = commandEntries.filter((entry) => classifyExecutionOwners(entry.executionOwners) === "child-safe");
@@ -568,6 +570,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
   return {
     schemaVersion: 1,
     selectionPlatform: process.platform,
+    routeAuthority,
     changedFiles: normalizedChangedFiles,
     importGraphLoaded: !!importGraph,
     recommendedCommands: commandEntries.map((entry) => ({

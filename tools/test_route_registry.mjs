@@ -742,6 +742,17 @@ function routeValues(route, singular, plural) {
 }
 
 function normalizeAuthorityContributor(route) {
+  const presence = {
+    sourceRefs: Object.hasOwn(route || {}, "sourceRef") || Object.hasOwn(route || {}, "sourceRefs"),
+    domains: Object.hasOwn(route || {}, "domain") || Object.hasOwn(route || {}, "domains"),
+    ownerHints: Object.hasOwn(route || {}, "ownerHint") || Object.hasOwn(route || {}, "ownerHints"),
+    tiers: ["layer", "layers", "tier", "tiers"].some((field) => Object.hasOwn(route || {}, field)),
+    costs: Object.hasOwn(route || {}, "cost") || Object.hasOwn(route || {}, "costs"),
+    resourceLocks: Object.hasOwn(route || {}, "resourceLocks"),
+    executionOwners: Object.hasOwn(route || {}, "executionOwner") || Object.hasOwn(route || {}, "executionOwners"),
+    ciProfiles: Object.hasOwn(route || {}, "ciProfile") || Object.hasOwn(route || {}, "ciProfiles"),
+    platforms: Object.hasOwn(route || {}, "platform") || Object.hasOwn(route || {}, "platforms"),
+  };
   const sourceRefs = Array.isArray(route?.sourceRefs)
     ? sortedRouteValues(route.sourceRefs)
     : sortedRouteValues(String(route?.sourceRef || "").split(","));
@@ -768,6 +779,7 @@ function normalizeAuthorityContributor(route) {
     ciProfiles,
     platforms: platforms.length > 0 ? platforms : ["all"],
     sourceKinds: sortedRouteValues(route?.authoritySource || route?.sourceKind || "selector-route"),
+    presence,
   };
 }
 
@@ -780,6 +792,23 @@ export function classifyVerificationExecutionOwners(executionOwners) {
 }
 
 function assertAuthorityContributorSchema(contributor) {
+  for (const field of [
+    "sourceRefs",
+    "domains",
+    "ownerHints",
+    "tiers",
+    "costs",
+    "executionOwners",
+    "ciProfiles",
+    "platforms",
+  ]) {
+    if (!Array.isArray(contributor[field]) || contributor[field].length === 0) {
+      throw new Error(`verification-route-authority-required-field:${contributor.id}:${field}`);
+    }
+  }
+  if (contributor.presence?.resourceLocks !== true || !Array.isArray(contributor.resourceLocks)) {
+    throw new Error(`verification-route-authority-required-field:${contributor.id}:resourceLocks`);
+  }
   for (const owner of contributor.executionOwners) {
     if (!EXECUTION_OWNERS.includes(owner)) {
       throw new Error(`verification-route-authority-invalid-execution-owner:${contributor.id}:${owner}`);
@@ -842,6 +871,8 @@ export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) 
         throw new Error(`verification-route-authority-source-drift:${contributor.id}:${fields.join(",")}`);
       }
       existing.sourceKinds = sortedRouteValues([...existing.sourceKinds, ...contributor.sourceKinds]);
+      existing.presence = Object.fromEntries(Object.keys(existing.presence)
+        .map((field) => [field, existing.presence[field] || contributor.presence[field]]));
       continue;
     }
     contributorsById.set(contributor.id, contributor);
@@ -863,6 +894,8 @@ export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) 
       : costs.sort((left, right) => COSTS.indexOf(right) - COSTS.indexOf(left))[0];
     const platforms = sortedRouteValues(contributors.flatMap((entry) => entry.platforms));
     const ciProfiles = sortedRouteValues(contributors.flatMap((entry) => entry.ciProfiles));
+    const presence = Object.fromEntries(Object.keys(contributors[0].presence)
+      .map((field) => [field, contributors.every((entry) => entry.presence[field] === true)]));
     return {
       commandRef,
       routeIds: contributors.map((entry) => entry.id),
@@ -878,8 +911,14 @@ export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) 
       resourceLocks: sortedRouteValues(contributors.flatMap((entry) => entry.resourceLocks)),
       tiers: sortedRouteValues(contributors.flatMap((entry) => entry.tiers)),
       ciProfiles,
+      presence,
       metadataComplete: COSTS.includes(cost)
         && EXECUTION_OWNERS.includes(executionOwner)
+        && contributors.every((entry) => entry.sourceRefs.length > 0)
+        && contributors.every((entry) => entry.domains.length > 0)
+        && contributors.every((entry) => entry.ownerHints.length > 0)
+        && contributors.every((entry) => entry.tiers.length > 0)
+        && contributors.every((entry) => entry.presence.resourceLocks === true)
         && platforms.length > 0
         && ciProfiles.length > 0,
       contributors,
