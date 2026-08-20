@@ -5,6 +5,8 @@
 - Worktree: `C:\Users\raede\.codex\worktrees\ded1\mapcreator`
 - Branch: `codex/p43-fast-verification-runner`
 - Starting revision: `132e5b4542eab9e1fabe1d3861575bde458650f3`
+- Phase 0 closeout worktree: `C:\Users\raede\.codex\worktrees\be0f\mapcreator`
+- Phase 0 branch/base: `codex/verification-j2b-closeout@9869698da5331e9afcc961f42b4666469abe6c46`
 - The prior core report planned 92 commands, passed the first 10, and stopped at `verify:test-console-allowlist`.
 - `verify:core` currently lacks Git identity, per-command checkpoint, timing, and resume support.
 - P4 phase verification already records initial/final SHA and tree and checkpoints command status, while resume and timing remain absent.
@@ -53,6 +55,10 @@
 | 2026-08-14 | Split J2 into compatibility-first J2a and production wiring J2b. | J2a extracts a shared Windows Job Object core while preserving Williams V1 evidence and source identity; J2b adds parent-death/control semantics and wires the P4 runner only after J2a equivalence is frozen. |
 | 2026-08-14 | Integrate J2a as `69b17903`. | The nine-line Williams V1 entrypoint delegates to an algorithm-equivalent shared Job Object core. The compiler reads each source once, compiles frozen copies, and binds the actual binary to a canonical ordered source-set carried through preparation, preregistration, block, and manifest evidence. |
 | 2026-08-14 | Bind the source identity helper itself into Williams tool identity. | Helper drift now invalidates current, candidate, block, and raw-manifest evidence; the new helper/core route to governance, job-runner, and live perf lanes with zero unmatched files. |
+| 2026-08-20 | Re-audit Phase 0 from isolated branch `codex/verification-j2b-closeout@9869698d` in worktree `be0f`. | Current committed code already includes the J2b V2 control protocol and P4 containment wiring from `fccef91b`; production code stays frozen while the exact acceptance gates are rerun. |
+| 2026-08-20 | Accept Stage 6J-C/J2b from the current committed implementation after bounded Windows revalidation. | Explicit cancel and parent death both produce zero active, remaining, unverified, or externally alive descendants; helper-crash uncertainty stays blocked and P4 admission requires verified tree-contained evidence. |
+| 2026-08-20 | Freeze verification-reform feature expansion after Phase 0 closeout. | Any later verification-platform change must show at least 20% same-environment benefit on the required PR lane, record exact before/after execution sets, prove coverage equivalence for selection changes, and preserve fail-closed contracts. |
+| 2026-08-20 | Restore the isolated worktree dependency layer from the committed lockfile. | The first SF-ATS child-safe attempt stopped on missing `acorn`; `npm ci --ignore-scripts --no-audit --no-fund` installed five declared packages, and the final 16-command child-safe plan passed. |
 
 ## Live process ownership
 
@@ -73,6 +79,8 @@
 | Stage 6J Windows lifecycle audit | thread `019ffb53-ee12-7f72-9c0e-801190c2cae0`, worktree `269f` | read-only; no `.runtime` writes | complete; J2 readiness is `READY_WITH_REQUIRED_WILLIAMS_IDENTITY_MIGRATION` |
 | Stage 6J evidence/adversarial audit | thread `019ffb54-8b38-7630-9b13-363cfba20917`, worktree `3121` | read-only; no `.runtime` writes | complete; final verdict `J_C_FINAL_REVIEW_CLEAR` |
 | Stage 6J-B/J2a shared Job core | root plus three bounded native subagents, integration worktree `ded1` | short fake/contract tests plus one bounded Windows integration | integrated as `69b17903`; Williams V1 compatibility and exact compiled-source identity clear |
+| Stage 6J-C/J2b bounded Windows integration | current `verification-j2b-closeout` task, branch `codex/verification-j2b-closeout`, worktree `be0f` | command `npm run test:node:windows-job-runtime:integration`; log `.runtime/reports/generated/verification-j2b-closeout/windows-job-integration.log`; retained PID evidence `.runtime/reports/generated/verification-j2b-closeout/process-tree-evidence-1787208039654-4bb2a3c8-a216-4273-969b-27636119b808.json`; no ports, databases, shared caches, or checkpoints | complete, exit 0, 5/5; all ten recorded owner/helper/root/descendant PIDs were absent at the external recheck |
+| Phase 0 SF-ATS child-safe verification | current `verification-j2b-closeout` task, worktree `be0f` | 13-file Phase 0 scope through `tools/run_adaptive_tests.mjs --execute --defer-main-thread`; JSON/Markdown/log under `.runtime/reports/generated/verification-j2b-closeout/`; current worktree `.runtime` is task-owned | complete, exit 0; 16/16 commands passed, all files matched, route schema 371 passed, and six main-thread/live commands remained deferred |
 
 ## Handoff
 
@@ -80,7 +88,7 @@ The root supervisor is the integration owner. Each hotspot task owns only its as
 
 ## Next step
 
-Design J2b from exact base `69b17903`: add a V2 parent-death/control protocol beside the preserved Williams V1 entrypoint, then wire verified descendant cleanup into the P4 lifecycle. Preserve the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until J2b containment and a same-environment control or CI run admit the newer candidate.
+Integrate the Phase 0 docs-only closeout commit before phases 1-3, then retain the complete 356/356 TAP at `b7f9b40e` as the current admission baseline until the final Stage 5b same-environment or CI run produces a newer canonical admission artifact.
 
 ## 2026-08-20 phase 0-3 coordination handoff
 
@@ -93,7 +101,7 @@ Design J2b from exact base `69b17903`: add a V2 parent-death/control protocol be
 | Existing worktrees | `codex/gate4-pages-reachability-inventory@9fe902d5` is clean; `export-pipeline/mapcreator@de7c9815` is detached and clean. They remain outside phase ownership. |
 | Current phase 2 observation | `.github/workflows/verify-shared.yml` already invokes `run_adaptive_tests.mjs --execute --defer-main-thread`; the phase 2 worker must determine the remaining gap against the full phase contract and may deliver an evidence-backed no-op. |
 | Integration order | 0 -> 1 -> 2 -> 3, with explicit conflict and semantic-overlap review after each delivery. |
-| Live-process owner | None at dispatch. Workers may run short isolated checks. Windows Job integration, browser, dist, performance, full P4, and shared `.runtime` checks require an explicitly recorded single owner. |
+| Live-process owner | Phase 0 `verification-j2b-closeout` owned and completed the bounded Windows Job integration in worktree `be0f`. Browser, dist, performance, full P4, and shared integration `.runtime` checks remain assigned to the final integration/CI owner. |
 | Final authority | A fresh independent audit task reviews exact commits. A separate integration task owns refs, ordered integration, final validation, push, registry synchronization, and final report. |
 
 Each execution task must report base and head SHA, branch, status, owned paths, changed files, regression coverage, commands and exit status, artifacts, route gaps, skipped main-thread or CI gates, remaining risk, and recommended integration method. A no-op requires current code and targeted evidence proving the phase contract is already satisfied.
