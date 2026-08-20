@@ -8,8 +8,14 @@ import {
   classifyExecutionOwners,
   normalizeChangedFiles,
 } from "./select_verification_targets.mjs";
-import { buildCommandSupersessionPlan } from "./verification/command_supersession.mjs";
+import { buildRouteIndex } from "./test_route_registry.mjs";
+import { VERIFICATION_DOMAINS } from "./verification/verification_domains.mjs";
 import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
+import {
+  buildVerificationSelectionPlan,
+  prepareRepositoryVerificationCatalog,
+  prepareVerificationCatalog,
+} from "./verification/script_portfolio.mjs";
 import {
   buildVerificationProfile,
   DEFAULT_ADAPTIVE_VERIFICATION_PROFILE_OUT,
@@ -233,6 +239,36 @@ function planGap(code, commandRef, detail = "") {
     commandRef: String(commandRef || ""),
     detail: String(detail || ""),
   };
+}
+
+function selectionRootSet(report) {
+  return uniqueSorted((report?.recommendedCommands || []).map((entry) => entry.commandRef));
+}
+
+export function bindSelectionToPreparedCatalog(report, preparedCatalog) {
+  return {
+    ...report,
+    catalogDigest: preparedCatalog.catalogDigest,
+    catalogSourceIdentity: structuredClone(preparedCatalog.sourceIdentity),
+    selectorRootSet: selectionRootSet(report),
+    routeAuthority: structuredClone(preparedCatalog.authority),
+  };
+}
+
+function validateSelectionCatalogBinding(report, preparedCatalog, {
+  expectedSelectorRootSet = selectionRootSet(report),
+} = {}) {
+  const gaps = [];
+  const compare = (field, actual, expected) => {
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      gaps.push(planGap("adaptive-selection-catalog-drift", "selection-artifact", field));
+    }
+  };
+  compare("catalogDigest", report?.catalogDigest, preparedCatalog.catalogDigest);
+  compare("catalogSourceIdentity", report?.catalogSourceIdentity, preparedCatalog.sourceIdentity);
+  compare("selectorRootSet", report?.selectorRootSet, expectedSelectorRootSet);
+  compare("routeAuthority", report?.routeAuthority, preparedCatalog.authority);
+  return gaps;
 }
 
 function shellSyntaxError(code, source) {
@@ -794,6 +830,10 @@ function authorityMetadata(entry) {
   return {
     executionOwner: entry.executionOwner,
     executionOwners: uniqueSorted(entry.executionOwners),
+    sourceRefs: uniqueSorted(entry.sourceRefs),
+    domains: uniqueSorted(entry.domains),
+    ownerHints: uniqueSorted(entry.ownerHints),
+    cost: entry.cost,
     platforms: uniqueSorted(entry.platforms),
     resourceLocks: uniqueSorted(entry.resourceLocks),
     tiers: uniqueSorted(entry.tiers),
@@ -821,6 +861,9 @@ function validateAuthorityContributor(entry, expectedDisposition, platform, rout
   const executionOwners = requiredStringArray(entry, "executionOwners", {
     allowEmpty: expectedDisposition === "blocked",
   });
+  const sourceRefs = requiredStringArray(entry, "sourceRefs");
+  const domains = requiredStringArray(entry, "domains");
+  const ownerHints = requiredStringArray(entry, "ownerHints");
   const platforms = requiredStringArray(entry, "platforms");
   const resourceLocks = requiredStringArray(entry, "resourceLocks", { allowEmpty: true });
   const tiers = requiredStringArray(entry, "tiers");
@@ -831,6 +874,9 @@ function validateAuthorityContributor(entry, expectedDisposition, platform, rout
   const provenanceSafetyIds = requiredStringArray(entry?.provenance, "safetyContributorRouteIds");
   const missing = [
     ["executionOwners", executionOwners],
+    ["sourceRefs", sourceRefs],
+    ["domains", domains],
+    ["ownerHints", ownerHints],
     ["platforms", platforms],
     ["resourceLocks", resourceLocks],
     ["tiers", tiers],
@@ -846,6 +892,10 @@ function validateAuthorityContributor(entry, expectedDisposition, platform, rout
   }
   if (typeof entry.executionOwner !== "string" || !AUTHORITY_DISPOSITIONS.has(entry.executionOwner)) {
     routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.executionOwner`));
+    return null;
+  }
+  if (typeof entry.cost !== "string" || !entry.cost.trim()) {
+    routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.cost`));
     return null;
   }
   if (!AUTHORITY_DISPOSITIONS.has(entry.disposition)) {
@@ -869,16 +919,12 @@ function validateAuthorityContributor(entry, expectedDisposition, platform, rout
     ));
     return null;
   }
-  if (!platforms.includes(platform)) {
+  if (!platforms.includes("all") && !platforms.includes(platform)) {
     routeGaps.push(planGap(
       "adaptive-selection-platform-mismatch",
       commandRef,
       `current=${platform};artifact=${platforms.join("+")}`,
     ));
-    return null;
-  }
-  if (JSON.stringify(tiers) !== JSON.stringify(ciProfiles)) {
-    routeGaps.push(planGap("adaptive-selection-authority-conflict", commandRef, "tiers!=ciProfiles"));
     return null;
   }
   if (JSON.stringify(routeIds) !== JSON.stringify(provenanceRouteIds)
@@ -1073,10 +1119,10 @@ export function planExecutionLaneFromPackageScripts({
   };
 }
 
-function normalizePlannerLane({
+function projectCanonicalLane({
   disposition,
   rootContributors,
-  packageScripts,
+  preparedCatalog,
   executionPlanner,
   platform,
   routeGaps,
@@ -1084,149 +1130,249 @@ function normalizePlannerLane({
 }) {
   const rootCommandRefs = rootContributors.map((entry) => entry.commandRef);
   plannerInvocations.push({ disposition, rootCommandRefs: [...rootCommandRefs] });
-  let result;
+  let plan;
   try {
-    result = executionPlanner({
-      schemaVersion: EXECUTION_PLANNER_SCHEMA_VERSION,
-      disposition,
-      platform,
-      rootCommandRefs: [...rootCommandRefs],
-      rootContributors: rootContributors.map((entry) => structuredClone(entry)),
-      packageScripts,
-    });
+    const maxLeaves = Math.min(HARD_MAX_GROUP_LEAVES, ...rootContributors.map((entry) => entry.maxLeaves));
+    const platformArgvLimit = platform === "win32" ? WINDOWS_MAX_ARGV_BYTES : POSIX_MAX_ARGV_BYTES;
+    const maxArgvBytes = Math.min(platformArgvLimit, ...rootContributors.map((entry) => entry.maxArgvBytes));
+    plan = executionPlanner(
+      preparedCatalog.catalog,
+      rootContributors.map((entry) => structuredClone(entry)),
+      {
+        preparedCatalog,
+        disposition,
+        platform,
+        maxLeaves: Number.isFinite(maxLeaves) ? maxLeaves : HARD_MAX_GROUP_LEAVES,
+        maxArgvBytes: Number.isFinite(maxArgvBytes) ? maxArgvBytes : platformArgvLimit,
+      },
+    );
   } catch (error) {
-    routeGaps.push(planGap(error.code || "adaptive-execution-planner-error", disposition, error.message));
-    return [];
+    const code = error.code || String(error.message || "adaptive-execution-planner-error").split(":")[0];
+    routeGaps.push(planGap(code, disposition, error.message));
+    return { plan: null, leaves: [], groups: [] };
   }
-  if (!result
-    || result.schemaVersion !== EXECUTION_PLANNER_SCHEMA_VERSION
-    || result.disposition !== disposition
-    || !Array.isArray(result.plannedRoots)
-    || !Array.isArray(result.routeGaps)) {
-    routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, "invalid-result-schema"));
-    return [];
+  if (!plan
+    || plan.schemaVersion !== 1
+    || plan.kind !== "verification-selection-plan"
+    || plan.status !== "ready"
+    || plan.catalogDigest !== preparedCatalog.catalogDigest
+    || !Array.isArray(plan.requestedCommandRefs)
+    || !Array.isArray(plan.selectedCommandRefs)
+    || !Array.isArray(plan.rootRecords)
+    || !Array.isArray(plan.normalizedLeaves)
+    || !Array.isArray(plan.executions)
+    || !Array.isArray(plan.dependencyEdges)
+    || !Array.isArray(plan.resourceLockGroups)) {
+    routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, "invalid-final-plan"));
+    return { plan: null, leaves: [], groups: [] };
   }
-  for (const gap of result.routeGaps) {
-    routeGaps.push(planGap(gap?.code || "adaptive-execution-planner-gap", gap?.commandRef || disposition, gap?.detail || ""));
+  if (JSON.stringify(plan.requestedCommandRefs) !== JSON.stringify(rootCommandRefs)) {
+    routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, "requested-root-drift"));
+    return { plan: null, leaves: [], groups: [] };
   }
-  const expectedRoots = new Map(rootContributors.map((entry) => [entry.commandRef, entry]));
-  const observedRoots = new Set();
-  const rawLeaves = [];
-  let sequence = 0;
-  for (const plannedRoot of result.plannedRoots) {
-    const commandRef = typeof plannedRoot?.commandRef === "string" ? plannedRoot.commandRef.trim() : "";
-    if (!commandRef || !expectedRoots.has(commandRef) || observedRoots.has(commandRef)) {
-      routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef || disposition, "unknown-or-duplicate-root"));
-      continue;
+  const contributorsByCommand = new Map(rootContributors.map((entry) => [entry.commandRef, entry]));
+  const groups = plan.executions.map((execution) => {
+    const sourceRootRefs = uniqueSorted(execution.provenance.map((entry) => entry.rootCommandRef));
+    const contributors = sourceRootRefs.map((commandRef) => contributorsByCommand.get(commandRef)).filter(Boolean);
+    const routeIds = uniqueSorted(execution.provenance.flatMap((entry) => entry.routeIds || []));
+    const safetyContributorRouteIds = uniqueSorted(
+      execution.provenance.flatMap((entry) => entry.safetyContributorRouteIds || []),
+    );
+    return {
+      disposition,
+      kind: execution.runner,
+      commandRef: formatCommandTokens([execution.executable, ...execution.effectiveArgv]),
+      rootCommandRef: sourceRootRefs[0] || null,
+      sourceRootRefs,
+      sourceCommandRefs: sourceRootRefs,
+      sourceRefs: uniqueSorted(contributors.flatMap((entry) => entry.sourceRefs)),
+      process: { bin: execution.executable, args: [...execution.effectiveArgv] },
+      processRef: execution.executionId,
+      processClass: execution.processClass,
+      isolation: execution.isolation,
+      groupId: execution.executionId,
+      executionGroupRef: execution.executionId,
+      canonicalLeafRefs: [...execution.leafKeys],
+      leafIds: [...execution.leafKeys],
+      files: [...execution.files],
+      modules: [...execution.modules],
+      specs: [...execution.specs],
+      routeIds,
+      safetyContributorRouteIds,
+      resourceLocks: [...execution.resourceLocks],
+      executionOwner: execution.executionOwner,
+      executionOwners: uniqueSorted(contributors.flatMap((entry) => entry.executionOwners)),
+      platforms: [...execution.platforms],
+      tiers: [...execution.tiers],
+      ciProfiles: [...execution.ciProfiles],
+      domains: [...execution.domains],
+      cost: execution.cost,
+      leafCount: execution.leafCount,
+      argvBytes: execution.argvBytes,
+      maxLeaves: execution.maxLeaves,
+      maxArgvBytes: execution.maxArgvBytes,
+      provenance: structuredClone(execution.provenance),
+      dependencyEdges: plan.dependencyEdges.filter((edge) => (
+        edge.from === execution.executionId || edge.to === execution.executionId
+      )),
+      sourceOrder: execution.order,
+    };
+  });
+  const groupByLeaf = new Map(groups.flatMap((group) => (
+    group.leafIds.map((leafId) => [leafId, group])
+  )));
+  const leaves = plan.normalizedLeaves.map((leafId, sequence) => {
+    const group = groupByLeaf.get(leafId);
+    if (!group) {
+      routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, `unprojected-leaf:${leafId}`));
+      return null;
     }
-    observedRoots.add(commandRef);
-    if (!Array.isArray(plannedRoot.expandedCommands)) {
-      routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef, "expandedCommands"));
-      continue;
-    }
-    const root = expectedRoots.get(commandRef);
-    for (const [commandIndex, entry] of plannedRoot.expandedCommands.entries()) {
-      if (!entry
-        || !Array.isArray(entry.tokens)
-        || entry.tokens.length === 0
-        || !entry.tokens.every((token) => typeof token === "string" && token.trim())
-        || !Array.isArray(entry.aliasPath)
-        || !entry.aliasPath.every((token) => typeof token === "string" && token.trim())) {
-        routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef, `expandedCommands[${commandIndex}]`));
-        continue;
-      }
-      const processKey = `${commandRef}\u0000${commandIndex}`;
-      rawLeaves.push(...normalizeExpandedCommand(entry, root, sequence, processKey));
-      sequence += 1;
-    }
-  }
-  for (const commandRef of rootCommandRefs) {
-    if (!observedRoots.has(commandRef)) {
-      routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef, "missing-root"));
-    }
-  }
-  return mergeLeaves(rawLeaves, routeGaps);
+    const separator = leafId.indexOf(":");
+    return {
+      leafId,
+      canonicalLeafRef: leafId,
+      kind: separator === -1 ? group.kind : leafId.slice(0, separator),
+      target: separator === -1 ? leafId : leafId.slice(separator + 1),
+      disposition,
+      authorityDisposition: disposition,
+      executionOwner: group.executionOwner,
+      executionOwners: [...group.executionOwners],
+      platforms: [...group.platforms],
+      resourceLocks: [...group.resourceLocks],
+      tiers: [...group.tiers],
+      ciProfiles: [...group.ciProfiles],
+      isolation: group.isolation,
+      batchSafe: group.isolation === "batch",
+      maxLeaves: group.maxLeaves,
+      maxArgvBytes: group.maxArgvBytes,
+      sourceCommandRefs: [...group.sourceCommandRefs],
+      sourceRootRefs: [...group.sourceRootRefs],
+      routeIds: [...group.routeIds],
+      safetyContributorRouteIds: [...group.safetyContributorRouteIds],
+      aliasPaths: group.provenance.map((entry) => entry.expansionPath),
+      processKeys: [group.processRef],
+      executionGroupRef: group.executionGroupRef,
+      processRef: group.processRef,
+      processClass: group.processClass,
+      files: [...group.files],
+      modules: [...group.modules],
+      specs: [...group.specs],
+      provenance: structuredClone(group.provenance),
+      dependencyEdges: structuredClone(group.dependencyEdges),
+      sourceOrder: group.sourceOrder,
+      sequence,
+    };
+  }).filter(Boolean);
+  return { plan, leaves, groups };
 }
 
-function collapseRoots(commandRefs, routeGaps) {
-  try {
-    return buildCommandSupersessionPlan(commandRefs);
-  } catch (error) {
-    routeGaps.push(planGap(error.code || "adaptive-supersession-error", error.commandRef || "", error.message));
-    return { commandRefs: [], supersededCommands: [] };
+function prepareAdaptiveCatalog(report, packageScripts, platform) {
+  if (Array.isArray(report.routeAuthority) && report.routeAuthority.length > 0) {
+    return prepareVerificationCatalog({
+      packageScripts,
+      authority: report.routeAuthority,
+      selectorCommandRefs: report.routeAuthority.map((entry) => entry.commandRef),
+      platform,
+      sourceMode: "fixture",
+    });
   }
+  const selectorRoutes = (report.recommendedCommands || []).map((entry, index) => ({
+    ...structuredClone(entry),
+    id: entry.routeIds?.[0] || `adaptive-fixture:${String(index + 1).padStart(4, "0")}`,
+    authoritySource: "selector-route",
+  }));
+  return prepareVerificationCatalog({
+    packageScripts,
+    selectorRoutes,
+    selectorCommandRefs: selectorRoutes.map((entry) => entry.commandRef),
+    platform,
+    sourceMode: "fixture",
+  });
 }
 
 export function buildExecutionPlan(report, {
   includeMainThread = false,
   packageScripts = readPackageScripts(),
   platform = process.platform,
-  // Phase 3 can replace this whole-lane seam with its canonical catalog planner.
-  executionPlanner = planExecutionLaneFromPackageScripts,
+  preparedCatalog = null,
+  executionPlanner = buildVerificationSelectionPlan,
 } = {}) {
   const authority = resolveSelectionAuthority(report, { platform });
   const routeGaps = [...authority.routeGaps, ...(report.blockedVerification || []).map((entry) => (
     planGap("adaptive-route-owner-gap", entry.commandRef, entry.reason)
   ))];
+  let currentPreparedCatalog = preparedCatalog;
+  try {
+    currentPreparedCatalog ||= prepareAdaptiveCatalog(report, packageScripts, platform);
+    if (preparedCatalog
+      && (preparedCatalog.sourceMode === "repository" || report.catalogDigest !== undefined)) {
+      routeGaps.push(...validateSelectionCatalogBinding(report, preparedCatalog));
+    }
+  } catch (error) {
+    routeGaps.push(planGap(
+      error.code || String(error.message || "adaptive-catalog-preparation-error").split(":")[0],
+      "verification-catalog",
+      error.message,
+    ));
+  }
   // run_adaptive_tests 自身可能被 selector 推荐；这里过滤递归命令，避免执行模式套娃。
   const withoutAdaptiveRecursion = (entries) => entries
     .filter((entry) => !entry.commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
   const childSafeContributors = withoutAdaptiveRecursion(authority.byDisposition.get("child-safe") || []);
   const mainThreadContributors = withoutAdaptiveRecursion(authority.byDisposition.get("main-thread") || []);
   const ciOnlyContributors = withoutAdaptiveRecursion(authority.byDisposition.get("ci-only") || []);
-  const childSafeCommands = uniqueSorted(childSafeContributors.map((entry) => entry.commandRef));
-  const mainThreadCommands = uniqueSorted(mainThreadContributors.map((entry) => entry.commandRef));
-  const ciOnlyCommands = uniqueSorted(ciOnlyContributors.map((entry) => entry.commandRef));
-  const selectedRootPlan = collapseRoots(
-    includeMainThread ? [...childSafeCommands, ...mainThreadCommands] : childSafeCommands,
-    routeGaps,
-  );
-  const deferredMainRootPlan = includeMainThread
-    ? { commandRefs: [], supersededCommands: [] }
-    : collapseRoots(mainThreadCommands, routeGaps);
-  const deferredCiRootPlan = collapseRoots(ciOnlyCommands, routeGaps);
-  const contributorsByCommand = new Map([
-    ...childSafeContributors,
-    ...mainThreadContributors,
-    ...ciOnlyContributors,
-  ].map((entry) => [entry.commandRef, entry]));
-  const contributorsFor = (rootPlan, executionDisposition) => rootPlan.commandRefs.map((commandRef) => ({
-    ...contributorsByCommand.get(commandRef),
+  const childSafeCommands = childSafeContributors.map((entry) => entry.commandRef);
+  const mainThreadCommands = mainThreadContributors.map((entry) => entry.commandRef);
+  const ciOnlyCommands = ciOnlyContributors.map((entry) => entry.commandRef);
+  const contributorsFor = (entries, executionDisposition) => entries.map((entry) => ({
+    ...entry,
     executionDisposition,
   }));
+  const selectedContributors = contributorsFor(
+    includeMainThread ? [...childSafeContributors, ...mainThreadContributors] : childSafeContributors,
+    "selected",
+  );
+  const deferredMainContributors = contributorsFor(
+    includeMainThread ? [] : mainThreadContributors,
+    "deferred-main-thread",
+  );
+  const deferredCiContributors = contributorsFor(ciOnlyContributors, "deferred-ci-only");
   const plannerInvocations = [];
-  let selectedLeaves = [];
-  let deferredMainThreadLeaves = [];
-  let deferredCiOnlyLeaves = [];
-  if (routeGaps.length === 0) {
-    selectedLeaves = normalizePlannerLane({
+  let selectedProjection = { plan: null, leaves: [], groups: [] };
+  let deferredMainProjection = { plan: null, leaves: [], groups: [] };
+  let deferredCiProjection = { plan: null, leaves: [], groups: [] };
+  if (routeGaps.length === 0 && currentPreparedCatalog) {
+    selectedProjection = projectCanonicalLane({
       disposition: "selected",
-      rootContributors: contributorsFor(selectedRootPlan, "selected"),
-      packageScripts,
+      rootContributors: selectedContributors,
+      preparedCatalog: currentPreparedCatalog,
       executionPlanner,
       platform,
       routeGaps,
       plannerInvocations,
     });
-    deferredMainThreadLeaves = normalizePlannerLane({
+    deferredMainProjection = projectCanonicalLane({
       disposition: "deferred-main-thread",
-      rootContributors: contributorsFor(deferredMainRootPlan, "deferred-main-thread"),
-      packageScripts,
+      rootContributors: deferredMainContributors,
+      preparedCatalog: currentPreparedCatalog,
       executionPlanner,
       platform,
       routeGaps,
       plannerInvocations,
     });
-    deferredCiOnlyLeaves = normalizePlannerLane({
+    deferredCiProjection = projectCanonicalLane({
       disposition: "deferred-ci-only",
-      rootContributors: contributorsFor(deferredCiRootPlan, "deferred-ci-only"),
-      packageScripts,
+      rootContributors: deferredCiContributors,
+      preparedCatalog: currentPreparedCatalog,
       executionPlanner,
       platform,
       routeGaps,
       plannerInvocations,
     });
   }
+  const selectedLeaves = selectedProjection.leaves;
+  const deferredMainThreadLeaves = deferredMainProjection.leaves;
+  const deferredCiOnlyLeaves = deferredCiProjection.leaves;
   const leafDispositionById = new Map();
   for (const leaf of [...selectedLeaves, ...deferredMainThreadLeaves, ...deferredCiOnlyLeaves]) {
     const priorDisposition = leafDispositionById.get(leaf.leafId);
@@ -1240,21 +1386,12 @@ export function buildExecutionPlan(report, {
       leafDispositionById.set(leaf.leafId, leaf.disposition);
     }
   }
-  const executionGroups = buildExecutionGroups(selectedLeaves, {
-    disposition: "selected",
-    platform,
-    routeGaps,
-  });
-  const deferredMainThreadGroups = buildExecutionGroups(deferredMainThreadLeaves, {
-    disposition: "deferred-main-thread",
-    platform,
-    routeGaps,
-  });
-  const deferredCiOnlyGroups = buildExecutionGroups(deferredCiOnlyLeaves, {
-    disposition: "deferred-ci-only",
-    platform,
-    routeGaps,
-  });
+  const executionGroups = selectedProjection.groups;
+  const deferredMainThreadGroups = deferredMainProjection.groups;
+  const deferredCiOnlyGroups = deferredCiProjection.groups;
+  const superseded = (projection) => (projection.plan?.rootRecords || [])
+    .filter((entry) => entry.disposition === "superseded")
+    .map(({ commandRef, supersededBy }) => ({ commandRef, supersededBy }));
   const uniqueRouteGaps = [...new Map(routeGaps.map((gap) => [
     `${gap.code}\u0000${gap.commandRef}\u0000${gap.detail}`,
     gap,
@@ -1266,29 +1403,36 @@ export function buildExecutionPlan(report, {
     childSafeCommands,
     mainThreadCommands,
     ciOnlyCommands,
-    commandsToRun: selectedRootPlan.commandRefs,
-    supersededCommands: selectedRootPlan.supersededCommands,
+    catalogDigest: currentPreparedCatalog?.catalogDigest || null,
+    catalogSourceIdentity: currentPreparedCatalog?.sourceIdentity || null,
+    commandsToRun: selectedProjection.plan?.selectedCommandRefs || [],
+    supersededCommands: superseded(selectedProjection),
     blockedMainThreadCommands: includeMainThread ? [] : mainThreadCommands,
-    deferredMainThreadSupersededCommands: deferredMainRootPlan.supersededCommands,
+    deferredMainThreadSupersededCommands: superseded(deferredMainProjection),
     deferredCiOnlyCommands: ciOnlyCommands,
-    deferredCiOnlySupersededCommands: deferredCiRootPlan.supersededCommands,
+    deferredCiOnlySupersededCommands: superseded(deferredCiProjection),
     selectedLeaves,
     deferredMainThreadLeaves,
     deferredCiOnlyLeaves,
     executionGroups,
     deferredMainThreadGroups,
     deferredCiOnlyGroups,
+    canonicalPlans: {
+      selected: selectedProjection.plan,
+      deferredMainThread: deferredMainProjection.plan,
+      deferredCiOnly: deferredCiProjection.plan,
+    },
     executionCommands: uniqueRouteGaps.length > 0 ? [] : executionGroups,
     routeGaps: uniqueRouteGaps,
     plannerInvocations,
     closure: {
       authorityContributorCount: authority.recommendedByCommand.size,
-      selectedRootCount: selectedRootPlan.commandRefs.length,
+      selectedRootCount: selectedProjection.plan?.selectedCommandRefs.length || 0,
       selectedLeafCount: selectedLeaves.length,
       executionGroupCount: executionGroups.length,
-      deferredMainThreadRootCount: deferredMainRootPlan.commandRefs.length,
+      deferredMainThreadRootCount: deferredMainProjection.plan?.selectedCommandRefs.length || 0,
       deferredMainThreadLeafCount: deferredMainThreadLeaves.length,
-      deferredCiOnlyRootCount: deferredCiRootPlan.commandRefs.length,
+      deferredCiOnlyRootCount: deferredCiProjection.plan?.selectedCommandRefs.length || 0,
       deferredCiOnlyLeafCount: deferredCiOnlyLeaves.length,
       plannerInvocationCount: plannerInvocations.length,
     },
@@ -1507,7 +1651,10 @@ function selectionArtifactError(code, detail = "") {
   return error;
 }
 
-export function readSelectionArtifact(selectionPath, changedFiles) {
+export function readSelectionArtifact(selectionPath, changedFiles, {
+  preparedCatalog = null,
+  expectedSelectorRootSet = null,
+} = {}) {
   let report;
   try {
     report = JSON.parse(fs.readFileSync(selectionPath, "utf8"));
@@ -1550,6 +1697,14 @@ export function readSelectionArtifact(selectionPath, changedFiles) {
     && report.unmatchedChangedFiles.length === 0
     && report.blockedVerification.length === 0) {
     throw selectionArtifactError("adaptive-selection-artifact-empty-closure", artifactChangedFiles.join(","));
+  }
+  if (preparedCatalog) {
+    const [bindingGap] = validateSelectionCatalogBinding(report, preparedCatalog, {
+      expectedSelectorRootSet: expectedSelectorRootSet || selectionRootSet(report),
+    });
+    if (bindingGap) {
+      throw selectionArtifactError(bindingGap.code, bindingGap.detail);
+    }
   }
   const authority = resolveSelectionAuthority(report);
   const provenanceGaps = authority.routeGaps.length > 0
@@ -1619,10 +1774,28 @@ function main() {
     process.exit(2);
   }
   let selectedReport;
+  let packageScripts = null;
+  let preparedCatalog = null;
   try {
+    packageScripts = readPackageScriptsForProfile();
+    const selectorRoutes = buildRouteIndex();
+    preparedCatalog = prepareRepositoryVerificationCatalog({
+      packageScripts,
+      verificationRecords: VERIFICATION_DOMAINS,
+      selectorRoutes,
+      repoRoot: REPO_ROOT,
+      platform: process.platform,
+    });
+    const currentSelection = bindSelectionToPreparedCatalog(
+      buildRecommendation(changedFiles, selectorRoutes, { routeAuthority: preparedCatalog.authority }),
+      preparedCatalog,
+    );
     selectedReport = args.selectionJson
-      ? readSelectionArtifact(args.selectionJson, changedFiles)
-      : buildRecommendation(changedFiles);
+      ? readSelectionArtifact(args.selectionJson, changedFiles, {
+        preparedCatalog,
+        expectedSelectorRootSet: currentSelection.selectorRootSet,
+      })
+      : currentSelection;
   } catch (error) {
     const gap = planGap(error.code || "adaptive-selection-artifact-error", "selection-artifact", error.message);
     const failedReport = {
@@ -1654,12 +1827,14 @@ function main() {
         : "blocked",
     selectionArtifact: args.selectionJson || null,
   };
-  const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
-  let packageScripts = null;
+  const executionPlan = buildExecutionPlan(report, {
+    includeMainThread: args.includeMainThread,
+    packageScripts,
+    preparedCatalog,
+  });
   let preparedProfilePlan = null;
   let profilePreparationError = null;
   try {
-    packageScripts = readPackageScriptsForProfile();
     preparedProfilePlan = prepareVerificationProfilePlan({
       selectorReport: report,
       executionPlan,

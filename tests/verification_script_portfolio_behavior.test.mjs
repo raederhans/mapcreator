@@ -277,7 +277,7 @@ test("recursively expands nested suites and preserves forwarded Node, Python, an
   ]);
 });
 
-test("fails closed for duplicate normalized leaves reached through direct and nested aliases", () => {
+test("merges equivalent normalized leaves reached through direct and nested aliases", () => {
   const catalog = buildVerificationCatalog({
     packageScripts: {
       unix: "node --test tests/duplicate.test.mjs",
@@ -287,10 +287,9 @@ test("fails closed for duplicate normalized leaves reached through direct and ne
     },
     records: [route("duplicate", "duplicates")],
   });
-  assert.throws(
-    () => buildVerificationSelectionPlan(catalog, ["duplicate"]),
-    /verification-plan-duplicate-leaf:node-test:tests\/duplicate\.test\.mjs/,
-  );
+  const plan = buildVerificationSelectionPlan(catalog, ["duplicate"]);
+  assert.deepEqual(plan.normalizedLeaves, ["node-test:tests/duplicate.test.mjs"]);
+  assert.equal(plan.executions.length, 1);
 });
 
 test("fails closed for cycles and unresolved suite references", () => {
@@ -448,7 +447,7 @@ test("reports mechanical consistency gaps across catalog, scripts, and route rec
     schemaVersion: 1,
     kind: "verification-catalog-consistency",
     consistent: false,
-    missingCatalogEntries: ["b", "missing-route"],
+    missingCatalogEntries: ["b"],
     orphanCatalogEntries: ["legacy"],
     unresolvedRecordRefs: ["missing-route"],
     entryMismatches: [],
@@ -691,7 +690,7 @@ test("keeps unittest filter values outside normalized Python modules", () => {
   ]);
 });
 
-test("uses Node module identity to reject duplicate and conflicting invocations", () => {
+test("uses Node module identity to merge equivalent and reject conflicting invocations", () => {
   const duplicateCatalog = buildVerificationCatalog({
     packageScripts: {
       unix: "node tools/check.mjs --mode same",
@@ -700,10 +699,9 @@ test("uses Node module identity to reject duplicate and conflicting invocations"
     },
     records: [route("both", "node-tools")],
   });
-  assert.throws(
-    () => buildVerificationSelectionPlan(duplicateCatalog, ["both"]),
-    /verification-plan-duplicate-leaf:node-script:tools\/check\.mjs/,
-  );
+  const duplicatePlan = buildVerificationSelectionPlan(duplicateCatalog, ["both"]);
+  assert.deepEqual(duplicatePlan.normalizedLeaves, ["node-script:tools/check.mjs"]);
+  assert.equal(duplicatePlan.executions.length, 1);
   const conflictCatalog = buildVerificationCatalog({
     packageScripts: {
       first: "node tools/check.mjs --mode a",
@@ -718,7 +716,7 @@ test("uses Node module identity to reject duplicate and conflicting invocations"
   );
 });
 
-test("treats Windows and Unix Python targets as the same normalized leaf", () => {
+test("merges Windows and Unix Python targets into one normalized leaf", () => {
   const catalog = buildVerificationCatalog({
     packageScripts: {
       unix: "python -m unittest tests/test_same.py -q",
@@ -727,10 +725,9 @@ test("treats Windows and Unix Python targets as the same normalized leaf", () =>
     },
     records: [route("both", "python")],
   });
-  assert.throws(
-    () => buildVerificationSelectionPlan(catalog, ["both"]),
-    /verification-plan-duplicate-leaf:python-unittest:tests\/test_same\.py/,
-  );
+  const plan = buildVerificationSelectionPlan(catalog, ["both"]);
+  assert.deepEqual(plan.normalizedLeaves, ["python-unittest:tests/test_same.py"]);
+  assert.equal(plan.executions.length, 1);
 });
 
 test("reports deterministic command, target, and execution metadata drift", () => {
@@ -920,10 +917,9 @@ test("uses repo-relative Windows identity with case folding and stable UNC handl
     records: [route("both", "windows")],
     ...win,
   });
-  assert.throws(
-    () => buildVerificationSelectionPlan(catalog, ["both"], win),
-    /verification-plan-duplicate-leaf:node-test:tests\/a\.test\.mjs/,
-  );
+  const drivePlan = buildVerificationSelectionPlan(catalog, ["both"], win);
+  assert.deepEqual(drivePlan.normalizedLeaves, ["node-test:tests/a.test.mjs"]);
+  assert.equal(drivePlan.executions.length, 1);
   const uncCatalog = buildVerificationCatalog({
     packageScripts: {
       first: "node --test //Server/Share/Tests/A.test.mjs",
@@ -933,10 +929,9 @@ test("uses repo-relative Windows identity with case folding and stable UNC handl
     records: [route("both", "windows")],
     ...win,
   });
-  assert.throws(
-    () => buildVerificationSelectionPlan(uncCatalog, ["both"], win),
-    /verification-plan-duplicate-leaf:node-test:\/\/server\/share\/tests\/a\.test\.mjs/,
-  );
+  const uncPlan = buildVerificationSelectionPlan(uncCatalog, ["both"], win);
+  assert.deepEqual(uncPlan.normalizedLeaves, ["node-test://server/share/tests/a.test.mjs"]);
+  assert.equal(uncPlan.executions.length, 1);
 });
 
 test("preserves real build-test-drift and build-check chains as topological executions", () => {

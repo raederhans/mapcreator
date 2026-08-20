@@ -18,6 +18,7 @@ import { resolveP4StateWriterPolicyRun } from "../run_p4_state_writer_policy_tes
 export const SCRIPT_PORTFOLIO_SCHEMA_VERSION = 1;
 export const VERIFICATION_CATALOG_SCHEMA_VERSION = 1;
 export const VERIFICATION_CATALOG_KIND = "verification-test-catalog";
+export const PREPARED_VERIFICATION_CATALOG_KIND = "prepared-verification-test-catalog";
 export const CANONICAL_VERIFICATION_ENTRYPOINTS = Object.freeze([
   "verify:pr",
   "verify:demo",
@@ -28,6 +29,9 @@ export const CANONICAL_VERIFICATION_ENTRYPOINTS = Object.freeze([
 const CLASSIFICATIONS = Object.freeze(["canonical", "internal", "superseded"]);
 const COST_ORDER = Object.freeze(["fast", "contract", "heavy"]);
 const EXECUTION_OWNER_ORDER = Object.freeze(["child-safe", "main-thread", "ci-only"]);
+const DEFAULT_EXECUTION_MAX_LEAVES = 64;
+const DEFAULT_WINDOWS_ARGV_BYTES = 30_000;
+const DEFAULT_POSIX_ARGV_BYTES = 131_072;
 
 function sortedUnique(values) {
   return [...new Set((values || []).filter((value) => value !== undefined && value !== null).map(String))].sort();
@@ -428,6 +432,14 @@ function parseLeafDefinition(id, command, metadata, pathOptions = {}) {
       ...(files.length === 0 ? { targetless: true, discovery: { kind: "node-test-default" } } : {}),
     };
   }
+  if (/^(?:node|node\.exe)$/i.test(executable) && args[0] === "--check") {
+    const files = args.slice(1).map((value) => normalizeVerificationPath(value, pathOptions));
+    return {
+      id, kind: "leaf", command, executable, argv: args, runner: "node-check",
+      files, modules: [], specs: [], runnerArgs: [], ...leafMetadata,
+      ...(files.length === 0 ? { targetless: true, discovery: { kind: "node-check-default" } } : {}),
+    };
+  }
   const nodeEntrypoint = /^(?:node|node\.exe)$/i.test(executable)
     ? normalizeVerificationPath(args[0] || "", pathOptions)
     : "";
@@ -438,7 +450,8 @@ function parseLeafDefinition(id, command, metadata, pathOptions = {}) {
       : sortedUnique(discoverySpecs.map((value) => normalizeVerificationPath(value, pathOptions)));
     return {
       id, kind: "leaf", command, executable, argv: args, runner: "playwright",
-      files: [], modules: [], specs, runnerArgs: args.slice(1), ...leafMetadata,
+      files: [], modules: [], specs, runnerArgs: ["run-spec"], executionMode: "e2e-layering",
+      ...leafMetadata,
       ...(specs.length === 0 ? { targetless: true, discovery: { kind: "e2e-route-authority" } } : {}),
     };
   }
@@ -624,7 +637,7 @@ export function buildVerificationCatalog(input, options = {}) {
   const scriptIds = new Set(Object.keys(scripts));
   const directRefs = authority
     .map((entry) => entry.commandRef)
-    .filter((commandRef) => commandRef && !scriptIds.has(commandRef));
+    .filter((commandRef) => commandRef && !scriptIds.has(commandRef) && /\s/.test(commandRef));
   for (const commandRef of directRefs) {
     assertSupportedShellOperators(commandRef, commandRef);
     entries.push({
@@ -672,6 +685,134 @@ export function buildRepositoryVerificationCatalog({
     platform,
     sourceMode: "repository",
   });
+}
+
+function preparedCatalogSourceIdentity({
+  packageScripts,
+  verificationRecords,
+  selectorRoutes,
+  authority,
+  repoRoot,
+  platform,
+  sourceMode,
+}) {
+  const payload = JSON.stringify({
+    schemaVersion: VERIFICATION_CATALOG_SCHEMA_VERSION,
+    kind: VERIFICATION_CATALOG_KIND,
+    sourceMode,
+    repoRoot: normalizeVerificationPath(repoRoot, { repoRoot: "", platform }),
+    platform,
+    packageScripts,
+    verificationRecords,
+    selectorRoutes,
+    authority,
+  });
+  return {
+    algorithm: "sha256",
+    digest: createHash("sha256").update(payload).digest("hex"),
+    sourceMode,
+    repoRoot: normalizeVerificationPath(repoRoot, { repoRoot: "", platform }),
+    platform,
+  };
+}
+
+export function prepareVerificationCatalog({
+  packageScripts = {},
+  verificationRecords = [],
+  selectorRoutes = [],
+  authority,
+  selectorCommandRefs,
+  repoRoot = process.cwd(),
+  platform = process.platform,
+  sourceMode = "fixture",
+  catalogBuilder = buildVerificationCatalog,
+  authorityReconciler = reconcileVerificationRouteAuthority,
+} = {}) {
+  const reconciledAuthority = authority || authorityReconciler([
+    ...verificationRecords.map((record, index) => ({
+      ...record,
+      id: record?.id || `verification-record:${String(index + 1).padStart(4, "0")}:${record?.commandRef || "<unknown>"}`,
+      authoritySource: "verification-record",
+    })),
+    ...selectorRoutes.map((route) => ({ ...route, authoritySource: "selector-route" })),
+  ]);
+  assertCatalogAuthorityCompleteness(reconciledAuthority);
+  const sourceIdentity = preparedCatalogSourceIdentity({
+    packageScripts,
+    verificationRecords,
+    selectorRoutes,
+    authority: reconciledAuthority,
+    repoRoot,
+    platform,
+    sourceMode,
+  });
+  const catalog = catalogBuilder({
+    packageScripts,
+    authority: reconciledAuthority,
+    selectorRoutes,
+    selectorCommandRefs: selectorCommandRefs || selectorRoutes.map((route) => route.commandRef),
+    repoRoot,
+    platform,
+    sourceMode,
+  });
+  return {
+    schemaVersion: VERIFICATION_CATALOG_SCHEMA_VERSION,
+    kind: PREPARED_VERIFICATION_CATALOG_KIND,
+    sourceMode,
+    sourceIdentity,
+    catalogDigest: catalog.sourceIntegrity.digest,
+    authority: reconciledAuthority,
+    catalog,
+    sourceInputs: {
+      packageScripts,
+      verificationRecords,
+      selectorRoutes,
+      repoRoot,
+      platform,
+      sourceMode,
+    },
+  };
+}
+
+export function prepareRepositoryVerificationCatalog({
+  packageScripts,
+  verificationRecords = VERIFICATION_DOMAINS,
+  selectorRoutes = buildRouteIndex(),
+  repoRoot = process.cwd(),
+  platform = process.platform,
+  catalogBuilder = buildVerificationCatalog,
+  authorityReconciler = reconcileVerificationRouteAuthority,
+} = {}) {
+  return prepareVerificationCatalog({
+    packageScripts,
+    verificationRecords,
+    selectorRoutes,
+    selectorCommandRefs: selectorRoutes.map((route) => route.commandRef),
+    repoRoot,
+    platform,
+    sourceMode: "repository",
+    catalogBuilder,
+    authorityReconciler,
+  });
+}
+
+export function assertPreparedVerificationCatalog(prepared, catalog = prepared?.catalog) {
+  if (!prepared
+    || prepared.schemaVersion !== VERIFICATION_CATALOG_SCHEMA_VERSION
+    || prepared.kind !== PREPARED_VERIFICATION_CATALOG_KIND
+    || prepared.catalog !== catalog
+    || prepared.catalogDigest !== catalog?.sourceIntegrity?.digest) {
+    throw new Error("verification-plan-invalid-prepared-catalog");
+  }
+  const expectedIdentity = preparedCatalogSourceIdentity({
+    ...prepared.sourceInputs,
+    authority: prepared.authority,
+  });
+  if (expectedIdentity.digest !== prepared.sourceIdentity?.digest) {
+    throw new Error("verification-plan-prepared-source-drift");
+  }
+  assertCatalogSourceIntegrity(catalog);
+  return prepared;
 }
 
 function assertRepositorySourceConsistency(catalog, sourceInputs) {
@@ -989,6 +1130,16 @@ function normalizePlanningRoots(commandRefs) {
       commandRef,
       routeIds: sortedUnique(normalized.routeIds),
       safetyContributorRouteIds: sortedUnique(normalized.safetyContributorRouteIds),
+      sourceRefs: normalized.sourceRefs === undefined ? undefined : sortedUnique(normalized.sourceRefs),
+      domains: normalized.domains === undefined ? undefined : sortedUnique(normalized.domains),
+      ownerHints: normalized.ownerHints === undefined ? undefined : sortedUnique(normalized.ownerHints),
+      cost: normalized.cost,
+      executionOwner: normalized.executionOwner,
+      platforms: normalized.platforms === undefined ? undefined : sortedUnique(normalized.platforms),
+      resourceLocks: normalized.resourceLocks === undefined ? undefined : sortedUnique(normalized.resourceLocks),
+      tiers: normalized.tiers === undefined ? undefined : sortedUnique(normalized.tiers),
+      ciProfiles: normalized.ciProfiles === undefined ? undefined : sortedUnique(normalized.ciProfiles),
+      executionDisposition: normalized.executionDisposition,
     };
   });
 }
@@ -1122,15 +1273,218 @@ function executionProcessShape(executable, effectiveArgv, platform) {
   return { executable, effectiveArgv };
 }
 
+function rebuildLogicalArgv(entry, { files, modules, specs }, forwardedArgs) {
+  const argv = [...(entry.argv || [])];
+  const withTargets = (markerIndex, targets) => [
+    ...argv.slice(0, markerIndex + 1),
+    ...targets,
+    ...(entry.runnerArgs || []),
+    ...forwardedArgs,
+  ];
+  if (entry.runner === "node-test") return withTargets(argv.indexOf("--test"), files);
+  if (entry.runner === "node-check") return withTargets(argv.indexOf("--check"), files);
+  if (entry.runner === "python-unittest") {
+    const markerIndex = argv.findIndex((value, index) => value === "unittest" && argv[index - 1] === "-m");
+    return withTargets(markerIndex, [...files, ...modules]);
+  }
+  if (entry.runner === "python-pytest") {
+    const markerIndex = argv.findIndex((value, index) => value === "pytest" && argv[index - 1] === "-m");
+    return withTargets(markerIndex, files);
+  }
+  if (entry.runner === "playwright" && entry.executionMode !== "e2e-layering") {
+    const markerIndex = argv.findIndex((value, index) => value === "test"
+      && (index === 0 || /(?:playwright|cli\.js)$/i.test(argv[index - 1])));
+    return withTargets(markerIndex, specs);
+  }
+  return [...argv, ...forwardedArgs];
+}
+
+function isOrderedSubset(left, right) {
+  let index = 0;
+  for (const value of right) {
+    if (value === left[index]) index += 1;
+  }
+  return index === left.length;
+}
+
+function playwrightInvocationCovers(left, right) {
+  return left.runner === "playwright"
+    && right.runner === "playwright"
+    && JSON.stringify(left.executionOwner) === JSON.stringify(right.executionOwner)
+    && JSON.stringify(left.platforms) === JSON.stringify(right.platforms)
+    && JSON.stringify(left.resourceLocks) === JSON.stringify(right.resourceLocks)
+    && isOrderedSubset(left.argv, right.argv);
+}
+
+function executionArgvBytes(executable, argv, platform) {
+  return Buffer.byteLength(
+    [executable, ...argv].join("\0"),
+    platform === "win32" ? "utf16le" : "utf8",
+  );
+}
+
+function executionProcessClass(runner) {
+  if (runner.startsWith("python-")) return "python";
+  if (runner === "playwright") return "playwright";
+  if (runner.startsWith("node-")) return "node";
+  return "native";
+}
+
+function partitionCanonicalExecution(execution, {
+  platform,
+  maxLeaves,
+  maxArgvBytes,
+}) {
+  const processClass = executionProcessClass(execution.runner);
+  const finalize = (entry) => ({
+    ...entry,
+    processClass,
+    isolation: processClass === "python" ? "process" : entry.leafKeys.length > 1 ? "batch" : "process",
+    leafCount: entry.leafKeys.length,
+    argvBytes: executionArgvBytes(entry.executable, entry.effectiveArgv, platform),
+    maxLeaves,
+    maxArgvBytes,
+  });
+  if (execution.runner === "playwright"
+    && execution.executionMode === "e2e-layering"
+    && execution.specs.length > 0) {
+    return execution.specs.map((spec) => {
+      const logicalArgv = [execution.argv[0], "run-spec", spec, ...execution.forwardedArgs];
+      const processShape = executionProcessShape(execution.logicalExecutable, logicalArgv, platform);
+      return finalize({
+        ...execution,
+        argv: [execution.argv[0], "run-spec", spec],
+        logicalArgv,
+        executable: processShape.executable,
+        effectiveArgv: processShape.effectiveArgv,
+        specs: [spec],
+        leafKeys: [`playwright:${normalizeVerificationPath(spec, { platform })}`],
+      });
+    });
+  }
+  if (!new Set(["node-test", "node-check"]).has(execution.runner) || execution.files.length === 0) {
+    const finalized = finalize(execution);
+    if (finalized.leafCount > maxLeaves) {
+      throw new Error(`verification-plan-leaf-budget-exceeded:${execution.id}:${finalized.leafCount}:${maxLeaves}`);
+    }
+    if (finalized.argvBytes > maxArgvBytes) {
+      throw new Error(`verification-plan-argv-budget-exceeded:${execution.id}:${finalized.argvBytes}:${maxArgvBytes}`);
+    }
+    return [finalized];
+  }
+
+  const chunks = [];
+  let current = [];
+  const buildChunk = (files) => {
+    if (files.length === execution.files.length
+      && files.every((file, index) => file === execution.files[index])) {
+      return finalize(execution);
+    }
+    const nodeMode = execution.runner === "node-check" ? "--check" : "--test";
+    const logicalArgv = [nodeMode, ...files, ...execution.runnerArgs, ...execution.forwardedArgs];
+    const processShape = executionProcessShape(execution.logicalExecutable, logicalArgv, platform);
+    return finalize({
+      ...execution,
+      argv: [nodeMode, ...files, ...execution.runnerArgs],
+      logicalArgv,
+      effectiveArgv: processShape.effectiveArgv,
+      executable: processShape.executable,
+      files,
+      leafKeys: files.map((file) => `${execution.runner}:${normalizeVerificationPath(file, { platform })}`),
+    });
+  };
+  for (const file of execution.files) {
+    const candidate = buildChunk([...current, file]);
+    if (current.length > 0 && (execution.runner === "node-check"
+      || candidate.leafCount > maxLeaves
+      || candidate.argvBytes > maxArgvBytes)) {
+      chunks.push(buildChunk(current));
+      current = [file];
+      const single = buildChunk(current);
+      if (single.leafCount > maxLeaves || single.argvBytes > maxArgvBytes) {
+        throw new Error(`verification-plan-argv-budget-exceeded:${execution.id}:${single.argvBytes}:${maxArgvBytes}`);
+      }
+    } else {
+      current.push(file);
+    }
+  }
+  if (current.length > 0) {
+    const finalChunk = buildChunk(current);
+    if (finalChunk.leafCount > maxLeaves || finalChunk.argvBytes > maxArgvBytes) {
+      throw new Error(`verification-plan-argv-budget-exceeded:${execution.id}:${finalChunk.argvBytes}:${maxArgvBytes}`);
+    }
+    chunks.push(finalChunk);
+  }
+  return chunks;
+}
+
+function finalizeCanonicalExecutions(unbatchedExecutions, dependencyEdgeIndexes, options) {
+  const chunksByRawId = new Map();
+  const flattened = [];
+  for (const execution of unbatchedExecutions) {
+    const chunks = partitionCanonicalExecution(execution, options);
+    chunksByRawId.set(execution.executionId, chunks);
+    flattened.push(...chunks);
+  }
+  const finalIdByChunk = new Map();
+  flattened.forEach((chunk, index) => {
+    finalIdByChunk.set(chunk, `execution:${String(index + 1).padStart(4, "0")}`);
+  });
+  const executions = flattened.map((chunk, order) => {
+    const siblings = chunksByRawId.get(chunk.executionId);
+    const chunkIndex = siblings.indexOf(chunk);
+    const dependsOn = chunkIndex > 0
+      ? [finalIdByChunk.get(siblings[chunkIndex - 1])]
+      : chunk.dependsOn.map((rawDependency) => {
+        const dependencyChunks = chunksByRawId.get(rawDependency);
+        return finalIdByChunk.get(dependencyChunks.at(-1));
+      });
+    return {
+      ...chunk,
+      sourceExecutionId: chunk.executionId,
+      executionId: finalIdByChunk.get(chunk),
+      order,
+      dependsOn,
+    };
+  });
+  const dependencyEdges = dependencyEdgeIndexes.map((edge) => {
+    const fromChunks = chunksByRawId.get(`execution:${String(edge.fromIndex + 1).padStart(4, "0")}`);
+    const toChunks = chunksByRawId.get(`execution:${String(edge.toIndex + 1).padStart(4, "0")}`);
+    return {
+      from: finalIdByChunk.get(fromChunks.at(-1)),
+      to: finalIdByChunk.get(toChunks[0]),
+      kind: edge.kind,
+      suiteId: edge.suiteId,
+      sourceOrder: edge.sourceOrder,
+    };
+  });
+  for (const chunks of chunksByRawId.values()) {
+    for (let index = 1; index < chunks.length; index += 1) {
+      dependencyEdges.push({
+        from: finalIdByChunk.get(chunks[index - 1]),
+        to: finalIdByChunk.get(chunks[index]),
+        kind: "execution-batch-sequence",
+        suiteId: chunks[index].id,
+        sourceOrder: index,
+      });
+    }
+  }
+  return { executions, dependencyEdges };
+}
+
 function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
   platform,
   repoRoot = catalog?.identity?.repoRoot || process.cwd(),
   allowUnclassified = false,
   allowUnverifiedCatalog = false,
   supersession = VERIFICATION_COMMAND_SUPERSESSION,
+  maxLeaves = DEFAULT_EXECUTION_MAX_LEAVES,
+  maxArgvBytes,
 } = {}) {
   assertCatalogSourceIntegrity(catalog, { allowUnverifiedCatalog });
   const identityPlatform = platform || catalog?.identity?.platform || process.platform;
+  const effectiveMaxArgvBytes = maxArgvBytes
+    || (identityPlatform === "win32" ? DEFAULT_WINDOWS_ARGV_BYTES : DEFAULT_POSIX_ARGV_BYTES);
   const roots = normalizePlanningRoots(commandRefs);
   const byId = catalogEntries(catalog);
   const authorityByCommand = new Map((catalog?.authority || []).map((entry) => [entry.commandRef, entry]));
@@ -1140,7 +1494,21 @@ function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
   assertSupersessionCoverage(byId, supersededBy, { repoRoot, platform: identityPlatform });
   const retained = new Set(supersessionPlan.commandRefs);
   const rootRecords = roots.map((root) => {
-    const authority = authorityByCommand.get(root.commandRef);
+    const authority = authorityByCommand.get(root.commandRef) || null;
+    const rootCarriesAuthority = [
+      "sourceRefs",
+      "domains",
+      "ownerHints",
+      "cost",
+      "executionOwner",
+      "platforms",
+      "resourceLocks",
+      "tiers",
+      "ciProfiles",
+    ].some((field) => root[field] !== undefined);
+    if (!authority && rootCarriesAuthority) {
+      throw new Error(`verification-plan-root-authority-missing:${root.commandRef}`);
+    }
     const authorityRouteIds = sortedUnique(authority?.routeIds);
     const authoritySafetyRouteIds = sortedUnique(authority?.safetyContributorRouteIds);
     if (root.routeIds.some((routeId) => !authorityRouteIds.includes(routeId))) {
@@ -1149,6 +1517,17 @@ function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
     if (root.safetyContributorRouteIds.length > 0
       && JSON.stringify(root.safetyContributorRouteIds) !== JSON.stringify(authoritySafetyRouteIds)) {
       throw new Error(`verification-plan-root-route-drift:${root.commandRef}:safetyContributorRouteIds`);
+    }
+    for (const field of ["sourceRefs", "domains", "ownerHints", "platforms", "resourceLocks", "tiers", "ciProfiles"]) {
+      if (root[field] !== undefined
+        && JSON.stringify(root[field]) !== JSON.stringify(sortedUnique(authority[field]))) {
+        throw new Error(`verification-plan-root-authority-drift:${root.commandRef}:${field}`);
+      }
+    }
+    for (const field of ["cost", "executionOwner"]) {
+      if (root[field] !== undefined && root[field] !== authority[field]) {
+        throw new Error(`verification-plan-root-authority-drift:${root.commandRef}:${field}`);
+      }
     }
     return {
       ...root,
@@ -1251,32 +1630,67 @@ function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
     });
     return { heads: [index], tails: [index] };
   };
-  for (const rootContext of rootRecords.filter((candidate) => candidate.disposition === "planned")) {
+  const plannedRootRecords = rootRecords.filter((candidate) => candidate.disposition === "planned")
+    .sort((left, right) => {
+      const leftEntry = byId.get(left.commandRef);
+      const rightEntry = byId.get(right.commandRef);
+      const leftRank = leftEntry?.runner === "playwright" ? (leftEntry.runnerArgs || []).length : Number.MAX_SAFE_INTEGER;
+      const rightRank = rightEntry?.runner === "playwright" ? (rightEntry.runnerArgs || []).length : Number.MAX_SAFE_INTEGER;
+      return leftRank - rightRank || left.inputIndex - right.inputIndex;
+    });
+  for (const rootContext of plannedRootRecords) {
     visit(rootContext.commandRef, [], [], {}, { root: rootContext, expansionPath: [] });
   }
 
   const pathOptions = { repoRoot, platform: identityPlatform };
   const claimedTargets = new Map();
-  const executions = [];
+  const unbatchedExecutions = [];
+  const executionIndexByExpanded = new Map();
   for (let index = 0; index < expanded.length; index += 1) {
     const { entry, forwardedArgs, dependsOnIndexes, provenance } = expanded[index];
     const comparable = comparableLeaf(entry, forwardedArgs, pathOptions);
+    const duplicateExecutionIndexes = new Set();
+    const freshTargets = [];
     const leafKeys = [];
     for (const target of leafTargets(entry, pathOptions)) {
       const displayKey = `${comparable.runner}:${target.display}`;
       const existing = claimedTargets.get(target.collisionKey);
       if (existing) {
         const conflict = conflictingField(existing.comparable, comparable);
-        if (conflict) throw new Error(`verification-plan-leaf-conflict:${existing.displayKey}:${conflict}`);
-        throw new Error(`verification-plan-duplicate-leaf:${existing.displayKey}`);
+        if (conflict && !playwrightInvocationCovers(existing.comparable, comparable)) {
+          throw new Error(`verification-plan-leaf-conflict:${existing.displayKey}:${conflict}`);
+        }
+        duplicateExecutionIndexes.add(existing.executionIndex);
+        continue;
       }
-      claimedTargets.set(target.collisionKey, { comparable, displayKey });
+      freshTargets.push({ ...target, displayKey });
       leafKeys.push(displayKey);
     }
-    const executionId = `execution:${String(index + 1).padStart(4, "0")}`;
-    const logicalArgv = [...(entry.argv || []), ...forwardedArgs];
+    for (const duplicateIndex of duplicateExecutionIndexes) {
+      const existingExecution = unbatchedExecutions[duplicateIndex];
+      existingExecution.provenance.push(...structuredClone(provenance));
+    }
+    if (freshTargets.length === 0) {
+      executionIndexByExpanded.set(index, [...duplicateExecutionIndexes][0]);
+      continue;
+    }
+    const freshCollisionKeys = new Set(freshTargets.map((target) => target.collisionKey));
+    const files = (entry.files || []).filter((value) => freshCollisionKeys.has(
+      `path:${normalizeVerificationPath(value, pathOptions)}`,
+    ));
+    const specs = (entry.specs || []).filter((value) => freshCollisionKeys.has(
+      `path:${normalizeVerificationPath(value, pathOptions)}`,
+    ));
+    const modules = (entry.modules || []).filter((value) => freshCollisionKeys.has(
+      `module:${normalizeModuleIdentity(value, pathOptions)}`,
+    ));
+    const executionIndex = unbatchedExecutions.length;
+    const executionId = `execution:${String(executionIndex + 1).padStart(4, "0")}`;
+    const logicalArgv = freshTargets.length === leafTargets(entry, pathOptions).length
+      ? [...(entry.argv || []), ...forwardedArgs]
+      : rebuildLogicalArgv(entry, { files, modules, specs }, forwardedArgs);
     const processShape = executionProcessShape(entry.executable, logicalArgv, identityPlatform);
-    executions.push({
+    unbatchedExecutions.push({
       executionId,
       order: index,
       id: entry.id,
@@ -1288,9 +1702,11 @@ function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
       logicalExecutable: entry.executable,
       logicalArgv,
       runner: comparable.runner,
-      files: [...(entry.files || [])],
-      modules: [...(entry.modules || [])],
-      specs: [...(entry.specs || [])],
+      runnerArgs: [...(entry.runnerArgs || [])],
+      executionMode: entry.executionMode || null,
+      files,
+      modules,
+      specs,
       domains: sortedUnique(entry.domains),
       cost: entry.cost || "contract",
       executionOwner: comparable.executionOwner,
@@ -1300,10 +1716,35 @@ function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
       ciProfiles: sortedUnique(entry.ciProfiles),
       leafKeys: leafKeys.sort(),
       dependsOn: [...dependsOnIndexes].sort((left, right) => left - right)
+        .map((dependencyIndex) => executionIndexByExpanded.get(dependencyIndex))
+        .filter((dependencyIndex) => dependencyIndex !== undefined)
         .map((dependencyIndex) => `execution:${String(dependencyIndex + 1).padStart(4, "0")}`),
       provenance,
     });
+    executionIndexByExpanded.set(index, executionIndex);
+    for (const target of freshTargets) {
+      claimedTargets.set(target.collisionKey, {
+        comparable,
+        displayKey: target.displayKey,
+        executionIndex,
+      });
+    }
   }
+  const remappedDependencyEdges = dependencyEdgeIndexes.flatMap((edge) => {
+    const fromIndex = executionIndexByExpanded.get(edge.fromIndex);
+    const toIndex = executionIndexByExpanded.get(edge.toIndex);
+    if (fromIndex === undefined || toIndex === undefined || fromIndex === toIndex) return [];
+    return [{ ...edge, fromIndex, toIndex }];
+  });
+  const { executions, dependencyEdges } = finalizeCanonicalExecutions(
+    unbatchedExecutions,
+    remappedDependencyEdges,
+    {
+      platform: identityPlatform,
+      maxLeaves,
+      maxArgvBytes: effectiveMaxArgvBytes,
+    },
+  );
   const lockGroups = new Map();
   for (const execution of executions) {
     const key = JSON.stringify(execution.resourceLocks);
@@ -1318,25 +1759,22 @@ function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
     schemaVersion: VERIFICATION_CATALOG_SCHEMA_VERSION,
     kind: "verification-selection-plan",
     status: "ready",
+    catalogDigest: catalog?.sourceIntegrity?.digest || null,
+    catalogIdentity: catalog?.identity || null,
     requestedCommandRefs: roots.map((root) => root.commandRef),
     selectedCommandRefs: supersessionPlan.commandRefs,
     rootRecords,
     normalizedLeaves: executions.flatMap((entry) => entry.leafKeys).sort(),
     executions,
-    dependencyEdges: dependencyEdgeIndexes.map((edge) => ({
-      from: `execution:${String(edge.fromIndex + 1).padStart(4, "0")}`,
-      to: `execution:${String(edge.toIndex + 1).padStart(4, "0")}`,
-      kind: edge.kind,
-      suiteId: edge.suiteId,
-      sourceOrder: edge.sourceOrder,
-    })),
+    dependencyEdges,
     resourceLockGroups,
   };
 }
 
 /** Expand selected suites into a stable, fail-closed whole-lane execution plan. */
 export function buildVerificationSelectionPlan(catalog, commandRefs, options = {}) {
-  assertRepositorySourceConsistency(catalog, options.sourceInputs);
+  if (options.preparedCatalog) assertPreparedVerificationCatalog(options.preparedCatalog, catalog);
+  else assertRepositorySourceConsistency(catalog, options.sourceInputs);
   return buildVerificationSelectionPlanInternal(catalog, commandRefs, options);
 }
 

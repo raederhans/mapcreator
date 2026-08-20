@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   buildRouteIndex,
+  reconcileVerificationRouteAuthority,
 } from "../tools/test_route_registry.mjs";
 import {
   buildRecommendation,
@@ -28,6 +29,7 @@ import {
 } from "../tools/verification/resumable_verification.mjs";
 import {
   assertAdaptiveExecutionInput,
+  bindSelectionToPreparedCatalog,
   buildExecutionPlan,
   discoverChangedFiles,
   executeAdaptivePlan,
@@ -42,6 +44,13 @@ import {
 import {
   buildVerificationProfile,
 } from "../tools/verification/verification_profile.mjs";
+import {
+  buildVerificationCatalog,
+  buildVerificationSelectionPlan,
+  prepareVerificationCatalog,
+  prepareRepositoryVerificationCatalog,
+} from "../tools/verification/script_portfolio.mjs";
+import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
 
 const PACKAGE_SCRIPTS = {
   "test:node:city-points-render-owner": "node --test tests/city_points_render_owner_behavior.test.mjs tests/urban_city_policy_strategic_values_behavior.test.mjs",
@@ -149,7 +158,12 @@ const TEST_MAX_ARGV_BYTES = process.platform === "win32" ? 30_000 : 131_072;
 function adaptiveContributor(commandRef, {
   disposition = "child-safe",
   executionOwners = [disposition],
+  sourceRefs = [`source:${commandRef}`],
+  domains = ["test-routing"],
+  ownerHints = ["test-routing"],
+  cost = "contract",
   resourceLocks = [],
+  tiers = ["contract"],
   ciProfiles = disposition === "child-safe" ? ["pr-fast"] : ["full"],
   routeIds = [`route:${commandRef}`],
   safetyContributorRouteIds = routeIds,
@@ -163,9 +177,13 @@ function adaptiveContributor(commandRef, {
     commandRef,
     executionOwner: disposition,
     executionOwners,
+    sourceRefs,
+    domains,
+    ownerHints,
+    cost,
     platforms,
     resourceLocks,
-    tiers: [...ciProfiles],
+    tiers,
     ciProfiles,
     routeIds,
     safetyContributorRouteIds,
@@ -1668,28 +1686,42 @@ test("adaptive execution invokes one whole-lane planner per disposition and prop
     ciProfiles: ["perf-pr-gate"],
   })];
   const calls = [];
-  const executionPlanner = (input) => {
+  const executionPlanner = (catalog, rootContributors, options) => {
     calls.push({
-      disposition: input.disposition,
-      rootCommandRefs: input.rootCommandRefs,
+      disposition: options.disposition,
+      rootCommandRefs: rootContributors.map((entry) => entry.commandRef),
     });
-    return {
-      schemaVersion: 1,
-      disposition: input.disposition,
-      routeGaps: [],
-      plannedRoots: input.rootCommandRefs.map((commandRef) => ({
-        commandRef,
-        expandedCommands: [{
-          tokens: input.disposition === "selected"
-            ? ["node", "--test", "tests/shared_catalog.test.mjs"]
-            : ["node", "--test", `tests/${commandRef.slice(-2)}.test.mjs`],
-          aliasPath: ["phase3-catalog", commandRef],
-        }],
-      })),
-    };
+    return buildVerificationSelectionPlan(catalog, rootContributors, options);
   };
-  const plan = buildExecutionPlan(adaptiveReport({ selected, mainThread, ciOnly }), {
-    packageScripts: {},
+  const plannerScripts = {
+    "catalog:one": "node --test tests/shared_catalog.test.mjs",
+    "catalog:two": "node --test tests/shared_catalog.test.mjs",
+    "catalog:main": "node --test tests/main_catalog.test.mjs",
+    "catalog:ci": "node --test tests/ci_catalog.test.mjs",
+  };
+  const selectorReport = adaptiveReport({ selected, mainThread, ciOnly });
+  let catalogBuilds = 0;
+  let authorityReconciliations = 0;
+  const preparedCatalog = prepareVerificationCatalog({
+    packageScripts: plannerScripts,
+    selectorRoutes: selectorReport.recommendedCommands.map((entry) => ({
+      ...entry,
+      id: entry.routeIds[0],
+    })),
+    selectorCommandRefs: selectorReport.recommendedCommands.map((entry) => entry.commandRef),
+    catalogBuilder(input) {
+      catalogBuilds += 1;
+      return buildVerificationCatalog(input);
+    },
+    authorityReconciler(inputs) {
+      authorityReconciliations += 1;
+      return reconcileVerificationRouteAuthority(inputs);
+    },
+  });
+  const boundReport = bindSelectionToPreparedCatalog(selectorReport, preparedCatalog);
+  const plan = buildExecutionPlan(boundReport, {
+    packageScripts: plannerScripts,
+    preparedCatalog,
     executionPlanner,
   });
   assert.deepEqual(calls, [
@@ -1698,19 +1730,21 @@ test("adaptive execution invokes one whole-lane planner per disposition and prop
     { disposition: "deferred-ci-only", rootCommandRefs: ["catalog:ci"] },
   ]);
   assert.deepEqual(plan.routeGaps, []);
+  assert.equal(catalogBuilds, 1);
+  assert.equal(authorityReconciliations, 1);
   assert.equal(plan.selectedLeaves.length, 1);
   assert.deepEqual(plan.selectedLeaves[0].sourceCommandRefs, ["catalog:one", "catalog:two"]);
   assert.equal(plan.closure.plannerInvocationCount, 3);
 
   const conflictingSelected = [
     adaptiveContributor("catalog:one"),
-    adaptiveContributor("catalog:two", { resourceLocks: ["different-lock"] }),
+    adaptiveContributor("catalog:two", { ciProfiles: ["full"] }),
   ];
   const conflictPlan = buildExecutionPlan(adaptiveReport({ selected: conflictingSelected }), {
-    packageScripts: {},
+    packageScripts: plannerScripts,
     executionPlanner,
   });
-  assert.ok(conflictPlan.routeGaps.some((gap) => gap.code === "adaptive-leaf-metadata-conflict"));
+  assert.ok(conflictPlan.routeGaps.some((gap) => gap.code === "verification-plan-leaf-conflict"));
   assert.deepEqual(conflictPlan.executionCommands, []);
 });
 
@@ -1722,14 +1756,14 @@ test("adaptive execution fails closed before commands on cyclic or unresolved al
       "test:cycle:b": "npm run test:cycle:a",
     },
   });
-  assert.ok(cyclePlan.routeGaps.some((gap) => gap.code === "adaptive-alias-cycle"));
+  assert.ok(cyclePlan.routeGaps.some((gap) => gap.code === "verification-plan-cycle"));
   assert.deepEqual(cyclePlan.executionCommands, []);
 
   const unresolvedRoot = adaptiveContributor("test:missing");
   const unresolvedPlan = buildExecutionPlan(adaptiveReport({ selected: [unresolvedRoot] }), {
     packageScripts: {},
   });
-  assert.ok(unresolvedPlan.routeGaps.some((gap) => gap.code === "adaptive-command-unresolved"));
+  assert.ok(unresolvedPlan.routeGaps.some((gap) => gap.code === "verification-plan-unresolved-ref"));
   let calls = 0;
   assert.deepEqual(executeAdaptivePlan(unresolvedPlan, {
     runner() {
@@ -1773,7 +1807,7 @@ test("adaptive execution keeps Windows Job, browser, Pages, and perf leaves in l
     ));
     assert.ok(groups.length > 0, `missing deferred groups for ${testCase.commandRef}`);
     assert.ok(groups.every((group) => group.resourceLocks.includes(testCase.lock)));
-    assert.ok(groups.every((group) => group.sourceCommandRefs.length === 1));
+    assert.ok(groups.every((group) => group.sourceCommandRefs.includes(testCase.commandRef)));
     if (testCase.kind) assert.ok(groups.every((group) => group.kind === testCase.kind));
   }
 });
@@ -1841,7 +1875,7 @@ test("adaptive execution enforces Node batch budgets and Python process isolatio
     maxArgvBytes: 20,
   });
   const oversizedPlan = buildExecutionPlan(adaptiveReport({ selected: [oversizedRoot] }), { packageScripts: {} });
-  assert.ok(oversizedPlan.routeGaps.some((gap) => gap.code === "adaptive-group-argv-budget-exceeded"));
+  assert.ok(oversizedPlan.routeGaps.some((gap) => gap.code === "verification-plan-argv-budget-exceeded"));
   assert.deepEqual(oversizedPlan.executionCommands, []);
 });
 
@@ -1978,6 +2012,51 @@ test("adaptive pre-spawn ENOENT and interrupted evidence keep processStarted fal
   });
   assert.equal(unresolved[0].status, "failed");
   assert.equal(unresolved[0].processStarted, false);
+});
+
+test("forged complete Pages authority artifact blocks planning and spawning", () => {
+  const packageScripts = JSON.parse(fs.readFileSync("package.json", "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const preparedCatalog = prepareRepositoryVerificationCatalog({
+    packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+  });
+  const current = bindSelectionToPreparedCatalog(
+    buildRecommendation([".github/workflows/verify-shared.yml"], selectorRoutes, {
+      routeAuthority: preparedCatalog.authority,
+    }),
+    preparedCatalog,
+  );
+  const forged = structuredClone(current);
+  const commandRef = "verify:pages-dist-and-drift";
+  for (const entry of forged.routeAuthority) {
+    if (entry.commandRef === commandRef) entry.resourceLocks = [];
+  }
+  for (const entries of [
+    forged.recommendedCommands,
+    forged.childAgentStaticTasks,
+    forged.mainThreadSerialVerification,
+    forged.ciOnlyVerification,
+    ...forged.matchedByFile.map((entry) => entry.recommendedCommands),
+  ]) {
+    for (const entry of entries) {
+      if (entry.commandRef === commandRef) entry.resourceLocks = [];
+    }
+  }
+  const plan = buildExecutionPlan(forged, { packageScripts, preparedCatalog });
+  assert.ok(plan.routeGaps.some((gap) => gap.code === "adaptive-selection-catalog-drift"));
+  assert.deepEqual(plan.executionCommands, []);
+  let runnerCount = 0;
+  assert.deepEqual(executeAdaptivePlan(plan, {
+    runner() {
+      runnerCount += 1;
+      return { status: 0 };
+    },
+  }), []);
+  assert.equal(runnerCount, 0);
 });
 
 test("adaptive execution rejects legacy unstructured commands", () => {

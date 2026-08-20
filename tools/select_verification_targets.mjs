@@ -419,9 +419,13 @@ function executionAuthorityForCommand(entry, disposition = classifyExecutionOwne
   return {
     executionOwner: disposition,
     executionOwners: [...entry.executionOwners].sort(),
-    platforms: [process.platform],
+    sourceRefs: [...entry.sourceRefs].sort(),
+    domains: [...entry.domains].sort(),
+    ownerHints: [...entry.ownerHints].sort(),
+    cost: entry.cost,
+    platforms: [...entry.platforms].sort(),
     resourceLocks: [...entry.resourceLocks].sort(),
-    tiers: ciProfiles,
+    tiers: [...entry.tiers].sort(),
     ciProfiles,
     routeIds,
     safetyContributorRouteIds,
@@ -485,19 +489,26 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex(), reconciledAu
     byCommand.set(route.commandRef, existing);
   }
   return [...byCommand.values()]
-    .map((entry) => ({
-      commandRef: entry.commandRef,
-      domains: [...entry.domains].sort(),
-      ownerHints: [...entry.ownerHints].sort(),
-      resourceLocks: [...entry.resourceLocks].sort(),
-      executionOwners: [...entry.executionOwners].sort(),
-      ciProfiles: [...entry.ciProfiles].sort(),
-      routeIds: [...entry.routeIds].sort(),
-      safetyContributorRouteIds: [...entry.safetyContributorRouteIds].sort(),
-      expandedSpecs: [...entry.expandedSpecs].sort(),
-      matchedFiles: [...entry.matchedFiles].sort(),
-      guidance: guidanceSetsToObject(entry.guidance),
-    }))
+    .map((entry) => {
+      const authority = authorityByCommand.get(entry.commandRef);
+      return {
+        commandRef: entry.commandRef,
+        sourceRefs: [...(authority?.sourceRefs || [])].sort(),
+        domains: [...(authority?.domains || entry.domains)].sort(),
+        ownerHints: [...(authority?.ownerHints || entry.ownerHints)].sort(),
+        cost: authority?.cost || "unclassified",
+        platforms: [...(authority?.platforms || ["all"])].sort(),
+        resourceLocks: [...entry.resourceLocks].sort(),
+        executionOwners: [...entry.executionOwners].sort(),
+        tiers: [...(authority?.tiers || [])].sort(),
+        ciProfiles: [...entry.ciProfiles].sort(),
+        routeIds: [...entry.routeIds].sort(),
+        safetyContributorRouteIds: [...entry.safetyContributorRouteIds].sort(),
+        expandedSpecs: [...entry.expandedSpecs].sort(),
+        matchedFiles: [...entry.matchedFiles].sort(),
+        guidance: guidanceSetsToObject(entry.guidance),
+      };
+    })
     .sort(compareCommandEntries);
 }
 
@@ -543,9 +554,11 @@ function skippedHeavyRoutes(allRoutes, selectedRoutes) {
   }));
 }
 
-function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
+function buildRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
+  routeAuthority = null,
+} = {}) {
   validateRouteIndex(allRoutes);
-  const routeAuthority = reconcileVerificationRouteAuthority(allRoutes);
+  const reconciledRouteAuthority = routeAuthority || reconcileVerificationRouteAuthority(allRoutes);
   const p4ExactPhaseSelection = resolveP4ExactPhaseSelection(allRoutes);
   const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
   const importGraph = readImportGraph();
@@ -554,9 +567,9 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
     routes: currentPhaseRoutesForChangedFile(allRoutes, file, importGraph, p4ExactPhaseSelection),
   }));
   const matchedRoutes = matchedRoutesByFile.flatMap((entry) => entry.routes);
-  const commandEntries = buildCommandEntries(matchedRoutes, allRoutes, routeAuthority);
+  const commandEntries = buildCommandEntries(matchedRoutes, allRoutes, reconciledRouteAuthority);
   for (const entry of matchedRoutesByFile) {
-    const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes, routeAuthority);
+    const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes, reconciledRouteAuthority);
     entry.commandEntries = perFileCommandEntries;
   }
   const childSafeRoutes = commandEntries.filter((entry) => classifyExecutionOwners(entry.executionOwners) === "child-safe");
@@ -570,7 +583,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
   return {
     schemaVersion: 1,
     selectionPlatform: process.platform,
-    routeAuthority,
+    routeAuthority: reconciledRouteAuthority,
     changedFiles: normalizedChangedFiles,
     importGraphLoaded: !!importGraph,
     recommendedCommands: commandEntries.map((entry) => ({
