@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildVerificationCatalog,
+  buildRepositoryVerificationCatalog,
+  buildRepositoryVerificationSelectionPlan,
   buildVerificationSelectionPlan,
   buildScriptPortfolio,
   CANONICAL_VERIFICATION_ENTRYPOINTS,
@@ -18,6 +20,7 @@ import {
   parseScriptPortfolioArgs,
   normalizeVerificationPath,
 } from "../tools/verification/script_portfolio.mjs";
+import { buildRouteIndex } from "../tools/test_route_registry.mjs";
 import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -177,7 +180,7 @@ function route(commandRef, domain, overrides = {}) {
     executionOwner: "child-safe",
     platforms: ["linux", "win32"],
     resourceLocks: [],
-    tier: "pr",
+    tier: "contract",
     ciProfile: "pr-fast",
     ...overrides,
   };
@@ -196,15 +199,15 @@ test("builds a canonical catalog from package scripts and route records", () => 
     },
     records: [
       route("test:node:a", "node-domain"),
-      route("test:node:a", "shared-domain", { tier: "nightly", ciProfile: "nightly" }),
+      route("test:node:a", "shared-domain", { tier: "heavy", ciProfile: "full" }),
       route("test:python:b", "python-domain"),
       route("test:e2e:c", "browser-domain", {
         cost: "heavy",
         executionOwner: "main-thread",
         platforms: ["linux"],
         resourceLocks: ["playwright-browser", ".runtime-output"],
-        tier: "nightly",
-        ciProfile: "browser",
+        tier: "heavy",
+        ciProfile: "pr-smoke",
       }),
     ],
   });
@@ -225,8 +228,8 @@ test("builds a canonical catalog from package scripts and route records", () => 
     executionOwner: "child-safe",
     platforms: ["linux", "win32"],
     resourceLocks: [],
-    tiers: ["nightly", "pr"],
-    ciProfiles: ["nightly", "pr-fast"],
+    tiers: ["contract", "heavy"],
+    ciProfiles: ["full", "pr-fast"],
     metadataComplete: true,
   });
   assert.equal(byId.get("test:python:b").runner, "python-unittest");
@@ -238,8 +241,8 @@ test("builds a canonical catalog from package scripts and route records", () => 
   assert.equal(byId.get("test:e2e:c").runner, "playwright");
   assert.deepEqual(byId.get("test:e2e:c").specs, ["tests/e2e/c.spec.js"]);
   assert.deepEqual(byId.get("verify:all").refs, [
-    { id: "test:node:a", args: [] },
-    { id: "test:python:b", args: [] },
+    { id: "test:node:a", args: [], sourceOrder: 0 },
+    { id: "test:python:b", args: [], sourceOrder: 1 },
   ]);
 });
 
@@ -255,13 +258,13 @@ test("recursively expands nested suites and preserves forwarded Node, Python, an
     records: [route("all", "all")],
   });
   const plan = buildVerificationSelectionPlan(catalog, ["all"]);
-  assert.deepEqual(plan.executions.map((entry) => entry.id), ["node", "e2e", "python"]);
+  assert.deepEqual(plan.executions.map((entry) => entry.id), ["node", "python", "e2e"]);
   assert.deepEqual(plan.executions.find((entry) => entry.id === "node").forwardedArgs, ["--test-reporter=spec"]);
   assert.deepEqual(plan.executions.find((entry) => entry.id === "node").effectiveArgv, [
     "--test", "./tests/a.test.mjs", "--test-name-pattern", "base", "--test-reporter=spec",
   ]);
   assert.deepEqual(plan.executions.find((entry) => entry.id === "e2e").forwardedArgs, ["--retries=2"]);
-  assert.deepEqual(plan.executions.find((entry) => entry.id === "python").effectiveArgv, [
+  assert.deepEqual(plan.executions.find((entry) => entry.id === "python").logicalArgv, [
     "-m", "unittest", "tests.test_b", "-q",
   ]);
   assert.deepEqual(plan.normalizedLeaves, [
@@ -293,6 +296,38 @@ test("fails closed for cycles and unresolved suite references", () => {
   const unresolved = buildVerificationCatalog({ packageScripts: { a: "npm run missing" } });
   assert.throws(() => buildVerificationSelectionPlan(unresolved, ["a"]), /verification-plan-unresolved-ref:missing/);
   assert.throws(() => buildVerificationSelectionPlan(unresolved, ["unknown"]), /verification-plan-unresolved-ref:unknown/);
+  const conflictingOrder = {
+    entries: [
+      {
+        id: "leaf",
+        kind: "leaf",
+        command: "node --test tests/a.test.mjs",
+        executable: "node",
+        argv: ["--test", "tests/a.test.mjs"],
+        runner: "node-test",
+        files: ["tests/a.test.mjs"],
+        modules: [],
+        specs: [],
+        cost: "fast",
+        executionOwner: "child-safe",
+        platforms: ["all"],
+        resourceLocks: [],
+        tiers: ["pr"],
+        ciProfiles: ["pr-fast"],
+      },
+      {
+        id: "ordered",
+        kind: "suite",
+        refs: [
+          { id: "leaf", args: [], sourceOrder: 1 },
+        ],
+      },
+    ],
+  };
+  assert.throws(
+    () => buildVerificationSelectionPlan(conflictingOrder, ["ordered"], { allowUnverifiedCatalog: true }),
+    /verification-plan-conflicting-source-order:ordered/,
+  );
 });
 
 test("fails closed when duplicate leaves disagree on runner args, owner, platform, or locks", () => {
@@ -317,6 +352,7 @@ test("fails closed when duplicate leaves disagree on runner args, owner, platfor
     ["executionOwner", "main-thread"],
     ["platforms", ["win32"]],
     ["resourceLocks", [".runtime-output"]],
+    ["ciProfiles", ["full"]],
     ["runner", "opaque"],
   ]) {
     const catalog = {
@@ -327,7 +363,7 @@ test("fails closed when duplicate leaves disagree on runner args, owner, platfor
       ],
     };
     assert.throws(
-      () => buildVerificationSelectionPlan(catalog, ["both"]),
+      () => buildVerificationSelectionPlan(catalog, ["both"], { allowUnverifiedCatalog: true }),
       new RegExp(`verification-plan-leaf-conflict:node-test:tests/a\\.test\\.mjs:${field}`),
     );
   }
@@ -341,22 +377,23 @@ test("keeps locks as an execution boundary and returns deterministic plans", () 
       all: "npm run z && npm run a",
     },
     records: [
-      route("z", "z", { executionOwner: "main-thread", resourceLocks: ["port:4173", ".runtime-output"] }),
+      route("z", "z", { executionOwner: "main-thread", resourceLocks: ["browser-dev-server", ".runtime-output"] }),
       route("a", "a"),
     ],
   });
   const first = buildVerificationSelectionPlan(catalog, ["all"]);
   const second = buildVerificationSelectionPlan(catalog, ["all"]);
   assert.deepEqual(first, second);
-  assert.deepEqual(first.executions.map((entry) => entry.id), ["a", "z"]);
+  assert.deepEqual(first.executions.map((entry) => entry.id), ["z", "a"]);
   assert.deepEqual(first.resourceLockGroups, [
-    { resourceLocks: [], executionIds: ["a"] },
-    { resourceLocks: [".runtime-output", "port:4173"], executionIds: ["z"] },
+    { resourceLocks: [], executionIds: ["execution:0002"] },
+    { resourceLocks: [".runtime-output", "browser-dev-server"], executionIds: ["execution:0001"] },
   ]);
   const direct = buildVerificationSelectionPlan(catalog, ["z", "a"]);
   const reversed = buildVerificationSelectionPlan(catalog, ["a", "z"]);
-  assert.deepEqual(direct, reversed);
-  assert.deepEqual(direct.selectedCommandRefs, ["a", "z"]);
+  assert.deepEqual(direct.executions.map((entry) => entry.id), ["z", "a"]);
+  assert.deepEqual(reversed.executions.map((entry) => entry.id), ["a", "z"]);
+  assert.deepEqual(direct.selectedCommandRefs, ["z", "a"]);
 });
 
 test("normalizes Windows and Unix leaf paths without changing module names", () => {
@@ -390,6 +427,11 @@ test("reports mechanical consistency gaps across catalog, scripts, and route rec
     unresolvedSuiteRefs: [],
     cyclicSuiteRefs: [],
     invalidSuitePlans: [],
+    selectorPlanFailures: [],
+    supersessionMismatches: [],
+    authorityMismatches: [],
+    catalogIdentityMismatches: [],
+    sourceIntegrityMismatches: [],
     unclassifiedCatalogEntries: [],
     targetlessDiscoveryEntries: [],
   });
@@ -403,14 +445,19 @@ test("reports mechanical consistency gaps across catalog, scripts, and route rec
     schemaVersion: 1,
     kind: "verification-catalog-consistency",
     consistent: false,
-    missingCatalogEntries: ["b"],
+    missingCatalogEntries: ["b", "missing-route"],
     orphanCatalogEntries: ["legacy"],
     unresolvedRecordRefs: ["missing-route"],
     entryMismatches: [],
     unresolvedSuiteRefs: [],
     cyclicSuiteRefs: [],
     invalidSuitePlans: [],
-    unclassifiedCatalogEntries: ["a", "b"],
+    selectorPlanFailures: [{ commandRef: "missing-route", error: "verification-plan-unresolved-ref:missing-route" }],
+    supersessionMismatches: [],
+    authorityMismatches: ["authority"],
+    catalogIdentityMismatches: ["sourceMode", "identity", "selectorCommandRefs"],
+    sourceIntegrityMismatches: ["sourceIntegrity"],
+    unclassifiedCatalogEntries: [],
     targetlessDiscoveryEntries: [],
   });
 });
@@ -429,6 +476,11 @@ test("mechanical consistency rejects unresolved and cyclic retained aliases", ()
     unresolvedSuiteRefs: ["a->missing"],
     cyclicSuiteRefs: [],
     invalidSuitePlans: [{ id: "a", error: "verification-plan-unresolved-ref:missing" }],
+    selectorPlanFailures: [],
+    supersessionMismatches: [],
+    authorityMismatches: [],
+    catalogIdentityMismatches: [],
+    sourceIntegrityMismatches: [],
     unclassifiedCatalogEntries: [],
     targetlessDiscoveryEntries: [],
   });
@@ -451,9 +503,9 @@ test("models every mixed command-chain segment as an alias or stable inline leaf
   const byId = new Map(catalog.entries.map((entry) => [entry.id, entry]));
   assert.equal(byId.get("mixed").kind, "suite");
   assert.deepEqual(byId.get("mixed").refs, [
-    { id: "mixed#inline:01", args: [] },
-    { id: "mixed#inline:02", args: [] },
-    { id: "leaf", args: [] },
+    { id: "mixed#inline:01", args: [], sourceOrder: 0 },
+    { id: "mixed#inline:02", args: [], sourceOrder: 1 },
+    { id: "leaf", args: [], sourceOrder: 2 },
   ]);
   assert.deepEqual({
     kind: byId.get("mixed#inline:01").kind,
@@ -472,8 +524,8 @@ test("models every mixed command-chain segment as an alias or stable inline leaf
   const plan = buildVerificationSelectionPlan(catalog, ["mixed"]);
   assert.deepEqual(plan.executions.map((entry) => entry.id), [
     "mixed#inline:01",
-    "leaf",
     "mixed#inline:02",
+    "leaf",
   ]);
   assert.deepEqual(plan.executions.find((entry) => entry.id === "mixed#inline:02").argv, [
     "run", "python", "--", "-m", "unittest", "tests.test_inline", "-q",
@@ -533,7 +585,7 @@ test("creates catalog leaves for direct metadata command refs", () => {
   ];
   const catalog = buildVerificationCatalog({ packageScripts: {}, records });
   const byId = new Map(catalog.entries.map((entry) => [entry.id, entry]));
-  assert.equal(byId.get(directNode).sourceKind, "direct-record");
+  assert.equal(byId.get(directNode).sourceKind, "direct-authority");
   assert.equal(byId.get(directNode).runner, "node-script");
   assert.equal(byId.get(directPython).runner, "python-unittest");
   assert.deepEqual(byId.get(directPython).modules, ["tests.test_direct"]);
@@ -558,15 +610,18 @@ test("requires explicit execution metadata before a selected leaf can enter a pl
     }],
   };
   assert.throws(
-    () => buildVerificationSelectionPlan(forged, ["leaf"]),
+    () => buildVerificationSelectionPlan(forged, ["leaf"], { allowUnverifiedCatalog: true }),
     /verification-plan-unclassified-leaf:leaf/,
   );
   const authorized = buildVerificationCatalog({
     packageScripts,
-    records: [route("suite", "catalog", { resourceLocks: [".runtime-output"] })],
+    records: [route("suite", "catalog", {
+      executionOwner: "main-thread",
+      resourceLocks: [".runtime-output"],
+    })],
   });
   const [execution] = buildVerificationSelectionPlan(authorized, ["suite"]).executions;
-  assert.equal(execution.executionOwner, "child-safe");
+  assert.equal(execution.executionOwner, "main-thread");
   assert.deepEqual(execution.resourceLocks, [".runtime-output"]);
 });
 
@@ -598,7 +653,7 @@ test("recognizes direct Playwright binaries and rejects config discovery without
     }],
   };
   assert.throws(
-    () => buildVerificationSelectionPlan(staleCatalog, ["discovery"]),
+    () => buildVerificationSelectionPlan(staleCatalog, ["discovery"], { allowUnverifiedCatalog: true }),
     /verification-plan-targetless-leaf:discovery:unknown/,
   );
 });
@@ -703,17 +758,373 @@ test("reports deterministic command, target, and execution metadata drift", () =
     fields: ["ciProfiles", "executionOwner", "platforms", "resourceLocks"],
   }]);
   assert.equal(metadataDrift.consistent, false);
+
+  const mutated = buildVerificationCatalog({ packageScripts, records });
+  mutated.entries[0].command = "node --test tests/b.test.mjs";
+  mutated.entries[0].argv = ["--test", "tests/b.test.mjs"];
+  mutated.entries[0].files = ["tests/b.test.mjs"];
+  assert.throws(
+    () => buildVerificationSelectionPlan(mutated, ["a"]),
+    /verification-plan-catalog-source-drift/,
+  );
+  assert.throws(
+    () => buildVerificationSelectionPlan({ entries: mutated.entries }, ["a"]),
+    /verification-plan-unverified-catalog/,
+  );
+  const unsealed = buildVerificationCatalog({ packageScripts, records });
+  delete unsealed.sourceIntegrity;
+  assert.deepEqual(
+    checkVerificationCatalogConsistency(unsealed, { packageScripts, records }).sourceIntegrityMismatches,
+    ["sourceIntegrity"],
+  );
+  assert.equal(checkVerificationCatalogConsistency(unsealed, { packageScripts, records }).consistent, false);
+  const staleSeal = buildVerificationCatalog({ packageScripts, records });
+  staleSeal.sourceIntegrity.digest = "0".repeat(64);
+  assert.deepEqual(
+    checkVerificationCatalogConsistency(staleSeal, { packageScripts, records }).sourceIntegrityMismatches,
+    ["sourceIntegrity"],
+  );
+});
+
+test("fails closed for unsupported shell operators while preserving quoted script syntax", () => {
+  for (const [operator, escaped] of [
+    ["||", "\\|\\|"],
+    ["|", "\\|"],
+    ["&", "&"],
+    [";", ";"],
+    ["<", "<"],
+    [">", ">"],
+  ]) {
+    assert.throws(
+      () => buildVerificationCatalog({
+        packageScripts: { bad: `node --test tests/a.test.mjs ${operator} node --test tests/b.test.mjs` },
+        records: [route("bad", "shell")],
+      }),
+      new RegExp(`verification-catalog-unsupported-shell-operator:bad:${escaped}`),
+    );
+  }
+  const quoted = buildVerificationCatalog({
+    packageScripts: { quoted: "node -e \"process.env.X='a;b|c&d'; import('./tests/a.test.mjs')\"" },
+    records: [route("quoted", "shell")],
+  });
+  assert.equal(buildVerificationSelectionPlan(quoted, ["quoted"]).executions[0].runner, "opaque");
+});
+
+test("uses repo-relative Windows identity with case folding and stable UNC handling", () => {
+  const win = { repoRoot: "C:\\Repo", platform: "win32" };
+  assert.equal(normalizeVerificationPath("C:\\Repo\\Tests\\A.test.mjs", win), "tests/a.test.mjs");
+  assert.equal(normalizeVerificationPath("c:/repo/tests/a.test.mjs", win), "tests/a.test.mjs");
+  assert.equal(
+    normalizeVerificationPath("\\\\Server\\Share\\Tests\\A.test.mjs", win),
+    "//server/share/tests/a.test.mjs",
+  );
+  assert.equal(
+    normalizeVerificationPath("\\\\Server\\Share\\Repo\\Tests\\A.test.mjs", {
+      repoRoot: "\\\\server\\share\\repo",
+      platform: "win32",
+    }),
+    "tests/a.test.mjs",
+  );
+  assert.equal(
+    normalizeVerificationPath("/repo/Tests/A.test.mjs", { repoRoot: "/repo", platform: "linux" }),
+    "Tests/A.test.mjs",
+  );
+  const catalog = buildVerificationCatalog({
+    packageScripts: {
+      first: "node --test C:/Repo/Tests/A.test.mjs",
+      second: "node --test c:/repo/tests/a.test.mjs",
+      both: "npm run first && npm run second",
+    },
+    records: [route("both", "windows")],
+    ...win,
+  });
+  assert.throws(
+    () => buildVerificationSelectionPlan(catalog, ["both"], win),
+    /verification-plan-duplicate-leaf:node-test:tests\/a\.test\.mjs/,
+  );
+  const uncCatalog = buildVerificationCatalog({
+    packageScripts: {
+      first: "node --test //Server/Share/Tests/A.test.mjs",
+      second: "node --test //server/share/tests/a.test.mjs",
+      both: "npm run first && npm run second",
+    },
+    records: [route("both", "windows")],
+    ...win,
+  });
+  assert.throws(
+    () => buildVerificationSelectionPlan(uncCatalog, ["both"], win),
+    /verification-plan-duplicate-leaf:node-test:\/\/server\/share\/tests\/a\.test\.mjs/,
+  );
+});
+
+test("preserves real build-test-drift and build-check chains as topological executions", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+  const selectorRoutes = buildRouteIndex();
+  const catalog = buildRepositoryVerificationCatalog({
+    packageScripts: packageJson.scripts,
+    selectorRoutes,
+    repoRoot: REPO_ROOT,
+  });
+  const sourceInputs = {
+    packageScripts: packageJson.scripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  };
+  assert.throws(
+    () => buildVerificationSelectionPlan(catalog, ["verify:pages-dist-and-drift"]),
+    /verification-plan-missing-source-authority/,
+  );
+  const pages = buildVerificationSelectionPlan(catalog, ["verify:pages-dist-and-drift"], {
+    platform: process.platform,
+    sourceInputs,
+  });
+  assert.deepEqual(pages.executions.map((entry) => entry.id), [
+    "verify:pages-dist-and-drift#inline:01",
+    "verify:pages-dist-and-drift#inline:02",
+    "test:node:landing-showcase-view",
+    "test:node:sample-project-contracts",
+    "verify:pages-dist-and-drift#inline:05",
+  ]);
+  assert.deepEqual(pages.executions.map((entry) => entry.dependsOn), [
+    [],
+    ["execution:0001"],
+    ["execution:0002"],
+    ["execution:0003"],
+    ["execution:0004"],
+  ]);
+  assert.equal(pages.executions[0].effectiveArgv.at(-1), "tools/build_pages_dist.py");
+  if (process.platform === "win32") {
+    assert.equal(pages.executions[0].executable, "cmd.exe");
+    assert.deepEqual(pages.executions[0].effectiveArgv.slice(0, 4), ["/d", "/s", "/c", "npm"]);
+  }
+  assert.equal(pages.executions.at(-1).effectiveArgv[0], "diff");
+
+  const drift = buildVerificationSelectionPlan(catalog, ["verify:dist-drift"], {
+    platform: process.platform,
+    sourceInputs,
+  });
+  assert.deepEqual(drift.executions.map((entry) => entry.id), [
+    "verify:dist-drift#inline:01",
+    "verify:dist-drift#inline:02",
+  ]);
+  assert.deepEqual(drift.dependencyEdges, [{
+    from: "execution:0001",
+    to: "execution:0002",
+    kind: "suite-sequence",
+    suiteId: "verify:dist-drift",
+    sourceOrder: 1,
+  }]);
+});
+
+test("plans full selector roots once with supersession, process argv, and route provenance", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+  const roots = [
+    "node tools/select_verification_targets.mjs --check",
+    "test:node:supervisor-contracts",
+    "test:node:supervisor-plan",
+    "test:node:supervisor-routing",
+    "test:node:verification-metadata",
+    "test:node:verification-script-portfolio",
+    "test:node:verify-core-runner",
+    "test:node:williams-crossover-governance",
+    "test:node:williams-crossover-job-runner",
+    "test:node:windows-job-runtime",
+    "verify:script-portfolio",
+    "verify:supervisor-contracts",
+    "verify:test-import-graph",
+    "verify:test:e2e-layers",
+  ];
+  const plan = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots,
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.equal(plan.rootRecords.length, 14);
+  assert.ok(plan.rootRecords.every((entry) => entry.routeIds.length > 0));
+  assert.deepEqual(
+    plan.rootRecords.filter((entry) => entry.disposition === "superseded")
+      .map((entry) => [entry.commandRef, entry.supersededBy]),
+    [
+      ["test:node:supervisor-contracts", "verify:supervisor-contracts"],
+      ["test:node:supervisor-routing", "verify:supervisor-contracts"],
+    ],
+  );
+  assert.equal(plan.executions.length, 14);
+  assert.ok(plan.executions.every((entry) => entry.executable && Array.isArray(entry.effectiveArgv)));
+  assert.ok(plan.executions.every((entry) => entry.provenance[0].routeIds.length > 0));
+
+  const directPython = "python -m unittest tests.test_e2e_structural_tooling -q";
+  const [execution] = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: [{
+    commandRef: directPython,
+    routeIds: ["infra:playwright-observability"],
+    safetyContributorRouteIds: ["infra:playwright-observability"],
+    }],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  }).executions;
+  assert.equal(execution.logicalExecutable, "python");
+  assert.deepEqual(execution.logicalArgv, ["-m", "unittest", "tests.test_e2e_structural_tooling", "-q"]);
+  if (process.platform === "win32") {
+    assert.equal(execution.executable, process.execPath);
+    assert.deepEqual(execution.effectiveArgv, [
+      "tools/run_python.mjs", "-m", "unittest", "tests.test_e2e_structural_tooling", "-q",
+    ]);
+  } else {
+    assert.equal(execution.executable, "python");
+    assert.deepEqual(execution.effectiveArgv, execution.logicalArgv);
+  }
+  assert.deepEqual(execution.provenance[0].routeIds, ["infra:playwright-observability"]);
+  assert.deepEqual(execution.provenance[0].safetyContributorRouteIds, ["infra:playwright-observability"]);
+
+  assert.throws(
+    () => buildRepositoryVerificationSelectionPlan({
+      packageScripts: packageJson.scripts,
+      roots: [{
+        commandRef: directPython,
+        routeIds: ["stale:route"],
+        safetyContributorRouteIds: ["infra:playwright-observability"],
+      }],
+      repoRoot: REPO_ROOT,
+      platform: process.platform,
+    }),
+    /verification-plan-root-route-drift:python -m unittest tests\.test_e2e_structural_tooling -q:routeIds/,
+  );
+});
+
+test("plans distinct selector E2E roots by spec identity", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+  const selectorRoutes = buildRouteIndex();
+  const roots = selectorRoutes.filter((route) => route.id.startsWith("e2e:")).slice(0, 2)
+    .map((route) => ({
+      commandRef: route.commandRef,
+      routeIds: [route.id],
+      safetyContributorRouteIds: [route.id],
+    }));
+  const plan = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots,
+    selectorRoutes,
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.equal(plan.executions.length, 2);
+  assert.ok(plan.executions.every((entry) => entry.runner === "playwright" && entry.specs.length === 1));
+  assert.notEqual(plan.executions[0].specs[0], plan.executions[1].specs[0]);
+});
+
+test("repository planning fails when current package or route sources drift", () => {
+  const authorityRoute = {
+    id: "selector:a",
+    commandRef: "a",
+    sourceRef: "tests/a.test.mjs",
+    domain: "a",
+    ownerHint: "a",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  };
+  const catalog = buildRepositoryVerificationCatalog({
+    packageScripts: { a: "node --test tests/a.test.mjs" },
+    verificationRecords: [],
+    selectorRoutes: [authorityRoute],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.throws(
+    () => buildVerificationSelectionPlan(catalog, ["a"], {
+      platform: process.platform,
+      sourceInputs: {
+        packageScripts: { a: "node --test tests/b.test.mjs" },
+        verificationRecords: [],
+        selectorRoutes: [authorityRoute],
+        repoRoot: REPO_ROOT,
+        platform: process.platform,
+      },
+    }),
+    /verification-plan-source-authority-drift/,
+  );
+});
+
+test("reconciled authority rejects route source drift mechanically", () => {
+  const shared = {
+    id: "shared-route",
+    commandRef: "a",
+    domain: "a",
+    ownerHint: "a",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  };
+  assert.throws(
+    () => buildVerificationCatalog({
+      packageScripts: { a: "node --test tests/a.test.mjs" },
+      records: [shared],
+      selectorRoutes: [{ ...shared, commandRef: "b" }],
+    }),
+    /verification-route-authority-source-drift:shared-route:commandRef/,
+  );
+});
+
+test("reconciled authority rejects invalid safety metadata before catalog planning", () => {
+  const packageScripts = { a: "node --test tests/a.test.mjs" };
+  for (const [overrides, error] of [
+    [
+      { executionOwner: undefined, executionOwners: ["main-thread", "bogus-owner"] },
+      /verification-route-authority-invalid-execution-owner:verification-record:0001:a:bogus-owner/,
+    ],
+    [{ ciProfile: "bogus-profile" }, /verification-route-authority-invalid-ci-profile:verification-record:0001:a:bogus-profile/],
+    [{ executionOwner: "main-thread", resourceLocks: ["bogus-lock"] }, /verification-route-authority-invalid-resource-lock:verification-record:0001:a:bogus-lock/],
+    [{ resourceLocks: [".runtime-output"] }, /verification-route-authority-child-safe-resource-lock:verification-record:0001:a/],
+    [{ cost: "heavy" }, /verification-route-authority-child-safe-heavy:verification-record:0001:a/],
+    [{ platforms: ["plan9"] }, /verification-route-authority-invalid-platform:verification-record:0001:a:plan9/],
+  ]) {
+    assert.throws(
+      () => buildVerificationCatalog({ packageScripts, records: [route("a", "a", overrides)] }),
+      error,
+    );
+  }
+});
+
+test("supersession fails closed when the current superseder closure drops a covered leaf", () => {
+  const catalog = buildVerificationCatalog({
+    packageScripts: {
+      superseder: "node --test tests/a.test.mjs",
+      covered: "node --test tests/b.test.mjs",
+    },
+    records: [route("superseder", "a"), route("covered", "b")],
+  });
+  assert.throws(
+    () => buildVerificationSelectionPlan(catalog, ["superseder", "covered"], {
+      supersession: { superseder: ["covered"] },
+    }),
+    /verification-plan-supersession-drift:superseder:covered/,
+  );
 });
 
 test("real package scripts and verification domains form one mechanically consistent catalog", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
-  const catalog = buildVerificationCatalog({
+  const selectorRoutes = buildRouteIndex();
+  const catalog = buildRepositoryVerificationCatalog({
     packageScripts: packageJson.scripts,
-    records: VERIFICATION_DOMAINS,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: REPO_ROOT,
   });
   const consistency = checkVerificationCatalogConsistency(catalog, {
     packageScripts: packageJson.scripts,
     records: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: REPO_ROOT,
+    sourceMode: "repository",
   });
   assert.equal(consistency.consistent, true);
   assert.deepEqual({
@@ -733,9 +1144,12 @@ test("real package scripts and verification domains form one mechanically consis
     cyclicSuiteRefs: [],
     invalidSuitePlans: [],
   });
-  assert.ok(consistency.unclassifiedCatalogEntries.includes("bench:editor-performance"));
-  assert.ok(consistency.unclassifiedCatalogEntries.includes("test:e2e"));
-  assert.deepEqual(consistency.targetlessDiscoveryEntries, ["test:e2e"]);
+  assert.deepEqual(consistency.unclassifiedCatalogEntries, []);
+  assert.deepEqual(consistency.targetlessDiscoveryEntries, []);
+  assert.deepEqual(consistency.selectorPlanFailures, []);
+  assert.deepEqual(consistency.supersessionMismatches, []);
+  assert.deepEqual(consistency.catalogIdentityMismatches, []);
+  assert.deepEqual(consistency.sourceIntegrityMismatches, []);
   const directRefs = VERIFICATION_DOMAINS
     .filter((entry) => entry.commandType === "direct")
     .map((entry) => entry.commandRef);

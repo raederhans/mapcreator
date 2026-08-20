@@ -45,6 +45,7 @@ export const EXECUTION_OWNERS = VERIFICATION_EXECUTION_OWNERS;
 export const COSTS = VERIFICATION_COSTS;
 export const LAYERS = VERIFICATION_LAYERS;
 export const CI_PROFILES = VERIFICATION_CI_PROFILES;
+export const PLATFORMS = Object.freeze(["all", "win32", "linux", "darwin"]);
 
 const INFRASTRUCTURE_ROUTES = [
   {
@@ -723,6 +724,167 @@ function moduleNameFromPythonPath(sourceRef) {
 
 function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function sortedRouteValues(values) {
+  const input = Array.isArray(values) ? values : values === undefined || values === null ? [] : [values];
+  return [...new Set(input
+    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .filter((value) => value !== undefined && value !== null && String(value).trim())
+    .map(String))].sort();
+}
+
+function routeValues(route, singular, plural) {
+  return sortedRouteValues([
+    ...(plural && Array.isArray(route?.[plural]) ? route[plural] : []),
+    ...(route?.[singular] === undefined ? [] : [route[singular]]),
+  ]);
+}
+
+function normalizeAuthorityContributor(route) {
+  const sourceRefs = Array.isArray(route?.sourceRefs)
+    ? sortedRouteValues(route.sourceRefs)
+    : sortedRouteValues(String(route?.sourceRef || "").split(","));
+  const domains = routeValues(route, "domain", "domains");
+  const ownerHints = routeValues(route, "ownerHint", "ownerHints");
+  const tiers = sortedRouteValues([
+    ...routeValues(route, "layer", "layers"),
+    ...routeValues(route, "tier", "tiers"),
+  ]);
+  const costs = routeValues(route, "cost", "costs");
+  const executionOwners = routeValues(route, "executionOwner", "executionOwners");
+  const ciProfiles = routeValues(route, "ciProfile", "ciProfiles");
+  const platforms = routeValues(route, "platform", "platforms");
+  return {
+    id: String(route?.id || ""),
+    commandRef: String(route?.commandRef || ""),
+    sourceRefs,
+    domains,
+    ownerHints,
+    tiers,
+    costs,
+    resourceLocks: sortedRouteValues(route?.resourceLocks),
+    executionOwners,
+    ciProfiles,
+    platforms: platforms.length > 0 ? platforms : ["all"],
+    sourceKinds: sortedRouteValues(route?.authoritySource || route?.sourceKind || "selector-route"),
+  };
+}
+
+export function classifyVerificationExecutionOwners(executionOwners) {
+  const owners = new Set(executionOwners);
+  if (owners.has("ci-only")) return "ci-only";
+  if (owners.has("main-thread")) return "main-thread";
+  if (owners.size > 0 && [...owners].every((owner) => owner === "child-safe")) return "child-safe";
+  return "blocked";
+}
+
+function assertAuthorityContributorSchema(contributor) {
+  for (const owner of contributor.executionOwners) {
+    if (!EXECUTION_OWNERS.includes(owner)) {
+      throw new Error(`verification-route-authority-invalid-execution-owner:${contributor.id}:${owner}`);
+    }
+  }
+  for (const cost of contributor.costs) {
+    if (!COSTS.includes(cost)) {
+      throw new Error(`verification-route-authority-invalid-cost:${contributor.id}:${cost}`);
+    }
+  }
+  for (const tier of contributor.tiers) {
+    if (!LAYERS.includes(tier)) {
+      throw new Error(`verification-route-authority-invalid-tier:${contributor.id}:${tier}`);
+    }
+  }
+  for (const profile of contributor.ciProfiles) {
+    if (!CI_PROFILES.includes(profile)) {
+      throw new Error(`verification-route-authority-invalid-ci-profile:${contributor.id}:${profile}`);
+    }
+  }
+  for (const lock of contributor.resourceLocks) {
+    if (!RESOURCE_LOCKS.includes(lock)) {
+      throw new Error(`verification-route-authority-invalid-resource-lock:${contributor.id}:${lock}`);
+    }
+  }
+  for (const platform of contributor.platforms) {
+    if (!PLATFORMS.includes(platform)) {
+      throw new Error(`verification-route-authority-invalid-platform:${contributor.id}:${platform}`);
+    }
+  }
+  if (contributor.executionOwners.includes("child-safe") && contributor.resourceLocks.length > 0) {
+    throw new Error(`verification-route-authority-child-safe-resource-lock:${contributor.id}`);
+  }
+  if (contributor.executionOwners.includes("child-safe") && contributor.costs.includes("heavy")) {
+    throw new Error(`verification-route-authority-child-safe-heavy:${contributor.id}`);
+  }
+}
+
+/**
+ * Reconcile every route contributor for a command into the selector's canonical
+ * safety authority. Duplicate route ids must be byte-for-byte equivalent after
+ * schema normalization, so retained metadata and generated routes cannot drift.
+ */
+export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) {
+  if (!Array.isArray(routes)) throw new TypeError("verification-route-authority-invalid-routes");
+  const contributorsById = new Map();
+  for (const rawRoute of routes) {
+    const contributor = normalizeAuthorityContributor(rawRoute);
+    if (!contributor.id || !contributor.commandRef) {
+      throw new Error(`verification-route-authority-invalid-contributor:${contributor.id || "<unknown>"}`);
+    }
+    assertAuthorityContributorSchema(contributor);
+    const existing = contributorsById.get(contributor.id);
+    if (existing) {
+      const fields = Object.keys(contributor)
+        .filter((field) => field !== "sourceKinds")
+        .filter((field) => JSON.stringify(existing[field]) !== JSON.stringify(contributor[field]))
+        .sort();
+      if (fields.length > 0) {
+        throw new Error(`verification-route-authority-source-drift:${contributor.id}:${fields.join(",")}`);
+      }
+      existing.sourceKinds = sortedRouteValues([...existing.sourceKinds, ...contributor.sourceKinds]);
+      continue;
+    }
+    contributorsById.set(contributor.id, contributor);
+  }
+
+  const byCommand = new Map();
+  for (const contributor of contributorsById.values()) {
+    const current = byCommand.get(contributor.commandRef) || [];
+    current.push(contributor);
+    byCommand.set(contributor.commandRef, current);
+  }
+  return [...byCommand.entries()].map(([commandRef, contributors]) => {
+    contributors.sort((left, right) => left.id.localeCompare(right.id));
+    const executionOwners = sortedRouteValues(contributors.flatMap((entry) => entry.executionOwners));
+    const costs = sortedRouteValues(contributors.flatMap((entry) => entry.costs));
+    const executionOwner = classifyVerificationExecutionOwners(executionOwners);
+    const cost = costs.length === 0
+      ? "unclassified"
+      : costs.sort((left, right) => COSTS.indexOf(right) - COSTS.indexOf(left))[0];
+    const platforms = sortedRouteValues(contributors.flatMap((entry) => entry.platforms));
+    const ciProfiles = sortedRouteValues(contributors.flatMap((entry) => entry.ciProfiles));
+    return {
+      commandRef,
+      routeIds: contributors.map((entry) => entry.id),
+      safetyContributorRouteIds: contributors.map((entry) => entry.id),
+      sourceRefs: sortedRouteValues(contributors.flatMap((entry) => entry.sourceRefs)),
+      sourceKinds: sortedRouteValues(contributors.flatMap((entry) => entry.sourceKinds)),
+      domains: sortedRouteValues(contributors.flatMap((entry) => entry.domains)),
+      ownerHints: sortedRouteValues(contributors.flatMap((entry) => entry.ownerHints)),
+      executionOwners,
+      executionOwner,
+      cost,
+      platforms: platforms.length > 0 ? platforms : ["all"],
+      resourceLocks: sortedRouteValues(contributors.flatMap((entry) => entry.resourceLocks)),
+      tiers: sortedRouteValues(contributors.flatMap((entry) => entry.tiers)),
+      ciProfiles,
+      metadataComplete: COSTS.includes(cost)
+        && EXECUTION_OWNERS.includes(executionOwner)
+        && platforms.length > 0
+        && ciProfiles.length > 0,
+      contributors,
+    };
+  }).sort((left, right) => left.commandRef.localeCompare(right.commandRef));
 }
 
 function e2eCost(primaryLayer) {

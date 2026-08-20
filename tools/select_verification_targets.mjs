@@ -3,7 +3,14 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { normalizeP4StateActionPhase } from "./p4_state_action_phases.mjs";
-import { buildRouteIndex, summarizeRoutes, validateRouteIndex, toRepoPath } from "./test_route_registry.mjs";
+import {
+  buildRouteIndex,
+  classifyVerificationExecutionOwners,
+  reconcileVerificationRouteAuthority,
+  summarizeRoutes,
+  validateRouteIndex,
+  toRepoPath,
+} from "./test_route_registry.mjs";
 
 const REPO_ROOT = process.cwd();
 const IMPORT_GRAPH_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-import-graph.json");
@@ -399,11 +406,7 @@ function compareCommandEntries(left, right) {
 }
 
 export function classifyExecutionOwners(executionOwners) {
-  const owners = new Set(executionOwners || []);
-  if (owners.has("ci-only")) return "ci-only";
-  if (owners.has("main-thread")) return "main-thread";
-  if (owners.size > 0 && [...owners].every((owner) => owner === "child-safe")) return "child-safe";
-  return "blocked";
+  return classifyVerificationExecutionOwners(executionOwners);
 }
 
 const DEFAULT_EXECUTION_MAX_LEAVES = 64;
@@ -444,12 +447,9 @@ function selectionContributor(entry, disposition, extra = {}) {
 
 function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
   const byCommand = new Map();
-  const allRoutesByCommand = new Map();
-  for (const route of allRoutes) {
-    const commandRoutes = allRoutesByCommand.get(route.commandRef) || [];
-    commandRoutes.push(route);
-    allRoutesByCommand.set(route.commandRef, commandRoutes);
-  }
+  const authorityByCommand = new Map(
+    reconcileVerificationRouteAuthority(allRoutes).map((entry) => [entry.commandRef, entry]),
+  );
   for (const route of routes) {
     const existing = byCommand.get(route.commandRef) || {
       commandRef: route.commandRef,
@@ -467,13 +467,18 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
     existing.domains.add(route.domain);
     existing.ownerHints.add(route.ownerHint);
     existing.routeIds.add(route.id);
-    for (const commandRoute of allRoutesByCommand.get(route.commandRef) || [route]) {
-      existing.safetyContributorRouteIds.add(commandRoute.id);
-      existing.executionOwners.add(commandRoute.executionOwner);
-      existing.ciProfiles.add(commandRoute.ciProfile);
-      for (const lock of commandRoute.resourceLocks) {
-        existing.resourceLocks.add(lock);
-      }
+    const authority = authorityByCommand.get(route.commandRef);
+    for (const contributorId of authority?.safetyContributorRouteIds || [route.id]) {
+      existing.safetyContributorRouteIds.add(contributorId);
+    }
+    for (const executionOwner of authority?.executionOwners || [route.executionOwner]) {
+      existing.executionOwners.add(executionOwner);
+    }
+    for (const ciProfile of authority?.ciProfiles || [route.ciProfile]) {
+      existing.ciProfiles.add(ciProfile);
+    }
+    for (const lock of authority?.resourceLocks || route.resourceLocks) {
+      existing.resourceLocks.add(lock);
     }
     collectRouteGuidance(existing.guidance, route.guidance);
     byCommand.set(route.commandRef, existing);

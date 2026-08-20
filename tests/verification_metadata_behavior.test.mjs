@@ -11,6 +11,7 @@ import {
 import {
   buildNodeRoutes,
   buildRouteIndex,
+  reconcileVerificationRouteAuthority,
 } from "../tools/test_route_registry.mjs";
 import {
   VERIFICATION_DOMAINS,
@@ -1443,6 +1444,34 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   for (const sourceRef of identityInputs) {
     assert.ok(commandsForChangedFile(identityInputReport, sourceRef).some((command) => command.commandRef === "perf:williams-crossover:run"), sourceRef);
   }
+});
+
+test("selector and catalog authority share contributor owner, lock, and CI reconciliation", () => {
+  const authority = reconcileVerificationRouteAuthority(buildRouteIndex());
+  const byCommand = new Map(authority.map((entry) => [entry.commandRef, entry]));
+  const telemetry = byCommand.get("test:node:williams-crossover-telemetry-live");
+  assert.ok(telemetry);
+  assert.equal(telemetry.executionOwner, "main-thread");
+  assert.deepEqual(telemetry.executionOwners, ["child-safe", "main-thread"]);
+  assert.deepEqual(telemetry.resourceLocks, ["perf-dev-server"]);
+  assert.deepEqual(telemetry.ciProfiles, ["perf-pr-gate", "pr-fast"]);
+  assert.ok(telemetry.safetyContributorRouteIds.includes("perf:williams-crossover-telemetry-live"));
+  assert.ok(telemetry.safetyContributorRouteIds.includes("node:test:node:williams-crossover-telemetry-live"));
+
+  const directPython = byCommand.get("python -m unittest tests.test_e2e_structural_tooling -q");
+  assert.ok(directPython);
+  assert.equal(directPython.executionOwner, "child-safe");
+  assert.deepEqual(directPython.resourceLocks, []);
+  assert.deepEqual(directPython.ciProfiles, ["pr-fast"]);
+
+  const report = buildRecommendation(["tests/williams_crossover_windows_job_runner_integration.test.mjs"]);
+  const selectedTelemetry = report.recommendedCommands
+    .find((entry) => entry.commandRef === telemetry.commandRef);
+  assert.ok(selectedTelemetry);
+  assert.deepEqual(selectedTelemetry.executionOwners, telemetry.executionOwners);
+  assert.deepEqual(selectedTelemetry.resourceLocks, telemetry.resourceLocks);
+  assert.deepEqual(selectedTelemetry.ciProfiles, telemetry.ciProfiles);
+  assert.deepEqual(selectedTelemetry.safetyContributorRouteIds, telemetry.safetyContributorRouteIds);
 });
 
 test("dated schema-2 baseline artifacts route to the perf contract", () => {
