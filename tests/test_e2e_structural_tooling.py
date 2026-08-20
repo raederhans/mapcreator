@@ -433,9 +433,13 @@ const authority = (commandRef, disposition, resourceLocks, ciProfiles) => ({
   commandRef,
   executionOwner: disposition,
   executionOwners: [disposition],
+  sourceRefs: ['tests/synthetic.test.mjs'],
+  domains: ['test-routing'],
+  ownerHints: ['test-infra'],
+  cost: disposition === 'main-thread' ? 'heavy' : 'contract',
   platforms: [process.platform],
   resourceLocks,
-  tiers: ciProfiles,
+  tiers: [disposition === 'main-thread' ? 'heavy' : 'contract'],
   ciProfiles,
   routeIds: [`synthetic:${disposition}:${commandRef}`],
   safetyContributorRouteIds: [`synthetic:${disposition}:${commandRef}`],
@@ -464,6 +468,9 @@ const report = {
   unmatchedChangedFiles: [],
 };
 const plan = buildExecutionPlan(report, { includeMainThread: false });
+if (plan.routeGaps.length !== 0 || plan.executionCommands.length !== 1) {
+  throw new Error(`child-safe plan must be executable: ${JSON.stringify(plan.routeGaps)}`);
+}
 if (plan.commandsToRun.join(',') !== 'verify:test:e2e-layers') {
   throw new Error(`unexpected runnable commands: ${plan.commandsToRun.join(',')}`);
 }
@@ -471,6 +478,9 @@ if (plan.blockedMainThreadCommands.join(',') !== tnoWaterCommand) {
   throw new Error(`main-thread command should stay blocked by default: ${plan.blockedMainThreadCommands.join(',')}`);
 }
 const mainThreadPlan = buildExecutionPlan(report, { includeMainThread: true });
+if (mainThreadPlan.routeGaps.length !== 0 || mainThreadPlan.executionCommands.length !== 2) {
+  throw new Error(`main-thread plan must be executable: ${JSON.stringify(mainThreadPlan.routeGaps)}`);
+}
 if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.blockedMainThreadCommands.length !== 0) {
   throw new Error(`includeMainThread should run the reserved command: ${JSON.stringify(mainThreadPlan)}`);
 }
