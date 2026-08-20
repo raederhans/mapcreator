@@ -57,6 +57,10 @@ function commandRefOf(value) {
   return String(typeof value === "string" ? value : value?.commandRef || value?.command || "").trim();
 }
 
+function executionIdentityOf(value) {
+  return String(value?.groupId || value?.executionGroupRef || commandRefOf(value)).trim();
+}
+
 function nonNegativeDuration(value) {
   const duration = Number(value);
   return Number.isFinite(duration) && duration >= 0 ? duration : 0;
@@ -274,44 +278,78 @@ function slowestFirst(left, right, durationKey = "wallTimeMs", identityKey = "co
 
 function normalizeExecutionProjection(executionProjection, plannedCommands) {
   const rows = [];
+  const appendRow = (entry, inherited = {}) => {
+    const rootCommandRef = commandRefOf(entry?.rootCommandRef || inherited.rootCommandRef);
+    const sourceRootRefs = stableUnique(
+      entry?.sourceRootRefs || inherited.sourceRootRefs || [rootCommandRef],
+    );
+    const canonicalLeafRef = commandRefOf(entry?.canonicalLeafRef || entry?.leafId || entry?.commandRef || entry);
+    const executionGroupRef = commandRefOf(
+      entry?.executionGroupRef || entry?.groupId || inherited.executionGroupRef || rootCommandRef,
+    );
+    if (!rootCommandRef || !canonicalLeafRef || !executionGroupRef) return;
+    rows.push({
+      rootCommandRef,
+      sourceRootRefs: sourceRootRefs.length > 0 ? sourceRootRefs : [rootCommandRef],
+      canonicalLeafRef,
+      leafId: commandRefOf(entry?.leafId || canonicalLeafRef),
+      kind: String(entry?.kind || inherited.kind || "legacy-command"),
+      executionGroupRef,
+      groupId: commandRefOf(entry?.groupId || executionGroupRef),
+      files: stableUnique(entry?.files || inherited.files),
+      modules: stableUnique(entry?.modules || inherited.modules),
+      specs: stableUnique(entry?.specs || inherited.specs),
+      processRef: commandRefOf(entry?.processRef || inherited.processRef || executionGroupRef),
+      processClass: String(entry?.processClass || inherited.processClass || "unclassified"),
+      isolation: String(entry?.isolation || inherited.isolation || "process"),
+      disposition: String(entry?.disposition || inherited.disposition || "selected"),
+      executionOwner: String(entry?.executionOwner || inherited.executionOwner || "unclassified"),
+      executionOwners: stableUnique(entry?.executionOwners || inherited.executionOwners),
+      platforms: stableUnique(entry?.platforms || inherited.platforms),
+      resourceLocks: stableUnique(entry?.resourceLocks || inherited.resourceLocks),
+      routeIds: stableUnique(entry?.routeIds || inherited.routeIds),
+      safetyContributorRouteIds: stableUnique(
+        entry?.safetyContributorRouteIds || inherited.safetyContributorRouteIds,
+      ),
+      provenance: structuredClone(entry?.provenance || inherited.provenance || []),
+      dependencyEdges: structuredClone(entry?.dependencyEdges || inherited.dependencyEdges || []),
+      sourceOrder: Number.isInteger(entry?.sourceOrder)
+        ? entry.sourceOrder
+        : Number.isInteger(inherited.sourceOrder) ? inherited.sourceOrder : rows.length,
+    });
+  };
   for (const entry of executionProjection || []) {
-    const rootCommandRef = commandRefOf(entry?.rootCommandRef);
-    const inheritedGroupRef = commandRefOf(entry?.executionGroupRef) || rootCommandRef;
     const nestedLeaves = Array.isArray(entry?.canonicalLeaves) ? entry.canonicalLeaves : null;
     if (nestedLeaves) {
-      for (const leaf of nestedLeaves) {
-        const canonicalLeafRef = commandRefOf(leaf?.canonicalLeafRef || leaf?.commandRef || leaf);
-        const executionGroupRef = commandRefOf(leaf?.executionGroupRef) || inheritedGroupRef;
-        if (rootCommandRef && canonicalLeafRef && executionGroupRef) {
-          rows.push({ rootCommandRef, canonicalLeafRef, executionGroupRef });
-        }
-      }
+      for (const leaf of nestedLeaves) appendRow(leaf, entry);
       continue;
     }
-    const canonicalLeafRef = commandRefOf(entry?.canonicalLeafRef);
-    const executionGroupRef = commandRefOf(entry?.executionGroupRef) || rootCommandRef;
-    if (rootCommandRef && canonicalLeafRef && executionGroupRef) {
-      rows.push({ rootCommandRef, canonicalLeafRef, executionGroupRef });
-    }
+    appendRow(entry);
   }
-  const projectedRoots = new Set(rows.map((entry) => entry.rootCommandRef));
+  const projectedRoots = new Set(rows.flatMap((entry) => entry.sourceRootRefs));
   for (const rootCommandRef of stableUnique(plannedCommands)) {
     if (!projectedRoots.has(rootCommandRef)) {
-      rows.push({
+      appendRow({
         rootCommandRef,
+        sourceRootRefs: [rootCommandRef],
         canonicalLeafRef: rootCommandRef,
+        leafId: rootCommandRef,
         executionGroupRef: rootCommandRef,
       });
     }
   }
   return rows.sort((left, right) => (
-    left.rootCommandRef.localeCompare(right.rootCommandRef)
+    left.sourceOrder - right.sourceOrder
+    || left.rootCommandRef.localeCompare(right.rootCommandRef)
     || left.canonicalLeafRef.localeCompare(right.canonicalLeafRef)
     || left.executionGroupRef.localeCompare(right.executionGroupRef)
   ));
 }
 
-function plannedLeavesFromProjection(plannedCommands, projection) {
+function plannedLeavesFromProjection(plannedCommands, projection, projectionMode = "legacy") {
+  if (projectionMode === "canonical") {
+    return stableValues(projection.map((entry) => entry.canonicalLeafRef));
+  }
   const leavesByRoot = new Map();
   for (const entry of projection) {
     const leaves = leavesByRoot.get(entry.rootCommandRef) || [];
@@ -333,6 +371,14 @@ function defaultMissingAnalysis(commandRef) {
   };
 }
 
+function projectionTestFiles(entry) {
+  return stableUnique([
+    ...(entry?.files || []),
+    ...(entry?.modules || []),
+    ...(entry?.specs || []),
+  ].map(normalizeVerificationTestFile));
+}
+
 export function prepareVerificationProfilePlan({
   selectorReport = null,
   executionPlan = null,
@@ -350,6 +396,11 @@ export function prepareVerificationProfilePlan({
     (executionPlan?.commandsToRun || []).map(commandRefOf).filter(Boolean),
   );
   const projection = normalizeExecutionProjection(executionProjection, plannedCommands);
+  const projectionMode = executionPlan?.verificationProfileProjectionKind === "canonical-final-plan"
+    && projection.length > 0
+    && projection.every((entry) => entry.leafId && entry.groupId && entry.processRef)
+    ? "canonical"
+    : "legacy";
   const observedCommands = stableValues(
     (executionResults || []).map(commandRefOf).filter(Boolean),
   );
@@ -366,14 +417,16 @@ export function prepareVerificationProfilePlan({
   const analysisByCommand = {};
   const selectorFilesByCommand = {};
   for (const commandRef of allCommandRefs) {
-    analysisByCommand[commandRef] = structuredClone(commandAnalyzer(commandRef, { packageScripts }));
     selectorFilesByCommand[commandRef] = selectorFilesForCommand(selectorReport, commandRef);
+    if (projectionMode === "legacy") {
+      analysisByCommand[commandRef] = structuredClone(commandAnalyzer(commandRef, { packageScripts }));
+    }
   }
   const filesForCommand = (commandRef) => {
     const analyzed = analysisByCommand[commandRef]?.testFiles || [];
     return analyzed.length > 0 ? analyzed : selectorFilesByCommand[commandRef] || [];
   };
-  const plannedCanonicalLeaves = plannedLeavesFromProjection(plannedCommands, projection);
+  const plannedCanonicalLeaves = plannedLeavesFromProjection(plannedCommands, projection, projectionMode);
   const selectorRecommendedFiles = stableUnique(recommendedCommands.flatMap((commandRef) => (
     (selectorFilesByCommand[commandRef] || []).length > 0
       ? selectorFilesByCommand[commandRef]
@@ -389,7 +442,10 @@ export function prepareVerificationProfilePlan({
     executionProjection: projection,
     plannedCanonicalLeaves,
     selectorRecommendedFiles,
-    plannedFiles: stableUnique(plannedCanonicalLeaves.flatMap(filesForCommand)),
+    plannedFiles: projectionMode === "canonical"
+      ? stableUnique(projection.flatMap(projectionTestFiles))
+      : stableUnique(plannedCanonicalLeaves.flatMap(filesForCommand)),
+    projectionMode,
     analysisByCommand,
     selectorFilesByCommand,
   };
@@ -462,6 +518,7 @@ export function buildVerificationProfile({
   const recommendedCommands = prepared.recommendedCommands || [];
   const plannedCommands = prepared.plannedCommands || [];
   const projection = prepared.executionProjection || [];
+  const canonicalProjection = prepared.projectionMode === "canonical";
   const resultEntries = (executionResults || [])
     .filter((entry) => entry && entry.status !== "pending")
     .map((entry) => structuredClone(entry));
@@ -476,37 +533,44 @@ export function buildVerificationProfile({
       ? analyzed
       : prepared.selectorFilesByCommand?.[commandRef] || [];
   };
-  const leavesForExecutionCommand = (commandRef) => {
+  const projectionForExecution = (executionRef) => projection
+    .filter((entry) => entry.executionGroupRef === executionRef || entry.groupId === executionRef);
+  const leavesForExecutionCommand = (executionRef) => {
     const projected = projection
-      .filter((entry) => entry.executionGroupRef === commandRef)
+      .filter((entry) => entry.executionGroupRef === executionRef || entry.groupId === executionRef)
       .map((entry) => entry.canonicalLeafRef);
-    return projected.length > 0 ? projected : [commandRef];
+    return projected.length > 0 ? projected : [executionRef];
   };
-  const rootsForExecutionCommand = (commandRef) => {
+  const rootsForExecutionCommand = (executionRef) => {
     const projected = stableUnique(
       projection
-        .filter((entry) => entry.executionGroupRef === commandRef)
-        .map((entry) => entry.rootCommandRef),
+        .filter((entry) => entry.executionGroupRef === executionRef || entry.groupId === executionRef)
+        .flatMap((entry) => entry.sourceRootRefs || [entry.rootCommandRef]),
     );
-    return projected.length > 0 ? projected : [commandRef];
+    return projected.length > 0 ? projected : [executionRef];
   };
   const plannedCanonicalLeaves = prepared.plannedCanonicalLeaves
-    || plannedLeavesFromProjection(plannedCommands, projection);
+    || plannedLeavesFromProjection(plannedCommands, projection, prepared.projectionMode);
   const accountedCanonicalLeaves = stableValues(
-    resultEntries.flatMap((entry) => leavesForExecutionCommand(commandRefOf(entry))),
+    resultEntries.flatMap((entry) => leavesForExecutionCommand(executionIdentityOf(entry))),
   );
-  const filesForExecutionCommand = (commandRef) => (
-    leavesForExecutionCommand(commandRef).flatMap(filesForCommand)
-  );
+  const filesForExecutionCommand = (executionRef) => {
+    if (canonicalProjection) return projectionForExecution(executionRef).flatMap(projectionTestFiles);
+    return leavesForExecutionCommand(executionRef).flatMap(filesForCommand);
+  };
   const selectorRecommendedFiles = prepared.selectorRecommendedFiles || [];
   const plannedFiles = prepared.plannedFiles || [];
   const actualFiles = stableUnique(
-    processStartedEntries.flatMap((entry) => filesForExecutionCommand(commandRefOf(entry))),
+    processStartedEntries.flatMap((entry) => (
+      Array.isArray(entry.actualFiles)
+        ? entry.actualFiles.map(normalizeVerificationTestFile)
+        : filesForExecutionCommand(executionIdentityOf(entry))
+    )),
   );
   const missingCommands = multisetDifference(plannedCanonicalLeaves, accountedCanonicalLeaves);
   const unexpectedCommands = multisetDifference(accountedCanonicalLeaves, plannedCanonicalLeaves);
-  const accountedRootCommands = stableValues(
-    resultEntries.flatMap((entry) => rootsForExecutionCommand(commandRefOf(entry))),
+  const accountedRootCommands = stableUnique(
+    resultEntries.flatMap((entry) => rootsForExecutionCommand(executionIdentityOf(entry))),
   );
   const rootMissingCommands = multisetDifference(plannedCommands, accountedRootCommands);
   const rootUnexpectedCommands = multisetDifference(accountedRootCommands, plannedCommands);
@@ -514,7 +578,7 @@ export function buildVerificationProfile({
     || new Set(["listed", "planned"]).has(String(runnerState || "").toLowerCase())
     ? "not-executed"
     : missingCommands.length === 0 && unexpectedCommands.length === 0
-      ? "equivalent"
+      ? canonicalProjection ? "complete" : "equivalent"
       : "partial";
 
   const processStarts = emptyProcessStarts();
@@ -524,11 +588,22 @@ export function buildVerificationProfile({
   let productTestWallTimeMs = 0;
   for (const entry of processStartedEntries) {
     const commandRef = commandRefOf(entry);
-    const analysis = analysisByCommand[commandRef] || defaultMissingAnalysis(commandRef);
-    for (const key of Object.keys(processStarts)) {
-      processStarts[key] += Number(analysis.processStarts[key] || 0);
+    const executionRef = executionIdentityOf(entry);
+    if (canonicalProjection) {
+      const processClass = projectionForExecution(executionRef)[0]?.processClass || "unclassified";
+      if (Object.hasOwn(processStarts, processClass)) processStarts[processClass] += 1;
+      else processStarts.unclassified += 1;
+    } else {
+      const analysis = analysisByCommand[commandRef] || defaultMissingAnalysis(commandRef);
+      for (const key of Object.keys(processStarts)) {
+        processStarts[key] += Number(analysis.processStarts[key] || 0);
+      }
     }
-    const files = filesForExecutionCommand(commandRef);
+    const files = Array.isArray(entry.actualFiles)
+      ? stableUnique(entry.actualFiles.map(normalizeVerificationTestFile))
+      : canonicalProjection
+        ? stableUnique(filesForExecutionCommand(executionRef))
+        : filesForExecutionCommand(executionRef);
     const wallTimeMs = nonNegativeDuration(entry.durationMs);
     const classification = classifyCommand(commandRef, files);
     if (classification === "meta-verification") metaVerificationWallTimeMs += wallTimeMs;
@@ -568,6 +643,68 @@ export function buildVerificationProfile({
   const observedInterruptionSignal = interruptionSignal
     || resultEntries.find((entry) => entry.signal)?.signal
     || null;
+  const resultsByExecution = new Map(resultEntries.map((entry) => [executionIdentityOf(entry), entry]));
+  const evidenceByGroup = new Map();
+  for (const row of projection) {
+    const groupRef = row.executionGroupRef;
+    const current = evidenceByGroup.get(groupRef) || {
+      rootCommandRef: row.rootCommandRef,
+      sourceRootRefs: [],
+      canonicalLeafRefs: [],
+      leafIds: [],
+      kind: row.kind,
+      executionGroupRef: groupRef,
+      groupId: row.groupId,
+      files: [],
+      modules: [],
+      specs: [],
+      processRef: row.processRef,
+      processClass: row.processClass,
+      isolation: row.isolation,
+      disposition: row.disposition,
+      executionOwner: row.executionOwner,
+      executionOwners: [],
+      platforms: [],
+      resourceLocks: [],
+      routeIds: [],
+      safetyContributorRouteIds: [],
+      provenance: structuredClone(row.provenance),
+      dependencyEdges: structuredClone(row.dependencyEdges),
+      sourceOrder: row.sourceOrder,
+    };
+    current.sourceRootRefs = stableUnique([...current.sourceRootRefs, ...row.sourceRootRefs]);
+    current.canonicalLeafRefs = stableValues([...current.canonicalLeafRefs, row.canonicalLeafRef]);
+    current.leafIds = stableValues([...current.leafIds, row.leafId]);
+    current.files = stableUnique([...current.files, ...row.files]);
+    current.modules = stableUnique([...current.modules, ...row.modules]);
+    current.specs = stableUnique([...current.specs, ...row.specs]);
+    current.executionOwners = stableUnique([...current.executionOwners, ...row.executionOwners]);
+    current.platforms = stableUnique([...current.platforms, ...row.platforms]);
+    current.resourceLocks = stableUnique([...current.resourceLocks, ...row.resourceLocks]);
+    current.routeIds = stableUnique([...current.routeIds, ...row.routeIds]);
+    current.safetyContributorRouteIds = stableUnique([
+      ...current.safetyContributorRouteIds,
+      ...row.safetyContributorRouteIds,
+    ]);
+    current.sourceOrder = Math.min(current.sourceOrder, row.sourceOrder);
+    evidenceByGroup.set(groupRef, current);
+  }
+  const executionEvidence = [...evidenceByGroup.values()]
+    .sort((left, right) => left.sourceOrder - right.sourceOrder || left.groupId.localeCompare(right.groupId))
+    .map((entry) => {
+      const result = resultsByExecution.get(entry.executionGroupRef);
+      if (!result) return entry;
+      return {
+        ...entry,
+        processStarted: result.processStarted === true,
+        interrupted: result.interrupted === true || Boolean(result.signal),
+        exitCode: Number.isInteger(result.exitCode) ? result.exitCode : null,
+        status: String(result.status || "unknown"),
+        actualFiles: Array.isArray(result.actualFiles)
+          ? stableUnique(result.actualFiles.map(normalizeVerificationTestFile))
+          : stableUnique(projectionForExecution(entry.executionGroupRef).flatMap(projectionTestFiles)),
+      };
+    });
 
   return {
     schemaVersion: VERIFICATION_PROFILE_SCHEMA_VERSION,
@@ -590,6 +727,7 @@ export function buildVerificationProfile({
       plannedCanonicalLeafCount: plannedCanonicalLeaves.length,
       plannedFiles,
       plannedUniqueFileCount: plannedFiles.length,
+      executionProjection: projection,
       accountedCommands,
       accountedCommandCount: accountedCommands.length,
       accountedRootCommands,
@@ -609,7 +747,7 @@ export function buildVerificationProfile({
         status: comparisonStatus === "not-executed"
           ? "not-executed"
           : rootMissingCommands.length === 0 && rootUnexpectedCommands.length === 0
-            ? "equivalent"
+            ? canonicalProjection ? "complete" : "equivalent"
             : "partial",
         missingCommands: rootMissingCommands,
         unexpectedCommands: rootUnexpectedCommands,
@@ -639,6 +777,7 @@ export function buildVerificationProfile({
         .slice(0, 10),
     },
     files,
+    executionEvidence,
     analysisIssues: stableUnique(
       Object.values(analysisByCommand).flatMap((analysis) => analysis.analysisIssues),
     ),

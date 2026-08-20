@@ -43,6 +43,7 @@ import {
 } from "../tools/verification/command_supersession.mjs";
 import {
   buildVerificationProfile,
+  prepareVerificationProfilePlan,
 } from "../tools/verification/verification_profile.mjs";
 import {
   buildVerificationCatalog,
@@ -1735,6 +1736,36 @@ test("adaptive execution invokes one whole-lane planner per disposition and prop
   assert.equal(plan.selectedLeaves.length, 1);
   assert.deepEqual(plan.selectedLeaves[0].sourceCommandRefs, ["catalog:one", "catalog:two"]);
   assert.equal(plan.closure.plannerInvocationCount, 3);
+  let legacyAnalyzerCalls = 0;
+  const preparedProfile = prepareVerificationProfilePlan({
+    executionPlan: plan,
+    commandAnalyzer() {
+      legacyAnalyzerCalls += 1;
+      throw new Error("canonical adaptive path must not invoke the legacy analyzer");
+    },
+  });
+  const canonicalProfile = buildVerificationProfile({
+    runnerId: "adaptive-canonical-final-plan",
+    executionPlan: plan,
+    preparedPlan: preparedProfile,
+    executionResults: plan.executionGroups.map((group) => ({
+      commandRef: group.commandRef,
+      groupId: group.groupId,
+      status: "passed",
+      exitCode: 0,
+      processStarted: true,
+      interrupted: false,
+      actualFiles: [...group.files, ...group.modules, ...group.specs],
+    })),
+    terminalState: "passed",
+  });
+  assert.equal(legacyAnalyzerCalls, 0);
+  assert.deepEqual(
+    canonicalProfile.selection.accountedCanonicalLeaves,
+    canonicalProfile.selection.plannedCanonicalLeaves,
+  );
+  assert.equal(canonicalProfile.selection.executionSetComparison.status, "complete");
+  assert.equal(canonicalProfile.selection.executionProjection[0].groupId, plan.executionGroups[0].groupId);
 
   const conflictingSelected = [
     adaptiveContributor("catalog:one"),

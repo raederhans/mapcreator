@@ -361,6 +361,95 @@ test("prepared profile plans parse commands once across repeated checkpoints", (
   assert.equal(analysisCount, parsedCount);
 });
 
+test("canonical final-plan projection bypasses legacy analysis and checkpoints lifecycle only", () => {
+  let legacyAnalyzerCalls = 0;
+  const staticProjection = ["a", "b"].map((suffix, sourceOrder) => ({
+    rootCommandRef: "root-suite",
+    sourceRootRefs: ["root-suite"],
+    canonicalLeafRef: `node-test:tests/${suffix}.test.mjs`,
+    leafId: `node-test:tests/${suffix}.test.mjs`,
+    kind: "node-test",
+    executionGroupRef: "execution:0001",
+    groupId: "execution:0001",
+    files: [`tests/${suffix}.test.mjs`],
+    modules: [],
+    specs: [],
+    processRef: "execution:0001",
+    processClass: "node",
+    isolation: "batch",
+    disposition: "selected",
+    executionOwner: "child-safe",
+    executionOwners: ["child-safe"],
+    platforms: ["all"],
+    resourceLocks: [],
+    routeIds: ["route:root"],
+    safetyContributorRouteIds: ["route:root"],
+    provenance: [{ rootCommandRef: "root-suite", routeIds: ["route:root"] }],
+    dependencyEdges: [],
+    sourceOrder,
+  }));
+  const executionPlan = {
+    commandsToRun: ["root-suite"],
+    verificationProfileProjectionKind: "canonical-final-plan",
+    verificationProfileProjection: staticProjection,
+  };
+  const preparedPlan = prepareVerificationProfilePlan({
+    executionPlan,
+    commandAnalyzer() {
+      legacyAnalyzerCalls += 1;
+      throw new Error("canonical projection must bypass legacy analysis");
+    },
+  });
+  assert.equal(legacyAnalyzerCalls, 0);
+
+  const running = buildVerificationProfile({
+    runnerId: "canonical-checkpoint",
+    preparedPlan,
+    executionResults: [{
+      commandRef: "node --test tests/a.test.mjs tests/b.test.mjs",
+      groupId: "execution:0001",
+      status: "running",
+      processStarted: false,
+      interrupted: false,
+      exitCode: null,
+    }],
+  });
+  const passed = buildVerificationProfile({
+    runnerId: "canonical-checkpoint",
+    preparedPlan,
+    executionResults: [{
+      commandRef: "node --test tests/a.test.mjs tests/b.test.mjs",
+      groupId: "execution:0001",
+      status: "passed",
+      processStarted: true,
+      interrupted: false,
+      exitCode: 0,
+      durationMs: 12,
+      actualFiles: ["tests/a.test.mjs", "tests/b.test.mjs"],
+    }],
+    terminalState: "passed",
+  });
+
+  assert.equal(legacyAnalyzerCalls, 0);
+  assert.deepEqual(passed.selection.plannedCanonicalLeaves, [
+    "node-test:tests/a.test.mjs",
+    "node-test:tests/b.test.mjs",
+  ]);
+  assert.deepEqual(passed.selection.accountedCanonicalLeaves, passed.selection.plannedCanonicalLeaves);
+  assert.deepEqual(passed.selection.executionSetComparison, {
+    status: "complete",
+    missingCommands: [],
+    unexpectedCommands: [],
+  });
+  assert.equal(passed.selection.executionProjection[0].processClass, "node");
+  assert.deepEqual(passed.selection.executionProjection[0].sourceRootRefs, ["root-suite"]);
+  assert.equal(running.executionEvidence[0].processStarted, false);
+  assert.equal(running.executionEvidence[0].status, "running");
+  assert.deepEqual(passed.executionEvidence[0].actualFiles, ["tests/a.test.mjs", "tests/b.test.mjs"]);
+  assert.equal(passed.executionEvidence[0].processStarted, true);
+  assert.equal(passed.processStarts.node, 1);
+});
+
 test("observer recovery retains the last profile failure diagnostic", () => {
   const failed = publishVerificationProfileSafely({
     outputPath: "profile.json",

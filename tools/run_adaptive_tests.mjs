@@ -1290,6 +1290,42 @@ function prepareAdaptiveCatalog(report, packageScripts, platform) {
   });
 }
 
+function buildCanonicalProfileProjection(groups) {
+  return groups.flatMap((group) => group.leafIds.map((leafId, leafIndex) => {
+    const separator = leafId.indexOf(":");
+    const kind = separator === -1 ? group.kind : leafId.slice(0, separator);
+    const target = separator === -1 ? leafId : leafId.slice(separator + 1);
+    const files = group.files.filter((file) => file === target);
+    const modules = group.modules.filter((moduleName) => moduleName === target);
+    const specs = group.specs.filter((spec) => spec === target);
+    return {
+      rootCommandRef: group.rootCommandRef,
+      sourceRootRefs: [...group.sourceRootRefs],
+      canonicalLeafRef: leafId,
+      leafId,
+      kind,
+      executionGroupRef: group.executionGroupRef,
+      groupId: group.groupId,
+      files,
+      modules,
+      specs,
+      processRef: group.processRef,
+      processClass: group.processClass,
+      isolation: group.isolation,
+      disposition: group.disposition,
+      executionOwner: group.executionOwner,
+      executionOwners: [...group.executionOwners],
+      platforms: [...group.platforms],
+      resourceLocks: [...group.resourceLocks],
+      routeIds: [...group.routeIds],
+      safetyContributorRouteIds: [...group.safetyContributorRouteIds],
+      provenance: structuredClone(group.provenance),
+      dependencyEdges: structuredClone(group.dependencyEdges),
+      sourceOrder: group.sourceOrder * HARD_MAX_GROUP_LEAVES + leafIndex,
+    };
+  }));
+}
+
 export function buildExecutionPlan(report, {
   includeMainThread = false,
   packageScripts = readPackageScripts(),
@@ -1396,6 +1432,7 @@ export function buildExecutionPlan(report, {
     `${gap.code}\u0000${gap.commandRef}\u0000${gap.detail}`,
     gap,
   ])).values()];
+  const verificationProfileProjection = buildCanonicalProfileProjection(executionGroups);
   return {
     schemaVersion: EXECUTION_PLAN_SCHEMA_VERSION,
     plannerSchemaVersion: EXECUTION_PLANNER_SCHEMA_VERSION,
@@ -1417,6 +1454,8 @@ export function buildExecutionPlan(report, {
     executionGroups,
     deferredMainThreadGroups,
     deferredCiOnlyGroups,
+    verificationProfileProjectionKind: "canonical-final-plan",
+    verificationProfileProjection,
     canonicalPlans: {
       selected: selectedProjection.plan,
       deferredMainThread: deferredMainProjection.plan,
@@ -1622,6 +1661,13 @@ export function executeAdaptivePlan(executionPlan, {
       })
       : { status: 1, error: "Command could not be resolved." };
     entry.processStarted = Boolean(command && result && !result.error);
+    entry.actualFiles = entry.processStarted
+      ? uniqueSorted([
+        ...(plannedCommand.files || []),
+        ...(plannedCommand.modules || []),
+        ...(plannedCommand.specs || []),
+      ])
+      : [];
     const finishedAtDate = now();
     entry.finishedAt = finishedAtDate.toISOString();
     entry.durationMs = Math.max(0, finishedAtDate.getTime() - startedAtDate.getTime());
