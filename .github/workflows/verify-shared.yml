@@ -76,6 +76,7 @@ jobs:
         run: npm ci
 
       - name: Explain verification selector
+        id: selector
         if: inputs.profile == 'pr-fast'
         shell: bash
         run: |
@@ -89,13 +90,7 @@ jobs:
             git diff --name-only HEAD^ HEAD > "$changed_files"
           fi
           test -s "$changed_files" || { echo "::error::verification selector received an empty changed-file set"; exit 1; }
-          npm run verify:script-portfolio
-          npm run verify:test-import-graph
-          node tools/build_test_import_graph.mjs --graph-out .runtime/reports/generated/test-import-graph.json
-          node tools/select_verification_targets.mjs --check
-          npm run verify:architecture-boundaries
           node tools/select_verification_targets.mjs --changed-files-list "$changed_files" --json-out .runtime/reports/generated/verification-selector-explain.json --md-out .runtime/reports/generated/verification-selector-explain.md
-          npm run verify:test-timeout-inventory
 
       - name: Cache Playwright browsers
         if: (inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'
@@ -141,24 +136,12 @@ jobs:
         if: inputs.profile == 'full'
         run: python -m unittest discover -s tests -p "test_*.py"
 
-      - name: Run Python fast contracts
-        if: inputs.profile == 'pr-fast'
-        run: >
-          python -m unittest
-          tests.test_app_entry_resolver
-          tests.test_main_deferred_detail_promotion_boundary_contract
-          tests.test_scenario_chunk_refresh_contracts
-          tests.test_scenario_renderer_bridge_boundary_contract
-          tests.test_map_renderer_interaction_border_snapshot_orchestration_contract
-          tests.test_perf_gate_contract
-          tests.test_startup_shell
-          -q
-
       - name: Run affected child-safe contracts
-        if: inputs.profile == 'pr-fast'
+        if: always() && inputs.profile == 'pr-fast' && steps.selector.outcome != 'skipped'
         run: |
           node tools/run_adaptive_tests.mjs \
             --changed-files-list .runtime/tmp/verification-selector-changed-files.txt \
+            --selection-json .runtime/reports/generated/verification-selector-explain.json \
             --execute \
             --defer-main-thread \
             --json-out .runtime/reports/generated/verification-selector-execution.json \

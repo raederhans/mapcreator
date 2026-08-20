@@ -459,7 +459,75 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
         self.assertIn("unmatched changed files", result.stderr)
         payload = json.loads((REPO_ROOT / ".runtime/reports/generated/test-adaptive-unmatched-execute.json").read_text(encoding="utf-8"))
         self.assertIn("docs/active/unrelated-task/context.md", payload["unmatchedChangedFiles"])
-        self.assertIsNone(payload["executionResults"])
+        self.assertEqual(payload["executionStatus"], "blocked")
+        self.assertEqual(payload["executionResults"], [])
+        self.assertEqual(payload["executionPlan"]["executionCommands"], [])
+
+    def test_adaptive_execute_rejects_a_stale_selection_artifact_with_empty_execution(self) -> None:
+        selection_path = TMP_ROOT / "test-adaptive-stale-selector.json"
+        json_out = TMP_ROOT / "test-adaptive-stale-selector-execution.json"
+        md_out = TMP_ROOT / "test-adaptive-stale-selector-execution.md"
+        selection_path.write_text(json.dumps({
+            "schemaVersion": 1,
+            "changedFiles": ["package.json"],
+            "recommendedCommands": [],
+            "childAgentStaticTasks": [],
+            "mainThreadSerialVerification": [],
+            "ciOnlyVerification": [],
+            "blockedVerification": [],
+            "unmatchedChangedFiles": [],
+        }), encoding="utf-8")
+        result = run_command(
+            "node",
+            "tools/run_adaptive_tests.mjs",
+            "--execute",
+            "--defer-main-thread",
+            "--changed-file",
+            "tools/run_adaptive_tests.mjs",
+            "--selection-json",
+            str(selection_path),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        payload = json.loads(json_out.read_text(encoding="utf-8"))
+        self.assertEqual(payload["executionStatus"], "blocked")
+        self.assertEqual(payload["executionResults"], [])
+        self.assertEqual(payload["executionPlan"]["executionCommands"], [])
+        self.assertEqual(
+            payload["executionPlan"]["routeGaps"][0]["code"],
+            "adaptive-selection-artifact-changed-files-mismatch",
+        )
+
+    def test_adaptive_execute_records_an_explicit_empty_changed_file_list(self) -> None:
+        changed_files_path = TMP_ROOT / "test-adaptive-empty-changed-files.txt"
+        json_out = TMP_ROOT / "test-adaptive-empty-changed-files.json"
+        md_out = TMP_ROOT / "test-adaptive-empty-changed-files.md"
+        changed_files_path.write_text("", encoding="utf-8")
+        result = run_command(
+            "node",
+            "tools/run_adaptive_tests.mjs",
+            "--execute",
+            "--defer-main-thread",
+            "--changed-files-list",
+            str(changed_files_path),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        payload = json.loads(json_out.read_text(encoding="utf-8"))
+        self.assertEqual(payload["executionStatus"], "blocked")
+        self.assertEqual(payload["changedFiles"], [])
+        self.assertEqual(payload["executionResults"], [])
+        self.assertEqual(payload["executionPlan"]["executionCommands"], [])
+        self.assertEqual(
+            payload["executionPlan"]["routeGaps"][0]["code"],
+            "adaptive-execution-empty-changed-files",
+        )
 
     def test_adaptive_execute_can_defer_main_thread_routes_with_evidence(self) -> None:
         json_out = TMP_ROOT / "test-adaptive-deferred-main-thread.json"
@@ -486,6 +554,27 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
         self.assertTrue(payload["executionResults"])
         self.assertTrue(all(entry["exitCode"] == 0 for entry in payload["executionResults"]))
         self.assertIn("mainThreadDisposition: deferred", md_out.read_text(encoding="utf-8"))
+
+    def test_adaptive_execute_records_main_thread_ownership_block_as_empty_evidence(self) -> None:
+        json_out = TMP_ROOT / "test-adaptive-blocked-main-thread.json"
+        md_out = TMP_ROOT / "test-adaptive-blocked-main-thread.md"
+        result = run_command(
+            "node",
+            "tools/run_adaptive_tests.mjs",
+            "--execute",
+            "--changed-file",
+            "tests/e2e/sample_guide_deeplink.spec.js",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        payload = json.loads(json_out.read_text(encoding="utf-8"))
+        self.assertEqual(payload["executionStatus"], "blocked")
+        self.assertEqual(payload["executionResults"], [])
+        self.assertEqual(payload["executionPlan"]["executionCommands"], [])
+        self.assertIn("verify:demo", payload["executionPlan"]["blockedMainThreadCommands"])
 
     def test_route_registry_includes_every_package_test_node_script(self) -> None:
         script = """
@@ -1219,31 +1308,30 @@ const page = {
             self.assertIn("verify:architecture-boundaries", package_commands)
             self.assertIn("verify:perf-gate-contract", package_commands)
 
-    def test_verify_shared_checks_checked_in_import_graph_before_building_artifact_copy(self) -> None:
+    def test_verify_shared_builds_selector_artifact_before_selected_execution(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
-        verify_index = workflow.index("npm run verify:test-import-graph")
-        build_index = workflow.index("node tools/build_test_import_graph.mjs --graph-out .runtime/reports/generated/test-import-graph.json")
-        selector_check_index = workflow.index("node tools/select_verification_targets.mjs --check")
-        architecture_index = workflow.index("npm run verify:architecture-boundaries")
         selector_explain_index = workflow.index("node tools/select_verification_targets.mjs --changed-files-list")
-        self.assertLess(verify_index, build_index)
-        self.assertLess(build_index, selector_check_index)
-        self.assertLess(selector_check_index, architecture_index)
-        self.assertLess(architecture_index, selector_explain_index)
+        adaptive_runner_index = workflow.index("node tools/run_adaptive_tests.mjs")
+        self.assertLess(selector_explain_index, adaptive_runner_index)
+        self.assertIn("id: selector", workflow)
+        self.assertIn("if: always() && inputs.profile == 'pr-fast' && steps.selector.outcome != 'skipped'", workflow)
+        self.assertNotIn("npm run verify:test-import-graph", workflow)
+        self.assertNotIn("npm run verify:architecture-boundaries", workflow)
+        self.assertNotIn("npm run verify:test-timeout-inventory", workflow)
         self.assertIn(".runtime/reports/generated/test-import-graph.json", workflow)
         self.assertIn(".runtime/tmp/verification-selector-changed-files.txt", workflow)
 
     def test_verify_shared_pr_fast_runner_executes_the_adaptive_child_safe_plan(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
-        self.assertIn("tests.test_main_deferred_detail_promotion_boundary_contract", workflow)
-        self.assertIn("tests.test_perf_gate_contract", workflow)
+        self.assertNotIn("- name: Run Python fast contracts", workflow)
         self.assertIn("node tools/run_adaptive_tests.mjs", workflow)
         self.assertIn("--changed-files-list .runtime/tmp/verification-selector-changed-files.txt", workflow)
+        self.assertIn("--selection-json .runtime/reports/generated/verification-selector-explain.json", workflow)
         self.assertIn("--execute", workflow)
         self.assertIn("--defer-main-thread", workflow)
         self.assertIn("verification-selector-execution.json", workflow)
         self.assertIn('test -s "$changed_files"', workflow)
-        self.assertIn("npm run verify:script-portfolio", workflow)
+        self.assertNotIn("npm run verify:script-portfolio", workflow)
         self.assertNotIn("name.startsWith('test:node:')", workflow)
         self.assertNotIn("spawnSync('npm', ['run', name]", workflow)
 
