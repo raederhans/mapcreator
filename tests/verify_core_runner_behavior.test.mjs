@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 import {
   buildRouteIndex,
@@ -49,6 +50,7 @@ import {
   buildVerificationCatalog,
   buildVerificationSelectionPlan,
   prepareVerificationCatalog,
+  prepareRepositoryVerificationCatalogBinding,
   prepareRepositoryVerificationCatalog,
 } from "../tools/verification/script_portfolio.mjs";
 import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
@@ -1967,6 +1969,110 @@ test("adaptive execution consumes only an exact and complete changed-file select
     () => readSelectionArtifact(incompleteArtifactPath, ["tools/run_adaptive_tests.mjs"]),
     /adaptive-selection-authority-field/,
   );
+});
+
+test("real selector CLI artifact binds to the repository catalog and drives structured execution", (t) => {
+  const runtimeTmp = path.join(process.cwd(), ".runtime", "tmp");
+  fs.mkdirSync(runtimeTmp, { recursive: true });
+  const tempRoot = fs.mkdtempSync(path.join(runtimeTmp, "selector-adaptive-seam-"));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const changedFiles = [".github/workflows/verify-shared.yml"];
+  const changedFilesPath = path.join(tempRoot, "changed-files.txt");
+  const artifactPath = path.join(tempRoot, "selector.json");
+  const markdownPath = path.join(tempRoot, "selector.md");
+  fs.writeFileSync(changedFilesPath, `${changedFiles.join("\n")}\n`, "utf8");
+
+  const selectorResult = spawnSync(process.execPath, [
+    "tools/select_verification_targets.mjs",
+    "--changed-files-list",
+    changedFilesPath,
+    "--json-out",
+    artifactPath,
+    "--md-out",
+    markdownPath,
+  ], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(selectorResult.status, 0, selectorResult.stderr || selectorResult.stdout);
+
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+  const packageScripts = JSON.parse(fs.readFileSync("package.json", "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+  });
+  const currentSelection = binding.bindSelectionReport(buildRecommendation(changedFiles, selectorRoutes, {
+    routeAuthority: binding.preparedCatalog.authority,
+  }));
+  assert.equal(artifact.routeAuthority.length, 331);
+  assert.deepEqual(artifact.routeAuthority, binding.preparedCatalog.authority);
+  assert.equal(artifact.catalogDigest, binding.preparedCatalog.catalogDigest);
+  assert.deepEqual(artifact.catalogSourceIdentity, binding.preparedCatalog.sourceIdentity);
+  assert.deepEqual(artifact.selectorRootSet, currentSelection.selectorRootSet);
+
+  const loaded = readSelectionArtifact(artifactPath, changedFiles, {
+    preparedCatalog: binding.preparedCatalog,
+    expectedSelectorRootSet: currentSelection.selectorRootSet,
+  });
+  const plan = buildExecutionPlan(loaded, {
+    packageScripts,
+    preparedCatalog: binding.preparedCatalog,
+  });
+  assert.deepEqual(plan.routeGaps, []);
+  assert.ok(plan.executionGroups.length > 0);
+  const runnerCalls = [];
+  const results = executeAdaptivePlan(plan, {
+    runner(bin, args) {
+      runnerCalls.push([bin, ...args]);
+      return { status: 0 };
+    },
+  });
+  assert.ok(runnerCalls.length > 0);
+  assert.equal(results.length, plan.executionGroups.length);
+  assert.ok(results.every((entry) => entry.status === "passed"));
+
+  const assertDriftZeroSpawn = (field, mutate) => {
+    const forgedPath = path.join(tempRoot, `selector-forged-${field}.json`);
+    const forged = structuredClone(artifact);
+    mutate(forged);
+    fs.writeFileSync(forgedPath, JSON.stringify(forged), "utf8");
+    let forgedRunnerCalls = 0;
+    assert.throws(() => {
+      const forgedSelection = readSelectionArtifact(forgedPath, changedFiles, {
+        preparedCatalog: binding.preparedCatalog,
+        expectedSelectorRootSet: currentSelection.selectorRootSet,
+      });
+      const forgedPlan = buildExecutionPlan(forgedSelection, {
+        packageScripts,
+        preparedCatalog: binding.preparedCatalog,
+      });
+      executeAdaptivePlan(forgedPlan, {
+        runner() {
+          forgedRunnerCalls += 1;
+          return { status: 0 };
+        },
+      });
+    }, new RegExp(`adaptive-selection-catalog-drift:${field}`));
+    assert.equal(forgedRunnerCalls, 0);
+  };
+
+  assertDriftZeroSpawn("routeAuthority", (forged) => {
+    forged.routeAuthority[0].resourceLocks = ["browser-dev-server"];
+  });
+  assertDriftZeroSpawn("catalogDigest", (forged) => {
+    forged.catalogDigest = `${forged.catalogDigest}-forged`;
+  });
+  assertDriftZeroSpawn("catalogSourceIdentity", (forged) => {
+    forged.catalogSourceIdentity.digest = `${forged.catalogSourceIdentity.digest}-forged`;
+  });
+  assertDriftZeroSpawn("selectorRootSet", (forged) => {
+    forged.selectorRootSet = [...forged.selectorRootSet, "forged:root"];
+  });
 });
 
 test("adaptive execution owner precedence classifies every mixed owner set", () => {

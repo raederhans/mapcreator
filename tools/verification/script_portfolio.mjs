@@ -796,6 +796,31 @@ export function prepareRepositoryVerificationCatalog({
   });
 }
 
+export function verificationSelectionRootSet(report) {
+  return sortedUnique((report?.recommendedCommands || []).map((entry) => entry.commandRef));
+}
+
+export function bindSelectionReportToPreparedCatalog(report, preparedCatalog) {
+  assertPreparedVerificationCatalog(preparedCatalog);
+  return {
+    ...report,
+    catalogDigest: preparedCatalog.catalogDigest,
+    catalogSourceIdentity: structuredClone(preparedCatalog.sourceIdentity),
+    selectorRootSet: verificationSelectionRootSet(report),
+    routeAuthority: structuredClone(preparedCatalog.authority),
+  };
+}
+
+export function prepareRepositoryVerificationCatalogBinding(options = {}) {
+  const preparedCatalog = prepareRepositoryVerificationCatalog(options);
+  return {
+    preparedCatalog,
+    bindSelectionReport(report) {
+      return bindSelectionReportToPreparedCatalog(report, preparedCatalog);
+    },
+  };
+}
+
 export function assertPreparedVerificationCatalog(prepared, catalog = prepared?.catalog) {
   if (!prepared
     || prepared.schemaVersion !== VERIFICATION_CATALOG_SCHEMA_VERSION

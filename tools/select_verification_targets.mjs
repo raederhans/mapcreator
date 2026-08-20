@@ -11,6 +11,10 @@ import {
   validateRouteIndex,
   toRepoPath,
 } from "./test_route_registry.mjs";
+import { VERIFICATION_DOMAINS } from "./verification/verification_domains.mjs";
+import {
+  prepareRepositoryVerificationCatalogBinding,
+} from "./verification/script_portfolio.mjs";
 
 const REPO_ROOT = process.cwd();
 const IMPORT_GRAPH_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-import-graph.json");
@@ -702,6 +706,29 @@ function writeOutputFiles(report, args) {
   }
 }
 
+function readPackageScripts(packagePath = path.join(REPO_ROOT, "package.json")) {
+  return JSON.parse(fs.readFileSync(packagePath, "utf8")).scripts || {};
+}
+
+export function buildRepositoryRecommendation(changedFiles, {
+  packageScripts = readPackageScripts(),
+  verificationRecords = VERIFICATION_DOMAINS,
+  selectorRoutes = buildRouteIndex(),
+  repoRoot = REPO_ROOT,
+  platform = process.platform,
+} = {}) {
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts,
+    verificationRecords,
+    selectorRoutes,
+    repoRoot,
+    platform,
+  });
+  return binding.bindSelectionReport(buildRecommendation(changedFiles, selectorRoutes, {
+    routeAuthority: binding.preparedCatalog.authority,
+  }));
+}
+
 function listRoutes() {
   const routes = buildRouteIndex();
   console.log(JSON.stringify({ summary: summarizeRoutes(routes), routes }, null, 2));
@@ -744,7 +771,7 @@ function main() {
     return;
   }
 
-  const report = buildRecommendation(args.changedFiles);
+  const report = buildRepositoryRecommendation(args.changedFiles);
   writeOutputFiles(report, args);
   if (args.format === "json") {
     console.log(JSON.stringify(report, null, 2));

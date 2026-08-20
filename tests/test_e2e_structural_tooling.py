@@ -1406,6 +1406,57 @@ const page = {
         self.assertIn(".runtime/reports/generated/test-import-graph.json", workflow)
         self.assertIn(".runtime/tmp/verification-selector-changed-files.txt", workflow)
 
+        changed_files_path = self.tmp_root / "verification-selector-changed-files.txt"
+        selector_json_path = self.tmp_root / "verification-selector-explain.json"
+        selector_md_path = self.tmp_root / "verification-selector-explain.md"
+        adaptive_json_path = self.tmp_root / "verification-selector-execution.json"
+        adaptive_md_path = self.tmp_root / "verification-selector-execution.md"
+        adaptive_profile_path = self.tmp_root / "verification-selector-execution-profile.json"
+        changed_files_path.write_text(".github/workflows/verify-shared.yml\n", encoding="utf-8")
+        selector_result = run_command(
+            "node",
+            "tools/select_verification_targets.mjs",
+            "--changed-files-list",
+            str(changed_files_path),
+            "--json-out",
+            str(selector_json_path),
+            "--md-out",
+            str(selector_md_path),
+        )
+        self.assert_command_ok(selector_result)
+        selector_payload = json.loads(selector_json_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(selector_payload["routeAuthority"]), 331)
+        self.assertTrue(selector_payload["catalogDigest"])
+        self.assertTrue(selector_payload["catalogSourceIdentity"]["digest"])
+        self.assertEqual(
+            selector_payload["selectorRootSet"],
+            sorted(entry["commandRef"] for entry in selector_payload["recommendedCommands"]),
+        )
+
+        adaptive_result = run_command(
+            "node",
+            "tools/run_adaptive_tests.mjs",
+            "--changed-files-list",
+            str(changed_files_path),
+            "--selection-json",
+            str(selector_json_path),
+            "--defer-main-thread",
+            "--json-out",
+            str(adaptive_json_path),
+            "--md-out",
+            str(adaptive_md_path),
+            "--profile-out",
+            str(adaptive_profile_path),
+        )
+        self.assert_command_ok(adaptive_result)
+        adaptive_payload = json.loads(adaptive_json_path.read_text(encoding="utf-8"))
+        self.assertEqual(adaptive_payload["selectionArtifact"], str(selector_json_path))
+        self.assertEqual(adaptive_payload["catalogDigest"], selector_payload["catalogDigest"])
+        self.assertEqual(adaptive_payload["catalogSourceIdentity"], selector_payload["catalogSourceIdentity"])
+        self.assertEqual(adaptive_payload["selectorRootSet"], selector_payload["selectorRootSet"])
+        self.assertEqual(adaptive_payload["executionPlan"]["routeGaps"], [])
+        self.assertGreater(len(adaptive_payload["executionPlan"]["executionGroups"]), 0)
+
     def test_verify_shared_pr_fast_runner_executes_the_adaptive_child_safe_plan(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
         self.assertNotIn("- name: Run Python fast contracts", workflow)

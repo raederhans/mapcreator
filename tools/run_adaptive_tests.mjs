@@ -12,8 +12,9 @@ import { buildRouteIndex } from "./test_route_registry.mjs";
 import { VERIFICATION_DOMAINS } from "./verification/verification_domains.mjs";
 import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
 import {
+  bindSelectionReportToPreparedCatalog,
   buildVerificationSelectionPlan,
-  prepareRepositoryVerificationCatalog,
+  prepareRepositoryVerificationCatalogBinding,
   prepareVerificationCatalog,
 } from "./verification/script_portfolio.mjs";
 import {
@@ -246,13 +247,7 @@ function selectionRootSet(report) {
 }
 
 export function bindSelectionToPreparedCatalog(report, preparedCatalog) {
-  return {
-    ...report,
-    catalogDigest: preparedCatalog.catalogDigest,
-    catalogSourceIdentity: structuredClone(preparedCatalog.sourceIdentity),
-    selectorRootSet: selectionRootSet(report),
-    routeAuthority: structuredClone(preparedCatalog.authority),
-  };
+  return bindSelectionReportToPreparedCatalog(report, preparedCatalog);
 }
 
 function validateSelectionCatalogBinding(report, preparedCatalog, {
@@ -1829,16 +1824,16 @@ function main() {
   try {
     packageScripts = readPackageScriptsForProfile();
     const selectorRoutes = buildRouteIndex();
-    preparedCatalog = prepareRepositoryVerificationCatalog({
+    const catalogBinding = prepareRepositoryVerificationCatalogBinding({
       packageScripts,
       verificationRecords: VERIFICATION_DOMAINS,
       selectorRoutes,
       repoRoot: REPO_ROOT,
       platform: process.platform,
     });
-    const currentSelection = bindSelectionToPreparedCatalog(
+    preparedCatalog = catalogBinding.preparedCatalog;
+    const currentSelection = catalogBinding.bindSelectionReport(
       buildRecommendation(changedFiles, selectorRoutes, { routeAuthority: preparedCatalog.authority }),
-      preparedCatalog,
     );
     selectedReport = args.selectionJson
       ? readSelectionArtifact(args.selectionJson, changedFiles, {
