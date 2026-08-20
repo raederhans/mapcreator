@@ -107,10 +107,12 @@ Stage 6J-C closes verification-platform feature expansion for this reform. Any l
 
 - Local integration branch: `codex/sc-phases-0-3-candidate`.
 - Exact base: `9869698da5331e9afcc961f42b4666469abe6c46`.
-- Frozen code candidate before this docs record: `f50e557283a3e276a4f5f8a945ffbb2642441deb`.
+- Previous docs-record candidate `a244c59ed8ce704ecb8ddc738324d2eb094a70b4` received `REQUEST CHANGES / BLOCK` from independent review `01a01fa5-f27a-7553-8385-9427313b6f43` because the PR-fast selector CLI artifact lacked repository catalog bindings.
+- E code candidate: `be28f8744ccbc5ba5c7b661f47788a3beeb11889`.
 - Local integration owner: the current combined-candidate task owns this branch, index, worktree `.runtime`, adaptive artifacts, and serialized live gates.
 - Phase order is preserved through eight ordered delivery commits followed by authority seal, canonical planner wiring, canonical profile projection, lane-local uniqueness closure, and the authorized structural-fixture refresh.
-- The exact 16-file SF-ATS dry-run reports `unmatched=0`, `blocked=0`, `routeGaps=0`, 204 selected roots, 237 unique selected leaves, 173 execution groups, 17 deferred-main roots, and three planner invocations.
-- The exact 16-file child-safe execution passed all 173 groups. Its canonical profile reports 237/237 leaves, 227/227 files, `comparison=complete`, 173 process starts, and zero analysis issues.
+- E makes selector CLI production output and adaptive consumption share one repository catalog preparation/binding helper. The real selector artifact carries a 331-command reconciled authority, catalog digest, source identity, and 233-root selector set; strict drift remains a zero-spawn failure.
+- The exact 16-file bound-artifact dry-run reports `selectionArtifact` loaded, `unmatched=0`, `blocked=0`, `routeGaps=0`, 204 selected roots, 237 unique selected leaves, 173 execution groups, 17 deferred-main roots, and three planner invocations.
+- The exact 16-file bound-artifact child-safe execution passed all 173 groups. Its canonical profile reports 237/237 leaves, 227/227 files, `comparison=complete`, 173 process starts, and zero analysis issues.
 - Main-thread ownership remains explicit for 20 deferred commands. Full P4/Stage 5b, browser, performance, scenario-data, and real Pages generation remain final integration or CI admission work.
 - Real Pages generation stays outside this candidate validation because the builder writes tracked `dist` files; the sealed final plan proves the exact build -> contract -> Node tests -> drift dependency chain.

@@ -113,7 +113,8 @@ Each execution task must report base and head SHA, branch, status, owned paths, 
 - Worktree: `C:\Users\raede\.codex\worktrees\a82e\mapcreator`.
 - Branch: `codex/sc-phases-0-3-candidate`.
 - Exact base: `9869698da5331e9afcc961f42b4666469abe6c46`.
-- Frozen code candidate before the docs record: `f50e557283a3e276a4f5f8a945ffbb2642441deb`.
+- Previous candidate with docs record: `a244c59ed8ce704ecb8ddc738324d2eb094a70b4`.
+- Current E code candidate: `be28f8744ccbc5ba5c7b661f47788a3beeb11889`.
 - Remote activity: none. `main`, `origin/main`, all other refs/worktrees, and `export-pipeline` remained unchanged.
 - Parent `main` still owns its 19 unrelated source/dist/scenario/E2E WIP paths. `tests/test_e2e_structural_tooling.py` was clean in the parent and every other worktree before the authorized D edit.
 - Active ownership audit found only the current integration task; it serially owned this branch/index, candidate `.runtime`, selector/adaptive artifacts, P4 quick, and Windows integration.
@@ -130,12 +131,16 @@ Each execution task must report base and head SHA, branch, status, owned paths, 
 | Artifacts | `.runtime/reports/generated/sc-phases-0-3-candidate/{selector,adaptive-dry-run,adaptive-execute}.{json,md}` plus `adaptive-dry-run-profile.json` and `adaptive-execute-profile.json`. |
 | Bounded live evidence | P4 quick passed 260/260. Windows Job V2 passed 5/5 on bounded retry with zero residual target processes. Core list wrote `.runtime/reports/generated/verify-core.json` with 82 commands. |
 | Remaining admission | Full P4/Stage 5b, full Core, browser, performance, scenario-data, CI, and real Pages generation remain open. Pages generation is held because it writes tracked `dist` content outside this candidate boundary. |
+| Independent review HIGH | Review `01a01fa5-f27a-7553-8385-9427313b6f43` blocked `a244c59e`: workflow selector output omitted repository catalog bindings and carried 323 selector-only authority commands, so the 331-command adaptive strict reader failed before spawn. |
+| E producer/consumer closure | `be28f874` moves selection binding into the Phase 3 portfolio boundary. Selector CLI and adaptive main both use the same prepared repository binding; the workflow YAML remains unchanged. Four independent binding drifts remain zero-spawn. |
+| E bound artifacts | `.runtime/reports/generated/sc-phases-0-3-candidate-e/` contains the real selector artifact plus bound dry-run/execute JSON, Markdown, and profiles. The selector has 331 authority commands and 233 roots; execute loaded `selectionArtifact`, passed 173/173 groups, and published a complete 237-leaf profile. |
 
 ### Live process ownership closeout
 
 | Process | Owner | Artifact | State |
 | --- | --- | --- | --- |
 | exact 16-file adaptive dry-run/execute | current combined-candidate task | `.runtime/reports/generated/sc-phases-0-3-candidate/` | complete; execute exit 0; 173/173 groups passed |
+| exact 16-file bound selector/dry-run/execute after E | current combined-candidate task | `.runtime/reports/generated/sc-phases-0-3-candidate-e/` | complete; selector/dry-run/execute exit 0; artifact authority 331; 173/173 groups passed; task processes and locks 0 |
 | P4 quick | current combined-candidate task | `.runtime/reports/generated/p4-state-actions/P4.0/state-writer-policy-tests.quick.tap` | complete; 260/260 passed |
 | Windows Job V2 integration | current combined-candidate task | test-owned temporary containment evidence | complete; 5/5 passed; residual target processes 0 |
 | full P4/Core/browser/perf/scenario/Pages | final integration or CI owner | assigned at launch | open |
