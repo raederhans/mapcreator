@@ -105,3 +105,37 @@ Integrate the Phase 0 docs-only closeout commit before phases 1-3, then retain t
 | Final authority | A fresh independent audit task reviews exact commits. A separate integration task owns refs, ordered integration, final validation, push, registry synchronization, and final report. |
 
 Each execution task must report base and head SHA, branch, status, owned paths, changed files, regression coverage, commands and exit status, artifacts, route gaps, skipped main-thread or CI gates, remaining risk, and recommended integration method. A no-op requires current code and targeted evidence proving the phase contract is already satisfied.
+
+## 2026-08-20 SC phase 0-3 combined candidate
+
+### Current candidate truth
+
+- Worktree: `C:\Users\raede\.codex\worktrees\a82e\mapcreator`.
+- Branch: `codex/sc-phases-0-3-candidate`.
+- Exact base: `9869698da5331e9afcc961f42b4666469abe6c46`.
+- Frozen code candidate before the docs record: `f50e557283a3e276a4f5f8a945ffbb2642441deb`.
+- Remote activity: none. `main`, `origin/main`, all other refs/worktrees, and `export-pipeline` remained unchanged.
+- Parent `main` still owns its 19 unrelated source/dist/scenario/E2E WIP paths. `tests/test_e2e_structural_tooling.py` was clean in the parent and every other worktree before the authorized D edit.
+- Active ownership audit found only the current integration task; it serially owned this branch/index, candidate `.runtime`, selector/adaptive artifacts, P4 quick, and Windows integration.
+
+### Candidate decisions and evidence
+
+| Decision or evidence | Result |
+| --- | --- |
+| Ordered integration | Eight phase commits were cherry-picked in the authorized 0 -> 1 -> 2 -> 3 sequence. Conflicts were limited to the adaptive runner and core-runner regression file and were resolved by preserving strict Phase 2 planning plus Phase 1 observer checkpoints. |
+| Authority seal | Fixed schema/kind identity, presence-aware required authority, reconciled selector/catalog provenance, and unquoted control-separator rejection fail closed before spawn. |
+| Final-plan seam | One prepared repository catalog feeds one Phase 3 final-plan call per selected, deferred-main-thread, and deferred-ci-only disposition. Production execution consumes structured executions, dependency edges, lock groups, and provenance directly. |
+| Profile projection | Canonical executions project immutable root/leaf/group/process/safety/provenance/dependency/source-order facts. Checkpoints append lifecycle evidence, and canonical operation makes zero legacy analyzer calls. |
+| Exact real lane | Sixteen changed files produce unmatched 0, blocked 0, route gaps 0, 237 unique selected leaves, 173 execution groups, and 20 deferred main-thread commands. Full child-safe execution passed all 173 groups. |
+| Artifacts | `.runtime/reports/generated/sc-phases-0-3-candidate/{selector,adaptive-dry-run,adaptive-execute}.{json,md}` plus `adaptive-dry-run-profile.json` and `adaptive-execute-profile.json`. |
+| Bounded live evidence | P4 quick passed 260/260. Windows Job V2 passed 5/5 on bounded retry with zero residual target processes. Core list wrote `.runtime/reports/generated/verify-core.json` with 82 commands. |
+| Remaining admission | Full P4/Stage 5b, full Core, browser, performance, scenario-data, CI, and real Pages generation remain open. Pages generation is held because it writes tracked `dist` content outside this candidate boundary. |
+
+### Live process ownership closeout
+
+| Process | Owner | Artifact | State |
+| --- | --- | --- | --- |
+| exact 16-file adaptive dry-run/execute | current combined-candidate task | `.runtime/reports/generated/sc-phases-0-3-candidate/` | complete; execute exit 0; 173/173 groups passed |
+| P4 quick | current combined-candidate task | `.runtime/reports/generated/p4-state-actions/P4.0/state-writer-policy-tests.quick.tap` | complete; 260/260 passed |
+| Windows Job V2 integration | current combined-candidate task | test-owned temporary containment evidence | complete; 5/5 passed; residual target processes 0 |
+| full P4/Core/browser/perf/scenario/Pages | final integration or CI owner | assigned at launch | open |

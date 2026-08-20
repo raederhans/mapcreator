@@ -50,9 +50,9 @@ Reduce repeated verification time while preserving fail-closed coverage and audi
 The user authorized coordinated execution of phases 0-3 from the `SC项目推进` diagnosis. The source conversation used `origin/main@7ddcee0d613b0210a37e287c77e49c90443bd415`; each lane must re-audit current `main@9a5b25c6c07b05442c8c517457520e5ba610cd18` before changing code because later local commits may already satisfy part of a phase.
 
 - [x] Phase 0 / `verification-j2b-closeout`: finish J2b parent-death, explicit-cancel, and verified zero-descendant cleanup; then freeze verification-platform feature expansion.
-- [ ] Phase 1 / `chore/verification-baseline`: emit a thin stable profile for wall time, normalized executed files and counts, process starts, selector planned versus executed closure, cache outcomes, meta/product split, and top-ten slow commands/files without changing the selected execution set.
-- [ ] Phase 2 / `fix/pr-fast-use-selector`: audit the current adaptive `pr-fast` path, close remaining selector-to-execution gaps, preserve fail-closed unmatched/route-gap behavior, and retain heavy/full coverage as shadow, nightly, sampled, or main-thread work.
-- [ ] Phase 3 / `fix/test-leaf-deduplication`: establish canonical leaf expansion and structural duplicate rejection; converge test catalog sources only to the smallest phase-complete boundary supported by current code and tests.
+- [x] Phase 1 / `chore/verification-baseline`: emit a thin stable profile for wall time, normalized executed files and counts, process starts, selector planned versus executed closure, cache outcomes, meta/product split, and top-ten slow commands/files without changing the selected execution set.
+- [x] Phase 2 / `fix/pr-fast-use-selector`: audit the current adaptive `pr-fast` path, close remaining selector-to-execution gaps, preserve fail-closed unmatched/route-gap behavior, and retain heavy/full coverage as shadow, nightly, sampled, or main-thread work.
+- [x] Phase 3 / `fix/test-leaf-deduplication`: establish canonical leaf expansion and structural duplicate rejection; converge test catalog sources only to the smallest phase-complete boundary supported by current code and tests.
 
 Execution order is phase 0, phase 1, phase 2, phase 3 for integration. Work may proceed in isolated worktrees when file ownership remains disjoint. Later phases must report overlap and dependency on earlier commits rather than silently absorbing them.
 
@@ -102,3 +102,15 @@ Stage 6J-C closes verification-platform feature expansion for this reform. Any l
 - A cached repository scan must remain immutable or isolated so tests cannot influence one another.
 - Historical-proof and cross-process caches must expose their identity and invalidation decisions in durable evidence.
 - Existing user and worktree changes outside this task remain untouched.
+
+## SC phase 0-3 combined candidate — 2026-08-20
+
+- Local integration branch: `codex/sc-phases-0-3-candidate`.
+- Exact base: `9869698da5331e9afcc961f42b4666469abe6c46`.
+- Frozen code candidate before this docs record: `f50e557283a3e276a4f5f8a945ffbb2642441deb`.
+- Local integration owner: the current combined-candidate task owns this branch, index, worktree `.runtime`, adaptive artifacts, and serialized live gates.
+- Phase order is preserved through eight ordered delivery commits followed by authority seal, canonical planner wiring, canonical profile projection, lane-local uniqueness closure, and the authorized structural-fixture refresh.
+- The exact 16-file SF-ATS dry-run reports `unmatched=0`, `blocked=0`, `routeGaps=0`, 204 selected roots, 237 unique selected leaves, 173 execution groups, 17 deferred-main roots, and three planner invocations.
+- The exact 16-file child-safe execution passed all 173 groups. Its canonical profile reports 237/237 leaves, 227/227 files, `comparison=complete`, 173 process starts, and zero analysis issues.
+- Main-thread ownership remains explicit for 20 deferred commands. Full P4/Stage 5b, browser, performance, scenario-data, and real Pages generation remain final integration or CI admission work.
+- Real Pages generation stays outside this candidate validation because the builder writes tracked `dist` files; the sealed final plan proves the exact build -> contract -> Node tests -> drift dependency chain.

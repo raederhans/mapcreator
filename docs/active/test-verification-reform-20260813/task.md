@@ -37,13 +37,26 @@ The initial runner reform plus Stage 6A proof reuse, Stage 6B exact evidence reu
 - [x] Read and freeze the source diagnosis and phase contracts from the user-designated Edge tab.
 - [x] Recheck root ownership: `main@9a5b25c6`, `origin/main@7ddcee0d`, parent checkout ahead 46 with unrelated scenario/UI WIP preserved.
 - [x] Phase 0 delivery: current-state audit, bounded J2b implementation, regression coverage, adaptive selection, Windows integration evidence, and ready-for-integration commit.
-- [ ] Phase 1 delivery: current-state audit, minimal stable profiling output, regression coverage, adaptive selection, and ready-for-integration commit.
-- [ ] Phase 2 delivery: current-state audit of the already-adaptive workflow, remaining selector execution repair, fail-closed regression coverage, adaptive selection, and ready-for-integration commit or evidence-backed no-op.
-- [ ] Phase 3 delivery: canonical leaf expansion/deduplication boundary, duplicate/cycle/unresolved regressions, adaptive selection, and ready-for-integration commit.
+- [x] Phase 1 delivery: current-state audit, minimal stable profiling output, regression coverage, adaptive selection, and ready-for-integration commit.
+- [x] Phase 2 delivery: current-state audit of the already-adaptive workflow, remaining selector execution repair, fail-closed regression coverage, adaptive selection, and ready-for-integration commit or evidence-backed no-op.
+- [x] Phase 3 delivery: canonical leaf expansion/deduplication boundary, duplicate/cycle/unresolved regressions, adaptive selection, and ready-for-integration commit.
 - [ ] Independent audit of each exact delivery and their ordered combined diff.
 - [ ] Ordered integration, targeted verification, SF-ATS selector dry-run, authorized push, registry/task closeout, and final remote-state report.
 
 Phase workers own only their isolated worktrees and local commits. The final integration task owns merge/cherry-pick choice, target refs, push, shared `.runtime` outputs, long checks, and worktree cleanup.
+
+### Combined-candidate local closeout
+
+- [x] Cherry-pick the eight phase deliveries in the authorized order from exact base `9869698da5331e9afcc961f42b4666469abe6c46`.
+- [x] Commit A authority/catalog/parser sealing as `f623bf0e17801720de4a810a96ab9cf36b4529ae`.
+- [x] Commit B direct Phase 2 -> Phase 3 final-plan wiring as `9c96ec6b0f67d8ecf9289e66c15fa8a4483543b0`.
+- [x] Commit C canonical execution profile projection as `6a0b5eedb36b73190d162e6bc7f7ef91ffed039b`.
+- [x] Close mutually exclusive disposition overlap while retaining lane-local uniqueness as `3d92d8752deec85558191f7b63cb5a0f6d4f2aa7`.
+- [x] Refresh the authorized structural authority fixture as D `f50e557283a3e276a4f5f8a945ffbb2642441deb`.
+- [x] Run the 12 combined mechanical acceptance areas through focused behavior regressions plus the exact 16-file real selector and adaptive plan.
+- [x] Run the exact 16-file child-safe plan to terminal success under one `.runtime` owner.
+- [ ] Run final Stage 5b/full P4/browser/performance/scenario-data/Pages generation admission under the designated final integration or CI owner.
+- [ ] Obtain an independent review verdict for the exact final candidate SHA.
 
 ## Validation evidence
 
@@ -70,6 +83,12 @@ Phase workers own only their isolated worktrees and local commits. The final int
 | Stage 6B exact policy evidence | Integrated as `f6310175`. Evidence binds explicit untracked-aware clean SHA/tree identity, canonical phase and checker plan, policy/config/checkpoint identity, report bytes and producer provenance. Create/validate use start/end identity fences; each Core/P4/direct/standalone invocation owns one live-fallback attempt. Root rerun passed Node 63/63, Python 3/3, route schema 363, syntax/diff checks, and SF-ATS with 11 changed files / 0 route gaps. Full TAP and every P4 direct checker remain live. |
 | Stage 6C read-only portfolio audit | Current Core closure is 87 top-level / 103 leaf / 70 Node / 20 Python processes. Strict command-closure supersession projects 80 top-level / 95 leaf / 62 Node / 20 Python with identical Node test-file coverage. |
 | Stage 6C strict command closure | Integrated as `0df8698c`. Core now lists 80 commands and seven durable supersession records; mechanical closure is 95 leaf / 62 Node / 20 Python while the unique Node test-file set remains 103/103. Cycle and unresolved provenance fail closed. Root rerun passed Core 34/34, metadata 29/29, supervisor contracts/routing 18/18, supervisor plan 17/17, route schema 363, list 80/7/0/0, and SF-ATS with five changed files / zero route gaps. |
+| SC phase 0-3 wiring regressions | `node --test` for profile/core/metadata/portfolio passed 142/142. The suite covers forged authority zero-spawn, prepared catalog build once, one planner call per disposition, canonical analyzer calls zero, schema/kind reseal drift, required-field deletion, CR/LF/CRLF rejection, Windows identity/conflict behavior, Pages topology, batching/isolation, observer faults, pre-spawn, ENOENT, and lifecycle evidence. |
+| Structural authority fixture | `npm run -s python -- -m unittest tests.test_e2e_structural_tooling -q` passed 48/48 after the authorized fixture received the current required authority fields. Production missing-field behavior remains fail closed. |
+| Exact 16-file SF-ATS selector and dry-run | Selector recommends 233 commands with 213 child-safe and 20 main-thread entries. Adaptive dry-run keeps 204 selected roots, 237 unique leaves in 173 groups, defers 17 main-thread roots with 32 leaves, calls the three disposition planners once each, and reports unmatched 0 / blocked 0 / route gaps 0. |
+| Exact 16-file child-safe execution | All 173 structured execution groups passed. The final profile reports lifecycle `passed`, 237/237 canonical leaves, 227/227 files, complete leaf/root comparisons, 160 Node plus 13 Python process starts, zero interruption, zero analysis issues, and successful observer publication across 347 checkpoints. |
+| P4 and Windows bounded live gates | P4 quick passed 260/260 after restoring five lockfile dependencies. Windows Job V2 passed 5/5 with zero residual target processes; the first run passed all five behaviors and hit a transient teardown `EPERM`, then the bounded retry exited 0. |
+| Core and Pages boundary evidence | Core list produced 82 commands. The deferred Pages final plan contains five ordered executions and four exact dependency edges: build -> startup contract -> landing Node test -> sample-project Node test -> dist drift. Real Pages generation remained outside the tracked `dist` write boundary. |
 | Frozen full policy after Stages 6A-C | `b7f9b40e`: 356/356 passed, exit 0, TAP total 954,768.5944 ms (~15m55s). This is 84.4% below the 6,139,150.8 ms baseline and 73.9% below the 3,662,093.7 ms intermediate run. The closed snapshot (420,985.07 ms) and deterministic builder (470,960.75 ms) still account for 93.42%; both consume the shared repository-scan cache whose resolver still clones the full graph per return. |
 | Stage 6D shared-readonly experiment | Short correctness review closed two P1 certificate/proxy bypasses and one P2 revoked-proxy diagnostic gap; focused 8/8, batch 9/9, soundness 20/20, syntax, route 363, and SF-ATS route gaps all passed. The frozen full-policy candidate at `8d828e4` exceeded 30 minutes while its single manifest worker remained CPU-active, crossing 1.9x of the 954,768.5944 ms admission baseline before completion. Root stopped the exact four-process tree, confirmed zero remaining target PIDs, and reverted the candidate as `d873c075`. The checked-in full TAP remains the prior complete 356/356 baseline. |
 | Stage 6E measured target | The next slice batches `validateStateActionNonTargetParameterMutations`: static evidence shows 14 action modules and about 142 per-binding scanner setups before each module's normal batch inventory. Acceptance requires an exact legacy-oracle violation comparison and one scanner invocation per action module. |
