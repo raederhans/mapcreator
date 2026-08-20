@@ -9,6 +9,7 @@ import {
 import {
   buildRecommendation,
   classifyExecutionOwners,
+  normalizeChangedFiles,
 } from "../tools/select_verification_targets.mjs";
 import {
   buildCoreVerificationPlan,
@@ -142,6 +143,64 @@ const PACKAGE_SCRIPTS = {
   "test:e2e:project-save-load": "node node_modules/@playwright/test/cli.js test tests/e2e/project_save_load_roundtrip.spec.js --workers=1",
   "test:e2e:interaction-funnel": "node node_modules/@playwright/test/cli.js test tests/e2e/interaction_funnel_contract.spec.js --workers=1 --retries=0",
 };
+
+const TEST_MAX_ARGV_BYTES = process.platform === "win32" ? 30_000 : 131_072;
+
+function adaptiveContributor(commandRef, {
+  disposition = "child-safe",
+  executionOwners = [disposition],
+  resourceLocks = [],
+  ciProfiles = disposition === "child-safe" ? ["pr-fast"] : ["full"],
+  routeIds = [`route:${commandRef}`],
+  safetyContributorRouteIds = routeIds,
+  platforms = [process.platform],
+  batchSafe = false,
+  isolation = "process",
+  maxLeaves = 64,
+  maxArgvBytes = TEST_MAX_ARGV_BYTES,
+} = {}) {
+  return {
+    commandRef,
+    executionOwner: disposition,
+    executionOwners,
+    platforms,
+    resourceLocks,
+    tiers: [...ciProfiles],
+    ciProfiles,
+    routeIds,
+    safetyContributorRouteIds,
+    provenance: {
+      routeIds: [...routeIds],
+      safetyContributorRouteIds: [...safetyContributorRouteIds],
+    },
+    disposition,
+    batchSafe,
+    isolation,
+    maxLeaves,
+    maxArgvBytes,
+  };
+}
+
+function adaptiveReport({
+  selected = [],
+  mainThread = [],
+  ciOnly = [],
+  blocked = [],
+  selectionPlatform = process.platform,
+} = {}) {
+  return {
+    schemaVersion: 1,
+    selectionPlatform,
+    changedFiles: ["tests/synthetic.test.mjs"],
+    recommendedCommands: [...selected, ...mainThread, ...ciOnly, ...blocked].map((entry) => structuredClone(entry)),
+    childAgentStaticTasks: selected.map((entry) => structuredClone(entry)),
+    mainThreadSerialVerification: mainThread.map((entry) => structuredClone(entry)),
+    ciOnlyVerification: ciOnly.map((entry) => structuredClone(entry)),
+    blockedVerification: blocked.map((entry) => structuredClone(entry)),
+    matchedByFile: [],
+    unmatchedChangedFiles: [],
+  };
+}
 
 function commandRefs(plan) {
   return plan.commandsToRun.map((entry) => entry.commandRef);
@@ -537,9 +596,14 @@ test("adaptive observer publication and builder failures stay in primary evidenc
   assert.equal(persisted.observerDiagnostics.profile.lastFailure.phase, "publish");
 
   const calls = [];
+  const executionCommands = [
+    { commandRef: "node first.mjs", process: { bin: "node", args: ["first.mjs"] } },
+    { commandRef: "node second.mjs", process: { bin: "node", args: ["second.mjs"] } },
+  ];
   const results = executeAdaptivePlan({
     ...executionPlan,
     commandsToRun: ["node first.mjs", "node second.mjs"],
+    executionCommands,
   }, {
     runner() {
       calls.push(calls.length + 1);
@@ -549,6 +613,7 @@ test("adaptive observer publication and builder failures stay in primary evidenc
       writeAdaptiveOutputs(report, args, entries, {
         ...executionPlan,
         commandsToRun: ["node first.mjs", "node second.mjs"],
+        executionCommands,
       });
     },
   });
@@ -1178,13 +1243,12 @@ test("adaptive command supersession removes covered TNO and Pages commands", () 
     "verify:unrelated",
   ]);
 
-  const plan = buildExecutionPlan({
-    childAgentStaticTasks: [
-      { commandRef: "verify:tno-coverage-ledger" },
-      { commandRef: "verify:tno-coverage-chain" },
+  const plan = buildExecutionPlan(adaptiveReport({
+    selected: [
+      adaptiveContributor("verify:tno-coverage-ledger"),
+      adaptiveContributor("verify:tno-coverage-chain"),
     ],
-    mainThreadSerialVerification: [],
-  });
+  }));
   assert.deepEqual(plan.commandsToRun, ["verify:tno-coverage-chain"]);
   assert.deepEqual(plan.supersededCommands, [{
     commandRef: "verify:tno-coverage-ledger",
@@ -1460,6 +1524,7 @@ test("adaptive history discovery requires its exact base and rejects last-commit
   assert.deepEqual(parseAdaptiveArgs(["--execute", "--history-base", "origin/main"]), {
     changedFiles: [],
     changedFilesProvided: false,
+    inputErrors: [],
     dryRun: false,
     includeBranchHistory: true,
     historyBase: "origin/main",
@@ -1499,6 +1564,31 @@ test("adaptive history discovery requires its exact base and rejects last-commit
     () => assertAdaptiveExecutionInput([], { dryRun: false }),
     /adaptive-execution-empty-changed-files/,
   );
+  const ingressRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-changed-file-ingress-"));
+  const whitespaceList = path.join(ingressRoot, "whitespace.txt");
+  fs.writeFileSync(whitespaceList, "  \r\n\t\r\n", "utf8");
+  const ingressArgv = [
+    ["--execute"],
+    ["--execute", "--changed-file"],
+    ["--execute", "--changed-file", ""],
+    ["--execute", "--changed-file", "   "],
+    ["--execute", "--changed-file", ","],
+    ["--execute", "--changed-files", ","],
+    ["--execute", "--changed-files-list", whitespaceList],
+  ];
+  for (const argv of ingressArgv) {
+    const parsed = parseAdaptiveArgs(argv);
+    const changedFiles = normalizeChangedFiles(parsed.changedFiles);
+    assert.throws(
+      () => assertAdaptiveExecutionInput(changedFiles, { dryRun: parsed.dryRun }),
+      /adaptive-execution-empty-changed-files/,
+      JSON.stringify(argv),
+    );
+  }
+  assert.deepEqual(
+    normalizeChangedFiles(["tests/a.test.mjs", "./tests/a.test.mjs", " tests/a.test.mjs "]),
+    ["tests/a.test.mjs"],
+  );
 });
 
 test("adaptive execution reconciles duplicate route safety metadata before PR execution", () => {
@@ -1518,103 +1608,128 @@ test("adaptive execution reconciles duplicate route safety metadata before PR ex
   assert.ok(executionPlan.blockedMainThreadCommands.includes(telemetryCommand));
 });
 
-test("adaptive execution expands aliases to canonical leaves and aggregates ordinary runtimes", () => {
-  const packageScripts = {
-    "test:suite": "npm run test:node:a && npm run test:nested && npm run test:python:a",
-    "test:nested": "npm run test:node:b && npm run test:python:b",
-    "test:node:a": "node --test tests/a.test.mjs tests/shared.test.mjs",
-    "test:node:b": "node --test tests/shared.test.mjs tests/b.test.mjs",
-    "test:python:a": "npm run python -- -m unittest tests.test_alpha tests.test_shared -q",
-    "test:python:b": "npm run python -- -m unittest tests.test_shared tests.test_beta -q",
-    "test:locked": "node --test tests/locked.test.mjs",
-    "test:ci": "python -m unittest tests.test_ci -q",
-    python: "node tools/run_python.mjs",
-  };
-  const report = {
-    recommendedCommands: [
-      {
-        commandRef: "test:suite",
-        executionOwners: ["child-safe"],
-        resourceLocks: [],
-        ciProfiles: ["pr-fast"],
-        routeIds: ["suite"],
-      },
-      {
-        commandRef: "test:locked",
-        executionOwners: ["main-thread"],
-        resourceLocks: ["browser-dev-server", "playwright-browser"],
-        ciProfiles: ["full"],
-        routeIds: ["locked"],
-      },
-      {
-        commandRef: "test:ci",
-        executionOwners: ["ci-only"],
-        resourceLocks: ["perf-dev-server"],
-        ciProfiles: ["nightly"],
-        routeIds: ["ci"],
-      },
-    ],
-    childAgentStaticTasks: [
-      { commandRef: "test:suite" },
-      { commandRef: "test:node:b" },
-    ],
-    mainThreadSerialVerification: [{ commandRef: "test:locked" }],
-    ciOnlyVerification: [{ commandRef: "test:ci" }],
-    blockedVerification: [],
-  };
+test("adaptive execution treats complete selection contributors as the only safety authority", () => {
+  const selected = adaptiveContributor("node --test tests/authority.test.mjs");
+  const cases = [];
 
-  const plan = buildExecutionPlan(report, { packageScripts });
+  const missingPlatform = adaptiveReport({ selected: [selected] });
+  delete missingPlatform.recommendedCommands[0].platforms;
+  cases.push([missingPlatform, "adaptive-selection-authority-field"]);
+
+  const conflictingLock = adaptiveReport({ selected: [selected] });
+  conflictingLock.childAgentStaticTasks[0].resourceLocks = ["forged-lock"];
+  cases.push([conflictingLock, "adaptive-selection-authority-conflict"]);
+
+  const crossDisposition = adaptiveReport({ selected: [selected] });
+  crossDisposition.mainThreadSerialVerification.push(structuredClone(selected));
+  cases.push([crossDisposition, "adaptive-selection-cross-disposition"]);
+
+  const forgedFullP4 = adaptiveContributor("verify:p4:state-writer-policy", {
+    disposition: "child-safe",
+    executionOwners: ["main-thread"],
+    resourceLocks: [],
+    ciProfiles: ["full"],
+  });
+  cases.push([
+    adaptiveReport({ selected: [forgedFullP4] }),
+    "adaptive-selection-disposition-owner-mismatch",
+  ]);
+
+  for (const [report, expectedGap] of cases) {
+    const plan = buildExecutionPlan(report, { packageScripts: {} });
+    assert.ok(plan.routeGaps.some((gap) => gap.code === expectedGap), JSON.stringify(plan.routeGaps));
+    assert.deepEqual(plan.executionCommands, []);
+    let spawnCount = 0;
+    assert.deepEqual(executeAdaptivePlan(plan, {
+      runner() {
+        spawnCount += 1;
+        return { status: 0 };
+      },
+    }), []);
+    assert.equal(spawnCount, 0);
+  }
+});
+
+test("adaptive execution invokes one whole-lane planner per disposition and propagates cross-root facts", () => {
+  const selected = [
+    adaptiveContributor("catalog:one"),
+    adaptiveContributor("catalog:two"),
+  ];
+  const mainThread = [adaptiveContributor("catalog:main", {
+    disposition: "main-thread",
+    executionOwners: ["main-thread"],
+    resourceLocks: ["browser-dev-server"],
+    ciProfiles: ["full"],
+  })];
+  const ciOnly = [adaptiveContributor("catalog:ci", {
+    disposition: "ci-only",
+    executionOwners: ["ci-only"],
+    resourceLocks: ["perf-dev-server"],
+    ciProfiles: ["perf-pr-gate"],
+  })];
+  const calls = [];
+  const executionPlanner = (input) => {
+    calls.push({
+      disposition: input.disposition,
+      rootCommandRefs: input.rootCommandRefs,
+    });
+    return {
+      schemaVersion: 1,
+      disposition: input.disposition,
+      routeGaps: [],
+      plannedRoots: input.rootCommandRefs.map((commandRef) => ({
+        commandRef,
+        expandedCommands: [{
+          tokens: input.disposition === "selected"
+            ? ["node", "--test", "tests/shared_catalog.test.mjs"]
+            : ["node", "--test", `tests/${commandRef.slice(-2)}.test.mjs`],
+          aliasPath: ["phase3-catalog", commandRef],
+        }],
+      })),
+    };
+  };
+  const plan = buildExecutionPlan(adaptiveReport({ selected, mainThread, ciOnly }), {
+    packageScripts: {},
+    executionPlanner,
+  });
+  assert.deepEqual(calls, [
+    { disposition: "selected", rootCommandRefs: ["catalog:one", "catalog:two"] },
+    { disposition: "deferred-main-thread", rootCommandRefs: ["catalog:main"] },
+    { disposition: "deferred-ci-only", rootCommandRefs: ["catalog:ci"] },
+  ]);
   assert.deepEqual(plan.routeGaps, []);
-  assert.equal(plan.selectedLeaves.length, 6);
-  assert.equal(new Set(plan.selectedLeaves.map((leaf) => leaf.leafId)).size, 6);
-  assert.equal(plan.executionGroups.length, 2);
-  const nodeGroup = plan.executionGroups.find((group) => group.kind === "node-test");
-  const pythonGroup = plan.executionGroups.find((group) => group.kind === "python-unittest");
-  assert.ok(nodeGroup);
-  assert.ok(pythonGroup);
-  assert.deepEqual(nodeGroup.process.args, [
-    "--test",
-    "tests/a.test.mjs",
-    "tests/b.test.mjs",
-    "tests/shared.test.mjs",
-  ]);
-  assert.deepEqual(pythonGroup.process.args.slice(-4), [
-    "tests.test_alpha",
-    "tests.test_beta",
-    "tests.test_shared",
-    "-q",
-  ]);
-  const sharedNodeLeaf = plan.selectedLeaves.find((leaf) => leaf.target === "tests/shared.test.mjs");
-  assert.deepEqual(sharedNodeLeaf.sourceCommandRefs, ["test:node:b", "test:suite"]);
-  assert.equal(sharedNodeLeaf.aliasPaths.length, 3);
-  assert.deepEqual(plan.deferredMainThreadGroups[0].resourceLocks, ["browser-dev-server", "playwright-browser"]);
-  assert.deepEqual(plan.deferredCiOnlyGroups[0].resourceLocks, ["perf-dev-server"]);
-  assert.equal(plan.closure.deferredMainThreadLeafCount, 1);
-  assert.equal(plan.closure.deferredCiOnlyLeafCount, 1);
+  assert.equal(plan.selectedLeaves.length, 1);
+  assert.deepEqual(plan.selectedLeaves[0].sourceCommandRefs, ["catalog:one", "catalog:two"]);
+  assert.equal(plan.closure.plannerInvocationCount, 3);
+
+  const conflictingSelected = [
+    adaptiveContributor("catalog:one"),
+    adaptiveContributor("catalog:two", { resourceLocks: ["different-lock"] }),
+  ];
+  const conflictPlan = buildExecutionPlan(adaptiveReport({ selected: conflictingSelected }), {
+    packageScripts: {},
+    executionPlanner,
+  });
+  assert.ok(conflictPlan.routeGaps.some((gap) => gap.code === "adaptive-leaf-metadata-conflict"));
+  assert.deepEqual(conflictPlan.executionCommands, []);
 });
 
 test("adaptive execution fails closed before commands on cyclic or unresolved aliases", () => {
-  const cyclicReport = {
-    recommendedCommands: [],
-    childAgentStaticTasks: [{ commandRef: "test:cycle:a" }],
-    mainThreadSerialVerification: [],
-    ciOnlyVerification: [],
-    blockedVerification: [],
-  };
-  const cyclePlan = buildExecutionPlan(cyclicReport, {
+  const cycleRoot = adaptiveContributor("test:cycle:a");
+  const cyclePlan = buildExecutionPlan(adaptiveReport({ selected: [cycleRoot] }), {
     packageScripts: {
       "test:cycle:a": "npm run test:cycle:b",
       "test:cycle:b": "npm run test:cycle:a",
     },
   });
-  assert.equal(cyclePlan.routeGaps[0].code, "adaptive-alias-cycle");
+  assert.ok(cyclePlan.routeGaps.some((gap) => gap.code === "adaptive-alias-cycle"));
   assert.deepEqual(cyclePlan.executionCommands, []);
 
-  const unresolvedPlan = buildExecutionPlan({
-    ...cyclicReport,
-    childAgentStaticTasks: [{ commandRef: "test:missing" }],
-  }, { packageScripts: {} });
-  assert.equal(unresolvedPlan.routeGaps[0].code, "adaptive-command-unresolved");
+  const unresolvedRoot = adaptiveContributor("test:missing");
+  const unresolvedPlan = buildExecutionPlan(adaptiveReport({ selected: [unresolvedRoot] }), {
+    packageScripts: {},
+  });
+  assert.ok(unresolvedPlan.routeGaps.some((gap) => gap.code === "adaptive-command-unresolved"));
   let calls = 0;
   assert.deepEqual(executeAdaptivePlan(unresolvedPlan, {
     runner() {
@@ -1663,37 +1778,9 @@ test("adaptive execution keeps Windows Job, browser, Pages, and perf leaves in l
   }
 });
 
-test("adaptive execution accepts a replaceable catalog expander boundary", () => {
-  const calls = [];
-  const plan = buildExecutionPlan({
-    recommendedCommands: [],
-    childAgentStaticTasks: [{ commandRef: "catalog:owned" }],
-    mainThreadSerialVerification: [],
-    ciOnlyVerification: [],
-    blockedVerification: [],
-  }, {
-    packageScripts: {},
-    commandExpander(commandRef, packageScripts) {
-      calls.push({ commandRef, packageScripts });
-      return [{
-        tokens: ["node", "--test", "tests/catalog_owned.test.mjs"],
-        aliasPath: ["external-catalog", commandRef],
-      }];
-    },
-  });
-  assert.deepEqual(calls, [{ commandRef: "catalog:owned", packageScripts: {} }]);
-  assert.deepEqual(plan.routeGaps, []);
-  assert.deepEqual(plan.executionGroups[0].leafIds, ["node-test\u0000tests/catalog_owned.test.mjs"]);
-});
-
 test("adaptive execution preserves one-file Node check semantics", () => {
-  const plan = buildExecutionPlan({
-    recommendedCommands: [],
-    childAgentStaticTasks: [{ commandRef: "verify:checks" }],
-    mainThreadSerialVerification: [],
-    ciOnlyVerification: [],
-    blockedVerification: [],
-  }, {
+  const checks = adaptiveContributor("verify:checks", { isolation: "leaf" });
+  const plan = buildExecutionPlan(adaptiveReport({ selected: [checks] }), {
     packageScripts: {
       "verify:checks": "node --check tools/one.mjs tools/two.mjs",
     },
@@ -1704,19 +1791,71 @@ test("adaptive execution preserves one-file Node check semantics", () => {
   );
 });
 
-test("adaptive execution consumes only an exact changed-file selection artifact", () => {
+test("adaptive execution enforces Node batch budgets and Python process isolation", () => {
+  const nodeTargets = Array.from({ length: 211 }, (_, index) => `tests/budget_${index}.test.mjs`);
+  const nodeRoot = adaptiveContributor("test:node:211", {
+    batchSafe: true,
+    isolation: "batch",
+    maxLeaves: 64,
+  });
+  const nodePlan = buildExecutionPlan(adaptiveReport({ selected: [nodeRoot] }), {
+    packageScripts: { "test:node:211": `node --test ${nodeTargets.join(" ")}` },
+  });
+  assert.deepEqual(nodePlan.routeGaps, []);
+  assert.equal(nodePlan.selectedLeaves.length, 211);
+  assert.equal(nodePlan.executionGroups.length, 4);
+  assert.ok(nodePlan.executionGroups.every((group) => group.leafCount <= 64));
+  assert.ok(nodePlan.executionGroups.every((group) => group.argvBytes <= group.maxArgvBytes));
+
+  const pythonRoots = Array.from({ length: 15 }, (_, index) => adaptiveContributor(
+    `python -m unittest tests.test_history_${index} -q`,
+    { isolation: "process" },
+  ));
+  const pythonPlan = buildExecutionPlan(adaptiveReport({ selected: pythonRoots }), { packageScripts: {} });
+  assert.deepEqual(pythonPlan.routeGaps, []);
+  assert.equal(pythonPlan.selectedLeaves.length, 15);
+  assert.equal(pythonPlan.executionGroups.length, 15);
+  assert.ok(pythonPlan.executionGroups.every((group) => group.kind === "python-unittest"));
+
+  const windowsRoot = adaptiveContributor("test:node:windows-budget", {
+    platforms: ["win32"],
+    batchSafe: true,
+    isolation: "batch",
+    maxLeaves: 64,
+    maxArgvBytes: 600,
+  });
+  const windowsReport = adaptiveReport({ selected: [windowsRoot], selectionPlatform: "win32" });
+  const windowsPlan = buildExecutionPlan(windowsReport, {
+    platform: "win32",
+    packageScripts: {
+      "test:node:windows-budget": `node --test ${Array.from({ length: 30 }, (_, index) => `tests/windows_argv_${index}.test.mjs`).join(" ")}`,
+    },
+  });
+  assert.deepEqual(windowsPlan.routeGaps, []);
+  assert.ok(windowsPlan.executionGroups.length > 1);
+  assert.ok(windowsPlan.executionGroups.every((group) => group.argvBytes <= 600));
+
+  const oversizedRoot = adaptiveContributor("node --test tests/a_very_long_single_leaf_name.test.mjs", {
+    batchSafe: true,
+    isolation: "batch",
+    maxArgvBytes: 20,
+  });
+  const oversizedPlan = buildExecutionPlan(adaptiveReport({ selected: [oversizedRoot] }), { packageScripts: {} });
+  assert.ok(oversizedPlan.routeGaps.some((gap) => gap.code === "adaptive-group-argv-budget-exceeded"));
+  assert.deepEqual(oversizedPlan.executionCommands, []);
+});
+
+test("adaptive execution consumes only an exact and complete changed-file selection artifact", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-selection-artifact-"));
   const artifactPath = path.join(tempRoot, "selector.json");
-  const artifact = {
-    schemaVersion: 1,
-    changedFiles: ["tools/run_adaptive_tests.mjs"],
-    recommendedCommands: [],
-    childAgentStaticTasks: [],
-    mainThreadSerialVerification: [],
-    ciOnlyVerification: [],
-    blockedVerification: [],
-    unmatchedChangedFiles: [],
-  };
+  const contributor = adaptiveContributor("node --test tests/artifact.test.mjs");
+  const artifact = adaptiveReport({ selected: [contributor] });
+  artifact.changedFiles = ["tools/run_adaptive_tests.mjs"];
+  artifact.matchedByFile = [{
+    changedFile: "tools/run_adaptive_tests.mjs",
+    matchedRouteIds: [...contributor.routeIds],
+    recommendedCommands: [structuredClone(contributor)],
+  }];
   fs.writeFileSync(artifactPath, JSON.stringify(artifact), "utf8");
   assert.deepEqual(
     readSelectionArtifact(artifactPath, ["./tools/run_adaptive_tests.mjs"]).changedFiles,
@@ -1725,6 +1864,14 @@ test("adaptive execution consumes only an exact changed-file selection artifact"
   assert.throws(
     () => readSelectionArtifact(artifactPath, ["package.json"]),
     /adaptive-selection-artifact-changed-files-mismatch/,
+  );
+  const incompleteArtifactPath = path.join(tempRoot, "selector-incomplete.json");
+  const incompleteArtifact = structuredClone(artifact);
+  delete incompleteArtifact.childAgentStaticTasks[0].resourceLocks;
+  fs.writeFileSync(incompleteArtifactPath, JSON.stringify(incompleteArtifact), "utf8");
+  assert.throws(
+    () => readSelectionArtifact(incompleteArtifactPath, ["tools/run_adaptive_tests.mjs"]),
+    /adaptive-selection-authority-field/,
   );
 });
 
@@ -1741,7 +1888,11 @@ test("adaptive execution checkpoints running and terminal results with timings",
   const checkpoints = [];
   const calls = [];
   const results = executeAdaptivePlan({
-    commandsToRun: ["node first.mjs", "node second.mjs"],
+    routeGaps: [],
+    executionCommands: [
+      { commandRef: "node first.mjs", process: { bin: "node", args: ["first.mjs"] } },
+      { commandRef: "node second.mjs", process: { bin: "node", args: ["second.mjs"] } },
+    ],
   }, {
     cwd: process.cwd(),
     now: (() => {
@@ -1770,7 +1921,11 @@ test("adaptive execution checkpoints running and terminal results with timings",
 test("adaptive execution records an interrupted terminal result and stops", () => {
   const checkpoints = [];
   const results = executeAdaptivePlan({
-    commandsToRun: ["node first.mjs", "node second.mjs"],
+    routeGaps: [],
+    executionCommands: [
+      { commandRef: "node first.mjs", process: { bin: "node", args: ["first.mjs"] } },
+      { commandRef: "node second.mjs", process: { bin: "node", args: ["second.mjs"] } },
+    ],
   }, {
     runner() {
       return { status: null, signal: "SIGINT" };
@@ -1783,6 +1938,7 @@ test("adaptive execution records an interrupted terminal result and stops", () =
   assert.equal(results.length, 1);
   assert.equal(results[0].status, "interrupted");
   assert.equal(results[0].signal, "SIGINT");
+  assert.equal(results[0].interrupted, true);
   assert.equal(results[0].exitCode, 1);
   assert.equal(results[0].processStarted, true);
   assert.equal(checkpoints.at(-1)[0].status, "interrupted");
@@ -1792,7 +1948,11 @@ test("adaptive pre-spawn ENOENT and interrupted evidence keep processStarted fal
   const missing = Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" });
   const checkpoints = [];
   const results = executeAdaptivePlan({
-    commandsToRun: ["node missing.mjs", "node later.mjs"],
+    routeGaps: [],
+    executionCommands: [
+      { commandRef: "node missing.mjs", process: { bin: "node", args: ["missing.mjs"] } },
+      { commandRef: "node later.mjs", process: { bin: "node", args: ["later.mjs"] } },
+    ],
   }, {
     runner() {
       return { status: null, signal: "SIGINT", error: missing };
@@ -1808,11 +1968,29 @@ test("adaptive pre-spawn ENOENT and interrupted evidence keep processStarted fal
   assert.equal(checkpoints[0][0].processStarted, false);
   assert.equal(checkpoints.at(-1)[0].processStarted, false);
 
-  const unresolved = executeAdaptivePlan({ commandsToRun: [""] }, {
+  const unresolved = executeAdaptivePlan({
+    routeGaps: [],
+    executionCommands: [{ commandRef: "" }],
+  }, {
     runner() {
       throw new Error("unresolved commands must stop before runner invocation");
     },
   });
   assert.equal(unresolved[0].status, "failed");
   assert.equal(unresolved[0].processStarted, false);
+});
+
+test("adaptive execution rejects legacy unstructured commands", () => {
+  let spawnCount = 0;
+  const legacyResults = executeAdaptivePlan({
+    routeGaps: [],
+    commandsToRun: ["node legacy.mjs"],
+  }, {
+    runner() {
+      spawnCount += 1;
+      return { status: 0 };
+    },
+  });
+  assert.deepEqual(legacyResults, []);
+  assert.equal(spawnCount, 0);
 });

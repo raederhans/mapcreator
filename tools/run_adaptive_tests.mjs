@@ -3,7 +3,11 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { buildRecommendation, normalizeChangedFiles } from "./select_verification_targets.mjs";
+import {
+  buildRecommendation,
+  classifyExecutionOwners,
+  normalizeChangedFiles,
+} from "./select_verification_targets.mjs";
 import { buildCommandSupersessionPlan } from "./verification/command_supersession.mjs";
 import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
 import {
@@ -33,11 +37,19 @@ const DEFAULT_DISCOVERY_COMMANDS = [
 const HISTORY_DISCOVERY_COMMANDS = [
   ["diff", "--name-only", "origin/main...HEAD", "--diff-filter=ACMRD", "-z"],
 ];
+const EXECUTION_PLANNER_SCHEMA_VERSION = 1;
+const EXECUTION_PLAN_SCHEMA_VERSION = 3;
+const HARD_MAX_GROUP_LEAVES = 64;
+const WINDOWS_MAX_ARGV_BYTES = 30_000;
+const POSIX_MAX_ARGV_BYTES = 131_072;
+const AUTHORITY_DISPOSITIONS = new Set(["child-safe", "main-thread", "ci-only", "blocked"]);
+const EXECUTION_ISOLATIONS = new Set(["batch", "root", "process", "leaf"]);
 
 export function parseArgs(argv) {
   const args = {
     changedFiles: [],
     changedFilesProvided: false,
+    inputErrors: [],
     dryRun: true,
     includeBranchHistory: false,
     historyBase: "",
@@ -48,20 +60,38 @@ export function parseArgs(argv) {
     mdOut: DEFAULT_MD_OUT,
     profileOut: DEFAULT_ADAPTIVE_VERIFICATION_PROFILE_OUT,
   };
+  const takeOptionValue = (index) => (
+    index + 1 < argv.length && !String(argv[index + 1]).startsWith("--")
+      ? { value: argv[index + 1], consumed: true }
+      : { value: "", consumed: false }
+  );
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--changed-file") {
       args.changedFilesProvided = true;
-      args.changedFiles.push(argv[++index]);
+      const next = takeOptionValue(index);
+      args.changedFiles.push(next.value);
+      if (next.consumed) index += 1;
     } else if (token === "--changed-files") {
       args.changedFilesProvided = true;
-      args.changedFiles.push(...String(argv[++index] || "").split(",").map((value) => value.trim()).filter(Boolean));
+      const next = takeOptionValue(index);
+      args.changedFiles.push(...String(next.value).split(","));
+      if (next.consumed) index += 1;
     }
     else if (token === "--changed-files-list") {
       args.changedFilesProvided = true;
-      const filePath = argv[++index];
-      const values = fs.readFileSync(filePath, "utf8").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-      args.changedFiles.push(...values);
+      const next = takeOptionValue(index);
+      const filePath = String(next.value || "").trim();
+      if (next.consumed) index += 1;
+      if (!filePath) {
+        args.inputErrors.push("adaptive-changed-files-list-path-empty");
+      } else {
+        try {
+          args.changedFiles.push(...fs.readFileSync(filePath, "utf8").split(/\r?\n/));
+        } catch (error) {
+          args.inputErrors.push(`adaptive-changed-files-list-unreadable:${error.message}`);
+        }
+      }
     } else if (token === "--dry-run") args.dryRun = true;
     else if (token === "--execute") args.dryRun = false;
     else if (token === "--include-branch-history") args.includeBranchHistory = true;
@@ -374,6 +404,7 @@ function leafRecord({
   root,
   aliasPath,
   sequence,
+  processKey,
 }) {
   const normalizedTarget = normalizePathToken(target);
   const normalizedOptions = options.map((entry) => String(entry));
@@ -386,16 +417,26 @@ function leafRecord({
     tokens: tokens.map((entry) => String(entry)),
     sourceCommandRefs: [root.commandRef],
     aliasPaths: [[...aliasPath]],
+    processKeys: [processKey],
     sequence,
-    disposition: root.disposition,
+    disposition: root.executionDisposition,
+    authorityDisposition: root.disposition,
+    executionOwner: root.executionOwner,
     executionOwners: [...root.executionOwners],
+    platforms: [...root.platforms],
     resourceLocks: [...root.resourceLocks],
+    tiers: [...root.tiers],
     ciProfiles: [...root.ciProfiles],
     routeIds: [...root.routeIds],
+    safetyContributorRouteIds: [...root.safetyContributorRouteIds],
+    batchSafe: root.batchSafe,
+    isolation: root.isolation,
+    maxLeaves: root.maxLeaves,
+    maxArgvBytes: root.maxArgvBytes,
   };
 }
 
-function rawLeaf(tokens, root, aliasPath, sequence, kind = "raw") {
+function rawLeaf(tokens, root, aliasPath, sequence, processKey, kind = "raw") {
   return leafRecord({
     kind,
     options: tokens,
@@ -403,10 +444,11 @@ function rawLeaf(tokens, root, aliasPath, sequence, kind = "raw") {
     root,
     aliasPath,
     sequence,
+    processKey,
   });
 }
 
-function normalizeExpandedCommand(entry, root, sequence) {
+function normalizeExpandedCommand(entry, root, sequence, processKey) {
   let tokens = [...entry.tokens];
   if (tokens[0] === "node" && normalizePathToken(tokens[1]) === "tools/run_python.mjs") {
     tokens = ["python", ...tokens.slice(2)];
@@ -425,6 +467,7 @@ function normalizeExpandedCommand(entry, root, sequence) {
         root,
         aliasPath: entry.aliasPath,
         sequence,
+        processKey,
       }));
     }
   }
@@ -439,6 +482,7 @@ function normalizeExpandedCommand(entry, root, sequence) {
         root,
         aliasPath: entry.aliasPath,
         sequence,
+        processKey,
       }));
     }
   }
@@ -460,6 +504,7 @@ function normalizeExpandedCommand(entry, root, sequence) {
         root,
         aliasPath: entry.aliasPath,
         sequence,
+        processKey,
       }));
     }
   }
@@ -478,6 +523,7 @@ function normalizeExpandedCommand(entry, root, sequence) {
       root,
       aliasPath: entry.aliasPath,
       sequence,
+      processKey,
     })];
   }
 
@@ -495,6 +541,7 @@ function normalizeExpandedCommand(entry, root, sequence) {
         root,
         aliasPath: entry.aliasPath,
         sequence,
+        processKey,
       }));
     }
   }
@@ -512,6 +559,7 @@ function normalizeExpandedCommand(entry, root, sequence) {
         root,
         aliasPath: entry.aliasPath,
         sequence,
+        processKey,
       }));
     }
   }
@@ -526,15 +574,37 @@ function normalizeExpandedCommand(entry, root, sequence) {
         root,
         aliasPath: entry.aliasPath,
         sequence,
+        processKey,
       }));
     }
   }
 
   const runtime = tokens[0] === "node" ? "node" : tokens[0] === "python" ? "python" : "external";
-  return [rawLeaf(tokens, root, entry.aliasPath, sequence, runtime)];
+  return [rawLeaf(tokens, root, entry.aliasPath, sequence, processKey, runtime)];
 }
 
-function mergeLeaves(leaves) {
+function leafSafetyMetadata(leaf) {
+  return {
+    kind: leaf.kind,
+    target: leaf.target,
+    options: leaf.options,
+    tokens: leaf.tokens,
+    disposition: leaf.disposition,
+    authorityDisposition: leaf.authorityDisposition,
+    executionOwner: leaf.executionOwner,
+    executionOwners: leaf.executionOwners,
+    platforms: leaf.platforms,
+    resourceLocks: leaf.resourceLocks,
+    tiers: leaf.tiers,
+    ciProfiles: leaf.ciProfiles,
+    batchSafe: leaf.batchSafe,
+    isolation: leaf.isolation,
+    maxLeaves: leaf.maxLeaves,
+    maxArgvBytes: leaf.maxArgvBytes,
+  };
+}
+
+function mergeLeaves(leaves, routeGaps) {
   const byId = new Map();
   for (const leaf of leaves) {
     const existing = byId.get(leaf.leafId);
@@ -542,12 +612,22 @@ function mergeLeaves(leaves) {
       byId.set(leaf.leafId, { ...leaf });
       continue;
     }
+    if (JSON.stringify(leafSafetyMetadata(existing)) !== JSON.stringify(leafSafetyMetadata(leaf))) {
+      routeGaps.push(planGap(
+        "adaptive-leaf-metadata-conflict",
+        leaf.sourceCommandRefs.join(","),
+        `leaf=${JSON.stringify(leaf.leafId)}`,
+      ));
+      continue;
+    }
     existing.sourceCommandRefs = uniqueSorted([...existing.sourceCommandRefs, ...leaf.sourceCommandRefs]);
     existing.aliasPaths = [...existing.aliasPaths, ...leaf.aliasPaths];
-    existing.executionOwners = uniqueSorted([...existing.executionOwners, ...leaf.executionOwners]);
-    existing.resourceLocks = uniqueSorted([...existing.resourceLocks, ...leaf.resourceLocks]);
-    existing.ciProfiles = uniqueSorted([...existing.ciProfiles, ...leaf.ciProfiles]);
+    existing.processKeys = uniqueSorted([...existing.processKeys, ...leaf.processKeys]);
     existing.routeIds = uniqueSorted([...existing.routeIds, ...leaf.routeIds]);
+    existing.safetyContributorRouteIds = uniqueSorted([
+      ...existing.safetyContributorRouteIds,
+      ...leaf.safetyContributorRouteIds,
+    ]);
     existing.sequence = Math.min(existing.sequence, leaf.sequence);
   }
   return [...byId.values()].sort((left, right) => left.sequence - right.sequence || left.leafId.localeCompare(right.leafId));
@@ -568,91 +648,504 @@ function aggregateTokens(kind, leaves) {
   if (kind === "python-unittest") return ["python", "-m", "unittest", ...targets, ...options];
   if (kind === "python-pytest") return ["python", "-m", "pytest", ...targets, ...options];
   if (kind === "python-pycompile") return ["python", "-m", "py_compile", ...targets];
+  if (kind === "playwright") return ["node", leaves[0].tokens[1], "test", ...targets, ...options];
   return [...leaves[0].tokens];
 }
 
-function buildExecutionGroups(leaves, { disposition }) {
-  const aggregatable = new Set([
-    "node-test",
-    "python-unittest",
-    "python-pytest",
-    "python-pycompile",
-  ]);
-  const grouped = new Map();
-  for (const leaf of leaves) {
-    const canAggregate = leaf.resourceLocks.length === 0 && aggregatable.has(leaf.kind);
-    const key = canAggregate
-      ? `aggregate:${leaf.kind}:${JSON.stringify(leaf.options)}`
-      : `independent:${leaf.leafId}`;
-    const group = grouped.get(key) || {
-      key,
-      kind: canAggregate ? leaf.kind : "independent",
-      resourceLocks: new Set(),
-      executionOwners: new Set(),
-      ciProfiles: new Set(),
-      sourceCommandRefs: new Set(),
-      leaves: [],
-    };
-    group.leaves.push(leaf);
-    for (const lock of leaf.resourceLocks) group.resourceLocks.add(lock);
-    for (const owner of leaf.executionOwners) group.executionOwners.add(owner);
-    for (const profile of leaf.ciProfiles) group.ciProfiles.add(profile);
-    for (const commandRef of leaf.sourceCommandRefs) group.sourceCommandRefs.add(commandRef);
-    grouped.set(key, group);
-  }
-  return [...grouped.values()].map((group, index) => {
-    const tokens = aggregateTokens(group.leaves[0].kind, group.leaves);
-    return {
-      groupId: `${disposition}-${String(index + 1).padStart(3, "0")}`,
-      disposition,
-      kind: group.kind === "independent" ? group.leaves[0].kind : group.kind,
-      commandRef: formatCommandTokens(tokens),
-      process: processForTokens(tokens),
-      leafIds: group.leaves.map((leaf) => leaf.leafId),
-      sourceCommandRefs: [...group.sourceCommandRefs].sort(),
-      resourceLocks: [...group.resourceLocks].sort(),
-      executionOwners: [...group.executionOwners].sort(),
-      ciProfiles: [...group.ciProfiles].sort(),
-    };
-  });
+function argvByteLength(tokens, platform) {
+  const encoding = platform === "win32" ? "utf16le" : "utf8";
+  return Buffer.byteLength(tokens.map((token) => String(token)).join("\u0000"), encoding);
 }
 
-function commandMetadata(report, commandRef, disposition, fallbackOwner) {
-  const recommended = (report.recommendedCommands || []).find((entry) => entry.commandRef === commandRef) || {};
+function leafBudget(leaf, platform) {
+  const hardArgvLimit = platform === "win32" ? WINDOWS_MAX_ARGV_BYTES : POSIX_MAX_ARGV_BYTES;
   return {
-    commandRef,
-    disposition,
-    executionOwners: uniqueSorted(recommended.executionOwners || [fallbackOwner]),
-    resourceLocks: uniqueSorted(recommended.resourceLocks),
-    ciProfiles: uniqueSorted(recommended.ciProfiles),
-    routeIds: uniqueSorted(recommended.routeIds),
+    maxLeaves: Math.min(leaf.maxLeaves, HARD_MAX_GROUP_LEAVES),
+    maxArgvBytes: Math.min(leaf.maxArgvBytes, hardArgvLimit),
   };
 }
 
-function expandRoots(
-  roots,
-  report,
-  packageScripts,
-  disposition,
-  fallbackOwner,
-  routeGaps,
-  commandExpander,
-) {
-  const expandedLeaves = [];
-  let sequence = 0;
-  for (const commandRef of roots) {
-    const root = commandMetadata(report, commandRef, disposition, fallbackOwner);
-    try {
-      const expanded = commandExpander(commandRef, packageScripts);
-      for (const entry of expanded) {
-        expandedLeaves.push(...normalizeExpandedCommand(entry, root, sequence));
-        sequence += 1;
+function groupMetadataKey(leaf) {
+  return JSON.stringify({
+    kind: leaf.kind,
+    options: leaf.options,
+    executionOwner: leaf.executionOwner,
+    executionOwners: leaf.executionOwners,
+    platforms: leaf.platforms,
+    resourceLocks: leaf.resourceLocks,
+    ciProfiles: leaf.ciProfiles,
+    batchSafe: leaf.batchSafe,
+    isolation: leaf.isolation,
+    maxLeaves: leaf.maxLeaves,
+    maxArgvBytes: leaf.maxArgvBytes,
+  });
+}
+
+function makeExecutionGroup(leaves, { disposition, platform, routeGaps }) {
+  const first = leaves[0];
+  const tokens = aggregateTokens(first.kind, leaves);
+  const budget = leafBudget(first, platform);
+  const argvBytes = argvByteLength(tokens, platform);
+  if (leaves.length > budget.maxLeaves) {
+    routeGaps.push(planGap(
+      "adaptive-group-leaf-budget-exceeded",
+      uniqueSorted(leaves.flatMap((leaf) => leaf.sourceCommandRefs)).join(","),
+      `leaves=${leaves.length};maxLeaves=${budget.maxLeaves}`,
+    ));
+    return null;
+  }
+  if (argvBytes > budget.maxArgvBytes) {
+    routeGaps.push(planGap(
+      "adaptive-group-argv-budget-exceeded",
+      uniqueSorted(leaves.flatMap((leaf) => leaf.sourceCommandRefs)).join(","),
+      `argvBytes=${argvBytes};maxArgvBytes=${budget.maxArgvBytes};platform=${platform}`,
+    ));
+    return null;
+  }
+  return {
+    disposition,
+    kind: first.kind,
+    commandRef: formatCommandTokens(tokens),
+    process: processForTokens(tokens, platform),
+    leafIds: leaves.map((leaf) => leaf.leafId),
+    sourceCommandRefs: uniqueSorted(leaves.flatMap((leaf) => leaf.sourceCommandRefs)),
+    routeIds: uniqueSorted(leaves.flatMap((leaf) => leaf.routeIds)),
+    safetyContributorRouteIds: uniqueSorted(leaves.flatMap((leaf) => leaf.safetyContributorRouteIds)),
+    resourceLocks: [...first.resourceLocks],
+    executionOwner: first.executionOwner,
+    executionOwners: [...first.executionOwners],
+    platforms: [...first.platforms],
+    tiers: [...first.tiers],
+    ciProfiles: [...first.ciProfiles],
+    batchSafe: first.batchSafe,
+    isolation: first.isolation,
+    leafCount: leaves.length,
+    argvBytes,
+    maxLeaves: budget.maxLeaves,
+    maxArgvBytes: budget.maxArgvBytes,
+  };
+}
+
+function buildExecutionGroups(leaves, { disposition, platform, routeGaps }) {
+  const batchKinds = new Set(["node-test", "playwright"]);
+  const buckets = new Map();
+  for (const leaf of leaves) {
+    const canBatch = leaf.resourceLocks.length === 0
+      && leaf.batchSafe
+      && leaf.isolation === "batch"
+      && batchKinds.has(leaf.kind);
+    let isolationKey;
+    if (canBatch) isolationKey = "batch";
+    else if (leaf.resourceLocks.length > 0 || leaf.isolation === "leaf") isolationKey = `leaf:${leaf.leafId}`;
+    else if (leaf.isolation === "root") isolationKey = `root:${leaf.sourceCommandRefs.join("\u0000")}`;
+    else isolationKey = `process:${leaf.processKeys.join("\u0000")}`;
+    const key = `${isolationKey}:${groupMetadataKey(leaf)}`;
+    const bucket = buckets.get(key) || { canBatch, leaves: [] };
+    bucket.leaves.push(leaf);
+    buckets.set(key, bucket);
+  }
+
+  const groups = [];
+  for (const bucket of buckets.values()) {
+    if (!bucket.canBatch) {
+      const group = makeExecutionGroup(bucket.leaves, { disposition, platform, routeGaps });
+      if (group) groups.push(group);
+      continue;
+    }
+    let chunk = [];
+    for (const leaf of bucket.leaves) {
+      const candidate = [...chunk, leaf];
+      const tokens = aggregateTokens(leaf.kind, candidate);
+      const budget = leafBudget(leaf, platform);
+      const fits = candidate.length <= budget.maxLeaves
+        && argvByteLength(tokens, platform) <= budget.maxArgvBytes;
+      if (fits) {
+        chunk = candidate;
+        continue;
       }
-    } catch (error) {
-      routeGaps.push(planGap(error.code || "adaptive-plan-error", commandRef, error.message));
+      if (chunk.length > 0) {
+        const group = makeExecutionGroup(chunk, { disposition, platform, routeGaps });
+        if (group) groups.push(group);
+        chunk = [];
+      }
+      const single = makeExecutionGroup([leaf], { disposition, platform, routeGaps });
+      if (single) chunk = [leaf];
+    }
+    if (chunk.length > 0) {
+      const group = makeExecutionGroup(chunk, { disposition, platform, routeGaps });
+      if (group) groups.push(group);
     }
   }
-  return mergeLeaves(expandedLeaves);
+  return groups.map((group, index) => ({
+    groupId: `${disposition}-${String(index + 1).padStart(3, "0")}`,
+    ...group,
+  }));
+}
+
+function requiredStringArray(entry, field, { allowEmpty = false } = {}) {
+  if (!Array.isArray(entry?.[field])) return null;
+  if (!entry[field].every((value) => typeof value === "string" && value.trim())) return null;
+  const normalized = uniqueSorted(entry[field]);
+  if (!allowEmpty && normalized.length === 0) return null;
+  return normalized;
+}
+
+function authorityMetadata(entry) {
+  return {
+    executionOwner: entry.executionOwner,
+    executionOwners: uniqueSorted(entry.executionOwners),
+    platforms: uniqueSorted(entry.platforms),
+    resourceLocks: uniqueSorted(entry.resourceLocks),
+    tiers: uniqueSorted(entry.tiers),
+    ciProfiles: uniqueSorted(entry.ciProfiles),
+    routeIds: uniqueSorted(entry.routeIds),
+    safetyContributorRouteIds: uniqueSorted(entry.safetyContributorRouteIds),
+    provenance: {
+      routeIds: uniqueSorted(entry.provenance?.routeIds),
+      safetyContributorRouteIds: uniqueSorted(entry.provenance?.safetyContributorRouteIds),
+    },
+    disposition: entry.disposition,
+    batchSafe: entry.batchSafe,
+    isolation: entry.isolation,
+    maxLeaves: entry.maxLeaves,
+    maxArgvBytes: entry.maxArgvBytes,
+  };
+}
+
+function validateAuthorityContributor(entry, expectedDisposition, platform, routeGaps, field) {
+  const commandRef = typeof entry?.commandRef === "string" ? entry.commandRef.trim() : "";
+  if (!commandRef) {
+    routeGaps.push(planGap("adaptive-selection-authority-field", field, "commandRef"));
+    return null;
+  }
+  const executionOwners = requiredStringArray(entry, "executionOwners", {
+    allowEmpty: expectedDisposition === "blocked",
+  });
+  const platforms = requiredStringArray(entry, "platforms");
+  const resourceLocks = requiredStringArray(entry, "resourceLocks", { allowEmpty: true });
+  const tiers = requiredStringArray(entry, "tiers");
+  const ciProfiles = requiredStringArray(entry, "ciProfiles");
+  const routeIds = requiredStringArray(entry, "routeIds");
+  const safetyContributorRouteIds = requiredStringArray(entry, "safetyContributorRouteIds");
+  const provenanceRouteIds = requiredStringArray(entry?.provenance, "routeIds");
+  const provenanceSafetyIds = requiredStringArray(entry?.provenance, "safetyContributorRouteIds");
+  const missing = [
+    ["executionOwners", executionOwners],
+    ["platforms", platforms],
+    ["resourceLocks", resourceLocks],
+    ["tiers", tiers],
+    ["ciProfiles", ciProfiles],
+    ["routeIds", routeIds],
+    ["safetyContributorRouteIds", safetyContributorRouteIds],
+    ["provenance.routeIds", provenanceRouteIds],
+    ["provenance.safetyContributorRouteIds", provenanceSafetyIds],
+  ].find(([, value]) => value === null);
+  if (missing) {
+    routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.${missing[0]}`));
+    return null;
+  }
+  if (typeof entry.executionOwner !== "string" || !AUTHORITY_DISPOSITIONS.has(entry.executionOwner)) {
+    routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.executionOwner`));
+    return null;
+  }
+  if (!AUTHORITY_DISPOSITIONS.has(entry.disposition)) {
+    routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.disposition`));
+    return null;
+  }
+  if (entry.disposition !== expectedDisposition) {
+    routeGaps.push(planGap(
+      "adaptive-selection-cross-disposition",
+      commandRef,
+      `field=${field};expected=${expectedDisposition};actual=${entry.disposition}`,
+    ));
+    return null;
+  }
+  const classifiedOwner = classifyExecutionOwners(executionOwners);
+  if (entry.executionOwner !== classifiedOwner || entry.executionOwner !== expectedDisposition) {
+    routeGaps.push(planGap(
+      "adaptive-selection-disposition-owner-mismatch",
+      commandRef,
+      `disposition=${expectedDisposition};executionOwner=${entry.executionOwner};owners=${executionOwners.join("+")}`,
+    ));
+    return null;
+  }
+  if (!platforms.includes(platform)) {
+    routeGaps.push(planGap(
+      "adaptive-selection-platform-mismatch",
+      commandRef,
+      `current=${platform};artifact=${platforms.join("+")}`,
+    ));
+    return null;
+  }
+  if (JSON.stringify(tiers) !== JSON.stringify(ciProfiles)) {
+    routeGaps.push(planGap("adaptive-selection-authority-conflict", commandRef, "tiers!=ciProfiles"));
+    return null;
+  }
+  if (JSON.stringify(routeIds) !== JSON.stringify(provenanceRouteIds)
+    || JSON.stringify(safetyContributorRouteIds) !== JSON.stringify(provenanceSafetyIds)
+    || routeIds.some((routeId) => !safetyContributorRouteIds.includes(routeId))) {
+    routeGaps.push(planGap("adaptive-selection-authority-conflict", commandRef, "provenance"));
+    return null;
+  }
+  if (typeof entry.batchSafe !== "boolean"
+    || !EXECUTION_ISOLATIONS.has(entry.isolation)
+    || !Number.isInteger(entry.maxLeaves)
+    || entry.maxLeaves <= 0
+    || !Number.isInteger(entry.maxArgvBytes)
+    || entry.maxArgvBytes <= 0) {
+    routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.groupBudget`));
+    return null;
+  }
+  if ((entry.batchSafe && entry.isolation !== "batch") || (!entry.batchSafe && entry.isolation === "batch")) {
+    routeGaps.push(planGap("adaptive-selection-authority-conflict", commandRef, "batchSafe/isolation"));
+    return null;
+  }
+  return {
+    commandRef,
+    ...authorityMetadata(entry),
+  };
+}
+
+function resolveSelectionAuthority(report, { platform = process.platform } = {}) {
+  const routeGaps = [];
+  if (report.selectionPlatform !== platform) {
+    routeGaps.push(planGap(
+      "adaptive-selection-platform-mismatch",
+      "selection-artifact",
+      `current=${platform};artifact=${String(report.selectionPlatform || "missing")}`,
+    ));
+  }
+  const laneDefinitions = [
+    ["childAgentStaticTasks", "child-safe"],
+    ["mainThreadSerialVerification", "main-thread"],
+    ["ciOnlyVerification", "ci-only"],
+    ["blockedVerification", "blocked"],
+  ];
+  const recommendedByCommand = new Map();
+  for (const [index, entry] of (report.recommendedCommands || []).entries()) {
+    const normalized = validateAuthorityContributor(
+      entry,
+      entry?.disposition,
+      platform,
+      routeGaps,
+      `recommendedCommands[${index}]`,
+    );
+    if (!normalized) continue;
+    if (recommendedByCommand.has(normalized.commandRef)) {
+      routeGaps.push(planGap("adaptive-selection-authority-conflict", normalized.commandRef, "duplicate-recommended-command"));
+      continue;
+    }
+    recommendedByCommand.set(normalized.commandRef, normalized);
+  }
+
+  const byDisposition = new Map(laneDefinitions.map(([, disposition]) => [disposition, []]));
+  const observedDisposition = new Map();
+  for (const [field, disposition] of laneDefinitions) {
+    if (!Array.isArray(report[field])) {
+      routeGaps.push(planGap("adaptive-selection-authority-field", "selection-artifact", field));
+      continue;
+    }
+    for (const [index, entry] of report[field].entries()) {
+      const normalized = validateAuthorityContributor(entry, disposition, platform, routeGaps, `${field}[${index}]`);
+      if (!normalized) continue;
+      const priorDisposition = observedDisposition.get(normalized.commandRef);
+      if (priorDisposition && priorDisposition !== disposition) {
+        routeGaps.push(planGap(
+          "adaptive-selection-cross-disposition",
+          normalized.commandRef,
+          `${priorDisposition}->${disposition}`,
+        ));
+        continue;
+      }
+      observedDisposition.set(normalized.commandRef, disposition);
+      const recommended = recommendedByCommand.get(normalized.commandRef);
+      if (!recommended) {
+        routeGaps.push(planGap("adaptive-selection-authority-missing-recommendation", normalized.commandRef, field));
+        continue;
+      }
+      if (JSON.stringify(authorityMetadata(recommended)) !== JSON.stringify(authorityMetadata(normalized))) {
+        routeGaps.push(planGap("adaptive-selection-authority-conflict", normalized.commandRef, field));
+        continue;
+      }
+      byDisposition.get(disposition).push(normalized);
+    }
+  }
+  for (const [commandRef, recommended] of recommendedByCommand) {
+    if (observedDisposition.get(commandRef) !== recommended.disposition) {
+      routeGaps.push(planGap(
+        "adaptive-selection-authority-missing-contributor",
+        commandRef,
+        `disposition=${recommended.disposition}`,
+      ));
+    }
+  }
+  return { byDisposition, recommendedByCommand, routeGaps };
+}
+
+function validateSelectionArtifactProvenance(report, authority, { platform = process.platform } = {}) {
+  const routeGaps = [];
+  const expectedFiles = normalizeChangedFiles(report.changedFiles);
+  const unmatchedFiles = new Set(normalizeChangedFiles(report.unmatchedChangedFiles));
+  const observedFiles = new Set();
+  const routeIdsByCommand = new Map();
+  for (const [index, entry] of report.matchedByFile.entries()) {
+    const normalizedFile = normalizeChangedFiles([entry?.changedFile])[0] || "";
+    if (!normalizedFile || !expectedFiles.includes(normalizedFile) || observedFiles.has(normalizedFile)) {
+      routeGaps.push(planGap(
+        "adaptive-selection-provenance-conflict",
+        normalizedFile || `matchedByFile[${index}]`,
+        "unknown-or-duplicate-changed-file",
+      ));
+      continue;
+    }
+    observedFiles.add(normalizedFile);
+    const matchedRouteIds = requiredStringArray(entry, "matchedRouteIds", {
+      allowEmpty: unmatchedFiles.has(normalizedFile),
+    });
+    if (matchedRouteIds === null || !Array.isArray(entry.recommendedCommands)) {
+      routeGaps.push(planGap("adaptive-selection-provenance-field", normalizedFile, `matchedByFile[${index}]`));
+      continue;
+    }
+    if (!unmatchedFiles.has(normalizedFile)
+      && (matchedRouteIds.length === 0 || entry.recommendedCommands.length === 0)) {
+      routeGaps.push(planGap("adaptive-selection-provenance-empty", normalizedFile, `matchedByFile[${index}]`));
+      continue;
+    }
+    for (const [commandIndex, command] of entry.recommendedCommands.entries()) {
+      const normalized = validateAuthorityContributor(
+        command,
+        command?.disposition,
+        platform,
+        routeGaps,
+        `matchedByFile[${index}].recommendedCommands[${commandIndex}]`,
+      );
+      if (!normalized) continue;
+      const recommended = authority.recommendedByCommand.get(normalized.commandRef);
+      if (!recommended) {
+        routeGaps.push(planGap("adaptive-selection-provenance-conflict", normalized.commandRef, normalizedFile));
+        continue;
+      }
+      if (normalized.routeIds.some((routeId) => !matchedRouteIds.includes(routeId))) {
+        routeGaps.push(planGap("adaptive-selection-provenance-conflict", normalized.commandRef, `${normalizedFile}:routeIds`));
+      }
+      const observedRouteIds = routeIdsByCommand.get(normalized.commandRef) || new Set();
+      for (const routeId of normalized.routeIds) observedRouteIds.add(routeId);
+      routeIdsByCommand.set(normalized.commandRef, observedRouteIds);
+    }
+  }
+  for (const changedFile of expectedFiles) {
+    if (!observedFiles.has(changedFile)) {
+      routeGaps.push(planGap("adaptive-selection-provenance-missing-file", changedFile));
+    }
+  }
+  for (const [commandRef, recommended] of authority.recommendedByCommand) {
+    const observedRouteIds = routeIdsByCommand.get(commandRef) || new Set();
+    if (recommended.routeIds.some((routeId) => !observedRouteIds.has(routeId))) {
+      routeGaps.push(planGap("adaptive-selection-provenance-missing-route", commandRef));
+    }
+  }
+  return routeGaps;
+}
+
+export function planExecutionLaneFromPackageScripts({
+  disposition,
+  rootContributors,
+  packageScripts,
+}) {
+  const plannedRoots = [];
+  const routeGaps = [];
+  for (const root of rootContributors) {
+    try {
+      plannedRoots.push({
+        commandRef: root.commandRef,
+        expandedCommands: expandCommandAliases(root.commandRef, packageScripts),
+      });
+    } catch (error) {
+      routeGaps.push(planGap(error.code || "adaptive-plan-error", root.commandRef, error.message));
+      plannedRoots.push({ commandRef: root.commandRef, expandedCommands: [] });
+    }
+  }
+  return {
+    schemaVersion: EXECUTION_PLANNER_SCHEMA_VERSION,
+    disposition,
+    plannedRoots,
+    routeGaps,
+  };
+}
+
+function normalizePlannerLane({
+  disposition,
+  rootContributors,
+  packageScripts,
+  executionPlanner,
+  platform,
+  routeGaps,
+  plannerInvocations,
+}) {
+  const rootCommandRefs = rootContributors.map((entry) => entry.commandRef);
+  plannerInvocations.push({ disposition, rootCommandRefs: [...rootCommandRefs] });
+  let result;
+  try {
+    result = executionPlanner({
+      schemaVersion: EXECUTION_PLANNER_SCHEMA_VERSION,
+      disposition,
+      platform,
+      rootCommandRefs: [...rootCommandRefs],
+      rootContributors: rootContributors.map((entry) => structuredClone(entry)),
+      packageScripts,
+    });
+  } catch (error) {
+    routeGaps.push(planGap(error.code || "adaptive-execution-planner-error", disposition, error.message));
+    return [];
+  }
+  if (!result
+    || result.schemaVersion !== EXECUTION_PLANNER_SCHEMA_VERSION
+    || result.disposition !== disposition
+    || !Array.isArray(result.plannedRoots)
+    || !Array.isArray(result.routeGaps)) {
+    routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, "invalid-result-schema"));
+    return [];
+  }
+  for (const gap of result.routeGaps) {
+    routeGaps.push(planGap(gap?.code || "adaptive-execution-planner-gap", gap?.commandRef || disposition, gap?.detail || ""));
+  }
+  const expectedRoots = new Map(rootContributors.map((entry) => [entry.commandRef, entry]));
+  const observedRoots = new Set();
+  const rawLeaves = [];
+  let sequence = 0;
+  for (const plannedRoot of result.plannedRoots) {
+    const commandRef = typeof plannedRoot?.commandRef === "string" ? plannedRoot.commandRef.trim() : "";
+    if (!commandRef || !expectedRoots.has(commandRef) || observedRoots.has(commandRef)) {
+      routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef || disposition, "unknown-or-duplicate-root"));
+      continue;
+    }
+    observedRoots.add(commandRef);
+    if (!Array.isArray(plannedRoot.expandedCommands)) {
+      routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef, "expandedCommands"));
+      continue;
+    }
+    const root = expectedRoots.get(commandRef);
+    for (const [commandIndex, entry] of plannedRoot.expandedCommands.entries()) {
+      if (!entry
+        || !Array.isArray(entry.tokens)
+        || entry.tokens.length === 0
+        || !entry.tokens.every((token) => typeof token === "string" && token.trim())
+        || !Array.isArray(entry.aliasPath)
+        || !entry.aliasPath.every((token) => typeof token === "string" && token.trim())) {
+        routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef, `expandedCommands[${commandIndex}]`));
+        continue;
+      }
+      const processKey = `${commandRef}\u0000${commandIndex}`;
+      rawLeaves.push(...normalizeExpandedCommand(entry, root, sequence, processKey));
+      sequence += 1;
+    }
+  }
+  for (const commandRef of rootCommandRefs) {
+    if (!observedRoots.has(commandRef)) {
+      routeGaps.push(planGap("adaptive-execution-planner-contract", commandRef, "missing-root"));
+    }
+  }
+  return mergeLeaves(rawLeaves, routeGaps);
 }
 
 function collapseRoots(commandRefs, routeGaps) {
@@ -667,18 +1160,23 @@ function collapseRoots(commandRefs, routeGaps) {
 export function buildExecutionPlan(report, {
   includeMainThread = false,
   packageScripts = readPackageScripts(),
-  // Catalog ownership stays outside the runner; a canonical catalog expander can replace this adapter.
-  commandExpander = expandCommandAliases,
+  platform = process.platform,
+  // Phase 3 can replace this whole-lane seam with its canonical catalog planner.
+  executionPlanner = planExecutionLaneFromPackageScripts,
 } = {}) {
-  // run_adaptive_tests 自身可能被 selector 推荐；这里过滤递归命令，避免执行模式套娃。
-  const withoutAdaptiveRecursion = (entries) => uniqueSorted(entries.map((entry) => entry.commandRef))
-    .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
-  const childSafeCommands = withoutAdaptiveRecursion(report.childAgentStaticTasks || []);
-  const mainThreadCommands = withoutAdaptiveRecursion(report.mainThreadSerialVerification || []);
-  const ciOnlyCommands = withoutAdaptiveRecursion(report.ciOnlyVerification || []);
-  const routeGaps = (report.blockedVerification || []).map((entry) => (
+  const authority = resolveSelectionAuthority(report, { platform });
+  const routeGaps = [...authority.routeGaps, ...(report.blockedVerification || []).map((entry) => (
     planGap("adaptive-route-owner-gap", entry.commandRef, entry.reason)
-  ));
+  ))];
+  // run_adaptive_tests 自身可能被 selector 推荐；这里过滤递归命令，避免执行模式套娃。
+  const withoutAdaptiveRecursion = (entries) => entries
+    .filter((entry) => !entry.commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
+  const childSafeContributors = withoutAdaptiveRecursion(authority.byDisposition.get("child-safe") || []);
+  const mainThreadContributors = withoutAdaptiveRecursion(authority.byDisposition.get("main-thread") || []);
+  const ciOnlyContributors = withoutAdaptiveRecursion(authority.byDisposition.get("ci-only") || []);
+  const childSafeCommands = uniqueSorted(childSafeContributors.map((entry) => entry.commandRef));
+  const mainThreadCommands = uniqueSorted(mainThreadContributors.map((entry) => entry.commandRef));
+  const ciOnlyCommands = uniqueSorted(ciOnlyContributors.map((entry) => entry.commandRef));
   const selectedRootPlan = collapseRoots(
     includeMainThread ? [...childSafeCommands, ...mainThreadCommands] : childSafeCommands,
     routeGaps,
@@ -687,38 +1185,84 @@ export function buildExecutionPlan(report, {
     ? { commandRefs: [], supersededCommands: [] }
     : collapseRoots(mainThreadCommands, routeGaps);
   const deferredCiRootPlan = collapseRoots(ciOnlyCommands, routeGaps);
-  const selectedLeaves = expandRoots(
-    selectedRootPlan.commandRefs,
-    report,
-    packageScripts,
-    "selected",
-    "child-safe",
+  const contributorsByCommand = new Map([
+    ...childSafeContributors,
+    ...mainThreadContributors,
+    ...ciOnlyContributors,
+  ].map((entry) => [entry.commandRef, entry]));
+  const contributorsFor = (rootPlan, executionDisposition) => rootPlan.commandRefs.map((commandRef) => ({
+    ...contributorsByCommand.get(commandRef),
+    executionDisposition,
+  }));
+  const plannerInvocations = [];
+  let selectedLeaves = [];
+  let deferredMainThreadLeaves = [];
+  let deferredCiOnlyLeaves = [];
+  if (routeGaps.length === 0) {
+    selectedLeaves = normalizePlannerLane({
+      disposition: "selected",
+      rootContributors: contributorsFor(selectedRootPlan, "selected"),
+      packageScripts,
+      executionPlanner,
+      platform,
+      routeGaps,
+      plannerInvocations,
+    });
+    deferredMainThreadLeaves = normalizePlannerLane({
+      disposition: "deferred-main-thread",
+      rootContributors: contributorsFor(deferredMainRootPlan, "deferred-main-thread"),
+      packageScripts,
+      executionPlanner,
+      platform,
+      routeGaps,
+      plannerInvocations,
+    });
+    deferredCiOnlyLeaves = normalizePlannerLane({
+      disposition: "deferred-ci-only",
+      rootContributors: contributorsFor(deferredCiRootPlan, "deferred-ci-only"),
+      packageScripts,
+      executionPlanner,
+      platform,
+      routeGaps,
+      plannerInvocations,
+    });
+  }
+  const leafDispositionById = new Map();
+  for (const leaf of [...selectedLeaves, ...deferredMainThreadLeaves, ...deferredCiOnlyLeaves]) {
+    const priorDisposition = leafDispositionById.get(leaf.leafId);
+    if (priorDisposition && priorDisposition !== leaf.disposition) {
+      routeGaps.push(planGap(
+        "adaptive-leaf-cross-disposition",
+        leaf.sourceCommandRefs.join(","),
+        `leaf=${JSON.stringify(leaf.leafId)};${priorDisposition}->${leaf.disposition}`,
+      ));
+    } else {
+      leafDispositionById.set(leaf.leafId, leaf.disposition);
+    }
+  }
+  const executionGroups = buildExecutionGroups(selectedLeaves, {
+    disposition: "selected",
+    platform,
     routeGaps,
-    commandExpander,
-  );
-  const deferredMainThreadLeaves = expandRoots(
-    deferredMainRootPlan.commandRefs,
-    report,
-    packageScripts,
-    "deferred-main-thread",
-    "main-thread",
+  });
+  const deferredMainThreadGroups = buildExecutionGroups(deferredMainThreadLeaves, {
+    disposition: "deferred-main-thread",
+    platform,
     routeGaps,
-    commandExpander,
-  );
-  const deferredCiOnlyLeaves = expandRoots(
-    deferredCiRootPlan.commandRefs,
-    report,
-    packageScripts,
-    "deferred-ci-only",
-    "ci-only",
+  });
+  const deferredCiOnlyGroups = buildExecutionGroups(deferredCiOnlyLeaves, {
+    disposition: "deferred-ci-only",
+    platform,
     routeGaps,
-    commandExpander,
-  );
-  const executionGroups = buildExecutionGroups(selectedLeaves, { disposition: "selected" });
-  const deferredMainThreadGroups = buildExecutionGroups(deferredMainThreadLeaves, { disposition: "deferred-main-thread" });
-  const deferredCiOnlyGroups = buildExecutionGroups(deferredCiOnlyLeaves, { disposition: "deferred-ci-only" });
+  });
+  const uniqueRouteGaps = [...new Map(routeGaps.map((gap) => [
+    `${gap.code}\u0000${gap.commandRef}\u0000${gap.detail}`,
+    gap,
+  ])).values()];
   return {
-    schemaVersion: 2,
+    schemaVersion: EXECUTION_PLAN_SCHEMA_VERSION,
+    plannerSchemaVersion: EXECUTION_PLANNER_SCHEMA_VERSION,
+    platform,
     childSafeCommands,
     mainThreadCommands,
     ciOnlyCommands,
@@ -734,9 +1278,11 @@ export function buildExecutionPlan(report, {
     executionGroups,
     deferredMainThreadGroups,
     deferredCiOnlyGroups,
-    executionCommands: routeGaps.length > 0 ? [] : executionGroups,
-    routeGaps,
+    executionCommands: uniqueRouteGaps.length > 0 ? [] : executionGroups,
+    routeGaps: uniqueRouteGaps,
+    plannerInvocations,
     closure: {
+      authorityContributorCount: authority.recommendedByCommand.size,
       selectedRootCount: selectedRootPlan.commandRefs.length,
       selectedLeafCount: selectedLeaves.length,
       executionGroupCount: executionGroups.length,
@@ -744,6 +1290,7 @@ export function buildExecutionPlan(report, {
       deferredMainThreadLeafCount: deferredMainThreadLeaves.length,
       deferredCiOnlyRootCount: deferredCiRootPlan.commandRefs.length,
       deferredCiOnlyLeafCount: deferredCiOnlyLeaves.length,
+      plannerInvocationCount: plannerInvocations.length,
     },
   };
 }
@@ -863,19 +1410,20 @@ export function writeAdaptiveOutputs(report, args, executionResults = null, exec
   };
   const blockedByOwnership = report.mainThreadDisposition === "blocked"
     && (executionPlan?.blockedMainThreadCommands || []).length > 0;
-  const executionStatus = terminalState
-    || (executionResults === null
-      ? "planned"
-      : (report.unmatchedChangedFiles || []).length > 0
-        || (executionPlan?.routeGaps || []).length > 0
-        || blockedByOwnership
-        ? "blocked"
+  const planningBlocked = (report.unmatchedChangedFiles || []).length > 0
+    || (executionPlan?.routeGaps || []).length > 0
+    || blockedByOwnership;
+  const executionStatus = planningBlocked
+    ? "blocked"
+    : terminalState
+      || (executionResults === null
+        ? "planned"
         : executionResults.some((entry) => entry.status === "interrupted")
           ? "interrupted"
-          : executionResults.some((entry) => entry.exitCode !== 0)
-            ? "failed"
-            : executionResults.some((entry) => entry.status === "running")
-              ? "running"
+          : executionResults.some((entry) => entry.status === "running")
+            ? "running"
+            : executionResults.some((entry) => entry.status !== "passed")
+              ? "failed"
               : "passed");
   atomicWriteJsonSync(args.jsonOut, {
     ...report,
@@ -896,9 +1444,9 @@ export function executeAdaptivePlan(executionPlan, {
 } = {}) {
   if ((executionPlan.routeGaps || []).length > 0) return [];
   const executionResults = [];
-  const plannedCommands = Object.hasOwn(executionPlan, "executionCommands")
-    ? executionPlan.executionCommands || []
-    : (executionPlan.commandsToRun || []).map((commandRef) => ({ commandRef }));
+  const plannedCommands = Array.isArray(executionPlan.executionCommands)
+    ? executionPlan.executionCommands
+    : [];
   for (const plannedCommand of plannedCommands) {
     const commandRef = plannedCommand.commandRef;
     const startedAtDate = now();
@@ -915,6 +1463,7 @@ export function executeAdaptivePlan(executionPlan, {
       exitCode: null,
       signal: null,
       processStarted: false,
+      interrupted: false,
     };
     executionResults.push(entry);
     onCheckpoint(executionResults);
@@ -932,9 +1481,10 @@ export function executeAdaptivePlan(executionPlan, {
     const finishedAtDate = now();
     entry.finishedAt = finishedAtDate.toISOString();
     entry.durationMs = Math.max(0, finishedAtDate.getTime() - startedAtDate.getTime());
+    entry.signal = typeof result?.signal === "string" ? result.signal : null;
+    entry.interrupted = entry.signal !== null || result?.error?.code === "EINTR";
     entry.exitCode = typeof result?.status === "number" ? result.status : 1;
-    entry.signal = result?.signal ? String(result.signal) : null;
-    entry.status = entry.signal ? "interrupted" : entry.exitCode === 0 ? "passed" : "failed";
+    entry.status = entry.interrupted ? "interrupted" : entry.exitCode === 0 ? "passed" : "failed";
     if (result?.error) entry.error = String(result.error);
     onCheckpoint(executionResults);
     if (entry.exitCode !== 0) break;
@@ -974,6 +1524,7 @@ export function readSelectionArtifact(selectionPath, changedFiles) {
     "mainThreadSerialVerification",
     "ciOnlyVerification",
     "blockedVerification",
+    "matchedByFile",
     "unmatchedChangedFiles",
   ]) {
     if (!Array.isArray(report[field])) {
@@ -983,32 +1534,8 @@ export function readSelectionArtifact(selectionPath, changedFiles) {
   if (!report.changedFiles.every((entry) => typeof entry === "string" && entry.trim())) {
     throw selectionArtifactError("adaptive-selection-artifact-field", "changedFiles[]");
   }
-  for (const field of [
-    "recommendedCommands",
-    "childAgentStaticTasks",
-    "mainThreadSerialVerification",
-    "ciOnlyVerification",
-    "blockedVerification",
-  ]) {
-    if (!report[field].every((entry) => (
-      entry
-      && typeof entry === "object"
-      && !Array.isArray(entry)
-      && typeof entry.commandRef === "string"
-      && entry.commandRef.trim()
-    ))) {
-      throw selectionArtifactError("adaptive-selection-artifact-field", `${field}[].commandRef`);
-    }
-  }
   if (!report.unmatchedChangedFiles.every((entry) => typeof entry === "string" && entry.trim())) {
     throw selectionArtifactError("adaptive-selection-artifact-field", "unmatchedChangedFiles[]");
-  }
-  for (const entry of report.recommendedCommands) {
-    for (const field of ["executionOwners", "resourceLocks", "ciProfiles", "routeIds"]) {
-      if (!Array.isArray(entry[field])) {
-        throw selectionArtifactError("adaptive-selection-artifact-field", `recommendedCommands[].${field}`);
-      }
-    }
   }
   const expectedChangedFiles = normalizeChangedFiles(changedFiles);
   const artifactChangedFiles = normalizeChangedFiles(report.changedFiles);
@@ -1018,23 +1545,40 @@ export function readSelectionArtifact(selectionPath, changedFiles) {
       `expected=${expectedChangedFiles.join(",")};artifact=${artifactChangedFiles.join(",")}`,
     );
   }
+  if (artifactChangedFiles.length > 0
+    && report.recommendedCommands.length === 0
+    && report.unmatchedChangedFiles.length === 0
+    && report.blockedVerification.length === 0) {
+    throw selectionArtifactError("adaptive-selection-artifact-empty-closure", artifactChangedFiles.join(","));
+  }
+  const authority = resolveSelectionAuthority(report);
+  const provenanceGaps = authority.routeGaps.length > 0
+    ? []
+    : validateSelectionArtifactProvenance(report, authority);
+  if (authority.routeGaps.length > 0 || provenanceGaps.length > 0) {
+    const [gap] = [...authority.routeGaps, ...provenanceGaps];
+    throw selectionArtifactError(gap.code, `${gap.commandRef}:${gap.detail}`);
+  }
   return report;
 }
 
 function emptySelectionReport(changedFiles, gap) {
   return {
     schemaVersion: 1,
+    selectionPlatform: process.platform,
     changedFiles: normalizeChangedFiles(changedFiles),
     recommendedCommands: [],
     childAgentStaticTasks: [],
     mainThreadSerialVerification: [],
     ciOnlyVerification: [],
-    blockedVerification: [{
-      commandRef: gap.commandRef || "selection-artifact",
-      reason: gap.detail || gap.code,
-    }],
+    blockedVerification: [],
+    matchedByFile: [],
     unmatchedChangedFiles: [],
-    diagnosticNextSteps: [],
+    diagnosticNextSteps: [{
+      commandRef: gap.commandRef || "selection-artifact",
+      executionOwners: [],
+      resourceLocks: [],
+    }],
     advisoryNotes: [],
   };
 }
@@ -1044,13 +1588,19 @@ function main() {
   if (args.includeMainThread && args.deferMainThread) {
     throw new Error("--include-main-thread and --defer-main-thread are mutually exclusive");
   }
-  const changedFiles = args.changedFilesProvided
+  const rawChangedFiles = args.changedFilesProvided
     ? args.changedFiles
     : discoverChangedFiles({
       includeBranchHistory: args.includeBranchHistory,
       historyBase: args.historyBase,
     });
+  const changedFiles = normalizeChangedFiles(rawChangedFiles);
   try {
+    if (args.inputErrors.length > 0) {
+      const error = new Error(args.inputErrors.join(";"));
+      error.code = "adaptive-execution-input-error";
+      throw error;
+    }
     assertAdaptiveExecutionInput(changedFiles, { dryRun: args.dryRun });
   } catch (error) {
     const gap = planGap(error.code || "adaptive-execution-input-error", "changed-files", error.message);
@@ -1126,8 +1676,17 @@ function main() {
   if (args.dryRun) {
     writeAdaptiveOutputs(report, args, null, executionPlan, {
       ...profileOutputOptions,
-      terminalState: "planned",
+      terminalState: (report.unmatchedChangedFiles || []).length > 0 || executionPlan.routeGaps.length > 0
+        ? "blocked"
+        : "planned",
     });
+    if ((report.unmatchedChangedFiles || []).length > 0 || executionPlan.routeGaps.length > 0) {
+      console.error(
+        `Adaptive planning failed closed with ${report.unmatchedChangedFiles.length} unmatched file(s) `
+        + `and ${executionPlan.routeGaps.length} route gap(s).`,
+      );
+      process.exit(2);
+    }
     console.log(
       `Adaptive selection recommended ${report.recommendedCommands.length} commands; `
       + `execution plan keeps ${executionPlan.commandsToRun.length} and blocks ${executionPlan.blockedMainThreadCommands.length} `
@@ -1180,7 +1739,7 @@ function main() {
       writeAdaptiveOutputs(report, args, results, executionPlan, profileOutputOptions);
     },
   });
-  const failed = executionResults.find((entry) => entry.exitCode !== 0);
+  const failed = executionResults.find((entry) => entry.status !== "passed");
   if (failed) process.exit(failed.exitCode);
   if (executionPlan.executionCommands.length > 0) {
     spawnSync("node", ["tools/test_timing_summary.mjs"], {

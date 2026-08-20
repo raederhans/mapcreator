@@ -80,7 +80,13 @@ function readChangedFileList(filePath) {
 }
 
 function normalizeChangedFiles(values) {
-  return [...new Set(values.map((value) => toRepoPath(path.relative(REPO_ROOT, path.resolve(REPO_ROOT, value))).replace(/^\.\//, "")))].sort();
+  const normalizedInputs = (Array.isArray(values) ? values : [])
+    .filter((value) => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value && !/^,+$/.test(value));
+  return [...new Set(normalizedInputs.map((value) => (
+    toRepoPath(path.relative(REPO_ROOT, path.resolve(REPO_ROOT, value))).replace(/^\.\//, "")
+  )))].sort();
 }
 
 function routeSourceRefs(route) {
@@ -400,6 +406,42 @@ export function classifyExecutionOwners(executionOwners) {
   return "blocked";
 }
 
+const DEFAULT_EXECUTION_MAX_LEAVES = 64;
+const DEFAULT_EXECUTION_MAX_ARGV_BYTES = process.platform === "win32" ? 30_000 : 131_072;
+
+function executionAuthorityForCommand(entry, disposition = classifyExecutionOwners(entry.executionOwners)) {
+  const routeIds = [...entry.routeIds].sort();
+  const safetyContributorRouteIds = [...entry.safetyContributorRouteIds].sort();
+  const ciProfiles = [...entry.ciProfiles].sort();
+  return {
+    executionOwner: disposition,
+    executionOwners: [...entry.executionOwners].sort(),
+    platforms: [process.platform],
+    resourceLocks: [...entry.resourceLocks].sort(),
+    tiers: ciProfiles,
+    ciProfiles,
+    routeIds,
+    safetyContributorRouteIds,
+    provenance: {
+      routeIds,
+      safetyContributorRouteIds,
+    },
+    disposition,
+    batchSafe: false,
+    isolation: "process",
+    maxLeaves: DEFAULT_EXECUTION_MAX_LEAVES,
+    maxArgvBytes: DEFAULT_EXECUTION_MAX_ARGV_BYTES,
+  };
+}
+
+function selectionContributor(entry, disposition, extra = {}) {
+  return {
+    commandRef: entry.commandRef,
+    ...extra,
+    ...executionAuthorityForCommand(entry, disposition),
+  };
+}
+
 function buildCommandEntries(routes, allRoutes = buildRouteIndex()) {
   const byCommand = new Map();
   const allRoutesByCommand = new Map();
@@ -520,6 +562,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
 
   return {
     schemaVersion: 1,
+    selectionPlatform: process.platform,
     changedFiles: normalizedChangedFiles,
     importGraphLoaded: !!importGraph,
     recommendedCommands: commandEntries.map((entry) => ({
@@ -534,26 +577,24 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
       routeIds: entry.routeIds,
       safetyContributorRouteIds: entry.safetyContributorRouteIds,
       guidance: entry.guidance,
+      ...executionAuthorityForCommand(entry),
     })),
     coveredDomains: [...new Set(commandEntries.flatMap((entry) => entry.domains))].sort(),
     coveredOwners: [...new Set(commandEntries.flatMap((entry) => entry.ownerHints))].sort(),
     resourceLocks: [...new Set(commandEntries.flatMap((entry) => entry.resourceLocks))].sort(),
     executionOwners: [...new Set(commandEntries.flatMap((entry) => entry.executionOwners))].sort(),
-    childAgentStaticTasks: childSafeRoutes.map((entry) => ({
-      commandRef: entry.commandRef,
+    childAgentStaticTasks: childSafeRoutes.map((entry) => selectionContributor(entry, "child-safe", {
       reason: "short contract route",
       expandedSpecs: entry.expandedSpecs,
     })),
-    mainThreadSerialVerification: mainThreadRoutes.map((entry) => ({
-      commandRef: entry.commandRef,
-      resourceLocks: entry.resourceLocks,
+    mainThreadSerialVerification: mainThreadRoutes.map((entry) => selectionContributor(entry, "main-thread", {
       expandedSpecs: entry.expandedSpecs,
       guidance: entry.guidance,
     })),
-    ciOnlyVerification: ciOnlyRoutes.map((entry) => ({ commandRef: entry.commandRef, reason: "reserved for CI profile" })),
-    blockedVerification: blockedRoutes.map((entry) => ({
-      commandRef: entry.commandRef,
-      executionOwners: entry.executionOwners,
+    ciOnlyVerification: ciOnlyRoutes.map((entry) => selectionContributor(entry, "ci-only", {
+      reason: "reserved for CI profile",
+    })),
+    blockedVerification: blockedRoutes.map((entry) => selectionContributor(entry, "blocked", {
       reason: "execution owner metadata could not be classified",
     })),
     matchedByFile: matchedRoutesByFile.map((entry) => ({
@@ -569,6 +610,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
         safetyContributorRouteIds: commandEntry.safetyContributorRouteIds,
         expandedSpecs: commandEntry.expandedSpecs,
         guidance: commandEntry.guidance,
+        ...executionAuthorityForCommand(commandEntry),
       })),
     })),
     impactedDomains: summarizeImpactedDomains(commandEntries),

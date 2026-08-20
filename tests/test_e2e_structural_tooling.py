@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TMP_ROOT = REPO_ROOT / ".runtime" / "tmp" / "test_e2e_structural_tooling"
+TMP_BASE = REPO_ROOT / ".runtime" / "tmp" / "test_e2e_structural_tooling"
 
 
 def run_command(*command: str) -> subprocess.CompletedProcess[str]:
@@ -22,7 +23,13 @@ def run_command(*command: str) -> subprocess.CompletedProcess[str]:
 
 class E2eStructuralToolingContractTest(unittest.TestCase):
     def setUp(self) -> None:
-        TMP_ROOT.mkdir(parents=True, exist_ok=True)
+        TMP_BASE.mkdir(parents=True, exist_ok=True)
+        self._temp_dir = tempfile.TemporaryDirectory(
+            prefix=f"{self._testMethodName}-",
+            dir=TMP_BASE,
+        )
+        self.addCleanup(self._temp_dir.cleanup)
+        self.tmp_root = Path(self._temp_dir.name)
 
     def assert_command_ok(self, result: subprocess.CompletedProcess[str]) -> None:
         if result.returncode == 0:
@@ -31,8 +38,8 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.fail(details or "command failed")
 
     def test_timeout_inventory_writes_schema(self) -> None:
-        json_out = TMP_ROOT / "timeout-inventory.json"
-        md_out = TMP_ROOT / "timeout-inventory.md"
+        json_out = self.tmp_root / "timeout-inventory.json"
+        md_out = self.tmp_root / "timeout-inventory.md"
         result = run_command(
             "node",
             "tools/test_timeout_inventory.mjs",
@@ -49,9 +56,9 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertTrue(md_out.exists())
 
     def test_import_graph_writes_schema(self) -> None:
-        graph_out = TMP_ROOT / "test-import-graph.json"
-        summary_json = TMP_ROOT / "test-import-graph-summary.json"
-        summary_md = TMP_ROOT / "test-import-graph-summary.md"
+        graph_out = self.tmp_root / "test-import-graph.json"
+        summary_json = self.tmp_root / "test-import-graph-summary.json"
+        summary_md = self.tmp_root / "test-import-graph-summary.md"
         result = run_command(
             "node",
             "tools/build_test_import_graph.mjs",
@@ -422,9 +429,39 @@ for (const testCase of cases) {
         script = """
 const { buildExecutionPlan } = await import('./tools/run_adaptive_tests.mjs');
 const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json';
+const authority = (commandRef, disposition, resourceLocks, ciProfiles) => ({
+  commandRef,
+  executionOwner: disposition,
+  executionOwners: [disposition],
+  platforms: [process.platform],
+  resourceLocks,
+  tiers: ciProfiles,
+  ciProfiles,
+  routeIds: [`synthetic:${disposition}:${commandRef}`],
+  safetyContributorRouteIds: [`synthetic:${disposition}:${commandRef}`],
+  provenance: {
+    routeIds: [`synthetic:${disposition}:${commandRef}`],
+    safetyContributorRouteIds: [`synthetic:${disposition}:${commandRef}`],
+  },
+  disposition,
+  batchSafe: false,
+  isolation: 'process',
+  maxLeaves: 64,
+  maxArgvBytes: process.platform === 'win32' ? 30000 : 131072,
+});
+const selected = authority('verify:test:e2e-layers', 'child-safe', [], ['pr-fast']);
+const mainThread = authority(tnoWaterCommand, 'main-thread', ['.runtime-output'], ['full']);
 const report = {
-  childAgentStaticTasks: [{ commandRef: 'verify:test:e2e-layers' }],
-  mainThreadSerialVerification: [{ commandRef: tnoWaterCommand }],
+  schemaVersion: 1,
+  selectionPlatform: process.platform,
+  changedFiles: ['tests/synthetic.test.mjs'],
+  recommendedCommands: [selected, mainThread],
+  childAgentStaticTasks: [selected],
+  mainThreadSerialVerification: [mainThread],
+  ciOnlyVerification: [],
+  blockedVerification: [],
+  matchedByFile: [],
+  unmatchedChangedFiles: [],
 };
 const plan = buildExecutionPlan(report, { includeMainThread: false });
 if (plan.commandsToRun.join(',') !== 'verify:test:e2e-layers') {
@@ -451,22 +488,22 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
             "--changed-file",
             "docs/active/unrelated-task/context.md",
             "--json-out",
-            ".runtime/reports/generated/test-adaptive-unmatched-execute.json",
+            str(self.tmp_root / "test-adaptive-unmatched-execute.json"),
             "--md-out",
-            ".runtime/reports/generated/test-adaptive-unmatched-execute.md",
+            str(self.tmp_root / "test-adaptive-unmatched-execute.md"),
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unmatched changed files", result.stderr)
-        payload = json.loads((REPO_ROOT / ".runtime/reports/generated/test-adaptive-unmatched-execute.json").read_text(encoding="utf-8"))
+        payload = json.loads((self.tmp_root / "test-adaptive-unmatched-execute.json").read_text(encoding="utf-8"))
         self.assertIn("docs/active/unrelated-task/context.md", payload["unmatchedChangedFiles"])
         self.assertEqual(payload["executionStatus"], "blocked")
         self.assertEqual(payload["executionResults"], [])
         self.assertEqual(payload["executionPlan"]["executionCommands"], [])
 
     def test_adaptive_execute_rejects_a_stale_selection_artifact_with_empty_execution(self) -> None:
-        selection_path = TMP_ROOT / "test-adaptive-stale-selector.json"
-        json_out = TMP_ROOT / "test-adaptive-stale-selector-execution.json"
-        md_out = TMP_ROOT / "test-adaptive-stale-selector-execution.md"
+        selection_path = self.tmp_root / "test-adaptive-stale-selector.json"
+        json_out = self.tmp_root / "test-adaptive-stale-selector-execution.json"
+        md_out = self.tmp_root / "test-adaptive-stale-selector-execution.md"
         selection_path.write_text(json.dumps({
             "schemaVersion": 1,
             "changedFiles": ["package.json"],
@@ -475,6 +512,7 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
             "mainThreadSerialVerification": [],
             "ciOnlyVerification": [],
             "blockedVerification": [],
+            "matchedByFile": [],
             "unmatchedChangedFiles": [],
         }), encoding="utf-8")
         result = run_command(
@@ -502,9 +540,9 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
         )
 
     def test_adaptive_execute_records_an_explicit_empty_changed_file_list(self) -> None:
-        changed_files_path = TMP_ROOT / "test-adaptive-empty-changed-files.txt"
-        json_out = TMP_ROOT / "test-adaptive-empty-changed-files.json"
-        md_out = TMP_ROOT / "test-adaptive-empty-changed-files.md"
+        changed_files_path = self.tmp_root / "test-adaptive-empty-changed-files.txt"
+        json_out = self.tmp_root / "test-adaptive-empty-changed-files.json"
+        md_out = self.tmp_root / "test-adaptive-empty-changed-files.md"
         changed_files_path.write_text("", encoding="utf-8")
         result = run_command(
             "node",
@@ -529,9 +567,46 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
             "adaptive-execution-empty-changed-files",
         )
 
+    def test_adaptive_execute_normalizes_all_empty_ingress_before_planning(self) -> None:
+        whitespace_list = self.tmp_root / "whitespace-only.txt"
+        whitespace_list.write_text("  \n\t\n", encoding="utf-8")
+        cases = {
+            "missing-value": ["--changed-file"],
+            "empty-string": ["--changed-file", ""],
+            "whitespace": ["--changed-file", "   "],
+            "comma-only-file": ["--changed-file", ","],
+            "comma-only-list": ["--changed-files", ",,,"],
+            "whitespace-list": ["--changed-files-list", str(whitespace_list)],
+        }
+        for name, ingress_args in cases.items():
+            with self.subTest(name=name):
+                json_out = self.tmp_root / f"{name}.json"
+                md_out = self.tmp_root / f"{name}.md"
+                result = run_command(
+                    "node",
+                    "tools/run_adaptive_tests.mjs",
+                    "--execute",
+                    "--defer-main-thread",
+                    "--json-out",
+                    str(json_out),
+                    "--md-out",
+                    str(md_out),
+                    *ingress_args,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                payload = json.loads(json_out.read_text(encoding="utf-8"))
+                self.assertEqual(payload["changedFiles"], [])
+                self.assertEqual(payload["executionStatus"], "blocked")
+                self.assertEqual(payload["executionResults"], [])
+                self.assertEqual(payload["executionPlan"]["executionCommands"], [])
+                self.assertEqual(
+                    payload["executionPlan"]["routeGaps"][0]["code"],
+                    "adaptive-execution-empty-changed-files",
+                )
+
     def test_adaptive_execute_can_defer_main_thread_routes_with_evidence(self) -> None:
-        json_out = TMP_ROOT / "test-adaptive-deferred-main-thread.json"
-        md_out = TMP_ROOT / "test-adaptive-deferred-main-thread.md"
+        json_out = self.tmp_root / "test-adaptive-deferred-main-thread.json"
+        md_out = self.tmp_root / "test-adaptive-deferred-main-thread.md"
         result = run_command(
             "node",
             "tools/run_adaptive_tests.mjs",
@@ -556,8 +631,8 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
         self.assertIn("mainThreadDisposition: deferred", md_out.read_text(encoding="utf-8"))
 
     def test_adaptive_execute_records_main_thread_ownership_block_as_empty_evidence(self) -> None:
-        json_out = TMP_ROOT / "test-adaptive-blocked-main-thread.json"
-        md_out = TMP_ROOT / "test-adaptive-blocked-main-thread.md"
+        json_out = self.tmp_root / "test-adaptive-blocked-main-thread.json"
+        md_out = self.tmp_root / "test-adaptive-blocked-main-thread.md"
         result = run_command(
             "node",
             "tools/run_adaptive_tests.mjs",
