@@ -1779,6 +1779,35 @@ test("adaptive execution invokes one whole-lane planner per disposition and prop
   assert.deepEqual(conflictPlan.executionCommands, []);
 });
 
+test("adaptive execution keeps canonical overlap unique within mutually exclusive dispositions", () => {
+  const selected = [adaptiveContributor("catalog:child")];
+  const mainThread = [adaptiveContributor("catalog:main", {
+    disposition: "main-thread",
+    executionOwners: ["main-thread"],
+    resourceLocks: ["dist", ".runtime-output"],
+    ciProfiles: ["deploy-minimal"],
+  })];
+  const scripts = {
+    "catalog:child": "node --test tests/shared_disposition.test.mjs",
+    "catalog:main": "node --test tests/shared_disposition.test.mjs",
+  };
+  const plan = buildExecutionPlan(adaptiveReport({ selected, mainThread }), {
+    packageScripts: scripts,
+  });
+
+  assert.deepEqual(plan.routeGaps, []);
+  assert.deepEqual(plan.selectedLeaves.map((leaf) => leaf.leafId), [
+    "node-test:tests/shared_disposition.test.mjs",
+  ]);
+  assert.deepEqual(plan.deferredMainThreadLeaves.map((leaf) => leaf.leafId), [
+    "node-test:tests/shared_disposition.test.mjs",
+  ]);
+  assert.equal(plan.executionCommands.length, 1);
+  assert.equal(plan.executionCommands[0].leafIds.length, 1);
+  assert.equal(plan.deferredMainThreadGroups.length, 1);
+  assert.equal(plan.deferredMainThreadGroups[0].leafIds.length, 1);
+});
+
 test("adaptive execution fails closed before commands on cyclic or unresolved aliases", () => {
   const cycleRoot = adaptiveContributor("test:cycle:a");
   const cyclePlan = buildExecutionPlan(adaptiveReport({ selected: [cycleRoot] }), {

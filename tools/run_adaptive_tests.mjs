@@ -1409,17 +1409,21 @@ export function buildExecutionPlan(report, {
   const selectedLeaves = selectedProjection.leaves;
   const deferredMainThreadLeaves = deferredMainProjection.leaves;
   const deferredCiOnlyLeaves = deferredCiProjection.leaves;
-  const leafDispositionById = new Map();
-  for (const leaf of [...selectedLeaves, ...deferredMainThreadLeaves, ...deferredCiOnlyLeaves]) {
-    const priorDisposition = leafDispositionById.get(leaf.leafId);
-    if (priorDisposition && priorDisposition !== leaf.disposition) {
-      routeGaps.push(planGap(
-        "adaptive-leaf-cross-disposition",
-        leaf.sourceCommandRefs.join(","),
-        `leaf=${JSON.stringify(leaf.leafId)};${priorDisposition}->${leaf.disposition}`,
-      ));
-    } else {
-      leafDispositionById.set(leaf.leafId, leaf.disposition);
+  for (const [disposition, leaves] of [
+    ["selected", selectedLeaves],
+    ["deferred-main-thread", deferredMainThreadLeaves],
+    ["deferred-ci-only", deferredCiOnlyLeaves],
+  ]) {
+    const laneLeafIds = new Set();
+    for (const leaf of leaves) {
+      if (laneLeafIds.has(leaf.leafId)) {
+        routeGaps.push(planGap(
+          "adaptive-leaf-duplicate",
+          leaf.sourceCommandRefs.join(","),
+          `leaf=${JSON.stringify(leaf.leafId)};disposition=${disposition}`,
+        ));
+      }
+      laneLeafIds.add(leaf.leafId);
     }
   }
   const executionGroups = selectedProjection.groups;
