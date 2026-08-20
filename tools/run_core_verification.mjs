@@ -31,6 +31,10 @@ import {
 import {
   buildCommandSupersessionPlan,
 } from "./verification/command_supersession.mjs";
+import {
+  buildVerificationProfile,
+  DEFAULT_CORE_VERIFICATION_PROFILE_OUT,
+} from "./verification/verification_profile.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
@@ -48,6 +52,7 @@ export function parseArgs(argv) {
     resumeFrom: null,
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
+    profileOut: DEFAULT_CORE_VERIFICATION_PROFILE_OUT,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -193,6 +198,7 @@ export function buildCoreVerificationPlan({
     reportPaths: {
       json: DEFAULT_JSON_OUT,
       markdown: DEFAULT_MD_OUT,
+      profile: DEFAULT_CORE_VERIFICATION_PROFILE_OUT,
     },
   };
 }
@@ -303,7 +309,12 @@ function renderExecutionMarkdown(report) {
   return `${lines.join("\n")}\n`;
 }
 
-function writeExecutionReport(report, { jsonOut, mdOut }) {
+function writeExecutionReport(report, {
+  jsonOut,
+  mdOut,
+  profileOut = null,
+  packageScripts = {},
+}) {
   report.updatedAt = new Date().toISOString();
   report.summary = summarizeCommandStates(report.commands);
   report.results = report.commands
@@ -318,6 +329,17 @@ function writeExecutionReport(report, { jsonOut, mdOut }) {
       externalEvidence: entry.externalEvidence || null,
     }));
   atomicWriteJsonSync(jsonOut, report);
+  if (profileOut) {
+    atomicWriteJsonSync(profileOut, buildVerificationProfile({
+      runnerId: report.runnerId,
+      executionPlan: {
+        commandsToRun: (report.planIdentity?.commands || []).map((entry) => entry.commandRef),
+      },
+      executionResults: report.commands,
+      packageScripts,
+      runnerState: report.verdict,
+    }));
+  }
   fs.mkdirSync(path.dirname(mdOut), { recursive: true });
   fs.writeFileSync(mdOut, renderExecutionMarkdown(report), "utf8");
   return report;
@@ -469,9 +491,15 @@ export function runCoreVerification({
     reportPaths: {
       json: args.jsonOut,
       markdown: args.mdOut,
+      profile: args.profileOut || null,
     },
   };
-  const checkpoint = () => writeExecutionReport(report, { jsonOut: args.jsonOut, mdOut: args.mdOut });
+  const checkpoint = () => writeExecutionReport(report, {
+    jsonOut: args.jsonOut,
+    mdOut: args.mdOut,
+    profileOut: args.profileOut || null,
+    packageScripts,
+  });
   if (args.list) {
     checkpoint();
     return { plan, results: [], report, exitCode: 0 };

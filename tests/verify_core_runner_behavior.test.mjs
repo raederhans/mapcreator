@@ -389,6 +389,7 @@ test("--list writes reports and does not execute", () => {
         "--md-out",
         path.join(tempDir, "verify-core.md"),
       ]),
+      profileOut: path.join(tempDir, "verify-core-profile.json"),
     },
     packageScripts: PACKAGE_SCRIPTS,
     runner(bin, args) {
@@ -402,6 +403,11 @@ test("--list writes reports and does not execute", () => {
   assert.equal(calls.length, 0);
   assert.equal(fs.existsSync(path.join(tempDir, "verify-core.json")), true);
   assert.equal(fs.existsSync(path.join(tempDir, "verify-core.md")), true);
+  assert.equal(fs.existsSync(path.join(tempDir, "verify-core-profile.json")), true);
+  assert.equal(
+    JSON.parse(fs.readFileSync(path.join(tempDir, "verify-core-profile.json"), "utf8")).lifecycle.state,
+    "listed",
+  );
 });
 
 test("execution records failure and stops on first failing command", () => {
@@ -565,6 +571,7 @@ test("resume parsing is explicit and does not expose an arbitrary skip flag", ()
     resumeFrom: "previous.json",
     jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
     mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.md"),
+    profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core-profile.json"),
   });
   assert.throws(() => parseArgs(["--skip", "verify:p4:state-writer-policy"]), /Unknown verify:core argument/);
 });
@@ -1298,6 +1305,7 @@ test("adaptive history discovery requires its exact base and rejects last-commit
     deferMainThread: false,
     jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-selection.json"),
     mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-selection.md"),
+    profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-profile.json"),
   });
   assert.throws(() => parseAdaptiveArgs(["--history-base", ""]), /requires a non-empty Git revision/);
 
@@ -1381,4 +1389,24 @@ test("adaptive execution checkpoints running and terminal results with timings",
   assert.equal(checkpoints[3][1].status, "failed");
   assert.deepEqual(results.map((entry) => entry.durationMs), [25, 25]);
   assert.deepEqual(results.map((entry) => entry.exitCode), [0, 7]);
+});
+
+test("adaptive execution records an interrupted terminal result and stops", () => {
+  const checkpoints = [];
+  const results = executeAdaptivePlan({
+    commandsToRun: ["node first.mjs", "node second.mjs"],
+  }, {
+    runner() {
+      return { status: null, signal: "SIGINT" };
+    },
+    onCheckpoint(entries) {
+      checkpoints.push(structuredClone(entries));
+    },
+  });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].status, "interrupted");
+  assert.equal(results[0].signal, "SIGINT");
+  assert.equal(results[0].exitCode, 1);
+  assert.equal(checkpoints.at(-1)[0].status, "interrupted");
 });

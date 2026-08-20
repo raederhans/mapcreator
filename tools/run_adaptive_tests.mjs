@@ -6,10 +6,23 @@ import { fileURLToPath } from "node:url";
 import { buildRecommendation } from "./select_verification_targets.mjs";
 import { buildCommandSupersessionPlan } from "./verification/command_supersession.mjs";
 import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
+import {
+  buildVerificationProfile,
+  DEFAULT_ADAPTIVE_VERIFICATION_PROFILE_OUT,
+} from "./verification/verification_profile.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "test-adaptive-selection.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "test-adaptive-selection.md");
+let packageScriptsForProfile = null;
+function readPackageScriptsForProfile() {
+  if (packageScriptsForProfile === null) {
+    packageScriptsForProfile = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"),
+    ).scripts || {};
+  }
+  return packageScriptsForProfile;
+}
 const DEFAULT_DISCOVERY_COMMANDS = [
   ["diff", "--name-only", "--diff-filter=ACMRD", "-z"],
   ["diff", "--name-only", "--cached", "--diff-filter=ACMRD", "-z"],
@@ -29,6 +42,7 @@ export function parseArgs(argv) {
     deferMainThread: false,
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
+    profileOut: DEFAULT_ADAPTIVE_VERIFICATION_PROFILE_OUT,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -221,8 +235,23 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
   return `${lines.join("\n")}\n`;
 }
 
-function writeOutputs(report, args, executionResults = null, executionPlan = null) {
-  atomicWriteJsonSync(args.jsonOut, { ...report, executionResults, executionPlan });
+function writeOutputs(report, args, executionResults = null, executionPlan = null, {
+  terminalState = "",
+} = {}) {
+  atomicWriteJsonSync(args.jsonOut, {
+    ...report,
+    executionResults,
+    executionPlan,
+    verificationProfilePath: args.profileOut,
+  });
+  atomicWriteJsonSync(args.profileOut, buildVerificationProfile({
+    runnerId: "adaptive-verification",
+    selectorReport: report,
+    executionPlan,
+    executionResults: executionResults || [],
+    packageScripts: readPackageScriptsForProfile(),
+    terminalState,
+  }));
   fs.mkdirSync(path.dirname(args.mdOut), { recursive: true });
   fs.writeFileSync(args.mdOut, renderMarkdown(report, executionResults, executionPlan), "utf8");
 }
@@ -243,6 +272,7 @@ export function executeAdaptivePlan(executionPlan, {
       finishedAt: null,
       durationMs: null,
       exitCode: null,
+      signal: null,
     };
     executionResults.push(entry);
     onCheckpoint(executionResults);
@@ -260,7 +290,8 @@ export function executeAdaptivePlan(executionPlan, {
     entry.finishedAt = finishedAtDate.toISOString();
     entry.durationMs = Math.max(0, finishedAtDate.getTime() - startedAtDate.getTime());
     entry.exitCode = typeof result?.status === "number" ? result.status : 1;
-    entry.status = entry.exitCode === 0 ? "passed" : "failed";
+    entry.signal = result?.signal ? String(result.signal) : null;
+    entry.status = entry.signal ? "interrupted" : entry.exitCode === 0 ? "passed" : "failed";
     if (result?.error) entry.error = String(result.error);
     onCheckpoint(executionResults);
     if (entry.exitCode !== 0) break;
@@ -304,7 +335,7 @@ function main() {
   };
   const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
   if (args.dryRun) {
-    writeOutputs(report, args, null, executionPlan);
+    writeOutputs(report, args, null, executionPlan, { terminalState: "planned" });
     console.log(
       `Adaptive selection recommended ${report.recommendedCommands.length} commands; `
       + `execution plan keeps ${executionPlan.commandsToRun.length} and blocks ${executionPlan.blockedMainThreadCommands.length} `
@@ -314,7 +345,7 @@ function main() {
   }
 
   if ((report.unmatchedChangedFiles || []).length > 0) {
-    writeOutputs(report, args);
+    writeOutputs(report, args, null, executionPlan, { terminalState: "blocked" });
     console.error(
       `Adaptive selection found ${report.unmatchedChangedFiles.length} unmatched changed files. `
       + "Add route coverage before running --execute.",
@@ -323,7 +354,7 @@ function main() {
   }
 
   if (executionPlan.blockedMainThreadCommands.length > 0 && !args.deferMainThread) {
-    writeOutputs(report, args, null, executionPlan);
+    writeOutputs(report, args, null, executionPlan, { terminalState: "blocked" });
     console.error(
       `Adaptive selection found ${executionPlan.blockedMainThreadCommands.length} main-thread commands. `
       + "Re-run with --include-main-thread after reserving the live test lane.",
@@ -346,7 +377,7 @@ function main() {
       encoding: "utf8",
     });
   }
-  writeOutputs(report, args, executionResults, executionPlan);
+  writeOutputs(report, args, executionResults, executionPlan, { terminalState: "passed" });
   const deferredSummary = args.deferMainThread
     ? `; deferred ${executionPlan.blockedMainThreadCommands.length} main-thread command(s)`
     : "";
