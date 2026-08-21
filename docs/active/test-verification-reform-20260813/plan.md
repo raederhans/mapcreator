@@ -120,7 +120,7 @@ Stage 6J-C closes verification-platform feature expansion for this reform. Any l
 ## Williams session-journal admission repair — 2026-08-21
 
 - [x] Freeze the repair base at `d1f7c9c3ae0257c056aea8fb1a968a3db40ce7cb` in isolated worktree `b42a` and preserve the `a82e` candidate plus `045e` control worktrees.
-- [x] Reproduce the existing-journal failure with ordinary files under `.runtime/tmp` on Windows PowerShell 5.1 / .NET Framework 4.8 and PowerShell 7.6 / .NET 10.
+- [x] Reproduce the existing-journal failure with ordinary files under `.runtime/tmp` on Windows PowerShell 5.1 / .NET Framework 4.8.1 and PowerShell 7.6 / .NET 10.
 - [x] Extend the existing Williams governance suite with real-file-system coverage for consecutive checkpoints, existing-target atomic replacement, UTF-8 without BOM, valid JSON, failed-publication cleanup, retained prior journal content, and a later successful replacement.
 - [x] Preserve `File.Replace` publication and pass a true null string through `System.Management.Automation.Language.NullString.Value`.
 - [x] Run focused RED/GREEN, Williams governance and Job runner regressions, verification metadata, SF-ATS child-safe execution, PowerShell 7 compatibility, and the serialized live power-scheme preflight.
