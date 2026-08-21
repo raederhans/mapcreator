@@ -1786,6 +1786,7 @@ test("Williams pre-block standard perf admission rejects every governed resource
     ));
     const cleanup = JSON.parse(await fs.readFile(path.join(directory, "cleanup.json"), "utf8"));
     const jobEvidence = JSON.parse(await fs.readFile(path.join(directory, "job-object.json"), "utf8"));
+    const stderr = await fs.readFile(path.join(directory, "runner.stderr.log"), "utf8");
     assert.equal(result.complete, false, testCase.label);
     assert.equal(result.blockResult.status, "invalid", testCase.label);
     assert.equal(result.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, testCase.label);
@@ -1796,6 +1797,8 @@ test("Williams pre-block standard perf admission rejects every governed resource
     assert.equal(admission.status, "rejected", testCase.label);
     assert.equal(admission.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected, testCase.label);
     assert.ok(admission.failures.some((failure) => failure.code === testCase.failureCode), testCase.label);
+    assert.match(stderr, /^standard-perf-admission-rejected: /, testCase.label);
+    assert.ok(stderr.includes(testCase.failureCode), testCase.label);
     assert.equal(cleanup.valid, true, testCase.label);
     assert.equal(cleanup.workloadSpawnCount, 0, testCase.label);
     assert.equal(cleanup.workloadStarted, false, testCase.label);
@@ -1907,6 +1910,63 @@ test("Williams pre-block standard perf admission rejects every governed resource
   assert.match(forgedStderr, /git-evidence-invalid/);
   assert.equal(forgedPreparationCount, 0);
   assert.equal(forgedSpawnCount, 0);
+});
+
+test("Williams quiet-window rejection publishes cadence and environment stderr with zero workload spawn", async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-quiet-window-rejection-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  const directory = path.join(outputRoot, "block-01");
+  let preparationCount = 0;
+  let workloadSpawnCount = 0;
+  const result = await runWilliamsBlockWithTestAdapters({
+    block: {
+      ordinal: 1,
+      id: "block-01",
+      side: "A",
+      orderId: "tno-hoi4",
+      scenarioOrder: ["tno_1962", "hoi4_1939"],
+      cwd: CONTROL_WORKTREE,
+      expectedHead: CONTROL_HEAD,
+      directory,
+      command: { bin: process.execPath, args: ["--version"] },
+    },
+    packageLock: {},
+    lazyPreparationAuthority: async () => {
+      preparationCount += 1;
+      return { harnessArtifacts: {}, preparedRunner: {}, packageLock: {} };
+    },
+  }, {
+    collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
+    collectAdmissionEvidence: async () => standardPerfAdmissionEvidence(),
+    collectTelemetry: async ({ phase }) => {
+      const telemetry = telemetryWindow(phase, 1, CONTROL_WORKTREE, CONTROL_HEAD);
+      if (phase === "pre") {
+        const firstAtMs = Date.parse(telemetry.samples[0].at);
+        telemetry.samples.forEach((sample, index) => {
+          const captureStartedAtMs = firstAtMs + index * 1635;
+          sample.at = new Date(captureStartedAtMs).toISOString();
+          sample.completedAt = new Date(captureStartedAtMs + sample.captureDurationMs).toISOString();
+        });
+        telemetry.environment.ports["8000"] = [{ pid: 4321 }];
+      }
+      return telemetry;
+    },
+    runLoggedCommand: async () => {
+      workloadSpawnCount += 1;
+      throw new Error("workload must stay unreachable after quiet-window rejection");
+    },
+  });
+  const stderr = await fs.readFile(path.join(directory, "runner.stderr.log"), "utf8");
+  assert.equal(result.complete, false);
+  assert.equal(result.blockResult.status, "invalid");
+  assert.equal(result.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  assert.equal(result.blockResult.skipReason, "williams-quiet-window-invalid");
+  assert.equal(result.blockResult.workloadSpawnCount, 0);
+  assert.equal(preparationCount, 1);
+  assert.equal(workloadSpawnCount, 0);
+  assert.match(stderr, /^williams-quiet-window-invalid: /);
+  assert.match(stderr, /telemetry\.samples\.interval/);
+  assert.match(stderr, /task-ports-busy/);
 });
 
 test("telemetry cadence is frozen in preregistration and rejects a fixed-delay window before workload admission", () => {
