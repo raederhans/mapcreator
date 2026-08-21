@@ -208,3 +208,22 @@ The early stop occurred before raw-manifest publication and final JSON/Markdown 
 Admission status is `BLOCK`. The full Williams performance decision, normal push to `origin/main`, deployed Pages check, and GitHub Actions observation stayed unrun. A new repair task must align the Williams two-run experiment with the control canonical-role contract and make the Windows PowerShell 5.1 journal reader encoding explicit, then submit a fresh exact candidate for independent review and a newly authorized admission run.
 
 The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavior.test.mjs` as its sole child-safe group. Dry-run and execution exited `0`; 56/56 tests passed with one Node process start, complete execution-set comparison, zero unmatched files, zero blocked verification entries, and zero route gaps. Artifacts use `.runtime/reports/generated/sc-phases-0-3-final-admission/18-final-admission-docs-*`.
+
+## 2026-08-21 Williams nested-admission alignment handoff
+
+| Fact | Current authority and evidence |
+| --- | --- |
+| User authority | Continue from the second Williams invalid-experiment into a code-changing repair cycle; keep each phase at no more than three visible tasks. |
+| Conversation budget | Phase 0-3 uses stopped legacy repair task `01a023da-d868-73f0-9b01-c68715b9c8a2`, active isolated repair task `01a024c0-cc96-7d01-bbfa-9ac5014ec1fb`, and review task `01a023ed-9423-7882-96c7-90cb26d55005`; count is capped at 3/3. |
+| Repair base and code chain | The isolated repair starts at `a97d4574fc2e964876a9dc17ea792d93ec24ad9d`; root integrated `102dfd4522efa198ce577c029037771c4dd0726b` followed by `60c3352b026d495e30709694d6e092cc222da119` into `bc29`. The delivery worktree `de63` is detached and clean at `60c3352b`. |
+| Live2 evidence | Root `C:\Users\raede\.codex\worktrees\a82e\mapcreator\.runtime\admission\sc-phases-0-3-a97d4574-live2`; final report says `invalid-experiment`, `admitted=false`, exit `3`. |
+| Direct root cause | Williams block-01 quiet-window was valid, then the baseline standard admission rejected CPU average `21.1%` against `20%` and `ChatGPT[6820] 30.4%` against `25%`. The workload produced zero measured runs. |
+| Repair boundary | Align pre-block admission with the existing standard policy. Thresholds, allowlists, independent baseline admission, Job Object behavior, power lifecycle, raw contract, and exit codes remain unchanged. |
+| Code owner | Isolated repair task `01a024c0-cc96-7d01-bbfa-9ac5014ec1fb` delivered the Williams runner/policy/governance-test repair in `de63`. Root reviewed and committed the exact diff, fast-forwarded it into `bc29`, and retains task-record, index, ref, candidate, SF-ATS, and live-process ownership. The legacy repair task is stopped. |
+| Root deterministic closure | At `60c3352b`, syntax and diff checks exit `0`; Williams governance passes 71/71; Windows Job runner passes 16 with one explicit live telemetry skip; render role policy passes 82/82; perf contracts pass 26/26. SF-ATS executes 7/7 child-safe groups and 9/9 canonical leaves, with zero unmatched files, blocked verification entries, route gaps, or CI-only roots. |
+| Deferred root lanes | `perf:williams-power-scheme:live-preflight`, `test:node:williams-crossover-telemetry-live`, `perf:gate`, and `perf:williams-crossover:run` remain main-thread deferred. No live process is running. |
+| Preserved alternative | Root preserved the concurrent pre-block admission implementation as quarantine stash commit `773409fd19812456a92ea766e29cf8c83587f4f4`; it is outside the candidate and remains recoverable. |
+| Review owner | Reused review task performs fresh independent code-reviewer plus architect/verifier review only after root freezes the exact repair SHA. |
+| Live owner | Root exclusively owns browser, Playwright, performance, power-scheme, ports 8000/8892, and `.runtime/admission` outputs. No live process is currently running. |
+| Stop condition | A deterministic failure is repaired before review. Any live invalid-experiment, regression, harness fault, cleanup uncertainty, revision drift, or remote divergence stops admission and downstream phases. |
+| Next checkpoint | Root commits these task records, freezes the new exact candidate ref, moves the clean review worktree to that SHA, and hands the cumulative `a97d4574..candidate` boundary to the existing independent review task. |

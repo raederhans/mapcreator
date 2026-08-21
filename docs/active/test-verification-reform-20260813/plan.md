@@ -139,3 +139,15 @@ The repair acceptance boundary keeps performance thresholds, retry policy, power
 - [ ] Push the final candidate to `origin/main` and observe required GitHub checks.
 
 Stage 5b remains open. The single Williams attempt exited `3` after block 01 produced 4/32 raw samples and 0/8 completed blocks. The control baseline rejected the Williams two-run configuration against the canonical five-run role contract, and Windows PowerShell 5.1 failed to decode the BOM-less UTF-8 lifecycle journal with its default reader. Final report generation, performance acceptance, push, and remote CI stayed beyond the fail-closed admission boundary.
+
+## Williams nested-admission alignment repair — 2026-08-21
+
+- [x] Reproduce and mechanically cover the contract gap where the Williams pre-block quiet window admits an environment that the immediately following standard performance admission rejects.
+- [x] Make the pre-block decision use the standard admission policy's CPU average, CPU peak, top-process single-core, memory, power, and Git requirements without broadening any threshold or allowlist.
+- [x] Preserve the baseline runner's independent fail-closed admission, Williams Job Object containment, power-scheme lifecycle, exact revision identity, raw evidence contract, and exit-code meanings.
+- [x] Ensure a pre-block rejection happens before Job preparation or the block workload starts and records a typed, auditable invalid-experiment result with valid zero-spawn cleanup.
+- [x] Add deterministic regressions for average CPU, peak CPU, top-process, memory, power, Git, accepted parity, collector failure, forged admitted envelopes, and zero workload spawn on rejection.
+- [x] Run focused Williams governance, role/perf/Job contracts, syntax, SF-ATS dry-run and child-safe execution; reserve every browser/perf/live lane for the root owner.
+- [ ] Freeze a new exact candidate SHA, obtain independent code-reviewer and architect/verifier clearance in the existing review task, and request a new live lifecycle only for that repaired SHA.
+
+The repair starts from `a97d4574fc2e964876a9dc17ea792d93ec24ad9d`. Code commits `102dfd4522efa198ce577c029037771c4dd0726b` and `60c3352b026d495e30709694d6e092cc222da119` implement the nested admission alignment and close the subsequent pre-Job ordering, fixed-oracle, and strict `not-started` evidence gaps. Root verification at `60c3352b` passed Williams governance 71/71, Job runner 16 pass plus one explicit live skip, role policy 82/82, perf contracts 26/26, and all seven SF-ATS child-safe groups; unmatched files, blocked verification entries, and route gaps are zero. The previous two full Williams lifecycles remain immutable evidence: live1 stopped at block 02 on standard CPU admission, and live2 stopped at block 01 on standard CPU plus top-process admission. A third execution against `a97d4574` is prohibited. Any future live run requires the new task-record-sealed candidate, fresh independent review, clean measurement worktrees, and a newly recorded lifecycle authority.

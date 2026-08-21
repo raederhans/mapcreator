@@ -161,3 +161,23 @@ Repair artifacts are under `.runtime/reports/generated/williams-journal-fix-*`. 
 | Parent WIP protection | Parent stays `main@9869698d` with 19 tracked paths and 977 diff lines; canonical PowerShell LF-join/no-final-newline SHA-256 remains `aea020b4130165870c07e4d92e5cf87454f4e9776bfffc1feec69aec1370e661`; overlap with the 18 candidate paths is zero. |
 | SF-ATS docs-only verification | The three task-record paths select one child-safe command, `node --test tests/verify_core_runner_behavior.test.mjs`; dry-run and execution both exit `0`, the regression passes 56/56, and `unmatched=[]`, `blocked=[]`, `routeGaps=[]`. |
 | Admission disposition | `BLOCK`. Performance acceptance and regression verdicts are unavailable. `origin/main` push and remote CI were not run. |
+
+## 2026-08-21 Williams nested-admission alignment repair
+
+- [x] Preserve both prior live evidence roots and close retry authority for `a97d4574fc2e964876a9dc17ea792d93ec24ad9d`.
+- [x] Record live2 root cause: block-01 outer quiet-window valid; inner standard admission rejected CPU average `21.1% > 20%` and `ChatGPT[6820] 30.4% > 25%`; zero measurements started.
+- [x] Verify live2 cleanup: Job Object `cleanupValid=true`, `remainingPids=[]`, `unverifiedPids=[]`, ports clear, Balance restored, temporary scheme absent, candidate/control clean, and parent WIP hash unchanged.
+- [x] Implement same-policy pre-block admission with full decision revalidation before lazy Job preparation and zero workload spawn on rejected, invalid, or collection-failure evidence; code commits are `102dfd4522efa198ce577c029037771c4dd0726b` and `60c3352b026d495e30709694d6e092cc222da119`.
+- [x] Pass deterministic and SF-ATS child-safe verification for the exact three-file follow-up diff: syntax and diff checks exit `0`; Williams governance 71/71; Job runner 16 pass plus one explicit live skip; role policy 82/82; perf contracts 26/26; SF-ATS 7/7 execution groups and 9/9 canonical leaves with `unmatched=[]`, `blocked=[]`, and `routeGaps=[]`.
+- [ ] Create a new clean candidate SHA and complete the reused independent review task.
+- [ ] Obtain and execute a newly authorized live lifecycle for the repaired SHA.
+- [ ] After live admission passes, push normally, verify exact remote SHA, and observe required GitHub Actions.
+
+Current artifacts:
+
+- live1: `.runtime/admission/sc-phases-0-3-a97d4574-live1/`
+- live2: `.runtime/admission/sc-phases-0-3-a97d4574-live2/`
+- live2 report: `.runtime/admission/sc-phases-0-3-a97d4574-live2/williams-report.json`
+- live2 block-01 admission: `.runtime/admission/sc-phases-0-3-a97d4574-live2/williams-raw/blocks/block-01/raw/perf-admission.json`
+- isolated follow-up evidence: `C:\Users\raede\.codex\worktrees\de63\mapcreator\.runtime\reports\generated\williams-preblock-admission-followup\`
+- root final deterministic/SF-ATS evidence: `.runtime/reports/generated/williams-preblock-admission-root-final/`
