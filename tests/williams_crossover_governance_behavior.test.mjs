@@ -1902,6 +1902,9 @@ test("Williams pre-block standard perf admission rejects every governed resource
   assert.equal(forgedResult.standardPerfAdmissionValidation.valid, false);
   assert.ok(forgedResult.standardPerfAdmissionValidation.reasons.includes("git-evidence-invalid"));
   assert.equal(forgedResult.blockResult.skipReason, "standard-perf-admission-invalid");
+  const forgedStderr = await fs.readFile(path.join(forgedDirectory, "runner.stderr.log"), "utf8");
+  assert.match(forgedStderr, /standard-perf-admission-invalid/);
+  assert.match(forgedStderr, /git-evidence-invalid/);
   assert.equal(forgedPreparationCount, 0);
   assert.equal(forgedSpawnCount, 0);
 });
@@ -3102,7 +3105,8 @@ test("raw analyzer rebuilds an accepted report from exactly 32 measured files", 
 test("raw analyzer revalidates manifest-consistent pre-block standard admission evidence", async (t) => {
   const root = await materializeEvidenceRoot(createEvidence());
   const notStartedRoot = await materializeEvidenceRoot(createEvidence());
-  t.after(() => Promise.all([root, notStartedRoot].map(
+  const missingAdmissionRoot = await materializeEvidenceRoot(createEvidence());
+  t.after(() => Promise.all([root, notStartedRoot, missingAdmissionRoot].map(
     (evidenceRoot) => fs.rm(evidenceRoot, { recursive: true, force: true }),
   )));
   const admissionPath = path.join(root, "blocks", "block-01", "pre-block-standard-perf-admission.json");
@@ -3186,6 +3190,19 @@ test("raw analyzer revalidates manifest-consistent pre-block standard admission 
     )),
     [],
   );
+
+  const missingAdmissionRelativePath = "blocks/block-01/pre-block-standard-perf-admission.json";
+  await fs.rm(path.join(missingAdmissionRoot, ...missingAdmissionRelativePath.split("/")));
+  await rebuildRawManifest(missingAdmissionRoot);
+  const missingAdmissionReport = await analyzeTrustedRawRoot(missingAdmissionRoot);
+  assert.equal(missingAdmissionReport.decision.status, "invalid-experiment");
+  assert.equal(missingAdmissionReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  assert.ok(missingAdmissionReport.manifestValidation.errors.includes(
+    `manifest.missing-entry:${missingAdmissionRelativePath}`,
+  ));
+  assert.ok(missingAdmissionReport.decision.invalidReasons.some(
+    (reason) => reason.startsWith("block-01.preBlockAdmission."),
+  ));
 
   const structuralCases = [
     ["exit 3", (block) => { block.jobObject.blockExitCode = 1; }, "block-01.jobObject.blockExitCode"],

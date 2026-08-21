@@ -1061,6 +1061,35 @@ function buildWilliamsNotStartedJobEvidence(block, preBlockAdmission, skipReason
   };
 }
 
+function formatWilliamsSkipDetail(
+  skipReason,
+  preBlockAdmission,
+  standardPerfAdmissionValidation,
+  quietWindow,
+) {
+  if (skipReason === "standard-perf-admission-invalid") {
+    return standardPerfAdmissionValidation.reasons.join(",") || "admission-validator-reasons-missing";
+  }
+  if (skipReason === "standard-perf-admission-rejected") {
+    const failureCodes = Array.isArray(preBlockAdmission?.failures)
+      ? preBlockAdmission.failures.map((entry) => String(entry?.code || "missing"))
+      : [];
+    return failureCodes.join(",") || "admission-evaluator-failures-missing";
+  }
+  const quietWindowReasons = [
+    ...(quietWindow.telemetryCadence?.errors || []),
+    ...(quietWindow.capabilityStatus === "available"
+      ? []
+      : [`telemetry-capability-${quietWindow.capabilityStatus || "missing"}`]),
+    ...(quietWindow.portsClear ? [] : ["task-ports-busy"]),
+    ...(quietWindow.activeServer ? ["active-task-server"] : []),
+    ...(quietWindow.directProbeResponse ? ["task-probe-responded"] : []),
+    ...(quietWindow.gitClean ? [] : ["measurement-worktree-dirty"]),
+    ...(quietWindow.detached ? [] : ["measurement-worktree-attached"]),
+  ];
+  return [...new Set(quietWindowReasons)].join(",") || "quiet-window-invalid";
+}
+
 async function runLoggedCommand(command, {
   cwd,
   stdoutPath,
@@ -1229,12 +1258,18 @@ async function runBlock({
       });
     } else {
       const jobEvidence = buildWilliamsNotStartedJobEvidence(block, preBlockAdmission, skipReason);
+      const skipDetail = formatWilliamsSkipDetail(
+        skipReason,
+        preBlockAdmission,
+        standardPerfAdmissionValidation,
+        quietWindow,
+      );
       commandResult = { ...commandResult, jobEvidence };
       await writeJson(path.join(directory, "job-object.json"), jobEvidence);
       await writeText(path.join(directory, "runner.stdout.log"), "");
       await writeText(
         path.join(directory, "runner.stderr.log"),
-        `${skipReason}: ${jobEvidence.admission.failureCodes.join(",") || "quiet-window-invalid"}\n`,
+        `${skipReason}: ${skipDetail}\n`,
       );
     }
   } finally {
