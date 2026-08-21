@@ -129,3 +129,14 @@ Phase workers own only their isolated worktrees and local commits. The final int
 - Full wall-clock savings remain unmeasured until the frozen-candidate Core/P4 admission run; current Stage 6C evidence proves command and test-file closure only.
 - Full Core wall-clock savings remain unmeasured. Stage 6D established that recursive descriptor audit/deep freeze is unsuitable for the real scan graph; Stage 6E established that fewer scanner invocations do not imply lower wall time when multi-binding analysis changes internal complexity; Stage 6G showed that a large isolated Git-read win did not translate into the frozen full-policy wall-clock gate. Stage 6H has paired scanner-local evidence, while its repository-scale effect requires a same-environment control or CI admission run.
 - The streaming wrapper bounds synthesized output at 64 MiB and may also retain the prior canonical/completed pair plus final serialization during rollback-safe publication. J2b preserves that bounded artifact contract while embedding verified Job Object descendant teardown evidence.
+
+## 2026-08-21 Williams session-journal repair
+
+- [x] Reproduce `Write-WilliamsPowerSchemeSession` failing on its second checkpoint when `File.Replace` receives PowerShell `$null` for the .NET string backup-path parameter.
+- [x] Add a Windows real-file-system regression to `tests/williams_crossover_governance_behavior.test.mjs`; the test first failed on checkpoint two and now validates four publications around an induced read-only-destination failure.
+- [x] Update `tools/perf/williams_crossover_power_scheme.ps1` to pass `System.Management.Automation.Language.NullString.Value` while retaining the existing atomic publication and finally cleanup flow.
+- [x] Pass Williams governance `44/44`, Williams Job runner `16 passed / 1 explicit live-telemetry skip`, verification metadata `31/31`, and final SF-ATS child-safe execution with eight canonical commands and zero route gaps.
+- [x] Pass PowerShell 7.6 consecutive existing-target writes and the Windows PowerShell 5.1 live preflight; restore Balance `381b4222-f694-41f0-9685-ff5bb260df2e`, delete temporary scheme `763d8e3a-fac8-4f75-968f-985592042ffc`, and finish with zero matching processes or listeners on 8000/8892.
+- [ ] Final integration owner runs `perf:williams-crossover:run` for the complete 32-sample experiment after cherry-picking this isolated repair.
+
+Repair artifacts are under `.runtime/reports/generated/williams-journal-fix-*`. The adaptive execution defers `perf:williams-power-scheme:live-preflight`, live telemetry, standard perf, and full Williams as main-thread roots; the explicitly assigned power preflight completed separately with exit 0.

@@ -1668,6 +1668,88 @@ test("rerun08 governance uses query and active GUID identity without list-delta 
   assert.doesNotMatch(governanceSource, /\/list.*identity owner/is);
 });
 
+test(
+  "power-scheme journal atomically replaces an existing checkpoint and cleans a failed publication",
+  { skip: process.platform !== "win32" },
+  async (t) => {
+    const helperPath = fileURLToPath(
+      new URL("../tools/perf/williams_crossover_power_scheme.ps1", import.meta.url),
+    );
+    const runtimeTmp = fileURLToPath(new URL("../.runtime/tmp/", import.meta.url));
+    await fs.mkdir(runtimeTmp, { recursive: true });
+    const tempRoot = await fs.mkdtemp(path.join(runtimeTmp, "williams-power-journal-"));
+    t.after(() => fs.rm(tempRoot, { recursive: true, force: true }));
+    const journalPath = path.join(tempRoot, "session.json");
+    const escapePowerShellLiteral = (value) => value.replaceAll("'", "''");
+    const script = `
+. '${escapePowerShellLiteral(helperPath)}'
+$journalPath = '${escapePowerShellLiteral(journalPath)}'
+$first = [ordered]@{ schemaVersion = 1; status = 'checkpoint-one'; events = @([ordered]@{ ordinal = 1 }) }
+$second = [ordered]@{ schemaVersion = 1; status = 'checkpoint-two'; events = @([ordered]@{ ordinal = 1 }, [ordered]@{ ordinal = 2 }) }
+$blocked = [ordered]@{ schemaVersion = 1; status = 'blocked-checkpoint'; events = @([ordered]@{ ordinal = 3 }) }
+$final = [ordered]@{ schemaVersion = 1; status = 'checkpoint-four'; events = @([ordered]@{ ordinal = 4 }) }
+
+Write-WilliamsPowerSchemeSession -Session $first -Path $journalPath
+$firstRead = Get-Content -Raw -LiteralPath $journalPath | ConvertFrom-Json
+Write-WilliamsPowerSchemeSession -Session $second -Path $journalPath
+$secondRead = Get-Content -Raw -LiteralPath $journalPath | ConvertFrom-Json
+
+[IO.File]::SetAttributes($journalPath, [IO.FileAttributes]::ReadOnly)
+$failureType = $null
+$failureMessage = $null
+try {
+  Write-WilliamsPowerSchemeSession -Session $blocked -Path $journalPath
+} catch {
+  $failureType = if ($_.Exception.InnerException) { $_.Exception.InnerException.GetType().FullName } else { $_.Exception.GetType().FullName }
+  $failureMessage = $_.Exception.Message
+} finally {
+  [IO.File]::SetAttributes($journalPath, [IO.FileAttributes]::Normal)
+}
+$afterFailureRead = Get-Content -Raw -LiteralPath $journalPath | ConvertFrom-Json
+$journalLeaf = [IO.Path]::GetFileName($journalPath)
+$temporaryFilesAfterFailure = @([IO.Directory]::GetFiles([IO.Path]::GetDirectoryName($journalPath), "$journalLeaf.*.tmp"))
+
+Write-WilliamsPowerSchemeSession -Session $final -Path $journalPath
+$finalText = [IO.File]::ReadAllText($journalPath)
+$finalBytes = [IO.File]::ReadAllBytes($journalPath)
+$finalRead = $finalText | ConvertFrom-Json
+[ordered]@{
+  first = $firstRead
+  second = $secondRead
+  failureType = $failureType
+  failureMessage = $failureMessage
+  afterFailure = $afterFailureRead
+  temporaryFilesAfterFailure = $temporaryFilesAfterFailure
+  final = $finalRead
+  finalHasUtf8Bom = ($finalBytes.Length -ge 3 -and $finalBytes[0] -eq 0xef -and $finalBytes[1] -eq 0xbb -and $finalBytes[2] -eq 0xbf)
+  finalHasTerminatingNewline = $finalText.EndsWith([Environment]::NewLine)
+  directoryFiles = @([IO.Directory]::GetFiles([IO.Path]::GetDirectoryName($journalPath)) | ForEach-Object { [IO.Path]::GetFileName($_) })
+} | ConvertTo-Json -Depth 8
+`;
+    const result = spawnSync(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+      { encoding: "utf8", windowsHide: true },
+    );
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.first.status, "checkpoint-one");
+    assert.deepEqual(report.first.events, [{ ordinal: 1 }]);
+    assert.equal(report.second.status, "checkpoint-two");
+    assert.deepEqual(report.second.events, [{ ordinal: 1 }, { ordinal: 2 }]);
+    assert.equal(report.failureType, "System.UnauthorizedAccessException");
+    assert.equal(typeof report.failureMessage, "string");
+    assert.deepEqual(report.afterFailure, report.second);
+    assert.deepEqual(report.temporaryFilesAfterFailure, []);
+    assert.equal(report.final.status, "checkpoint-four");
+    assert.deepEqual(report.final.events, [{ ordinal: 4 }]);
+    assert.equal(report.finalHasUtf8Bom, false);
+    assert.equal(report.finalHasTerminatingNewline, true);
+    assert.deepEqual(report.directoryFiles, ["session.json"]);
+  },
+);
+
 test("tracked power helper locks the rerun08 GUID lifecycle and deletion proof", async () => {
   const helperUrl = new URL("../tools/perf/williams_crossover_power_scheme.ps1", import.meta.url);
   const helperPath = fileURLToPath(helperUrl);

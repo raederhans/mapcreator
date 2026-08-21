@@ -734,7 +734,12 @@ function Write-WilliamsPowerSchemeSession {
       [Text.UTF8Encoding]::new($false)
     )
     if ([IO.File]::Exists($fullPath)) {
-      [IO.File]::Replace($temporaryPath, $fullPath, $null, $true)
+      [IO.File]::Replace(
+        $temporaryPath,
+        $fullPath,
+        [System.Management.Automation.Language.NullString]::Value,
+        $true
+      )
     } else {
       [IO.File]::Move($temporaryPath, $fullPath)
     }

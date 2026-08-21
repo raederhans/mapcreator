@@ -144,3 +144,16 @@ Each execution task must report base and head SHA, branch, status, owned paths, 
 | P4 quick | current combined-candidate task | `.runtime/reports/generated/p4-state-actions/P4.0/state-writer-policy-tests.quick.tap` | complete; 260/260 passed |
 | Windows Job V2 integration | current combined-candidate task | test-owned temporary containment evidence | complete; 5/5 passed; residual target processes 0 |
 | full P4/Core/browser/perf/scenario/Pages | final integration or CI owner | assigned at launch | open |
+
+## 2026-08-21 Williams journal atomic-publication handoff
+
+| Fact | Evidence |
+| --- | --- |
+| Ownership | Isolated implementation branch `codex/fix-williams-journal-atomic-replace` in worktree `b42a`, exact base `d1f7c9c3ae0257c056aea8fb1a968a3db40ce7cb`; candidate `a82e` and control `045e` stayed read-only. |
+| Direct root cause | PowerShell binds ordinary `$null` to an empty string for a .NET string parameter. Both `File.Replace(source, destination, $null, true)` and its three-argument form raised `System.ArgumentException`; `System.Management.Automation.Language.NullString.Value` passed the true null accepted by the documented API. |
+| Production change | `Write-WilliamsPowerSchemeSession` keeps same-directory temporary creation, UTF-8 without BOM, `File.Replace` for existing targets, `File.Move` for first publication, and finally cleanup; only the null-string representation changed. |
+| Regression | A real journal receives two consecutive checkpoints, retains valid JSON, then survives a read-only-destination publication failure with the prior checkpoint intact and zero `*.tmp` files, and finally accepts a fourth atomic replacement with one journal file remaining. |
+| Static and child-safe verification | Focused regression passed; Williams governance `44/44`; Job runner `16 passed / 1 explicit live skip`; metadata `31/31`; final adaptive execution passed eight canonical commands with `unmatchedChangedFiles=[]` and `routeGaps=[]`. |
+| Cross-runtime evidence | Windows PowerShell 5.1 / CLR 4.0 runs the production regression and live preflight; PowerShell 7.6 / .NET 10 completed two writes to the same existing journal with zero temporary files. |
+| Live preflight | Sole owner `codex/fix-williams-journal-atomic-replace`; log `.runtime/reports/generated/williams-journal-fix-live-preflight.log`; exit 0 with lifecycle and cleanup valid, Balance restored, temporary GUID absent, and ports 8000/8892 plus matching process set empty. |
+| Deferred admission | The complete 32-sample Williams crossover, live telemetry, and standard perf experiment remain assigned to the final integration owner. |
