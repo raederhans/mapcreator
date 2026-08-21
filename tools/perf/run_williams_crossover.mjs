@@ -1161,7 +1161,6 @@ async function validateRawManifest(
 }
 
 export async function analyzeWilliamsCrossoverRawRoot(rawRoot, {
-  currentToolIdentity = null,
   trustedRevisionIdentity = null,
 } = {}) {
   const trustedIdentity = buildWilliamsTrustedRevisionIdentity(trustedRevisionIdentity || {});
@@ -1217,7 +1216,7 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, {
       rawRuns,
     });
   }
-  const analyzerToolIdentity = currentToolIdentity || await buildCurrentHarnessArtifacts();
+  const analyzerToolIdentity = await buildCurrentHarnessArtifacts();
   const manifestValidation = await validateRawManifest(
     resolvedRoot,
     manifest,

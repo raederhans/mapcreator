@@ -1464,6 +1464,33 @@ test("raw-root analyzer rejects a manifest-valid runtime substitution", async (t
   );
 });
 
+test("raw-root analyzer derives current tool identity and ignores caller substitution", async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const currentToolIdentity = await buildCurrentHarnessArtifacts();
+  currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  const substitutedToolIdentity = structuredClone(currentToolIdentity);
+  substitutedToolIdentity.policy.lfNormalizedSha256 = "f".repeat(64);
+
+  for (const block of WILLIAMS_BLOCK_SEQUENCE) {
+    const identityPath = path.join(root, "blocks", block.id, "identity.json");
+    const identity = JSON.parse(await fs.readFile(identityPath, "utf8"));
+    identity.artifacts.policy = structuredClone(substitutedToolIdentity.policy);
+    await writeJson(identityPath, identity);
+  }
+  await fs.rm(path.join(root, "raw-sha256-manifest.json"));
+  await buildWilliamsRawManifest(root, substitutedToolIdentity);
+
+  const report = await analyzeWilliamsCrossoverRawRoot(root, {
+    trustedRevisionIdentity: trustedRevisionIdentity(),
+    currentToolIdentity: substitutedToolIdentity,
+  });
+  assert.equal(report.manifestValidation.status, "invalid");
+  assert.ok(report.manifestValidation.errors.includes("manifest.toolIdentity.policy.current"));
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+});
+
 test("raw-root analyzer rejects manifest-valid synchronized trusted revision substitutions", async (t) => {
   const cases = [
     [
