@@ -783,7 +783,7 @@ function runGitFixture(cwd, args) {
   return result.stdout.trim();
 }
 
-async function createDetachedAnalyzerFixtureRepository() {
+async function createDetachedAnalyzerFixtureRepository({ commitMessage = "fixture" } = {}) {
   const root = await makeRuntimeTemp("williams-direct-cli-repo-");
   const files = [
     "package-lock.json",
@@ -806,23 +806,33 @@ async function createDetachedAnalyzerFixtureRepository() {
   runGitFixture(root, ["config", "user.name", "Williams Test"]);
   runGitFixture(root, ["config", "user.email", "williams-test@example.invalid"]);
   runGitFixture(root, ["add", "--", ...files]);
-  runGitFixture(root, ["commit", "--quiet", "-m", "fixture"]);
+  runGitFixture(root, ["commit", "--quiet", "-m", commitMessage]);
   runGitFixture(root, ["checkout", "--quiet", "--detach", "HEAD"]);
   return { root, head: runGitFixture(root, ["rev-parse", "HEAD"]) };
 }
 
 async function loadDetachedAnalyzerFixture() {
-  const fixture = await createDetachedAnalyzerFixtureRepository();
+  const fixture = await createDetachedAnalyzerFixtureRepository({ commitMessage: "candidate fixture" });
+  const control = await createDetachedAnalyzerFixtureRepository({ commitMessage: "control fixture" });
+  assert.notEqual(path.resolve(control.root), path.resolve(fixture.root));
+  assert.notEqual(control.head, fixture.head);
   const moduleUrl = pathToFileURL(path.join(fixture.root, "tools", "perf", "run_williams_crossover.mjs"));
   const runner = await import(`${moduleUrl.href}?fixture=${crypto.randomUUID()}`);
-  return { ...fixture, runner };
+  return { ...fixture, control, runner };
+}
+
+async function removeDetachedAnalyzerFixture(fixture) {
+  await Promise.all([
+    fs.rm(fixture.root, { recursive: true, force: true }),
+    fs.rm(fixture.control.root, { recursive: true, force: true }),
+  ]);
 }
 
 function buildDetachedExecutePreflightOptions(runner, fixture, outputRoot, candidateWorktree = fixture.root) {
   return runner.parseWilliamsArgs([
     "--execute",
-    "--control-worktree", fixture.root,
-    "--control-head", fixture.head,
+    "--control-worktree", fixture.control.root,
+    "--control-head", fixture.control.head,
     "--candidate-worktree", candidateWorktree,
     "--candidate-head", fixture.head,
     "--raw-root", path.join(outputRoot, "raw"),
@@ -867,7 +877,7 @@ test("execute preflight accepts a canonical Windows mixed-case candidate root be
   const fixture = await loadDetachedAnalyzerFixture();
   const outputRoot = await makeRuntimeTemp("williams-execute-mixed-case-");
   t.after(() => Promise.all([
-    fs.rm(fixture.root, { recursive: true, force: true }),
+    removeDetachedAnalyzerFixture(fixture),
     fs.rm(outputRoot, { recursive: true, force: true }),
   ]));
   const mixedCaseRoot = windowsMixedCasePath(fixture.root);
@@ -888,11 +898,73 @@ test("execute preflight accepts a canonical Windows mixed-case candidate root be
   await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT");
 });
 
+test("execute rejects non-distinct trusted A/B identities before every downstream authority", async (t) => {
+  const fixture = await loadDetachedAnalyzerFixture();
+  t.after(() => removeDetachedAnalyzerFixture(fixture));
+  const cases = [
+    {
+      label: "distinct physical roots declare one exact head",
+      reason: "trusted-revision-identity.heads.distinct",
+      mutateOptions: (options) => {
+        options.controlHead = fixture.head;
+      },
+    },
+    {
+      label: "one physical root declares distinct exact heads",
+      reason: "trusted-revision-identity.worktrees.distinct",
+      mutateOptions: (options) => {
+        options.controlWorktree = fixture.root;
+      },
+    },
+  ];
+
+  for (const { label, reason, mutateOptions } of cases) {
+    const outputRoot = await makeRuntimeTemp("williams-execute-distinct-identity-");
+    t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+    const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
+    mutateOptions(options);
+    const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+    assert.equal(Object.isFrozen(trustedIdentity), true, label);
+    let authorityCalls = 0;
+    let jobPreparationCalls = 0;
+    const unexpectedAuthority = async () => {
+      authorityCalls += 1;
+      throw new Error("unexpected-downstream-authority");
+    };
+
+    await assert.rejects(
+      fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity, {
+        analyzerAuthorityAdapter: {
+          realpath: unexpectedAuthority,
+          gitTopLevel: unexpectedAuthority,
+          gitSnapshot: unexpectedAuthority,
+          readWorkspaceFile: unexpectedAuthority,
+          readCommitArtifact: unexpectedAuthority,
+        },
+        prepareWindowsJobRunnerFn: async () => {
+          jobPreparationCalls += 1;
+          throw new Error("unexpected-job-preparation");
+        },
+      }),
+      (error) => (
+        error instanceof fixture.runner.WilliamsInvalidExperimentError
+        && error.code === "trusted-revision-identity-invalid"
+        && error.message.includes(reason)
+        && fixture.runner.getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
+      ),
+      label,
+    );
+    assert.equal(authorityCalls, 0, label);
+    assert.equal(jobPreparationCalls, 0, label);
+    await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT", label);
+  }
+});
+
 test("execute preflight fences trusted harness descriptor reads before Job preparation", async (t) => {
   const fixture = await loadDetachedAnalyzerFixture();
   const outputRoot = await makeRuntimeTemp("williams-execute-post-fence-");
   t.after(() => Promise.all([
-    fs.rm(fixture.root, { recursive: true, force: true }),
+    removeDetachedAnalyzerFixture(fixture),
     fs.rm(outputRoot, { recursive: true, force: true }),
   ]));
   const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
@@ -921,17 +993,27 @@ test("execute preflight fences trusted harness descriptor reads before Job prepa
 
 test("execute package descriptors fail closed after exact-commit reads and before output or Job preparation", async (t) => {
   const fixture = await loadDetachedAnalyzerFixture();
-  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
-  const clean = { actualHead: fixture.head, detached: true, branch: null, gitStatus: "" };
+  t.after(() => removeDetachedAnalyzerFixture(fixture));
+  const candidateClean = { actualHead: fixture.head, detached: true, branch: null, gitStatus: "" };
+  const controlClean = { actualHead: fixture.control.head, detached: true, branch: null, gitStatus: "" };
   const packageLock = await fs.readFile(path.join(fixture.root, "package-lock.json"));
+  const postFenceCommitReads = [];
   const cases = [
     {
       label: "checkout drift after descriptor read",
       expectedCode: "identity-mismatch",
+      expectedMessage: "control/A after package-lock snapshot",
+      commitReads: postFenceCommitReads,
       adapter: trustedAnalyzerAuthorityAdapter({
         root: fixture.root,
         head: fixture.head,
-        snapshots: [clean, clean, clean, { ...clean, actualHead: "f".repeat(40) }],
+        snapshots: [
+          candidateClean,
+          candidateClean,
+          controlClean,
+          { ...controlClean, actualHead: "f".repeat(40) },
+        ],
+        commitReads: postFenceCommitReads,
       }),
     },
     {
@@ -940,7 +1022,7 @@ test("execute package descriptors fail closed after exact-commit reads and befor
       adapter: trustedAnalyzerAuthorityAdapter({
         root: fixture.root,
         head: fixture.head,
-        snapshots: [clean, clean, clean, clean],
+        snapshots: [candidateClean, candidateClean, controlClean, controlClean],
         commitMutations: {
           "package-lock.json": (buffer) => Buffer.concat([buffer, Buffer.from("\n")]),
         },
@@ -951,7 +1033,7 @@ test("execute package descriptors fail closed after exact-commit reads and befor
     },
   ];
 
-  for (const { label, expectedCode, adapter } of cases) {
+  for (const { label, expectedCode, expectedMessage, commitReads, adapter } of cases) {
     const outputRoot = await makeRuntimeTemp("williams-package-preflight-");
     t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
     const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
@@ -968,10 +1050,22 @@ test("execute package descriptors fail closed after exact-commit reads and befor
       (error) => (
         error instanceof fixture.runner.WilliamsInvalidExperimentError
         && error.code === expectedCode
+        && (!expectedMessage || error.message.includes(expectedMessage))
         && fixture.runner.getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
       ),
       label,
     );
+    if (commitReads) {
+      assert.deepEqual(
+        commitReads.filter((entry) => entry.relativePath === "package-lock.json"),
+        [{
+          root: fixture.control.root,
+          head: fixture.control.head,
+          relativePath: "package-lock.json",
+        }],
+        label,
+      );
+    }
     assert.equal(jobPreparationCalls, 0, label);
     await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT", label);
   }
@@ -979,7 +1073,7 @@ test("execute package descriptors fail closed after exact-commit reads and befor
 
 test("execute preflight keeps physical-root, Git-top-level, and candidate-commit drift fail closed", async (t) => {
   const fixture = await loadDetachedAnalyzerFixture();
-  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  t.after(() => removeDetachedAnalyzerFixture(fixture));
   const clean = { actualHead: fixture.head, detached: true, branch: null, gitStatus: "" };
   const cases = [
     [
@@ -2326,6 +2420,8 @@ test("raw analyzer admits canonical commands from a mixed-case Windows candidate
   const root = await materializeEvidenceRoot(createEvidence());
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   const mixedCaseRoot = windowsMixedCasePath(REPO_ROOT);
+  assert.notEqual(mixedCaseRoot, REPO_ROOT);
+  assert.equal(mixedCaseRoot.toLowerCase(), REPO_ROOT.toLowerCase());
   await synchronizeRawRevisionEvidence(root, {
     candidateWorktree: mixedCaseRoot,
     commandCandidateWorktree: REPO_ROOT,

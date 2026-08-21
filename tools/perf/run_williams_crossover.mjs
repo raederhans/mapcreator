@@ -17,6 +17,7 @@ import {
   buildWilliamsBlockCommand,
   buildWilliamsPreregistration,
   validateWilliamsTelemetryCadence,
+  validateWilliamsTrustedRevisionIdentity,
 } from "./williams_crossover_policy.mjs";
 import {
   WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
@@ -1722,6 +1723,13 @@ async function executeExperiment(options, trustedRevisionIdentity, {
   analyzerAuthorityAdapter = null,
   prepareWindowsJobRunnerFn = prepareWindowsJobRunner,
 } = {}) {
+  const trustedRevisionIdentityErrors = validateWilliamsTrustedRevisionIdentity(trustedRevisionIdentity);
+  if (trustedRevisionIdentityErrors.length > 0) {
+    throw new WilliamsInvalidExperimentError(
+      `Trusted revision identity failed execute admission: ${trustedRevisionIdentityErrors.join(", ")}`,
+      "trusted-revision-identity-invalid",
+    );
+  }
   validateExecuteOptions(options);
   const executionOptions = {
     ...options,
