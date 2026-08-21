@@ -67,6 +67,35 @@ function sha256(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
 }
 
+function sha256JsonArtifact(payload) {
+  return sha256(Buffer.from(`${JSON.stringify(payload, null, 2)}\n`, "utf8"));
+}
+
+function bindReportRawEvidenceHashes(report) {
+  const root = report.rawEvidence.root;
+  report.rawEvidence.environmentAdmission = {
+    rawPath: `${root}/perf-admission.json`,
+    rawSha256: sha256JsonArtifact(report.environmentAdmission),
+  };
+  report.rawEvidence.generationFence = {
+    rawPath: `${root}/perf-generation-fence.json`,
+    rawSha256: sha256JsonArtifact(report.generationFence),
+  };
+  let measuredRunCount = 0;
+  for (const [scenarioId, scenario] of Object.entries(report.scenarios || {})) {
+    for (const [runIndex, run] of (scenario.runs || []).entries()) {
+      const rawPayload = structuredClone(run);
+      delete rawPayload.rawPath;
+      delete rawPayload.rawSha256;
+      run.rawPath = `${root}/${scenarioId}/run-${String(runIndex + 1).padStart(2, "0")}.json`;
+      run.rawSha256 = sha256JsonArtifact(rawPayload);
+      measuredRunCount += 1;
+    }
+  }
+  report.rawEvidence.measuredRunCount = measuredRunCount;
+  return report;
+}
+
 function toRepoPath(filePath) {
   return path.relative(REPO_ROOT, filePath).replaceAll("\\", "/");
 }
@@ -937,8 +966,19 @@ test("baseline admission rejects coerced gate metrics before comparison", () => 
       config: { scenarios: ["tno_1962"] },
       scenarios: { tno_1962: { summary: { ...validSummary, totalStartupMs: invalidValue } } },
     };
+    bindReportRawEvidenceHashes(report);
     assert.throws(() => validateGateBaselineReport(report, ["tno_1962"], "fixture.json"), /invalid gate metrics/);
-    assert.throws(() => validateGateCurrentReport(report, ["tno_1962"], "fixture"), /invalid gate metrics/);
+    const currentReport = structuredClone(report);
+    currentReport.mode = "gate";
+    currentReport.rawEvidence.mode = "gate";
+    currentReport.rawEvidence.windowId = `gate-${FIXTURE_GIT_HEAD}-invalid-metric-fixture`;
+    currentReport.rawEvidence.root = ".runtime/output/perf/invalid-metric-fixture/gate";
+    currentReport.generationFence = makeStableGenerationFence({
+      baselineOracleBeforeSha256: "a".repeat(64),
+      baselineOracleAfterSha256: "a".repeat(64),
+    });
+    bindReportRawEvidenceHashes(currentReport);
+    assert.throws(() => validateGateCurrentReport(currentReport, ["tno_1962"], "fixture"), /invalid gate metrics/);
   }
 });
 
@@ -1009,6 +1049,7 @@ test("baseline admission binds five raw runs to canonical render-role evidence",
 
   const storedRoleDrift = structuredClone(canonical);
   storedRoleDrift.scenarios.tno_1962.runs[0].renderSampleRole.roleMatched = false;
+  bindReportRawEvidenceHashes(storedRoleDrift);
   assert.throws(
     () => validateGateBaselineReport(storedRoleDrift, SCENARIOS, baselinePath),
     /run-1\.renderSampleRole does not match raw snapshot evidence/,
@@ -1032,9 +1073,38 @@ test("baseline admission binds five raw runs to canonical render-role evidence",
   const renderSamples = duplicateCandidate.scenarios.tno_1962.runs[0].snapshot.renderSamples;
   renderSamples.samples.push({ ...renderSamples.samples.at(-1), sequence: renderSamples.samples.length + 1 });
   renderSamples.count = renderSamples.samples.length;
+  bindReportRawEvidenceHashes(duplicateCandidate);
   assert.throws(
     () => validateGateBaselineReport(duplicateCandidate, SCENARIOS, baselinePath),
     /canonicalRole=canonical-candidate-unique/,
+  );
+
+  const forgedAdmissionSha = structuredClone(canonical);
+  forgedAdmissionSha.rawEvidence.environmentAdmission.rawSha256 = "0".repeat(64);
+  assert.throws(
+    () => validateGateBaselineReport(forgedAdmissionSha, SCENARIOS, baselinePath),
+    /environmentAdmission SHA256 does not match embedded evidence/,
+  );
+
+  const forgedFenceSha = structuredClone(canonical);
+  forgedFenceSha.rawEvidence.generationFence.rawSha256 = "0".repeat(64);
+  assert.throws(
+    () => validateGateBaselineReport(forgedFenceSha, SCENARIOS, baselinePath),
+    /generationFence SHA256 does not match embedded evidence/,
+  );
+
+  const forgedRunSha = structuredClone(canonical);
+  forgedRunSha.scenarios.tno_1962.runs[0].rawSha256 = "0".repeat(64);
+  assert.throws(
+    () => validateGateBaselineReport(forgedRunSha, SCENARIOS, baselinePath),
+    /tno_1962\.run-1 SHA256 does not match embedded evidence/,
+  );
+
+  const driftedRunPath = structuredClone(canonical);
+  driftedRunPath.scenarios.tno_1962.runs[0].rawPath = `${canonical.rawEvidence.root}/hoi4_1939/run-01.json`;
+  assert.throws(
+    () => validateGateBaselineReport(driftedRunPath, SCENARIOS, baselinePath),
+    /tno_1962\.run-1 must bind exact rawPath/,
   );
 });
 
@@ -1286,31 +1356,36 @@ test("network retry stays bounded and ordinary boot failures remain fail-closed"
   assert.equal(ordinaryAttempts, 1);
 });
 
-function makeSchema3IdentityReport() {
+function makeSchema3IdentityReport(mode = "baseline") {
+  const rawRoot = `.runtime/output/perf/baseline_2026-07-30/${mode}`;
+  const oracleSha256 = mode === "gate" ? "a".repeat(64) : null;
   const report = {
     schemaVersion: 3,
     benchmarkMetricsSchemaVersion: "3.3",
     probeSchema: "mc_perf_snapshot",
     environmentAdmission: makeAdmittedEnvironmentAdmission(),
-    generationFence: makeStableGenerationFence(),
+    generationFence: makeStableGenerationFence({
+      baselineOracleBeforeSha256: oracleSha256,
+      baselineOracleAfterSha256: oracleSha256,
+    }),
     rawEvidence: {
       schemaVersion: 1,
       policyId: "standard-perf-raw-window-v1",
-      mode: "baseline",
-      windowId: `baseline-${FIXTURE_GIT_HEAD}-fixture`,
-      root: ".runtime/output/perf/baseline_2026-07-30/baseline",
+      mode,
+      windowId: `${mode}-${FIXTURE_GIT_HEAD}-fixture`,
+      root: rawRoot,
       environmentAdmission: {
-        rawPath: ".runtime/output/perf/baseline_2026-07-30/baseline/perf-admission.json",
+        rawPath: `${rawRoot}/perf-admission.json`,
         rawSha256: "d".repeat(64),
       },
       generationFence: {
-        rawPath: ".runtime/output/perf/baseline_2026-07-30/baseline/perf-generation-fence.json",
+        rawPath: `${rawRoot}/perf-generation-fence.json`,
         rawSha256: "e".repeat(64),
       },
       measuredRunCount: 0,
     },
     gitHead: FIXTURE_GIT_HEAD,
-    mode: "baseline",
+    mode,
     environment: {
       os: "win32 10.0.26200",
       platform: "win32",
@@ -1358,7 +1433,7 @@ function makeSchema3IdentityReport() {
       { workloadIdentity: structuredClone(workloadIdentity), runs: [] },
     ]),
   );
-  return report;
+  return bindReportRawEvidenceHashes(report);
 }
 
 test("schema-3 generation fence binds oracle hashes to report mode", () => {
@@ -1385,13 +1460,19 @@ test("baseline identity comparison rejects each schema-3 workload drift independ
     ["browserVersion", (report) => { report.environment.browserVersion = "146.0.0.0"; }, /browser version mismatch/],
     ["packageLockSha256", (report) => { report.environment.packageLockSha256 = "c".repeat(64); }, /package lock mismatch/],
     ["runs", (report) => { report.config.runs = 4; }, /runs mismatch/],
-    ["manifestSha256", (report) => { report.workloadIdentity.scenarios.tno_1962.manifestSha256 = "d".repeat(64); }, /manifestSha256 mismatch/],
-    ["featureCount", (report) => { report.workloadIdentity.scenarios.tno_1962.featureCount = 12866; }, /featureCount mismatch/],
+    ["manifestSha256", (report) => {
+      report.workloadIdentity.scenarios.tno_1962.manifestSha256 = "d".repeat(64);
+      report.scenarios.tno_1962.workloadIdentity.manifestSha256 = "d".repeat(64);
+    }, /manifestSha256 mismatch/],
+    ["featureCount", (report) => {
+      report.workloadIdentity.scenarios.tno_1962.featureCount = 12866;
+      report.scenarios.tno_1962.workloadIdentity.featureCount = 12866;
+    }, /featureCount mismatch/],
   ];
 
   for (const [label, mutate, expected] of cases) {
     const baseline = makeSchema3IdentityReport();
-    const current = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport("gate");
     mutate(current);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
@@ -1401,26 +1482,7 @@ test("baseline identity comparison rejects each schema-3 workload drift independ
 
 test("baseline identity comparison requires distinct hash-bound baseline and gate raw windows", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
-  current.mode = "gate";
-  current.rawEvidence = {
-    ...structuredClone(current.rawEvidence),
-    mode: "gate",
-    windowId: `gate-${FIXTURE_GIT_HEAD}-fixture`,
-    root: ".runtime/output/perf/baseline_2026-07-30/gate",
-    environmentAdmission: {
-      rawPath: ".runtime/output/perf/baseline_2026-07-30/gate/perf-admission.json",
-      rawSha256: "f".repeat(64),
-    },
-    generationFence: {
-      rawPath: ".runtime/output/perf/baseline_2026-07-30/gate/perf-generation-fence.json",
-      rawSha256: "1".repeat(64),
-    },
-  };
-  current.generationFence = makeStableGenerationFence({
-    baselineOracleBeforeSha256: "a".repeat(64),
-    baselineOracleAfterSha256: "a".repeat(64),
-  });
+  const current = makeSchema3IdentityReport("gate");
 
   assert.deepEqual(collectBaselineContractMismatches(current, baseline), []);
   current.rawEvidence.root = baseline.rawEvidence.root;
@@ -1432,9 +1494,20 @@ test("baseline identity comparison requires distinct hash-bound baseline and gat
   );
 });
 
+test("baseline and current validators pin their report roles", () => {
+  assert.throws(
+    () => validateGateBaselineReport(makeSchema3IdentityReport("gate"), [], "gate fixture"),
+    /baseline\.mode expected="baseline" actual="gate"/,
+  );
+  assert.throws(
+    () => validateGateCurrentReport(makeSchema3IdentityReport("baseline"), [], "baseline fixture"),
+    /current\.mode expected="gate" actual="baseline"/,
+  );
+});
+
 test("baseline identity comparison binds scenario workload identities to report identities", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
   current.scenarios.tno_1962.workloadIdentity.manifestSha256 = "f".repeat(64);
 
   assert.deepEqual(
@@ -1443,9 +1516,20 @@ test("baseline identity comparison binds scenario workload identities to report 
   );
 });
 
+test("baseline identity comparison exposes paired report and scenario identity drift", () => {
+  const baseline = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
+  current.workloadIdentity.scenarios.tno_1962.baseUrl = "http://127.0.0.1:8892";
+  current.scenarios.tno_1962.workloadIdentity.manifestSha256 = "f".repeat(64);
+
+  const mismatches = collectBaselineContractMismatches(current, baseline);
+  assert.ok(mismatches.some((entry) => /tno_1962\.report workload identity mismatch/.test(entry)));
+  assert.ok(mismatches.some((entry) => /tno_1962\.current scenario workload identity does not match report workload identity/.test(entry)));
+});
+
 test("baseline identity comparison requires the exact canonical scenario sequence", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
   const hoi4Identity = {
     manifestSha256: "d".repeat(64),
     featureCount: 12602,
@@ -1487,10 +1571,11 @@ test("baseline identity comparison requires the exact canonical scenario sequenc
 
 test("baseline identity comparison requires admitted windows on the same Windows power scheme", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
   const currentPowerSchemeGuid = "a1841308-3541-4fab-bc81-f71556f20b4a";
   current.environmentAdmission.power.activeSchemeGuid = currentPowerSchemeGuid;
   current.generationFence.power.activeSchemeGuid = currentPowerSchemeGuid;
+  bindReportRawEvidenceHashes(current);
 
   assert.match(collectBaselineContractMismatches(current, baseline)[0], /power scheme mismatch/);
 
@@ -1503,7 +1588,7 @@ test("baseline identity comparison requires admitted windows on the same Windows
 
 test("baseline identity comparison rejects degraded Windows power evidence", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
   current.environmentAdmission.power = {
     status: "collection-error",
     activeSchemeGuid: "",
@@ -1528,7 +1613,7 @@ test("baseline identity comparison rejects degraded Windows power evidence", () 
 
 test("baseline identity comparison rejects forged admitted environment evidence", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
   current.environmentAdmission.exitCode = STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected;
   current.environmentAdmission.failures = [{ code: "cpu-average-high", detail: "fixture" }];
 
@@ -1537,14 +1622,14 @@ test("baseline identity comparison rejects forged admitted environment evidence"
       .some((entry) => /current\.environmentAdmission must be admitted/.test(entry)),
   );
 
-  const thresholdDrift = makeSchema3IdentityReport();
+  const thresholdDrift = makeSchema3IdentityReport("gate");
   thresholdDrift.environmentAdmission.thresholds.cpuAverageMaxPercent += 1;
   assert.ok(
     collectBaselineContractMismatches(thresholdDrift, baseline)
       .some((entry) => /current\.environmentAdmission must be admitted/.test(entry)),
   );
 
-  const admissionHeadDrift = makeSchema3IdentityReport();
+  const admissionHeadDrift = makeSchema3IdentityReport("gate");
   admissionHeadDrift.environmentAdmission.git.head = "a".repeat(40);
   assert.ok(
     collectBaselineContractMismatches(admissionHeadDrift, baseline)
@@ -1619,7 +1704,7 @@ test("baseline artifact date follows the selected oracle filename", () => {
 
 test("baseline identity comparison rejects an incomplete canonical gate scenario set", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
   baseline.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
   current.config.scenarios = ["tno_1962"];
 
@@ -1631,7 +1716,7 @@ test("baseline identity comparison rejects an incomplete canonical gate scenario
 
 test("baseline identity comparison reports invalid scenario collection types without throwing", () => {
   const baseline = makeSchema3IdentityReport();
-  const current = makeSchema3IdentityReport();
+  const current = makeSchema3IdentityReport("gate");
   current.config.scenarios = { tno_1962: true, hoi4_1939: true };
 
   const mismatches = collectBaselineContractMismatches(current, baseline);
@@ -1662,7 +1747,7 @@ test("baseline identity comparison rejects missing schema-3 workload fields", ()
 
   for (const [label, mutate, expected] of cases) {
     const baseline = makeSchema3IdentityReport();
-    const current = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport("gate");
     mutate(baseline);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
@@ -1673,7 +1758,7 @@ test("baseline identity comparison rejects missing schema-3 workload fields", ()
 test("baseline identity comparison rejects current-side and bilateral schema-3 identity gaps", () => {
   for (const [label, mutate, expected] of missingSchema3IdentityCases) {
     const baseline = makeSchema3IdentityReport();
-    const current = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport("gate");
     mutate(current);
     let mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} current-side gap should produce one focused mismatch`);
@@ -1695,14 +1780,14 @@ test("baseline identity comparison rejects malformed exact platform and node ide
 
   for (const [label, mutate, expected] of cases) {
     let baseline = makeSchema3IdentityReport();
-    let current = makeSchema3IdentityReport();
+    let current = makeSchema3IdentityReport("gate");
     mutate(baseline);
     let mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} baseline-side drift should produce one focused mismatch`);
     assert.match(mismatches[0], expected);
 
     baseline = makeSchema3IdentityReport();
-    current = makeSchema3IdentityReport();
+    current = makeSchema3IdentityReport("gate");
     mutate(current);
     mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} current-side drift should produce one focused mismatch`);
@@ -1727,7 +1812,7 @@ test("baseline identity comparison rejects machine and runner drift", () => {
 
   for (const [label, mutate, expected] of cases) {
     const baseline = makeSchema3IdentityReport();
-    const current = makeSchema3IdentityReport();
+    const current = makeSchema3IdentityReport("gate");
     mutate(current);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
@@ -1743,18 +1828,24 @@ test("baseline identity comparison rejects missing scenario workload identity on
 
   for (const [label, mutate, expected] of cases) {
     let baseline = makeSchema3IdentityReport();
-    let current = makeSchema3IdentityReport();
+    let current = makeSchema3IdentityReport("gate");
     mutate(baseline);
     let mismatches = collectBaselineContractMismatches(current, baseline);
-    assert.equal(mismatches.length, 1, `${label} baseline-side gap should produce one focused mismatch`);
-    assert.match(mismatches[0], expected);
+    assert.ok(mismatches.some((entry) => expected.test(entry)), `${label} baseline-side gap should expose the primary mismatch`);
+    assert.ok(
+      mismatches.some((entry) => /baseline scenario workload identity does not match report workload identity/.test(entry)),
+      `${label} baseline-side gap should expose internal identity drift`,
+    );
 
     baseline = makeSchema3IdentityReport();
-    current = makeSchema3IdentityReport();
+    current = makeSchema3IdentityReport("gate");
     mutate(current);
     mismatches = collectBaselineContractMismatches(current, baseline);
-    assert.equal(mismatches.length, 1, `${label} current-side gap should produce one focused mismatch`);
-    assert.match(mismatches[0], expected);
+    assert.ok(mismatches.some((entry) => expected.test(entry)), `${label} current-side gap should expose the primary mismatch`);
+    assert.ok(
+      mismatches.some((entry) => /current scenario workload identity does not match report workload identity/.test(entry)),
+      `${label} current-side gap should expose internal identity drift`,
+    );
 
     mutate(baseline);
     mismatches = collectBaselineContractMismatches(current, baseline);

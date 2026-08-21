@@ -215,8 +215,10 @@ class PerfGateContractTest(unittest.TestCase):
             "collectBaselineContractMismatches(report, baselineReportForGate)",
             script,
         )
-        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline")', script)
-        self.assertIn('getPerfReportContractMismatches(currentReport, "current")', script)
+        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline", "baseline")', script)
+        self.assertIn('getPerfReportContractMismatches(currentReport, "current", "gate")', script)
+        self.assertIn("sha256JsonArtifact(report?.[artifactKey])", script)
+        self.assertIn("sha256JsonArtifact(rawPayload)", script)
         self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 3;", script)
         self.assertNotIn("const LEGACY_PERF_REPORT_SCHEMA_VERSION", script)
         self.assertIn('from "./render_sample_role_policy.mjs";', script)

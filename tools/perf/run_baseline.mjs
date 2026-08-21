@@ -1453,6 +1453,16 @@ async function buildStandardPerfRawEvidence(options, environmentAdmission, gener
   };
 }
 
+function sha256JsonArtifact(payload) {
+  try {
+    const serialized = JSON.stringify(payload, null, 2);
+    if (typeof serialized !== "string") return "";
+    return crypto.createHash("sha256").update(`${serialized}\n`, "utf8").digest("hex");
+  } catch (_error) {
+    return "";
+  }
+}
+
 function collectRawEvidenceContractMismatches(report, label) {
   const mismatches = [];
   const evidence = report?.rawEvidence;
@@ -1475,21 +1485,51 @@ function collectRawEvidenceContractMismatches(report, label) {
     const artifact = evidence?.[artifactKey];
     const rawPath = String(artifact?.rawPath || "").trim().replaceAll("\\", "/");
     const rawSha256 = String(artifact?.rawSha256 || "").trim();
-    if (rawPath !== `${root}/${artifactName}` || !/^[0-9a-f]{64}$/.test(rawSha256)) {
-      mismatches.push(`${label}.rawEvidence.${artifactKey} must bind ${root}/${artifactName} with SHA256`);
+    if (rawPath !== `${root}/${artifactName}`) {
+      mismatches.push(`${label}.rawEvidence.${artifactKey} must bind exact rawPath ${root}/${artifactName}`);
+    }
+    if (!/^[0-9a-f]{64}$/.test(rawSha256)) {
+      mismatches.push(`${label}.rawEvidence.${artifactKey} must bind a lowercase SHA256`);
+    } else if (rawSha256 !== sha256JsonArtifact(report?.[artifactKey])) {
+      mismatches.push(`${label}.rawEvidence.${artifactKey} SHA256 does not match embedded evidence`);
     }
   }
-  const measuredRuns = Object.values(report?.scenarios || {})
-    .flatMap((scenario) => Array.isArray(scenario?.runs) ? scenario.runs : []);
-  if (evidence?.measuredRunCount !== measuredRuns.length) {
-    mismatches.push(`${label}.rawEvidence.measuredRunCount expected=${measuredRuns.length} actual=${JSON.stringify(evidence?.measuredRunCount)}`);
-  }
-  for (const [index, run] of measuredRuns.entries()) {
-    const rawPath = String(run?.rawPath || "").trim().replaceAll("\\", "/");
-    const rawSha256 = String(run?.rawSha256 || "").trim();
-    if (!rawPath.startsWith(`${root}/`) || !/^[0-9a-f]{64}$/.test(rawSha256)) {
-      mismatches.push(`${label}.run-${index + 1} must bind rawPath under ${root} with SHA256`);
+  let measuredRunCount = 0;
+  const boundRunPaths = new Set();
+  for (const [scenarioId, scenario] of Object.entries(report?.scenarios || {})) {
+    if (!Array.isArray(scenario?.runs)) continue;
+    for (const [runIndex, run] of scenario.runs.entries()) {
+      measuredRunCount += 1;
+      const runLabel = `${scenarioId}.run-${runIndex + 1}`;
+      const expectedRawPath = `${root}/${scenarioId}/run-${String(runIndex + 1).padStart(2, "0")}.json`;
+      const rawPath = String(run?.rawPath || "").trim().replaceAll("\\", "/");
+      const rawSha256 = String(run?.rawSha256 || "").trim();
+      if (rawPath !== expectedRawPath) {
+        mismatches.push(`${label}.${runLabel} must bind exact rawPath ${expectedRawPath}`);
+      }
+      if (boundRunPaths.has(rawPath)) {
+        mismatches.push(`${label}.${runLabel} duplicates rawPath ${rawPath || "<missing>"}`);
+      } else if (rawPath) {
+        boundRunPaths.add(rawPath);
+      }
+      if (!/^[0-9a-f]{64}$/.test(rawSha256)) {
+        mismatches.push(`${label}.${runLabel} must bind a lowercase SHA256`);
+        continue;
+      }
+      const rawPayload = run && typeof run === "object" && !Array.isArray(run)
+        ? { ...run }
+        : null;
+      if (rawPayload) {
+        delete rawPayload.rawPath;
+        delete rawPayload.rawSha256;
+      }
+      if (rawSha256 !== sha256JsonArtifact(rawPayload)) {
+        mismatches.push(`${label}.${runLabel} SHA256 does not match embedded evidence`);
+      }
     }
+  }
+  if (evidence?.measuredRunCount !== measuredRunCount) {
+    mismatches.push(`${label}.rawEvidence.measuredRunCount expected=${measuredRunCount} actual=${JSON.stringify(evidence?.measuredRunCount)}`);
   }
   return mismatches;
 }
@@ -1499,7 +1539,7 @@ const PERF_REPORT_CONTRACT_FIELDS = [
   { key: "probeSchema", expected: "mc_perf_snapshot" },
 ];
 
-function getPerfReportContractMismatches(report, label = "report") {
+function getPerfReportContractMismatches(report, label = "report", expectedMode = "") {
   const mismatches = PERF_REPORT_CONTRACT_FIELDS
     .filter(({ key, expected }) => report?.[key] !== expected)
     .map(({ key, expected }) => `${label}.${key} expected=${JSON.stringify(expected)} actual=${JSON.stringify(report?.[key])}`);
@@ -1511,6 +1551,9 @@ function getPerfReportContractMismatches(report, label = "report") {
   }
   if (!readGenerationFenceIdentity(report)) {
     mismatches.push(`${label}.generationFence must be stable under ${STANDARD_PERF_GENERATION_FENCE_POLICY_ID}`);
+  }
+  if (expectedMode && report?.mode !== expectedMode) {
+    mismatches.push(`${label}.mode expected=${JSON.stringify(expectedMode)} actual=${JSON.stringify(report?.mode)}`);
   }
   mismatches.push(...collectRawEvidenceContractMismatches(report, label));
   return mismatches;
@@ -1556,7 +1599,7 @@ export function validateGateBaselineReport(baselineReport, scenarioIds, baseline
   if (!baselineReport || typeof baselineReport !== "object") {
     throw new Error(`[perf-baseline] Baseline report is invalid: ${baselinePath}`);
   }
-  const baselineContractMismatches = getPerfReportContractMismatches(baselineReport, "baseline");
+  const baselineContractMismatches = getPerfReportContractMismatches(baselineReport, "baseline", "baseline");
   if (baselineContractMismatches.length) {
     throw new Error(
       `[perf-baseline] Baseline report schema mismatch: ${baselinePath}\n${baselineContractMismatches.map((item) => `- ${item}`).join("\n")}`
@@ -1631,6 +1674,12 @@ export function validateGateBaselineReport(baselineReport, scenarioIds, baseline
 export function validateGateCurrentReport(currentReport, scenarioIds, label = "current report") {
   if (!currentReport || typeof currentReport !== "object") {
     throw new Error(`[perf-baseline] Current report is invalid: ${label}`);
+  }
+  const currentContractMismatches = getPerfReportContractMismatches(currentReport, "current", "gate");
+  if (currentContractMismatches.length) {
+    throw new Error(
+      `[perf-baseline] Current report schema mismatch: ${label}\n${currentContractMismatches.map((item) => `- ${item}`).join("\n")}`
+    );
   }
   const currentScenarios = currentReport.scenarios;
   if (!currentScenarios || typeof currentScenarios !== "object") {
@@ -1814,8 +1863,8 @@ export function collectGovernedRenderSampleRoleMismatches(
 
 export function collectBaselineContractMismatches(currentReport, baselineReport) {
   const mismatches = [
-    ...getPerfReportContractMismatches(currentReport, "current"),
-    ...getPerfReportContractMismatches(baselineReport, "baseline"),
+    ...getPerfReportContractMismatches(currentReport, "current", "gate"),
+    ...getPerfReportContractMismatches(baselineReport, "baseline", "baseline"),
   ];
   const baselinePlatform = readCanonicalNodePlatform(
     baselineReport?.environment?.platform
@@ -1823,14 +1872,12 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
   const currentPlatform = readCanonicalNodePlatform(
     currentReport?.environment?.platform
   );
-  if (currentReport?.mode === "gate" && baselineReport?.mode === "baseline") {
-    const baselineRawRoot = String(baselineReport?.rawEvidence?.root || "").trim().replaceAll("\\", "/");
-    const currentRawRoot = String(currentReport?.rawEvidence?.root || "").trim().replaceAll("\\", "/");
-    if (!baselineRawRoot || !currentRawRoot || baselineRawRoot === currentRawRoot) {
-      mismatches.push(
-        `raw evidence window collision: baseline=${baselineRawRoot || "<missing>"} current=${currentRawRoot || "<missing>"}`
-      );
-    }
+  const baselineRawRoot = String(baselineReport?.rawEvidence?.root || "").trim().replaceAll("\\", "/");
+  const currentRawRoot = String(currentReport?.rawEvidence?.root || "").trim().replaceAll("\\", "/");
+  if (!baselineRawRoot || !currentRawRoot || baselineRawRoot === currentRawRoot) {
+    mismatches.push(
+      `raw evidence window collision: baseline=${baselineRawRoot || "<missing>"} current=${currentRawRoot || "<missing>"}`
+    );
   }
   if (!baselinePlatform || !currentPlatform || baselinePlatform !== currentPlatform) {
     mismatches.push(`os platform mismatch: baseline=${baselinePlatform || "<missing>"} current=${currentPlatform || "<missing>"}`);
@@ -1959,23 +2006,30 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     const currentIdentity = currentReport?.workloadIdentity?.scenarios?.[scenarioId] || {};
     const baselineManifestSha256 = String(baselineIdentity.manifestSha256 || "").trim();
     const currentManifestSha256 = String(currentIdentity.manifestSha256 || "").trim();
-    if (!baselineManifestSha256 || !currentManifestSha256 || baselineManifestSha256 !== currentManifestSha256) {
+    const manifestMatches = baselineManifestSha256
+      && currentManifestSha256
+      && baselineManifestSha256 === currentManifestSha256;
+    if (!manifestMatches) {
       mismatches.push(`${scenarioId}.manifestSha256 mismatch: baseline=${baselineManifestSha256 || "<missing>"} current=${currentManifestSha256 || "<missing>"}`);
     }
     const baselineFeatureCount = finiteNumber(baselineIdentity.featureCount, NaN);
     const currentFeatureCount = finiteNumber(currentIdentity.featureCount, NaN);
-    if (!Number.isFinite(baselineFeatureCount) || !Number.isFinite(currentFeatureCount) || baselineFeatureCount !== currentFeatureCount) {
+    const featureCountMatches = Number.isFinite(baselineFeatureCount)
+      && Number.isFinite(currentFeatureCount)
+      && baselineFeatureCount === currentFeatureCount;
+    if (!featureCountMatches) {
       mismatches.push(`${scenarioId}.featureCount mismatch: baseline=${baselineFeatureCount} current=${currentFeatureCount}`);
     }
-    if (isDeepStrictEqual(baselineIdentity, currentIdentity)) {
-      const baselineScenarioIdentity = baselineReport?.scenarios?.[scenarioId]?.workloadIdentity;
-      const currentScenarioIdentity = currentReport?.scenarios?.[scenarioId]?.workloadIdentity;
-      if (!isDeepStrictEqual(baselineScenarioIdentity, baselineIdentity)) {
-        mismatches.push(`${scenarioId}.baseline scenario workload identity does not match report workload identity`);
-      }
-      if (!isDeepStrictEqual(currentScenarioIdentity, currentIdentity)) {
-        mismatches.push(`${scenarioId}.current scenario workload identity does not match report workload identity`);
-      }
+    if (manifestMatches && featureCountMatches && !isDeepStrictEqual(baselineIdentity, currentIdentity)) {
+      mismatches.push(`${scenarioId}.report workload identity mismatch`);
+    }
+    const baselineScenarioIdentity = baselineReport?.scenarios?.[scenarioId]?.workloadIdentity;
+    const currentScenarioIdentity = currentReport?.scenarios?.[scenarioId]?.workloadIdentity;
+    if (!isDeepStrictEqual(baselineScenarioIdentity, baselineIdentity)) {
+      mismatches.push(`${scenarioId}.baseline scenario workload identity does not match report workload identity`);
+    }
+    if (!isDeepStrictEqual(currentScenarioIdentity, currentIdentity)) {
+      mismatches.push(`${scenarioId}.current scenario workload identity does not match report workload identity`);
     }
   }
 
