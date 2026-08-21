@@ -59,7 +59,10 @@ const NODE_PLATFORM_IDS = new Set(["aix", "android", "darwin", "freebsd", "linux
 const PERF_BASELINE_DATE = "2026-07-30";
 const DEFAULT_BASELINE_JSON = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.json`);
 const DEFAULT_BASELINE_MD = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.md`);
-const DEFAULT_RAW_DIR = path.join(REPO_ROOT, ".runtime", "output", "perf", `baseline_${PERF_BASELINE_DATE}`);
+const DEFAULT_RAW_ROOT = path.join(REPO_ROOT, ".runtime", "output", "perf", `baseline_${PERF_BASELINE_DATE}`);
+const DEFAULT_BASELINE_RAW_DIR = path.join(DEFAULT_RAW_ROOT, "baseline");
+const DEFAULT_GATE_RAW_DIR = path.join(DEFAULT_RAW_ROOT, "gate");
+const STANDARD_PERF_RAW_EVIDENCE_POLICY_ID = "standard-perf-raw-window-v1";
 const ACTIVE_SERVER_PATH = path.join(REPO_ROOT, ".runtime", "dev", "active_server.json");
 const PERF_SERVER_RUNTIME_ROOT = path.join(REPO_ROOT, ".runtime", "tmp", "perf-baseline-runtime");
 const PERF_SERVER_ACTIVE_SERVER_PATH = path.join(PERF_SERVER_RUNTIME_ROOT, "dev", "active_server.json");
@@ -114,7 +117,7 @@ function parseArgs(argv) {
     regressionMode: "enforce",
     baselineJson: DEFAULT_BASELINE_JSON,
     baselineMd: DEFAULT_BASELINE_MD,
-    rawDir: DEFAULT_RAW_DIR,
+    rawDir: null,
     urlQuery: { ...PERF_URL_QUERY },
     writeMarkdown: true,
     renderSampleRunProfileId: STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
@@ -168,6 +171,9 @@ function parseArgs(argv) {
     throw new Error(
       `[perf-baseline] Measured repo root mismatch expected=${REPO_ROOT} actual=${path.resolve(options.measuredRepoRoot)}.`
     );
+  }
+  if (!options.rawDir) {
+    options.rawDir = options.mode === "gate" ? DEFAULT_GATE_RAW_DIR : DEFAULT_BASELINE_RAW_DIR;
   }
   return options;
 }
@@ -228,7 +234,7 @@ export function validateBaselineOutputSelection(options = {}) {
   const usesCanonicalJsonPath = normalizeMetadataPath(options.baselineJson) === normalizeMetadataPath(DEFAULT_BASELINE_JSON);
   const usesCanonicalMarkdownPath = options.writeMarkdown !== false
     && normalizeMetadataPath(options.baselineMd) === normalizeMetadataPath(DEFAULT_BASELINE_MD);
-  const usesCanonicalRawPath = normalizeMetadataPath(options.rawDir) === normalizeMetadataPath(DEFAULT_RAW_DIR);
+  const usesCanonicalRawPath = normalizeMetadataPath(options.rawDir) === normalizeMetadataPath(DEFAULT_BASELINE_RAW_DIR);
   if (usesCanonicalJsonPath || usesCanonicalMarkdownPath || usesCanonicalRawPath) {
     throw new Error(
       "[perf-baseline] custom scenarios require custom output paths for JSON, Markdown, and raw measurements."
@@ -1143,6 +1149,7 @@ async function runScenarioSeries(browser, serverLeaseRef, scenarioId, options) {
     runs.push({
       ...run,
       rawPath: path.relative(REPO_ROOT, filePath).replaceAll("\\", "/"),
+      rawSha256: await sha256File(filePath),
     });
   }
   const lastBaseUrl = serverLeaseRef.current?.baseUrl || "";
@@ -1415,6 +1422,78 @@ async function writeBaselineArtifacts(options, report) {
   }
 }
 
+function toRepoRelativeArtifactPath(filePath) {
+  return path.relative(REPO_ROOT, filePath).replaceAll("\\", "/");
+}
+
+async function buildStandardPerfRawEvidence(options, environmentAdmission, generationFence, measurement) {
+  const admissionPath = path.join(options.rawDir, "perf-admission.json");
+  const generationFencePath = path.join(options.rawDir, "perf-generation-fence.json");
+  const measuredRunCount = Object.values(measurement?.scenarios || {})
+    .reduce((count, scenario) => count + (Array.isArray(scenario?.runs) ? scenario.runs.length : 0), 0);
+  const startedAtToken = String(environmentAdmission?.startedAt || "unknown")
+    .replace(/[^0-9A-Za-z]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "unknown";
+  return {
+    schemaVersion: 1,
+    policyId: STANDARD_PERF_RAW_EVIDENCE_POLICY_ID,
+    mode: options.mode,
+    windowId: `${options.mode}-${String(environmentAdmission?.git?.head || "unknown")}-${startedAtToken}`,
+    root: toRepoRelativeArtifactPath(options.rawDir),
+    environmentAdmission: {
+      rawPath: toRepoRelativeArtifactPath(admissionPath),
+      rawSha256: await sha256File(admissionPath),
+    },
+    generationFence: {
+      rawPath: toRepoRelativeArtifactPath(generationFencePath),
+      rawSha256: await sha256File(generationFencePath),
+    },
+    measuredRunCount,
+  };
+}
+
+function collectRawEvidenceContractMismatches(report, label) {
+  const mismatches = [];
+  const evidence = report?.rawEvidence;
+  const root = String(evidence?.root || "").trim().replaceAll("\\", "/").replace(/\/$/, "");
+  const reportMode = String(report?.mode || "").trim();
+  if (
+    evidence?.schemaVersion !== 1
+    || evidence?.policyId !== STANDARD_PERF_RAW_EVIDENCE_POLICY_ID
+    || evidence?.mode !== reportMode
+    || !root
+    || !String(evidence?.windowId || "").trim()
+  ) {
+    mismatches.push(`${label}.rawEvidence must bind mode=${reportMode || "<missing>"} under ${STANDARD_PERF_RAW_EVIDENCE_POLICY_ID}`);
+    return mismatches;
+  }
+  for (const [artifactKey, artifactName] of [
+    ["environmentAdmission", "perf-admission.json"],
+    ["generationFence", "perf-generation-fence.json"],
+  ]) {
+    const artifact = evidence?.[artifactKey];
+    const rawPath = String(artifact?.rawPath || "").trim().replaceAll("\\", "/");
+    const rawSha256 = String(artifact?.rawSha256 || "").trim();
+    if (rawPath !== `${root}/${artifactName}` || !/^[0-9a-f]{64}$/.test(rawSha256)) {
+      mismatches.push(`${label}.rawEvidence.${artifactKey} must bind ${root}/${artifactName} with SHA256`);
+    }
+  }
+  const measuredRuns = Object.values(report?.scenarios || {})
+    .flatMap((scenario) => Array.isArray(scenario?.runs) ? scenario.runs : []);
+  if (evidence?.measuredRunCount !== measuredRuns.length) {
+    mismatches.push(`${label}.rawEvidence.measuredRunCount expected=${measuredRuns.length} actual=${JSON.stringify(evidence?.measuredRunCount)}`);
+  }
+  for (const [index, run] of measuredRuns.entries()) {
+    const rawPath = String(run?.rawPath || "").trim().replaceAll("\\", "/");
+    const rawSha256 = String(run?.rawSha256 || "").trim();
+    if (!rawPath.startsWith(`${root}/`) || !/^[0-9a-f]{64}$/.test(rawSha256)) {
+      mismatches.push(`${label}.run-${index + 1} must bind rawPath under ${root} with SHA256`);
+    }
+  }
+  return mismatches;
+}
+
 const PERF_REPORT_CONTRACT_FIELDS = [
   { key: "benchmarkMetricsSchemaVersion", expected: "3.3" },
   { key: "probeSchema", expected: "mc_perf_snapshot" },
@@ -1433,6 +1512,7 @@ function getPerfReportContractMismatches(report, label = "report") {
   if (!readGenerationFenceIdentity(report)) {
     mismatches.push(`${label}.generationFence must be stable under ${STANDARD_PERF_GENERATION_FENCE_POLICY_ID}`);
   }
+  mismatches.push(...collectRawEvidenceContractMismatches(report, label));
   return mismatches;
 }
 
@@ -1743,6 +1823,15 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
   const currentPlatform = readCanonicalNodePlatform(
     currentReport?.environment?.platform
   );
+  if (currentReport?.mode === "gate" && baselineReport?.mode === "baseline") {
+    const baselineRawRoot = String(baselineReport?.rawEvidence?.root || "").trim().replaceAll("\\", "/");
+    const currentRawRoot = String(currentReport?.rawEvidence?.root || "").trim().replaceAll("\\", "/");
+    if (!baselineRawRoot || !currentRawRoot || baselineRawRoot === currentRawRoot) {
+      mismatches.push(
+        `raw evidence window collision: baseline=${baselineRawRoot || "<missing>"} current=${currentRawRoot || "<missing>"}`
+      );
+    }
+  }
   if (!baselinePlatform || !currentPlatform || baselinePlatform !== currentPlatform) {
     mismatches.push(`os platform mismatch: baseline=${baselinePlatform || "<missing>"} current=${currentPlatform || "<missing>"}`);
   }
@@ -1878,6 +1967,16 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     if (!Number.isFinite(baselineFeatureCount) || !Number.isFinite(currentFeatureCount) || baselineFeatureCount !== currentFeatureCount) {
       mismatches.push(`${scenarioId}.featureCount mismatch: baseline=${baselineFeatureCount} current=${currentFeatureCount}`);
     }
+    if (isDeepStrictEqual(baselineIdentity, currentIdentity)) {
+      const baselineScenarioIdentity = baselineReport?.scenarios?.[scenarioId]?.workloadIdentity;
+      const currentScenarioIdentity = currentReport?.scenarios?.[scenarioId]?.workloadIdentity;
+      if (!isDeepStrictEqual(baselineScenarioIdentity, baselineIdentity)) {
+        mismatches.push(`${scenarioId}.baseline scenario workload identity does not match report workload identity`);
+      }
+      if (!isDeepStrictEqual(currentScenarioIdentity, currentIdentity)) {
+        mismatches.push(`${scenarioId}.current scenario workload identity does not match report workload identity`);
+      }
+    }
   }
 
   const baselineAdmission = readEnvironmentAdmissionIdentity(baselineReport);
@@ -1956,6 +2055,12 @@ async function main() {
     { baselineOracleBeforeSha256 },
   );
   const packageLockSha256 = await sha256File(path.join(REPO_ROOT, "package-lock.json"));
+  const rawEvidence = await buildStandardPerfRawEvidence(
+    options,
+    environmentAdmission,
+    generationFence,
+    measurement,
+  );
   const report = {
     schemaVersion: resolveRenderSampleRunProfile(
       options.renderSampleRunProfileId,
@@ -1982,6 +2087,7 @@ async function main() {
     }),
     environmentAdmission,
     generationFence,
+    rawEvidence,
     workloadIdentity: buildReportWorkloadIdentity(options, measurement),
     scenarios: measurement.scenarios,
   };
