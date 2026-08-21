@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   WILLIAMS_ADJACENT_PAIRS,
@@ -85,12 +85,15 @@ function normalizedGitBlob(buffer) {
 }
 
 function trustedAnalyzerAuthorityAdapter({
+  root = REPO_ROOT,
+  head = CANDIDATE_HEAD,
   snapshots = null,
-  gitTopLevel = REPO_ROOT,
+  gitTopLevel = root,
   commitMutations = {},
+  realpath = (value) => path.resolve(value),
 } = {}) {
   const cleanSnapshot = {
-    actualHead: CANDIDATE_HEAD,
+    actualHead: head,
     detached: true,
     branch: null,
     gitStatus: "",
@@ -98,7 +101,7 @@ function trustedAnalyzerAuthorityAdapter({
   const snapshotSequence = snapshots || [cleanSnapshot, cleanSnapshot];
   let snapshotIndex = 0;
   return {
-    realpath: async (value) => path.resolve(value),
+    realpath,
     gitTopLevel: async () => gitTopLevel,
     gitSnapshot: async () => structuredClone(
       snapshotSequence[Math.min(snapshotIndex++, snapshotSequence.length - 1)],
@@ -781,6 +784,153 @@ async function createDetachedAnalyzerFixtureRepository() {
   runGitFixture(root, ["checkout", "--quiet", "--detach", "HEAD"]);
   return { root, head: runGitFixture(root, ["rev-parse", "HEAD"]) };
 }
+
+async function loadDetachedAnalyzerFixture() {
+  const fixture = await createDetachedAnalyzerFixtureRepository();
+  const moduleUrl = pathToFileURL(path.join(fixture.root, "tools", "perf", "run_williams_crossover.mjs"));
+  const runner = await import(`${moduleUrl.href}?fixture=${crypto.randomUUID()}`);
+  return { ...fixture, runner };
+}
+
+function buildDetachedExecutePreflightOptions(runner, fixture, outputRoot, candidateWorktree = fixture.root) {
+  return runner.parseWilliamsArgs([
+    "--execute",
+    "--control-worktree", fixture.root,
+    "--control-head", fixture.head,
+    "--candidate-worktree", candidateWorktree,
+    "--candidate-head", fixture.head,
+    "--raw-root", path.join(outputRoot, "raw"),
+    "--json-out", path.join(outputRoot, "report.json"),
+    "--md-out", path.join(outputRoot, "report.md"),
+  ]);
+}
+
+function windowsMixedCasePath(value) {
+  return [...path.resolve(value)].map((character, index) => {
+    if (!/[a-z]/i.test(character)) return character;
+    return index % 2 === 0 ? character.toUpperCase() : character.toLowerCase();
+  }).join("");
+}
+
+async function rejectUnexpectedJobPreparation() {
+  throw new Error("unexpected-job-preparation");
+}
+
+test("execute preflight accepts a canonical Windows mixed-case candidate root before a later typed failure", {
+  skip: process.platform !== "win32",
+}, async (t) => {
+  const fixture = await loadDetachedAnalyzerFixture();
+  const outputRoot = await makeRuntimeTemp("williams-execute-mixed-case-");
+  t.after(() => Promise.all([
+    fs.rm(fixture.root, { recursive: true, force: true }),
+    fs.rm(outputRoot, { recursive: true, force: true }),
+  ]));
+  const mixedCaseRoot = windowsMixedCasePath(fixture.root);
+  assert.notEqual(mixedCaseRoot, fixture.root);
+  assert.equal(mixedCaseRoot.toLowerCase(), fixture.root.toLowerCase());
+  const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot, mixedCaseRoot);
+  await fs.writeFile(options.jsonOut, "{}\n", "utf8");
+  const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+
+  await assert.rejects(
+    fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity),
+    (error) => (
+      error instanceof fixture.runner.WilliamsInvalidExperimentError
+      && error.code === "report-output-exists"
+      && fixture.runner.getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
+    ),
+  );
+  await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT");
+});
+
+test("execute preflight fences trusted harness descriptor reads before Job preparation", async (t) => {
+  const fixture = await loadDetachedAnalyzerFixture();
+  const outputRoot = await makeRuntimeTemp("williams-execute-post-fence-");
+  t.after(() => Promise.all([
+    fs.rm(fixture.root, { recursive: true, force: true }),
+    fs.rm(outputRoot, { recursive: true, force: true }),
+  ]));
+  const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
+  const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+  const clean = { actualHead: fixture.head, detached: true, branch: null, gitStatus: "" };
+  const analyzerAuthorityAdapter = trustedAnalyzerAuthorityAdapter({
+    root: fixture.root,
+    head: fixture.head,
+    snapshots: [clean, { ...clean, actualHead: "f".repeat(40) }],
+  });
+
+  await assert.rejects(
+    fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity, {
+      analyzerAuthorityAdapter,
+      prepareWindowsJobRunnerFn: rejectUnexpectedJobPreparation,
+    }),
+    (error) => (
+      error instanceof fixture.runner.WilliamsInvalidExperimentError
+      && error.code === "identity-mismatch"
+      && error.message.includes("trusted analyzer after tool snapshot")
+      && fixture.runner.getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
+    ),
+  );
+  await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT");
+});
+
+test("execute preflight keeps physical-root, Git-top-level, and candidate-commit drift fail closed", async (t) => {
+  const fixture = await loadDetachedAnalyzerFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const clean = { actualHead: fixture.head, detached: true, branch: null, gitStatus: "" };
+  const cases = [
+    [
+      "different physical candidate root",
+      () => {
+        let realpathCall = 0;
+        return trustedAnalyzerAuthorityAdapter({
+          root: fixture.root,
+          head: fixture.head,
+          realpath: async () => (++realpathCall === 3 ? path.dirname(fixture.root) : fixture.root),
+        });
+      },
+      "trusted-analyzer-realpath-mismatch",
+    ],
+    [
+      "Git top-level drift",
+      () => trustedAnalyzerAuthorityAdapter({
+        root: fixture.root,
+        head: fixture.head,
+        gitTopLevel: path.dirname(fixture.root),
+      }),
+      "trusted-analyzer-realpath-mismatch",
+    ],
+    [
+      "candidate commit drift",
+      () => trustedAnalyzerAuthorityAdapter({
+        root: fixture.root,
+        head: fixture.head,
+        snapshots: [{ ...clean, actualHead: "e".repeat(40) }],
+      }),
+      "identity-mismatch",
+    ],
+  ];
+
+  for (const [label, buildAdapter, expectedCode] of cases) {
+    const outputRoot = await makeRuntimeTemp("williams-execute-root-drift-");
+    t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+    const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
+    const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+    await assert.rejects(
+      fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity, {
+        analyzerAuthorityAdapter: buildAdapter(),
+        prepareWindowsJobRunnerFn: rejectUnexpectedJobPreparation,
+      }),
+      (error) => (
+        error instanceof fixture.runner.WilliamsInvalidExperimentError
+        && error.code === expectedCode
+        && fixture.runner.getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
+      ),
+      label,
+    );
+    await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT", label);
+  }
+});
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
   assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v7");

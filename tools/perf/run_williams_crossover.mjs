@@ -1604,55 +1604,11 @@ export async function validateWilliamsOutputPolicy(options, { reserveRawRoot = f
   }
 }
 
-async function collectHarnessArtifacts(options) {
-  const candidate = options.candidateWorktree;
-  const jobRunnerSourceDescriptors = await Promise.all(
-    JOB_RUNNER_SOURCE_PATHS.map((relativePath) => trackedArtifactDescriptor(candidate, relativePath)),
-  );
-  const jobRunnerSources = buildOrderedContainmentSourceSet(jobRunnerSourceDescriptors);
-  const artifacts = {
-    root: path.resolve(candidate),
-    runner: await trackedArtifactDescriptor(candidate, BASELINE_RUNNER_PATH),
-    rolePolicy: await trackedArtifactDescriptor(candidate, ROLE_POLICY_PATH),
-    analyzer: await trackedArtifactDescriptor(candidate, ANALYZER_PATH),
-    policy: await trackedArtifactDescriptor(candidate, POLICY_PATH),
-    windowsRuntime: await trackedArtifactDescriptor(candidate, WINDOWS_RUNTIME_PATH),
-    containmentIdentityHelper: await trackedArtifactDescriptor(candidate, CONTAINMENT_IDENTITY_HELPER_PATH),
-    jobRunnerSource: jobRunnerSourceDescriptors[0],
-    jobRunnerSources,
-    powerSchemeHelper: await trackedArtifactDescriptor(candidate, POWER_SCHEME_HELPER_PATH),
-  };
-  const current = await buildCurrentHarnessArtifacts();
-  if (path.resolve(candidate) !== path.resolve(current.root)) {
-    throw new WilliamsInvalidExperimentError(
-      "The executing Williams harness root must equal the exact candidate worktree.",
-      "tool-root-mismatch",
-    );
-  }
-  for (const [field, relativePath] of [
-    ["runner", BASELINE_RUNNER_PATH],
-    ["rolePolicy", ROLE_POLICY_PATH],
-    ["analyzer", ANALYZER_PATH],
-    ["policy", POLICY_PATH],
-    ["windowsRuntime", WINDOWS_RUNTIME_PATH],
-    ["containmentIdentityHelper", CONTAINMENT_IDENTITY_HELPER_PATH],
-    ["jobRunnerSource", JOB_RUNNER_SOURCE_PATH],
-    ["powerSchemeHelper", POWER_SCHEME_HELPER_PATH],
-  ]) {
-    if (!artifactDescriptorsEqual(current[field], artifacts[field])) {
-      throw new WilliamsInvalidExperimentError(
-        `Executing ${relativePath} differs from candidate HEAD; commit tooling and recreate the exact detached candidate worktree.`,
-        "tool-identity-mismatch",
-      );
-    }
-  }
-  if (!orderedContainmentSourceSetsEqual(current.jobRunnerSources, artifacts.jobRunnerSources)) {
-    throw new WilliamsInvalidExperimentError(
-      `Executing ${JOB_RUNNER_SOURCE_PATHS.join(", ")} differs from candidate HEAD; commit tooling and recreate the exact detached candidate worktree.`,
-      "tool-identity-mismatch",
-    );
-  }
-  return artifacts;
+async function collectHarnessArtifacts(options, { analyzerAuthorityAdapter = null } = {}) {
+  return buildCurrentHarnessArtifacts({
+    trustedRevisionIdentity: options.trustedRevisionIdentity,
+    analyzerAuthorityAdapter,
+  });
 }
 
 export function requireWilliamsJobRunnerReady(preparation, { expectedSourceSet = null } = {}) {
@@ -1671,7 +1627,10 @@ export function requireWilliamsJobRunnerReady(preparation, { expectedSourceSet =
   return preparation;
 }
 
-async function executeExperiment(options, trustedRevisionIdentity) {
+async function executeExperiment(options, trustedRevisionIdentity, {
+  analyzerAuthorityAdapter = null,
+  prepareWindowsJobRunnerFn = prepareWindowsJobRunner,
+} = {}) {
   validateExecuteOptions(options);
   const executionOptions = {
     ...options,
@@ -1683,9 +1642,9 @@ async function executeExperiment(options, trustedRevisionIdentity) {
   };
   validateMeasurementWorktree(executionOptions.controlWorktree, executionOptions.controlHead, "control/A");
   validateMeasurementWorktree(executionOptions.candidateWorktree, executionOptions.candidateHead, "candidate/B");
-  const harnessArtifacts = await collectHarnessArtifacts(executionOptions);
+  const harnessArtifacts = await collectHarnessArtifacts(executionOptions, { analyzerAuthorityAdapter });
   await validateWilliamsOutputPolicy(executionOptions, { reserveRawRoot: true, allowReportOverwrite: false });
-  const preparationResult = await prepareWindowsJobRunner({
+  const preparationResult = await prepareWindowsJobRunnerFn({
     evidenceDirectory: path.join(executionOptions.rawRoot, "harness", "job-runner"),
     evidenceBinaryPath: path.join(executionOptions.rawRoot, WINDOWS_JOB_RUNNER_EVIDENCE_PATH),
     evidenceBinaryDescriptorPath: WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
@@ -1755,6 +1714,10 @@ async function executeExperiment(options, trustedRevisionIdentity) {
   } finally {
     await preparation.cleanup();
   }
+}
+
+export async function executeWilliamsExperimentWithTestAdapters(options, trustedRevisionIdentity, adapters = {}) {
+  return executeExperiment(options, trustedRevisionIdentity, adapters);
 }
 
 export async function runWilliamsCli(options) {
