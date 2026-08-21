@@ -12,7 +12,8 @@ PACKAGE_LOCK = REPO_ROOT / "package-lock.json"
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "perf-pr-gate.yml"
 BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.md"
 BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.json"
-BASELINE_SOURCE_GIT_HEAD = "6fae0fe94f5db98d18810f1c0bf97033427d1d23"
+BASELINE_RATIFICATION = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30-ratification.json"
+BASELINE_SOURCE_GIT_HEAD = "9879a828841d892823f576680d55a28697d77bcd"
 PERF_SCRIPT = REPO_ROOT / "tools" / "perf" / "run_baseline.mjs"
 STANDARD_PERF_ADMISSION = REPO_ROOT / "tools" / "perf" / "standard_perf_admission.mjs"
 RENDER_SAMPLE_ROLE_POLICY = REPO_ROOT / "tools" / "perf" / "render_sample_role_policy.mjs"
@@ -444,6 +445,14 @@ class PerfGateContractTest(unittest.TestCase):
             "standard-perf-generation-fence-v1",
         )
         self.assertEqual(baseline_payload.get("generationFence", {}).get("status"), "stable")
+        self.assertEqual(
+            baseline_payload.get("environmentAdmission", {}).get("git", {}).get("head"),
+            BASELINE_SOURCE_GIT_HEAD,
+        )
+        self.assertEqual(
+            baseline_payload.get("generationFence", {}).get("git", {}).get("head"),
+            BASELINE_SOURCE_GIT_HEAD,
+        )
         self.assertEqual(set(baseline_payload.get("scenarios", {})), {"tno_1962", "hoi4_1939"})
         self.assertEqual(
             set(baseline_payload.get("workloadIdentity", {}).get("scenarios", {})),
@@ -462,6 +471,34 @@ class PerfGateContractTest(unittest.TestCase):
         role_policy = baseline_payload.get("renderSampleRolePolicy", {})
         self.assertEqual(role_policy.get("policyId"), "render-sample-role-v2")
         self.assertEqual(role_policy.get("canonicalRoleId"), "last-post-promotion-idle-scenario-frame-v1")
+        raw_evidence = baseline_payload.get("rawEvidence", {})
+        self.assertEqual(raw_evidence.get("schemaVersion"), 1)
+        self.assertEqual(raw_evidence.get("policyId"), "standard-perf-raw-window-v1")
+        self.assertEqual(raw_evidence.get("mode"), "baseline")
+        self.assertEqual(
+            raw_evidence.get("root"),
+            ".runtime/admission/sc-phases-0-3-standard-ratification/baseline-9879a828-window-02",
+        )
+        self.assertEqual(raw_evidence.get("measuredRunCount"), 10)
+
+        def serialized_raw_sha256(payload):
+            serialized = json.dumps(
+                payload,
+                ensure_ascii=False,
+                indent=2,
+                separators=(",", ": "),
+            ) + "\n"
+            return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+        self.assertEqual(
+            serialized_raw_sha256(baseline_payload.get("environmentAdmission", {})),
+            raw_evidence.get("environmentAdmission", {}).get("rawSha256"),
+        )
+        self.assertEqual(
+            serialized_raw_sha256(baseline_payload.get("generationFence", {})),
+            raw_evidence.get("generationFence", {}).get("rawSha256"),
+        )
+        raw_paths = set()
         for scenario_id in ("tno_1962", "hoi4_1939"):
             scenario = baseline_payload.get("scenarios", {}).get(scenario_id, {})
             summary = scenario.get("summary", {})
@@ -470,6 +507,7 @@ class PerfGateContractTest(unittest.TestCase):
             self.assertIsInstance(summary.get("workerDecodeMs"), (int, float))
             self.assertIsInstance(summary.get("workerMetaBuildMs"), (int, float))
             identity = baseline_payload.get("workloadIdentity", {}).get("scenarios", {}).get(scenario_id, {})
+            self.assertEqual(scenario.get("workloadIdentity"), identity)
             manifest_path = REPO_ROOT / "data" / "scenarios" / scenario_id / "manifest.json"
             self.assertEqual(identity.get("manifestPath"), manifest_path.relative_to(REPO_ROOT).as_posix())
             self.assertEqual(
@@ -481,6 +519,84 @@ class PerfGateContractTest(unittest.TestCase):
             role_summary = scenario.get("renderSampleRoleSummary", {})
             self.assertEqual(role_summary.get("matchedRunCount"), 5)
             self.assertEqual(role_summary.get("mismatchCount"), 0)
+            runs = scenario.get("runs", [])
+            self.assertEqual(len(runs), 5)
+            for run in runs:
+                raw_path = run.get("rawPath")
+                self.assertIsInstance(raw_path, str)
+                self.assertTrue(raw_path.startswith(f"{raw_evidence.get('root')}/{scenario_id}/run-"))
+                self.assertNotIn(raw_path, raw_paths)
+                raw_paths.add(raw_path)
+                embedded_raw = dict(run)
+                embedded_raw.pop("rawPath")
+                expected_raw_sha256 = embedded_raw.pop("rawSha256")
+                self.assertRegex(str(expected_raw_sha256), r"^[0-9a-f]{64}$")
+                self.assertEqual(serialized_raw_sha256(embedded_raw), expected_raw_sha256)
+        self.assertEqual(len(raw_paths), 10)
+
+    def test_baseline_ratification_receipt_binds_drift_decision_and_evidence(self):
+        baseline_payload = json.loads(BASELINE_JSON.read_text(encoding="utf-8"))
+        receipt = json.loads(BASELINE_RATIFICATION.read_text(encoding="utf-8"))
+        ratified = receipt.get("ratifiedBaseline", {})
+
+        self.assertEqual(receipt.get("schemaVersion"), 1)
+        self.assertEqual(receipt.get("policyId"), "standard-perf-baseline-ratification-v1")
+        self.assertEqual(receipt.get("decision"), "accepted-common-mode-drift")
+        self.assertTrue(receipt.get("commonModeDriftAccepted"))
+        self.assertEqual(ratified.get("sourceGitHead"), BASELINE_SOURCE_GIT_HEAD)
+        self.assertEqual(ratified.get("generatedAt"), baseline_payload.get("generatedAt"))
+        self.assertEqual(
+            ratified.get("jsonSha256"),
+            hashlib.sha256(BASELINE_JSON.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            ratified.get("markdownSha256"),
+            hashlib.sha256(BASELINE_MD.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(ratified.get("rawEvidence"), baseline_payload.get("rawEvidence"))
+
+        previous = receipt.get("previousCanonical", {})
+        self.assertEqual(previous.get("sourceGitHead"), "204d4d462ea0eeaacee1070efbd6e33edb436f9c")
+        self.assertEqual(previous.get("jsonSha256"), "42a61a402ce2e52022e7c004dfba8922c1c9f841ae8f388a21166c333533b2b1")
+        self.assertEqual(previous.get("jsonBytes"), 823435)
+
+        comparison = receipt.get("sameMachineControlComparison", {})
+        self.assertEqual(comparison.get("inventoryCount"), 26)
+        self.assertEqual(
+            comparison.get("inventorySha256"),
+            "f60c7767b157e955aae462bda81cd028059fee7ace1734f9079ad8ecec1f90c3",
+        )
+        self.assertEqual(
+            comparison.get("control", {}).get("sourceGitHead"),
+            "9869698da5331e9afcc961f42b4666469abe6c46",
+        )
+        self.assertEqual(
+            comparison.get("candidate", {}).get("sourceGitHead"),
+            "6fae0fe94f5db98d18810f1c0bf97033427d1d23",
+        )
+        self.assertEqual(comparison.get("candidate", {}).get("regressionMode"), "enforce")
+        self.assertEqual(comparison.get("candidate", {}).get("contractMismatches"), [])
+        self.assertEqual(comparison.get("candidate", {}).get("renderSampleRoleMismatches"), [])
+        self.assertEqual(comparison.get("candidate", {}).get("failures"), [])
+        comparison_ratios = []
+        for scenario_metrics in comparison.get("scenarios", {}).values():
+            for metric in scenario_metrics.values():
+                self.assertAlmostEqual(metric["ratio"], metric["candidate"] / metric["control"], places=12)
+                comparison_ratios.append(metric["ratio"])
+        self.assertEqual(len(comparison_ratios), 10)
+        self.assertLessEqual(max(comparison_ratios), 0.9804222648730948)
+
+        drift = receipt.get("historicalCanonicalDrift", {})
+        self.assertEqual(drift.get("decision"), "accepted-common-mode-drift")
+        drift_ratios = []
+        for scenario_id, scenario_metrics in drift.get("scenarios", {}).items():
+            baseline_summary = baseline_payload.get("scenarios", {}).get(scenario_id, {}).get("summary", {})
+            for metric_name, metric in scenario_metrics.items():
+                self.assertEqual(metric["ratified"], baseline_summary.get(metric_name))
+                self.assertAlmostEqual(metric["ratio"], metric["ratified"] / metric["previous"], places=12)
+                drift_ratios.append(metric["ratio"])
+        self.assertEqual(len(drift_ratios), 10)
+        self.assertTrue(all(ratio > 1 for ratio in drift_ratios))
 
     def test_editor_benchmark_locks_identity_and_fill_black_pixel_contract(self):
         script = EDITOR_BENCHMARK_SCRIPT.read_text(encoding="utf-8")

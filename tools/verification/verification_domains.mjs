@@ -300,6 +300,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "docs/perf/baseline_2026-07-14.md",
       "docs/perf/baseline_2026-07-30.json",
       "docs/perf/baseline_2026-07-30.md",
+      "docs/perf/baseline_2026-07-30-ratification.json",
       "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/context.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/task.md",

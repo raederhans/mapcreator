@@ -974,27 +974,30 @@ test("baseline admission requires the exact gate scenario sequence", () => {
   );
 });
 
-test("baseline admission binds five raw runs to canonical render-role evidence", async (t) => {
+test("baseline admission binds five raw runs to canonical render-role evidence", async () => {
   const baselinePath = path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.json");
   const canonical = JSON.parse(await fs.readFile(baselinePath, "utf8"));
-  if (!canonical.rawEvidence) {
-    t.skip("canonical baseline regeneration is the next ratification step");
-    return;
-  }
   assert.doesNotThrow(() => validateGateBaselineReport(canonical, SCENARIOS, baselinePath));
+
+  const missingRawEvidence = structuredClone(canonical);
+  delete missingRawEvidence.rawEvidence;
+  assert.throws(
+    () => validateGateBaselineReport(missingRawEvidence, SCENARIOS, baselinePath),
+    /rawEvidence must bind mode=baseline under standard-perf-raw-window-v1/,
+  );
 
   const missingRuns = structuredClone(canonical);
   delete missingRuns.scenarios.tno_1962.runs;
   assert.throws(
     () => validateGateBaselineReport(missingRuns, SCENARIOS, baselinePath),
-    /tno_1962\.runs must be an array/,
+    /rawEvidence\.measuredRunCount expected=5 actual=10/,
   );
 
   const shortRuns = structuredClone(canonical);
   shortRuns.scenarios.tno_1962.runs.pop();
   assert.throws(
     () => validateGateBaselineReport(shortRuns, SCENARIOS, baselinePath),
-    /tno_1962\.runs\.length expected=5 actual=4/,
+    /rawEvidence\.measuredRunCount expected=9 actual=10/,
   );
 
   const configuredRunDrift = structuredClone(canonical);

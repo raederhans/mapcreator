@@ -158,7 +158,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:perf-gate-contract",
     commandRef: "verify:perf-gate-contract",
-    sourceRef: ".github/workflows/perf-pr-gate.yml,ops/browser-mcp/editor-performance-benchmark.py,tools/perf/run_baseline.mjs",
+    sourceRef: ".github/workflows/perf-pr-gate.yml,docs/perf/baseline_2026-07-30-ratification.json,ops/browser-mcp/editor-performance-benchmark.py,tools/perf/run_baseline.mjs",
     domain: "perf",
     ownerHint: "perf-runtime",
     layer: "contract",

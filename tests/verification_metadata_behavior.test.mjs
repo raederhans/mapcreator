@@ -1483,6 +1483,7 @@ test("dated schema-2 baseline artifacts route to the perf contract", () => {
     "docs/perf/baseline_2026-07-14.md",
     "docs/perf/baseline_2026-07-30.json",
     "docs/perf/baseline_2026-07-30.md",
+    "docs/perf/baseline_2026-07-30-ratification.json",
   ];
   const baselineReport = buildRecommendation(baselineSourceRefs);
   assert.deepEqual(baselineReport.unmatchedChangedFiles, []);
@@ -1493,6 +1494,16 @@ test("dated schema-2 baseline artifacts route to the perf contract", () => {
       `${sourceRef} must select ${entry.commandRef}`,
     );
   }
+});
+
+test("baseline ratification receipt routes to both governed report contracts", () => {
+  const sourceRef = "docs/perf/baseline_2026-07-30-ratification.json";
+  const report = buildRecommendation([sourceRef]);
+  const commands = commandsForChangedFile(report, sourceRef).map((command) => command.commandRef);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(commands.includes("test:node:render-sample-role-policy"));
+  assert.ok(commands.includes("verify:perf-gate-contract"));
 });
 
 test("standard perf admission routes directly to the render sample role policy", () => {
