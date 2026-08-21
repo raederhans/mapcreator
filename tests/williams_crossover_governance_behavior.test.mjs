@@ -19,7 +19,7 @@ import {
   buildWilliamsPreregistration,
 } from "../tools/perf/williams_crossover_policy.mjs";
 import {
-  analyzeWilliamsCrossoverRawRoot,
+  analyzeWilliamsCrossoverRawRootWithTestAdapters,
   buildWilliamsBlockArtifactIdentity,
   buildCurrentHarnessArtifacts,
   buildWilliamsExecutionPlan,
@@ -78,9 +78,46 @@ function trustedRevisionIdentity(overrides = {}) {
   };
 }
 
-async function analyzeTrustedRawRoot(root, overrides = {}) {
-  return analyzeWilliamsCrossoverRawRoot(root, {
+function normalizedGitBlob(buffer) {
+  const normalized = Buffer.from(Buffer.from(buffer).toString("utf8").replace(/\r\n?/g, "\n"), "utf8");
+  const header = Buffer.from(`blob ${normalized.length}\0`, "utf8");
+  return crypto.createHash("sha1").update(header).update(normalized).digest("hex");
+}
+
+function trustedAnalyzerAuthorityAdapter({
+  snapshots = null,
+  gitTopLevel = REPO_ROOT,
+  commitMutations = {},
+} = {}) {
+  const cleanSnapshot = {
+    actualHead: CANDIDATE_HEAD,
+    detached: true,
+    branch: null,
+    gitStatus: "",
+  };
+  const snapshotSequence = snapshots || [cleanSnapshot, cleanSnapshot];
+  let snapshotIndex = 0;
+  return {
+    realpath: async (value) => path.resolve(value),
+    gitTopLevel: async () => gitTopLevel,
+    gitSnapshot: async () => structuredClone(
+      snapshotSequence[Math.min(snapshotIndex++, snapshotSequence.length - 1)],
+    ),
+    readWorkspaceFile: async ({ root, relativePath }) => fs.readFile(path.join(root, relativePath)),
+    readCommitArtifact: async ({ root, relativePath }) => {
+      let buffer = await fs.readFile(path.join(root, relativePath));
+      const mutate = commitMutations[relativePath];
+      if (mutate) buffer = Buffer.from(await mutate(Buffer.from(buffer)));
+      return { buffer, gitBlob: normalizedGitBlob(buffer) };
+    },
+  };
+}
+
+async function analyzeTrustedRawRoot(root, overrides = {}, analyzeOptions = {}) {
+  return analyzeWilliamsCrossoverRawRootWithTestAdapters(root, {
     trustedRevisionIdentity: trustedRevisionIdentity(overrides),
+    analyzerAuthorityAdapter: analyzeOptions.analyzerAuthorityAdapter || trustedAnalyzerAuthorityAdapter(),
+    rawSnapshotAdapter: analyzeOptions.rawSnapshotAdapter || null,
   });
 }
 
@@ -667,6 +704,82 @@ async function synchronizeRawRevisionEvidence(root, overrides = {}) {
     await writeJson(cleanupPath, cleanup);
   }
   await rebuildRawManifest(root);
+}
+
+async function synchronizeRawToolIdentity(root, currentToolIdentity) {
+  const toolIdentity = structuredClone(currentToolIdentity);
+  toolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  const preregistrationPath = path.join(root, "preregistration.json");
+  const preregistration = JSON.parse(await fs.readFile(preregistrationPath, "utf8"));
+  preregistration.workloadContract.processContainment.identity = {
+    source: toolIdentity.jobRunnerSource,
+    sourceSet: toolIdentity.jobRunnerSources,
+    binary: toolIdentity.jobRunnerBinary,
+  };
+  preregistration.telemetry.powerSchemeHelper = toolIdentity.powerSchemeHelper;
+  await writeJson(preregistrationPath, preregistration);
+
+  const preparationPath = path.join(root, "harness", "job-runner-preparation.json");
+  const preparation = JSON.parse(await fs.readFile(preparationPath, "utf8"));
+  preparation.source = toolIdentity.jobRunnerSource;
+  preparation.sourceSet = toolIdentity.jobRunnerSources;
+  preparation.binary = toolIdentity.jobRunnerBinary;
+  await writeJson(preparationPath, preparation);
+
+  for (const block of WILLIAMS_BLOCK_SEQUENCE) {
+    const identityPath = path.join(root, "blocks", block.id, "identity.json");
+    const identity = JSON.parse(await fs.readFile(identityPath, "utf8"));
+    for (const field of [
+      "runner",
+      "rolePolicy",
+      "analyzer",
+      "policy",
+      "windowsRuntime",
+      "containmentIdentityHelper",
+      "jobRunnerSource",
+      "jobRunnerSources",
+      "powerSchemeHelper",
+      "jobRunnerBinary",
+    ]) {
+      identity.artifacts[field] = structuredClone(toolIdentity[field]);
+    }
+    await writeJson(identityPath, identity);
+  }
+  await fs.rm(path.join(root, "raw-sha256-manifest.json"));
+  await buildWilliamsRawManifest(root, toolIdentity);
+}
+
+function runGitFixture(cwd, args) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  return result.stdout.trim();
+}
+
+async function createDetachedAnalyzerFixtureRepository() {
+  const root = await makeRuntimeTemp("williams-direct-cli-repo-");
+  const files = [
+    "tools/perf/run_williams_crossover.mjs",
+    "tools/perf/williams_crossover_policy.mjs",
+    "tools/perf/williams_crossover_windows_runtime.mjs",
+    "tools/perf/run_baseline.mjs",
+    "tools/perf/render_sample_role_policy.mjs",
+    "tools/perf/williams_crossover_windows_job_runner.cs",
+    "tools/perf/williams_crossover_power_scheme.ps1",
+    "tools/process_containment/ordered_source_set_identity.mjs",
+    "tools/process_containment/windows_job_runner_core.cs",
+  ];
+  for (const relativePath of files) {
+    const destination = path.join(root, relativePath);
+    await fs.mkdir(path.dirname(destination), { recursive: true });
+    await fs.copyFile(path.join(REPO_ROOT, relativePath), destination);
+  }
+  runGitFixture(root, ["init", "--quiet"]);
+  runGitFixture(root, ["config", "user.name", "Williams Test"]);
+  runGitFixture(root, ["config", "user.email", "williams-test@example.invalid"]);
+  runGitFixture(root, ["add", "--", ...files]);
+  runGitFixture(root, ["commit", "--quiet", "-m", "fixture"]);
+  runGitFixture(root, ["checkout", "--quiet", "--detach", "HEAD"]);
+  return { root, head: runGitFixture(root, ["rev-parse", "HEAD"]) };
 }
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
@@ -1481,9 +1594,10 @@ test("raw-root analyzer derives current tool identity and ignores caller substit
   await fs.rm(path.join(root, "raw-sha256-manifest.json"));
   await buildWilliamsRawManifest(root, substitutedToolIdentity);
 
-  const report = await analyzeWilliamsCrossoverRawRoot(root, {
+  const report = await analyzeWilliamsCrossoverRawRootWithTestAdapters(root, {
     trustedRevisionIdentity: trustedRevisionIdentity(),
     currentToolIdentity: substitutedToolIdentity,
+    analyzerAuthorityAdapter: trustedAnalyzerAuthorityAdapter(),
   });
   assert.equal(report.manifestValidation.status, "invalid");
   assert.ok(report.manifestValidation.errors.includes("manifest.toolIdentity.policy.current"));
@@ -1899,6 +2013,186 @@ test("power-scheme execution always stops the session and restores the process e
       && error.message.includes("cleanup timed out")
     ),
   );
+});
+
+test("trusted analyzer rejects attached, dirty, byte-drifted, and changing checkout authority", async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const clean = { actualHead: CANDIDATE_HEAD, detached: true, branch: null, gitStatus: "" };
+  const cases = [
+    [
+      "attached checkout",
+      trustedAnalyzerAuthorityAdapter({
+        snapshots: [{ ...clean, detached: false, branch: "codex/test" }],
+      }),
+    ],
+    [
+      "tracked dirty tool",
+      trustedAnalyzerAuthorityAdapter({ snapshots: [{ ...clean, gitStatus: " M tools/perf/run_williams_crossover.mjs" }] }),
+    ],
+    [
+      "index dirty tool",
+      trustedAnalyzerAuthorityAdapter({ snapshots: [{ ...clean, gitStatus: "M  tools/perf/run_williams_crossover.mjs" }] }),
+    ],
+    [
+      "untracked dirty tool",
+      trustedAnalyzerAuthorityAdapter({ snapshots: [{ ...clean, gitStatus: "?? untrusted-tool.mjs" }] }),
+    ],
+    [
+      "HEAD:path byte drift",
+      trustedAnalyzerAuthorityAdapter({
+        commitMutations: {
+          "tools/perf/run_williams_crossover.mjs": (buffer) => Buffer.concat([buffer, Buffer.from("\n// drift\n")]),
+        },
+      }),
+    ],
+    [
+      "checkout changed while tools were read",
+      trustedAnalyzerAuthorityAdapter({
+        snapshots: [clean, { ...clean, actualHead: "f".repeat(40) }],
+      }),
+    ],
+    [
+      "Git top-level differs from analyzer realpath",
+      trustedAnalyzerAuthorityAdapter({ gitTopLevel: path.dirname(REPO_ROOT) }),
+    ],
+  ];
+  for (const [label, analyzerAuthorityAdapter] of cases) {
+    await assert.rejects(
+      analyzeTrustedRawRoot(root, {}, { analyzerAuthorityAdapter }),
+      (error) => error instanceof WilliamsInvalidExperimentError
+        && getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment,
+      label,
+    );
+  }
+});
+
+test("raw authority parses and hashes each required path from one immutable Buffer", async (t) => {
+  const acceptedRoot = await materializeEvidenceRoot(createEvidence());
+  const renderByBlock = {};
+  setMetricValues(renderByBlock, [1, 4, 6, 7], 1000);
+  setMetricValues(renderByBlock, [2, 3, 5, 8], 1060);
+  const regressionRoot = await materializeEvidenceRoot(createEvidence({ renderByBlock }));
+  t.after(() => Promise.all([acceptedRoot, regressionRoot].map((root) => (
+    fs.rm(root, { recursive: true, force: true })
+  ))));
+  const readCounts = new Map();
+  const rawSnapshotAdapter = {
+    readFile: async ({ absolutePath, relativePath }) => {
+      const count = (readCounts.get(relativePath) || 0) + 1;
+      readCounts.set(relativePath, count);
+      if (relativePath === "raw-sha256-manifest.json") return fs.readFile(absolutePath);
+      const firstSnapshotPath = path.join(acceptedRoot, relativePath);
+      if (count === 1) return fs.readFile(firstSnapshotPath);
+      return fs.readFile(absolutePath);
+    },
+  };
+  const report = await analyzeTrustedRawRoot(regressionRoot, {}, { rawSnapshotAdapter });
+  const manifest = JSON.parse(await fs.readFile(path.join(regressionRoot, "raw-sha256-manifest.json"), "utf8"));
+  assert.equal(readCounts.size, manifest.requiredEntryCount + 1);
+  assert.equal(Math.max(...readCounts.values()), 1);
+  assert.equal(report.manifestValidation.status, "invalid");
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+});
+
+test("raw authority rejects a reparse-point parent before consuming evidence", async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const reparseParent = path.normalize(path.join(root, "blocks", "block-01", "raw"));
+  const rawSnapshotAdapter = {
+    lstat: async (value) => {
+      const stat = await fs.lstat(value);
+      if (path.normalize(value).toLowerCase() !== reparseParent.toLowerCase()) return stat;
+      return {
+        isDirectory: () => true,
+        isFile: () => false,
+        isSymbolicLink: () => true,
+      };
+    },
+  };
+  const report = await analyzeTrustedRawRoot(root, {}, { rawSnapshotAdapter });
+  assert.equal(report.manifestValidation.status, "invalid");
+  assert.ok(report.manifestValidation.errors.some((error) => error.includes("symlink or reparse point")));
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+});
+
+test("final raw-root and analyze CLI authority cover accepted 0, valid regression 2, and invalid 3", async (t) => {
+  const renderByBlock = {};
+  setMetricValues(renderByBlock, [1, 4, 6, 7], 1000);
+  setMetricValues(renderByBlock, [2, 3, 5, 8], 1060);
+  const invalidEvidence = createEvidence();
+  invalidEvidence.preregistration.schemaVersion = 0;
+  const cases = [
+    ["accepted", await materializeEvidenceRoot(createEvidence()), WILLIAMS_EXIT_CODES.accepted],
+    ["valid-regression", await materializeEvidenceRoot(createEvidence({ renderByBlock })), WILLIAMS_EXIT_CODES.validRegression],
+    ["invalid-experiment", await materializeEvidenceRoot(invalidEvidence), WILLIAMS_EXIT_CODES.invalidExperiment],
+  ];
+  const fixtureRepository = await createDetachedAnalyzerFixtureRepository();
+  const fixtureToolIdentity = await buildCurrentHarnessArtifacts({ root: fixtureRepository.root });
+  const runnerPath = path.join(fixtureRepository.root, "tools", "perf", "run_williams_crossover.mjs");
+  const reportRoot = await makeRuntimeTemp("williams-cli-matrix-");
+  t.after(() => Promise.all([
+    ...cases.map(([, root]) => fs.rm(root, { recursive: true, force: true })),
+    fs.rm(fixtureRepository.root, { recursive: true, force: true }),
+    fs.rm(reportRoot, { recursive: true, force: true }),
+  ]));
+  for (const [label, root, expectedExitCode] of cases) {
+    const rawReport = await analyzeTrustedRawRoot(root);
+    assert.equal(rawReport.decision.exitCode, expectedExitCode, `${label}/raw-root`);
+    await synchronizeRawRevisionEvidence(root, {
+      candidateWorktree: fixtureRepository.root,
+      candidateHead: fixtureRepository.head,
+    });
+    await synchronizeRawToolIdentity(root, fixtureToolIdentity);
+    const result = spawnSync(process.execPath, [
+      runnerPath,
+      "--analyze",
+      "--raw-root", root,
+      "--json-out", path.join(reportRoot, `${label}.json`),
+      "--md-out", path.join(reportRoot, `${label}.md`),
+      "--control-worktree", CONTROL_WORKTREE,
+      "--control-head", CONTROL_HEAD,
+      "--candidate-worktree", fixtureRepository.root,
+      "--candidate-head", fixtureRepository.head,
+    ], { encoding: "utf8", windowsHide: true });
+    process.stdout.write(`# direct-cli-matrix ${label} exit=${result.status}\n`);
+    assert.equal(result.status, expectedExitCode, `${label}/CLI: ${result.stderr}`);
+  }
+});
+
+test("direct Williams CLI process preserves a generic harness fault as exit 1 with stderr", async (t) => {
+  const fixtureRepository = await createDetachedAnalyzerFixtureRepository();
+  const rawRoot = await materializeEvidenceRoot(createEvidence());
+  const markdownOut = path.join(RUNTIME_TMP_ROOT, `williams-direct-cli-${crypto.randomUUID()}.md`);
+  t.after(() => Promise.all([
+    fs.rm(fixtureRepository.root, { recursive: true, force: true }),
+    fs.rm(rawRoot, { recursive: true, force: true }),
+    fs.rm(markdownOut, { force: true }),
+  ]));
+  await synchronizeRawRevisionEvidence(rawRoot, {
+    candidateWorktree: fixtureRepository.root,
+    candidateHead: fixtureRepository.head,
+  });
+  const fixtureToolIdentity = await buildCurrentHarnessArtifacts({ root: fixtureRepository.root });
+  await synchronizeRawToolIdentity(rawRoot, fixtureToolIdentity);
+
+  const runnerPath = path.join(fixtureRepository.root, "tools", "perf", "run_williams_crossover.mjs");
+  const result = spawnSync(process.execPath, [
+    runnerPath,
+    "--analyze",
+    "--overwrite-analysis",
+    "--raw-root", rawRoot,
+    "--json-out", fixtureRepository.root,
+    "--md-out", markdownOut,
+    "--control-worktree", CONTROL_WORKTREE,
+    "--control-head", CONTROL_HEAD,
+    "--candidate-worktree", fixtureRepository.root,
+    "--candidate-head", fixtureRepository.head,
+  ], { encoding: "utf8", windowsHide: true });
+  process.stdout.write(`# direct-cli-harness-fault exit=${result.status} stderr=${JSON.stringify(result.stderr.trim().split(/\r?\n/, 1)[0])}\n`);
+  assert.equal(result.status, WILLIAMS_EXIT_CODES.harnessFault);
+  assert.match(result.stderr, /EISDIR|EPERM|illegal operation on a directory/i);
 });
 
 test("raw analyzer rebuilds an accepted report from exactly 32 measured files", async (t) => {

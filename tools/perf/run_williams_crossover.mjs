@@ -283,6 +283,20 @@ function runGit(cwd, args, options = {}) {
   return runSync("git", args, { cwd, ...options });
 }
 
+function runGitBuffer(cwd, args) {
+  const result = spawnSync("git", args, {
+    cwd,
+    encoding: null,
+    windowsHide: true,
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(" ")} exited ${result.status}: ${Buffer.from(result.stderr || result.stdout || []).toString("utf8").trim()}`);
+  }
+  return Buffer.from(result.stdout || []);
+}
+
 export function invokeWilliamsPowerSchemeHelper({
   action,
   helperPath,
@@ -454,8 +468,11 @@ async function trackedArtifactDescriptor(worktree, relativePath) {
   };
 }
 
-async function currentArtifactDescriptor(relativePath) {
-  const content = await fs.readFile(path.join(REPO_ROOT, relativePath));
+async function currentArtifactDescriptor(root, relativePath, readWorkspaceFile = null) {
+  const absolutePath = path.join(root, relativePath);
+  const content = readWorkspaceFile
+    ? await readWorkspaceFile({ root, relativePath, absolutePath })
+    : await fs.readFile(absolutePath);
   const normalized = Buffer.from(content.toString("utf8").replace(/\r\n?/g, "\n"), "utf8");
   return {
     path: toPosix(relativePath),
@@ -464,20 +481,21 @@ async function currentArtifactDescriptor(relativePath) {
   };
 }
 
-export async function buildCurrentHarnessArtifacts() {
-  const jobRunnerSourceDescriptors = await Promise.all(JOB_RUNNER_SOURCE_PATHS.map(currentArtifactDescriptor));
+async function readCurrentHarnessArtifacts(root, readWorkspaceFile = null) {
+  const descriptor = (relativePath) => currentArtifactDescriptor(root, relativePath, readWorkspaceFile);
+  const jobRunnerSourceDescriptors = await Promise.all(JOB_RUNNER_SOURCE_PATHS.map(descriptor));
   const jobRunnerSources = buildOrderedContainmentSourceSet(jobRunnerSourceDescriptors);
   return {
-    root: REPO_ROOT,
-    runner: await currentArtifactDescriptor(BASELINE_RUNNER_PATH),
-    rolePolicy: await currentArtifactDescriptor(ROLE_POLICY_PATH),
-    analyzer: await currentArtifactDescriptor(ANALYZER_PATH),
-    policy: await currentArtifactDescriptor(POLICY_PATH),
-    windowsRuntime: await currentArtifactDescriptor(WINDOWS_RUNTIME_PATH),
-    containmentIdentityHelper: await currentArtifactDescriptor(CONTAINMENT_IDENTITY_HELPER_PATH),
+    root,
+    runner: await descriptor(BASELINE_RUNNER_PATH),
+    rolePolicy: await descriptor(ROLE_POLICY_PATH),
+    analyzer: await descriptor(ANALYZER_PATH),
+    policy: await descriptor(POLICY_PATH),
+    windowsRuntime: await descriptor(WINDOWS_RUNTIME_PATH),
+    containmentIdentityHelper: await descriptor(CONTAINMENT_IDENTITY_HELPER_PATH),
     jobRunnerSource: jobRunnerSourceDescriptors[0],
     jobRunnerSources,
-    powerSchemeHelper: await currentArtifactDescriptor(POWER_SCHEME_HELPER_PATH),
+    powerSchemeHelper: await descriptor(POWER_SCHEME_HELPER_PATH),
   };
 }
 
@@ -517,6 +535,127 @@ function identityPathsEqual(left, right) {
   return process.platform === "win32"
     ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
     : normalizedLeft === normalizedRight;
+}
+
+function defaultAnalyzerAuthorityAdapter() {
+  return {
+    realpath: (value) => fs.realpath(value),
+    gitTopLevel: async (root) => runGit(root, ["rev-parse", "--show-toplevel"]).stdout.trim(),
+    gitSnapshot: async (root) => worktreeGitSnapshot(root),
+    readWorkspaceFile: ({ absolutePath }) => fs.readFile(absolutePath),
+    readCommitArtifact: async ({ root, head, relativePath }) => ({
+      buffer: runGitBuffer(root, ["show", `${head}:${toPosix(relativePath)}`]),
+      gitBlob: runGit(root, ["rev-parse", `${head}:${toPosix(relativePath)}`]).stdout.trim(),
+    }),
+  };
+}
+
+async function canonicalizeTrustedAnalyzerRoot(trustedRevisionIdentity, adapter) {
+  const [repoRoot, analyzerRoot, candidateRoot] = await Promise.all([
+    adapter.realpath(REPO_ROOT),
+    adapter.realpath(trustedRevisionIdentity.trustedAnalyzerRoot),
+    adapter.realpath(trustedRevisionIdentity.expectedCandidateWorktree),
+  ]);
+  const gitTopLevel = await adapter.gitTopLevel(analyzerRoot);
+  const canonicalGitTopLevel = await adapter.realpath(gitTopLevel);
+  if (
+    !identityPathsEqual(repoRoot, analyzerRoot)
+    || !identityPathsEqual(analyzerRoot, candidateRoot)
+    || !identityPathsEqual(analyzerRoot, canonicalGitTopLevel)
+  ) {
+    throw new WilliamsInvalidExperimentError(
+      "Trusted analyzer, candidate, repository, and Git top-level realpaths must identify one root.",
+      "trusted-analyzer-realpath-mismatch",
+    );
+  }
+  return analyzerRoot;
+}
+
+async function readExpectedHarnessArtifacts(root, expectedHead, adapter) {
+  const descriptor = async (relativePath) => {
+    const artifact = await adapter.readCommitArtifact({ root, head: expectedHead, relativePath });
+    const content = Buffer.from(artifact?.buffer || []);
+    return {
+      path: toPosix(relativePath),
+      gitBlob: String(artifact?.gitBlob || "").trim(),
+      lfNormalizedSha256: lfNormalizedSha256(content),
+    };
+  };
+  const jobRunnerSourceDescriptors = await Promise.all(JOB_RUNNER_SOURCE_PATHS.map(descriptor));
+  return {
+    root,
+    runner: await descriptor(BASELINE_RUNNER_PATH),
+    rolePolicy: await descriptor(ROLE_POLICY_PATH),
+    analyzer: await descriptor(ANALYZER_PATH),
+    policy: await descriptor(POLICY_PATH),
+    windowsRuntime: await descriptor(WINDOWS_RUNTIME_PATH),
+    containmentIdentityHelper: await descriptor(CONTAINMENT_IDENTITY_HELPER_PATH),
+    jobRunnerSource: jobRunnerSourceDescriptors[0],
+    jobRunnerSources: buildOrderedContainmentSourceSet(jobRunnerSourceDescriptors),
+    powerSchemeHelper: await descriptor(POWER_SCHEME_HELPER_PATH),
+  };
+}
+
+function validateTrustedHarnessArtifacts(current, expected) {
+  for (const [field, relativePath] of [
+    ["runner", BASELINE_RUNNER_PATH],
+    ["rolePolicy", ROLE_POLICY_PATH],
+    ["analyzer", ANALYZER_PATH],
+    ["policy", POLICY_PATH],
+    ["windowsRuntime", WINDOWS_RUNTIME_PATH],
+    ["containmentIdentityHelper", CONTAINMENT_IDENTITY_HELPER_PATH],
+    ["jobRunnerSource", JOB_RUNNER_SOURCE_PATH],
+    ["powerSchemeHelper", POWER_SCHEME_HELPER_PATH],
+  ]) {
+    if (!artifactDescriptorsEqual(current[field], expected[field])) {
+      throw new WilliamsInvalidExperimentError(
+        `Current Williams tool bytes differ from the trusted candidate commit at ${relativePath}.`,
+        "trusted-tool-identity-mismatch",
+      );
+    }
+  }
+  if (!orderedContainmentSourceSetsEqual(current.jobRunnerSources, expected.jobRunnerSources)) {
+    throw new WilliamsInvalidExperimentError(
+      `Current Williams tool bytes differ from the trusted candidate commit at ${JOB_RUNNER_SOURCE_PATHS.join(", ")}.`,
+      "trusted-tool-identity-mismatch",
+    );
+  }
+}
+
+export async function buildCurrentHarnessArtifacts({
+  root = REPO_ROOT,
+  trustedRevisionIdentity = null,
+  analyzerAuthorityAdapter = null,
+} = {}) {
+  if (!trustedRevisionIdentity) return readCurrentHarnessArtifacts(normalizePath(root));
+  const adapter = { ...defaultAnalyzerAuthorityAdapter(), ...(analyzerAuthorityAdapter || {}) };
+  try {
+    const canonicalRoot = await canonicalizeTrustedAnalyzerRoot(trustedRevisionIdentity, adapter);
+    validateMeasurementSnapshot(
+      await adapter.gitSnapshot(canonicalRoot),
+      trustedRevisionIdentity.expectedCandidateHead,
+      "trusted analyzer before tool snapshot",
+    );
+    const current = await readCurrentHarnessArtifacts(canonicalRoot, adapter.readWorkspaceFile);
+    const expected = await readExpectedHarnessArtifacts(
+      canonicalRoot,
+      trustedRevisionIdentity.expectedCandidateHead,
+      adapter,
+    );
+    validateTrustedHarnessArtifacts(current, expected);
+    validateMeasurementSnapshot(
+      await adapter.gitSnapshot(canonicalRoot),
+      trustedRevisionIdentity.expectedCandidateHead,
+      "trusted analyzer after tool snapshot",
+    );
+    return current;
+  } catch (error) {
+    if (error instanceof WilliamsInvalidExperimentError) throw error;
+    throw new WilliamsInvalidExperimentError(
+      `Trusted analyzer authority is unavailable: ${String(error?.message || error)}`,
+      "trusted-analyzer-authority-unavailable",
+    );
+  }
 }
 
 export function buildWilliamsTrustedRevisionIdentity(options = {}) {
@@ -895,22 +1034,6 @@ async function runBlock(block, harnessArtifacts, preparedRunner) {
   return { complete, blockResult };
 }
 
-async function walkFiles(root) {
-  if (!(await pathExists(root))) return [];
-  const files = [];
-  const stack = [root];
-  while (stack.length) {
-    const current = stack.pop();
-    const entries = await fs.readdir(current, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(current, entry.name);
-      if (entry.isDirectory()) stack.push(fullPath);
-      else if (entry.isFile()) files.push(fullPath);
-    }
-  }
-  return files;
-}
-
 function requiredEvidencePaths() {
   const paths = [
     "preregistration.json",
@@ -990,20 +1113,158 @@ export async function buildWilliamsRawManifest(rawRoot, harnessArtifacts) {
   return manifest;
 }
 
-async function readRequiredJson(rawRoot, relativePath, errors) {
-  const absolutePath = path.join(rawRoot, relativePath);
+function defaultRawSnapshotAdapter() {
+  return {
+    lstat: (value) => fs.lstat(value),
+    realpath: (value) => fs.realpath(value),
+    readdir: (value, options) => fs.readdir(value, options),
+    readFile: async ({ absolutePath }) => {
+      const handle = await fs.open(absolutePath, "r");
+      try {
+        const stat = await handle.stat();
+        const buffer = await handle.readFile();
+        return { buffer, stat };
+      } finally {
+        await handle.close();
+      }
+    },
+  };
+}
+
+function isSafeRelativeEvidencePath(relativePath) {
+  const normalizedPath = path.posix.normalize(relativePath);
+  return Boolean(relativePath)
+    && !path.posix.isAbsolute(relativePath)
+    && normalizedPath !== ".."
+    && !normalizedPath.startsWith("../")
+    && normalizedPath === relativePath;
+}
+
+async function validateRawPathSegments(rawRoot, canonicalRoot, relativePath, adapter) {
+  if (!isSafeRelativeEvidencePath(relativePath)) {
+    throw new Error(`unsafe relative evidence path: ${relativePath}`);
+  }
+  const segments = relativePath.split("/");
+  let currentPath = rawRoot;
+  for (let index = 0; index < segments.length; index += 1) {
+    currentPath = path.join(currentPath, segments[index]);
+    const stat = await adapter.lstat(currentPath);
+    if (stat.isSymbolicLink()) throw new Error(`symlink or reparse point: ${relativePath}`);
+    const finalSegment = index === segments.length - 1;
+    if (!finalSegment && !stat.isDirectory()) throw new Error(`parent is not a directory: ${relativePath}`);
+    if (finalSegment && !stat.isFile()) throw new Error(`evidence path is not a regular file: ${relativePath}`);
+  }
+  const canonicalPath = await adapter.realpath(currentPath);
+  if (!pathIsInside(canonicalRoot, canonicalPath)) {
+    throw new Error(`evidence path escapes raw root: ${relativePath}`);
+  }
+  return { absolutePath: currentPath, canonicalPath };
+}
+
+async function buildRawEvidenceSnapshot(rawRoot, rawSnapshotAdapter = null) {
+  const adapter = { ...defaultRawSnapshotAdapter(), ...(rawSnapshotAdapter || {}) };
+  const errors = [];
+  let canonicalRoot = rawRoot;
   try {
-    return await readJson(absolutePath);
+    const rootStat = await adapter.lstat(rawRoot);
+    if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+      throw new Error("raw root must be a regular directory without symlink or reparse indirection");
+    }
+    canonicalRoot = await adapter.realpath(rawRoot);
+    if (!identityPathsEqual(rawRoot, canonicalRoot)) {
+      throw new Error("raw root realpath differs from the requested root");
+    }
+  } catch (error) {
+    throw new WilliamsInvalidExperimentError(
+      `Williams raw evidence root is unsafe: ${String(error?.message || error)}`,
+      "raw-root-unsafe",
+    );
+  }
+
+  const records = new Map();
+  for (const relativePath of ["raw-sha256-manifest.json", ...requiredEvidencePaths()]) {
+    try {
+      const pathBeforeRead = await validateRawPathSegments(rawRoot, canonicalRoot, relativePath, adapter);
+      const { absolutePath } = pathBeforeRead;
+      const readResult = await adapter.readFile({ absolutePath, relativePath });
+      const buffer = Buffer.from(readResult?.buffer ?? readResult);
+      const fileStat = readResult?.stat || await adapter.lstat(absolutePath);
+      if (fileStat.isSymbolicLink?.() || !fileStat.isFile()) {
+        throw new Error(`evidence path is not a regular file: ${relativePath}`);
+      }
+      const pathAfterRead = await validateRawPathSegments(rawRoot, canonicalRoot, relativePath, adapter);
+      if (!identityPathsEqual(pathBeforeRead.canonicalPath, pathAfterRead.canonicalPath)) {
+        throw new Error(`evidence path changed while being read: ${relativePath}`);
+      }
+      records.set(relativePath, Object.freeze({
+        relativePath,
+        absolutePath,
+        buffer,
+        bytes: buffer.length,
+        sha256: sha256(buffer),
+      }));
+    } catch (error) {
+      errors.push(`${relativePath}: ${String(error?.message || error)}`);
+      records.set(relativePath, null);
+    }
+  }
+  return Object.freeze({ rawRoot, canonicalRoot, records, errors, adapter });
+}
+
+function parseSnapshotJson(snapshot, relativePath, errors) {
+  const record = snapshot.records.get(relativePath);
+  if (!record) return null;
+  try {
+    return JSON.parse(record.buffer.toString("utf8"));
   } catch (error) {
     errors.push(`${relativePath}: ${String(error?.message || error)}`);
     return null;
   }
 }
 
+async function walkRawEvidenceInventory(rawRoot, snapshot) {
+  const errors = [];
+  const actualRawPaths = [];
+  const blocksRoot = path.join(rawRoot, "blocks");
+  const stack = [blocksRoot];
+  while (stack.length) {
+    const current = stack.pop();
+    let entries;
+    try {
+      const stat = await snapshot.adapter.lstat(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error("inventory directory is unsafe");
+      entries = await snapshot.adapter.readdir(current, { withFileTypes: true });
+    } catch (error) {
+      errors.push(`raw.inventory:${toPosix(path.relative(rawRoot, current))}:${String(error?.message || error)}`);
+      continue;
+    }
+    for (const entry of entries) {
+      const absolutePath = path.join(current, entry.name);
+      const relativePath = toPosix(path.relative(rawRoot, absolutePath));
+      try {
+        const stat = await snapshot.adapter.lstat(absolutePath);
+        if (stat.isSymbolicLink()) throw new Error("symlink or reparse point");
+        if (stat.isDirectory()) {
+          const canonicalDirectory = await snapshot.adapter.realpath(absolutePath);
+          if (!pathIsInside(snapshot.canonicalRoot, canonicalDirectory)) throw new Error("directory escapes raw root");
+          stack.push(absolutePath);
+        } else if (stat.isFile() && /\/raw\/[^/]+\/run-\d+\.json$/i.test(`/${relativePath}`)) {
+          actualRawPaths.push(relativePath);
+        } else if (!stat.isFile()) {
+          throw new Error("unsupported filesystem entry type");
+        }
+      } catch (error) {
+        errors.push(`raw.inventory:${relativePath}:${String(error?.message || error)}`);
+      }
+    }
+  }
+  return { actualRawPaths, errors };
+}
+
 async function validateRawManifest(
-  rawRoot,
+  snapshot,
   manifest,
-  actualRawFiles,
+  actualRawPaths,
   loadErrors,
   blocks,
   currentToolIdentity,
@@ -1012,7 +1273,7 @@ async function validateRawManifest(
 ) {
   const errors = [...loadErrors];
   if (!manifest || typeof manifest !== "object") {
-    return { status: "invalid", errors: [...errors, "manifest.missing"], measuredRawFileCount: actualRawFiles.length };
+    return { status: "invalid", errors: [...errors, "manifest.missing"], measuredRawFileCount: actualRawPaths.length };
   }
   if (manifest.schemaVersion !== 1) errors.push("manifest.schemaVersion");
   if (manifest.policyId !== WILLIAMS_CROSSOVER_POLICY_ID) errors.push("manifest.policyId");
@@ -1029,27 +1290,19 @@ async function validateRawManifest(
     if (!required.has(entryPath)) errors.push(`manifest.extra-entry:${entryPath}`);
   }
   for (const [relativePath, entry] of entries) {
-    const normalizedPath = path.posix.normalize(relativePath);
-    if (
-      path.posix.isAbsolute(relativePath)
-      || normalizedPath === ".."
-      || normalizedPath.startsWith("../")
-      || normalizedPath !== relativePath
-    ) {
+    if (!isSafeRelativeEvidencePath(relativePath)) {
       errors.push(`manifest.unsafe-path:${relativePath}`);
       continue;
     }
-    const absolutePath = path.join(rawRoot, relativePath);
-    try {
-      const content = await fs.readFile(absolutePath);
-      if (sha256(content) !== entry.sha256) errors.push(`manifest.sha256:${relativePath}`);
-      if (content.length !== entry.bytes) errors.push(`manifest.bytes:${relativePath}`);
-    } catch (error) {
-      errors.push(`manifest.unreadable:${relativePath}:${String(error?.message || error)}`);
+    const record = snapshot.records.get(relativePath);
+    if (!record) errors.push(`manifest.unreadable:${relativePath}`);
+    else {
+      if (record.sha256 !== entry.sha256) errors.push(`manifest.sha256:${relativePath}`);
+      if (record.bytes !== entry.bytes) errors.push(`manifest.bytes:${relativePath}`);
     }
   }
   const expectedRaw = new Set(requiredEvidencePaths().filter((relativePath) => relativePath.includes("/raw/")));
-  const actualRaw = new Set(actualRawFiles.map((filePath) => toPosix(path.relative(rawRoot, filePath))));
+  const actualRaw = new Set(actualRawPaths);
   for (const expectedPath of expectedRaw) if (!actualRaw.has(expectedPath)) errors.push(`raw.missing:${expectedPath}`);
   for (const actualPath of actualRaw) if (!expectedRaw.has(actualPath)) errors.push(`raw.extra:${actualPath}`);
   if (actualRaw.size !== 32) errors.push(`raw.count.expected-32-actual-${actualRaw.size}`);
@@ -1160,36 +1413,43 @@ async function validateRawManifest(
   };
 }
 
-export async function analyzeWilliamsCrossoverRawRoot(rawRoot, {
+async function analyzeWilliamsCrossoverRawRootInternal(rawRoot, {
   trustedRevisionIdentity = null,
+  analyzerAuthorityAdapter = null,
+  rawSnapshotAdapter = null,
 } = {}) {
   const trustedIdentity = buildWilliamsTrustedRevisionIdentity(trustedRevisionIdentity || {});
   const resolvedRoot = normalizePath(rawRoot);
-  const loadErrors = [];
-  const preregistration = await readRequiredJson(resolvedRoot, "preregistration.json", loadErrors);
-  const jobRunnerPreparation = await readRequiredJson(
-    resolvedRoot,
+  const analyzerToolIdentity = await buildCurrentHarnessArtifacts({
+    trustedRevisionIdentity: trustedIdentity,
+    analyzerAuthorityAdapter,
+  });
+  const snapshot = await buildRawEvidenceSnapshot(resolvedRoot, rawSnapshotAdapter);
+  const loadErrors = [...snapshot.errors];
+  const preregistration = parseSnapshotJson(snapshot, "preregistration.json", loadErrors);
+  const jobRunnerPreparation = parseSnapshotJson(
+    snapshot,
     "harness/job-runner-preparation.json",
     loadErrors,
   );
-  const powerSchemeLifecycle = await readRequiredJson(
-    resolvedRoot,
+  const powerSchemeLifecycle = parseSnapshotJson(
+    snapshot,
     POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH,
     loadErrors,
   );
-  const manifest = await readRequiredJson(resolvedRoot, "raw-sha256-manifest.json", loadErrors);
-  const allFiles = await walkFiles(path.join(resolvedRoot, "blocks"));
-  const actualRawFiles = allFiles.filter((filePath) => /[\\/]raw[\\/].+\.json$/i.test(filePath));
+  const manifest = parseSnapshotJson(snapshot, "raw-sha256-manifest.json", loadErrors);
+  const inventory = await walkRawEvidenceInventory(resolvedRoot, snapshot);
+  loadErrors.push(...inventory.errors);
   const blocks = [];
   for (const expectedBlock of WILLIAMS_BLOCK_SEQUENCE) {
     const prefix = `blocks/${expectedBlock.id}`;
-    const metadata = await readRequiredJson(resolvedRoot, `${prefix}/block-metadata.json`, loadErrors);
+    const metadata = parseSnapshotJson(snapshot, `${prefix}/block-metadata.json`, loadErrors);
     const rawRuns = {};
     for (const scenarioId of WILLIAMS_SCENARIOS) {
       rawRuns[scenarioId] = [];
       for (const runNumber of [1, 2]) {
-        const run = await readRequiredJson(
-          resolvedRoot,
+        const run = parseSnapshotJson(
+          snapshot,
           `${prefix}/raw/${scenarioId}/run-${String(runNumber).padStart(2, "0")}.json`,
           loadErrors,
         );
@@ -1202,25 +1462,24 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, {
       side: metadata?.side ?? expectedBlock.side,
       orderId: metadata?.orderId ?? expectedBlock.orderId,
       scenarioOrder: metadata?.scenarioOrder ?? [],
-      identity: await readRequiredJson(resolvedRoot, `${prefix}/identity.json`, loadErrors),
+      identity: parseSnapshotJson(snapshot, `${prefix}/identity.json`, loadErrors),
       telemetry: {
-        pre: await readRequiredJson(resolvedRoot, `${prefix}/telemetry-pre.json`, loadErrors),
-        post: await readRequiredJson(resolvedRoot, `${prefix}/telemetry-post.json`, loadErrors),
+        pre: parseSnapshotJson(snapshot, `${prefix}/telemetry-pre.json`, loadErrors),
+        post: parseSnapshotJson(snapshot, `${prefix}/telemetry-post.json`, loadErrors),
       },
-      quietWindow: await readRequiredJson(resolvedRoot, `${prefix}/quiet-window.json`, loadErrors),
-      command: await readRequiredJson(resolvedRoot, `${prefix}/command.json`, loadErrors),
-      baseline: await readRequiredJson(resolvedRoot, `${prefix}/baseline.json`, loadErrors),
-      cleanup: await readRequiredJson(resolvedRoot, `${prefix}/cleanup.json`, loadErrors),
-      jobObject: await readRequiredJson(resolvedRoot, `${prefix}/job-object.json`, loadErrors),
-      blockResult: await readRequiredJson(resolvedRoot, `${prefix}/block-result.json`, loadErrors),
+      quietWindow: parseSnapshotJson(snapshot, `${prefix}/quiet-window.json`, loadErrors),
+      command: parseSnapshotJson(snapshot, `${prefix}/command.json`, loadErrors),
+      baseline: parseSnapshotJson(snapshot, `${prefix}/baseline.json`, loadErrors),
+      cleanup: parseSnapshotJson(snapshot, `${prefix}/cleanup.json`, loadErrors),
+      jobObject: parseSnapshotJson(snapshot, `${prefix}/job-object.json`, loadErrors),
+      blockResult: parseSnapshotJson(snapshot, `${prefix}/block-result.json`, loadErrors),
       rawRuns,
     });
   }
-  const analyzerToolIdentity = await buildCurrentHarnessArtifacts();
   const manifestValidation = await validateRawManifest(
-    resolvedRoot,
+    snapshot,
     manifest,
-    actualRawFiles,
+    inventory.actualRawPaths,
     loadErrors,
     blocks,
     analyzerToolIdentity,
@@ -1236,6 +1495,16 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, {
     manifestValidation,
     rawRoot: resolvedRoot,
   });
+}
+
+export async function analyzeWilliamsCrossoverRawRoot(rawRoot, {
+  trustedRevisionIdentity = null,
+} = {}) {
+  return analyzeWilliamsCrossoverRawRootInternal(rawRoot, { trustedRevisionIdentity });
+}
+
+export async function analyzeWilliamsCrossoverRawRootWithTestAdapters(rawRoot, options = {}) {
+  return analyzeWilliamsCrossoverRawRootInternal(rawRoot, options);
 }
 
 export function buildWilliamsMarkdown(report) {
@@ -1502,7 +1771,9 @@ export async function runWilliamsCli(options) {
   if (options.mode === "analyze") {
     const trustedRevisionIdentity = buildWilliamsTrustedRevisionIdentity(options);
     await validateWilliamsOutputPolicy(options, { reserveRawRoot: false, allowReportOverwrite: options.overwriteAnalysis === true });
-    const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot, { trustedRevisionIdentity });
+    const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot, {
+      trustedRevisionIdentity,
+    });
     await writeReport(options, report, { allowOverwrite: options.overwriteAnalysis === true });
     return { mode: options.mode, exitCode: report.decision.exitCode, report };
   }
