@@ -168,6 +168,72 @@ function arraysEqual(left, right) {
     && left.every((value, index) => value === right[index]);
 }
 
+function normalizeIdentityPath(value) {
+  const text = String(value || "").trim();
+  return text ? path.resolve(text) : "";
+}
+
+function identityPathsEqual(left, right) {
+  const normalizedLeft = normalizeIdentityPath(left);
+  const normalizedRight = normalizeIdentityPath(right);
+  if (!normalizedLeft || !normalizedRight) return false;
+  return process.platform === "win32"
+    ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+    : normalizedLeft === normalizedRight;
+}
+
+function trustedSideRevision(trustedRevisionIdentity, side) {
+  if (side === "A") {
+    return {
+      head: String(trustedRevisionIdentity?.expectedControlHead || ""),
+      worktree: normalizeIdentityPath(trustedRevisionIdentity?.expectedControlWorktree),
+    };
+  }
+  return {
+    head: String(trustedRevisionIdentity?.expectedCandidateHead || ""),
+    worktree: normalizeIdentityPath(trustedRevisionIdentity?.expectedCandidateWorktree),
+  };
+}
+
+export function validateWilliamsTrustedRevisionIdentity(trustedRevisionIdentity) {
+  const errors = [];
+  if (!trustedRevisionIdentity || typeof trustedRevisionIdentity !== "object") {
+    return ["trusted-revision-identity.missing"];
+  }
+  for (const [field, kind] of [
+    ["expectedControlWorktree", "path"],
+    ["expectedControlHead", "head"],
+    ["expectedCandidateWorktree", "path"],
+    ["expectedCandidateHead", "head"],
+    ["trustedAnalyzerRoot", "path"],
+  ]) {
+    const value = String(trustedRevisionIdentity[field] || "").trim();
+    if (!value) errors.push(`trusted-revision-identity.${field}.missing`);
+    else if (kind === "head" && !/^[a-f0-9]{40}$/i.test(value)) {
+      errors.push(`trusted-revision-identity.${field}.format`);
+    } else if (kind === "path" && normalizeIdentityPath(value) !== value) {
+      errors.push(`trusted-revision-identity.${field}.canonical`);
+    }
+  }
+  if (!identityPathsEqual(
+    trustedRevisionIdentity.expectedCandidateWorktree,
+    trustedRevisionIdentity.trustedAnalyzerRoot,
+  )) {
+    errors.push("trusted-revision-identity.candidateRoot.analyzerRoot");
+  }
+  if (String(trustedRevisionIdentity.expectedControlHead || "").toLowerCase()
+    === String(trustedRevisionIdentity.expectedCandidateHead || "").toLowerCase()) {
+    errors.push("trusted-revision-identity.heads.distinct");
+  }
+  if (identityPathsEqual(
+    trustedRevisionIdentity.expectedControlWorktree,
+    trustedRevisionIdentity.expectedCandidateWorktree,
+  )) {
+    errors.push("trusted-revision-identity.worktrees.distinct");
+  }
+  return errors;
+}
+
 function artifactDescriptorsEqual(left, right) {
   return left?.path === right?.path
     && left?.gitBlob === right?.gitBlob
@@ -188,18 +254,22 @@ function canonicalJson(value) {
   return JSON.stringify(value);
 }
 
-function validateCanonicalBlockCommand(command, block, preregistration, rawRoot) {
+function expectedCanonicalBlockCommand(block, trustedRevisionIdentity, rawRoot) {
+  const sideRevision = trustedSideRevision(trustedRevisionIdentity, block.side);
+  return buildWilliamsBlockCommand({
+    candidateWorktree: trustedRevisionIdentity?.expectedCandidateWorktree,
+    measuredWorktree: sideRevision.worktree,
+    blockDirectory: path.join(path.resolve(String(rawRoot)), "blocks", block.id),
+    scenarioOrder: block.scenarioOrder,
+  });
+}
+
+function validateCanonicalBlockCommand(command, block, trustedRevisionIdentity, rawRoot) {
   const errors = [];
   if (!String(rawRoot || "").trim()) {
     return [`${block.id}.command.rawRoot`, `${block.id}.command.canonical`];
   }
-  const sideRegistration = block.side === "A" ? preregistration?.control : preregistration?.candidate;
-  const expected = buildWilliamsBlockCommand({
-    candidateWorktree: preregistration?.candidate?.worktree,
-    measuredWorktree: sideRegistration?.worktree,
-    blockDirectory: path.join(path.resolve(String(rawRoot)), "blocks", block.id),
-    scenarioOrder: block.scenarioOrder,
-  });
+  const expected = expectedCanonicalBlockCommand(block, trustedRevisionIdentity, rawRoot);
   if (command?.bin !== expected.bin) errors.push(`${block.id}.command.bin`);
   if (!arraysEqual(command?.args, expected.args)) errors.push(`${block.id}.command.args`);
   if (errors.length > 0) errors.push(`${block.id}.command.canonical`);
@@ -495,7 +565,7 @@ export function buildWilliamsPreregistration({
   };
 }
 
-export function validateWilliamsPreregistration(preregistration) {
+export function validateWilliamsPreregistration(preregistration, trustedRevisionIdentity) {
   const normalized = normalizePreregistration(preregistration);
   const containmentIdentity = normalized.workloadContract?.processContainment?.identity || {};
   const expected = buildWilliamsPreregistration({
@@ -517,6 +587,20 @@ export function validateWilliamsPreregistration(preregistration) {
   if (normalized.candidate.side !== "B") errors.push("preregistration.candidate.side");
   if (!/^[a-f0-9]{40}$/i.test(String(normalized.candidate.head || ""))) errors.push("preregistration.candidate.head");
   if (!String(normalized.candidate.worktree || "").trim()) errors.push("preregistration.candidate.worktree");
+  const trustedControl = trustedSideRevision(trustedRevisionIdentity, "A");
+  const trustedCandidate = trustedSideRevision(trustedRevisionIdentity, "B");
+  if (String(normalized.control.head || "") !== trustedControl.head) {
+    errors.push("preregistration.control.head.trusted");
+  }
+  if (!identityPathsEqual(normalized.control.worktree, trustedControl.worktree)) {
+    errors.push("preregistration.control.worktree.trusted");
+  }
+  if (String(normalized.candidate.head || "") !== trustedCandidate.head) {
+    errors.push("preregistration.candidate.head.trusted");
+  }
+  if (!identityPathsEqual(normalized.candidate.worktree, trustedCandidate.worktree)) {
+    errors.push("preregistration.candidate.worktree.trusted");
+  }
   if (normalized.control.head === normalized.candidate.head) errors.push("preregistration.heads.distinct");
   if (String(normalized.control.worktree || "").toLowerCase() === String(normalized.candidate.worktree || "").toLowerCase()) {
     errors.push("preregistration.worktrees.distinct");
@@ -972,12 +1056,18 @@ function validateWilliamsPowerSchemeLifecycle(lifecycle, preregistration, jobRun
   return { errors, activeAtMs, restoreAtMs, preregisteredAtMs };
 }
 
-function validateTelemetryEnvironment(window, label, expectedBlock, preregistration) {
+function validateTelemetryEnvironment(
+  window,
+  label,
+  expectedBlock,
+  preregistration,
+  trustedRevisionIdentity,
+) {
   const errors = [];
   const environment = window?.environment || {};
-  const side = expectedBlock.side === "A" ? preregistration?.control : preregistration?.candidate;
-  if (String(environment.cwd || "") !== String(side?.worktree || "")) errors.push(`${label}.environment.cwd.identity`);
-  if (String(environment.gitHead || "") !== String(side?.head || "")) errors.push(`${label}.environment.gitHead`);
+  const side = trustedSideRevision(trustedRevisionIdentity, expectedBlock.side);
+  if (!identityPathsEqual(environment.cwd, side.worktree)) errors.push(`${label}.environment.cwd.identity`);
+  if (String(environment.gitHead || "") !== side.head) errors.push(`${label}.environment.gitHead`);
   if (environment.detached !== true) errors.push(`${label}.environment.detached`);
   if (String(environment.gitStatus || "") !== "") errors.push(`${label}.environment.gitStatus.clean`);
   if (environmentHasActiveTaskSurface(environment)) errors.push(`${label}.environment.task-surface-active`);
@@ -990,7 +1080,12 @@ function validateTelemetryEnvironment(window, label, expectedBlock, preregistrat
   return errors;
 }
 
-function buildTelemetryAdmission(blocks, preregistration, powerLifecycleWindow = null) {
+function buildTelemetryAdmission(
+  blocks,
+  preregistration,
+  trustedRevisionIdentity,
+  powerLifecycleWindow = null,
+) {
   // admission 同时约束区组内 pre/post、跨区组时间顺序和统一机器状态，防止环境漂移伪装成代码差异。
   const errors = [];
   const blockSummaries = new Map();
@@ -1007,8 +1102,20 @@ function buildTelemetryAdmission(blocks, preregistration, powerLifecycleWindow =
     const post = validateTelemetryWindow(block.telemetry?.post, `${expectedBlock.id}.telemetry.post`, "post");
     errors.push(...pre.errors, ...post.errors);
     errors.push(
-      ...validateTelemetryEnvironment(block.telemetry?.pre, `${expectedBlock.id}.telemetry.pre`, expectedBlock, preregistration),
-      ...validateTelemetryEnvironment(block.telemetry?.post, `${expectedBlock.id}.telemetry.post`, expectedBlock, preregistration),
+      ...validateTelemetryEnvironment(
+        block.telemetry?.pre,
+        `${expectedBlock.id}.telemetry.pre`,
+        expectedBlock,
+        preregistration,
+        trustedRevisionIdentity,
+      ),
+      ...validateTelemetryEnvironment(
+        block.telemetry?.post,
+        `${expectedBlock.id}.telemetry.post`,
+        expectedBlock,
+        preregistration,
+        trustedRevisionIdentity,
+      ),
     );
     const preFirstAtMs = pre.summary?.firstAtMs ?? null;
     const preLastAtMs = pre.summary?.lastAtMs ?? null;
@@ -1144,19 +1251,21 @@ function buildTelemetryAdmission(blocks, preregistration, powerLifecycleWindow =
   };
 }
 
-function validateIdentity(identity, block, preregistration) {
+function validateIdentity(identity, block, preregistration, trustedRevisionIdentity) {
   const errors = [];
   const expectedSide = block.side;
   const registration = preregistration && typeof preregistration === "object" ? preregistration : {};
-  const sideRegistration = expectedSide === "A" ? registration.control : registration.candidate;
+  const sideRevision = trustedSideRevision(trustedRevisionIdentity, expectedSide);
   if (String(identity?.side || "") !== expectedSide) errors.push(`${block.id}.identity.side`);
-  if (String(identity?.expectedHead || "") !== String(sideRegistration?.head || "")) errors.push(`${block.id}.identity.expectedHead`);
-  if (String(identity?.actualHead || "") !== String(sideRegistration?.head || "")) errors.push(`${block.id}.identity.actualHead`);
+  if (String(identity?.expectedHead || "") !== sideRevision.head) errors.push(`${block.id}.identity.expectedHead`);
+  if (String(identity?.actualHead || "") !== sideRevision.head) errors.push(`${block.id}.identity.actualHead`);
   if (identity?.detached !== true) errors.push(`${block.id}.identity.detached`);
   if (String(identity?.gitStatus || "") !== "") errors.push(`${block.id}.identity.gitStatus`);
-  if (String(identity?.cwd || "") !== String(sideRegistration?.worktree || "")) errors.push(`${block.id}.identity.cwd`);
-  if (String(identity?.measuredRoot || "") !== String(sideRegistration?.worktree || "")) errors.push(`${block.id}.identity.measuredRoot`);
-  if (String(identity?.harnessRoot || "") !== String(registration.candidate?.worktree || "")) errors.push(`${block.id}.identity.harnessRoot`);
+  if (!identityPathsEqual(identity?.cwd, sideRevision.worktree)) errors.push(`${block.id}.identity.cwd`);
+  if (!identityPathsEqual(identity?.measuredRoot, sideRevision.worktree)) errors.push(`${block.id}.identity.measuredRoot`);
+  if (!identityPathsEqual(identity?.harnessRoot, trustedRevisionIdentity?.trustedAnalyzerRoot)) {
+    errors.push(`${block.id}.identity.harnessRoot`);
+  }
   for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
     const descriptor = identity?.artifacts?.[field];
     if (!String(descriptor?.gitBlob || "").trim()) errors.push(`${block.id}.identity.artifacts.${field}.gitBlob`);
@@ -1209,7 +1318,7 @@ function validateIdentity(identity, block, preregistration) {
   return errors;
 }
 
-function validateCleanup(cleanup, block, evidence) {
+function validateCleanup(cleanup, block, evidence, expectedCommand, expectedCwd) {
   const errors = [];
   if (!cleanup || typeof cleanup !== "object") return [`${block.id}.cleanup.missing`];
   if (cleanup.valid !== true) errors.push(`${block.id}.cleanup.valid`);
@@ -1224,13 +1333,13 @@ function validateCleanup(cleanup, block, evidence) {
   if (cleanup.detachedStable !== true) errors.push(`${block.id}.cleanup.detachedStable`);
   const jobObject = cleanup.jobObject;
   errors.push(...validateJobObjectEvidence(jobObject, `${block.id}.cleanup.jobObject`, {
-    command: evidence?.command,
-    cwd: evidence?.identity?.cwd,
+    command: expectedCommand,
+    cwd: expectedCwd,
     exitCode: evidence?.blockResult?.exitCode,
   }));
   errors.push(...validateJobObjectEvidence(evidence?.jobObject, `${block.id}.jobObject`, {
-    command: evidence?.command,
-    cwd: evidence?.identity?.cwd,
+    command: expectedCommand,
+    cwd: expectedCwd,
     exitCode: evidence?.blockResult?.exitCode,
   }));
   if (canonicalJson(evidence?.jobObject) !== canonicalJson(jobObject)) {
@@ -1254,10 +1363,10 @@ function validateQuietWindow(quietWindow, block) {
     : [`${block.id}.quietWindow.invalid`];
 }
 
-function validateBaselineIdentity(baseline, block, preregistration) {
+function validateBaselineIdentity(baseline, block, preregistration, trustedRevisionIdentity) {
   const errors = [];
   const registration = preregistration && typeof preregistration === "object" ? preregistration : {};
-  const expectedHead = block.side === "A" ? registration.control?.head : registration.candidate?.head;
+  const expectedHead = trustedSideRevision(trustedRevisionIdentity, block.side).head;
   if (String(baseline?.gitHead || "") !== String(expectedHead || "")) errors.push(`${block.id}.baseline.gitHead`);
   if (finite(baseline?.schemaVersion) !== 2) errors.push(`${block.id}.baseline.schemaVersion`);
   if (finite(baseline?.config?.warmups) !== 1) errors.push(`${block.id}.baseline.config.warmups`);
@@ -1615,6 +1724,7 @@ function validateCrossBlockIdentity(blocks) {
 }
 
 export function analyzeWilliamsCrossoverEvidence({
+  trustedRevisionIdentity,
   preregistration,
   jobRunnerPreparation,
   powerSchemeLifecycle,
@@ -1629,7 +1739,8 @@ export function analyzeWilliamsCrossoverEvidence({
     jobRunnerPreparation,
   );
   const invalidReasons = [
-    ...validateWilliamsPreregistration(preregistration),
+    ...validateWilliamsTrustedRevisionIdentity(trustedRevisionIdentity),
+    ...validateWilliamsPreregistration(preregistration, trustedRevisionIdentity),
     ...validateWilliamsJobRunnerPreparation(jobRunnerPreparation, preregistration),
     ...powerLifecycleValidation.errors,
     ...(manifestValidation?.status === "valid" ? [] : (manifestValidation?.errors || ["manifest.invalid"])),
@@ -1638,7 +1749,12 @@ export function analyzeWilliamsCrossoverEvidence({
   const internalOutliers = [];
   const normalizedBlocks = [];
   const blocksByOrdinal = new Map(blocks.map((block) => [finite(block?.ordinal), block]));
-  const telemetryAdmission = buildTelemetryAdmission(blocks, preregistration, powerLifecycleValidation);
+  const telemetryAdmission = buildTelemetryAdmission(
+    blocks,
+    preregistration,
+    trustedRevisionIdentity,
+    powerLifecycleValidation,
+  );
   invalidReasons.push(...telemetryAdmission.errors);
 
   for (const expectedBlock of WILLIAMS_BLOCK_SEQUENCE) {
@@ -1655,12 +1771,35 @@ export function analyzeWilliamsCrossoverEvidence({
     ) {
       invalidReasons.push(`${expectedBlock.id}.metadata`);
     }
-    invalidReasons.push(...validateCanonicalBlockCommand(evidence.command, expectedBlock, preregistration, rawRoot));
-    invalidReasons.push(...validateIdentity(evidence.identity, expectedBlock, preregistration));
-    invalidReasons.push(...validateCleanup(evidence.cleanup, expectedBlock, evidence));
+    const expectedCommand = expectedCanonicalBlockCommand(expectedBlock, trustedRevisionIdentity, rawRoot);
+    const expectedCwd = trustedSideRevision(trustedRevisionIdentity, expectedBlock.side).worktree;
+    invalidReasons.push(...validateCanonicalBlockCommand(
+      evidence.command,
+      expectedBlock,
+      trustedRevisionIdentity,
+      rawRoot,
+    ));
+    invalidReasons.push(...validateIdentity(
+      evidence.identity,
+      expectedBlock,
+      preregistration,
+      trustedRevisionIdentity,
+    ));
+    invalidReasons.push(...validateCleanup(
+      evidence.cleanup,
+      expectedBlock,
+      evidence,
+      expectedCommand,
+      expectedCwd,
+    ));
     invalidReasons.push(...validateBlockResult(evidence.blockResult, expectedBlock));
     invalidReasons.push(...validateQuietWindow(evidence.quietWindow, expectedBlock));
-    invalidReasons.push(...validateBaselineIdentity(evidence.baseline, expectedBlock, preregistration));
+    invalidReasons.push(...validateBaselineIdentity(
+      evidence.baseline,
+      expectedBlock,
+      preregistration,
+      trustedRevisionIdentity,
+    ));
     invalidReasons.push(...validateBlockWorkloadIdentity(evidence.baseline, expectedBlock));
 
     const scenarios = {};
@@ -1774,6 +1913,7 @@ export function analyzeWilliamsCrossoverEvidence({
       policyId: RENDER_SAMPLE_ROLE_POLICY_ID,
       canonicalRoleId: CANONICAL_RENDER_SAMPLE_ROLE_ID,
     },
+    trustedRevisionIdentity,
     preregistration,
     powerSchemeLifecycle,
     manifestValidation,

@@ -25,6 +25,7 @@ import {
   buildWilliamsExecutionPlan,
   buildWilliamsMarkdown,
   buildWilliamsRawManifest,
+  buildWilliamsTrustedRevisionIdentity,
   deriveWilliamsQuietWindow,
   getWilliamsErrorExitCode,
   parseWilliamsArgs,
@@ -43,12 +44,16 @@ import {
   WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
 } from "../tools/perf/render_sample_role_policy.mjs";
 
+const REPO_ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const CONTROL_HEAD = "a".repeat(40);
-const CANDIDATE_HEAD = "b".repeat(40);
+const CANDIDATE_HEAD = spawnSync("git", ["rev-parse", "HEAD"], {
+  cwd: REPO_ROOT,
+  encoding: "utf8",
+  windowsHide: true,
+}).stdout.trim();
 const CONTROL_WORKTREE = "C:\\perf\\control";
-const CANDIDATE_WORKTREE = "C:\\perf\\candidate";
+const CANDIDATE_WORKTREE = REPO_ROOT;
 const EVIDENCE_RAW_ROOT = "C:\\perf\\evidence";
-const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const RUNTIME_TMP_ROOT = path.join(REPO_ROOT, ".runtime", "tmp");
 const EXPECTED_POWER_SCHEME_GUID = "00000000-0000-0000-0000-000000000000";
 const JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
@@ -61,6 +66,47 @@ const URL_QUERY = Object.freeze({
   startup_cache: 0,
   perf: 1,
 });
+
+function trustedRevisionIdentity(overrides = {}) {
+  return {
+    expectedControlWorktree: CONTROL_WORKTREE,
+    expectedControlHead: CONTROL_HEAD,
+    expectedCandidateWorktree: CANDIDATE_WORKTREE,
+    expectedCandidateHead: CANDIDATE_HEAD,
+    trustedAnalyzerRoot: REPO_ROOT,
+    ...overrides,
+  };
+}
+
+async function analyzeTrustedRawRoot(root, overrides = {}) {
+  return analyzeWilliamsCrossoverRawRoot(root, {
+    trustedRevisionIdentity: trustedRevisionIdentity(overrides),
+  });
+}
+
+function literalWilliamsCommand({
+  rawRoot,
+  blockId,
+  measuredWorktree,
+  scenarioOrder,
+}) {
+  const directory = path.join(rawRoot, "blocks", blockId);
+  return {
+    bin: process.execPath,
+    args: [
+      path.join(CANDIDATE_WORKTREE, "tools", "perf", "run_baseline.mjs"),
+      "--measured-repo-root", measuredWorktree,
+      "--mode", "baseline",
+      "--scenarios", scenarioOrder.join(","),
+      "--runs", "2",
+      "--warmups", "1",
+      "--render-sample-run-profile", "p2-williams-crossover-v7",
+      "--baseline-json", path.join(directory, "baseline.json"),
+      "--baseline-md", path.join(directory, "baseline.md"),
+      "--raw-dir", path.join(directory, "raw"),
+    ],
+  };
+}
 
 async function makeRuntimeTemp(prefix) {
   await fs.mkdir(RUNTIME_TMP_ROOT, { recursive: true });
@@ -451,6 +497,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     };
   });
   return {
+    trustedRevisionIdentity: trustedRevisionIdentity(),
     rawRoot: EVIDENCE_RAW_ROOT,
     preregistration,
     jobRunnerPreparation: jobRunnerPreparation(
@@ -548,6 +595,78 @@ async function materializeEvidenceRoot(evidence) {
   }
   await buildWilliamsRawManifest(root, currentToolIdentity);
   return root;
+}
+
+async function rebuildRawManifest(root) {
+  const currentToolIdentity = await buildCurrentHarnessArtifacts();
+  currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  await fs.rm(path.join(root, "raw-sha256-manifest.json"));
+  await buildWilliamsRawManifest(root, currentToolIdentity);
+}
+
+async function synchronizeRawRevisionEvidence(root, overrides = {}) {
+  const preregistrationPath = path.join(root, "preregistration.json");
+  const preregistration = JSON.parse(await fs.readFile(preregistrationPath, "utf8"));
+  const revision = {
+    controlWorktree: overrides.controlWorktree ?? preregistration.control.worktree,
+    controlHead: overrides.controlHead ?? preregistration.control.head,
+    candidateWorktree: overrides.candidateWorktree ?? preregistration.candidate.worktree,
+    candidateHead: overrides.candidateHead ?? preregistration.candidate.head,
+  };
+  preregistration.control.worktree = revision.controlWorktree;
+  preregistration.control.head = revision.controlHead;
+  preregistration.candidate.worktree = revision.candidateWorktree;
+  preregistration.candidate.head = revision.candidateHead;
+  await writeJson(preregistrationPath, preregistration);
+
+  for (const block of WILLIAMS_BLOCK_SEQUENCE) {
+    const directory = path.join(root, "blocks", block.id);
+    const measuredWorktree = block.side === "A" ? revision.controlWorktree : revision.candidateWorktree;
+    const expectedHead = block.side === "A" ? revision.controlHead : revision.candidateHead;
+    const command = literalWilliamsCommand({
+      rawRoot: root,
+      blockId: block.id,
+      measuredWorktree,
+      scenarioOrder: block.scenarioOrder,
+    });
+    command.args[0] = path.join(revision.candidateWorktree, "tools", "perf", "run_baseline.mjs");
+    await writeJson(path.join(directory, "command.json"), command);
+
+    const identityPath = path.join(directory, "identity.json");
+    const identity = JSON.parse(await fs.readFile(identityPath, "utf8"));
+    identity.expectedHead = expectedHead;
+    identity.actualHead = expectedHead;
+    identity.cwd = measuredWorktree;
+    identity.measuredRoot = measuredWorktree;
+    identity.harnessRoot = revision.candidateWorktree;
+    await writeJson(identityPath, identity);
+
+    for (const telemetryName of ["telemetry-pre.json", "telemetry-post.json"]) {
+      const telemetryPath = path.join(directory, telemetryName);
+      const telemetry = JSON.parse(await fs.readFile(telemetryPath, "utf8"));
+      telemetry.environment.cwd = measuredWorktree;
+      telemetry.environment.gitHead = expectedHead;
+      await writeJson(telemetryPath, telemetry);
+    }
+
+    const baselinePath = path.join(directory, "baseline.json");
+    const baseline = JSON.parse(await fs.readFile(baselinePath, "utf8"));
+    baseline.gitHead = expectedHead;
+    await writeJson(baselinePath, baseline);
+
+    const jobObjectPath = path.join(directory, "job-object.json");
+    const jobObject = JSON.parse(await fs.readFile(jobObjectPath, "utf8"));
+    jobObject.commandExecutablePath = command.bin;
+    jobObject.commandWorkingDirectory = measuredWorktree;
+    jobObject.commandArguments = [...command.args];
+    await writeJson(jobObjectPath, jobObject);
+
+    const cleanupPath = path.join(directory, "cleanup.json");
+    const cleanup = JSON.parse(await fs.readFile(cleanupPath, "utf8"));
+    cleanup.jobObject = structuredClone(jobObject);
+    await writeJson(cleanupPath, cleanup);
+  }
+  await rebuildRawManifest(root);
 }
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
@@ -1053,14 +1172,21 @@ test("CLI defaults to list and the plan keeps live execution explicit", () => {
     candidateWorktree: CANDIDATE_WORKTREE,
   });
   assert.equal(plan.blocks.length, 8);
-  assert.deepEqual(plan.blocks[2].command.args.slice(0, 11), [
-    path.join(CANDIDATE_WORKTREE, "tools", "perf", "run_baseline.mjs"),
-    "--measured-repo-root", CANDIDATE_WORKTREE,
-    "--mode", "baseline",
-    "--scenarios", "hoi4_1939,tno_1962",
-    "--runs", "2",
-    "--warmups", "1",
-  ]);
+  assert.deepEqual(plan.blocks[2].command, {
+    bin: process.execPath,
+    args: [
+      path.join(CANDIDATE_WORKTREE, "tools", "perf", "run_baseline.mjs"),
+      "--measured-repo-root", CANDIDATE_WORKTREE,
+      "--mode", "baseline",
+      "--scenarios", "hoi4_1939,tno_1962",
+      "--runs", "2",
+      "--warmups", "1",
+      "--render-sample-run-profile", "p2-williams-crossover-v7",
+      "--baseline-json", path.join(plan.blocks[2].directory, "baseline.json"),
+      "--baseline-md", path.join(plan.blocks[2].directory, "baseline.md"),
+      "--raw-dir", path.join(plan.blocks[2].directory, "raw"),
+    ],
+  });
 
   const powerBoundOptions = parseWilliamsArgs([
     "--expected-power-scheme-guid",
@@ -1075,6 +1201,66 @@ test("CLI defaults to list and the plan keeps live execution explicit", () => {
   });
   assert.equal(powerBoundOptions.expectedPowerSchemeGuid, EXPECTED_POWER_SCHEME_GUID);
   assert.equal(powerBoundPlan.preregistration.telemetry.expectedPowerSchemeGuid, EXPECTED_POWER_SCHEME_GUID);
+
+  const envelopePlan = buildWilliamsExecutionPlan({
+    rawRoot: EVIDENCE_RAW_ROOT,
+    controlWorktree: "C:\\untrusted\\control",
+    controlHead: "e".repeat(40),
+    candidateWorktree: "C:\\untrusted\\candidate",
+    candidateHead: "f".repeat(40),
+    trustedRevisionIdentity: trustedRevisionIdentity(),
+  });
+  assert.deepEqual(envelopePlan.preregistration.control, {
+    side: "A",
+    head: CONTROL_HEAD,
+    worktree: CONTROL_WORKTREE,
+  });
+  assert.deepEqual(envelopePlan.preregistration.candidate, {
+    side: "B",
+    head: CANDIDATE_HEAD,
+    worktree: CANDIDATE_WORKTREE,
+  });
+  assert.equal(envelopePlan.blocks[0].command.args[0], path.join(
+    CANDIDATE_WORKTREE,
+    "tools",
+    "perf",
+    "run_baseline.mjs",
+  ));
+});
+
+test("analyze consumes a complete external trusted revision identity and rejects missing or local drift", async () => {
+  const rawRoot = path.join(RUNTIME_TMP_ROOT, "williams-trusted-revision-cli");
+  const baseOptions = parseWilliamsArgs([
+    "--analyze",
+    "--raw-root", rawRoot,
+    "--json-out", `${rawRoot}.json`,
+    "--md-out", `${rawRoot}.md`,
+    "--control-worktree", CONTROL_WORKTREE,
+    "--control-head", CONTROL_HEAD,
+    "--candidate-worktree", CANDIDATE_WORKTREE,
+    "--candidate-head", CANDIDATE_HEAD,
+  ]);
+  assert.deepEqual(buildWilliamsTrustedRevisionIdentity(baseOptions), trustedRevisionIdentity());
+
+  for (const field of ["controlWorktree", "controlHead", "candidateWorktree", "candidateHead"]) {
+    await assert.rejects(
+      runWilliamsCli({ ...baseOptions, [field]: "" }),
+      (error) => error instanceof WilliamsInvalidExperimentError
+        && getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment,
+      field,
+    );
+  }
+  for (const drift of [
+    { candidateWorktree: path.join(REPO_ROOT, "substituted-candidate") },
+    { candidateHead: "f".repeat(40) },
+    { trustedAnalyzerRoot: path.dirname(REPO_ROOT) },
+  ]) {
+    assert.throws(
+      () => buildWilliamsTrustedRevisionIdentity({ ...baseOptions, ...drift }),
+      (error) => error instanceof WilliamsInvalidExperimentError
+        && getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment,
+    );
+  }
 });
 
 test("Williams analyzer rejects missing, substituted, and mixed run-profile identity", () => {
@@ -1179,13 +1365,6 @@ test("Williams authority rejects harness-root and shared runner identity drift",
 
 test("Williams analyzer rejects self-consistent noncanonical block commands", () => {
   const rawRoot = path.join(REPO_ROOT, ".runtime", "tmp", "williams-command-authority");
-  const canonicalPlan = buildWilliamsExecutionPlan({
-    rawRoot,
-    controlHead: CONTROL_HEAD,
-    candidateHead: CANDIDATE_HEAD,
-    controlWorktree: CONTROL_WORKTREE,
-    candidateWorktree: CANDIDATE_WORKTREE,
-  });
   const removeOption = (args, option) => {
     const index = args.indexOf(option);
     assert.ok(index >= 0, `${option} must exist in the canonical fixture`);
@@ -1197,19 +1376,34 @@ test("Williams analyzer rejects self-consistent noncanonical block commands", ()
     }],
     ["missing measured root", (command) => removeOption(command.args, "--measured-repo-root")],
     ["missing Williams profile", (command) => removeOption(command.args, "--render-sample-run-profile")],
-    ["missing baseline output", (command) => removeOption(command.args, "--baseline-json")],
+    ["missing baseline JSON", (command) => removeOption(command.args, "--baseline-json")],
+    ["missing baseline MD", (command) => removeOption(command.args, "--baseline-md")],
+    ["missing raw output", (command) => removeOption(command.args, "--raw-dir")],
+    ["extra argument", (command) => command.args.push("--write-markdown", "false")],
+    ["argument reorder", (command) => {
+      const runsIndex = command.args.indexOf("--runs");
+      const runsPair = command.args.splice(runsIndex, 2);
+      const warmupsIndex = command.args.indexOf("--warmups");
+      command.args.splice(warmupsIndex + 2, 0, ...runsPair);
+    }],
   ];
 
   for (const [label, mutate] of cases) {
     const evidence = createEvidence();
     evidence.rawRoot = rawRoot;
-    const command = structuredClone(canonicalPlan.blocks[0].command);
+    const command = literalWilliamsCommand({
+      rawRoot,
+      blockId: "block-01",
+      measuredWorktree: CONTROL_WORKTREE,
+      scenarioOrder: ["tno_1962", "hoi4_1939"],
+    });
     mutate(command);
     evidence.blocks[0].command = command;
     evidence.blocks[0].jobObject = jobObjectEvidence(4001, { command, cwd: CONTROL_WORKTREE });
     evidence.blocks[0].cleanup.jobObject = jobObjectEvidence(4001, { command, cwd: CONTROL_WORKTREE });
     const report = analyzeWilliamsCrossoverEvidence(evidence);
     assert.equal(report.decision.status, "invalid-experiment", label);
+    assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, label);
     assert.ok(report.decision.invalidReasons.includes("block-01.command.canonical"), label);
   }
 });
@@ -1262,12 +1456,60 @@ test("raw-root analyzer rejects a manifest-valid runtime substitution", async (t
   currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   await fs.rm(path.join(root, "raw-sha256-manifest.json"));
   await buildWilliamsRawManifest(root, currentToolIdentity);
-  const report = await analyzeWilliamsCrossoverRawRoot(root);
+  const report = await analyzeTrustedRawRoot(root);
   assert.equal(report.manifestValidation.status, "valid");
   assert.equal(report.decision.status, "invalid-experiment");
   assert.ok(
     report.decision.invalidReasons.includes("preregistration.workloadContract.command.nodeExecutablePath"),
   );
+});
+
+test("raw-root analyzer rejects manifest-valid synchronized trusted revision substitutions", async (t) => {
+  const cases = [
+    [
+      "candidate root",
+      { candidateWorktree: "C:\\perf\\candidate-substituted" },
+      "preregistration.candidate.worktree.trusted",
+    ],
+    [
+      "candidate head",
+      { candidateHead: "d".repeat(40) },
+      "preregistration.candidate.head.trusted",
+    ],
+    [
+      "control root",
+      { controlWorktree: "C:\\perf\\control-substituted" },
+      "preregistration.control.worktree.trusted",
+    ],
+    [
+      "control head",
+      { controlHead: "c".repeat(40) },
+      "preregistration.control.head.trusted",
+    ],
+    [
+      "combined control and candidate revision identity",
+      {
+        controlWorktree: "C:\\perf\\control-combined",
+        controlHead: "c".repeat(40),
+        candidateWorktree: "C:\\perf\\candidate-combined",
+        candidateHead: "d".repeat(40),
+      },
+      "preregistration.candidate.worktree.trusted",
+    ],
+  ];
+  const roots = [];
+  t.after(() => Promise.all(roots.map((root) => fs.rm(root, { recursive: true, force: true }))));
+
+  for (const [label, mutation, expectedReason] of cases) {
+    const root = await materializeEvidenceRoot(createEvidence());
+    roots.push(root);
+    await synchronizeRawRevisionEvidence(root, mutation);
+    const report = await analyzeTrustedRawRoot(root);
+    assert.equal(report.manifestValidation.status, "valid", label);
+    assert.equal(report.decision.status, "invalid-experiment", label);
+    assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, label);
+    assert.ok(report.decision.invalidReasons.includes(expectedReason), label);
+  }
 });
 
 test("raw-root analyzer rejects missing, substituted, and mixed run-profile identity", async (t) => {
@@ -1294,12 +1536,111 @@ test("raw-root analyzer rejects missing, substituted, and mixed run-profile iden
     mutate(evidence);
     const root = await materializeEvidenceRoot(evidence);
     roots.push(root);
-    const report = await analyzeWilliamsCrossoverRawRoot(root);
+    const report = await analyzeTrustedRawRoot(root);
     assert.equal(report.decision.status, "invalid-experiment", label);
     assert.ok(
       report.decision.invalidReasons.some((reason) => reason.includes("renderSampleRunProfile") || reason.includes("runProfile")),
       `${label}: ${report.decision.invalidReasons.join("\n")}`,
     );
+  }
+});
+
+test("raw-root command, Job, cleanup, profile, and workload mutations stay manifest-valid and fail typed admission", async (t) => {
+  const removeOption = (args, option) => {
+    const index = args.indexOf(option);
+    assert.ok(index >= 0, `${option} must exist in the independent literal fixture`);
+    args.splice(index, 2);
+  };
+  const commandCases = [
+    ["old control runner", (command) => {
+      command.args[0] = path.join(CONTROL_WORKTREE, "tools", "perf", "run_baseline.mjs");
+    }],
+    ["missing measured root", (command) => removeOption(command.args, "--measured-repo-root")],
+    ["missing profile", (command) => removeOption(command.args, "--render-sample-run-profile")],
+    ["missing JSON", (command) => removeOption(command.args, "--baseline-json")],
+    ["missing MD", (command) => removeOption(command.args, "--baseline-md")],
+    ["missing raw output", (command) => removeOption(command.args, "--raw-dir")],
+    ["extra argument", (command) => command.args.push("--write-markdown", "false")],
+    ["argument reorder", (command) => {
+      const runsIndex = command.args.indexOf("--runs");
+      const runsPair = command.args.splice(runsIndex, 2);
+      const warmupsIndex = command.args.indexOf("--warmups");
+      command.args.splice(warmupsIndex + 2, 0, ...runsPair);
+    }],
+  ];
+  const roots = [];
+  t.after(() => Promise.all(roots.map((root) => fs.rm(root, { recursive: true, force: true }))));
+
+  for (const [label, mutate] of commandCases) {
+    const root = await materializeEvidenceRoot(createEvidence());
+    roots.push(root);
+    const directory = path.join(root, "blocks", "block-08");
+    const command = literalWilliamsCommand({
+      rawRoot: root,
+      blockId: "block-08",
+      measuredWorktree: CANDIDATE_WORKTREE,
+      scenarioOrder: ["hoi4_1939", "tno_1962"],
+    });
+    mutate(command);
+    await writeJson(path.join(directory, "command.json"), command);
+
+    const jobObjectPath = path.join(directory, "job-object.json");
+    const jobObject = JSON.parse(await fs.readFile(jobObjectPath, "utf8"));
+    jobObject.commandExecutablePath = command.bin;
+    jobObject.commandWorkingDirectory = CANDIDATE_WORKTREE;
+    jobObject.commandArguments = [...command.args];
+    await writeJson(jobObjectPath, jobObject);
+    const cleanupPath = path.join(directory, "cleanup.json");
+    const cleanup = JSON.parse(await fs.readFile(cleanupPath, "utf8"));
+    cleanup.jobObject = structuredClone(jobObject);
+    await writeJson(cleanupPath, cleanup);
+
+    await rebuildRawManifest(root);
+    const report = await analyzeTrustedRawRoot(root);
+    assert.equal(report.manifestValidation.status, "valid", label);
+    assert.equal(report.decision.status, "invalid-experiment", label);
+    assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, label);
+    assert.ok(report.decision.invalidReasons.includes("block-08.command.canonical"), label);
+  }
+
+  for (const [label, mutate, expectedReason] of [
+    [
+      "block-08 profile drift",
+      (baseline) => {
+        baseline.renderSampleRolePolicy.runProfile.id = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+        baseline.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+        for (const scenarioId of WILLIAMS_SCENARIOS) {
+          baseline.workloadIdentity.scenarios[scenarioId].renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+          baseline.scenarios[scenarioId].workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+        }
+      },
+      "block-08.baseline.renderSampleRolePolicy.runProfile.id",
+    ],
+    [
+      "block-08 workload drift",
+      (baseline) => {
+        baseline.config.runs = 3;
+        baseline.workloadIdentity.runs = 3;
+        for (const scenarioId of WILLIAMS_SCENARIOS) {
+          baseline.workloadIdentity.scenarios[scenarioId].runs = 3;
+          baseline.scenarios[scenarioId].workloadIdentity.runs = 3;
+        }
+      },
+      "block-08.baseline.config.runs",
+    ],
+  ]) {
+    const root = await materializeEvidenceRoot(createEvidence());
+    roots.push(root);
+    const baselinePath = path.join(root, "blocks", "block-08", "baseline.json");
+    const baseline = JSON.parse(await fs.readFile(baselinePath, "utf8"));
+    mutate(baseline);
+    await writeJson(baselinePath, baseline);
+    await rebuildRawManifest(root);
+    const report = await analyzeTrustedRawRoot(root);
+    assert.equal(report.manifestValidation.status, "valid", label);
+    assert.equal(report.decision.status, "invalid-experiment", label);
+    assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, label);
+    assert.ok(report.decision.invalidReasons.includes(expectedReason), label);
   }
 });
 
@@ -1536,7 +1877,7 @@ test("power-scheme execution always stops the session and restores the process e
 test("raw analyzer rebuilds an accepted report from exactly 32 measured files", async (t) => {
   const root = await materializeEvidenceRoot(createEvidence());
   t.after(() => fs.rm(root, { recursive: true, force: true }));
-  const report = await analyzeWilliamsCrossoverRawRoot(root);
+  const report = await analyzeTrustedRawRoot(root);
   assert.equal(report.manifestValidation.status, "valid");
   assert.equal(report.manifestValidation.measuredRawFileCount, 32);
   assert.equal(report.decision.status, "accepted");
@@ -1552,7 +1893,7 @@ test("raw analyzer requires the executed Job runner binary and recomputes its de
   const missingIdentity = await buildCurrentHarnessArtifacts();
   missingIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   await buildWilliamsRawManifest(missingRoot, missingIdentity);
-  const missingReport = await analyzeWilliamsCrossoverRawRoot(missingRoot);
+  const missingReport = await analyzeTrustedRawRoot(missingRoot);
   assert.ok(missingReport.manifestValidation.errors.includes(`manifest.missing-entry:${JOB_RUNNER_EVIDENCE_PATH}`));
 
   await fs.writeFile(path.join(tamperedRoot, JOB_RUNNER_EVIDENCE_PATH), Buffer.from("MZ-tampered", "utf8"));
@@ -1560,7 +1901,7 @@ test("raw analyzer requires the executed Job runner binary and recomputes its de
   const tamperedIdentity = await buildCurrentHarnessArtifacts();
   tamperedIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   await buildWilliamsRawManifest(tamperedRoot, tamperedIdentity);
-  const tamperedReport = await analyzeWilliamsCrossoverRawRoot(tamperedRoot);
+  const tamperedReport = await analyzeTrustedRawRoot(tamperedRoot);
   assert.ok(tamperedReport.manifestValidation.errors.includes("manifest.toolIdentity.jobRunnerBinary.evidence.sha256"));
 });
 
@@ -1577,7 +1918,7 @@ test("raw analyzer consumes preparation and canonical per-block Job evidence", a
   const preparationIdentity = await buildCurrentHarnessArtifacts();
   preparationIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   await buildWilliamsRawManifest(preparationRoot, preparationIdentity);
-  const preparationReport = await analyzeWilliamsCrossoverRawRoot(preparationRoot);
+  const preparationReport = await analyzeTrustedRawRoot(preparationRoot);
   assert.ok(preparationReport.decision.invalidReasons.includes("job-runner-preparation.status"));
 
   const jobPath = path.join(jobRoot, "blocks", "block-01", "job-object.json");
@@ -1588,7 +1929,7 @@ test("raw analyzer consumes preparation and canonical per-block Job evidence", a
   const jobIdentity = await buildCurrentHarnessArtifacts();
   jobIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   await buildWilliamsRawManifest(jobRoot, jobIdentity);
-  const jobReport = await analyzeWilliamsCrossoverRawRoot(jobRoot);
+  const jobReport = await analyzeTrustedRawRoot(jobRoot);
   assert.ok(jobReport.decision.invalidReasons.includes("block-01.jobObject.cleanup-canonical"));
   assert.ok(jobReport.decision.invalidReasons.includes("block-01.jobObject.rootExitCode"));
 });
@@ -1605,8 +1946,8 @@ test("raw analyzer rejects both extra and missing measured files", async (t) => 
     { unexpected: true },
   );
   await fs.rm(path.join(missingRoot, "blocks", "block-08", "raw", "hoi4_1939", "run-02.json"));
-  const extraReport = await analyzeWilliamsCrossoverRawRoot(extraRoot);
-  const missingReport = await analyzeWilliamsCrossoverRawRoot(missingRoot);
+  const extraReport = await analyzeTrustedRawRoot(extraRoot);
+  const missingReport = await analyzeTrustedRawRoot(missingRoot);
   assert.equal(extraReport.decision.status, "invalid-experiment");
   assert.ok(extraReport.manifestValidation.errors.some((error) => error.includes("raw.extra:")));
   assert.equal(missingReport.decision.status, "invalid-experiment");
@@ -1626,18 +1967,18 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   const extraManifest = JSON.parse(await fs.readFile(extraManifestPath, "utf8"));
   extraManifest.files.push({ path: "blocks/block-01/unregistered.json", bytes: 2, sha256: HASH });
   await writeJson(extraManifestPath, extraManifest);
-  const extraReport = await analyzeWilliamsCrossoverRawRoot(extraRoot);
+  const extraReport = await analyzeTrustedRawRoot(extraRoot);
   assert.ok(extraReport.manifestValidation.errors.includes("manifest.extra-entry:blocks/block-01/unregistered.json"));
 
   await writeJson(path.join(tamperRoot, "blocks", "block-01", "block-metadata.json"), { tampered: true });
-  const tamperReport = await analyzeWilliamsCrossoverRawRoot(tamperRoot);
+  const tamperReport = await analyzeTrustedRawRoot(tamperRoot);
   assert.ok(tamperReport.manifestValidation.errors.includes("manifest.sha256:blocks/block-01/block-metadata.json"));
 
   const toolManifestPath = path.join(toolRoot, "raw-sha256-manifest.json");
   const toolManifest = JSON.parse(await fs.readFile(toolManifestPath, "utf8"));
   toolManifest.toolIdentity.policy.lfNormalizedSha256 = "f".repeat(64);
   await writeJson(toolManifestPath, toolManifest);
-  const toolReport = await analyzeWilliamsCrossoverRawRoot(toolRoot);
+  const toolReport = await analyzeTrustedRawRoot(toolRoot);
   assert.ok(toolReport.manifestValidation.errors.includes("manifest.toolIdentity.policy.current"));
   assert.equal(toolReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
 
@@ -1645,7 +1986,7 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   const identityHelperManifest = JSON.parse(await fs.readFile(identityHelperManifestPath, "utf8"));
   identityHelperManifest.toolIdentity.containmentIdentityHelper.lfNormalizedSha256 = "f".repeat(64);
   await writeJson(identityHelperManifestPath, identityHelperManifest);
-  const identityHelperReport = await analyzeWilliamsCrossoverRawRoot(identityHelperRoot);
+  const identityHelperReport = await analyzeTrustedRawRoot(identityHelperRoot);
   assert.ok(identityHelperReport.manifestValidation.errors.includes("manifest.toolIdentity.containmentIdentityHelper.current"));
   assert.equal(identityHelperReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
 
@@ -1653,7 +1994,7 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   const sharedHarnessManifest = JSON.parse(await fs.readFile(sharedHarnessManifestPath, "utf8"));
   sharedHarnessManifest.toolIdentity.sharedHarness.runner.lfNormalizedSha256 = "f".repeat(64);
   await writeJson(sharedHarnessManifestPath, sharedHarnessManifest);
-  const sharedHarnessReport = await analyzeWilliamsCrossoverRawRoot(sharedHarnessRoot);
+  const sharedHarnessReport = await analyzeTrustedRawRoot(sharedHarnessRoot);
   assert.ok(sharedHarnessReport.manifestValidation.errors.includes("manifest.toolIdentity.sharedHarness.runner.current"));
   assert.equal(sharedHarnessReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
 });
@@ -1871,7 +2212,14 @@ test("raw, JSON, and Markdown outputs use no-clobber with explicit analysis over
   );
   await writeJson(options.jsonOut, { preserved: true });
   await assert.rejects(
-    runWilliamsCli({ ...parseWilliamsArgs(["--analyze"]), ...options }),
+    runWilliamsCli({
+      ...parseWilliamsArgs(["--analyze"]),
+      ...options,
+      controlWorktree: CONTROL_WORKTREE,
+      controlHead: CONTROL_HEAD,
+      candidateWorktree: CANDIDATE_WORKTREE,
+      candidateHead: CANDIDATE_HEAD,
+    }),
     (error) => error instanceof WilliamsInvalidExperimentError && error.code === "report-output-exists",
   );
   assert.deepEqual(JSON.parse(await fs.readFile(options.jsonOut, "utf8")), { preserved: true });

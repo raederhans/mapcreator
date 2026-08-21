@@ -206,13 +206,18 @@ function blockDirectory(rawRoot, block) {
 }
 
 export function buildWilliamsExecutionPlan(options = {}) {
-  const harnessRoot = path.resolve(options.candidateWorktree || REPO_ROOT);
+  const trustedRevisionIdentity = options.trustedRevisionIdentity || {};
+  const controlWorktree = trustedRevisionIdentity.expectedControlWorktree || options.controlWorktree;
+  const candidateWorktree = trustedRevisionIdentity.expectedCandidateWorktree || options.candidateWorktree;
+  const controlHead = trustedRevisionIdentity.expectedControlHead || options.controlHead;
+  const candidateHead = trustedRevisionIdentity.expectedCandidateHead || options.candidateHead;
+  const harnessRoot = path.resolve(trustedRevisionIdentity.trustedAnalyzerRoot || candidateWorktree || REPO_ROOT);
   const rawRoot = path.resolve(options.rawRoot || DEFAULT_RAW_ROOT);
   const preregistration = buildWilliamsPreregistration({
-    controlHead: options.controlHead,
-    candidateHead: options.candidateHead,
-    controlWorktree: options.controlWorktree,
-    candidateWorktree: options.candidateWorktree,
+    controlHead,
+    candidateHead,
+    controlWorktree,
+    candidateWorktree,
     generatedAt: null,
     jobRunnerSource: options.jobRunnerSource || null,
     jobRunnerSources: options.jobRunnerSources || null,
@@ -223,8 +228,8 @@ export function buildWilliamsExecutionPlan(options = {}) {
   return {
     preregistration,
     blocks: WILLIAMS_BLOCK_SEQUENCE.map((block) => {
-      const cwd = block.side === "A" ? options.controlWorktree : options.candidateWorktree;
-      const expectedHead = block.side === "A" ? options.controlHead : options.candidateHead;
+      const cwd = block.side === "A" ? controlWorktree : candidateWorktree;
+      const expectedHead = block.side === "A" ? controlHead : candidateHead;
       const directory = blockDirectory(rawRoot, block);
       return {
         ...block,
@@ -503,6 +508,88 @@ export function validateMeasurementSnapshot(snapshot, expectedHead, label = "mea
 function validateMeasurementWorktree(worktree, expectedHead, label) {
   if (!worktree || !expectedHead) throw new WilliamsInvalidExperimentError(`${label} worktree and exact head are required.`, "identity-missing");
   return validateMeasurementSnapshot(worktreeGitSnapshot(worktree), expectedHead, label);
+}
+
+function identityPathsEqual(left, right) {
+  if (!String(left || "").trim() || !String(right || "").trim()) return false;
+  const normalizedLeft = normalizePath(left);
+  const normalizedRight = normalizePath(right);
+  return process.platform === "win32"
+    ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+    : normalizedLeft === normalizedRight;
+}
+
+export function buildWilliamsTrustedRevisionIdentity(options = {}) {
+  const rawIdentity = {
+    expectedControlWorktree: options.expectedControlWorktree ?? options.controlWorktree,
+    expectedControlHead: options.expectedControlHead ?? options.controlHead,
+    expectedCandidateWorktree: options.expectedCandidateWorktree ?? options.candidateWorktree,
+    expectedCandidateHead: options.expectedCandidateHead ?? options.candidateHead,
+    trustedAnalyzerRoot: options.trustedAnalyzerRoot ?? REPO_ROOT,
+  };
+  for (const field of [
+    "expectedControlWorktree",
+    "expectedControlHead",
+    "expectedCandidateWorktree",
+    "expectedCandidateHead",
+    "trustedAnalyzerRoot",
+  ]) {
+    if (!String(rawIdentity[field] || "").trim()) {
+      throw new WilliamsInvalidExperimentError(
+        `Trusted revision identity requires ${field}.`,
+        `trusted-revision-identity-${field}-missing`,
+      );
+    }
+  }
+  for (const field of ["expectedControlHead", "expectedCandidateHead"]) {
+    if (!/^[a-f0-9]{40}$/i.test(String(rawIdentity[field]))) {
+      throw new WilliamsInvalidExperimentError(
+        `Trusted revision identity ${field} must be an exact 40-character Git commit id.`,
+        `trusted-revision-identity-${field}-invalid`,
+      );
+    }
+  }
+  const trustedRevisionIdentity = Object.freeze({
+    expectedControlWorktree: normalizePath(rawIdentity.expectedControlWorktree),
+    expectedControlHead: String(rawIdentity.expectedControlHead).toLowerCase(),
+    expectedCandidateWorktree: normalizePath(rawIdentity.expectedCandidateWorktree),
+    expectedCandidateHead: String(rawIdentity.expectedCandidateHead).toLowerCase(),
+    trustedAnalyzerRoot: normalizePath(rawIdentity.trustedAnalyzerRoot),
+  });
+  if (!identityPathsEqual(trustedRevisionIdentity.trustedAnalyzerRoot, REPO_ROOT)) {
+    throw new WilliamsInvalidExperimentError(
+      "The trusted Williams analyzer root must equal the repository running the analyzer.",
+      "trusted-analyzer-root-mismatch",
+    );
+  }
+  if (!identityPathsEqual(
+    trustedRevisionIdentity.expectedCandidateWorktree,
+    trustedRevisionIdentity.trustedAnalyzerRoot,
+  )) {
+    throw new WilliamsInvalidExperimentError(
+      "The expected Williams candidate worktree must equal the trusted analyzer root.",
+      "trusted-candidate-root-mismatch",
+    );
+  }
+  let actualCandidateHead = "";
+  try {
+    actualCandidateHead = runGit(
+      trustedRevisionIdentity.trustedAnalyzerRoot,
+      ["rev-parse", "HEAD"],
+    ).stdout.trim().toLowerCase();
+  } catch (error) {
+    throw new WilliamsInvalidExperimentError(
+      `Trusted analyzer HEAD is unavailable: ${String(error?.message || error)}`,
+      "trusted-candidate-head-unavailable",
+    );
+  }
+  if (actualCandidateHead !== trustedRevisionIdentity.expectedCandidateHead) {
+    throw new WilliamsInvalidExperimentError(
+      `Trusted analyzer HEAD mismatch: expected ${trustedRevisionIdentity.expectedCandidateHead}, actual ${actualCandidateHead || "missing"}.`,
+      "trusted-candidate-head-mismatch",
+    );
+  }
+  return trustedRevisionIdentity;
 }
 
 async function collectBlockIdentity(block, harnessArtifacts) {
@@ -921,6 +1008,7 @@ async function validateRawManifest(
   blocks,
   currentToolIdentity,
   jobRunnerPreparation,
+  trustedRevisionIdentity,
 ) {
   const errors = [...loadErrors];
   if (!manifest || typeof manifest !== "object") {
@@ -967,6 +1055,9 @@ async function validateRawManifest(
   if (actualRaw.size !== 32) errors.push(`raw.count.expected-32-actual-${actualRaw.size}`);
   if (manifest.measuredRawFileCount !== 32) errors.push(`manifest.raw-count.expected-32-actual-${manifest.measuredRawFileCount}`);
   const sharedHarness = manifest.toolIdentity?.sharedHarness;
+  if (!identityPathsEqual(currentToolIdentity?.root, trustedRevisionIdentity?.trustedAnalyzerRoot)) {
+    errors.push("manifest.toolIdentity.currentAnalyzer.root.trusted");
+  }
   if (String(sharedHarness?.root || "") !== String(currentToolIdentity?.root || "")) {
     errors.push("manifest.toolIdentity.sharedHarness.root.current");
   }
@@ -1069,7 +1160,11 @@ async function validateRawManifest(
   };
 }
 
-export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIdentity = null } = {}) {
+export async function analyzeWilliamsCrossoverRawRoot(rawRoot, {
+  currentToolIdentity = null,
+  trustedRevisionIdentity = null,
+} = {}) {
+  const trustedIdentity = buildWilliamsTrustedRevisionIdentity(trustedRevisionIdentity || {});
   const resolvedRoot = normalizePath(rawRoot);
   const loadErrors = [];
   const preregistration = await readRequiredJson(resolvedRoot, "preregistration.json", loadErrors);
@@ -1131,8 +1226,10 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIden
     blocks,
     analyzerToolIdentity,
     jobRunnerPreparation,
+    trustedIdentity,
   );
   return analyzeWilliamsCrossoverEvidence({
+    trustedRevisionIdentity: trustedIdentity,
     preregistration,
     jobRunnerPreparation,
     powerSchemeLifecycle,
@@ -1306,15 +1403,23 @@ export function requireWilliamsJobRunnerReady(preparation, { expectedSourceSet =
   return preparation;
 }
 
-async function executeExperiment(options) {
+async function executeExperiment(options, trustedRevisionIdentity) {
   validateExecuteOptions(options);
-  validateMeasurementWorktree(options.controlWorktree, options.controlHead, "control/A");
-  validateMeasurementWorktree(options.candidateWorktree, options.candidateHead, "candidate/B");
-  const harnessArtifacts = await collectHarnessArtifacts(options);
-  await validateWilliamsOutputPolicy(options, { reserveRawRoot: true, allowReportOverwrite: false });
+  const executionOptions = {
+    ...options,
+    controlWorktree: trustedRevisionIdentity.expectedControlWorktree,
+    controlHead: trustedRevisionIdentity.expectedControlHead,
+    candidateWorktree: trustedRevisionIdentity.expectedCandidateWorktree,
+    candidateHead: trustedRevisionIdentity.expectedCandidateHead,
+    trustedRevisionIdentity,
+  };
+  validateMeasurementWorktree(executionOptions.controlWorktree, executionOptions.controlHead, "control/A");
+  validateMeasurementWorktree(executionOptions.candidateWorktree, executionOptions.candidateHead, "candidate/B");
+  const harnessArtifacts = await collectHarnessArtifacts(executionOptions);
+  await validateWilliamsOutputPolicy(executionOptions, { reserveRawRoot: true, allowReportOverwrite: false });
   const preparationResult = await prepareWindowsJobRunner({
-    evidenceDirectory: path.join(options.rawRoot, "harness", "job-runner"),
-    evidenceBinaryPath: path.join(options.rawRoot, WINDOWS_JOB_RUNNER_EVIDENCE_PATH),
+    evidenceDirectory: path.join(executionOptions.rawRoot, "harness", "job-runner"),
+    evidenceBinaryPath: path.join(executionOptions.rawRoot, WINDOWS_JOB_RUNNER_EVIDENCE_PATH),
     evidenceBinaryDescriptorPath: WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
   });
   const preparationSourceSetMatches = orderedContainmentSourceSetsEqual(
@@ -1322,7 +1427,7 @@ async function executeExperiment(options) {
     harnessArtifacts.jobRunnerSources,
   );
   const preparationIdentityMismatch = preparationResult.status === "available" && !preparationSourceSetMatches;
-  await writeJson(path.join(options.rawRoot, "harness", "job-runner-preparation.json"), {
+  await writeJson(path.join(executionOptions.rawRoot, "harness", "job-runner-preparation.json"), {
     schemaVersion: 1,
     status: preparationIdentityMismatch ? "identity-error" : preparationResult.status,
     error: preparationIdentityMismatch
@@ -1347,15 +1452,15 @@ async function executeExperiment(options) {
   }
   harnessArtifacts.jobRunnerBinary = preparation.binary;
   try {
-    const lifecyclePath = path.join(options.rawRoot, POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH);
-    const helperPath = path.join(options.candidateWorktree, POWER_SCHEME_HELPER_PATH);
+    const lifecyclePath = path.join(executionOptions.rawRoot, POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH);
+    const helperPath = path.join(executionOptions.candidateWorktree, POWER_SCHEME_HELPER_PATH);
     await withWilliamsPowerSchemeSession({
       helperPath,
       sessionPath: lifecyclePath,
-      requestedGuid: options.expectedPowerSchemeGuid,
+      requestedGuid: executionOptions.expectedPowerSchemeGuid,
       operation: async (expectedPowerSchemeGuid) => {
         const plan = buildWilliamsExecutionPlan({
-          ...options,
+          ...executionOptions,
           expectedPowerSchemeGuid,
           jobRunnerSource: harnessArtifacts.jobRunnerSource,
           jobRunnerSources: harnessArtifacts.jobRunnerSources,
@@ -1366,16 +1471,18 @@ async function executeExperiment(options) {
           ...plan.preregistration,
           generatedAt: new Date().toISOString(),
         };
-        await writeJson(path.join(options.rawRoot, "preregistration.json"), preregistration);
+        await writeJson(path.join(executionOptions.rawRoot, "preregistration.json"), preregistration);
         for (const block of plan.blocks) {
           const result = await runBlock(block, harnessArtifacts, preparation);
           if (!result.complete) break;
         }
       },
     });
-    await buildWilliamsRawManifest(options.rawRoot, harnessArtifacts);
-    const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot);
-    await writeReport(options, report, { allowOverwrite: false });
+    await buildWilliamsRawManifest(executionOptions.rawRoot, harnessArtifacts);
+    const report = await analyzeWilliamsCrossoverRawRoot(executionOptions.rawRoot, {
+      trustedRevisionIdentity,
+    });
+    await writeReport(executionOptions, report, { allowOverwrite: false });
     return report;
   } finally {
     await preparation.cleanup();
@@ -1383,23 +1490,26 @@ async function executeExperiment(options) {
 }
 
 export async function runWilliamsCli(options) {
-  const plan = buildWilliamsExecutionPlan(options);
   if (["list", "dry-run"].includes(options.mode)) {
+    const plan = buildWilliamsExecutionPlan(options);
     process.stdout.write(formatPlan(plan));
     return { mode: options.mode, exitCode: 0, plan };
   }
   if (options.mode === "plan") {
+    const plan = buildWilliamsExecutionPlan(options);
     process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
     return { mode: options.mode, exitCode: 0, plan };
   }
   if (options.mode === "analyze") {
+    const trustedRevisionIdentity = buildWilliamsTrustedRevisionIdentity(options);
     await validateWilliamsOutputPolicy(options, { reserveRawRoot: false, allowReportOverwrite: options.overwriteAnalysis === true });
-    const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot);
+    const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot, { trustedRevisionIdentity });
     await writeReport(options, report, { allowOverwrite: options.overwriteAnalysis === true });
     return { mode: options.mode, exitCode: report.decision.exitCode, report };
   }
   if (options.mode === "execute") {
-    const report = await executeExperiment(options);
+    const trustedRevisionIdentity = buildWilliamsTrustedRevisionIdentity(options);
+    const report = await executeExperiment(options, trustedRevisionIdentity);
     return { mode: options.mode, exitCode: report.decision.exitCode, report };
   }
   throw new Error(`Unsupported Williams crossover mode: ${options.mode}`);
