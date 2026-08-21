@@ -24,6 +24,7 @@ import {
   runStandardPerfAdmission,
   runStandardPerfGenerationFence,
   runWithTransientPerfNetworkRetry,
+  resolveMeasuredRepoRoot,
   shouldBlockOnPerfRegressions,
   summarizeSnapshot,
   validateGateBaselineReport,
@@ -1103,14 +1104,21 @@ test("explicit render-sample run profiles preserve Williams two-run and standard
 
 test("Williams run profile is caller-owned, symmetric, and report identity drift fails closed", async () => {
   const root = path.join(REPO_ROOT, ".runtime", "tmp", "williams-profile-plan-fixture");
+  const controlWorktree = path.join(root, "control");
+  const candidateWorktree = path.join(root, "candidate");
+  const sharedRunner = path.join(candidateWorktree, "tools", "perf", "run_baseline.mjs");
   const plan = buildWilliamsExecutionPlan({
     rawRoot: root,
     controlHead: "a".repeat(40),
     candidateHead: "b".repeat(40),
-    controlWorktree: path.join(root, "control"),
-    candidateWorktree: path.join(root, "candidate"),
+    controlWorktree,
+    candidateWorktree,
   });
   for (const block of plan.blocks) {
+    assert.equal(block.command.args[0], sharedRunner, `${block.id} must use the shared candidate harness runner`);
+    const measuredRootFlagIndex = block.command.args.indexOf("--measured-repo-root");
+    assert.ok(measuredRootFlagIndex > 0, `${block.id} must declare the measured repo root`);
+    assert.equal(block.command.args[measuredRootFlagIndex + 1], block.cwd);
     const profileFlagIndex = block.command.args.indexOf("--render-sample-run-profile");
     assert.ok(profileFlagIndex > 0, `${block.id} must declare the run profile`);
     assert.equal(
@@ -1153,6 +1161,27 @@ test("Williams run profile is caller-owned, symmetric, and report identity drift
       label,
     );
   }
+});
+
+test("measured repo root is explicit for a shared harness and defaults to the harness checkout", () => {
+  const harnessRoot = path.join(REPO_ROOT, ".runtime", "tmp", "perf-harness-root");
+  const measuredRoot = path.join(REPO_ROOT, ".runtime", "tmp", "perf-measured-root");
+  assert.equal(resolveMeasuredRepoRoot([], harnessRoot), path.resolve(harnessRoot));
+  assert.equal(
+    resolveMeasuredRepoRoot(["--measured-repo-root", measuredRoot], harnessRoot),
+    path.resolve(measuredRoot),
+  );
+  assert.throws(
+    () => resolveMeasuredRepoRoot(["--measured-repo-root"], harnessRoot),
+    /requires an explicit path/,
+  );
+  assert.throws(
+    () => resolveMeasuredRepoRoot([
+      "--measured-repo-root", measuredRoot,
+      "--measured-repo-root", harnessRoot,
+    ], harnessRoot),
+    /may only be declared once/,
+  );
 });
 
 test("gate scenario selection fails before measurement unless the canonical set is exact", () => {

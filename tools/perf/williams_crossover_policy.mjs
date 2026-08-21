@@ -1,6 +1,7 @@
 import {
   CANONICAL_RENDER_SAMPLE_ROLE_ID,
   RENDER_SAMPLE_ROLE_POLICY_ID,
+  WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
   analyzeRenderSampleRole,
   median,
 } from "./render_sample_role_policy.mjs";
@@ -118,6 +119,7 @@ const WORKLOAD_IDENTITY_FIELDS = Object.freeze([
   "sampleRole",
   "runs",
   "warmups",
+  "renderSampleRunProfileId",
   "urlQuery",
 ]);
 
@@ -383,6 +385,12 @@ export function buildWilliamsPreregistration({
       report: {
         mode: "baseline",
         schemaVersion: 2,
+        renderSampleRunProfile: {
+          id: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+          measuredRunsPerScenario: 2,
+          reportSchemaVersion: 2,
+          allowedModes: ["baseline"],
+        },
         benchmarkMetricsSchemaVersion: "3.3",
         probeSchema: "mc_perf_snapshot",
         threshold: 1.15,
@@ -1092,6 +1100,8 @@ function validateIdentity(identity, block, preregistration) {
   if (identity?.detached !== true) errors.push(`${block.id}.identity.detached`);
   if (String(identity?.gitStatus || "") !== "") errors.push(`${block.id}.identity.gitStatus`);
   if (String(identity?.cwd || "") !== String(sideRegistration?.worktree || "")) errors.push(`${block.id}.identity.cwd`);
+  if (String(identity?.measuredRoot || "") !== String(sideRegistration?.worktree || "")) errors.push(`${block.id}.identity.measuredRoot`);
+  if (String(identity?.harnessRoot || "") !== String(registration.candidate?.worktree || "")) errors.push(`${block.id}.identity.harnessRoot`);
   for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
     const descriptor = identity?.artifacts?.[field];
     if (!String(descriptor?.gitBlob || "").trim()) errors.push(`${block.id}.identity.artifacts.${field}.gitBlob`);
@@ -1204,6 +1214,20 @@ function validateBaselineIdentity(baseline, block, preregistration) {
   if (baseline?.renderSampleRolePolicy?.canonicalRoleId !== CANONICAL_RENDER_SAMPLE_ROLE_ID) {
     errors.push(`${block.id}.baseline.renderSampleRolePolicy.canonicalRoleId`);
   }
+  const expectedProfile = registration.workloadContract?.report?.renderSampleRunProfile || {};
+  const actualProfile = baseline?.renderSampleRolePolicy?.runProfile || {};
+  if (String(actualProfile.id || "") !== String(expectedProfile.id || "")) {
+    errors.push(`${block.id}.baseline.renderSampleRolePolicy.runProfile.id`);
+  }
+  if (finite(actualProfile.measuredRunsPerScenario) !== finite(expectedProfile.measuredRunsPerScenario)) {
+    errors.push(`${block.id}.baseline.renderSampleRolePolicy.runProfile.measuredRunsPerScenario`);
+  }
+  if (finite(actualProfile.reportSchemaVersion) !== finite(expectedProfile.reportSchemaVersion)) {
+    errors.push(`${block.id}.baseline.renderSampleRolePolicy.runProfile.reportSchemaVersion`);
+  }
+  if (!Array.isArray(expectedProfile.allowedModes) || !expectedProfile.allowedModes.includes(baseline?.mode)) {
+    errors.push(`${block.id}.baseline.renderSampleRolePolicy.runProfile.mode`);
+  }
   return errors;
 }
 
@@ -1222,6 +1246,7 @@ function validateBlockWorkloadIdentity(baseline, block) {
   const errors = [];
   const reportIdentity = baseline?.workloadIdentity || {};
   const contract = buildWilliamsPreregistration().workloadContract;
+  const expectedProfileId = contract.report.renderSampleRunProfile.id;
   if (baseline?.mode !== contract.report.mode) errors.push(`${block.id}.baseline.mode`);
   if (finite(baseline?.schemaVersion) !== contract.report.schemaVersion) errors.push(`${block.id}.baseline.schemaVersion.workload`);
   if (String(baseline?.benchmarkMetricsSchemaVersion || "") !== contract.report.benchmarkMetricsSchemaVersion) {
@@ -1235,6 +1260,9 @@ function validateBlockWorkloadIdentity(baseline, block) {
   if (!arraysEqual(reportIdentity.scenarioIds, block.scenarioOrder)) errors.push(`${block.id}.baseline.workloadIdentity.scenarioIds`);
   if (finite(reportIdentity.runs) !== 2) errors.push(`${block.id}.baseline.workloadIdentity.runs`);
   if (finite(reportIdentity.warmups) !== 1) errors.push(`${block.id}.baseline.workloadIdentity.warmups`);
+  if (String(reportIdentity.renderSampleRunProfileId || "") !== expectedProfileId) {
+    errors.push(`${block.id}.baseline.workloadIdentity.renderSampleRunProfileId`);
+  }
   if (JSON.stringify(reportIdentity.urlQuery || null) !== JSON.stringify(baseline?.config?.urlQuery || null)) {
     errors.push(`${block.id}.baseline.workloadIdentity.urlQuery`);
   }
@@ -1262,6 +1290,12 @@ function validateBlockWorkloadIdentity(baseline, block) {
     }
     if (finite(identity.runs) !== 2) errors.push(`${block.id}.baseline.workloadIdentity.${scenarioId}.runs`);
     if (finite(identity.warmups) !== 1) errors.push(`${block.id}.baseline.workloadIdentity.${scenarioId}.warmups`);
+    if (String(reportScenarioIdentity?.renderSampleRunProfileId || "") !== expectedProfileId) {
+      errors.push(`${block.id}.baseline.workloadIdentity.${scenarioId}.renderSampleRunProfileId`);
+    }
+    if (String(scenarioIdentity?.renderSampleRunProfileId || "") !== expectedProfileId) {
+      errors.push(`${block.id}.baseline.scenarios.${scenarioId}.workloadIdentity.renderSampleRunProfileId`);
+    }
     if (JSON.stringify(identity.urlQuery || null) !== JSON.stringify(reportIdentity.urlQuery || null)) {
       errors.push(`${block.id}.baseline.workloadIdentity.${scenarioId}.urlQuery`);
     }

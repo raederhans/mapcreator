@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -20,6 +19,7 @@ import {
 } from "../tools/perf/williams_crossover_policy.mjs";
 import {
   analyzeWilliamsCrossoverRawRoot,
+  buildWilliamsBlockArtifactIdentity,
   buildCurrentHarnessArtifacts,
   buildWilliamsExecutionPlan,
   buildWilliamsMarkdown,
@@ -37,11 +37,17 @@ import {
 import {
   buildOrderedContainmentSourceSet,
 } from "../tools/process_containment/ordered_source_set_identity.mjs";
+import {
+  STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
+  WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+} from "../tools/perf/render_sample_role_policy.mjs";
 
 const CONTROL_HEAD = "a".repeat(40);
 const CANDIDATE_HEAD = "b".repeat(40);
 const CONTROL_WORKTREE = "C:\\perf\\control";
 const CANDIDATE_WORKTREE = "C:\\perf\\candidate";
+const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
+const RUNTIME_TMP_ROOT = path.join(REPO_ROOT, ".runtime", "tmp");
 const EXPECTED_POWER_SCHEME_GUID = "00000000-0000-0000-0000-000000000000";
 const JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
 const JOB_RUNNER_FIXTURE_BYTES = Buffer.from("MZ-SCENARIO-FORGE-WILLIAMS-JOB-RUNNER-FIXTURE", "utf8");
@@ -53,6 +59,11 @@ const URL_QUERY = Object.freeze({
   startup_cache: 0,
   perf: 1,
 });
+
+async function makeRuntimeTemp(prefix) {
+  await fs.mkdir(RUNTIME_TMP_ROOT, { recursive: true });
+  return fs.mkdtemp(path.join(RUNTIME_TMP_ROOT, prefix));
+}
 
 function canonicalSnapshot(scenarioId, durationMs) {
   return {
@@ -299,6 +310,7 @@ function workloadIdentity(scenarioId) {
     baseUrl: "http://127.0.0.1:8892",
     runs: 2,
     warmups: 1,
+    renderSampleRunProfileId: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
     urlQuery: { ...URL_QUERY },
   };
 }
@@ -350,7 +362,12 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     }
     const command = {
       bin: process.execPath,
-      args: ["tools/perf/run_baseline.mjs", "--mode", "baseline", "--scenarios", block.scenarioOrder.join(",")],
+      args: [
+        path.join(CANDIDATE_WORKTREE, "tools", "perf", "run_baseline.mjs"),
+        "--measured-repo-root", cwd,
+        "--mode", "baseline",
+        "--scenarios", block.scenarioOrder.join(","),
+      ],
     };
     return {
       ordinal: block.ordinal,
@@ -365,6 +382,8 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
         detached: true,
         gitStatus: "",
         cwd,
+        measuredRoot: cwd,
+        harnessRoot: CANDIDATE_WORKTREE,
         artifacts: {
           packageLock: artifactDescriptor("package-lock.json"),
           runner: artifactDescriptor("tools/perf/run_baseline.mjs"),
@@ -412,11 +431,17 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
         renderSampleRolePolicy: {
           policyId: "render-sample-role-v2",
           canonicalRoleId: "last-post-promotion-idle-scenario-frame-v1",
+          runProfile: {
+            id: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+            measuredRunsPerScenario: 2,
+            reportSchemaVersion: 2,
+          },
         },
         workloadIdentity: {
           scenarioIds: [...block.scenarioOrder],
           runs: 2,
           warmups: 1,
+          renderSampleRunProfileId: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
           urlQuery: { ...URL_QUERY },
           baseUrl: "http://127.0.0.1:8892",
           scenarios: Object.fromEntries(WILLIAMS_SCENARIOS.map((scenarioId) => [scenarioId, workloadIdentity(scenarioId)])),
@@ -450,7 +475,7 @@ async function writeJson(filePath, payload) {
 }
 
 async function materializeEvidenceRoot(evidence) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "williams-crossover-"));
+  const root = await makeRuntimeTemp("williams-crossover-");
   const currentToolIdentity = await buildCurrentHarnessArtifacts();
   currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   evidence.preregistration.workloadContract.processContainment.identity = {
@@ -460,6 +485,8 @@ async function materializeEvidenceRoot(evidence) {
   };
   evidence.preregistration.telemetry.powerSchemeHelper = currentToolIdentity.powerSchemeHelper;
   for (const block of evidence.blocks) {
+    block.identity.artifacts.runner = currentToolIdentity.runner;
+    block.identity.artifacts.rolePolicy = currentToolIdentity.rolePolicy;
     block.identity.artifacts.analyzer = currentToolIdentity.analyzer;
     block.identity.artifacts.policy = currentToolIdentity.policy;
     block.identity.artifacts.windowsRuntime = currentToolIdentity.windowsRuntime;
@@ -510,6 +537,12 @@ async function materializeEvidenceRoot(evidence) {
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
   assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v7");
+  assert.deepEqual(buildWilliamsPreregistration().workloadContract.report.renderSampleRunProfile, {
+    id: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+    measuredRunsPerScenario: 2,
+    reportSchemaVersion: 2,
+    allowedModes: ["baseline"],
+  });
   assert.deepEqual(WILLIAMS_TELEMETRY_CADENCE, {
     windowSchemaVersion: 4,
     samplesPerWindow: 5,
@@ -1005,8 +1038,9 @@ test("CLI defaults to list and the plan keeps live execution explicit", () => {
     candidateWorktree: CANDIDATE_WORKTREE,
   });
   assert.equal(plan.blocks.length, 8);
-  assert.deepEqual(plan.blocks[2].command.args.slice(0, 9), [
-    "tools/perf/run_baseline.mjs",
+  assert.deepEqual(plan.blocks[2].command.args.slice(0, 11), [
+    path.join(CANDIDATE_WORKTREE, "tools", "perf", "run_baseline.mjs"),
+    "--measured-repo-root", CANDIDATE_WORKTREE,
     "--mode", "baseline",
     "--scenarios", "hoi4_1939,tno_1962",
     "--runs", "2",
@@ -1026,6 +1060,139 @@ test("CLI defaults to list and the plan keeps live execution explicit", () => {
   });
   assert.equal(powerBoundOptions.expectedPowerSchemeGuid, EXPECTED_POWER_SCHEME_GUID);
   assert.equal(powerBoundPlan.preregistration.telemetry.expectedPowerSchemeGuid, EXPECTED_POWER_SCHEME_GUID);
+});
+
+test("Williams analyzer rejects missing, substituted, and mixed run-profile identity", () => {
+  const cases = [
+    ["missing policy profile", (evidence) => { delete evidence.blocks[0].baseline.renderSampleRolePolicy.runProfile; }],
+    ["unknown policy profile", (evidence) => { evidence.blocks[0].baseline.renderSampleRolePolicy.runProfile.id = "unknown-profile"; }],
+    ["standard profile substitution", (evidence) => {
+      evidence.blocks[0].baseline.renderSampleRolePolicy.runProfile.id = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+    ["report profile drift", (evidence) => {
+      evidence.blocks[0].baseline.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+    ["report-scenario profile drift", (evidence) => {
+      evidence.blocks[0].baseline.workloadIdentity.scenarios.tno_1962.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+    ["scenario profile drift", (evidence) => {
+      evidence.blocks[0].baseline.scenarios.tno_1962.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+  ];
+  for (const [label, mutate] of cases) {
+    const evidence = createEvidence();
+    mutate(evidence);
+    const report = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.equal(report.decision.status, "invalid-experiment", label);
+  }
+});
+
+test("shared Williams measurement harness uses one absolute candidate runner for both measured worktrees", () => {
+  const plan = buildWilliamsExecutionPlan({
+    ...parseWilliamsArgs([]),
+    controlHead: CONTROL_HEAD,
+    candidateHead: CANDIDATE_HEAD,
+    controlWorktree: CONTROL_WORKTREE,
+    candidateWorktree: CANDIDATE_WORKTREE,
+  });
+  const sharedRunner = path.join(CANDIDATE_WORKTREE, "tools", "perf", "run_baseline.mjs");
+  for (const block of plan.blocks) {
+    const measuredRoot = block.side === "A" ? CONTROL_WORKTREE : CANDIDATE_WORKTREE;
+    assert.equal(block.command.args[0], sharedRunner);
+    const measuredRootFlag = block.command.args.indexOf("--measured-repo-root");
+    assert.ok(measuredRootFlag > 0);
+    assert.equal(block.command.args[measuredRootFlag + 1], measuredRoot);
+  }
+
+  const sharedRunnerDescriptor = artifactDescriptor("tools/perf/run_baseline.mjs");
+  const sharedRolePolicyDescriptor = artifactDescriptor("tools/perf/render_sample_role_policy.mjs");
+  const harnessArtifacts = { runner: sharedRunnerDescriptor, rolePolicy: sharedRolePolicyDescriptor };
+  const controlArtifacts = buildWilliamsBlockArtifactIdentity(
+    { ...artifactDescriptor("package-lock.json"), gitBlob: "a".repeat(40) },
+    harnessArtifacts,
+  );
+  const candidateArtifacts = buildWilliamsBlockArtifactIdentity(
+    { ...artifactDescriptor("package-lock.json"), gitBlob: "b".repeat(40) },
+    harnessArtifacts,
+  );
+  assert.notEqual(controlArtifacts.packageLock.gitBlob, candidateArtifacts.packageLock.gitBlob);
+  assert.deepEqual(controlArtifacts.runner, candidateArtifacts.runner);
+  assert.deepEqual(controlArtifacts.rolePolicy, candidateArtifacts.rolePolicy);
+});
+
+test("Williams authority rejects harness-root and shared runner identity drift", () => {
+  const rootDrift = createEvidence();
+  rootDrift.blocks[0].identity.harnessRoot = CONTROL_WORKTREE;
+  const rootReport = analyzeWilliamsCrossoverEvidence(rootDrift);
+  assert.ok(rootReport.decision.invalidReasons.includes("block-01.identity.harnessRoot"));
+
+  const runnerDrift = createEvidence();
+  runnerDrift.blocks[1].identity = {
+    ...runnerDrift.blocks[1].identity,
+    artifacts: {
+      ...runnerDrift.blocks[1].identity.artifacts,
+      runner: {
+        ...runnerDrift.blocks[1].identity.artifacts.runner,
+        gitBlob: "e".repeat(40),
+      },
+    },
+  };
+  assert.notDeepEqual(
+    runnerDrift.blocks[0].identity.artifacts.runner,
+    runnerDrift.blocks[1].identity.artifacts.runner,
+  );
+  const runnerReport = analyzeWilliamsCrossoverEvidence(runnerDrift);
+  assert.ok(
+    runnerReport.decision.invalidReasons.includes("block-02.identity.crossBlock.runner"),
+    JSON.stringify(runnerReport.decision.invalidReasons),
+  );
+
+  const rolePolicyDrift = createEvidence();
+  rolePolicyDrift.blocks[1].identity = {
+    ...rolePolicyDrift.blocks[1].identity,
+    artifacts: {
+      ...rolePolicyDrift.blocks[1].identity.artifacts,
+      rolePolicy: {
+        ...rolePolicyDrift.blocks[1].identity.artifacts.rolePolicy,
+        lfNormalizedSha256: "e".repeat(64),
+      },
+    },
+  };
+  const rolePolicyReport = analyzeWilliamsCrossoverEvidence(rolePolicyDrift);
+  assert.ok(rolePolicyReport.decision.invalidReasons.includes("block-02.identity.crossBlock.rolePolicy"));
+});
+
+test("raw-root analyzer rejects missing, substituted, and mixed run-profile identity", async (t) => {
+  const cases = [
+    ["missing policy profile", (evidence) => { delete evidence.blocks[0].baseline.renderSampleRolePolicy.runProfile; }],
+    ["unknown policy profile", (evidence) => { evidence.blocks[0].baseline.renderSampleRolePolicy.runProfile.id = "unknown-profile"; }],
+    ["standard profile substitution", (evidence) => {
+      evidence.blocks[0].baseline.renderSampleRolePolicy.runProfile.id = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+    ["report profile drift", (evidence) => {
+      evidence.blocks[0].baseline.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+    ["report-scenario profile drift", (evidence) => {
+      evidence.blocks[0].baseline.workloadIdentity.scenarios.tno_1962.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+    ["scenario profile drift", (evidence) => {
+      evidence.blocks[0].baseline.scenarios.tno_1962.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    }],
+  ];
+  const roots = [];
+  t.after(() => Promise.all(roots.map((root) => fs.rm(root, { recursive: true, force: true }))));
+  for (const [label, mutate] of cases) {
+    const evidence = createEvidence();
+    mutate(evidence);
+    const root = await materializeEvidenceRoot(evidence);
+    roots.push(root);
+    const report = await analyzeWilliamsCrossoverRawRoot(root);
+    assert.equal(report.decision.status, "invalid-experiment", label);
+    assert.ok(
+      report.decision.invalidReasons.some((reason) => reason.includes("renderSampleRunProfile") || reason.includes("runProfile")),
+      `${label}: ${report.decision.invalidReasons.join("\n")}`,
+    );
+  }
 });
 
 test("Williams admission requires a cleaned power lifecycle covering every telemetry window", () => {
@@ -1343,7 +1510,8 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   const tamperRoot = await materializeEvidenceRoot(createEvidence());
   const toolRoot = await materializeEvidenceRoot(createEvidence());
   const identityHelperRoot = await materializeEvidenceRoot(createEvidence());
-  t.after(() => Promise.all([extraRoot, tamperRoot, toolRoot, identityHelperRoot]
+  const sharedHarnessRoot = await materializeEvidenceRoot(createEvidence());
+  t.after(() => Promise.all([extraRoot, tamperRoot, toolRoot, identityHelperRoot, sharedHarnessRoot]
     .map((root) => fs.rm(root, { recursive: true, force: true }))));
 
   const extraManifestPath = path.join(extraRoot, "raw-sha256-manifest.json");
@@ -1372,6 +1540,14 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   const identityHelperReport = await analyzeWilliamsCrossoverRawRoot(identityHelperRoot);
   assert.ok(identityHelperReport.manifestValidation.errors.includes("manifest.toolIdentity.containmentIdentityHelper.current"));
   assert.equal(identityHelperReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+
+  const sharedHarnessManifestPath = path.join(sharedHarnessRoot, "raw-sha256-manifest.json");
+  const sharedHarnessManifest = JSON.parse(await fs.readFile(sharedHarnessManifestPath, "utf8"));
+  sharedHarnessManifest.toolIdentity.sharedHarness.runner.lfNormalizedSha256 = "f".repeat(64);
+  await writeJson(sharedHarnessManifestPath, sharedHarnessManifest);
+  const sharedHarnessReport = await analyzeWilliamsCrossoverRawRoot(sharedHarnessRoot);
+  assert.ok(sharedHarnessReport.manifestValidation.errors.includes("manifest.toolIdentity.sharedHarness.runner.current"));
+  assert.equal(sharedHarnessReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
 });
 
 test("Windows Job cleanup evidence fails admission closed for any unverified process", () => {
@@ -1573,7 +1749,7 @@ test("identity failures map to invalid exit 3 while internal failures map to har
 });
 
 test("raw, JSON, and Markdown outputs use no-clobber with explicit analysis overwrite", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "williams-output-policy-"));
+  const tempRoot = await makeRuntimeTemp("williams-output-policy-");
   t.after(() => fs.rm(tempRoot, { recursive: true, force: true }));
   const options = {
     rawRoot: path.join(tempRoot, "raw"),

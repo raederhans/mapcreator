@@ -31,7 +31,28 @@ import {
   validateStandardPerfAdmissionDecision,
 } from "./standard_perf_admission.mjs";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const HARNESS_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+export function resolveMeasuredRepoRoot(argv = process.argv.slice(2), fallbackRoot = HARNESS_REPO_ROOT) {
+  let measuredRepoRoot = path.resolve(fallbackRoot);
+  let declared = false;
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] !== "--measured-repo-root") continue;
+    const next = argv[index + 1];
+    if (!next || String(next).startsWith("--")) {
+      throw new Error("[perf-baseline] --measured-repo-root requires an explicit path.");
+    }
+    if (declared) {
+      throw new Error("[perf-baseline] --measured-repo-root may only be declared once.");
+    }
+    measuredRepoRoot = path.resolve(String(next));
+    declared = true;
+    index += 1;
+  }
+  return measuredRepoRoot;
+}
+
+const REPO_ROOT = resolveMeasuredRepoRoot();
 const SUPPORTED_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
 const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];
 const NODE_PLATFORM_IDS = new Set(["aix", "android", "darwin", "freebsd", "linux", "openbsd", "sunos", "win32"]);
@@ -97,6 +118,7 @@ function parseArgs(argv) {
     urlQuery: { ...PERF_URL_QUERY },
     writeMarkdown: true,
     renderSampleRunProfileId: STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
+    measuredRepoRoot: REPO_ROOT,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -137,7 +159,15 @@ function parseArgs(argv) {
     } else if (token === "--render-sample-run-profile" && next) {
       options.renderSampleRunProfileId = String(next).trim();
       index += 1;
+    } else if (token === "--measured-repo-root" && next) {
+      options.measuredRepoRoot = path.resolve(String(next));
+      index += 1;
     }
+  }
+  if (path.resolve(options.measuredRepoRoot) !== REPO_ROOT) {
+    throw new Error(
+      `[perf-baseline] Measured repo root mismatch expected=${REPO_ROOT} actual=${path.resolve(options.measuredRepoRoot)}.`
+    );
   }
   return options;
 }

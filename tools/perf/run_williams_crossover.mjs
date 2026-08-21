@@ -205,6 +205,8 @@ function blockDirectory(rawRoot, block) {
 }
 
 export function buildWilliamsExecutionPlan(options = {}) {
+  const harnessRoot = path.resolve(options.candidateWorktree || REPO_ROOT);
+  const baselineRunnerPath = path.join(harnessRoot, BASELINE_RUNNER_PATH);
   const preregistration = buildWilliamsPreregistration({
     controlHead: options.controlHead,
     candidateHead: options.candidateHead,
@@ -227,12 +229,14 @@ export function buildWilliamsExecutionPlan(options = {}) {
         ...block,
         scenarioOrder: [...block.scenarioOrder],
         cwd,
+        harnessRoot,
         expectedHead,
         directory,
         command: {
           bin: process.execPath,
           args: [
-            BASELINE_RUNNER_PATH,
+            baselineRunnerPath,
+            "--measured-repo-root", cwd,
             "--mode", "baseline",
             "--scenarios", block.scenarioOrder.join(","),
             "--runs", "2",
@@ -467,6 +471,9 @@ export async function buildCurrentHarnessArtifacts() {
   const jobRunnerSourceDescriptors = await Promise.all(JOB_RUNNER_SOURCE_PATHS.map(currentArtifactDescriptor));
   const jobRunnerSources = buildOrderedContainmentSourceSet(jobRunnerSourceDescriptors);
   return {
+    root: REPO_ROOT,
+    runner: await currentArtifactDescriptor(BASELINE_RUNNER_PATH),
+    rolePolicy: await currentArtifactDescriptor(ROLE_POLICY_PATH),
     analyzer: await currentArtifactDescriptor(ANALYZER_PATH),
     policy: await currentArtifactDescriptor(POLICY_PATH),
     windowsRuntime: await currentArtifactDescriptor(WINDOWS_RUNTIME_PATH),
@@ -508,6 +515,7 @@ function validateMeasurementWorktree(worktree, expectedHead, label) {
 
 async function collectBlockIdentity(block, harnessArtifacts) {
   const gitSnapshot = validateMeasurementWorktree(block.cwd, block.expectedHead, `${block.id}/${block.side}`);
+  const packageLock = await trackedArtifactDescriptor(block.cwd, PACKAGE_LOCK_PATH);
   return {
     schemaVersion: 1,
     blockId: block.id,
@@ -518,19 +526,25 @@ async function collectBlockIdentity(block, harnessArtifacts) {
     branch: gitSnapshot.branch,
     gitStatus: gitSnapshot.gitStatus,
     cwd: block.cwd,
-    artifacts: {
-      packageLock: await trackedArtifactDescriptor(block.cwd, PACKAGE_LOCK_PATH),
-      runner: await trackedArtifactDescriptor(block.cwd, BASELINE_RUNNER_PATH),
-      rolePolicy: await trackedArtifactDescriptor(block.cwd, ROLE_POLICY_PATH),
-      analyzer: harnessArtifacts.analyzer,
-      policy: harnessArtifacts.policy,
-      windowsRuntime: harnessArtifacts.windowsRuntime,
-      containmentIdentityHelper: harnessArtifacts.containmentIdentityHelper,
-      jobRunnerSource: harnessArtifacts.jobRunnerSource,
-      jobRunnerSources: harnessArtifacts.jobRunnerSources,
-      powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
-      jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
-    },
+    measuredRoot: block.cwd,
+    harnessRoot: harnessArtifacts.root,
+    artifacts: buildWilliamsBlockArtifactIdentity(packageLock, harnessArtifacts),
+  };
+}
+
+export function buildWilliamsBlockArtifactIdentity(packageLock, harnessArtifacts = {}) {
+  return {
+    packageLock,
+    runner: harnessArtifacts.runner,
+    rolePolicy: harnessArtifacts.rolePolicy,
+    analyzer: harnessArtifacts.analyzer,
+    policy: harnessArtifacts.policy,
+    windowsRuntime: harnessArtifacts.windowsRuntime,
+    containmentIdentityHelper: harnessArtifacts.containmentIdentityHelper,
+    jobRunnerSource: harnessArtifacts.jobRunnerSource,
+    jobRunnerSources: harnessArtifacts.jobRunnerSources,
+    powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
+    jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
   };
 }
 
@@ -876,6 +890,11 @@ export async function buildWilliamsRawManifest(rawRoot, harnessArtifacts) {
     requiredEntryCount: requiredEvidencePaths().length,
     measuredRawFileCount: files.filter((entry) => /\/raw\/[^/]+\/run-\d+\.json$/.test(`/${entry.path}`)).length,
     toolIdentity: {
+      sharedHarness: {
+        root: harnessArtifacts.root,
+        runner: harnessArtifacts.runner,
+        rolePolicy: harnessArtifacts.rolePolicy,
+      },
       analyzer: harnessArtifacts.analyzer,
       policy: harnessArtifacts.policy,
       windowsRuntime: harnessArtifacts.windowsRuntime,
@@ -955,6 +974,27 @@ async function validateRawManifest(
   for (const actualPath of actualRaw) if (!expectedRaw.has(actualPath)) errors.push(`raw.extra:${actualPath}`);
   if (actualRaw.size !== 32) errors.push(`raw.count.expected-32-actual-${actualRaw.size}`);
   if (manifest.measuredRawFileCount !== 32) errors.push(`manifest.raw-count.expected-32-actual-${manifest.measuredRawFileCount}`);
+  const sharedHarness = manifest.toolIdentity?.sharedHarness;
+  if (String(sharedHarness?.root || "") !== String(currentToolIdentity?.root || "")) {
+    errors.push("manifest.toolIdentity.sharedHarness.root.current");
+  }
+  for (const field of ["runner", "rolePolicy"]) {
+    const descriptor = sharedHarness?.[field];
+    if (!/^[a-f0-9]{40}$/i.test(String(descriptor?.gitBlob || ""))) {
+      errors.push(`manifest.toolIdentity.sharedHarness.${field}.gitBlob`);
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(descriptor?.lfNormalizedSha256 || ""))) {
+      errors.push(`manifest.toolIdentity.sharedHarness.${field}.lfNormalizedSha256`);
+    }
+    if (!artifactDescriptorsEqual(descriptor, currentToolIdentity?.[field])) {
+      errors.push(`manifest.toolIdentity.sharedHarness.${field}.current`);
+    }
+    for (const block of blocks) {
+      if (!artifactDescriptorsEqual(descriptor, block?.identity?.artifacts?.[field])) {
+        errors.push(`manifest.toolIdentity.sharedHarness.${field}.${block?.id || "unknown-block"}`);
+      }
+    }
+  }
   for (const field of ["analyzer", "policy", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
     if (!/^[a-f0-9]{40}$/i.test(String(manifest.toolIdentity?.[field]?.gitBlob || ""))) {
       errors.push(`manifest.toolIdentity.${field}.gitBlob`);
@@ -1213,6 +1253,9 @@ async function collectHarnessArtifacts(options) {
   );
   const jobRunnerSources = buildOrderedContainmentSourceSet(jobRunnerSourceDescriptors);
   const artifacts = {
+    root: path.resolve(candidate),
+    runner: await trackedArtifactDescriptor(candidate, BASELINE_RUNNER_PATH),
+    rolePolicy: await trackedArtifactDescriptor(candidate, ROLE_POLICY_PATH),
     analyzer: await trackedArtifactDescriptor(candidate, ANALYZER_PATH),
     policy: await trackedArtifactDescriptor(candidate, POLICY_PATH),
     windowsRuntime: await trackedArtifactDescriptor(candidate, WINDOWS_RUNTIME_PATH),
@@ -1222,7 +1265,15 @@ async function collectHarnessArtifacts(options) {
     powerSchemeHelper: await trackedArtifactDescriptor(candidate, POWER_SCHEME_HELPER_PATH),
   };
   const current = await buildCurrentHarnessArtifacts();
+  if (path.resolve(candidate) !== path.resolve(current.root)) {
+    throw new WilliamsInvalidExperimentError(
+      "The executing Williams harness root must equal the exact candidate worktree.",
+      "tool-root-mismatch",
+    );
+  }
   for (const [field, relativePath] of [
+    ["runner", BASELINE_RUNNER_PATH],
+    ["rolePolicy", ROLE_POLICY_PATH],
     ["analyzer", ANALYZER_PATH],
     ["policy", POLICY_PATH],
     ["windowsRuntime", WINDOWS_RUNTIME_PATH],
