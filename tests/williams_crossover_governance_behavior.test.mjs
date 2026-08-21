@@ -17,6 +17,7 @@ import {
   analyzeWilliamsCrossoverEvidence,
   buildWilliamsBlockCommand,
   buildWilliamsPreregistration,
+  expectedCanonicalBlockCommand,
 } from "../tools/perf/williams_crossover_policy.mjs";
 import {
   analyzeWilliamsCrossoverRawRootWithTestAdapters,
@@ -84,12 +85,28 @@ function normalizedGitBlob(buffer) {
   return crypto.createHash("sha1").update(header).update(normalized).digest("hex");
 }
 
+function normalizedSha256(buffer) {
+  const normalized = Buffer.from(Buffer.from(buffer).toString("utf8").replace(/\r\n?/g, "\n"), "utf8");
+  return crypto.createHash("sha256").update(normalized).digest("hex");
+}
+
+async function expectedPackageLockDescriptor() {
+  const buffer = await fs.readFile(path.join(REPO_ROOT, "package-lock.json"));
+  return {
+    path: "package-lock.json",
+    gitBlob: normalizedGitBlob(buffer),
+    lfNormalizedSha256: normalizedSha256(buffer),
+  };
+}
+
 function trustedAnalyzerAuthorityAdapter({
   root = REPO_ROOT,
   head = CANDIDATE_HEAD,
   snapshots = null,
   gitTopLevel = root,
   commitMutations = {},
+  commitBlobOverrides = {},
+  commitReads = null,
   realpath = (value) => path.resolve(value),
 } = {}) {
   const cleanSnapshot = {
@@ -107,11 +124,15 @@ function trustedAnalyzerAuthorityAdapter({
       snapshotSequence[Math.min(snapshotIndex++, snapshotSequence.length - 1)],
     ),
     readWorkspaceFile: async ({ root, relativePath }) => fs.readFile(path.join(root, relativePath)),
-    readCommitArtifact: async ({ root, relativePath }) => {
+    readCommitArtifact: async ({ root: requestedRoot, head: requestedHead, relativePath }) => {
+      commitReads?.push({ root: requestedRoot, head: requestedHead, relativePath });
       let buffer = await fs.readFile(path.join(root, relativePath));
       const mutate = commitMutations[relativePath];
       if (mutate) buffer = Buffer.from(await mutate(Buffer.from(buffer)));
-      return { buffer, gitBlob: normalizedGitBlob(buffer) };
+      buffer = Buffer.from(buffer.toString("utf8").replace(/\r\n?/g, "\n"), "utf8");
+      const override = commitBlobOverrides[relativePath];
+      const gitBlob = typeof override === "function" ? override(buffer) : override;
+      return { buffer, gitBlob: gitBlob || normalizedGitBlob(buffer) };
     },
   };
 }
@@ -564,6 +585,7 @@ async function writeJson(filePath, payload) {
 async function materializeEvidenceRoot(evidence) {
   const root = await makeRuntimeTemp("williams-crossover-");
   const currentToolIdentity = await buildCurrentHarnessArtifacts();
+  const packageLock = await expectedPackageLockDescriptor();
   currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
   evidence.preregistration.workloadContract.processContainment.identity = {
     source: currentToolIdentity.jobRunnerSource,
@@ -588,6 +610,7 @@ async function materializeEvidenceRoot(evidence) {
       jobEvidence.commandArguments = [...block.command.args];
     }
     block.identity.artifacts.runner = currentToolIdentity.runner;
+    block.identity.artifacts.packageLock = structuredClone(packageLock);
     block.identity.artifacts.rolePolicy = currentToolIdentity.rolePolicy;
     block.identity.artifacts.analyzer = currentToolIdentity.analyzer;
     block.identity.artifacts.policy = currentToolIdentity.policy;
@@ -653,6 +676,8 @@ async function synchronizeRawRevisionEvidence(root, overrides = {}) {
     candidateWorktree: overrides.candidateWorktree ?? preregistration.candidate.worktree,
     candidateHead: overrides.candidateHead ?? preregistration.candidate.head,
   };
+  const commandCandidateWorktree = overrides.commandCandidateWorktree ?? revision.candidateWorktree;
+  const harnessRoot = overrides.harnessRoot ?? commandCandidateWorktree;
   preregistration.control.worktree = revision.controlWorktree;
   preregistration.control.head = revision.controlHead;
   preregistration.candidate.worktree = revision.candidateWorktree;
@@ -669,7 +694,7 @@ async function synchronizeRawRevisionEvidence(root, overrides = {}) {
       measuredWorktree,
       scenarioOrder: block.scenarioOrder,
     });
-    command.args[0] = path.join(revision.candidateWorktree, "tools", "perf", "run_baseline.mjs");
+    command.args[0] = path.join(commandCandidateWorktree, "tools", "perf", "run_baseline.mjs");
     await writeJson(path.join(directory, "command.json"), command);
 
     const identityPath = path.join(directory, "identity.json");
@@ -678,7 +703,7 @@ async function synchronizeRawRevisionEvidence(root, overrides = {}) {
     identity.actualHead = expectedHead;
     identity.cwd = measuredWorktree;
     identity.measuredRoot = measuredWorktree;
-    identity.harnessRoot = revision.candidateWorktree;
+    identity.harnessRoot = harnessRoot;
     await writeJson(identityPath, identity);
 
     for (const telemetryName of ["telemetry-pre.json", "telemetry-post.json"]) {
@@ -761,6 +786,7 @@ function runGitFixture(cwd, args) {
 async function createDetachedAnalyzerFixtureRepository() {
   const root = await makeRuntimeTemp("williams-direct-cli-repo-");
   const files = [
+    "package-lock.json",
     "tools/perf/run_williams_crossover.mjs",
     "tools/perf/williams_crossover_policy.mjs",
     "tools/perf/williams_crossover_windows_runtime.mjs",
@@ -815,6 +841,25 @@ function windowsMixedCasePath(value) {
 async function rejectUnexpectedJobPreparation() {
   throw new Error("unexpected-job-preparation");
 }
+
+test("mixed-case Windows candidate roots preserve exact producer-consumer block commands", {
+  skip: process.platform !== "win32",
+}, async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-command-authority-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  const mixedCaseRoot = windowsMixedCasePath(REPO_ROOT);
+  const identity = buildWilliamsTrustedRevisionIdentity(trustedRevisionIdentity({
+    expectedCandidateWorktree: mixedCaseRoot,
+  }));
+  const rawRoot = path.join(outputRoot, "raw");
+  const plan = buildWilliamsExecutionPlan({ rawRoot, trustedRevisionIdentity: identity });
+
+  for (const block of plan.blocks) {
+    const expected = expectedCanonicalBlockCommand(block, identity, rawRoot);
+    assert.equal(block.command.bin, expected.bin, block.id);
+    assert.deepEqual(block.command.args, expected.args, block.id);
+  }
+});
 
 test("execute preflight accepts a canonical Windows mixed-case candidate root before a later typed failure", {
   skip: process.platform !== "win32",
@@ -872,6 +917,64 @@ test("execute preflight fences trusted harness descriptor reads before Job prepa
     ),
   );
   await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT");
+});
+
+test("execute package descriptors fail closed after exact-commit reads and before output or Job preparation", async (t) => {
+  const fixture = await loadDetachedAnalyzerFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const clean = { actualHead: fixture.head, detached: true, branch: null, gitStatus: "" };
+  const packageLock = await fs.readFile(path.join(fixture.root, "package-lock.json"));
+  const cases = [
+    {
+      label: "checkout drift after descriptor read",
+      expectedCode: "identity-mismatch",
+      adapter: trustedAnalyzerAuthorityAdapter({
+        root: fixture.root,
+        head: fixture.head,
+        snapshots: [clean, clean, clean, { ...clean, actualHead: "f".repeat(40) }],
+      }),
+    },
+    {
+      label: "descriptor bytes differ from exact commit blob",
+      expectedCode: "expected-commit-descriptor-mismatch",
+      adapter: trustedAnalyzerAuthorityAdapter({
+        root: fixture.root,
+        head: fixture.head,
+        snapshots: [clean, clean, clean, clean],
+        commitMutations: {
+          "package-lock.json": (buffer) => Buffer.concat([buffer, Buffer.from("\n")]),
+        },
+        commitBlobOverrides: {
+          "package-lock.json": normalizedGitBlob(packageLock),
+        },
+      }),
+    },
+  ];
+
+  for (const { label, expectedCode, adapter } of cases) {
+    const outputRoot = await makeRuntimeTemp("williams-package-preflight-");
+    t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+    const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
+    const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+    let jobPreparationCalls = 0;
+    await assert.rejects(
+      fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity, {
+        analyzerAuthorityAdapter: adapter,
+        prepareWindowsJobRunnerFn: async () => {
+          jobPreparationCalls += 1;
+          throw new Error("unexpected-job-preparation");
+        },
+      }),
+      (error) => (
+        error instanceof fixture.runner.WilliamsInvalidExperimentError
+        && error.code === expectedCode
+        && fixture.runner.getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
+      ),
+      label,
+    );
+    assert.equal(jobPreparationCalls, 0, label);
+    await assert.rejects(fs.access(options.rawRoot), (error) => error?.code === "ENOENT", label);
+  }
 });
 
 test("execute preflight keeps physical-root, Git-top-level, and candidate-commit drift fail closed", async (t) => {
@@ -2217,6 +2320,60 @@ test("trusted analyzer rejects attached, dirty, byte-drifted, and changing check
   }
 });
 
+test("raw analyzer admits canonical commands from a mixed-case Windows candidate identity", {
+  skip: process.platform !== "win32",
+}, async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const mixedCaseRoot = windowsMixedCasePath(REPO_ROOT);
+  await synchronizeRawRevisionEvidence(root, {
+    candidateWorktree: mixedCaseRoot,
+    commandCandidateWorktree: REPO_ROOT,
+    harnessRoot: REPO_ROOT,
+  });
+
+  const report = await analyzeTrustedRawRoot(root, {
+    expectedCandidateWorktree: mixedCaseRoot,
+  });
+  assert.equal(report.manifestValidation.status, "valid");
+  assert.equal(report.decision.status, "accepted");
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.accepted);
+  assert.equal(report.decision.invalidReasons.some((reason) => reason.includes(".command.")), false);
+});
+
+test("raw analyzer independently reconstructs both exact-head package descriptors", async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const substitutedPackageLock = {
+    path: "package-lock.json",
+    gitBlob: "e".repeat(40),
+    lfNormalizedSha256: "e".repeat(64),
+  };
+  for (const block of WILLIAMS_BLOCK_SEQUENCE) {
+    const identityPath = path.join(root, "blocks", block.id, "identity.json");
+    const identity = JSON.parse(await fs.readFile(identityPath, "utf8"));
+    identity.artifacts.packageLock = structuredClone(substitutedPackageLock);
+    await writeJson(identityPath, identity);
+  }
+  await rebuildRawManifest(root);
+  const commitReads = [];
+  const report = await analyzeTrustedRawRoot(root, {}, {
+    analyzerAuthorityAdapter: trustedAnalyzerAuthorityAdapter({ commitReads }),
+  });
+
+  assert.equal(report.manifestValidation.status, "invalid");
+  assert.ok(report.manifestValidation.errors.includes("manifest.toolIdentity.sides.A.packageLock.expectedCommit"));
+  assert.ok(report.manifestValidation.errors.includes("manifest.toolIdentity.sides.B.packageLock.expectedCommit"));
+  assert.deepEqual(
+    commitReads.filter((entry) => entry.relativePath === "package-lock.json"),
+    [
+      { root: CONTROL_WORKTREE, head: CONTROL_HEAD, relativePath: "package-lock.json" },
+      { root: REPO_ROOT, head: CANDIDATE_HEAD, relativePath: "package-lock.json" },
+    ],
+  );
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+});
+
 test("raw authority parses and hashes each required path from one immutable Buffer", async (t) => {
   const acceptedRoot = await materializeEvidenceRoot(createEvidence());
   const renderByBlock = {};
@@ -2291,6 +2448,8 @@ test("final raw-root and analyze CLI authority cover accepted 0, valid regressio
     const rawReport = await analyzeTrustedRawRoot(root);
     assert.equal(rawReport.decision.exitCode, expectedExitCode, `${label}/raw-root`);
     await synchronizeRawRevisionEvidence(root, {
+      controlWorktree: REPO_ROOT,
+      controlHead: CANDIDATE_HEAD,
       candidateWorktree: fixtureRepository.root,
       candidateHead: fixtureRepository.head,
     });
@@ -2301,8 +2460,8 @@ test("final raw-root and analyze CLI authority cover accepted 0, valid regressio
       "--raw-root", root,
       "--json-out", path.join(reportRoot, `${label}.json`),
       "--md-out", path.join(reportRoot, `${label}.md`),
-      "--control-worktree", CONTROL_WORKTREE,
-      "--control-head", CONTROL_HEAD,
+      "--control-worktree", REPO_ROOT,
+      "--control-head", CANDIDATE_HEAD,
       "--candidate-worktree", fixtureRepository.root,
       "--candidate-head", fixtureRepository.head,
     ], { encoding: "utf8", windowsHide: true });
@@ -2321,6 +2480,8 @@ test("direct Williams CLI process preserves a generic harness fault as exit 1 wi
     fs.rm(markdownOut, { force: true }),
   ]));
   await synchronizeRawRevisionEvidence(rawRoot, {
+    controlWorktree: REPO_ROOT,
+    controlHead: CANDIDATE_HEAD,
     candidateWorktree: fixtureRepository.root,
     candidateHead: fixtureRepository.head,
   });
@@ -2335,8 +2496,8 @@ test("direct Williams CLI process preserves a generic harness fault as exit 1 wi
     "--raw-root", rawRoot,
     "--json-out", fixtureRepository.root,
     "--md-out", markdownOut,
-    "--control-worktree", CONTROL_WORKTREE,
-    "--control-head", CONTROL_HEAD,
+    "--control-worktree", REPO_ROOT,
+    "--control-head", CANDIDATE_HEAD,
     "--candidate-worktree", fixtureRepository.root,
     "--candidate-head", fixtureRepository.head,
   ], { encoding: "utf8", windowsHide: true });

@@ -458,16 +458,6 @@ export async function withWilliamsPowerSchemeSession({
   }
 }
 
-async function trackedArtifactDescriptor(worktree, relativePath) {
-  const gitBlob = runGit(worktree, ["rev-parse", `HEAD:${toPosix(relativePath)}`]).stdout.trim();
-  const content = runGit(worktree, ["show", `HEAD:${toPosix(relativePath)}`]).stdout;
-  return {
-    path: toPosix(relativePath),
-    gitBlob,
-    lfNormalizedSha256: lfNormalizedSha256(Buffer.from(content, "utf8")),
-  };
-}
-
 async function currentArtifactDescriptor(root, relativePath, readWorkspaceFile = null) {
   const absolutePath = path.join(root, relativePath);
   const content = readWorkspaceFile
@@ -548,6 +538,91 @@ function defaultAnalyzerAuthorityAdapter() {
       gitBlob: runGit(root, ["rev-parse", `${head}:${toPosix(relativePath)}`]).stdout.trim(),
     }),
   };
+}
+
+async function expectedCommitArtifactDescriptor(root, expectedHead, relativePath, adapter) {
+  const commitPath = `${expectedHead}:${toPosix(relativePath)}`;
+  try {
+    const artifact = await adapter.readCommitArtifact({ root, head: expectedHead, relativePath });
+    if (!Buffer.isBuffer(artifact?.buffer) && !(artifact?.buffer instanceof Uint8Array)) {
+      throw new WilliamsInvalidExperimentError(
+        `Exact commit artifact ${commitPath} did not return Buffer bytes.`,
+        "expected-commit-descriptor-mismatch",
+      );
+    }
+    const content = Buffer.from(artifact.buffer);
+    const gitBlob = String(artifact?.gitBlob || "").trim().toLowerCase();
+    if (!/^[a-f0-9]{40}$/.test(gitBlob) || gitBlobSha1(content) !== gitBlob) {
+      throw new WilliamsInvalidExperimentError(
+        `Exact commit artifact bytes and blob identity differ for ${commitPath}.`,
+        "expected-commit-descriptor-mismatch",
+      );
+    }
+    return {
+      path: toPosix(relativePath),
+      gitBlob,
+      lfNormalizedSha256: lfNormalizedSha256(content),
+    };
+  } catch (error) {
+    if (error instanceof WilliamsInvalidExperimentError) throw error;
+    throw new WilliamsInvalidExperimentError(
+      `Exact commit artifact is unavailable for ${commitPath}: ${String(error?.message || error)}`,
+      "expected-commit-descriptor-unavailable",
+    );
+  }
+}
+
+async function collectExpectedPackageLockDescriptors(trustedRevisionIdentity, {
+  analyzerAuthorityAdapter = null,
+  fenceCheckout = false,
+} = {}) {
+  const adapter = { ...defaultAnalyzerAuthorityAdapter(), ...(analyzerAuthorityAdapter || {}) };
+  const revisions = [
+    {
+      side: "A",
+      label: "control/A",
+      root: trustedRevisionIdentity.expectedControlWorktree,
+      head: trustedRevisionIdentity.expectedControlHead,
+    },
+    {
+      side: "B",
+      label: "candidate/B",
+      root: trustedRevisionIdentity.trustedAnalyzerRoot,
+      head: trustedRevisionIdentity.expectedCandidateHead,
+    },
+  ];
+  const descriptors = {};
+  for (const revision of revisions) {
+    try {
+      if (fenceCheckout) {
+        validateMeasurementSnapshot(
+          await adapter.gitSnapshot(revision.root),
+          revision.head,
+          `${revision.label} before package-lock snapshot`,
+        );
+      }
+      descriptors[revision.side] = await expectedCommitArtifactDescriptor(
+        revision.root,
+        revision.head,
+        PACKAGE_LOCK_PATH,
+        adapter,
+      );
+      if (fenceCheckout) {
+        validateMeasurementSnapshot(
+          await adapter.gitSnapshot(revision.root),
+          revision.head,
+          `${revision.label} after package-lock snapshot`,
+        );
+      }
+    } catch (error) {
+      if (error instanceof WilliamsInvalidExperimentError) throw error;
+      throw new WilliamsInvalidExperimentError(
+        `Exact package descriptor authority is unavailable for ${revision.label}: ${String(error?.message || error)}`,
+        "expected-commit-descriptor-unavailable",
+      );
+    }
+  }
+  return descriptors;
 }
 
 async function canonicalizeTrustedAnalyzerRoot(trustedRevisionIdentity, adapter) {
@@ -731,9 +806,8 @@ export function buildWilliamsTrustedRevisionIdentity(options = {}) {
   return trustedRevisionIdentity;
 }
 
-async function collectBlockIdentity(block, harnessArtifacts) {
+async function collectBlockIdentity(block, harnessArtifacts, packageLock) {
   const gitSnapshot = validateMeasurementWorktree(block.cwd, block.expectedHead, `${block.id}/${block.side}`);
-  const packageLock = await trackedArtifactDescriptor(block.cwd, PACKAGE_LOCK_PATH);
   return {
     schemaVersion: 1,
     blockId: block.id,
@@ -964,7 +1038,7 @@ export function buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree,
   };
 }
 
-async function runBlock(block, harnessArtifacts, preparedRunner) {
+async function runBlock(block, harnessArtifacts, preparedRunner, packageLock) {
   const directory = block.directory;
   await ensureDir(directory);
   const metadata = {
@@ -979,7 +1053,7 @@ async function runBlock(block, harnessArtifacts, preparedRunner) {
     expectedHead: block.expectedHead,
   };
   await writeJson(path.join(directory, "block-metadata.json"), metadata);
-  const identity = await collectBlockIdentity(block, harnessArtifacts);
+  const identity = await collectBlockIdentity(block, harnessArtifacts, packageLock);
   await writeJson(path.join(directory, "identity.json"), identity);
   const preTelemetry = await collectWindowsTelemetryWindow({ worktree: block.cwd, phase: "pre" });
   await writeJson(path.join(directory, "telemetry-pre.json"), preTelemetry);
@@ -1270,6 +1344,7 @@ async function validateRawManifest(
   currentToolIdentity,
   jobRunnerPreparation,
   trustedRevisionIdentity,
+  expectedPackageLockDescriptors,
 ) {
   const errors = [...loadErrors];
   if (!manifest || typeof manifest !== "object") {
@@ -1398,9 +1473,21 @@ async function validateRawManifest(
       if (!/^[a-f0-9]{64}$/i.test(String(descriptor?.lfNormalizedSha256 || ""))) {
         errors.push(`manifest.toolIdentity.sides.${side}.${field}.lfNormalizedSha256`);
       }
+      if (field === "packageLock" && !artifactDescriptorsEqual(
+        descriptor,
+        expectedPackageLockDescriptors?.[side],
+      )) {
+        errors.push(`manifest.toolIdentity.sides.${side}.packageLock.expectedCommit`);
+      }
       for (const block of blocks.filter((entry) => entry?.side === side)) {
         if (!artifactDescriptorsEqual(descriptor, block?.identity?.artifacts?.[field])) {
           errors.push(`manifest.toolIdentity.sides.${side}.${field}.${block?.id || "unknown-block"}`);
+        }
+        if (field === "packageLock" && !artifactDescriptorsEqual(
+          block?.identity?.artifacts?.packageLock,
+          expectedPackageLockDescriptors?.[side],
+        )) {
+          errors.push(`${block?.id || "unknown-block"}.identity.artifacts.packageLock.expectedCommit`);
         }
       }
     }
@@ -1422,6 +1509,9 @@ async function analyzeWilliamsCrossoverRawRootInternal(rawRoot, {
   const resolvedRoot = normalizePath(rawRoot);
   const analyzerToolIdentity = await buildCurrentHarnessArtifacts({
     trustedRevisionIdentity: trustedIdentity,
+    analyzerAuthorityAdapter,
+  });
+  const expectedPackageLockDescriptors = await collectExpectedPackageLockDescriptors(trustedIdentity, {
     analyzerAuthorityAdapter,
   });
   const snapshot = await buildRawEvidenceSnapshot(resolvedRoot, rawSnapshotAdapter);
@@ -1485,6 +1575,7 @@ async function analyzeWilliamsCrossoverRawRootInternal(rawRoot, {
     analyzerToolIdentity,
     jobRunnerPreparation,
     trustedIdentity,
+    expectedPackageLockDescriptors,
   );
   return analyzeWilliamsCrossoverEvidence({
     trustedRevisionIdentity: trustedIdentity,
@@ -1643,6 +1734,10 @@ async function executeExperiment(options, trustedRevisionIdentity, {
   validateMeasurementWorktree(executionOptions.controlWorktree, executionOptions.controlHead, "control/A");
   validateMeasurementWorktree(executionOptions.candidateWorktree, executionOptions.candidateHead, "candidate/B");
   const harnessArtifacts = await collectHarnessArtifacts(executionOptions, { analyzerAuthorityAdapter });
+  const packageLockDescriptors = await collectExpectedPackageLockDescriptors(trustedRevisionIdentity, {
+    analyzerAuthorityAdapter,
+    fenceCheckout: true,
+  });
   await validateWilliamsOutputPolicy(executionOptions, { reserveRawRoot: true, allowReportOverwrite: false });
   const preparationResult = await prepareWindowsJobRunnerFn({
     evidenceDirectory: path.join(executionOptions.rawRoot, "harness", "job-runner"),
@@ -1700,7 +1795,12 @@ async function executeExperiment(options, trustedRevisionIdentity, {
         };
         await writeJson(path.join(executionOptions.rawRoot, "preregistration.json"), preregistration);
         for (const block of plan.blocks) {
-          const result = await runBlock(block, harnessArtifacts, preparation);
+          const result = await runBlock(
+            block,
+            harnessArtifacts,
+            preparation,
+            packageLockDescriptors[block.side],
+          );
           if (!result.complete) break;
         }
       },

@@ -254,10 +254,10 @@ function canonicalJson(value) {
   return JSON.stringify(value);
 }
 
-function expectedCanonicalBlockCommand(block, trustedRevisionIdentity, rawRoot) {
+export function expectedCanonicalBlockCommand(block, trustedRevisionIdentity, rawRoot) {
   const sideRevision = trustedSideRevision(trustedRevisionIdentity, block.side);
   return buildWilliamsBlockCommand({
-    candidateWorktree: trustedRevisionIdentity?.expectedCandidateWorktree,
+    candidateWorktree: trustedRevisionIdentity?.trustedAnalyzerRoot,
     measuredWorktree: sideRevision.worktree,
     blockDirectory: path.join(path.resolve(String(rawRoot)), "blocks", block.id),
     scenarioOrder: block.scenarioOrder,
