@@ -9,10 +9,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   WILLIAMS_BLOCK_SEQUENCE,
+  WILLIAMS_BASELINE_RUNNER_PATH,
   WILLIAMS_CROSSOVER_POLICY_ID,
   WILLIAMS_EXIT_CODES,
   WILLIAMS_SCENARIOS,
   analyzeWilliamsCrossoverEvidence,
+  buildWilliamsBlockCommand,
   buildWilliamsPreregistration,
   validateWilliamsTelemetryCadence,
 } from "./williams_crossover_policy.mjs";
@@ -29,14 +31,13 @@ import {
   isValidOrderedContainmentSourceSet,
   orderedContainmentSourceSetsEqual,
 } from "../process_containment/ordered_source_set_identity.mjs";
-import { WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID } from "./render_sample_role_policy.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_RAW_ROOT = path.join(REPO_ROOT, ".runtime", "output", "perf", "p2-williams-crossover");
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-williams-crossover.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-williams-crossover.md");
 const TASK_PORTS = Object.freeze([8000, 8892]);
-const BASELINE_RUNNER_PATH = "tools/perf/run_baseline.mjs";
+const BASELINE_RUNNER_PATH = WILLIAMS_BASELINE_RUNNER_PATH;
 const ROLE_POLICY_PATH = "tools/perf/render_sample_role_policy.mjs";
 const ANALYZER_PATH = "tools/perf/run_williams_crossover.mjs";
 const POLICY_PATH = "tools/perf/williams_crossover_policy.mjs";
@@ -206,7 +207,7 @@ function blockDirectory(rawRoot, block) {
 
 export function buildWilliamsExecutionPlan(options = {}) {
   const harnessRoot = path.resolve(options.candidateWorktree || REPO_ROOT);
-  const baselineRunnerPath = path.join(harnessRoot, BASELINE_RUNNER_PATH);
+  const rawRoot = path.resolve(options.rawRoot || DEFAULT_RAW_ROOT);
   const preregistration = buildWilliamsPreregistration({
     controlHead: options.controlHead,
     candidateHead: options.candidateHead,
@@ -224,7 +225,7 @@ export function buildWilliamsExecutionPlan(options = {}) {
     blocks: WILLIAMS_BLOCK_SEQUENCE.map((block) => {
       const cwd = block.side === "A" ? options.controlWorktree : options.candidateWorktree;
       const expectedHead = block.side === "A" ? options.controlHead : options.candidateHead;
-      const directory = blockDirectory(options.rawRoot || DEFAULT_RAW_ROOT, block);
+      const directory = blockDirectory(rawRoot, block);
       return {
         ...block,
         scenarioOrder: [...block.scenarioOrder],
@@ -232,21 +233,12 @@ export function buildWilliamsExecutionPlan(options = {}) {
         harnessRoot,
         expectedHead,
         directory,
-        command: {
-          bin: process.execPath,
-          args: [
-            baselineRunnerPath,
-            "--measured-repo-root", cwd,
-            "--mode", "baseline",
-            "--scenarios", block.scenarioOrder.join(","),
-            "--runs", "2",
-            "--warmups", "1",
-            "--render-sample-run-profile", WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
-            "--baseline-json", path.join(directory, "baseline.json"),
-            "--baseline-md", path.join(directory, "baseline.md"),
-            "--raw-dir", path.join(directory, "raw"),
-          ],
-        },
+        command: buildWilliamsBlockCommand({
+          candidateWorktree: harnessRoot,
+          measuredWorktree: cwd,
+          blockDirectory: directory,
+          scenarioOrder: block.scenarioOrder,
+        }),
       };
     }),
   };
@@ -1146,6 +1138,7 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIden
     powerSchemeLifecycle,
     blocks,
     manifestValidation,
+    rawRoot: resolvedRoot,
   });
 }
 

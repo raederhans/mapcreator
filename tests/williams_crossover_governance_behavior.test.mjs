@@ -15,6 +15,7 @@ import {
   WILLIAMS_SCENARIOS,
   WILLIAMS_TELEMETRY_CADENCE,
   analyzeWilliamsCrossoverEvidence,
+  buildWilliamsBlockCommand,
   buildWilliamsPreregistration,
 } from "../tools/perf/williams_crossover_policy.mjs";
 import {
@@ -46,6 +47,7 @@ const CONTROL_HEAD = "a".repeat(40);
 const CANDIDATE_HEAD = "b".repeat(40);
 const CONTROL_WORKTREE = "C:\\perf\\control";
 const CANDIDATE_WORKTREE = "C:\\perf\\candidate";
+const EVIDENCE_RAW_ROOT = "C:\\perf\\evidence";
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const RUNTIME_TMP_ROOT = path.join(REPO_ROOT, ".runtime", "tmp");
 const EXPECTED_POWER_SCHEME_GUID = "00000000-0000-0000-0000-000000000000";
@@ -360,15 +362,12 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
         },
       };
     }
-    const command = {
-      bin: process.execPath,
-      args: [
-        path.join(CANDIDATE_WORKTREE, "tools", "perf", "run_baseline.mjs"),
-        "--measured-repo-root", cwd,
-        "--mode", "baseline",
-        "--scenarios", block.scenarioOrder.join(","),
-      ],
-    };
+    const command = buildWilliamsBlockCommand({
+      candidateWorktree: CANDIDATE_WORKTREE,
+      measuredWorktree: cwd,
+      blockDirectory: path.join(EVIDENCE_RAW_ROOT, "blocks", block.id),
+      scenarioOrder: block.scenarioOrder,
+    });
     return {
       ordinal: block.ordinal,
       id: block.id,
@@ -452,6 +451,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     };
   });
   return {
+    rawRoot: EVIDENCE_RAW_ROOT,
     preregistration,
     jobRunnerPreparation: jobRunnerPreparation(
       preregistration.workloadContract.processContainment.identity.source,
@@ -484,7 +484,22 @@ async function materializeEvidenceRoot(evidence) {
     binary: currentToolIdentity.jobRunnerBinary,
   };
   evidence.preregistration.telemetry.powerSchemeHelper = currentToolIdentity.powerSchemeHelper;
+  evidence.rawRoot = root;
+  const materializedPlan = buildWilliamsExecutionPlan({
+    rawRoot: root,
+    controlHead: evidence.preregistration.control.head,
+    candidateHead: evidence.preregistration.candidate.head,
+    controlWorktree: evidence.preregistration.control.worktree,
+    candidateWorktree: evidence.preregistration.candidate.worktree,
+  });
+  const commandByBlockId = new Map(materializedPlan.blocks.map((block) => [block.id, block.command]));
   for (const block of evidence.blocks) {
+    block.command = structuredClone(commandByBlockId.get(block.id));
+    for (const jobEvidence of [block.jobObject, block.cleanup.jobObject]) {
+      jobEvidence.commandExecutablePath = block.command.bin;
+      jobEvidence.commandWorkingDirectory = block.identity.cwd;
+      jobEvidence.commandArguments = [...block.command.args];
+    }
     block.identity.artifacts.runner = currentToolIdentity.runner;
     block.identity.artifacts.rolePolicy = currentToolIdentity.rolePolicy;
     block.identity.artifacts.analyzer = currentToolIdentity.analyzer;
@@ -1160,6 +1175,43 @@ test("Williams authority rejects harness-root and shared runner identity drift",
   };
   const rolePolicyReport = analyzeWilliamsCrossoverEvidence(rolePolicyDrift);
   assert.ok(rolePolicyReport.decision.invalidReasons.includes("block-02.identity.crossBlock.rolePolicy"));
+});
+
+test("Williams analyzer rejects self-consistent noncanonical block commands", () => {
+  const rawRoot = path.join(REPO_ROOT, ".runtime", "tmp", "williams-command-authority");
+  const canonicalPlan = buildWilliamsExecutionPlan({
+    rawRoot,
+    controlHead: CONTROL_HEAD,
+    candidateHead: CANDIDATE_HEAD,
+    controlWorktree: CONTROL_WORKTREE,
+    candidateWorktree: CANDIDATE_WORKTREE,
+  });
+  const removeOption = (args, option) => {
+    const index = args.indexOf(option);
+    assert.ok(index >= 0, `${option} must exist in the canonical fixture`);
+    args.splice(index, 2);
+  };
+  const cases = [
+    ["old control runner", (command) => {
+      command.args[0] = path.join(CONTROL_WORKTREE, "tools", "perf", "run_baseline.mjs");
+    }],
+    ["missing measured root", (command) => removeOption(command.args, "--measured-repo-root")],
+    ["missing Williams profile", (command) => removeOption(command.args, "--render-sample-run-profile")],
+    ["missing baseline output", (command) => removeOption(command.args, "--baseline-json")],
+  ];
+
+  for (const [label, mutate] of cases) {
+    const evidence = createEvidence();
+    evidence.rawRoot = rawRoot;
+    const command = structuredClone(canonicalPlan.blocks[0].command);
+    mutate(command);
+    evidence.blocks[0].command = command;
+    evidence.blocks[0].jobObject = jobObjectEvidence(4001, { command, cwd: CONTROL_WORKTREE });
+    evidence.blocks[0].cleanup.jobObject = jobObjectEvidence(4001, { command, cwd: CONTROL_WORKTREE });
+    const report = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.equal(report.decision.status, "invalid-experiment", label);
+    assert.ok(report.decision.invalidReasons.includes("block-01.command.canonical"), label);
+  }
 });
 
 test("raw-root analyzer rejects missing, substituted, and mixed run-profile identity", async (t) => {

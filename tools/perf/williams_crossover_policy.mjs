@@ -1,3 +1,6 @@
+import path from "node:path";
+import process from "node:process";
+
 import {
   CANONICAL_RENDER_SAMPLE_ROLE_ID,
   RENDER_SAMPLE_ROLE_POLICY_ID,
@@ -21,6 +24,32 @@ export const WILLIAMS_JOB_RUNNER_SOURCE_PATHS = Object.freeze([
   WILLIAMS_JOB_RUNNER_CORE_SOURCE_PATH,
 ]);
 export const WILLIAMS_JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
+export const WILLIAMS_BASELINE_RUNNER_PATH = "tools/perf/run_baseline.mjs";
+
+export function buildWilliamsBlockCommand({
+  candidateWorktree,
+  measuredWorktree,
+  blockDirectory,
+  scenarioOrder = [],
+  nodeExecutable = process.execPath,
+} = {}) {
+  const directory = path.resolve(String(blockDirectory || ""));
+  return {
+    bin: String(nodeExecutable || ""),
+    args: [
+      path.join(path.resolve(String(candidateWorktree || "")), WILLIAMS_BASELINE_RUNNER_PATH),
+      "--measured-repo-root", path.resolve(String(measuredWorktree || "")),
+      "--mode", "baseline",
+      "--scenarios", scenarioOrder.join(","),
+      "--runs", "2",
+      "--warmups", "1",
+      "--render-sample-run-profile", WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+      "--baseline-json", path.join(directory, "baseline.json"),
+      "--baseline-md", path.join(directory, "baseline.md"),
+      "--raw-dir", path.join(directory, "raw"),
+    ],
+  };
+}
 export const WILLIAMS_TELEMETRY_CADENCE = Object.freeze({
   windowSchemaVersion: 4,
   samplesPerWindow: 5,
@@ -157,6 +186,25 @@ function canonicalJson(value) {
     return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
   }
   return JSON.stringify(value);
+}
+
+function validateCanonicalBlockCommand(command, block, preregistration, rawRoot) {
+  const errors = [];
+  if (!String(rawRoot || "").trim()) {
+    return [`${block.id}.command.rawRoot`, `${block.id}.command.canonical`];
+  }
+  const sideRegistration = block.side === "A" ? preregistration?.control : preregistration?.candidate;
+  const expected = buildWilliamsBlockCommand({
+    candidateWorktree: preregistration?.candidate?.worktree,
+    measuredWorktree: sideRegistration?.worktree,
+    blockDirectory: path.join(path.resolve(String(rawRoot)), "blocks", block.id),
+    scenarioOrder: block.scenarioOrder,
+    nodeExecutable: preregistration?.workloadContract?.command?.nodeExecutablePath,
+  });
+  if (command?.bin !== expected.bin) errors.push(`${block.id}.command.bin`);
+  if (!arraysEqual(command?.args, expected.args)) errors.push(`${block.id}.command.args`);
+  if (errors.length > 0) errors.push(`${block.id}.command.canonical`);
+  return errors;
 }
 
 function validateJobObjectEvidence(jobObject, prefix, { command = null, cwd = null, exitCode = null } = {}) {
@@ -316,6 +364,7 @@ export function buildWilliamsPreregistration({
   jobRunnerBinary = null,
   powerSchemeHelper = null,
   expectedPowerSchemeGuid = "",
+  nodeExecutablePath = process.execPath,
 } = {}) {
   // 预注册把样本角色、区组顺序、阈值和遥测节奏冻结为实验输入，后续分析只校验和复算。
   return {
@@ -382,6 +431,11 @@ export function buildWilliamsPreregistration({
       admissionThresholds: JSON.parse(JSON.stringify(WILLIAMS_THRESHOLDS.telemetry)),
     },
     workloadContract: {
+      command: {
+        nodeExecutablePath: String(nodeExecutablePath || ""),
+        runnerPath: WILLIAMS_BASELINE_RUNNER_PATH,
+        exactArgumentsRequired: true,
+      },
       report: {
         mode: "baseline",
         schemaVersion: 2,
@@ -452,6 +506,7 @@ export function validateWilliamsPreregistration(preregistration) {
     jobRunnerBinary: containmentIdentity.binary || null,
     powerSchemeHelper: normalized.telemetry?.powerSchemeHelper || null,
     expectedPowerSchemeGuid: normalized.telemetry?.expectedPowerSchemeGuid || "",
+    nodeExecutablePath: normalized.workloadContract?.command?.nodeExecutablePath || "",
   });
   const errors = [];
   if (normalized.policyId !== expected.policyId) errors.push("preregistration.policyId");
@@ -521,6 +576,9 @@ export function validateWilliamsPreregistration(preregistration) {
   }
   if (JSON.stringify(normalized.workloadContract) !== JSON.stringify(expected.workloadContract)) {
     errors.push("preregistration.workloadContract");
+  }
+  if (!path.isAbsolute(String(normalized.workloadContract?.command?.nodeExecutablePath || ""))) {
+    errors.push("preregistration.workloadContract.command.nodeExecutablePath");
   }
   const sourceIdentity = containmentIdentity.source;
   if (String(sourceIdentity?.path || "") !== WILLIAMS_JOB_RUNNER_SOURCE_PATH) {
@@ -1565,6 +1623,7 @@ export function analyzeWilliamsCrossoverEvidence({
   powerSchemeLifecycle,
   blocks = [],
   manifestValidation = { status: "missing", errors: ["manifest.missing"] },
+  rawRoot = "",
 } = {}) {
   // 先汇总所有证据完整性错误，再计算性能方向；invalid experiment 不会被数值结果覆盖。
   const powerLifecycleValidation = validateWilliamsPowerSchemeLifecycle(
@@ -1599,6 +1658,7 @@ export function analyzeWilliamsCrossoverEvidence({
     ) {
       invalidReasons.push(`${expectedBlock.id}.metadata`);
     }
+    invalidReasons.push(...validateCanonicalBlockCommand(evidence.command, expectedBlock, preregistration, rawRoot));
     invalidReasons.push(...validateIdentity(evidence.identity, expectedBlock, preregistration));
     invalidReasons.push(...validateCleanup(evidence.cleanup, expectedBlock, evidence));
     invalidReasons.push(...validateBlockResult(evidence.blockResult, expectedBlock));
