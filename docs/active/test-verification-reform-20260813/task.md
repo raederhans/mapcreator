@@ -59,7 +59,7 @@ Phase workers own only their isolated worktrees and local commits. The final int
 - [x] Bind selector CLI artifacts through the shared repository catalog helper as E `be28f8744ccbc5ba5c7b661f47788a3beeb11889`.
 - [x] Run the exact 16-file selector -> `--selection-json` dry-run and child-safe execution to terminal success under one `.runtime` owner.
 - [ ] Run final Stage 5b/full P4/browser/performance/scenario-data/Pages generation admission under the designated final integration or CI owner.
-- [ ] Obtain a follow-up independent review verdict for the exact post-E candidate SHA.
+- [x] Obtain `APPROVE / CLEAR TO INTEGRATE` from the independent exact-head review of combined candidate `e602cf4fb1bb68b5692e58f8a8151223349b4135`, with zero findings at all severities.
 
 ## Validation evidence
 
@@ -137,6 +137,27 @@ Phase workers own only their isolated worktrees and local commits. The final int
 - [x] Update `tools/perf/williams_crossover_power_scheme.ps1` to pass `System.Management.Automation.Language.NullString.Value` while retaining the existing atomic publication and finally cleanup flow.
 - [x] Pass Williams governance `44/44`, Williams Job runner `16 passed / 1 explicit live-telemetry skip`, verification metadata `31/31`, and final SF-ATS child-safe execution with eight canonical commands and zero route gaps.
 - [x] Pass PowerShell 7.6 consecutive existing-target writes and the Windows PowerShell 5.1 live preflight; restore Balance `381b4222-f694-41f0-9685-ff5bb260df2e`, delete temporary scheme `763d8e3a-fac8-4f75-968f-985592042ffc`, and finish with zero matching processes or listeners on 8000/8892.
-- [ ] Final integration owner runs `perf:williams-crossover:run` for the complete 32-sample experiment after cherry-picking this isolated repair.
+- [x] Final integration owner fast-forwards the isolated repair and runs `perf:williams-crossover:run` once for the complete 32-sample plan; the command exits `3` at block 01 and admission becomes `BLOCK`.
 
 Repair artifacts are under `.runtime/reports/generated/williams-journal-fix-*`. The adaptive execution defers `perf:williams-power-scheme:live-preflight`, live telemetry, standard perf, and full Williams as main-thread roots; the explicitly assigned power preflight completed separately with exit 0.
+
+## 2026-08-21 final integration admission
+
+- [x] Confirm sole integration/live-test ownership and reserve `.runtime-output`, `browser-dev-server`, `perf-dev-server`, `playwright-browser`, and `system-power-scheme`.
+- [x] Confirm candidate/control identities, detached measurement state, clean Git state, empty task-owned process set, zero listeners on 8000/8892, Balance-only power state, and fresh output paths.
+- [x] Execute the complete Williams plan once with frozen control/candidate SHAs and isolated `17-williams-crossover-*` outputs.
+- [x] Stop admission on Williams exit `3`; preserve every partial raw/log artifact and perform zero retries.
+- [x] Restore Balance, delete temporary scheme `2f91656c-3eb3-4315-b1ef-20ab6f3f1245`, verify zero task-owned PIDs and zero listeners, restore a82e to `codex/sc-phases-0-3-candidate`, and keep control detached.
+- [ ] Produce 8/8 completed blocks, 32/32 raw samples, a valid raw manifest, final JSON/Markdown reports, and acceptance/regression PASS.
+- [ ] Push to `origin/main` and observe required GitHub Actions to terminal conclusions.
+
+| Final admission check | Result |
+| --- | --- |
+| Williams command | `npm run perf:williams-crossover:run -- --control-worktree C:\Users\raede\.codex\worktrees\045e\mapcreator --candidate-worktree C:\Users\raede\.codex\worktrees\a82e\mapcreator --control-head 9869698da5331e9afcc961f42b4666469abe6c46 --candidate-head e602cf4fb1bb68b5692e58f8a8151223349b4135 --raw-root ...\17-williams-crossover-raw --json-out ...\17-williams-crossover-report.json --md-out ...\17-williams-crossover-report.md`; exit `3`; one execution; zero retries. |
+| Measurement progress | `block-01` produced one invalid block result, 0/8 completed blocks, and 4/32 raw scenario samples. Final raw manifest and JSON/Markdown performance reports were never reached. |
+| Baseline blocker | Control `run_baseline.mjs` exited `1`: `config.runs expected=5 actual=2` plus the same 5-versus-2 mismatch for `tno_1962` and `hoi4_1939`. Job Object cleanup was valid with `remainingPids=[]` and `unverifiedPids=[]`. |
+| Journal blocker | The 32,180-byte lifecycle journal starts with `{` and has no BOM. Explicit UTF-8 parsing succeeds in PowerShell 7 and Windows PowerShell 5.1; the Windows PowerShell 5.1 default reader fails at JSON position 933. Automatic power-scheme stop therefore exited through the fail-closed recovery path. |
+| System recovery | `powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e` exit `0`; `powercfg /delete 2f91656c-3eb3-4315-b1ef-20ab6f3f1245` exit `0`; the temporary GUID is absent; Balance is the only remaining scheme; task-owned PIDs and listeners on 8000/8892 are zero. |
+| Parent WIP protection | Parent stays `main@9869698d` with 19 tracked paths and 977 diff lines; canonical PowerShell LF-join/no-final-newline SHA-256 remains `aea020b4130165870c07e4d92e5cf87454f4e9776bfffc1feec69aec1370e661`; overlap with the 18 candidate paths is zero. |
+| SF-ATS docs-only verification | The three task-record paths select one child-safe command, `node --test tests/verify_core_runner_behavior.test.mjs`; dry-run and execution both exit `0`, the regression passes 56/56, and `unmatched=[]`, `blocked=[]`, `routeGaps=[]`. |
+| Admission disposition | `BLOCK`. Performance acceptance and regression verdicts are unavailable. `origin/main` push and remote CI were not run. |

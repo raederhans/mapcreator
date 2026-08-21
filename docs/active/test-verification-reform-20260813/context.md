@@ -157,3 +157,54 @@ Each execution task must report base and head SHA, branch, status, owned paths, 
 | Cross-runtime evidence | Windows PowerShell 5.1 / CLR 4.0 runs the production regression and live preflight; PowerShell 7.6 / .NET 10 completed two writes to the same existing journal with zero temporary files. |
 | Live preflight | Sole owner `codex/fix-williams-journal-atomic-replace`; log `.runtime/reports/generated/williams-journal-fix-live-preflight.log`; exit 0 with lifecycle and cleanup valid, Balance restored, temporary GUID absent, and ports 8000/8892 plus matching process set empty. |
 | Deferred admission | The complete 32-sample Williams crossover, live telemetry, and standard perf experiment remain assigned to the final integration owner. |
+
+## 2026-08-21 SC phase 0-3 final admission BLOCK
+
+### Exact candidate and remote state
+
+- Integration worktree: `C:\Users\raede\.codex\worktrees\a82e\mapcreator`.
+- Candidate branch fast-forward path: `d1f7c9c3ae0257c056aea8fb1a968a3db40ce7cb -> 095455713e18a911dcb85762ad9767d411c2ca4d -> e602cf4fb1bb68b5692e58f8a8151223349b4135`.
+- Control: `C:\Users\raede\.codex\worktrees\045e\mapcreator`, detached and clean at `9869698da5331e9afcc961f42b4666469abe6c46`.
+- Fresh fetch and `ls-remote` both exited `0`; `origin/main` remained `7ddcee0d613b0210a37e287c77e49c90443bd415` and is an ancestor of `e602cf4`.
+- Parent checkout remained `main@9869698d` with the frozen 19-path / 977-line tracked WIP and canonical diff SHA-256 `aea020b4130165870c07e4d92e5cf87454f4e9776bfffc1feec69aec1370e661`.
+
+### Williams sole-owner execution
+
+The current integration task exclusively owned `.runtime-output`, `browser-dev-server`, `perf-dev-server`, `playwright-browser`, and `system-power-scheme`. Both measurement worktrees were detached, clean, and bound to their expected SHAs. Ports 8000/8892, matching Williams/baseline processes, Git locks, prior temporary schemes, and the expected-scheme environment variable were clear before launch.
+
+```powershell
+npm run perf:williams-crossover:run -- --control-worktree C:\Users\raede\.codex\worktrees\045e\mapcreator --candidate-worktree C:\Users\raede\.codex\worktrees\a82e\mapcreator --control-head 9869698da5331e9afcc961f42b4666469abe6c46 --candidate-head e602cf4fb1bb68b5692e58f8a8151223349b4135 --raw-root C:\Users\raede\.codex\worktrees\a82e\mapcreator\.runtime\reports\generated\sc-phases-0-3-final-admission\17-williams-crossover-raw --json-out C:\Users\raede\.codex\worktrees\a82e\mapcreator\.runtime\reports\generated\sc-phases-0-3-final-admission\17-williams-crossover-report.json --md-out C:\Users\raede\.codex\worktrees\a82e\mapcreator\.runtime\reports\generated\sc-phases-0-3-final-admission\17-williams-crossover-report.md
+```
+
+The command ran once and exited `3`. Block 01 ran the control baseline with `--runs 2 --warmups 1`; `run_baseline.mjs` rejected the canonical render role because the role contract requires five runs. The block wrote 4/32 raw samples, returned exit `1`, and completed Job Object cleanup with zero remaining or unverified PIDs. Completed blocks remained 0/8.
+
+The automatic power-scheme stop encountered a second blocker. `power-scheme-lifecycle.json` is valid BOM-less UTF-8 and parses successfully when Windows PowerShell 5.1 receives `-Encoding UTF8`; its default `Get-Content` decoding corrupts the localized Chinese `powercfg` strings and causes `ConvertFrom-Json` to fail at position 933. The task restored Balance, deleted run-owned GUID `2f91656c-3eb3-4315-b1ef-20ab6f3f1245`, verified that GUID absent, and confirmed zero task-owned processes and zero listeners. Candidate a82e returned to its branch clean at `e602cf4`; control remained detached and clean.
+
+### Preserved evidence
+
+- `.runtime/reports/generated/sc-phases-0-3-final-admission/17-williams-crossover.stdout.log`
+- `.runtime/reports/generated/sc-phases-0-3-final-admission/17-williams-crossover.stderr.log`
+- `.runtime/reports/generated/sc-phases-0-3-final-admission/17-williams-crossover-owner.json`
+- `.runtime/reports/generated/sc-phases-0-3-final-admission/17-williams-crossover-system-recovery.md`
+- `.runtime/reports/generated/sc-phases-0-3-final-admission/17-williams-crossover-raw/`
+
+The early stop occurred before raw-manifest publication and final JSON/Markdown report generation, so acceptance and regression verdicts remain unavailable.
+
+### Reused closed gates
+
+| Gate | Exact evidence |
+| --- | --- |
+| Windows Job V2 | `01b-windows-job-runtime-integration-retry.stdout.log`: 5/5 passed. |
+| Full P4 state-writer | `02-full-p4-state-writer-policy.stdout.log`: 403/403 passed. |
+| Full Core main-thread | `03-full-core-main-thread.stdout.log`: 86 commands completed, including Playwright main-thread coverage. |
+| Power scheme and telemetry | `04a-williams-power-scheme-live-preflight.stdout.log` completed; `04b-williams-crossover-telemetry-live.stdout.log`: 2/2 passed. |
+| P4.3 canonical admission | `05-p4-3-canonical-admission.stdout.log`: 403/403 policy tests, five phase commands, unmatched 0, route gaps 0. |
+| Browser/scenario recovery | `06-political-progressive-recovery.stdout.log`: 3/3 passed; `14-scenario-chunk-runtime.stdout.log`: 8/8 passed in 2.3 minutes, including the 17.2-second stable invalidation assertion. |
+| Stage 5 and TNO ready | `08-stage5-visual-acceptance.stdout.log`: 1/1 passed; `09-tno-ready-state.stdout.log`: 5/5 passed. |
+| Pages/public | Pages/dist completed inside the full Core lane; `10b-pages-public-release-gate-local.stdout.log`: local public release gate 1/1 passed with zero console or network issues. |
+
+### Disposition and handoff
+
+Admission status is `BLOCK`. The full Williams performance decision, normal push to `origin/main`, deployed Pages check, and GitHub Actions observation stayed unrun. A new repair task must align the Williams two-run experiment with the control canonical-role contract and make the Windows PowerShell 5.1 journal reader encoding explicit, then submit a fresh exact candidate for independent review and a newly authorized admission run.
+
+The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavior.test.mjs` as its sole child-safe group. Dry-run and execution exited `0`; 56/56 tests passed with one Node process start, complete execution-set comparison, zero unmatched files, zero blocked verification entries, and zero route gaps. Artifacts use `.runtime/reports/generated/sc-phases-0-3-final-admission/18-final-admission-docs-*`.

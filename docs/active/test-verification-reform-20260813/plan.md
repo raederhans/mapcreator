@@ -124,6 +124,18 @@ Stage 6J-C closes verification-platform feature expansion for this reform. Any l
 - [x] Extend the existing Williams governance suite with real-file-system coverage for consecutive checkpoints, existing-target atomic replacement, UTF-8 without BOM, valid JSON, failed-publication cleanup, retained prior journal content, and a later successful replacement.
 - [x] Preserve `File.Replace` publication and pass a true null string through `System.Management.Automation.Language.NullString.Value`.
 - [x] Run focused RED/GREEN, Williams governance and Job runner regressions, verification metadata, SF-ATS child-safe execution, PowerShell 7 compatibility, and the serialized live power-scheme preflight.
-- [ ] Cherry-pick the repair commit into the final candidate and run the complete 32-sample Williams crossover under the designated integration owner.
+- [x] Fast-forward the repair commits into the final candidate and launch the complete 32-sample Williams crossover under the designated integration owner; the single run stopped fail-closed at block 01.
 
 The repair acceptance boundary keeps performance thresholds, retry policy, power-scheme ownership, journal replay, cleanup, and fail-closed recovery semantics unchanged. The full crossover remains the final live admission measurement.
+
+## SC phase 0-3 final admission BLOCK — 2026-08-21
+
+- [x] Fast-forward `codex/sc-phases-0-3-candidate` from `d1f7c9c3ae0257c056aea8fb1a968a3db40ce7cb` to the exact reviewed combined candidate `e602cf4fb1bb68b5692e58f8a8151223349b4135`.
+- [x] Re-audit all worktrees and refs, fresh-fetch `origin/main@7ddcee0d613b0210a37e287c77e49c90443bd415`, verify its ancestry to the candidate, and preserve the parent checkout at `main@9869698da5331e9afcc961f42b4666469abe6c46`.
+- [x] Reuse the already closed Windows Job V2, full P4, full Core, P4.3, browser/scenario, Pages/dist, live telemetry, and power-scheme preflight artifacts.
+- [x] Run exactly one full Williams command with detached `045e@9869698d` as control and detached `a82e@e602cf4` as candidate, using new `17-williams-crossover-*` outputs and the frozen thresholds.
+- [x] Preserve the partial raw evidence, restore Balance, remove the run-owned temporary power scheme, return a82e to the candidate branch, and verify both measurement worktrees clean.
+- [ ] Complete 8/8 Williams blocks and 32/32 raw samples with acceptance and regression verdicts.
+- [ ] Push the final candidate to `origin/main` and observe required GitHub checks.
+
+Stage 5b remains open. The single Williams attempt exited `3` after block 01 produced 4/32 raw samples and 0/8 completed blocks. The control baseline rejected the Williams two-run configuration against the canonical five-run role contract, and Windows PowerShell 5.1 failed to decode the BOM-less UTF-8 lifecycle journal with its default reader. Final report generation, performance acceptance, push, and remote CI stayed beyond the fail-closed admission boundary.
