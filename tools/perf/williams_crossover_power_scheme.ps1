@@ -771,7 +771,7 @@ if ($StartSession) {
 
 if ($StopSession) {
   if (-not $SessionPath) { throw '-SessionPath is required for -StopSession.' }
-  $session = ConvertTo-WilliamsMutableSession -Payload (Get-Content -Raw -LiteralPath $SessionPath | ConvertFrom-Json)
+  $session = ConvertTo-WilliamsMutableSession -Payload (Get-Content -Raw -Encoding UTF8 -LiteralPath $SessionPath | ConvertFrom-Json)
   $checkpoint = { param($checkpointSession) Write-WilliamsPowerSchemeSession -Session $checkpointSession -Path $SessionPath }
   try {
     [void](Stop-WilliamsTemporaryPowerScheme -Session $session -Checkpoint $checkpoint)

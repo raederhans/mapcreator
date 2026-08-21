@@ -1669,7 +1669,7 @@ test("rerun08 governance uses query and active GUID identity without list-delta 
 });
 
 test(
-  "power-scheme journal atomically replaces an existing checkpoint and cleans a failed publication",
+  "power-scheme journal atomically replaces checkpoints and replays BOM-less UTF-8",
   { skip: process.platform !== "win32" },
   async (t) => {
     const helperPath = fileURLToPath(
@@ -1680,6 +1680,7 @@ test(
     const tempRoot = await fs.mkdtemp(path.join(runtimeTmp, "williams-power-journal-"));
     t.after(() => fs.rm(tempRoot, { recursive: true, force: true }));
     const journalPath = path.join(tempRoot, "session.json");
+    const replayPath = path.join(tempRoot, "localized-replay.json");
     const escapePowerShellLiteral = (value) => value.replaceAll("'", "''");
     const script = `
 . '${escapePowerShellLiteral(helperPath)}'
@@ -1747,6 +1748,71 @@ $finalRead = $finalText | ConvertFrom-Json
     assert.equal(report.finalHasUtf8Bom, false);
     assert.equal(report.finalHasTerminatingNewline, true);
     assert.deepEqual(report.directoryFiles, ["session.json"]);
+
+    const localizedCapabilities = "电源方案 GUID：卓越性能 / 日本語 / 한국어";
+    const localizedEventOutput =
+      "电源方案 GUID：381b4222-f694-41f0-9685-ff5bb260df2e（平衡）";
+    const replayJournal = {
+      schemaVersion: 1,
+      status: "active",
+      phase: "active",
+      originalGuid: null,
+      temporaryGuid: "12345678-1234-4234-8234-123456789abc",
+      createdGuid: null,
+      duplicateReturnedGuid: null,
+      destinationWasAbsent: false,
+      destinationAbsenceClassification: "localized-read-regression",
+      duplicateStarted: false,
+      originalExpectedPowerSchemeGuidEnv: null,
+      capabilities: localizedCapabilities,
+      events: [{
+        action: "capabilities",
+        output: localizedEventOutput,
+      }],
+    };
+    await fs.writeFile(replayPath, `${JSON.stringify(replayJournal)}\n`, "utf8");
+    const replayBytes = await fs.readFile(replayPath);
+    assert.equal(replayBytes.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])), false);
+
+    const escapedReplayPath = escapePowerShellLiteral(replayPath);
+    const pwshRead = spawnSync(
+      "pwsh.exe",
+      [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        `$journal = Get-Content -Raw -LiteralPath '${escapedReplayPath}' | ConvertFrom-Json; `
+          + "[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); "
+          + "$journal.capabilities | ConvertTo-Json -Compress",
+      ],
+      { encoding: "utf8", windowsHide: true },
+    );
+    assert.equal(pwshRead.status, 0, `${pwshRead.stdout}\n${pwshRead.stderr}`);
+    assert.equal(JSON.parse(pwshRead.stdout), localizedCapabilities);
+
+    const stopResult = spawnSync(
+      "powershell.exe",
+      [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        helperPath,
+        "-StopSession",
+        "-SessionPath",
+        replayPath,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    );
+    assert.equal(stopResult.status, 0, `${stopResult.stdout}\n${stopResult.stderr}`);
+    const replayed = JSON.parse(await fs.readFile(replayPath, "utf8"));
+    assert.equal(replayed.status, "cleaned");
+    assert.equal(replayed.cleanup.absenceClassification, "no-mutation-before-original-discovery");
+    assert.equal(replayed.capabilities, localizedCapabilities);
+    assert.equal(replayed.events[0].output, localizedEventOutput);
   },
 );
 
