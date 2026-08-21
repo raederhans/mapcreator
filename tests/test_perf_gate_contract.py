@@ -12,7 +12,7 @@ PACKAGE_LOCK = REPO_ROOT / "package-lock.json"
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "perf-pr-gate.yml"
 BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.md"
 BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-30.json"
-BASELINE_SOURCE_GIT_HEAD = "204d4d462ea0eeaacee1070efbd6e33edb436f9c"
+BASELINE_SOURCE_GIT_HEAD = "6fae0fe94f5db98d18810f1c0bf97033427d1d23"
 PERF_SCRIPT = REPO_ROOT / "tools" / "perf" / "run_baseline.mjs"
 STANDARD_PERF_ADMISSION = REPO_ROOT / "tools" / "perf" / "standard_perf_admission.mjs"
 RENDER_SAMPLE_ROLE_POLICY = REPO_ROOT / "tools" / "perf" / "render_sample_role_policy.mjs"
@@ -470,6 +470,12 @@ class PerfGateContractTest(unittest.TestCase):
             self.assertIsInstance(summary.get("workerDecodeMs"), (int, float))
             self.assertIsInstance(summary.get("workerMetaBuildMs"), (int, float))
             identity = baseline_payload.get("workloadIdentity", {}).get("scenarios", {}).get(scenario_id, {})
+            manifest_path = REPO_ROOT / "data" / "scenarios" / scenario_id / "manifest.json"
+            self.assertEqual(identity.get("manifestPath"), manifest_path.relative_to(REPO_ROOT).as_posix())
+            self.assertEqual(
+                identity.get("manifestSha256"),
+                hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            )
             self.assertRegex(str(identity.get("manifestSha256", "")), r"^[0-9a-f]{64}$")
             self.assertGreater(int(identity.get("featureCount", 0)), 0)
             role_summary = scenario.get("renderSampleRoleSummary", {})
