@@ -199,7 +199,6 @@ function validateCanonicalBlockCommand(command, block, preregistration, rawRoot)
     measuredWorktree: sideRegistration?.worktree,
     blockDirectory: path.join(path.resolve(String(rawRoot)), "blocks", block.id),
     scenarioOrder: block.scenarioOrder,
-    nodeExecutable: preregistration?.workloadContract?.command?.nodeExecutablePath,
   });
   if (command?.bin !== expected.bin) errors.push(`${block.id}.command.bin`);
   if (!arraysEqual(command?.args, expected.args)) errors.push(`${block.id}.command.args`);
@@ -364,7 +363,6 @@ export function buildWilliamsPreregistration({
   jobRunnerBinary = null,
   powerSchemeHelper = null,
   expectedPowerSchemeGuid = "",
-  nodeExecutablePath = process.execPath,
 } = {}) {
   // 预注册把样本角色、区组顺序、阈值和遥测节奏冻结为实验输入，后续分析只校验和复算。
   return {
@@ -432,7 +430,7 @@ export function buildWilliamsPreregistration({
     },
     workloadContract: {
       command: {
-        nodeExecutablePath: String(nodeExecutablePath || ""),
+        nodeExecutablePath: process.execPath,
         runnerPath: WILLIAMS_BASELINE_RUNNER_PATH,
         exactArgumentsRequired: true,
       },
@@ -506,7 +504,6 @@ export function validateWilliamsPreregistration(preregistration) {
     jobRunnerBinary: containmentIdentity.binary || null,
     powerSchemeHelper: normalized.telemetry?.powerSchemeHelper || null,
     expectedPowerSchemeGuid: normalized.telemetry?.expectedPowerSchemeGuid || "",
-    nodeExecutablePath: normalized.workloadContract?.command?.nodeExecutablePath || "",
   });
   const errors = [];
   if (normalized.policyId !== expected.policyId) errors.push("preregistration.policyId");
@@ -577,7 +574,7 @@ export function validateWilliamsPreregistration(preregistration) {
   if (JSON.stringify(normalized.workloadContract) !== JSON.stringify(expected.workloadContract)) {
     errors.push("preregistration.workloadContract");
   }
-  if (!path.isAbsolute(String(normalized.workloadContract?.command?.nodeExecutablePath || ""))) {
+  if (String(normalized.workloadContract?.command?.nodeExecutablePath || "") !== process.execPath) {
     errors.push("preregistration.workloadContract.command.nodeExecutablePath");
   }
   const sourceIdentity = containmentIdentity.source;

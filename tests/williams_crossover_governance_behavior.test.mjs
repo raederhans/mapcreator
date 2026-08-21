@@ -1214,6 +1214,62 @@ test("Williams analyzer rejects self-consistent noncanonical block commands", ()
   }
 });
 
+test("Williams analyzer rejects a self-consistent preregistered runtime substitution", () => {
+  const evidence = createEvidence();
+  const substitutedRuntime = "C:\\Windows\\System32\\cmd.exe";
+  evidence.preregistration.workloadContract.command.nodeExecutablePath = substitutedRuntime;
+  for (const block of evidence.blocks) {
+    block.command.bin = substitutedRuntime;
+    for (const jobEvidence of [block.jobObject, block.cleanup.jobObject]) {
+      jobEvidence.commandExecutablePath = substitutedRuntime;
+    }
+  }
+  const report = analyzeWilliamsCrossoverEvidence(evidence);
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.ok(
+    report.decision.invalidReasons.includes("preregistration.workloadContract.command.nodeExecutablePath"),
+  );
+});
+
+test("raw-root analyzer rejects a manifest-valid runtime substitution", async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const substitutedRuntime = "C:\\Windows\\System32\\cmd.exe";
+  const preregistrationPath = path.join(root, "preregistration.json");
+  const preregistration = JSON.parse(await fs.readFile(preregistrationPath, "utf8"));
+  preregistration.workloadContract.command.nodeExecutablePath = substitutedRuntime;
+  await writeJson(preregistrationPath, preregistration);
+
+  for (const block of WILLIAMS_BLOCK_SEQUENCE) {
+    const directory = path.join(root, "blocks", block.id);
+    const commandPath = path.join(directory, "command.json");
+    const command = JSON.parse(await fs.readFile(commandPath, "utf8"));
+    command.bin = substitutedRuntime;
+    await writeJson(commandPath, command);
+
+    const jobObjectPath = path.join(directory, "job-object.json");
+    const jobObject = JSON.parse(await fs.readFile(jobObjectPath, "utf8"));
+    jobObject.commandExecutablePath = substitutedRuntime;
+    await writeJson(jobObjectPath, jobObject);
+
+    const cleanupPath = path.join(directory, "cleanup.json");
+    const cleanup = JSON.parse(await fs.readFile(cleanupPath, "utf8"));
+    cleanup.jobObject.commandExecutablePath = substitutedRuntime;
+    await writeJson(cleanupPath, cleanup);
+  }
+
+  const currentToolIdentity = await buildCurrentHarnessArtifacts();
+  currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  await fs.rm(path.join(root, "raw-sha256-manifest.json"));
+  await buildWilliamsRawManifest(root, currentToolIdentity);
+  const report = await analyzeWilliamsCrossoverRawRoot(root);
+  assert.equal(report.manifestValidation.status, "valid");
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.ok(
+    report.decision.invalidReasons.includes("preregistration.workloadContract.command.nodeExecutablePath"),
+  );
+});
+
 test("raw-root analyzer rejects missing, substituted, and mixed run-profile identity", async (t) => {
   const cases = [
     ["missing policy profile", (evidence) => { delete evidence.blocks[0].baseline.renderSampleRolePolicy.runProfile; }],
