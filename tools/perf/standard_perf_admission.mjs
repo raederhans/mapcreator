@@ -150,6 +150,36 @@ function failure(code, detail) {
   return deepFreeze({ code, detail: String(detail || "") });
 }
 
+export function buildStandardPerfAdmissionCollectionFailureEvidence(
+  error,
+  { platform = process.platform, startedAt = new Date().toISOString(), completedAt = new Date().toISOString() } = {},
+) {
+  const detail = String(error?.stack || error?.message || error || "standard perf admission collection failed");
+  return deepFreeze({
+    schemaVersion: 1,
+    startedAt,
+    completedAt,
+    platform,
+    cpuSamples: [],
+    topProcesses: [],
+    memoryAvailableMiB: null,
+    power: {
+      status: platform === "win32" ? "collection-error" : "not-applicable",
+      activeSchemeGuid: "",
+      activeSchemeName: "",
+      acLineStatus: 255,
+      detail,
+    },
+    git: {
+      status: "collection-error",
+      head: "",
+      entries: [],
+      detail,
+    },
+    degradedCapabilities: ["standard-perf-admission-collection"],
+  });
+}
+
 export function evaluateStandardPerfAdmission(
   evidence,
   policy = STANDARD_PERF_ADMISSION_POLICY,

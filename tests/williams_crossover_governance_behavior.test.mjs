@@ -32,6 +32,8 @@ import {
   parseWilliamsArgs,
   requireWilliamsJobRunnerReady,
   resolveServerMetadataProbeTarget,
+  runWilliamsBlockWithTestAdapters,
+  runWilliamsPreBlockAdmission,
   runWilliamsCli,
   validateMeasurementSnapshot,
   validateWilliamsOutputPolicy,
@@ -44,6 +46,11 @@ import {
   STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
   WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
 } from "../tools/perf/render_sample_role_policy.mjs";
+import {
+  STANDARD_PERF_ADMISSION_EXIT_CODES,
+  STANDARD_PERF_ADMISSION_POLICY,
+  evaluateStandardPerfAdmission,
+} from "../tools/perf/standard_perf_admission.mjs";
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const CONTROL_HEAD = "a".repeat(40);
@@ -267,6 +274,32 @@ function telemetryWindow(phase, blockOrdinal, cwd, gitHead) {
       gitHead,
       detached: true,
     },
+  };
+}
+
+function standardPerfAdmissionEvidence(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    startedAt: "2026-07-11T00:00:00.000Z",
+    completedAt: "2026-07-11T00:00:07.000Z",
+    platform: "win32",
+    cpuSamples: [10, 11, 12, 13, 14, 15, 16],
+    topProcesses: [{ pid: 321, name: "System", singleCorePercent: 4 }],
+    memoryAvailableMiB: 16_000,
+    power: {
+      status: "available",
+      activeSchemeGuid: EXPECTED_POWER_SCHEME_GUID,
+      activeSchemeName: "Balanced",
+      acLineStatus: 1,
+    },
+    git: {
+      status: "available",
+      head: CONTROL_HEAD,
+      entries: [],
+      detail: "",
+    },
+    degradedCapabilities: [],
+    ...overrides,
   };
 }
 
@@ -496,6 +529,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
           rolePolicy: artifactDescriptor("tools/perf/render_sample_role_policy.mjs"),
           analyzer: artifactDescriptor("tools/perf/run_williams_crossover.mjs"),
           policy: artifactDescriptor("tools/perf/williams_crossover_policy.mjs"),
+          standardPerfAdmission: artifactDescriptor("tools/perf/standard_perf_admission.mjs"),
           windowsRuntime: artifactDescriptor("tools/perf/williams_crossover_windows_runtime.mjs"),
           containmentIdentityHelper: artifactDescriptor("tools/process_containment/ordered_source_set_identity.mjs"),
           jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
@@ -504,6 +538,17 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
           jobRunnerBinary: jobRunnerBinaryDescriptor(),
         },
       },
+      preBlockAdmission: evaluateStandardPerfAdmission(
+        standardPerfAdmissionEvidence({
+          git: {
+            status: "available",
+            head: expectedHead,
+            entries: [],
+            detail: "",
+          },
+        }),
+        STANDARD_PERF_ADMISSION_POLICY,
+      ),
       telemetry: {
         pre: telemetryWindow("pre", block.ordinal, cwd, expectedHead),
         post: telemetryWindow("post", block.ordinal, cwd, expectedHead),
@@ -614,6 +659,7 @@ async function materializeEvidenceRoot(evidence) {
     block.identity.artifacts.rolePolicy = currentToolIdentity.rolePolicy;
     block.identity.artifacts.analyzer = currentToolIdentity.analyzer;
     block.identity.artifacts.policy = currentToolIdentity.policy;
+    block.identity.artifacts.standardPerfAdmission = currentToolIdentity.standardPerfAdmission;
     block.identity.artifacts.windowsRuntime = currentToolIdentity.windowsRuntime;
     block.identity.artifacts.containmentIdentityHelper = currentToolIdentity.containmentIdentityHelper;
     block.identity.artifacts.jobRunnerSource = currentToolIdentity.jobRunnerSource;
@@ -639,6 +685,7 @@ async function materializeEvidenceRoot(evidence) {
       scenarioOrder: block.scenarioOrder,
     });
     await writeJson(path.join(directory, "identity.json"), block.identity);
+    await writeJson(path.join(directory, "pre-block-standard-perf-admission.json"), block.preBlockAdmission);
     await writeJson(path.join(directory, "telemetry-pre.json"), block.telemetry.pre);
     await writeJson(path.join(directory, "telemetry-post.json"), block.telemetry.post);
     await writeJson(path.join(directory, "quiet-window.json"), block.quietWindow);
@@ -719,6 +766,11 @@ async function synchronizeRawRevisionEvidence(root, overrides = {}) {
     baseline.gitHead = expectedHead;
     await writeJson(baselinePath, baseline);
 
+    const admissionPath = path.join(directory, "pre-block-standard-perf-admission.json");
+    const admission = JSON.parse(await fs.readFile(admissionPath, "utf8"));
+    admission.git.head = expectedHead;
+    await writeJson(admissionPath, admission);
+
     const jobObjectPath = path.join(directory, "job-object.json");
     const jobObject = JSON.parse(await fs.readFile(jobObjectPath, "utf8"));
     jobObject.commandExecutablePath = command.bin;
@@ -762,6 +814,7 @@ async function synchronizeRawToolIdentity(root, currentToolIdentity) {
       "rolePolicy",
       "analyzer",
       "policy",
+      "standardPerfAdmission",
       "windowsRuntime",
       "containmentIdentityHelper",
       "jobRunnerSource",
@@ -789,6 +842,7 @@ async function createDetachedAnalyzerFixtureRepository({ commitMessage = "fixtur
     "package-lock.json",
     "tools/perf/run_williams_crossover.mjs",
     "tools/perf/williams_crossover_policy.mjs",
+    "tools/perf/standard_perf_admission.mjs",
     "tools/perf/williams_crossover_windows_runtime.mjs",
     "tools/perf/run_baseline.mjs",
     "tools/perf/render_sample_role_policy.mjs",
@@ -1431,6 +1485,221 @@ test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and 
   }
 });
 
+test("Williams pre-block standard perf admission preserves standard policy parity and writes before workload spawn", async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-pre-block-standard-admission-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  const evidence = standardPerfAdmissionEvidence();
+  const artifactPath = path.join(outputRoot, "parity", "pre-block-standard-perf-admission.json");
+  const decision = await runWilliamsPreBlockAdmission({
+    worktree: CONTROL_WORKTREE,
+    artifactPath,
+    collectEvidence: async ({ cwd }) => {
+      assert.equal(cwd, CONTROL_WORKTREE);
+      return evidence;
+    },
+  });
+  const expected = evaluateStandardPerfAdmission(evidence, STANDARD_PERF_ADMISSION_POLICY);
+  assert.deepEqual(decision, expected);
+  assert.deepEqual(JSON.parse(await fs.readFile(artifactPath, "utf8")), expected);
+  assert.equal(decision.status, "admitted");
+  assert.equal(decision.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.accepted);
+  assert.deepEqual(decision.thresholds, STANDARD_PERF_ADMISSION_POLICY);
+
+  const directory = path.join(outputRoot, "accepted-block");
+  const command = { bin: process.execPath, args: ["--version"] };
+  const events = [];
+  let telemetryCount = 0;
+  let workloadSpawnCount = 0;
+  const result = await runWilliamsBlockWithTestAdapters({
+    ordinal: 1,
+    id: "block-01",
+    side: "A",
+    orderId: "tno-hoi4",
+    scenarioOrder: ["tno_1962", "hoi4_1939"],
+    cwd: CONTROL_WORKTREE,
+    expectedHead: CONTROL_HEAD,
+    directory,
+    command,
+  }, {}, {}, {}, {
+    collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
+    collectAdmissionEvidence: async () => {
+      events.push("standard-admission-collected");
+      return evidence;
+    },
+    collectTelemetry: async () => {
+      telemetryCount += 1;
+      events.push(`telemetry-${telemetryCount}`);
+      return telemetryWindow(telemetryCount === 1 ? "pre" : "post", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+    },
+    runLoggedCommand: async (_command, options) => {
+      workloadSpawnCount += 1;
+      events.push("workload-spawned");
+      const persistedAdmission = JSON.parse(await fs.readFile(
+        path.join(directory, "pre-block-standard-perf-admission.json"),
+        "utf8",
+      ));
+      assert.equal(persistedAdmission.status, "admitted");
+      const jobEvidence = jobObjectEvidence(4321, { command, cwd: CONTROL_WORKTREE });
+      await writeJson(options.jobEvidencePath, jobEvidence);
+      return {
+        pid: 4321,
+        exitCode: 0,
+        timedOut: false,
+        skipped: false,
+        workloadSpawnCount: 1,
+        taskOwnedTree: {
+          rootPids: [4321],
+          pids: [4321],
+          processes: [],
+          captureStatus: "available",
+          captureErrors: [],
+        },
+        jobEvidence,
+      };
+    },
+  });
+  assert.equal(result.complete, true);
+  assert.equal(result.blockResult.workloadSpawnCount, 1);
+  assert.equal(workloadSpawnCount, 1);
+  assert.ok(events.indexOf("standard-admission-collected") < events.indexOf("workload-spawned"));
+  assert.ok(events.indexOf("telemetry-1") < events.indexOf("workload-spawned"));
+});
+
+test("Williams pre-block standard perf admission rejects every governed resource dimension with zero workload spawn", async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-pre-block-standard-rejections-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  const cases = [
+    {
+      label: "average CPU",
+      failureCode: "cpu-average-high",
+      mutate: (evidence) => { evidence.cpuSamples = Array(7).fill(21); },
+    },
+    {
+      label: "peak CPU",
+      failureCode: "cpu-peak-high",
+      mutate: (evidence) => { evidence.cpuSamples = [36, 10, 10, 10, 10, 10, 10]; },
+    },
+    {
+      label: "top process",
+      failureCode: "top-process-high",
+      mutate: (evidence) => { evidence.topProcesses[0].singleCorePercent = 25.1; },
+    },
+    {
+      label: "available memory",
+      failureCode: "memory-available-low",
+      mutate: (evidence) => { evidence.memoryAvailableMiB = 4095.9; },
+    },
+    {
+      label: "power",
+      failureCode: "windows-power-evidence-unavailable",
+      mutate: (evidence) => { evidence.power.status = "collection-error"; },
+    },
+    {
+      label: "Git",
+      failureCode: "dirty-measurement-harness",
+      mutate: (evidence) => {
+        evidence.git.entries = [{ status: " M", paths: ["tools/perf/run_baseline.mjs"], malformed: false }];
+      },
+    },
+  ];
+
+  for (const [index, testCase] of cases.entries()) {
+    const evidence = structuredClone(standardPerfAdmissionEvidence());
+    testCase.mutate(evidence);
+    const directory = path.join(outputRoot, `case-${index + 1}`);
+    const command = { bin: process.execPath, args: ["--version"] };
+    let telemetryCount = 0;
+    let workloadSpawnCount = 0;
+    const result = await runWilliamsBlockWithTestAdapters({
+      ordinal: 1,
+      id: "block-01",
+      side: "A",
+      orderId: "tno-hoi4",
+      scenarioOrder: ["tno_1962", "hoi4_1939"],
+      cwd: CONTROL_WORKTREE,
+      expectedHead: CONTROL_HEAD,
+      directory,
+      command,
+    }, {}, {}, {}, {
+      collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
+      collectAdmissionEvidence: async () => evidence,
+      collectTelemetry: async () => {
+        telemetryCount += 1;
+        return telemetryWindow(telemetryCount === 1 ? "pre" : "post", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+      },
+      runLoggedCommand: async () => {
+        workloadSpawnCount += 1;
+        throw new Error("workload spawn must stay unreachable after standard admission rejection");
+      },
+    });
+    const admission = JSON.parse(await fs.readFile(
+      path.join(directory, "pre-block-standard-perf-admission.json"),
+      "utf8",
+    ));
+    const cleanup = JSON.parse(await fs.readFile(path.join(directory, "cleanup.json"), "utf8"));
+    const jobEvidence = JSON.parse(await fs.readFile(path.join(directory, "job-object.json"), "utf8"));
+    assert.equal(result.complete, false, testCase.label);
+    assert.equal(result.blockResult.status, "invalid", testCase.label);
+    assert.equal(result.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, testCase.label);
+    assert.equal(result.blockResult.workloadSpawnCount, 0, testCase.label);
+    assert.equal(result.blockResult.skipReason, "standard-perf-admission-rejected", testCase.label);
+    assert.equal(workloadSpawnCount, 0, testCase.label);
+    assert.equal(admission.status, "rejected", testCase.label);
+    assert.equal(admission.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected, testCase.label);
+    assert.ok(admission.failures.some((failure) => failure.code === testCase.failureCode), testCase.label);
+    assert.equal(cleanup.valid, true, testCase.label);
+    assert.equal(cleanup.workloadSpawnCount, 0, testCase.label);
+    assert.equal(cleanup.workloadStarted, false, testCase.label);
+    assert.equal(cleanup.cleanupRequired, false, testCase.label);
+    assert.equal(cleanup.terminationSucceeded, true, testCase.label);
+    assert.deepEqual(cleanup.taskOwnedPidsRemaining, [], testCase.label);
+    assert.equal(jobEvidence.status, "not-started", testCase.label);
+    assert.equal(jobEvidence.workloadSpawnCount, 0, testCase.label);
+    assert.equal(jobEvidence.cleanupValid, true, testCase.label);
+  }
+
+  const collectionFailureDirectory = path.join(outputRoot, "collection-failure");
+  let collectionFailureTelemetryCount = 0;
+  let collectionFailureSpawnCount = 0;
+  const collectionFailureResult = await runWilliamsBlockWithTestAdapters({
+    ordinal: 1,
+    id: "block-01",
+    side: "A",
+    orderId: "tno-hoi4",
+    scenarioOrder: ["tno_1962", "hoi4_1939"],
+    cwd: CONTROL_WORKTREE,
+    expectedHead: CONTROL_HEAD,
+    directory: collectionFailureDirectory,
+    command: { bin: process.execPath, args: ["--version"] },
+  }, {}, {}, {}, {
+    collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
+    collectAdmissionEvidence: async () => { throw new Error("collector unavailable"); },
+    collectTelemetry: async () => {
+      collectionFailureTelemetryCount += 1;
+      return telemetryWindow(
+        collectionFailureTelemetryCount === 1 ? "pre" : "post",
+        1,
+        CONTROL_WORKTREE,
+        CONTROL_HEAD,
+      );
+    },
+    runLoggedCommand: async () => {
+      collectionFailureSpawnCount += 1;
+      throw new Error("collection failure must stay fail closed");
+    },
+  });
+  const collectionFailureAdmission = JSON.parse(await fs.readFile(
+    path.join(collectionFailureDirectory, "pre-block-standard-perf-admission.json"),
+    "utf8",
+  ));
+  assert.equal(collectionFailureResult.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  assert.equal(collectionFailureResult.blockResult.workloadSpawnCount, 0);
+  assert.equal(collectionFailureSpawnCount, 0);
+  assert.equal(collectionFailureAdmission.status, "rejected");
+  assert.ok(collectionFailureAdmission.degradedCapabilities.includes("standard-perf-admission-collection"));
+  assert.ok(collectionFailureAdmission.failures.some((failure) => failure.code === "cpu-samples-invalid"));
+});
+
 test("telemetry cadence is frozen in preregistration and rejects a fixed-delay window before workload admission", () => {
   const evidence = createEvidence();
   assert.equal(evidence.preregistration.telemetry.scheduler, "monotonic-fixed-rate");
@@ -1821,6 +2090,13 @@ test("Williams authority rejects harness-root and shared runner identity drift",
   };
   const rolePolicyReport = analyzeWilliamsCrossoverEvidence(rolePolicyDrift);
   assert.ok(rolePolicyReport.decision.invalidReasons.includes("block-02.identity.crossBlock.rolePolicy"));
+
+  const standardAdmissionDrift = createEvidence();
+  standardAdmissionDrift.blocks[1].identity.artifacts.standardPerfAdmission.lfNormalizedSha256 = "e".repeat(64);
+  const standardAdmissionReport = analyzeWilliamsCrossoverEvidence(standardAdmissionDrift);
+  assert.ok(
+    standardAdmissionReport.decision.invalidReasons.includes("block-02.identity.crossBlock.standardPerfAdmission"),
+  );
 });
 
 test("Williams analyzer rejects self-consistent noncanonical block commands", () => {
@@ -2611,6 +2887,21 @@ test("raw analyzer rebuilds an accepted report from exactly 32 measured files", 
   assert.equal(report.decision.status, "accepted");
 });
 
+test("raw analyzer revalidates manifest-consistent pre-block standard admission evidence", async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const admissionPath = path.join(root, "blocks", "block-01", "pre-block-standard-perf-admission.json");
+  const admission = JSON.parse(await fs.readFile(admissionPath, "utf8"));
+  admission.cpu.averagePercent = STANDARD_PERF_ADMISSION_POLICY.cpuAverageMaxPercent + 0.1;
+  await writeJson(admissionPath, admission);
+  await rebuildRawManifest(root);
+
+  const report = await analyzeTrustedRawRoot(root);
+  assert.equal(report.manifestValidation.status, "valid");
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.ok(report.decision.invalidReasons.includes("block-01.preBlockAdmission.cpu-evidence-invalid"));
+});
+
 test("raw analyzer requires the executed Job runner binary and recomputes its descriptor", async (t) => {
   const missingRoot = await materializeEvidenceRoot(createEvidence());
   const tamperedRoot = await materializeEvidenceRoot(createEvidence());
@@ -2999,7 +3290,10 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   assert.ok(captureStartIndex < measuredCaptureIndex);
   assert.match(windowsSource, /at = \$captureStartedAt\.ToString\('o'\)/);
   assert.match(runnerSource, /validateWilliamsTelemetryCadence/);
-  assert.match(runnerSource, /if \(quietWindow\.valid\) \{\s*commandResult = await runLoggedCommand/);
+  assert.match(runnerSource, /collectStandardPerfAdmissionEvidence/);
+  assert.match(runnerSource, /evaluateStandardPerfAdmission/);
+  assert.match(runnerSource, /pre-block-standard-perf-admission\.json/);
+  assert.match(runnerSource, /if \(standardAdmissionAccepted && quietWindow\.valid\) \{\s*commandResult = await runLoggedCommandFn/);
   assert.doesNotMatch(runnerSource, /newBrowserPids\.length === 0/);
   assert.match(runnerSource, /newBrowserPids,/);
   assert.match(runnerSource, /mode: "list"/);

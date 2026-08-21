@@ -20,6 +20,7 @@ import {
   validateWilliamsTrustedRevisionIdentity,
 } from "./williams_crossover_policy.mjs";
 import {
+  WINDOWS_JOB_RUNNER_PROTOCOL_ID,
   WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
   collectWindowsPerformanceWindow,
   collectWindowsProcessSnapshot as collectProcessSnapshot,
@@ -27,6 +28,13 @@ import {
   prepareWindowsJobRunner,
   runWindowsJobCommand,
 } from "./williams_crossover_windows_runtime.mjs";
+import {
+  STANDARD_PERF_ADMISSION_EXIT_CODES,
+  STANDARD_PERF_ADMISSION_POLICY,
+  buildStandardPerfAdmissionCollectionFailureEvidence,
+  collectStandardPerfAdmissionEvidence,
+  evaluateStandardPerfAdmission,
+} from "./standard_perf_admission.mjs";
 import {
   buildOrderedContainmentSourceSet,
   isValidOrderedContainmentSourceSet,
@@ -42,6 +50,7 @@ const BASELINE_RUNNER_PATH = WILLIAMS_BASELINE_RUNNER_PATH;
 const ROLE_POLICY_PATH = "tools/perf/render_sample_role_policy.mjs";
 const ANALYZER_PATH = "tools/perf/run_williams_crossover.mjs";
 const POLICY_PATH = "tools/perf/williams_crossover_policy.mjs";
+const STANDARD_PERF_ADMISSION_PATH = "tools/perf/standard_perf_admission.mjs";
 const WINDOWS_RUNTIME_PATH = "tools/perf/williams_crossover_windows_runtime.mjs";
 const CONTAINMENT_IDENTITY_HELPER_PATH = "tools/process_containment/ordered_source_set_identity.mjs";
 const JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
@@ -482,6 +491,7 @@ async function readCurrentHarnessArtifacts(root, readWorkspaceFile = null) {
     rolePolicy: await descriptor(ROLE_POLICY_PATH),
     analyzer: await descriptor(ANALYZER_PATH),
     policy: await descriptor(POLICY_PATH),
+    standardPerfAdmission: await descriptor(STANDARD_PERF_ADMISSION_PATH),
     windowsRuntime: await descriptor(WINDOWS_RUNTIME_PATH),
     containmentIdentityHelper: await descriptor(CONTAINMENT_IDENTITY_HELPER_PATH),
     jobRunnerSource: jobRunnerSourceDescriptors[0],
@@ -664,6 +674,7 @@ async function readExpectedHarnessArtifacts(root, expectedHead, adapter) {
     rolePolicy: await descriptor(ROLE_POLICY_PATH),
     analyzer: await descriptor(ANALYZER_PATH),
     policy: await descriptor(POLICY_PATH),
+    standardPerfAdmission: await descriptor(STANDARD_PERF_ADMISSION_PATH),
     windowsRuntime: await descriptor(WINDOWS_RUNTIME_PATH),
     containmentIdentityHelper: await descriptor(CONTAINMENT_IDENTITY_HELPER_PATH),
     jobRunnerSource: jobRunnerSourceDescriptors[0],
@@ -678,6 +689,7 @@ function validateTrustedHarnessArtifacts(current, expected) {
     ["rolePolicy", ROLE_POLICY_PATH],
     ["analyzer", ANALYZER_PATH],
     ["policy", POLICY_PATH],
+    ["standardPerfAdmission", STANDARD_PERF_ADMISSION_PATH],
     ["windowsRuntime", WINDOWS_RUNTIME_PATH],
     ["containmentIdentityHelper", CONTAINMENT_IDENTITY_HELPER_PATH],
     ["jobRunnerSource", JOB_RUNNER_SOURCE_PATH],
@@ -832,6 +844,7 @@ export function buildWilliamsBlockArtifactIdentity(packageLock, harnessArtifacts
     rolePolicy: harnessArtifacts.rolePolicy,
     analyzer: harnessArtifacts.analyzer,
     policy: harnessArtifacts.policy,
+    standardPerfAdmission: harnessArtifacts.standardPerfAdmission,
     windowsRuntime: harnessArtifacts.windowsRuntime,
     containmentIdentityHelper: harnessArtifacts.containmentIdentityHelper,
     jobRunnerSource: harnessArtifacts.jobRunnerSource,
@@ -932,9 +945,17 @@ export async function collectWindowsTelemetryWindow({ worktree, phase } = {}) {
   }
 }
 
-export function deriveWilliamsQuietWindow(telemetry) {
+export function deriveWilliamsQuietWindow(telemetry, standardPerfAdmission = null) {
   const environment = telemetry?.environment || {};
   const telemetryCadence = validateWilliamsTelemetryCadence(telemetry, { label: "telemetry" });
+  const standardPerfAdmissionProvided = standardPerfAdmission !== null && standardPerfAdmission !== undefined;
+  const standardPerfAdmissionValid = !standardPerfAdmissionProvided || (
+    standardPerfAdmission?.policyId === STANDARD_PERF_ADMISSION_POLICY.policyId
+    && standardPerfAdmission?.status === "admitted"
+    && standardPerfAdmission?.exitCode === STANDARD_PERF_ADMISSION_EXIT_CODES.accepted
+    && Array.isArray(standardPerfAdmission?.failures)
+    && standardPerfAdmission.failures.length === 0
+  );
   const portsClear = TASK_PORTS.every((port) => (environment.ports?.[String(port)] || []).length === 0);
   const activeServer = (environment.server || []).some((entry) => (
     entry?.present === true
@@ -943,6 +964,7 @@ export function deriveWilliamsQuietWindow(telemetry) {
   const directProbeResponse = (environment.probe || []).some((entry) => entry?.responded === true);
   const valid = telemetry?.capability?.status === "available"
     && telemetryCadence.valid
+    && standardPerfAdmissionValid
     && portsClear
     && !activeServer
     && !directProbeResponse
@@ -959,11 +981,80 @@ export function deriveWilliamsQuietWindow(telemetry) {
       intervalsMs: [...telemetryCadence.intervalsMs],
       errors: [...telemetryCadence.errors],
     },
+    standardPerfAdmission: standardPerfAdmissionProvided ? {
+      valid: standardPerfAdmissionValid,
+      policyId: String(standardPerfAdmission?.policyId || ""),
+      status: String(standardPerfAdmission?.status || "missing"),
+      exitCode: standardPerfAdmission?.exitCode ?? null,
+      failureCodes: Array.isArray(standardPerfAdmission?.failures)
+        ? standardPerfAdmission.failures.map((entry) => String(entry?.code || "missing"))
+        : [],
+    } : null,
     portsClear,
     activeServer,
     directProbeResponse,
     gitClean: environment.gitStatus === "",
     detached: environment.detached === true,
+  };
+}
+
+export async function runWilliamsPreBlockAdmission({
+  worktree,
+  artifactPath,
+  collectEvidence = collectStandardPerfAdmissionEvidence,
+  evaluateAdmission = evaluateStandardPerfAdmission,
+} = {}) {
+  const startedAt = new Date().toISOString();
+  let evidence;
+  try {
+    evidence = await collectEvidence({ cwd: worktree });
+  } catch (error) {
+    evidence = buildStandardPerfAdmissionCollectionFailureEvidence(error, { startedAt });
+  }
+  const decision = evaluateAdmission(evidence, STANDARD_PERF_ADMISSION_POLICY);
+  await writeJson(artifactPath, decision);
+  return decision;
+}
+
+function buildWilliamsNotStartedJobEvidence(block, preBlockAdmission, skipReason) {
+  return {
+    schemaVersion: 1,
+    protocolId: WINDOWS_JOB_RUNNER_PROTOCOL_ID,
+    provider: "windows-job-object",
+    status: "not-started",
+    rootPid: null,
+    rootExitCode: null,
+    blockExitCode: WILLIAMS_EXIT_CODES.invalidExperiment,
+    jobObjectCreated: false,
+    timedOut: false,
+    createSuspended: false,
+    createNoWindow: false,
+    assignedBeforeResume: false,
+    rootInJobBeforeResume: false,
+    killOnJobClose: false,
+    breakawayAllowed: false,
+    suspendedRootTerminatedOnAssignFailure: false,
+    jobCloseSucceeded: false,
+    terminateJobSucceeded: false,
+    rootTerminationConfirmed: false,
+    jobProcessIdsAtRootExit: [],
+    remainingPids: [],
+    unverifiedPids: [],
+    cleanupValid: true,
+    workloadSpawnCount: 0,
+    commandExecutablePath: block.command.bin,
+    commandWorkingDirectory: block.cwd,
+    commandArguments: [...block.command.args],
+    skipReason,
+    admission: {
+      policyId: String(preBlockAdmission?.policyId || ""),
+      status: String(preBlockAdmission?.status || "missing"),
+      exitCode: preBlockAdmission?.exitCode ?? null,
+      failureCodes: Array.isArray(preBlockAdmission?.failures)
+        ? preBlockAdmission.failures.map((entry) => String(entry?.code || "missing"))
+        : [],
+    },
+    error: null,
   };
 }
 
@@ -1001,6 +1092,10 @@ export function buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree,
     : taskOwnedPids;
   const taskOwnedProcessesRemaining = (taskOwnedTree?.processes || []).filter((entry) => taskOwnedPidsRemaining.includes(entry.ProcessId));
   const terminationResults = [];
+  const workloadSpawnCount = Number.isInteger(jobEvidence?.workloadSpawnCount)
+    ? jobEvidence.workloadSpawnCount
+    : (Number.isInteger(jobEvidence?.rootPid) ? 1 : 0);
+  const workloadStarted = workloadSpawnCount > 0;
   const terminationSucceeded = jobEvidence?.cleanupValid === true;
   const portsClear = TASK_PORTS.every((port) => (postEnvironment.ports?.[String(port)] || []).length === 0);
   const serverProbesClear = (postEnvironment.server || []).every((entry) => entry?.probe?.responded !== true)
@@ -1025,6 +1120,9 @@ export function buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree,
     taskOwnedPids,
     taskOwnedProcesses: taskOwnedTree?.processes || [],
     processTreeCaptureStatus: taskOwnedTree?.captureStatus || "missing",
+    workloadSpawnCount,
+    workloadStarted,
+    cleanupRequired: workloadStarted,
     terminationResults,
     terminationSucceeded,
     taskOwnedPidsRemaining,
@@ -1039,7 +1137,13 @@ export function buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree,
   };
 }
 
-async function runBlock(block, harnessArtifacts, preparedRunner, packageLock) {
+async function runBlock(block, harnessArtifacts, preparedRunner, packageLock, {
+  collectBlockIdentity: collectBlockIdentityFn = collectBlockIdentity,
+  collectAdmissionEvidence = collectStandardPerfAdmissionEvidence,
+  evaluateAdmission = evaluateStandardPerfAdmission,
+  collectTelemetry = collectWindowsTelemetryWindow,
+  runLoggedCommand: runLoggedCommandFn = runLoggedCommand,
+} = {}) {
   const directory = block.directory;
   await ensureDir(directory);
   const metadata = {
@@ -1054,11 +1158,17 @@ async function runBlock(block, harnessArtifacts, preparedRunner, packageLock) {
     expectedHead: block.expectedHead,
   };
   await writeJson(path.join(directory, "block-metadata.json"), metadata);
-  const identity = await collectBlockIdentity(block, harnessArtifacts, packageLock);
+  const identity = await collectBlockIdentityFn(block, harnessArtifacts, packageLock);
   await writeJson(path.join(directory, "identity.json"), identity);
-  const preTelemetry = await collectWindowsTelemetryWindow({ worktree: block.cwd, phase: "pre" });
+  const preBlockAdmission = await runWilliamsPreBlockAdmission({
+    worktree: block.cwd,
+    artifactPath: path.join(directory, "pre-block-standard-perf-admission.json"),
+    collectEvidence: collectAdmissionEvidence,
+    evaluateAdmission,
+  });
+  const preTelemetry = await collectTelemetry({ worktree: block.cwd, phase: "pre" });
   await writeJson(path.join(directory, "telemetry-pre.json"), preTelemetry);
-  const quietWindow = deriveWilliamsQuietWindow(preTelemetry);
+  const quietWindow = deriveWilliamsQuietWindow(preTelemetry, preBlockAdmission);
   await writeJson(path.join(directory, "quiet-window.json"), quietWindow);
   await writeJson(path.join(directory, "command.json"), block.command);
 
@@ -1067,12 +1177,18 @@ async function runBlock(block, harnessArtifacts, preparedRunner, packageLock) {
     exitCode: 3,
     timedOut: false,
     skipped: true,
+    workloadSpawnCount: 0,
     taskOwnedTree: { rootPids: [], pids: [], processes: [], captureStatus: "available", captureErrors: [] },
   };
   let taskOwnedTree = { rootPids: [], pids: [], processes: [], captureStatus: "available", terminationResults: [] };
+  const standardAdmissionAccepted = preBlockAdmission.status === "admitted"
+    && preBlockAdmission.exitCode === STANDARD_PERF_ADMISSION_EXIT_CODES.accepted;
+  const skipReason = !standardAdmissionAccepted
+    ? "standard-perf-admission-rejected"
+    : (!quietWindow.valid ? "williams-quiet-window-invalid" : null);
   try {
-    if (quietWindow.valid) {
-      commandResult = await runLoggedCommand(block.command, {
+    if (standardAdmissionAccepted && quietWindow.valid) {
+      commandResult = await runLoggedCommandFn(block.command, {
         cwd: block.cwd,
         stdoutPath: path.join(directory, "runner.stdout.log"),
         stderrPath: path.join(directory, "runner.stderr.log"),
@@ -1080,8 +1196,14 @@ async function runBlock(block, harnessArtifacts, preparedRunner, packageLock) {
         preparedRunner,
       });
     } else {
+      const jobEvidence = buildWilliamsNotStartedJobEvidence(block, preBlockAdmission, skipReason);
+      commandResult = { ...commandResult, jobEvidence };
+      await writeJson(path.join(directory, "job-object.json"), jobEvidence);
       await writeText(path.join(directory, "runner.stdout.log"), "");
-      await writeText(path.join(directory, "runner.stderr.log"), "pre-block telemetry or quiet-window invalid\n");
+      await writeText(
+        path.join(directory, "runner.stderr.log"),
+        `${skipReason}: ${jobEvidence.admission.failureCodes.join(",") || "quiet-window-invalid"}\n`,
+      );
     }
   } finally {
     taskOwnedTree = commandResult.taskOwnedTree || {
@@ -1092,21 +1214,46 @@ async function runBlock(block, harnessArtifacts, preparedRunner, packageLock) {
       captureErrors: ["job object evidence missing"],
     };
   }
-  const postTelemetry = await collectWindowsTelemetryWindow({ worktree: block.cwd, phase: "post" });
+  const postTelemetry = await collectTelemetry({ worktree: block.cwd, phase: "post" });
   await writeJson(path.join(directory, "telemetry-post.json"), postTelemetry);
   const cleanup = buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree, commandResult.jobEvidence);
   await writeJson(path.join(directory, "cleanup.json"), cleanup);
-  const complete = quietWindow.valid && commandResult.exitCode === 0 && cleanup.valid;
+  const workloadSpawnCount = commandResult.skipped === true
+    ? 0
+    : (Number.isInteger(commandResult.workloadSpawnCount) ? commandResult.workloadSpawnCount : 1);
+  const complete = standardAdmissionAccepted
+    && quietWindow.valid
+    && commandResult.exitCode === 0
+    && workloadSpawnCount === 1
+    && cleanup.valid;
   const blockResult = {
     schemaVersion: 1,
     status: complete ? "complete" : "invalid",
     exitCode: commandResult.exitCode,
     timedOut: commandResult.timedOut === true,
     runnerPid: commandResult.pid,
+    workloadSpawnCount,
+    skipReason,
+    preBlockAdmission: {
+      policyId: preBlockAdmission.policyId,
+      status: preBlockAdmission.status,
+      exitCode: preBlockAdmission.exitCode,
+      failureCodes: preBlockAdmission.failures.map((entry) => entry.code),
+    },
     cleanupValid: cleanup.valid,
   };
   await writeJson(path.join(directory, "block-result.json"), blockResult);
-  return { complete, blockResult };
+  return { complete, blockResult, preBlockAdmission };
+}
+
+export async function runWilliamsBlockWithTestAdapters(
+  block,
+  harnessArtifacts,
+  preparedRunner,
+  packageLock,
+  adapters = {},
+) {
+  return runBlock(block, harnessArtifacts, preparedRunner, packageLock, adapters);
 }
 
 function requiredEvidencePaths() {
@@ -1121,6 +1268,7 @@ function requiredEvidencePaths() {
     for (const fileName of [
       "block-metadata.json",
       "identity.json",
+      "pre-block-standard-perf-admission.json",
       "telemetry-pre.json",
       "quiet-window.json",
       "command.json",
@@ -1171,6 +1319,7 @@ export async function buildWilliamsRawManifest(rawRoot, harnessArtifacts) {
         root: harnessArtifacts.root,
         runner: harnessArtifacts.runner,
         rolePolicy: harnessArtifacts.rolePolicy,
+        standardPerfAdmission: harnessArtifacts.standardPerfAdmission,
       },
       analyzer: harnessArtifacts.analyzer,
       policy: harnessArtifacts.policy,
@@ -1390,7 +1539,7 @@ async function validateRawManifest(
   if (String(sharedHarness?.root || "") !== String(currentToolIdentity?.root || "")) {
     errors.push("manifest.toolIdentity.sharedHarness.root.current");
   }
-  for (const field of ["runner", "rolePolicy"]) {
+  for (const field of ["runner", "rolePolicy", "standardPerfAdmission"]) {
     const descriptor = sharedHarness?.[field];
     if (!/^[a-f0-9]{40}$/i.test(String(descriptor?.gitBlob || ""))) {
       errors.push(`manifest.toolIdentity.sharedHarness.${field}.gitBlob`);
@@ -1554,6 +1703,11 @@ async function analyzeWilliamsCrossoverRawRootInternal(rawRoot, {
       orderId: metadata?.orderId ?? expectedBlock.orderId,
       scenarioOrder: metadata?.scenarioOrder ?? [],
       identity: parseSnapshotJson(snapshot, `${prefix}/identity.json`, loadErrors),
+      preBlockAdmission: parseSnapshotJson(
+        snapshot,
+        `${prefix}/pre-block-standard-perf-admission.json`,
+        loadErrors,
+      ),
       telemetry: {
         pre: parseSnapshotJson(snapshot, `${prefix}/telemetry-pre.json`, loadErrors),
         post: parseSnapshotJson(snapshot, `${prefix}/telemetry-post.json`, loadErrors),

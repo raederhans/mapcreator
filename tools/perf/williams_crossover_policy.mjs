@@ -12,6 +12,7 @@ import {
   isValidOrderedContainmentSourceSet,
   orderedContainmentSourceSetsEqual,
 } from "../process_containment/ordered_source_set_identity.mjs";
+import { validateStandardPerfAdmissionDecision } from "./standard_perf_admission.mjs";
 
 export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v7";
 export const WILLIAMS_CROSSOVER_SCHEMA_VERSION = 1;
@@ -1266,7 +1267,7 @@ function validateIdentity(identity, block, preregistration, trustedRevisionIdent
   if (!identityPathsEqual(identity?.harnessRoot, trustedRevisionIdentity?.trustedAnalyzerRoot)) {
     errors.push(`${block.id}.identity.harnessRoot`);
   }
-  for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
+  for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "standardPerfAdmission", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
     const descriptor = identity?.artifacts?.[field];
     if (!String(descriptor?.gitBlob || "").trim()) errors.push(`${block.id}.identity.artifacts.${field}.gitBlob`);
     if (!/^[a-f0-9]{64}$/i.test(String(descriptor?.lfNormalizedSha256 || ""))) {
@@ -1361,6 +1362,15 @@ function validateQuietWindow(quietWindow, block) {
   return quietWindow.status === "valid" && quietWindow.valid === true
     ? []
     : [`${block.id}.quietWindow.invalid`];
+}
+
+function validatePreBlockStandardPerfAdmission(decision, block, trustedRevisionIdentity) {
+  const expectedGitHead = trustedSideRevision(trustedRevisionIdentity, block.side).head;
+  const validation = validateStandardPerfAdmissionDecision(decision, {
+    expectedPlatform: "win32",
+    expectedGitHead,
+  });
+  return validation.reasons.map((reason) => `${block.id}.preBlockAdmission.${reason}`);
 }
 
 function validateBaselineIdentity(baseline, block, preregistration, trustedRevisionIdentity) {
@@ -1696,7 +1706,7 @@ function validateCrossBlockIdentity(blocks) {
   const errors = [];
   const first = blocks[0]?.identity?.artifacts || {};
   for (const block of blocks.slice(1)) {
-    for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
+    for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "standardPerfAdmission", "windowsRuntime", "containmentIdentityHelper", "jobRunnerSource", "powerSchemeHelper"]) {
       const actual = block.identity?.artifacts?.[field];
       const expected = first[field];
       if (
@@ -1794,6 +1804,11 @@ export function analyzeWilliamsCrossoverEvidence({
     ));
     invalidReasons.push(...validateBlockResult(evidence.blockResult, expectedBlock));
     invalidReasons.push(...validateQuietWindow(evidence.quietWindow, expectedBlock));
+    invalidReasons.push(...validatePreBlockStandardPerfAdmission(
+      evidence.preBlockAdmission,
+      expectedBlock,
+      trustedRevisionIdentity,
+    ));
     invalidReasons.push(...validateBaselineIdentity(
       evidence.baseline,
       expectedBlock,
