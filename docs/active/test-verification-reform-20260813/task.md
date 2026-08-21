@@ -169,7 +169,10 @@ Repair artifacts are under `.runtime/reports/generated/williams-journal-fix-*`. 
 - [x] Verify live2 cleanup: Job Object `cleanupValid=true`, `remainingPids=[]`, `unverifiedPids=[]`, ports clear, Balance restored, temporary scheme absent, candidate/control clean, and parent WIP hash unchanged.
 - [x] Implement same-policy pre-block admission with full decision revalidation before lazy Job preparation and zero workload spawn on rejected, invalid, or collection-failure evidence; code commits are `102dfd4522efa198ce577c029037771c4dd0726b` and `60c3352b026d495e30709694d6e092cc222da119`.
 - [x] Pass deterministic and SF-ATS child-safe verification for the exact three-file follow-up diff: syntax and diff checks exit `0`; Williams governance 71/71; Job runner 16 pass plus one explicit live skip; role policy 82/82; perf contracts 26/26; SF-ATS 7/7 execution groups and 9/9 canonical leaves with `unmatched=[]`, `blocked=[]`, and `routeGaps=[]`.
-- [ ] Create a new clean candidate SHA and complete the reused independent review task.
+- [x] Freeze `841801cd45e7bf5c9869e780bb4e338da346890c` and complete a fresh code-reviewer plus architect/verifier review. The coordinated verdict is `BLOCK` with two P2 findings: validator-invalid stderr lost `git-evidence-invalid`, and the raw analyzer lacked a direct missing pre-block admission artifact regression.
+- [x] Close both P2 findings in `c61ecb86190374c98be1863e06e8e180182fff04`: stderr now separates validator reasons, evaluator failure codes, and quiet-window environment detail; regressions cover forged-head stderr and missing admission no-throw/manifest/block/exit-3 behavior.
+- [x] Pass post-P2 syntax, focused RED/GREEN, Williams governance 71/71, Job runner 16 pass plus one explicit live skip, role policy 82/82, perf contracts 26/26, and exact two-file SF-ATS execution with 7/7 groups, 9/9 leaves, `unmatched=[]`, `blocked=[]`, `routeGaps=[]`, and zero CI-only roots.
+- [ ] Freeze the task-record-sealed candidate SHA and obtain fresh independent code-reviewer plus architect/verifier clearance through the reused review task.
 - [ ] Obtain and execute a newly authorized live lifecycle for the repaired SHA.
 - [ ] After live admission passes, push normally, verify exact remote SHA, and observe required GitHub Actions.
 
@@ -181,3 +184,5 @@ Current artifacts:
 - live2 block-01 admission: `.runtime/admission/sc-phases-0-3-a97d4574-live2/williams-raw/blocks/block-01/raw/perf-admission.json`
 - isolated follow-up evidence: `C:\Users\raede\.codex\worktrees\de63\mapcreator\.runtime\reports\generated\williams-preblock-admission-followup\`
 - root final deterministic/SF-ATS evidence: `.runtime/reports/generated/williams-preblock-admission-root-final/`
+- first coordinated review: `C:\Users\raede\.codex\worktrees\abb8\mapcreator\.runtime\reviews\sc-841801cd-coordinated-review\`
+- post-P2 SF-ATS evidence: `.runtime/reports/generated/sc-841801cd-p2-closure/`
