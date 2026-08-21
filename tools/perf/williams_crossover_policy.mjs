@@ -277,12 +277,101 @@ function validateCanonicalBlockCommand(command, block, trustedRevisionIdentity, 
   return errors;
 }
 
-function validateJobObjectEvidence(jobObject, prefix, { command = null, cwd = null, exitCode = null } = {}) {
+const WILLIAMS_NOT_STARTED_SKIP_REASONS = new Set([
+  "standard-perf-admission-rejected",
+  "standard-perf-admission-invalid",
+  "williams-quiet-window-invalid",
+]);
+
+function validateJobObjectEvidence(
+  jobObject,
+  prefix,
+  {
+    command = null,
+    cwd = null,
+    exitCode = null,
+    blockResult = null,
+    admissionValidation = null,
+  } = {},
+) {
   if (!jobObject || typeof jobObject !== "object") return [`${prefix}.missing`];
   const errors = [];
   if (jobObject.schemaVersion !== 1) errors.push(`${prefix}.schemaVersion`);
   if (jobObject.protocolId !== WILLIAMS_JOB_RUNNER_PROTOCOL_ID) errors.push(`${prefix}.protocolId`);
   if (jobObject.provider !== "windows-job-object") errors.push(`${prefix}.provider`);
+  if (jobObject.status === "not-started") {
+    if (jobObject.rootPid !== null) errors.push(`${prefix}.rootPid`);
+    if (jobObject.rootExitCode !== null) errors.push(`${prefix}.rootExitCode`);
+    if (jobObject.blockExitCode !== WILLIAMS_EXIT_CODES.invalidExperiment) errors.push(`${prefix}.blockExitCode`);
+    if (exitCode !== null && exitCode !== WILLIAMS_EXIT_CODES.invalidExperiment) errors.push(`${prefix}.exitCode`);
+    if (jobObject.jobObjectCreated !== false) errors.push(`${prefix}.jobObjectCreated`);
+    for (const field of [
+      "timedOut",
+      "createSuspended",
+      "createNoWindow",
+      "assignedBeforeResume",
+      "rootInJobBeforeResume",
+      "killOnJobClose",
+      "breakawayAllowed",
+      "suspendedRootTerminatedOnAssignFailure",
+      "jobCloseSucceeded",
+      "terminateJobSucceeded",
+      "rootTerminationConfirmed",
+    ]) {
+      if (jobObject[field] !== false) errors.push(`${prefix}.${field}`);
+    }
+    for (const field of ["jobProcessIdsAtRootExit", "remainingPids", "unverifiedPids"]) {
+      if (!Array.isArray(jobObject[field]) || jobObject[field].length !== 0) errors.push(`${prefix}.${field}`);
+    }
+    if (jobObject.cleanupValid !== true) errors.push(`${prefix}.cleanupValid`);
+    if (jobObject.workloadSpawnCount !== 0) errors.push(`${prefix}.workloadSpawnCount`);
+    if (!WILLIAMS_NOT_STARTED_SKIP_REASONS.has(jobObject.skipReason)) errors.push(`${prefix}.skipReason`);
+    if (!jobObject.admission || typeof jobObject.admission !== "object") errors.push(`${prefix}.admission`);
+    if (!Array.isArray(jobObject.admission?.failureCodes)) errors.push(`${prefix}.admission.failureCodes`);
+    const blockAdmission = blockResult?.preBlockAdmission;
+    if (canonicalJson(jobObject.admission) !== canonicalJson(blockAdmission)) {
+      errors.push(`${prefix}.admission.blockResultCanonical`);
+    }
+    const admissionFailureCodes = Array.isArray(jobObject.admission?.failureCodes)
+      ? jobObject.admission.failureCodes
+      : [];
+    const admittedEnvelope = jobObject.admission?.status === "admitted"
+      && jobObject.admission?.exitCode === WILLIAMS_EXIT_CODES.accepted
+      && admissionFailureCodes.length === 0;
+    if (jobObject.skipReason === "standard-perf-admission-rejected") {
+      if (
+        jobObject.admission?.status !== "rejected"
+        || jobObject.admission?.exitCode !== WILLIAMS_EXIT_CODES.invalidExperiment
+        || admissionFailureCodes.length === 0
+      ) errors.push(`${prefix}.admission.rejectedEnvelope`);
+      if (admissionValidation?.valid !== false) errors.push(`${prefix}.admission.rejectedValidation`);
+    } else if (jobObject.skipReason === "williams-quiet-window-invalid") {
+      if (!admittedEnvelope) errors.push(`${prefix}.admission.quietWindowEnvelope`);
+      if (admissionValidation?.valid !== true) errors.push(`${prefix}.admission.quietWindowValidation`);
+    } else if (jobObject.skipReason === "standard-perf-admission-invalid") {
+      if (!admittedEnvelope) errors.push(`${prefix}.admission.invalidEnvelope`);
+      if (
+        admissionValidation?.valid !== false
+        || !Array.isArray(admissionValidation?.reasons)
+        || admissionValidation.reasons.length === 0
+      ) errors.push(`${prefix}.admission.invalidValidation`);
+    }
+    if (jobObject.error !== null) errors.push(`${prefix}.error`);
+    if (blockResult) {
+      if (blockResult.status !== "invalid") errors.push(`${prefix}.blockResult.status`);
+      if (blockResult.exitCode !== WILLIAMS_EXIT_CODES.invalidExperiment) errors.push(`${prefix}.blockResult.exitCode`);
+      if (blockResult.runnerPid !== null) errors.push(`${prefix}.blockResult.runnerPid`);
+      if (blockResult.workloadSpawnCount !== 0) errors.push(`${prefix}.blockResult.workloadSpawnCount`);
+      if (blockResult.skipReason !== jobObject.skipReason) errors.push(`${prefix}.blockResult.skipReason`);
+      if (blockResult.cleanupValid !== true) errors.push(`${prefix}.blockResult.cleanupValid`);
+    }
+    if (command) {
+      if (jobObject.commandExecutablePath !== command.bin) errors.push(`${prefix}.commandExecutablePath`);
+      if (jobObject.commandWorkingDirectory !== cwd) errors.push(`${prefix}.commandWorkingDirectory`);
+      if (!arraysEqual(jobObject.commandArguments, command.args || [])) errors.push(`${prefix}.commandArguments`);
+    }
+    return errors;
+  }
   if (jobObject.status !== "complete") errors.push(`${prefix}.status`);
   if (!Number.isInteger(jobObject.rootPid) || jobObject.rootPid <= 0) errors.push(`${prefix}.rootPid`);
   if (!Number.isInteger(jobObject.rootExitCode) || (exitCode !== null && jobObject.rootExitCode !== exitCode)) {
@@ -1319,7 +1408,7 @@ function validateIdentity(identity, block, preregistration, trustedRevisionIdent
   return errors;
 }
 
-function validateCleanup(cleanup, block, evidence, expectedCommand, expectedCwd) {
+function validateCleanup(cleanup, block, evidence, expectedCommand, expectedCwd, expectedGitHead) {
   const errors = [];
   if (!cleanup || typeof cleanup !== "object") return [`${block.id}.cleanup.missing`];
   if (cleanup.valid !== true) errors.push(`${block.id}.cleanup.valid`);
@@ -1333,18 +1422,40 @@ function validateCleanup(cleanup, block, evidence, expectedCommand, expectedCwd)
   if (cleanup.gitHeadStable !== true) errors.push(`${block.id}.cleanup.gitHeadStable`);
   if (cleanup.detachedStable !== true) errors.push(`${block.id}.cleanup.detachedStable`);
   const jobObject = cleanup.jobObject;
+  const admissionValidation = validateStandardPerfAdmissionDecision(evidence?.preBlockAdmission, {
+    expectedPlatform: "win32",
+    expectedGitHead,
+  });
   errors.push(...validateJobObjectEvidence(jobObject, `${block.id}.cleanup.jobObject`, {
     command: expectedCommand,
     cwd: expectedCwd,
     exitCode: evidence?.blockResult?.exitCode,
+    blockResult: evidence?.blockResult,
+    admissionValidation,
   }));
   errors.push(...validateJobObjectEvidence(evidence?.jobObject, `${block.id}.jobObject`, {
     command: expectedCommand,
     cwd: expectedCwd,
     exitCode: evidence?.blockResult?.exitCode,
+    blockResult: evidence?.blockResult,
+    admissionValidation,
   }));
   if (canonicalJson(evidence?.jobObject) !== canonicalJson(jobObject)) {
     errors.push(`${block.id}.jobObject.cleanup-canonical`);
+  }
+  if (jobObject?.status === "not-started") {
+    if (cleanup.workloadSpawnCount !== 0) errors.push(`${block.id}.cleanup.zeroSpawn.workloadSpawnCount`);
+    if (cleanup.workloadStarted !== false) errors.push(`${block.id}.cleanup.zeroSpawn.workloadStarted`);
+    if (cleanup.cleanupRequired !== false) errors.push(`${block.id}.cleanup.zeroSpawn.cleanupRequired`);
+    if (!Array.isArray(cleanup.taskOwnedPids) || cleanup.taskOwnedPids.length !== 0) {
+      errors.push(`${block.id}.cleanup.zeroSpawn.taskOwnedPids`);
+    }
+    if (!Array.isArray(cleanup.taskOwnedProcesses) || cleanup.taskOwnedProcesses.length !== 0) {
+      errors.push(`${block.id}.cleanup.zeroSpawn.taskOwnedProcesses`);
+    }
+    if (!Array.isArray(cleanup.terminationResults) || cleanup.terminationResults.length !== 0) {
+      errors.push(`${block.id}.cleanup.zeroSpawn.terminationResults`);
+    }
   }
   return errors;
 }
@@ -1783,6 +1894,7 @@ export function analyzeWilliamsCrossoverEvidence({
     }
     const expectedCommand = expectedCanonicalBlockCommand(expectedBlock, trustedRevisionIdentity, rawRoot);
     const expectedCwd = trustedSideRevision(trustedRevisionIdentity, expectedBlock.side).worktree;
+    const expectedGitHead = trustedSideRevision(trustedRevisionIdentity, expectedBlock.side).head;
     invalidReasons.push(...validateCanonicalBlockCommand(
       evidence.command,
       expectedBlock,
@@ -1801,6 +1913,7 @@ export function analyzeWilliamsCrossoverEvidence({
       evidence,
       expectedCommand,
       expectedCwd,
+      expectedGitHead,
     ));
     invalidReasons.push(...validateBlockResult(evidence.blockResult, expectedBlock));
     invalidReasons.push(...validateQuietWindow(evidence.quietWindow, expectedBlock));

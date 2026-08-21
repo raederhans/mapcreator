@@ -303,6 +303,29 @@ function standardPerfAdmissionEvidence(overrides = {}) {
   };
 }
 
+function standardPerfAdmissionDecision(gitHead = CONTROL_HEAD, overrides = {}) {
+  return evaluateStandardPerfAdmission(
+    standardPerfAdmissionEvidence({
+      git: {
+        status: "available",
+        head: gitHead,
+        entries: [],
+        detail: "",
+      },
+      ...overrides,
+    }),
+    STANDARD_PERF_ADMISSION_POLICY,
+  );
+}
+
+function deriveTestQuietWindow(telemetry, decision = standardPerfAdmissionDecision(
+  telemetry?.environment?.gitHead || CONTROL_HEAD,
+)) {
+  return deriveWilliamsQuietWindow(telemetry, decision, {
+    expectedGitHead: telemetry?.environment?.gitHead || "",
+  });
+}
+
 function artifactDescriptor(relativePath = "artifact") {
   return { path: relativePath, gitBlob: "d".repeat(40), lfNormalizedSha256: HASH };
 }
@@ -361,6 +384,51 @@ function jobObjectEvidence(rootPid = 4242, {
     commandExecutablePath: command.bin,
     commandWorkingDirectory: cwd,
     commandArguments: [...command.args],
+    error: null,
+  };
+}
+
+function notStartedJobObjectEvidence({
+  command,
+  cwd,
+  skipReason = "standard-perf-admission-rejected",
+  admission = standardPerfAdmissionDecision(CONTROL_HEAD, { cpuSamples: Array(7).fill(21) }),
+} = {}) {
+  return {
+    schemaVersion: 1,
+    protocolId: "SF_WILLIAMS_JOB_V1",
+    provider: "windows-job-object",
+    status: "not-started",
+    rootPid: null,
+    rootExitCode: null,
+    blockExitCode: WILLIAMS_EXIT_CODES.invalidExperiment,
+    jobObjectCreated: false,
+    timedOut: false,
+    createSuspended: false,
+    createNoWindow: false,
+    assignedBeforeResume: false,
+    rootInJobBeforeResume: false,
+    killOnJobClose: false,
+    breakawayAllowed: false,
+    suspendedRootTerminatedOnAssignFailure: false,
+    jobCloseSucceeded: false,
+    terminateJobSucceeded: false,
+    rootTerminationConfirmed: false,
+    jobProcessIdsAtRootExit: [],
+    remainingPids: [],
+    unverifiedPids: [],
+    cleanupValid: true,
+    workloadSpawnCount: 0,
+    commandExecutablePath: command.bin,
+    commandWorkingDirectory: cwd,
+    commandArguments: [...command.args],
+    skipReason,
+    admission: {
+      policyId: admission.policyId,
+      status: admission.status,
+      exitCode: admission.exitCode,
+      failureCodes: admission.failures.map((entry) => entry.code),
+    },
     error: null,
   };
 }
@@ -614,6 +682,59 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     blocks,
     manifestValidation: { status: "valid", errors: [], measuredRawFileCount: 32 },
   };
+}
+
+function applyNotStartedBlockEvidence(evidence, blockIndex = 0) {
+  const block = evidence.blocks[blockIndex];
+  const expectedHead = block.side === "A" ? CONTROL_HEAD : CANDIDATE_HEAD;
+  const rejectedAdmission = standardPerfAdmissionDecision(expectedHead, {
+    cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
+  });
+  const notStartedJob = notStartedJobObjectEvidence({
+    command: block.command,
+    cwd: block.identity.cwd,
+    admission: rejectedAdmission,
+  });
+  block.preBlockAdmission = rejectedAdmission;
+  block.quietWindow = {
+    status: "invalid",
+    valid: false,
+    standardPerfAdmission: {
+      valid: false,
+      policyId: rejectedAdmission.policyId,
+      status: rejectedAdmission.status,
+      exitCode: rejectedAdmission.exitCode,
+      failureCodes: rejectedAdmission.failures.map((entry) => entry.code),
+    },
+  };
+  Object.assign(block.cleanup, {
+    workloadSpawnCount: 0,
+    workloadStarted: false,
+    cleanupRequired: false,
+    taskOwnedPids: [],
+    taskOwnedProcesses: [],
+    terminationResults: [],
+    terminationSucceeded: true,
+    jobObject: structuredClone(notStartedJob),
+  });
+  block.jobObject = structuredClone(notStartedJob);
+  block.blockResult = {
+    schemaVersion: 1,
+    status: "invalid",
+    exitCode: WILLIAMS_EXIT_CODES.invalidExperiment,
+    timedOut: false,
+    runnerPid: null,
+    workloadSpawnCount: 0,
+    skipReason: "standard-perf-admission-rejected",
+    preBlockAdmission: {
+      policyId: rejectedAdmission.policyId,
+      status: rejectedAdmission.status,
+      exitCode: rejectedAdmission.exitCode,
+      failureCodes: rejectedAdmission.failures.map((entry) => entry.code),
+    },
+    cleanupValid: true,
+  };
+  return block;
 }
 
 function setMetricValues(table, ordinals, value) {
@@ -1510,17 +1631,33 @@ test("Williams pre-block standard perf admission preserves standard policy parit
   const events = [];
   let telemetryCount = 0;
   let workloadSpawnCount = 0;
+  let preparationCount = 0;
   const result = await runWilliamsBlockWithTestAdapters({
-    ordinal: 1,
-    id: "block-01",
-    side: "A",
-    orderId: "tno-hoi4",
-    scenarioOrder: ["tno_1962", "hoi4_1939"],
-    cwd: CONTROL_WORKTREE,
-    expectedHead: CONTROL_HEAD,
-    directory,
-    command,
-  }, {}, {}, {}, {
+    block: {
+      ordinal: 1,
+      id: "block-01",
+      side: "A",
+      orderId: "tno-hoi4",
+      scenarioOrder: ["tno_1962", "hoi4_1939"],
+      cwd: CONTROL_WORKTREE,
+      expectedHead: CONTROL_HEAD,
+      directory,
+      command,
+    },
+    packageLock: {},
+    lazyPreparationAuthority: async ({ admission, validation }) => {
+      const persistedAdmission = JSON.parse(await fs.readFile(
+        path.join(directory, "pre-block-standard-perf-admission.json"),
+        "utf8",
+      ));
+      assert.deepEqual(persistedAdmission, admission);
+      assert.equal(validation.valid, true);
+      assert.equal(preparationCount, 0);
+      preparationCount += 1;
+      events.push("job-preparation");
+      return { harnessArtifacts: {}, preparedRunner: {}, packageLock: {} };
+    },
+  }, {
     collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
     collectAdmissionEvidence: async () => {
       events.push("standard-admission-collected");
@@ -1560,7 +1697,10 @@ test("Williams pre-block standard perf admission preserves standard policy parit
   });
   assert.equal(result.complete, true);
   assert.equal(result.blockResult.workloadSpawnCount, 1);
+  assert.equal(preparationCount, 1);
   assert.equal(workloadSpawnCount, 1);
+  assert.ok(events.indexOf("standard-admission-collected") < events.indexOf("job-preparation"));
+  assert.ok(events.indexOf("job-preparation") < events.indexOf("workload-spawned"));
   assert.ok(events.indexOf("standard-admission-collected") < events.indexOf("workload-spawned"));
   assert.ok(events.indexOf("telemetry-1") < events.indexOf("workload-spawned"));
 });
@@ -1610,17 +1750,25 @@ test("Williams pre-block standard perf admission rejects every governed resource
     const command = { bin: process.execPath, args: ["--version"] };
     let telemetryCount = 0;
     let workloadSpawnCount = 0;
+    let preparationCount = 0;
     const result = await runWilliamsBlockWithTestAdapters({
-      ordinal: 1,
-      id: "block-01",
-      side: "A",
-      orderId: "tno-hoi4",
-      scenarioOrder: ["tno_1962", "hoi4_1939"],
-      cwd: CONTROL_WORKTREE,
-      expectedHead: CONTROL_HEAD,
-      directory,
-      command,
-    }, {}, {}, {}, {
+      block: {
+        ordinal: 1,
+        id: "block-01",
+        side: "A",
+        orderId: "tno-hoi4",
+        scenarioOrder: ["tno_1962", "hoi4_1939"],
+        cwd: CONTROL_WORKTREE,
+        expectedHead: CONTROL_HEAD,
+        directory,
+        command,
+      },
+      packageLock: {},
+      lazyPreparationAuthority: async () => {
+        preparationCount += 1;
+        throw new Error("Job preparation must stay unreachable after standard admission rejection");
+      },
+    }, {
       collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
       collectAdmissionEvidence: async () => evidence,
       collectTelemetry: async () => {
@@ -1643,6 +1791,7 @@ test("Williams pre-block standard perf admission rejects every governed resource
     assert.equal(result.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, testCase.label);
     assert.equal(result.blockResult.workloadSpawnCount, 0, testCase.label);
     assert.equal(result.blockResult.skipReason, "standard-perf-admission-rejected", testCase.label);
+    assert.equal(preparationCount, 0, testCase.label);
     assert.equal(workloadSpawnCount, 0, testCase.label);
     assert.equal(admission.status, "rejected", testCase.label);
     assert.equal(admission.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected, testCase.label);
@@ -1661,17 +1810,25 @@ test("Williams pre-block standard perf admission rejects every governed resource
   const collectionFailureDirectory = path.join(outputRoot, "collection-failure");
   let collectionFailureTelemetryCount = 0;
   let collectionFailureSpawnCount = 0;
+  let collectionFailurePreparationCount = 0;
   const collectionFailureResult = await runWilliamsBlockWithTestAdapters({
-    ordinal: 1,
-    id: "block-01",
-    side: "A",
-    orderId: "tno-hoi4",
-    scenarioOrder: ["tno_1962", "hoi4_1939"],
-    cwd: CONTROL_WORKTREE,
-    expectedHead: CONTROL_HEAD,
-    directory: collectionFailureDirectory,
-    command: { bin: process.execPath, args: ["--version"] },
-  }, {}, {}, {}, {
+    block: {
+      ordinal: 1,
+      id: "block-01",
+      side: "A",
+      orderId: "tno-hoi4",
+      scenarioOrder: ["tno_1962", "hoi4_1939"],
+      cwd: CONTROL_WORKTREE,
+      expectedHead: CONTROL_HEAD,
+      directory: collectionFailureDirectory,
+      command: { bin: process.execPath, args: ["--version"] },
+    },
+    packageLock: {},
+    lazyPreparationAuthority: async () => {
+      collectionFailurePreparationCount += 1;
+      throw new Error("Job preparation must stay unreachable after collection failure");
+    },
+  }, {
     collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
     collectAdmissionEvidence: async () => { throw new Error("collector unavailable"); },
     collectTelemetry: async () => {
@@ -1694,10 +1851,59 @@ test("Williams pre-block standard perf admission rejects every governed resource
   ));
   assert.equal(collectionFailureResult.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
   assert.equal(collectionFailureResult.blockResult.workloadSpawnCount, 0);
+  assert.equal(collectionFailurePreparationCount, 0);
   assert.equal(collectionFailureSpawnCount, 0);
   assert.equal(collectionFailureAdmission.status, "rejected");
   assert.ok(collectionFailureAdmission.degradedCapabilities.includes("standard-perf-admission-collection"));
   assert.ok(collectionFailureAdmission.failures.some((failure) => failure.code === "cpu-samples-invalid"));
+
+  const forgedDirectory = path.join(outputRoot, "forged-admitted-envelope");
+  let forgedPreparationCount = 0;
+  let forgedSpawnCount = 0;
+  const forgedResult = await runWilliamsBlockWithTestAdapters({
+    block: {
+      ordinal: 1,
+      id: "block-01",
+      side: "A",
+      orderId: "tno-hoi4",
+      scenarioOrder: ["tno_1962", "hoi4_1939"],
+      cwd: CONTROL_WORKTREE,
+      expectedHead: CONTROL_HEAD,
+      directory: forgedDirectory,
+      command: { bin: process.execPath, args: ["--version"] },
+    },
+    packageLock: {},
+    lazyPreparationAuthority: async () => {
+      forgedPreparationCount += 1;
+      throw new Error("Job preparation must stay unreachable after full validator rejection");
+    },
+  }, {
+    collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
+    collectAdmissionEvidence: async () => standardPerfAdmissionEvidence({
+      git: {
+        status: "available",
+        head: "b".repeat(40),
+        entries: [],
+        detail: "",
+      },
+    }),
+    collectTelemetry: async ({ phase }) => telemetryWindow(
+      phase,
+      1,
+      CONTROL_WORKTREE,
+      CONTROL_HEAD,
+    ),
+    runLoggedCommand: async () => {
+      forgedSpawnCount += 1;
+      throw new Error("workload must stay unreachable after full validator rejection");
+    },
+  });
+  assert.equal(forgedResult.preBlockAdmission.status, "admitted");
+  assert.equal(forgedResult.standardPerfAdmissionValidation.valid, false);
+  assert.ok(forgedResult.standardPerfAdmissionValidation.reasons.includes("git-evidence-invalid"));
+  assert.equal(forgedResult.blockResult.skipReason, "standard-perf-admission-invalid");
+  assert.equal(forgedPreparationCount, 0);
+  assert.equal(forgedSpawnCount, 0);
 });
 
 test("telemetry cadence is frozen in preregistration and rejects a fixed-delay window before workload admission", () => {
@@ -1721,10 +1927,16 @@ test("telemetry cadence is frozen in preregistration and rejects a fixed-delay w
   assert.deepEqual(evidence.preregistration.telemetry.requiredWindowFields, ["startedAt", "completedAt"]);
 
   const telemetry = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
-  const validQuietWindow = deriveWilliamsQuietWindow(telemetry);
+  const validQuietWindow = deriveTestQuietWindow(telemetry);
   assert.equal(validQuietWindow.valid, true);
   assert.equal(validQuietWindow.telemetryCadence.valid, true);
   assert.deepEqual(validQuietWindow.telemetryCadence.intervalsMs, [1000, 1000, 1000, 1000]);
+  const missingAdmissionWindow = deriveWilliamsQuietWindow(telemetry, null, {
+    expectedGitHead: CONTROL_HEAD,
+  });
+  assert.equal(missingAdmissionWindow.valid, false);
+  assert.equal(missingAdmissionWindow.standardPerfAdmissionValidation.valid, false);
+  assert.ok(missingAdmissionWindow.standardPerfAdmissionValidation.reasons.includes("decision-envelope-invalid"));
 
   const firstAtMs = Date.parse(telemetry.samples[0].at);
   telemetry.samples.forEach((sample, index) => {
@@ -1732,14 +1944,14 @@ test("telemetry cadence is frozen in preregistration and rejects a fixed-delay w
     sample.at = new Date(captureStartedAtMs).toISOString();
     sample.completedAt = new Date(captureStartedAtMs + sample.captureDurationMs).toISOString();
   });
-  const quietWindow = deriveWilliamsQuietWindow(telemetry);
+  const quietWindow = deriveTestQuietWindow(telemetry);
   assert.equal(quietWindow.valid, false);
   assert.equal(quietWindow.telemetryCadence.valid, false);
   assert.ok(quietWindow.telemetryCadence.errors.includes("telemetry.samples.interval"));
 
   const incompleteWindow = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
   incompleteWindow.completedAt = incompleteWindow.samples.at(-1).at;
-  const incompleteQuietWindow = deriveWilliamsQuietWindow(incompleteWindow);
+  const incompleteQuietWindow = deriveTestQuietWindow(incompleteWindow);
   assert.equal(incompleteQuietWindow.valid, false);
   assert.ok(incompleteQuietWindow.telemetryCadence.errors.includes("telemetry.completedAt.sample-coverage"));
 });
@@ -1750,7 +1962,7 @@ test("a long excluded WMI prime preserves strict measured cadence while a measur
   primedTelemetry.priming.startedAt = new Date(
     Date.parse(primedTelemetry.priming.completedAt) - 3617,
   ).toISOString();
-  const primedQuietWindow = deriveWilliamsQuietWindow(primedTelemetry);
+  const primedQuietWindow = deriveTestQuietWindow(primedTelemetry);
   assert.equal(primedQuietWindow.valid, true);
   assert.deepEqual(primedQuietWindow.telemetryCadence.intervalsMs, [1000, 1000, 1000, 1000]);
 
@@ -1764,7 +1976,7 @@ test("a long excluded WMI prime preserves strict measured cadence while a measur
     measuredSpikeTelemetry.samples[index + 1].at = new Date(captureStartedAtMs).toISOString();
     measuredSpikeTelemetry.samples[index + 1].completedAt = new Date(captureStartedAtMs + 650).toISOString();
   });
-  const measuredSpikeQuietWindow = deriveWilliamsQuietWindow(measuredSpikeTelemetry);
+  const measuredSpikeQuietWindow = deriveTestQuietWindow(measuredSpikeTelemetry);
   assert.equal(measuredSpikeQuietWindow.valid, false);
   assert.ok(measuredSpikeQuietWindow.telemetryCadence.errors.includes("telemetry.samples.interval"));
 });
@@ -2889,7 +3101,10 @@ test("raw analyzer rebuilds an accepted report from exactly 32 measured files", 
 
 test("raw analyzer revalidates manifest-consistent pre-block standard admission evidence", async (t) => {
   const root = await materializeEvidenceRoot(createEvidence());
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const notStartedRoot = await materializeEvidenceRoot(createEvidence());
+  t.after(() => Promise.all([root, notStartedRoot].map(
+    (evidenceRoot) => fs.rm(evidenceRoot, { recursive: true, force: true }),
+  )));
   const admissionPath = path.join(root, "blocks", "block-01", "pre-block-standard-perf-admission.json");
   const admission = JSON.parse(await fs.readFile(admissionPath, "utf8"));
   admission.cpu.averagePercent = STANDARD_PERF_ADMISSION_POLICY.cpuAverageMaxPercent + 0.1;
@@ -2900,6 +3115,101 @@ test("raw analyzer revalidates manifest-consistent pre-block standard admission 
   assert.equal(report.manifestValidation.status, "valid");
   assert.equal(report.decision.status, "invalid-experiment");
   assert.ok(report.decision.invalidReasons.includes("block-01.preBlockAdmission.cpu-evidence-invalid"));
+
+  const blockRoot = path.join(notStartedRoot, "blocks", "block-01");
+  const rejectedAdmission = standardPerfAdmissionDecision(CONTROL_HEAD, {
+    cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
+  });
+  const command = JSON.parse(await fs.readFile(path.join(blockRoot, "command.json"), "utf8"));
+  const notStartedJob = notStartedJobObjectEvidence({
+    command,
+    cwd: CONTROL_WORKTREE,
+    admission: rejectedAdmission,
+  });
+  const quietWindow = JSON.parse(await fs.readFile(path.join(blockRoot, "quiet-window.json"), "utf8"));
+  quietWindow.status = "invalid";
+  quietWindow.valid = false;
+  quietWindow.standardPerfAdmission = {
+    valid: false,
+    policyId: rejectedAdmission.policyId,
+    status: rejectedAdmission.status,
+    exitCode: rejectedAdmission.exitCode,
+    failureCodes: rejectedAdmission.failures.map((entry) => entry.code),
+  };
+  const cleanup = JSON.parse(await fs.readFile(path.join(blockRoot, "cleanup.json"), "utf8"));
+  Object.assign(cleanup, {
+    workloadSpawnCount: 0,
+    workloadStarted: false,
+    cleanupRequired: false,
+    taskOwnedPids: [],
+    taskOwnedProcesses: [],
+    terminationResults: [],
+    terminationSucceeded: true,
+    jobObject: notStartedJob,
+  });
+  const blockResult = {
+    schemaVersion: 1,
+    status: "invalid",
+    exitCode: WILLIAMS_EXIT_CODES.invalidExperiment,
+    timedOut: false,
+    runnerPid: null,
+    workloadSpawnCount: 0,
+    skipReason: "standard-perf-admission-rejected",
+    preBlockAdmission: {
+      policyId: rejectedAdmission.policyId,
+      status: rejectedAdmission.status,
+      exitCode: rejectedAdmission.exitCode,
+      failureCodes: rejectedAdmission.failures.map((entry) => entry.code),
+    },
+    cleanupValid: true,
+  };
+  await Promise.all([
+    writeJson(path.join(blockRoot, "pre-block-standard-perf-admission.json"), rejectedAdmission),
+    writeJson(path.join(blockRoot, "quiet-window.json"), quietWindow),
+    writeJson(path.join(blockRoot, "cleanup.json"), cleanup),
+    writeJson(path.join(blockRoot, "job-object.json"), notStartedJob),
+    writeJson(path.join(blockRoot, "block-result.json"), blockResult),
+  ]);
+  await rebuildRawManifest(notStartedRoot);
+
+  const notStartedReport = await analyzeTrustedRawRoot(notStartedRoot);
+  assert.equal(notStartedReport.manifestValidation.status, "valid");
+  assert.equal(notStartedReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  assert.ok(notStartedReport.decision.invalidReasons.includes(
+    "block-01.preBlockAdmission.cpu-evidence-invalid",
+  ));
+  assert.deepEqual(
+    notStartedReport.decision.invalidReasons.filter((reason) => (
+      reason.startsWith("block-01.jobObject.")
+      || reason.startsWith("block-01.cleanup.jobObject.")
+      || reason.startsWith("block-01.cleanup.zeroSpawn.")
+    )),
+    [],
+  );
+
+  const structuralCases = [
+    ["exit 3", (block) => { block.jobObject.blockExitCode = 1; }, "block-01.jobObject.blockExitCode"],
+    ["spawn zero", (block) => { block.jobObject.workloadSpawnCount = 1; }, "block-01.jobObject.workloadSpawnCount"],
+    ["allowed skip reason", (block) => { block.jobObject.skipReason = "unknown"; }, "block-01.jobObject.skipReason"],
+    ["empty PID sets", (block) => { block.jobObject.remainingPids = [99]; }, "block-01.jobObject.remainingPids"],
+    ["canonical command", (block) => { block.jobObject.commandExecutablePath = "C:\\wrong.exe"; }, "block-01.jobObject.commandExecutablePath"],
+    ["canonical cwd", (block) => { block.jobObject.commandWorkingDirectory = "C:\\wrong"; }, "block-01.jobObject.commandWorkingDirectory"],
+    ["canonical cleanup Job", (block) => { block.cleanup.jobObject.skipReason = "williams-quiet-window-invalid"; }, "block-01.jobObject.cleanup-canonical"],
+    ["no termination", (block) => { block.cleanup.terminationResults = [{ pid: 99 }]; }, "block-01.cleanup.zeroSpawn.terminationResults"],
+    [
+      "admission summary field drift",
+      (block) => { block.blockResult.preBlockAdmission.failureCodes.push("drifted-failure-code"); },
+      "block-01.jobObject.admission.blockResultCanonical",
+    ],
+  ];
+  for (const [label, mutate, expectedReason] of structuralCases) {
+    const evidence = createEvidence();
+    const block = applyNotStartedBlockEvidence(evidence);
+    mutate(block);
+    const structuralReport = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.equal(structuralReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, label);
+    assert.ok(structuralReport.decision.invalidReasons.includes(expectedReason), label);
+  }
 });
 
 test("raw analyzer requires the executed Job runner binary and recomputes its descriptor", async (t) => {
@@ -3196,9 +3506,9 @@ test("canonical server metadata and every HTTP response fail quiet admission clo
     metadataUrlStatus: "valid",
     probe: { responded: true, ok: false, status: 404 },
   }];
-  assert.equal(deriveWilliamsQuietWindow(telemetry).valid, false);
+  assert.equal(deriveTestQuietWindow(telemetry).valid, false);
   telemetry.environment.server = [{ present: true, metadataUrlStatus: "missing", probe: null }];
-  assert.equal(deriveWilliamsQuietWindow(telemetry).valid, false);
+  assert.equal(deriveTestQuietWindow(telemetry).valid, false);
 });
 
 test("identity failures map to invalid exit 3 while internal failures map to harness fault 1", () => {
@@ -3292,8 +3602,29 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   assert.match(runnerSource, /validateWilliamsTelemetryCadence/);
   assert.match(runnerSource, /collectStandardPerfAdmissionEvidence/);
   assert.match(runnerSource, /evaluateStandardPerfAdmission/);
+  assert.match(runnerSource, /validateStandardPerfAdmissionDecision/);
+  assert.doesNotMatch(runnerSource, /evaluateAdmission/);
   assert.match(runnerSource, /pre-block-standard-perf-admission\.json/);
   assert.match(runnerSource, /if \(standardAdmissionAccepted && quietWindow\.valid\) \{\s*commandResult = await runLoggedCommandFn/);
+  const runBlockIndex = runnerSource.indexOf("async function runBlock");
+  const admissionIndex = runnerSource.indexOf("const preBlockAdmission = await runWilliamsPreBlockAdmission", runBlockIndex);
+  const admissionValidationIndex = runnerSource.indexOf("validateStandardPerfAdmissionDecision", admissionIndex);
+  const lazyPreparationIndex = runnerSource.indexOf("await lazyPreparationAuthority", admissionValidationIndex);
+  const executeIndex = runnerSource.indexOf("async function executeExperiment");
+  const powerOperationIndex = runnerSource.indexOf("operation: async (expectedPowerSchemeGuid)", executeIndex);
+  const productionLazyAuthorityIndex = runnerSource.indexOf("const lazyPreparationAuthority = async", powerOperationIndex);
+  const productionPreparationIndex = runnerSource.indexOf(
+    "preparation = await prepareWilliamsJobRunnerForExecution",
+    productionLazyAuthorityIndex,
+  );
+  assert.ok(runBlockIndex >= 0);
+  assert.ok(runBlockIndex < admissionIndex);
+  assert.ok(admissionIndex < admissionValidationIndex);
+  assert.ok(admissionValidationIndex < lazyPreparationIndex);
+  assert.ok(executeIndex < powerOperationIndex);
+  assert.doesNotMatch(runnerSource.slice(executeIndex, powerOperationIndex), /prepareWindowsJobRunnerFn\s*\(/);
+  assert.ok(powerOperationIndex < productionLazyAuthorityIndex);
+  assert.ok(productionLazyAuthorityIndex < productionPreparationIndex);
   assert.doesNotMatch(runnerSource, /newBrowserPids\.length === 0/);
   assert.match(runnerSource, /newBrowserPids,/);
   assert.match(runnerSource, /mode: "list"/);

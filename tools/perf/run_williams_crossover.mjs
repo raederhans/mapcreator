@@ -29,11 +29,11 @@ import {
   runWindowsJobCommand,
 } from "./williams_crossover_windows_runtime.mjs";
 import {
-  STANDARD_PERF_ADMISSION_EXIT_CODES,
   STANDARD_PERF_ADMISSION_POLICY,
   buildStandardPerfAdmissionCollectionFailureEvidence,
   collectStandardPerfAdmissionEvidence,
   evaluateStandardPerfAdmission,
+  validateStandardPerfAdmissionDecision,
 } from "./standard_perf_admission.mjs";
 import {
   buildOrderedContainmentSourceSet,
@@ -945,16 +945,19 @@ export async function collectWindowsTelemetryWindow({ worktree, phase } = {}) {
   }
 }
 
-export function deriveWilliamsQuietWindow(telemetry, standardPerfAdmission = null) {
+export function deriveWilliamsQuietWindow(
+  telemetry,
+  standardPerfAdmission,
+  { expectedGitHead = "" } = {},
+) {
   const environment = telemetry?.environment || {};
   const telemetryCadence = validateWilliamsTelemetryCadence(telemetry, { label: "telemetry" });
-  const standardPerfAdmissionProvided = standardPerfAdmission !== null && standardPerfAdmission !== undefined;
-  const standardPerfAdmissionValid = !standardPerfAdmissionProvided || (
-    standardPerfAdmission?.policyId === STANDARD_PERF_ADMISSION_POLICY.policyId
-    && standardPerfAdmission?.status === "admitted"
-    && standardPerfAdmission?.exitCode === STANDARD_PERF_ADMISSION_EXIT_CODES.accepted
-    && Array.isArray(standardPerfAdmission?.failures)
-    && standardPerfAdmission.failures.length === 0
+  const standardPerfAdmissionValidation = validateStandardPerfAdmissionDecision(
+    standardPerfAdmission,
+    {
+      expectedPlatform: process.platform,
+      expectedGitHead,
+    },
   );
   const portsClear = TASK_PORTS.every((port) => (environment.ports?.[String(port)] || []).length === 0);
   const activeServer = (environment.server || []).some((entry) => (
@@ -964,7 +967,7 @@ export function deriveWilliamsQuietWindow(telemetry, standardPerfAdmission = nul
   const directProbeResponse = (environment.probe || []).some((entry) => entry?.responded === true);
   const valid = telemetry?.capability?.status === "available"
     && telemetryCadence.valid
-    && standardPerfAdmissionValid
+    && standardPerfAdmissionValidation.valid
     && portsClear
     && !activeServer
     && !directProbeResponse
@@ -981,15 +984,16 @@ export function deriveWilliamsQuietWindow(telemetry, standardPerfAdmission = nul
       intervalsMs: [...telemetryCadence.intervalsMs],
       errors: [...telemetryCadence.errors],
     },
-    standardPerfAdmission: standardPerfAdmissionProvided ? {
-      valid: standardPerfAdmissionValid,
+    standardPerfAdmission: {
+      valid: standardPerfAdmissionValidation.valid,
       policyId: String(standardPerfAdmission?.policyId || ""),
       status: String(standardPerfAdmission?.status || "missing"),
       exitCode: standardPerfAdmission?.exitCode ?? null,
       failureCodes: Array.isArray(standardPerfAdmission?.failures)
         ? standardPerfAdmission.failures.map((entry) => String(entry?.code || "missing"))
         : [],
-    } : null,
+    },
+    standardPerfAdmissionValidation,
     portsClear,
     activeServer,
     directProbeResponse,
@@ -1002,7 +1006,6 @@ export async function runWilliamsPreBlockAdmission({
   worktree,
   artifactPath,
   collectEvidence = collectStandardPerfAdmissionEvidence,
-  evaluateAdmission = evaluateStandardPerfAdmission,
 } = {}) {
   const startedAt = new Date().toISOString();
   let evidence;
@@ -1011,7 +1014,7 @@ export async function runWilliamsPreBlockAdmission({
   } catch (error) {
     evidence = buildStandardPerfAdmissionCollectionFailureEvidence(error, { startedAt });
   }
-  const decision = evaluateAdmission(evidence, STANDARD_PERF_ADMISSION_POLICY);
+  const decision = evaluateStandardPerfAdmission(evidence, STANDARD_PERF_ADMISSION_POLICY);
   await writeJson(artifactPath, decision);
   return decision;
 }
@@ -1137,10 +1140,15 @@ export function buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree,
   };
 }
 
-async function runBlock(block, harnessArtifacts, preparedRunner, packageLock, {
+async function runBlock({
+  block,
+  harnessArtifacts: initialHarnessArtifacts = null,
+  preparedRunner: initialPreparedRunner = null,
+  packageLock: initialPackageLock = null,
+  lazyPreparationAuthority = null,
+}, {
   collectBlockIdentity: collectBlockIdentityFn = collectBlockIdentity,
   collectAdmissionEvidence = collectStandardPerfAdmissionEvidence,
-  evaluateAdmission = evaluateStandardPerfAdmission,
   collectTelemetry = collectWindowsTelemetryWindow,
   runLoggedCommand: runLoggedCommandFn = runLoggedCommand,
 } = {}) {
@@ -1158,17 +1166,41 @@ async function runBlock(block, harnessArtifacts, preparedRunner, packageLock, {
     expectedHead: block.expectedHead,
   };
   await writeJson(path.join(directory, "block-metadata.json"), metadata);
-  const identity = await collectBlockIdentityFn(block, harnessArtifacts, packageLock);
-  await writeJson(path.join(directory, "identity.json"), identity);
   const preBlockAdmission = await runWilliamsPreBlockAdmission({
     worktree: block.cwd,
     artifactPath: path.join(directory, "pre-block-standard-perf-admission.json"),
     collectEvidence: collectAdmissionEvidence,
-    evaluateAdmission,
   });
+  const standardPerfAdmissionValidation = validateStandardPerfAdmissionDecision(
+    preBlockAdmission,
+    {
+      expectedPlatform: process.platform,
+      expectedGitHead: block.expectedHead,
+    },
+  );
+  const standardAdmissionAccepted = standardPerfAdmissionValidation.valid;
+  let harnessArtifacts = initialHarnessArtifacts;
+  let preparedRunner = initialPreparedRunner;
+  let packageLock = initialPackageLock;
+  if (standardAdmissionAccepted && typeof lazyPreparationAuthority === "function") {
+    const prepared = await lazyPreparationAuthority({
+      block,
+      admission: preBlockAdmission,
+      validation: standardPerfAdmissionValidation,
+    });
+    harnessArtifacts = prepared?.harnessArtifacts ?? harnessArtifacts;
+    preparedRunner = prepared?.preparedRunner ?? preparedRunner;
+    packageLock = prepared?.packageLock ?? packageLock;
+  }
+  if (standardAdmissionAccepted) {
+    const identity = await collectBlockIdentityFn(block, harnessArtifacts, packageLock);
+    await writeJson(path.join(directory, "identity.json"), identity);
+  }
   const preTelemetry = await collectTelemetry({ worktree: block.cwd, phase: "pre" });
   await writeJson(path.join(directory, "telemetry-pre.json"), preTelemetry);
-  const quietWindow = deriveWilliamsQuietWindow(preTelemetry, preBlockAdmission);
+  const quietWindow = deriveWilliamsQuietWindow(preTelemetry, preBlockAdmission, {
+    expectedGitHead: block.expectedHead,
+  });
   await writeJson(path.join(directory, "quiet-window.json"), quietWindow);
   await writeJson(path.join(directory, "command.json"), block.command);
 
@@ -1181,10 +1213,10 @@ async function runBlock(block, harnessArtifacts, preparedRunner, packageLock, {
     taskOwnedTree: { rootPids: [], pids: [], processes: [], captureStatus: "available", captureErrors: [] },
   };
   let taskOwnedTree = { rootPids: [], pids: [], processes: [], captureStatus: "available", terminationResults: [] };
-  const standardAdmissionAccepted = preBlockAdmission.status === "admitted"
-    && preBlockAdmission.exitCode === STANDARD_PERF_ADMISSION_EXIT_CODES.accepted;
   const skipReason = !standardAdmissionAccepted
-    ? "standard-perf-admission-rejected"
+    ? (preBlockAdmission.status === "rejected"
+      ? "standard-perf-admission-rejected"
+      : "standard-perf-admission-invalid")
     : (!quietWindow.valid ? "williams-quiet-window-invalid" : null);
   try {
     if (standardAdmissionAccepted && quietWindow.valid) {
@@ -1243,17 +1275,19 @@ async function runBlock(block, harnessArtifacts, preparedRunner, packageLock, {
     cleanupValid: cleanup.valid,
   };
   await writeJson(path.join(directory, "block-result.json"), blockResult);
-  return { complete, blockResult, preBlockAdmission };
+  return {
+    complete,
+    blockResult,
+    preBlockAdmission,
+    standardPerfAdmissionValidation,
+  };
 }
 
 export async function runWilliamsBlockWithTestAdapters(
-  block,
-  harnessArtifacts,
-  preparedRunner,
-  packageLock,
+  execution,
   adapters = {},
 ) {
-  return runBlock(block, harnessArtifacts, preparedRunner, packageLock, adapters);
+  return runBlock(execution, adapters);
 }
 
 function requiredEvidencePaths() {
@@ -1873,6 +1907,45 @@ export function requireWilliamsJobRunnerReady(preparation, { expectedSourceSet =
   return preparation;
 }
 
+async function prepareWilliamsJobRunnerForExecution({
+  executionOptions,
+  harnessArtifacts,
+  prepareWindowsJobRunnerFn,
+}) {
+  const preparationResult = await prepareWindowsJobRunnerFn({
+    evidenceDirectory: path.join(executionOptions.rawRoot, "harness", "job-runner"),
+    evidenceBinaryPath: path.join(executionOptions.rawRoot, WINDOWS_JOB_RUNNER_EVIDENCE_PATH),
+    evidenceBinaryDescriptorPath: WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
+  });
+  const preparationSourceSetMatches = orderedContainmentSourceSetsEqual(
+    preparationResult.sourceSet,
+    harnessArtifacts.jobRunnerSources,
+  );
+  const preparationIdentityMismatch = preparationResult.status === "available" && !preparationSourceSetMatches;
+  await writeJson(path.join(executionOptions.rawRoot, "harness", "job-runner-preparation.json"), {
+    schemaVersion: 1,
+    status: preparationIdentityMismatch ? "identity-error" : preparationResult.status,
+    error: preparationIdentityMismatch
+      ? "compiled source set differs from the exact candidate/current tooling identity"
+      : (preparationResult.error || null),
+    compiledAt: preparationResult.compiledAt || null,
+    capabilityProbedAt: preparationResult.capabilityProbedAt || null,
+    source: harnessArtifacts.jobRunnerSource,
+    sourceSet: preparationResult.sourceSet || null,
+    binary: preparationResult.binary || null,
+    capabilityCommand: preparationResult.capabilityCommand || null,
+    capabilityEvidence: preparationResult.capabilityEvidence || preparationResult.probeResult?.jobEvidence || null,
+  });
+  try {
+    return requireWilliamsJobRunnerReady(preparationResult, {
+      expectedSourceSet: harnessArtifacts.jobRunnerSources,
+    });
+  } catch (error) {
+    await preparationResult.cleanup?.();
+    throw error;
+  }
+}
+
 async function executeExperiment(options, trustedRevisionIdentity, {
   analyzerAuthorityAdapter = null,
   prepareWindowsJobRunnerFn = prepareWindowsJobRunner,
@@ -1901,40 +1974,7 @@ async function executeExperiment(options, trustedRevisionIdentity, {
     fenceCheckout: true,
   });
   await validateWilliamsOutputPolicy(executionOptions, { reserveRawRoot: true, allowReportOverwrite: false });
-  const preparationResult = await prepareWindowsJobRunnerFn({
-    evidenceDirectory: path.join(executionOptions.rawRoot, "harness", "job-runner"),
-    evidenceBinaryPath: path.join(executionOptions.rawRoot, WINDOWS_JOB_RUNNER_EVIDENCE_PATH),
-    evidenceBinaryDescriptorPath: WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
-  });
-  const preparationSourceSetMatches = orderedContainmentSourceSetsEqual(
-    preparationResult.sourceSet,
-    harnessArtifacts.jobRunnerSources,
-  );
-  const preparationIdentityMismatch = preparationResult.status === "available" && !preparationSourceSetMatches;
-  await writeJson(path.join(executionOptions.rawRoot, "harness", "job-runner-preparation.json"), {
-    schemaVersion: 1,
-    status: preparationIdentityMismatch ? "identity-error" : preparationResult.status,
-    error: preparationIdentityMismatch
-      ? "compiled source set differs from the exact candidate/current tooling identity"
-      : (preparationResult.error || null),
-    compiledAt: preparationResult.compiledAt || null,
-    capabilityProbedAt: preparationResult.capabilityProbedAt || null,
-    source: harnessArtifacts.jobRunnerSource,
-    sourceSet: preparationResult.sourceSet || null,
-    binary: preparationResult.binary || null,
-    capabilityCommand: preparationResult.capabilityCommand || null,
-    capabilityEvidence: preparationResult.capabilityEvidence || preparationResult.probeResult?.jobEvidence || null,
-  });
-  let preparation;
-  try {
-    preparation = requireWilliamsJobRunnerReady(preparationResult, {
-      expectedSourceSet: harnessArtifacts.jobRunnerSources,
-    });
-  } catch (error) {
-    await preparationResult.cleanup?.();
-    throw error;
-  }
-  harnessArtifacts.jobRunnerBinary = preparation.binary;
+  let preparation = null;
   try {
     const lifecyclePath = path.join(executionOptions.rawRoot, POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH);
     const helperPath = path.join(executionOptions.candidateWorktree, POWER_SCHEME_HELPER_PATH);
@@ -1943,26 +1983,47 @@ async function executeExperiment(options, trustedRevisionIdentity, {
       sessionPath: lifecyclePath,
       requestedGuid: executionOptions.expectedPowerSchemeGuid,
       operation: async (expectedPowerSchemeGuid) => {
-        const plan = buildWilliamsExecutionPlan({
+        const preliminaryPlan = buildWilliamsExecutionPlan({
           ...executionOptions,
           expectedPowerSchemeGuid,
           jobRunnerSource: harnessArtifacts.jobRunnerSource,
           jobRunnerSources: harnessArtifacts.jobRunnerSources,
-          jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
           powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
         });
-        const preregistration = {
-          ...plan.preregistration,
-          generatedAt: new Date().toISOString(),
-        };
-        await writeJson(path.join(executionOptions.rawRoot, "preregistration.json"), preregistration);
-        for (const block of plan.blocks) {
-          const result = await runBlock(
-            block,
+        const lazyPreparationAuthority = async ({ block }) => {
+          if (!preparation) {
+            preparation = await prepareWilliamsJobRunnerForExecution({
+              executionOptions,
+              harnessArtifacts,
+              prepareWindowsJobRunnerFn,
+            });
+            harnessArtifacts.jobRunnerBinary = preparation.binary;
+            const finalPlan = buildWilliamsExecutionPlan({
+              ...executionOptions,
+              expectedPowerSchemeGuid,
+              jobRunnerSource: harnessArtifacts.jobRunnerSource,
+              jobRunnerSources: harnessArtifacts.jobRunnerSources,
+              jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
+              powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
+            });
+            const preregistration = {
+              ...finalPlan.preregistration,
+              generatedAt: new Date().toISOString(),
+            };
+            await writeJson(path.join(executionOptions.rawRoot, "preregistration.json"), preregistration);
+          }
+          return {
             harnessArtifacts,
-            preparation,
-            packageLockDescriptors[block.side],
-          );
+            preparedRunner: preparation,
+            packageLock: packageLockDescriptors[block.side],
+          };
+        };
+        for (const block of preliminaryPlan.blocks) {
+          const result = await runBlock({
+            block,
+            packageLock: packageLockDescriptors[block.side],
+            lazyPreparationAuthority,
+          });
           if (!result.complete) break;
         }
       },
@@ -1974,7 +2035,7 @@ async function executeExperiment(options, trustedRevisionIdentity, {
     await writeReport(executionOptions, report, { allowOverwrite: false });
     return report;
   } finally {
-    await preparation.cleanup();
+    await preparation?.cleanup?.();
   }
 }
 
