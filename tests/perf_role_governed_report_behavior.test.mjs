@@ -16,6 +16,7 @@ import {
 import {
   annotatePerfErrorWithDiagnostics,
   collectBaselineContractMismatches,
+  collectGovernedRenderSampleRoleMismatches,
   getBaselineArtifactDate,
   isTransientPerfNetworkFailure,
   normalizePerfRegressionMode,
@@ -29,7 +30,14 @@ import {
   validateBaselineOutputSelection,
   validateGateCurrentReport,
   validateGateScenarioSelection,
+  validateRenderSampleRunProfileSelection,
 } from "../tools/perf/run_baseline.mjs";
+import {
+  STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
+  WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+  summarizeRenderSampleRoleAnalyses,
+} from "../tools/perf/render_sample_role_policy.mjs";
+import { buildWilliamsExecutionPlan } from "../tools/perf/run_williams_crossover.mjs";
 import {
   PerfEnvironmentAdmissionError,
   PerfGenerationFenceError,
@@ -1004,6 +1012,147 @@ test("baseline admission binds five raw runs to canonical render-role evidence",
     () => validateGateBaselineReport(duplicateCandidate, SCENARIOS, baselinePath),
     /canonicalRole=canonical-candidate-unique/,
   );
+});
+
+function bindRenderSampleRunProfile(report, profileId, measuredRunsPerScenario, reportSchemaVersion) {
+  report.schemaVersion = reportSchemaVersion;
+  report.renderSampleRolePolicy.runProfile = {
+    id: profileId,
+    measuredRunsPerScenario,
+    reportSchemaVersion,
+  };
+  report.workloadIdentity.renderSampleRunProfileId = profileId;
+  for (const scenarioId of SCENARIOS) {
+    report.workloadIdentity.scenarios[scenarioId].renderSampleRunProfileId = profileId;
+    report.scenarios[scenarioId].workloadIdentity.renderSampleRunProfileId = profileId;
+  }
+  return report;
+}
+
+function buildWilliamsTwoRunRoleReport(canonical) {
+  const report = structuredClone(canonical);
+  report.config.runs = 2;
+  report.workloadIdentity.runs = 2;
+  for (const scenarioId of SCENARIOS) {
+    const scenario = report.scenarios[scenarioId];
+    scenario.runs = scenario.runs.slice(0, 2);
+    scenario.workloadIdentity.runs = 2;
+    report.workloadIdentity.scenarios[scenarioId].runs = 2;
+    const roleSummary = summarizeRenderSampleRoleAnalyses(
+      scenario.runs.map((run) => run.renderSampleRole),
+    );
+    scenario.renderSampleRoleSummary = structuredClone(roleSummary);
+    scenario.summary.canonicalRenderSampleMs = roleSummary.canonicalRenderSampleMs;
+  }
+  return bindRenderSampleRunProfile(
+    report,
+    WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+    2,
+    2,
+  );
+}
+
+test("explicit render-sample run profiles preserve Williams two-run and standard five-run contracts", async () => {
+  assert.doesNotThrow(() => validateRenderSampleRunProfileSelection({
+    mode: "baseline",
+    runs: 2,
+    renderSampleRunProfileId: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+  }));
+  assert.throws(
+    () => validateRenderSampleRunProfileSelection({ mode: "baseline", runs: 2 }),
+    /expected=5 actual=2/,
+  );
+  assert.doesNotThrow(() => validateRenderSampleRunProfileSelection({ mode: "baseline", runs: 5 }));
+  assert.throws(
+    () => validateRenderSampleRunProfileSelection({
+      mode: "gate",
+      runs: 2,
+      renderSampleRunProfileId: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+    }),
+    /mode expected=baseline actual=gate/,
+  );
+
+  const baselinePath = path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.json");
+  const canonical = JSON.parse(await fs.readFile(baselinePath, "utf8"));
+  const williamsReport = buildWilliamsTwoRunRoleReport(canonical);
+  assert.deepEqual(
+    collectGovernedRenderSampleRoleMismatches(
+      williamsReport,
+      SCENARIOS,
+      WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+    ),
+    [],
+  );
+
+  const defaultTwoRun = structuredClone(williamsReport);
+  defaultTwoRun.renderSampleRolePolicy.runProfile.id = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+  defaultTwoRun.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+  for (const scenarioId of SCENARIOS) {
+    defaultTwoRun.workloadIdentity.scenarios[scenarioId].renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+    defaultTwoRun.scenarios[scenarioId].workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+  }
+  assert.match(
+    collectGovernedRenderSampleRoleMismatches(
+      defaultTwoRun,
+      SCENARIOS,
+      STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
+    ).join("\n"),
+    /config\.runs expected=5 actual=2/,
+  );
+});
+
+test("Williams run profile is caller-owned, symmetric, and report identity drift fails closed", async () => {
+  const root = path.join(REPO_ROOT, ".runtime", "tmp", "williams-profile-plan-fixture");
+  const plan = buildWilliamsExecutionPlan({
+    rawRoot: root,
+    controlHead: "a".repeat(40),
+    candidateHead: "b".repeat(40),
+    controlWorktree: path.join(root, "control"),
+    candidateWorktree: path.join(root, "candidate"),
+  });
+  for (const block of plan.blocks) {
+    const profileFlagIndex = block.command.args.indexOf("--render-sample-run-profile");
+    assert.ok(profileFlagIndex > 0, `${block.id} must declare the run profile`);
+    assert.equal(
+      block.command.args[profileFlagIndex + 1],
+      WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+    );
+  }
+  for (const side of ["A", "B"]) {
+    assert.deepEqual(
+      new Set(plan.blocks.filter((block) => block.side === side).map((block) => {
+        const profileFlagIndex = block.command.args.indexOf("--render-sample-run-profile");
+        return block.command.args[profileFlagIndex + 1];
+      })),
+      new Set([WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID]),
+    );
+  }
+
+  const baselinePath = path.join(REPO_ROOT, "docs", "perf", "baseline_2026-07-30.json");
+  const canonical = JSON.parse(await fs.readFile(baselinePath, "utf8"));
+  const williamsReport = buildWilliamsTwoRunRoleReport(canonical);
+  const cases = [
+    ["missing policy profile", (report) => { delete report.renderSampleRolePolicy.runProfile; }, /renderSampleRolePolicy\.runProfile\.id/],
+    ["policy id", (report) => { report.renderSampleRolePolicy.runProfile.id = "unknown-profile"; }, /renderSampleRolePolicy\.runProfile\.id/],
+    ["policy run count", (report) => { report.renderSampleRolePolicy.runProfile.measuredRunsPerScenario = 5; }, /renderSampleRolePolicy\.runProfile\.measuredRunsPerScenario/],
+    ["policy report schema", (report) => { report.renderSampleRolePolicy.runProfile.reportSchemaVersion = 3; }, /renderSampleRolePolicy\.runProfile\.reportSchemaVersion/],
+    ["report schema", (report) => { report.schemaVersion = 3; }, /schemaVersion expected=2 actual=3/],
+    ["report identity", (report) => { report.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID; }, /workloadIdentity\.renderSampleRunProfileId/],
+    ["scenario identity", (report) => { report.scenarios.tno_1962.workloadIdentity.renderSampleRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID; }, /tno_1962\.workloadIdentity\.renderSampleRunProfileId/],
+  ];
+  for (const [label, mutate, expected] of cases) {
+    const drifted = structuredClone(williamsReport);
+    mutate(drifted);
+    assert.match(
+      collectGovernedRenderSampleRoleMismatches(
+        drifted,
+        SCENARIOS,
+        WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+      ).join("\n"),
+      expected,
+      label,
+    );
+  }
 });
 
 test("gate scenario selection fails before measurement unless the canonical set is exact", () => {

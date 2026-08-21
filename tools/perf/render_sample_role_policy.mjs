@@ -1,6 +1,35 @@
 export const RENDER_SAMPLE_ROLE_POLICY_ID = "render-sample-role-v2";
 export const CANONICAL_RENDER_SAMPLE_ROLE_ID = "last-post-promotion-idle-scenario-frame-v1";
 export const GOVERNED_RENDER_SAMPLE_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
+export const STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID = "standard-perf-5-run-v1";
+export const WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID = "p2-williams-crossover-v7";
+
+const RENDER_SAMPLE_RUN_PROFILES = Object.freeze({
+  [STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID]: Object.freeze({
+    id: STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
+    measuredRunsPerScenario: 5,
+    reportSchemaVersion: 3,
+    modes: Object.freeze(["baseline", "gate"]),
+  }),
+  [WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID]: Object.freeze({
+    id: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
+    measuredRunsPerScenario: 2,
+    reportSchemaVersion: 2,
+    modes: Object.freeze(["baseline"]),
+  }),
+});
+
+export function resolveRenderSampleRunProfile(
+  profileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
+) {
+  const normalizedProfileId = primitiveText(profileId)
+    || STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID;
+  const profile = RENDER_SAMPLE_RUN_PROFILES[normalizedProfileId];
+  if (!profile) {
+    throw new Error(`Unsupported render sample run profile: ${JSON.stringify(profileId)}.`);
+  }
+  return profile;
+}
 
 function finiteNumberOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;

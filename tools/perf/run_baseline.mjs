@@ -13,7 +13,9 @@ import {
   CANONICAL_RENDER_SAMPLE_ROLE_ID,
   GOVERNED_RENDER_SAMPLE_SCENARIOS,
   RENDER_SAMPLE_ROLE_POLICY_ID,
+  STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
   analyzeRenderSampleRole,
+  resolveRenderSampleRunProfile,
   summarizeRenderSampleRoleAnalyses,
 } from "./render_sample_role_policy.mjs";
 import {
@@ -49,7 +51,6 @@ const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
   Number.parseInt(process.env.PERF_DEV_SERVER_READY_TIMEOUT_MS || "45000", 10) || 45_000
 );
 const MIN_GATE_WARMUPS = 3;
-const CANONICAL_GATE_RUN_COUNT = 5;
 const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;
 const CURRENT_PERF_REPORT_SCHEMA_VERSION = 3;
 const PERF_REGRESSION_MODES = new Set(["enforce", "diagnostic"]);
@@ -95,6 +96,7 @@ function parseArgs(argv) {
     rawDir: DEFAULT_RAW_DIR,
     urlQuery: { ...PERF_URL_QUERY },
     writeMarkdown: true,
+    renderSampleRunProfileId: STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -132,9 +134,42 @@ function parseArgs(argv) {
     } else if (token === "--write-markdown" && next) {
       options.writeMarkdown = ["1", "true", "yes"].includes(String(next).trim().toLowerCase());
       index += 1;
+    } else if (token === "--render-sample-run-profile" && next) {
+      options.renderSampleRunProfileId = String(next).trim();
+      index += 1;
     }
   }
   return options;
+}
+
+export function validateRenderSampleRunProfileSelection(options = {}) {
+  const profile = resolveRenderSampleRunProfile(options.renderSampleRunProfileId);
+  const mode = String(options.mode || "baseline").trim();
+  if (!profile.modes.includes(mode)) {
+    throw new Error(
+      `[perf-baseline] Render sample run profile ${profile.id} mode expected=${profile.modes.join("|")} actual=${mode}.`
+    );
+  }
+  if (options.runs !== profile.measuredRunsPerScenario) {
+    throw new Error(
+      `[perf-baseline] Render sample run profile ${profile.id} runs expected=${profile.measuredRunsPerScenario} actual=${JSON.stringify(options.runs)}.`
+    );
+  }
+  return profile;
+}
+
+function buildRenderSampleRolePolicyIdentity(profileId) {
+  const profile = resolveRenderSampleRunProfile(profileId);
+  return {
+    policyId: RENDER_SAMPLE_ROLE_POLICY_ID,
+    canonicalRoleId: CANONICAL_RENDER_SAMPLE_ROLE_ID,
+    governedScenarios: GOVERNED_RENDER_SAMPLE_SCENARIOS,
+    runProfile: {
+      id: profile.id,
+      measuredRunsPerScenario: profile.measuredRunsPerScenario,
+      reportSchemaVersion: profile.reportSchemaVersion,
+    },
+  };
 }
 
 export function getBaselineArtifactDate(baselineJsonPath) {
@@ -733,16 +768,19 @@ function buildAggregateSampleSpread(runs) {
 }
 
 function buildScenarioWorkloadIdentity(manifestIdentity, options, baseUrl) {
+  const runProfile = resolveRenderSampleRunProfile(options.renderSampleRunProfileId);
   return {
     ...manifestIdentity,
     baseUrl,
     runs: options.runs,
     warmups: options.warmups,
     urlQuery: options.urlQuery,
+    renderSampleRunProfileId: runProfile.id,
   };
 }
 
 function buildReportWorkloadIdentity(options, measurement) {
+  const runProfile = resolveRenderSampleRunProfile(options.renderSampleRunProfileId);
   const scenarios = {};
   for (const [scenarioId, scenario] of Object.entries(measurement.scenarios || {})) {
     scenarios[scenarioId] = scenario.workloadIdentity || {};
@@ -754,6 +792,7 @@ function buildReportWorkloadIdentity(options, measurement) {
     threshold: options.threshold,
     urlQuery: options.urlQuery,
     baseUrl: measurement.baseUrl,
+    renderSampleRunProfileId: runProfile.id,
     scenarios,
   };
 }
@@ -1517,12 +1556,77 @@ export function validateGateCurrentReport(currentReport, scenarioIds, label = "c
   }
 }
 
-function collectGovernedRenderSampleRoleMismatches(report, scenarioIds) {
+export function collectGovernedRenderSampleRoleMismatches(
+  report,
+  scenarioIds,
+  expectedRunProfileId = STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID,
+) {
   const mismatches = [];
-  const configuredRunCount = report?.config?.runs;
-  if (configuredRunCount !== CANONICAL_GATE_RUN_COUNT) {
+  const expectedRunProfile = resolveRenderSampleRunProfile(expectedRunProfileId);
+  const declaredRolePolicy = report?.renderSampleRolePolicy || {};
+  const declaredRunProfile = declaredRolePolicy.runProfile;
+  const reportRunProfileId = report?.workloadIdentity?.renderSampleRunProfileId;
+  const scenarioRunProfileIdsAbsent = scenarioIds.every((scenarioId) => (
+    report?.workloadIdentity?.scenarios?.[scenarioId]?.renderSampleRunProfileId === undefined
+    && report?.scenarios?.[scenarioId]?.workloadIdentity?.renderSampleRunProfileId === undefined
+  ));
+  const legacyStandardProfile = expectedRunProfile.id === STANDARD_PERF_RENDER_SAMPLE_RUN_PROFILE_ID
+    && declaredRunProfile === undefined
+    && reportRunProfileId === undefined
+    && scenarioRunProfileIdsAbsent;
+  if (declaredRolePolicy.policyId !== RENDER_SAMPLE_ROLE_POLICY_ID) {
     mismatches.push(
-      `config.runs expected=${CANONICAL_GATE_RUN_COUNT} actual=${JSON.stringify(configuredRunCount)}`
+      `renderSampleRolePolicy.policyId expected=${RENDER_SAMPLE_ROLE_POLICY_ID} actual=${JSON.stringify(declaredRolePolicy.policyId)}`
+    );
+  }
+  if (declaredRolePolicy.canonicalRoleId !== CANONICAL_RENDER_SAMPLE_ROLE_ID) {
+    mismatches.push(
+      `renderSampleRolePolicy.canonicalRoleId expected=${CANONICAL_RENDER_SAMPLE_ROLE_ID} actual=${JSON.stringify(declaredRolePolicy.canonicalRoleId)}`
+    );
+  }
+  if (
+    !Array.isArray(declaredRolePolicy.governedScenarios)
+    || !isDeepStrictEqual(declaredRolePolicy.governedScenarios, GOVERNED_RENDER_SAMPLE_SCENARIOS)
+  ) {
+    mismatches.push("renderSampleRolePolicy.governedScenarios does not match governed scenario identity");
+  }
+  if (!legacyStandardProfile) {
+    if (declaredRunProfile?.id !== expectedRunProfile.id) {
+      mismatches.push(
+        `renderSampleRolePolicy.runProfile.id expected=${expectedRunProfile.id} actual=${JSON.stringify(declaredRunProfile?.id)}`
+      );
+    }
+    if (declaredRunProfile?.measuredRunsPerScenario !== expectedRunProfile.measuredRunsPerScenario) {
+      mismatches.push(
+        `renderSampleRolePolicy.runProfile.measuredRunsPerScenario expected=${expectedRunProfile.measuredRunsPerScenario} actual=${JSON.stringify(declaredRunProfile?.measuredRunsPerScenario)}`
+      );
+    }
+    if (declaredRunProfile?.reportSchemaVersion !== expectedRunProfile.reportSchemaVersion) {
+      mismatches.push(
+        `renderSampleRolePolicy.runProfile.reportSchemaVersion expected=${expectedRunProfile.reportSchemaVersion} actual=${JSON.stringify(declaredRunProfile?.reportSchemaVersion)}`
+      );
+    }
+    if (reportRunProfileId !== expectedRunProfile.id) {
+      mismatches.push(
+        `workloadIdentity.renderSampleRunProfileId expected=${expectedRunProfile.id} actual=${JSON.stringify(reportRunProfileId)}`
+      );
+    }
+  }
+  if (report?.schemaVersion !== expectedRunProfile.reportSchemaVersion) {
+    mismatches.push(
+      `schemaVersion expected=${expectedRunProfile.reportSchemaVersion} actual=${JSON.stringify(report?.schemaVersion)}`
+    );
+  }
+  const configuredRunCount = report?.config?.runs;
+  if (configuredRunCount !== expectedRunProfile.measuredRunsPerScenario) {
+    mismatches.push(
+      `config.runs expected=${expectedRunProfile.measuredRunsPerScenario} actual=${JSON.stringify(configuredRunCount)}`
+    );
+  }
+  const reportIdentityRunCount = report?.workloadIdentity?.runs;
+  if (reportIdentityRunCount !== expectedRunProfile.measuredRunsPerScenario) {
+    mismatches.push(
+      `workloadIdentity.runs expected=${expectedRunProfile.measuredRunsPerScenario} actual=${JSON.stringify(reportIdentityRunCount)}`
     );
   }
   for (const scenarioId of scenarioIds) {
@@ -1531,14 +1635,38 @@ function collectGovernedRenderSampleRoleMismatches(report, scenarioIds) {
     }
     const scenario = report?.scenarios?.[scenarioId] || {};
     const roleSummary = scenario.renderSampleRoleSummary || {};
+    const reportScenarioIdentity = report?.workloadIdentity?.scenarios?.[scenarioId] || {};
+    const scenarioIdentity = scenario.workloadIdentity || {};
+    if (!legacyStandardProfile) {
+      if (reportScenarioIdentity.renderSampleRunProfileId !== expectedRunProfile.id) {
+        mismatches.push(
+          `${scenarioId}.reportWorkloadIdentity.renderSampleRunProfileId expected=${expectedRunProfile.id} actual=${JSON.stringify(reportScenarioIdentity.renderSampleRunProfileId)}`
+        );
+      }
+      if (scenarioIdentity.renderSampleRunProfileId !== expectedRunProfile.id) {
+        mismatches.push(
+          `${scenarioId}.workloadIdentity.renderSampleRunProfileId expected=${expectedRunProfile.id} actual=${JSON.stringify(scenarioIdentity.renderSampleRunProfileId)}`
+        );
+      }
+    }
+    if (reportScenarioIdentity.runs !== expectedRunProfile.measuredRunsPerScenario) {
+      mismatches.push(
+        `${scenarioId}.reportWorkloadIdentity.runs expected=${expectedRunProfile.measuredRunsPerScenario} actual=${JSON.stringify(reportScenarioIdentity.runs)}`
+      );
+    }
+    if (scenarioIdentity.runs !== expectedRunProfile.measuredRunsPerScenario) {
+      mismatches.push(
+        `${scenarioId}.workloadIdentity.runs expected=${expectedRunProfile.measuredRunsPerScenario} actual=${JSON.stringify(scenarioIdentity.runs)}`
+      );
+    }
     if (!Array.isArray(scenario.runs)) {
       mismatches.push(`${scenarioId}.runs must be an array`);
       continue;
     }
     const runs = scenario.runs;
-    if (runs.length !== CANONICAL_GATE_RUN_COUNT) {
+    if (runs.length !== expectedRunProfile.measuredRunsPerScenario) {
       mismatches.push(
-        `${scenarioId}.runs.length expected=${CANONICAL_GATE_RUN_COUNT} actual=${runs.length}`
+        `${scenarioId}.runs.length expected=${expectedRunProfile.measuredRunsPerScenario} actual=${runs.length}`
       );
     }
     const recomputedAnalyses = runs.map((run, runIndex) => {
@@ -1767,6 +1895,7 @@ export function validateGateScenarioSelection(scenarioIds) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  validateRenderSampleRunProfileSelection(options);
   if (options.mode === "gate" && options.warmups < MIN_GATE_WARMUPS) {
     throw new Error(`[perf-baseline] Gate warmups must be at least ${MIN_GATE_WARMUPS}; received ${options.warmups}.`);
   }
@@ -1798,14 +1927,12 @@ async function main() {
   );
   const packageLockSha256 = await sha256File(path.join(REPO_ROOT, "package-lock.json"));
   const report = {
-    schemaVersion: CURRENT_PERF_REPORT_SCHEMA_VERSION,
+    schemaVersion: resolveRenderSampleRunProfile(
+      options.renderSampleRunProfileId,
+    ).reportSchemaVersion,
     benchmarkMetricsSchemaVersion: "3.3",
     probeSchema: "mc_perf_snapshot",
-    renderSampleRolePolicy: {
-      policyId: RENDER_SAMPLE_ROLE_POLICY_ID,
-      canonicalRoleId: CANONICAL_RENDER_SAMPLE_ROLE_ID,
-      governedScenarios: GOVERNED_RENDER_SAMPLE_SCENARIOS,
-    },
+    renderSampleRolePolicy: buildRenderSampleRolePolicyIdentity(options.renderSampleRunProfileId),
     generatedAt: new Date().toISOString(),
     gitHead,
     baselineDate: getBaselineArtifactDate(options.baselineJson),
@@ -1866,7 +1993,11 @@ async function main() {
     return;
   }
 
-  const renderSampleRoleMismatches = collectGovernedRenderSampleRoleMismatches(report, options.scenarios);
+  const renderSampleRoleMismatches = collectGovernedRenderSampleRoleMismatches(
+    report,
+    options.scenarios,
+    options.renderSampleRunProfileId,
+  );
   if (renderSampleRoleMismatches.length) {
     throw new Error(
       `Perf baseline render sample role mismatch.\n${renderSampleRoleMismatches.map((item) => `- ${item}`).join("\n")}`

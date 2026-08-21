@@ -29,6 +29,7 @@ import {
   isValidOrderedContainmentSourceSet,
   orderedContainmentSourceSetsEqual,
 } from "../process_containment/ordered_source_set_identity.mjs";
+import { WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID } from "./render_sample_role_policy.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_RAW_ROOT = path.join(REPO_ROOT, ".runtime", "output", "perf", "p2-williams-crossover");
@@ -236,6 +237,7 @@ export function buildWilliamsExecutionPlan(options = {}) {
             "--scenarios", block.scenarioOrder.join(","),
             "--runs", "2",
             "--warmups", "1",
+            "--render-sample-run-profile", WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
             "--baseline-json", path.join(directory, "baseline.json"),
             "--baseline-md", path.join(directory, "baseline.md"),
             "--raw-dir", path.join(directory, "raw"),
