@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import itertools
 import json
+import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -11,14 +14,107 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TMP_BASE = REPO_ROOT / ".runtime" / "tmp" / "test_e2e_structural_tooling"
 
 
-def run_command(*command: str) -> subprocess.CompletedProcess[str]:
+def run_command(*command: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         list(command),
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
         check=False,
+        env=None if env is None else {**os.environ, **env},
     )
+
+
+def parse_workflow_job_blocks(workflow: str) -> dict[str, str]:
+    lines = workflow.splitlines()
+    jobs_headers = [index for index, line in enumerate(lines) if line == "jobs:"]
+    if len(jobs_headers) != 1:
+        raise AssertionError(f"workflow must contain exactly one jobs block, found {len(jobs_headers)}")
+
+    job_header = re.compile(r"^  (?P<job_id>[A-Za-z_][A-Za-z0-9_-]*):(?:\s+#.*)?$")
+    jobs: dict[str, str] = {}
+    current_job: str | None = None
+    current_block: list[str] = []
+
+    def finish_current_job() -> None:
+        nonlocal current_job, current_block
+        if current_job is None:
+            return
+        jobs[current_job] = "\n".join(current_block)
+        current_job = None
+        current_block = []
+
+    for line_number, line in enumerate(lines[jobs_headers[0] + 1:], start=jobs_headers[0] + 2):
+        if line and not line[0].isspace() and not line.startswith("#"):
+            break
+        if not line.strip() or line.lstrip().startswith("#"):
+            if current_job is not None:
+                current_block.append(line)
+            continue
+
+        indentation = len(line) - len(line.lstrip(" "))
+        if indentation == 2:
+            stripped_header = line.strip()
+            if stripped_header.startswith(('"', "'")):
+                raise AssertionError(f"quoted job header is unsupported at line {line_number}: {stripped_header}")
+            match = job_header.fullmatch(line)
+            if match is None:
+                raise AssertionError(f"unparseable job header at line {line_number}: {stripped_header}")
+            finish_current_job()
+            job_id = match.group("job_id")
+            if job_id in jobs:
+                raise AssertionError(f"duplicate job id at line {line_number}: {job_id}")
+            current_job = job_id
+            continue
+
+        if indentation < 4 or current_job is None:
+            raise AssertionError(f"unparseable jobs content at line {line_number}: {line.strip()}")
+        current_block.append(line)
+
+    finish_current_job()
+    return jobs
+
+
+def parse_required_pr_workflow_jobs(workflow: str) -> dict[str, str]:
+    jobs = parse_workflow_job_blocks(workflow)
+    expected_jobs = {"pr-verify-fast", "pr-verify-smoke", "pr-verify-demo", "pr-verify-required"}
+    if set(jobs) != expected_jobs:
+        raise AssertionError(f"workflow job set mismatch: expected {sorted(expected_jobs)}, found {sorted(jobs)}")
+    return jobs
+
+
+def parse_job_scalar(job_block: str, key: str) -> str | list[str] | None:
+    match = re.search(rf"(?m)^    {re.escape(key)}:\s*(.+?)\s*$", job_block)
+    if match is None:
+        return None
+    value = match.group(1)
+    if value.startswith("["):
+        parsed = json.loads(value)
+        if not isinstance(parsed, list) or not all(isinstance(entry, str) for entry in parsed):
+            raise AssertionError(f"{key} must be a string list")
+        return parsed
+    return value
+
+
+def extract_required_aggregator_script(job_block: str) -> str:
+    lines = job_block.splitlines()
+    try:
+        run_index = lines.index("        run: |")
+    except ValueError:
+        raise AssertionError("required aggregator must contain one literal run block")
+    body_lines: list[str] = []
+    for line in lines[run_index + 1:]:
+        if line.startswith("          "):
+            body_lines.append(line[10:])
+        elif line == "":
+            body_lines.append("")
+        else:
+            break
+    shell_body = "\n".join(body_lines)
+    heredoc = re.fullmatch(r"node <<'NODE'\n(?P<script>.*)\nNODE", shell_body, re.DOTALL)
+    if heredoc is None:
+        raise AssertionError("required aggregator must execute one bounded Node heredoc")
+    return heredoc.group("script")
 
 
 class E2eStructuralToolingContractTest(unittest.TestCase):
@@ -1471,18 +1567,32 @@ const page = {
         self.assertNotIn("name.startsWith('test:node:')", workflow)
         self.assertNotIn("spawnSync('npm', ['run', name]", workflow)
 
-    def test_pr_required_chain_consumes_the_canonical_golden_demo_profile(self) -> None:
+    def test_pr_required_dag_consumes_the_canonical_golden_demo_profile(self) -> None:
         shared_workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
         pr_workflow = (REPO_ROOT / ".github" / "workflows" / "pr-verify.yml").read_text(encoding="utf-8")
+        jobs = parse_required_pr_workflow_jobs(pr_workflow)
 
-        fast_job_index = pr_workflow.index("  pr-verify-fast:")
-        smoke_job_index = pr_workflow.index("  pr-verify-smoke:")
-        demo_job_index = pr_workflow.index("  pr-verify-demo:")
-        self.assertLess(fast_job_index, smoke_job_index)
-        self.assertLess(smoke_job_index, demo_job_index)
-        self.assertIn("needs: pr-verify-fast", pr_workflow[smoke_job_index:demo_job_index])
-        self.assertIn("needs: pr-verify-smoke", pr_workflow[demo_job_index:])
-        self.assertIn("profile: demo", pr_workflow[demo_job_index:])
+        self.assertIsNone(parse_job_scalar(jobs["pr-verify-fast"], "needs"))
+        self.assertIsNone(parse_job_scalar(jobs["pr-verify-smoke"], "needs"))
+        self.assertEqual(parse_job_scalar(jobs["pr-verify-demo"], "needs"), ["pr-verify-smoke"])
+        self.assertEqual(parse_job_scalar(jobs["pr-verify-demo"], "uses"), "./.github/workflows/verify-shared.yml")
+        self.assertRegex(jobs["pr-verify-demo"], r"(?m)^      profile: demo$")
+
+        required_job = jobs["pr-verify-required"]
+        self.assertEqual(parse_job_scalar(required_job, "name"), "PR Verify Required")
+        self.assertEqual(parse_job_scalar(required_job, "if"), "always()")
+        self.assertEqual(
+            parse_job_scalar(required_job, "needs"),
+            ["pr-verify-fast", "pr-verify-smoke", "pr-verify-demo"],
+        )
+        self.assertEqual(parse_job_scalar(required_job, "runs-on"), "ubuntu-latest")
+        self.assertIsNone(parse_job_scalar(required_job, "uses"))
+        self.assertEqual(len(re.findall(r"(?m)^      - ", required_job)), 1)
+        self.assertNotRegex(required_job, r"(?m)^        uses:")
+        self.assertEqual(required_job.count("        run: |"), 1)
+        self.assertIn("REQUIRED_RESULTS: ${{ toJSON(needs) }}", required_job)
+        aggregator_script = extract_required_aggregator_script(required_job)
+        self.assertNotRegex(aggregator_script, r"\b(?:exec|execFile|fork|spawn|require)\s*\(")
 
         demo_node_condition = "inputs.profile == 'full' || inputs.profile == 'pr-fast' || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'"
         demo_browser_condition = "(inputs.profile == 'full' && inputs.run-e2e-smoke) || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'"
@@ -1494,6 +1604,108 @@ const page = {
         self.assertIn("name: demo-timing-and-failure-context", shared_workflow)
         self.assertIn(".runtime/reports/generated/test-timings-summary.json", shared_workflow)
         self.assertIn(".runtime/tests/playwright/**/failure-context.json", shared_workflow)
+
+    def test_workflow_job_parser_accepts_the_complete_unquoted_job_id_syntax(self) -> None:
+        workflow = """name: parser-contract
+jobs:
+  _Gate:
+    runs-on: ubuntu-latest
+  SecurityScan:
+    runs-on: ubuntu-latest
+  security_scan:
+    runs-on: ubuntu-latest
+  security-scan2:
+    runs-on: ubuntu-latest
+"""
+
+        self.assertEqual(
+            list(parse_workflow_job_blocks(workflow)),
+            ["_Gate", "SecurityScan", "security_scan", "security-scan2"],
+        )
+
+    def test_workflow_job_parser_fails_closed_for_unparsed_quoted_and_duplicate_headers(self) -> None:
+        cases = {
+            "unparsed": (
+                "  security.scan:\n    runs-on: ubuntu-latest\n",
+                "unparseable job header",
+            ),
+            "quoted": (
+                '  "security_scan":\n    runs-on: ubuntu-latest\n',
+                "quoted job header",
+            ),
+            "duplicate": (
+                "  security_scan:\n    runs-on: ubuntu-latest\n"
+                "  security_scan:\n    runs-on: ubuntu-latest\n",
+                "duplicate job id",
+            ),
+        }
+
+        for name, (jobs_section, expected_error) in cases.items():
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(AssertionError, expected_error):
+                    parse_workflow_job_blocks(f"name: parser-contract\njobs:\n{jobs_section}")
+
+    def test_pr_required_exact_job_set_detects_uppercase_and_underscore_additions(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "pr-verify.yml").read_text(encoding="utf-8")
+
+        for extra_job in ("security_scan", "SecurityScan"):
+            with self.subTest(extra_job=extra_job):
+                changed_workflow = workflow.replace(
+                    "  pr-verify-required:\n",
+                    f"  {extra_job}:\n    runs-on: ubuntu-latest\n\n  pr-verify-required:\n",
+                )
+                with self.assertRaisesRegex(AssertionError, "workflow job set mismatch"):
+                    parse_required_pr_workflow_jobs(changed_workflow)
+
+    def test_pr_required_aggregator_fails_closed_for_every_dependency_result_matrix(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "pr-verify.yml").read_text(encoding="utf-8")
+        required_job = parse_workflow_job_blocks(workflow)["pr-verify-required"]
+        script = extract_required_aggregator_script(required_job)
+        job_names = ["pr-verify-fast", "pr-verify-smoke", "pr-verify-demo"]
+        result_states = ["success", "failure", "cancelled", "skipped"]
+
+        for result_matrix in itertools.product(result_states, repeat=len(job_names)):
+            with self.subTest(results=result_matrix):
+                needs = {
+                    job: {"result": result, "outputs": {}}
+                    for job, result in zip(job_names, result_matrix, strict=True)
+                }
+                completed = run_command(
+                    "node",
+                    "-e",
+                    script,
+                    env={"REQUIRED_RESULTS": json.dumps(needs)},
+                )
+                should_pass = all(result == "success" for result in result_matrix)
+                self.assertEqual(completed.returncode == 0, should_pass, completed.stdout + completed.stderr)
+
+    def test_pr_required_aggregator_rejects_dependency_set_drift(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "pr-verify.yml").read_text(encoding="utf-8")
+        required_job = parse_workflow_job_blocks(workflow)["pr-verify-required"]
+        script = extract_required_aggregator_script(required_job)
+        valid_needs = {
+            job: {"result": "success", "outputs": {}}
+            for job in ("pr-verify-fast", "pr-verify-smoke", "pr-verify-demo")
+        }
+        cases = {
+            "missing": json.dumps({job: result for job, result in valid_needs.items() if job != "pr-verify-demo"}),
+            "extra": json.dumps({**valid_needs, "SecurityScan": {"result": "success", "outputs": {}}}),
+            "unknown-result": json.dumps({
+                **valid_needs,
+                "pr-verify-smoke": {"result": "timed_out", "outputs": {}},
+            }),
+            "malformed-json": "{",
+        }
+
+        for name, required_results in cases.items():
+            with self.subTest(name=name):
+                completed = run_command(
+                    "node",
+                    "-e",
+                    script,
+                    env={"REQUIRED_RESULTS": required_results},
+                )
+                self.assertNotEqual(completed.returncode, 0, completed.stdout + completed.stderr)
 
     def test_verify_shared_rejects_unknown_profiles_before_profile_steps(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")

@@ -11,15 +11,42 @@ jobs:
       run-e2e-smoke: false
 
   pr-verify-smoke:
-    needs: pr-verify-fast
     uses: ./.github/workflows/verify-shared.yml
     with:
       profile: pr-smoke
       run-e2e-smoke: true
 
   pr-verify-demo:
-    needs: pr-verify-smoke
+    needs: ["pr-verify-smoke"]
     uses: ./.github/workflows/verify-shared.yml
     with:
       profile: demo
       run-e2e-smoke: false
+
+  pr-verify-required:
+    name: PR Verify Required
+    if: always()
+    needs: ["pr-verify-fast", "pr-verify-smoke", "pr-verify-demo"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful PR verification results
+        env:
+          REQUIRED_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node <<'NODE'
+          const expectedJobs = ["pr-verify-fast", "pr-verify-smoke", "pr-verify-demo"];
+          const allowedResults = new Set(["success"]);
+          const needs = JSON.parse(process.env.REQUIRED_RESULTS);
+          const actualJobs = Object.keys(needs).sort();
+          const expectedJobsSorted = [...expectedJobs].sort();
+          const dependencySetMatches = JSON.stringify(actualJobs) === JSON.stringify(expectedJobsSorted);
+          const rejected = expectedJobs.filter((job) => !allowedResults.has(needs[job]?.result));
+
+          for (const job of expectedJobs) {
+            console.log(`${job}: ${needs[job]?.result ?? "missing"}`);
+          }
+          if (!dependencySetMatches || rejected.length > 0) {
+            console.error(`Required PR verification failed: ${rejected.join(", ") || "dependency set mismatch"}`);
+            process.exit(1);
+          }
+          NODE
