@@ -18,6 +18,13 @@ import {
   VERIFICATION_DOMAINS,
 } from "../tools/verification/verification_domains.mjs";
 import {
+  normalizeVerificationMetadataSource,
+  VERIFICATION_METADATA_SOURCE,
+  VERIFICATION_METADATA_SOURCE_IDENTITY,
+  verificationMetadataSourceDigest,
+  verificationMetadataSourceSummary,
+} from "../tools/verification/verification_catalog_projection.mjs";
+import {
   buildVerificationMetadataRoutes,
   buildVerifyCoreDefaultGroups,
   buildVerifyCoreMainThreadGroup,
@@ -26,6 +33,80 @@ import {
 } from "../tools/verification/verification_metadata_helpers.mjs";
 
 const REPO_ROOT = process.cwd();
+
+test("authored catalog source covers command authority, policies, and every projection key", () => {
+  const summary = verificationMetadataSourceSummary();
+  assert.equal(summary.authoredSurfaces, 1);
+  assert.equal(summary.packageScriptCount, 330);
+  assert.equal(summary.contributorRecords, 416);
+  assert.equal(summary.verificationRecordProjectionCount, 129);
+  assert.equal(summary.routeProjectionCount, 374);
+  assert.equal(summary.commandCount, 333);
+  assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 416);
+  for (const entry of VERIFICATION_METADATA_SOURCE.records) {
+    assert.equal(typeof entry.commandRef, "string");
+    assert.ok(entry.commandRef.length > 0);
+    for (const field of ["sourceRefs", "ownerHints", "domains", "tiers", "resourceLocks", "executionOwners", "profiles", "platforms"]) {
+      assert.ok(Array.isArray(entry[field]), `${entry.id}.${field}`);
+      assert.equal(new Set(entry[field]).size, entry[field].length, `${entry.id}.${field}.unique`);
+      assert.deepEqual(entry[field], [...entry[field]].sort(), `${entry.id}.${field}.sorted`);
+    }
+    assert.ok(entry.sourceRefs.length > 0);
+    assert.ok(entry.ownerHints.length > 0);
+    assert.ok(entry.domains.length > 0);
+    assert.ok(entry.tiers.length > 0);
+    assert.ok(entry.executionOwners.length > 0);
+    assert.ok(entry.profiles.length > 0);
+    assert.ok(entry.platforms.length > 0);
+    assert.equal(typeof entry.cost, "string");
+    assert.ok(VERIFICATION_METADATA_SOURCE.entrypointPolicies[entry.entrypointPolicyIndex]);
+  }
+  assert.equal(VERIFICATION_METADATA_SOURCE.estimatePolicy.kind, "verification-estimate-policy");
+  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 15);
+});
+
+test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
+  const reordered = structuredClone(VERIFICATION_METADATA_SOURCE);
+  const record = reordered.records.find((entry) => entry.sourceRefs.length > 1);
+  record.sourceRefs.reverse();
+  assert.equal(
+    verificationMetadataSourceDigest(reordered),
+    VERIFICATION_METADATA_SOURCE_IDENTITY.digest,
+  );
+
+  const reversedSupersession = structuredClone(VERIFICATION_METADATA_SOURCE);
+  const [superseder] = Object.entries(reversedSupersession.supersession)
+    .find(([, superseded]) => superseded.length > 1);
+  reversedSupersession.supersession[superseder].reverse();
+  assert.equal(
+    verificationMetadataSourceDigest(reversedSupersession),
+    VERIFICATION_METADATA_SOURCE_IDENTITY.digest,
+  );
+
+  const duplicateValue = structuredClone(VERIFICATION_METADATA_SOURCE);
+  duplicateValue.records[0].sourceRefs.push(duplicateValue.records[0].sourceRefs[0]);
+  assert.throws(
+    () => normalizeVerificationMetadataSource(duplicateValue),
+    /verification-metadata-source-duplicate-array-value/,
+  );
+
+  const duplicateRecord = structuredClone(VERIFICATION_METADATA_SOURCE);
+  duplicateRecord.records.push(structuredClone(duplicateRecord.records[0]));
+  assert.throws(
+    () => normalizeVerificationMetadataSource(duplicateRecord),
+    /verification-metadata-source-duplicate-record/,
+  );
+
+  const duplicateSupersession = structuredClone(VERIFICATION_METADATA_SOURCE);
+  duplicateSupersession.supersession[superseder].push(
+    duplicateSupersession.supersession[superseder][0],
+  );
+  assert.throws(
+    () => normalizeVerificationMetadataSource(duplicateSupersession),
+    /verification-metadata-source-duplicate-array-value:supersession\./,
+  );
+});
 const P4_POLICY_SOURCE_REFS = Object.freeze([
   "tools/state_writer_inventory.mjs",
   "tools/state_action_delegation_contract.mjs",
@@ -127,7 +208,7 @@ test("P4.0 state ownership policy owns its files, routes, and verify-core comman
   ));
   assert.ok(policyEntry);
   assert.ok(boundaryEntry);
-  assert.deepEqual(policyEntry.sourceRefs, P4_POLICY_SOURCE_REFS);
+  assert.deepEqual(policyEntry.sourceRefs, [...P4_POLICY_SOURCE_REFS].sort());
   for (const entry of [policyEntry, boundaryEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
@@ -501,7 +582,7 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
     "docs/active/renderer-pass-family-p3-closeout-20260715.md",
     "docs/active/renderer-pass-family-coupling-matrix-p3-0-20260713.md",
     "package.json",
-  ];
+  ].sort();
   const entry = VERIFICATION_DOMAINS.find((candidate) => (
     candidate.id === "verify-core:test:node:renderer-pass-family-inventory"
   ));
@@ -1430,7 +1511,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     ownerHint: "perf-runtime",
     layer: "heavy",
     cost: "heavy",
-    resourceLocks: ["perf-dev-server", "browser-dev-server", "playwright-browser", ".runtime-output", "system-power-scheme"],
+    resourceLocks: [".runtime-output", "browser-dev-server", "perf-dev-server", "playwright-browser", "system-power-scheme"],
     executionOwner: "main-thread",
     ciProfile: "perf-pr-gate",
     supervisorDomain: "perf",
@@ -1449,7 +1530,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     "tools/perf/render_sample_role_policy.mjs",
     "package-lock.json",
     "package.json",
-  ]);
+  ].sort());
   assert.deepEqual(liveTelemetryEntry, {
     ...liveTelemetryEntry,
     commandRef: "test:node:williams-crossover-telemetry-live",

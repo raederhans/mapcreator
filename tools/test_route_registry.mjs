@@ -5,6 +5,7 @@ import {
   buildVerificationMetadataRoutes,
 } from "./verification/verification_metadata_helpers.mjs";
 import {
+  LEGACY_VERIFICATION_DOMAINS,
   VERIFICATION_EXACT_DIRECT_COMMAND_REFS,
   VERIFICATION_CI_PROFILES,
   VERIFICATION_COSTS,
@@ -15,6 +16,10 @@ import {
   VERIFICATION_RESOURCE_LOCKS,
   deriveVerificationEntrypointPolicy,
 } from "./verification/verification_domains.mjs";
+import {
+  buildCanonicalRouteIndex,
+  VERIFICATION_METADATA_SOURCE_IDENTITY,
+} from "./verification/verification_catalog_projection.mjs";
 
 export const REPO_ROOT = process.cwd();
 export const E2E_MANIFEST_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-layer-manifest.json");
@@ -50,6 +55,7 @@ export const COSTS = VERIFICATION_COSTS;
 export const LAYERS = VERIFICATION_LAYERS;
 export const CI_PROFILES = VERIFICATION_CI_PROFILES;
 export const PLATFORMS = Object.freeze(["all", "win32", "linux", "darwin"]);
+export const ROUTE_REGISTRY_SOURCE_IDENTITY = VERIFICATION_METADATA_SOURCE_IDENTITY;
 
 const INFRASTRUCTURE_ROUTES = [
   {
@@ -757,6 +763,7 @@ function normalizeAuthorityContributor(route) {
     executionOwners: Object.hasOwn(route || {}, "executionOwner") || Object.hasOwn(route || {}, "executionOwners"),
     ciProfiles: Object.hasOwn(route || {}, "ciProfile") || Object.hasOwn(route || {}, "ciProfiles"),
     platforms: Object.hasOwn(route || {}, "platform") || Object.hasOwn(route || {}, "platforms"),
+    entrypointPolicy: Object.hasOwn(route || {}, "entrypointPolicy"),
   };
   const sourceRefs = Array.isArray(route?.sourceRefs)
     ? sortedRouteValues(route.sourceRefs)
@@ -784,6 +791,7 @@ function normalizeAuthorityContributor(route) {
     ciProfiles,
     platforms: platforms.length > 0 ? platforms : ["all"],
     sourceKinds: sortedRouteValues(route?.authoritySource || route?.sourceKind || "selector-route"),
+    entrypointPolicy: route?.entrypointPolicy ? structuredClone(route.entrypointPolicy) : null,
     presence,
   };
 }
@@ -869,12 +877,21 @@ export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) 
     const existing = contributorsById.get(contributor.id);
     if (existing) {
       const fields = Object.keys(contributor)
-        .filter((field) => field !== "sourceKinds")
+        .filter((field) => !new Set(["sourceKinds", "entrypointPolicy", "presence"]).has(field))
         .filter((field) => JSON.stringify(existing[field]) !== JSON.stringify(contributor[field]))
         .sort();
+      const presenceFields = Object.keys(contributor.presence)
+        .filter((field) => field !== "entrypointPolicy")
+        .filter((field) => existing.presence[field] !== contributor.presence[field]);
+      if (presenceFields.length > 0) fields.push("presence");
       if (fields.length > 0) {
         throw new Error(`verification-route-authority-source-drift:${contributor.id}:${fields.join(",")}`);
       }
+      if (existing.entrypointPolicy && contributor.entrypointPolicy
+        && JSON.stringify(existing.entrypointPolicy) !== JSON.stringify(contributor.entrypointPolicy)) {
+        throw new Error(`verification-route-authority-policy-drift:${contributor.commandRef}`);
+      }
+      existing.entrypointPolicy ||= contributor.entrypointPolicy;
       existing.sourceKinds = sortedRouteValues([...existing.sourceKinds, ...contributor.sourceKinds]);
       existing.presence = Object.fromEntries(Object.keys(existing.presence)
         .map((field) => [field, existing.presence[field] || contributor.presence[field]]));
@@ -902,13 +919,21 @@ export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) 
     const presence = Object.fromEntries(Object.keys(contributors[0].presence)
       .map((field) => [field, contributors.every((entry) => entry.presence[field] === true)]));
     const resourceLocks = sortedRouteValues(contributors.flatMap((entry) => entry.resourceLocks));
-    const entrypointPolicy = deriveVerificationEntrypointPolicy({
-      commandRef,
-      cost,
-      executionOwner,
-      resourceLocks,
-      ciProfiles,
-    });
+    const explicitPolicies = contributors.filter((entry) => entry.presence.entrypointPolicy === true);
+    const entrypointPolicy = explicitPolicies.length > 0
+      ? structuredClone(explicitPolicies[0].entrypointPolicy)
+      : deriveVerificationEntrypointPolicy({
+        commandRef,
+        cost,
+        executionOwner,
+        resourceLocks,
+        ciProfiles,
+      });
+    if (explicitPolicies.some((entry) => (
+      JSON.stringify(entry.entrypointPolicy) !== JSON.stringify(entrypointPolicy)
+    ))) {
+      throw new Error(`verification-route-authority-policy-drift:${commandRef}`);
+    }
     if (!VERIFICATION_ENTRYPOINT_DEPTHS.includes(entrypointPolicy.minimumDepth)
       || entrypointPolicy.eligibleEntrypoints.some((entrypoint) => !VERIFICATION_ENTRYPOINT_IDS.includes(entrypoint))) {
       throw new Error(`verification-route-authority-invalid-entrypoint-policy:${commandRef}`);
@@ -1051,8 +1076,9 @@ export function buildPythonRoutes() {
   return routes;
 }
 
-export function buildRouteIndex() {
-  const metadataRoutes = buildVerificationMetadataRoutes();
+// Legacy discovery remains available only to the zero-spawn shadow comparator.
+export function buildLegacyRouteIndex() {
+  const metadataRoutes = buildVerificationMetadataRoutes(LEGACY_VERIFICATION_DOMAINS);
   const metadataRouteIds = new Set(metadataRoutes.map((route) => route.id));
   return [
     ...metadataRoutes,
@@ -1062,6 +1088,10 @@ export function buildRouteIndex() {
     ...buildNodeRoutes(),
     ...buildPythonRoutes(),
   ];
+}
+
+export function buildRouteIndex() {
+  return buildCanonicalRouteIndex();
 }
 
 export function pythonCommandForTestPath(sourceRef) {
@@ -1128,14 +1158,13 @@ export function validateRoute(route, packageJson = readJson(PACKAGE_JSON_PATH)) 
   }
   validateRouteGuidance(route);
   const scripts = packageJson.scripts || {};
-  const exactDirectCommands = new Set(VERIFICATION_EXACT_DIRECT_COMMAND_REFS);
+  const exactDirectCommands = new Set([
+    ...VERIFICATION_EXACT_DIRECT_COMMAND_REFS,
+    ...buildCanonicalRouteIndex().map((entry) => entry.commandRef),
+  ]);
   const knownCommand =
     route.commandRef in scripts ||
-    route.commandRef.startsWith("node tools/e2e_layering.mjs ") ||
-    exactDirectCommands.has(route.commandRef) ||
-    route.commandRef.startsWith("python -m pytest ") ||
-    route.commandRef.startsWith("python -m unittest ") ||
-    route.commandRef.startsWith("python tools/");
+    exactDirectCommands.has(route.commandRef);
   if (!knownCommand) {
     throw new Error(`Route ${route.id} commandRef is not a package script or known command: ${route.commandRef}`);
   }

@@ -8,30 +8,33 @@ import {
   VERIFICATION_COMMAND_SUPERSESSION,
 } from "./command_supersession.mjs";
 import {
+  LEGACY_VERIFICATION_DOMAINS,
+  LEGACY_VERIFICATION_ESTIMATE_POLICY,
   VERIFICATION_DOMAINS,
   VERIFICATION_ESTIMATE_POLICY,
 } from "./verification_domains.mjs";
 import {
   buildRouteIndex,
+  buildLegacyRouteIndex,
   reconcileVerificationRouteAuthority,
 } from "../test_route_registry.mjs";
+import {
+  VERIFICATION_METADATA_SOURCE,
+  VERIFICATION_METADATA_SOURCE_IDENTITY,
+  verificationMetadataSourceSummary,
+} from "./verification_catalog_projection.mjs";
+import { LEGACY_VERIFICATION_COMMAND_SUPERSESSION } from "./command_supersession.mjs";
 import { buildP4PhaseVerificationPlan } from "../run_p4_phase_verification.mjs";
 import { resolveP4StateWriterPolicyRun } from "../run_p4_state_writer_policy_tests.mjs";
+
+export { VERIFICATION_METADATA_SOURCE_IDENTITY };
 
 export const SCRIPT_PORTFOLIO_SCHEMA_VERSION = 1;
 export const VERIFICATION_CATALOG_SCHEMA_VERSION = 1;
 export const VERIFICATION_CATALOG_KIND = "verification-test-catalog";
 export const PREPARED_VERIFICATION_CATALOG_KIND = "prepared-verification-test-catalog";
-export const VERIFICATION_TIER_ENTRYPOINTS = Object.freeze([
-  Object.freeze({ tier: 0, id: "edit", commandRef: "verify:edit", executionScope: "child-safe" }),
-  Object.freeze({ tier: 1, id: "impact", commandRef: "verify:impact", executionScope: "child-safe" }),
-  Object.freeze({ tier: 2, id: "pr", commandRef: "verify:pr", executionScope: "pr" }),
-  Object.freeze({ tier: 3, id: "nightly", commandRef: "verify:nightly", executionScope: "nightly" }),
-  Object.freeze({ tier: 4, id: "release", commandRef: "verify:release", executionScope: "release" }),
-]);
-export const VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS = Object.freeze([
-  Object.freeze({ id: "demo", commandRef: "verify:demo", consumer: "pr-verify-demo" }),
-]);
+export const VERIFICATION_TIER_ENTRYPOINTS = VERIFICATION_METADATA_SOURCE.canonicalEntrypoints.tier;
+export const VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS = VERIFICATION_METADATA_SOURCE.canonicalEntrypoints.productJourney;
 export const CANONICAL_VERIFICATION_ENTRYPOINTS = Object.freeze([
   ...VERIFICATION_TIER_ENTRYPOINTS.map((entry) => entry.commandRef),
   ...VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS.map((entry) => entry.commandRef),
@@ -668,8 +671,8 @@ function authorityMetadata(authorityByCommand, commandRef, command = commandRef,
   };
 }
 
-/** Build the canonical verification catalog from one reconciled route authority. */
-export function buildVerificationCatalog(input, options = {}) {
+/** Build a catalog for an internally selected authority mode. */
+function buildVerificationCatalogInternal(input, options = {}) {
   const packageScripts = input?.packageScripts || input;
   const records = input?.packageScripts ? input.records || [] : options.records || [];
   const selectorRoutes = input?.packageScripts ? input.selectorRoutes || [] : options.selectorRoutes || [];
@@ -758,23 +761,56 @@ export function buildVerificationCatalog(input, options = {}) {
   return sealVerificationCatalog(catalog);
 }
 
+/** Build an explicit caller-owned fixture catalog. */
+export function buildVerificationCatalog(input, options = {}) {
+  const requestedSourceMode = input?.packageScripts ? input.sourceMode : options.sourceMode;
+  if (requestedSourceMode !== undefined && requestedSourceMode !== "fixture") {
+    throw new Error(`verification-catalog-fixture-source-mode-forbidden:${requestedSourceMode}`);
+  }
+  if (input?.packageScripts) {
+    return buildVerificationCatalogInternal({ ...input, sourceMode: "fixture" }, options);
+  }
+  return buildVerificationCatalogInternal(input, { ...options, sourceMode: "fixture" });
+}
+
+function repositoryAuthorityInputs(options = {}) {
+  const canonical = {
+    packageScripts: VERIFICATION_METADATA_SOURCE.packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes: buildRouteIndex(),
+    estimatePolicy: VERIFICATION_ESTIMATE_POLICY,
+    supersession: VERIFICATION_COMMAND_SUPERSESSION,
+  };
+  for (const field of Object.keys(canonical)) {
+    if (!Object.hasOwn(options, field) || options[field] === undefined) continue;
+    if (options[field] === canonical[field]) continue;
+    if (JSON.stringify(options[field]) !== JSON.stringify(canonical[field])) {
+      const code = field === "packageScripts"
+        ? "verification-catalog-package-shadow-drift"
+        : `verification-catalog-repository-authority-override:${field}`;
+      throw new Error(code);
+    }
+  }
+  for (const field of ["catalogBuilder", "authorityReconciler"]) {
+    if (Object.hasOwn(options, field)) {
+      throw new Error(`verification-catalog-repository-authority-override:${field}`);
+    }
+  }
+  return canonical;
+}
+
 /** Build the repository catalog from package scripts, metadata, and every selector route. */
-export function buildRepositoryVerificationCatalog({
-  packageScripts,
-  verificationRecords = VERIFICATION_DOMAINS,
-  selectorRoutes = buildRouteIndex(),
-  repoRoot = process.cwd(),
-  platform = process.platform,
-  estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
-} = {}) {
-  return buildVerificationCatalog({
-    packageScripts,
-    records: verificationRecords,
-    selectorRoutes,
-    selectorCommandRefs: selectorRoutes.map((route) => route.commandRef),
+export function buildRepositoryVerificationCatalog(options = {}) {
+  const { repoRoot = process.cwd(), platform = process.platform } = options;
+  const canonical = repositoryAuthorityInputs(options);
+  return buildVerificationCatalogInternal({
+    packageScripts: canonical.packageScripts,
+    records: canonical.verificationRecords,
+    selectorRoutes: canonical.selectorRoutes,
+    selectorCommandRefs: canonical.selectorRoutes.map((route) => route.commandRef),
     repoRoot,
     platform,
-    estimatePolicy,
+    estimatePolicy: canonical.estimatePolicy,
     sourceMode: "repository",
   });
 }
@@ -788,6 +824,7 @@ function preparedCatalogSourceIdentity({
   platform,
   sourceMode,
   estimatePolicy,
+  metadataSourceIdentity = VERIFICATION_METADATA_SOURCE_IDENTITY,
 }) {
   const payload = JSON.stringify({
     schemaVersion: VERIFICATION_CATALOG_SCHEMA_VERSION,
@@ -800,6 +837,7 @@ function preparedCatalogSourceIdentity({
     selectorRoutes,
     authority,
     estimatePolicy,
+    metadataSourceIdentity,
   });
   return {
     algorithm: "sha256",
@@ -807,10 +845,11 @@ function preparedCatalogSourceIdentity({
     sourceMode,
     repoRoot: normalizeVerificationPath(repoRoot, { repoRoot: "", platform }),
     platform,
+    metadataSourceIdentity: structuredClone(metadataSourceIdentity),
   };
 }
 
-export function prepareVerificationCatalog({
+function prepareVerificationCatalogInternal({
   packageScripts = {},
   verificationRecords = [],
   selectorRoutes = [],
@@ -820,7 +859,8 @@ export function prepareVerificationCatalog({
   platform = process.platform,
   sourceMode = "fixture",
   estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
-  catalogBuilder = buildVerificationCatalog,
+  metadataSourceIdentity = VERIFICATION_METADATA_SOURCE_IDENTITY,
+  catalogBuilder = buildVerificationCatalogInternal,
   authorityReconciler = reconcileVerificationRouteAuthority,
 } = {}) {
   const reconciledAuthority = authority || authorityReconciler([
@@ -841,6 +881,7 @@ export function prepareVerificationCatalog({
     platform,
     sourceMode,
     estimatePolicy,
+    metadataSourceIdentity,
   });
   const catalog = catalogBuilder({
     packageScripts,
@@ -867,32 +908,32 @@ export function prepareVerificationCatalog({
       repoRoot,
       platform,
       estimatePolicy,
+      metadataSourceIdentity,
       sourceMode,
     },
   };
 }
 
-export function prepareRepositoryVerificationCatalog({
-  packageScripts,
-  verificationRecords = VERIFICATION_DOMAINS,
-  selectorRoutes = buildRouteIndex(),
-  repoRoot = process.cwd(),
-  platform = process.platform,
-  estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
-  catalogBuilder = buildVerificationCatalog,
-  authorityReconciler = reconcileVerificationRouteAuthority,
-} = {}) {
-  return prepareVerificationCatalog({
-    packageScripts,
-    verificationRecords,
-    selectorRoutes,
-    selectorCommandRefs: selectorRoutes.map((route) => route.commandRef),
+/** Prepare an explicit caller-owned fixture catalog. */
+export function prepareVerificationCatalog(options = {}) {
+  if (Object.hasOwn(options, "sourceMode") && options.sourceMode !== "fixture") {
+    throw new Error(`verification-catalog-fixture-source-mode-forbidden:${options.sourceMode}`);
+  }
+  return prepareVerificationCatalogInternal({ ...options, sourceMode: "fixture" });
+}
+
+export function prepareRepositoryVerificationCatalog(options = {}) {
+  const { repoRoot = process.cwd(), platform = process.platform } = options;
+  const canonical = repositoryAuthorityInputs(options);
+  return prepareVerificationCatalogInternal({
+    packageScripts: canonical.packageScripts,
+    verificationRecords: canonical.verificationRecords,
+    selectorRoutes: canonical.selectorRoutes,
+    selectorCommandRefs: canonical.selectorRoutes.map((route) => route.commandRef),
     repoRoot,
     platform,
-    estimatePolicy,
+    estimatePolicy: canonical.estimatePolicy,
     sourceMode: "repository",
-    catalogBuilder,
-    authorityReconciler,
   });
 }
 
@@ -921,6 +962,45 @@ export function prepareRepositoryVerificationCatalogBinding(options = {}) {
   };
 }
 
+function repositorySourceAuthorityDrift(detail, cause) {
+  const error = new Error("verification-plan-source-authority-drift");
+  error.detail = detail;
+  if (cause) error.cause = cause;
+  return error;
+}
+
+const canonicalRepositoryExpectationCache = new Map();
+
+function canonicalRepositoryExpectation(repoRoot, platform) {
+  const normalizedRepoRoot = normalizeVerificationPath(repoRoot, { repoRoot: "", platform });
+  const key = `${platform}\u0000${normalizedRepoRoot}`;
+  if (!canonicalRepositoryExpectationCache.has(key)) {
+    const expected = prepareRepositoryVerificationCatalog({ repoRoot, platform });
+    canonicalRepositoryExpectationCache.set(key, {
+      sourceIdentityDigest: expected.sourceIdentity.digest,
+      catalogDigest: expected.catalogDigest,
+    });
+  }
+  return canonicalRepositoryExpectationCache.get(key);
+}
+
+function assertCanonicalRepositoryPreparedCatalog(prepared) {
+  const repoRoot = prepared?.sourceInputs?.repoRoot || process.cwd();
+  const platform = prepared?.sourceInputs?.platform || process.platform;
+  let expected;
+  try {
+    expected = canonicalRepositoryExpectation(repoRoot, platform);
+  } catch (error) {
+    throw repositorySourceAuthorityDrift("prepared-source-inputs", error);
+  }
+  const canonicalIdentity = VERIFICATION_METADATA_SOURCE_IDENTITY;
+  const matches = prepared.sourceIdentity?.metadataSourceIdentity?.digest === canonicalIdentity.digest
+    && prepared.sourceIdentity?.digest === expected.sourceIdentityDigest
+    && prepared.catalogDigest === expected.catalogDigest
+    && JSON.stringify(prepared.authority) === JSON.stringify(prepared.catalog.authority);
+  if (!matches) throw repositorySourceAuthorityDrift("prepared-canonical-identity");
+}
+
 export function assertPreparedVerificationCatalog(prepared, catalog = prepared?.catalog) {
   if (!prepared
     || prepared.schemaVersion !== VERIFICATION_CATALOG_SCHEMA_VERSION
@@ -929,6 +1009,23 @@ export function assertPreparedVerificationCatalog(prepared, catalog = prepared?.
     || prepared.catalogDigest !== catalog?.sourceIntegrity?.digest) {
     throw new Error("verification-plan-invalid-prepared-catalog");
   }
+  const sourceModes = [
+    prepared.sourceMode,
+    prepared.sourceIdentity?.sourceMode,
+    prepared.sourceInputs?.sourceMode,
+    catalog.sourceMode,
+  ];
+  if (sourceModes.some((sourceMode) => sourceMode !== sourceModes[0])) {
+    throw new Error("verification-plan-prepared-source-drift");
+  }
+  if (prepared.sourceMode === "repository") {
+    try {
+      assertCatalogSourceIntegrity(catalog);
+    } catch (error) {
+      throw repositorySourceAuthorityDrift("prepared-catalog-integrity", error);
+    }
+    assertCanonicalRepositoryPreparedCatalog(prepared);
+  }
   const expectedIdentity = preparedCatalogSourceIdentity({
     ...prepared.sourceInputs,
     authority: prepared.authority,
@@ -936,24 +1033,37 @@ export function assertPreparedVerificationCatalog(prepared, catalog = prepared?.
   if (expectedIdentity.digest !== prepared.sourceIdentity?.digest) {
     throw new Error("verification-plan-prepared-source-drift");
   }
-  assertCatalogSourceIntegrity(catalog);
+  if (prepared.sourceMode !== "repository") assertCatalogSourceIntegrity(catalog);
   return prepared;
 }
 
 function assertRepositorySourceConsistency(catalog, sourceInputs) {
   if (catalog?.sourceMode !== "repository") return;
   if (!sourceInputs) throw new Error("verification-plan-missing-source-authority");
+  const repoRoot = sourceInputs.repoRoot || process.cwd();
+  const platform = sourceInputs.platform || process.platform;
+  let canonical;
+  let expected;
+  try {
+    canonical = repositoryAuthorityInputs(sourceInputs);
+    expected = canonicalRepositoryExpectation(repoRoot, platform);
+  } catch (error) {
+    throw repositorySourceAuthorityDrift("direct-source-inputs", error);
+  }
+  if (catalog?.sourceIntegrity?.digest !== expected.catalogDigest) {
+    throw repositorySourceAuthorityDrift("direct-canonical-identity");
+  }
   const consistency = checkVerificationCatalogConsistency(catalog, {
-    packageScripts: sourceInputs.packageScripts,
-    records: sourceInputs.verificationRecords || sourceInputs.records || VERIFICATION_DOMAINS,
-    selectorRoutes: sourceInputs.selectorRoutes || buildRouteIndex(),
-    repoRoot: sourceInputs.repoRoot || process.cwd(),
-    platform: sourceInputs.platform || process.platform,
-    estimatePolicy: sourceInputs.estimatePolicy || VERIFICATION_ESTIMATE_POLICY,
+    packageScripts: canonical.packageScripts,
+    records: canonical.verificationRecords,
+    selectorRoutes: canonical.selectorRoutes,
+    repoRoot,
+    platform,
+    estimatePolicy: canonical.estimatePolicy,
     sourceMode: "repository",
   });
   if (!consistency.consistent) {
-    const error = new Error("verification-plan-source-authority-drift");
+    const error = repositorySourceAuthorityDrift("direct-consistency");
     error.consistency = consistency;
     throw error;
   }
@@ -971,7 +1081,7 @@ export function checkVerificationCatalogConsistency(catalog, {
   estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
 } = {}) {
   const byId = catalogEntries(catalog);
-  const expectedCatalog = buildVerificationCatalog({
+  const expectedCatalog = buildVerificationCatalogInternal({
     packageScripts,
     records,
     selectorRoutes,
@@ -1094,6 +1204,151 @@ export function checkVerificationCatalogConsistency(catalog, {
     sourceIntegrityMismatches,
     unclassifiedCatalogEntries: [...unclassifiedCatalogEntries].sort(compareText),
     targetlessDiscoveryEntries: [...targetlessDiscoveryEntries].sort(compareText),
+  };
+}
+
+function shadowAuthorityProjection(authority) {
+  return authority.map((entry) => ({
+    commandRef: entry.commandRef,
+    routeIds: sortedUnique(entry.routeIds),
+    sourceRefs: sortedUnique(entry.sourceRefs),
+    ownerHints: sortedUnique(entry.ownerHints),
+    executionOwners: sortedUnique(entry.executionOwners),
+    executionOwner: entry.executionOwner,
+    cost: entry.cost,
+    resourceLocks: sortedUnique(entry.resourceLocks),
+    ciProfiles: sortedUnique(entry.ciProfiles),
+    tiers: sortedUnique(entry.tiers),
+    platforms: sortedUnique(entry.platforms),
+    entrypointPolicy: structuredClone(entry.entrypointPolicy),
+  })).sort((left, right) => compareText(left.commandRef, right.commandRef));
+}
+
+function shadowCatalogProjection(catalog) {
+  return catalog.entries.map((entry) => ({
+    id: entry.id,
+    kind: entry.kind,
+    command: entry.command,
+    executable: entry.executable,
+    argv: entry.argv,
+    runner: entry.runner,
+    files: entry.files,
+    modules: entry.modules,
+    specs: entry.specs,
+    refs: entry.refs,
+    domains: entry.domains,
+    cost: entry.cost,
+    executionOwner: entry.executionOwner,
+    platforms: entry.platforms,
+    resourceLocks: entry.resourceLocks,
+    tiers: entry.tiers,
+    ciProfiles: entry.ciProfiles,
+  })).sort((left, right) => compareText(left.id, right.id));
+}
+
+function shadowSupersessionProjection(supersession) {
+  return Object.fromEntries(Object.keys(supersession || {}).sort(compareText)
+    .map((superseder) => [superseder, sortedUnique(supersession[superseder])]));
+}
+
+function shadowMismatch(field, canonical, legacy) {
+  const canonicalPayload = JSON.stringify(canonical);
+  const legacyPayload = JSON.stringify(legacy);
+  return canonicalPayload === legacyPayload
+    ? null
+    : {
+      field,
+      canonicalDigest: createHash("sha256").update(canonicalPayload).digest("hex"),
+      legacyDigest: createHash("sha256").update(legacyPayload).digest("hex"),
+    };
+}
+
+function prepareShadowVerificationCatalog(options, fallbackEstimatePolicy) {
+  try {
+    return { prepared: prepareVerificationCatalogInternal(options), estimatePolicyError: null };
+  } catch (error) {
+    if (!String(error?.message || "").startsWith("verification-plan-estimate-policy-")) throw error;
+    return {
+      prepared: prepareVerificationCatalogInternal({ ...options, estimatePolicy: fallbackEstimatePolicy }),
+      estimatePolicyError: String(error.message),
+    };
+  }
+}
+
+export function compareVerificationMetadataShadow({
+  packageScripts = {},
+  canonicalVerificationRecords = VERIFICATION_DOMAINS,
+  canonicalSelectorRoutes = buildRouteIndex(),
+  canonicalSupersession = VERIFICATION_COMMAND_SUPERSESSION,
+  canonicalEstimatePolicy = VERIFICATION_ESTIMATE_POLICY,
+  legacyVerificationRecords = LEGACY_VERIFICATION_DOMAINS,
+  legacySelectorRoutes = buildLegacyRouteIndex(),
+  legacySupersession = LEGACY_VERIFICATION_COMMAND_SUPERSESSION,
+  legacyEstimatePolicy = LEGACY_VERIFICATION_ESTIMATE_POLICY,
+  repoRoot = process.cwd(),
+  platform = process.platform,
+} = {}) {
+  const canonicalShadow = prepareShadowVerificationCatalog({
+    packageScripts: VERIFICATION_METADATA_SOURCE.packageScripts,
+    verificationRecords: canonicalVerificationRecords,
+    selectorRoutes: canonicalSelectorRoutes,
+    repoRoot,
+    platform,
+    estimatePolicy: canonicalEstimatePolicy,
+    sourceMode: "shadow",
+  }, VERIFICATION_ESTIMATE_POLICY);
+  const legacyShadow = prepareShadowVerificationCatalog({
+    packageScripts,
+    verificationRecords: legacyVerificationRecords,
+    selectorRoutes: legacySelectorRoutes,
+    repoRoot,
+    platform,
+    estimatePolicy: legacyEstimatePolicy,
+    sourceMode: "shadow",
+  }, VERIFICATION_ESTIMATE_POLICY);
+  const canonicalPrepared = canonicalShadow.prepared;
+  const legacyPrepared = legacyShadow.prepared;
+  const canonicalPortfolio = buildScriptPortfolio(VERIFICATION_METADATA_SOURCE.packageScripts, { supersession: canonicalSupersession });
+  const legacyPortfolio = buildScriptPortfolio(packageScripts, { supersession: legacySupersession });
+  const comparisons = [
+    shadowMismatch("packageScripts", VERIFICATION_METADATA_SOURCE.packageScripts, packageScripts),
+    shadowMismatch("authority", shadowAuthorityProjection(canonicalPrepared.authority), shadowAuthorityProjection(legacyPrepared.authority)),
+    shadowMismatch("catalog", shadowCatalogProjection(canonicalPrepared.catalog), shadowCatalogProjection(legacyPrepared.catalog)),
+    shadowMismatch("selectorCommandRefs", canonicalPrepared.catalog.selectorCommandRefs, legacyPrepared.catalog.selectorCommandRefs),
+    shadowMismatch("portfolio", canonicalPortfolio.scripts, legacyPortfolio.scripts),
+    shadowMismatch(
+      "supersession",
+      shadowSupersessionProjection(canonicalSupersession),
+      shadowSupersessionProjection(legacySupersession),
+    ),
+    shadowMismatch("estimatePolicy", {
+      policy: canonicalEstimatePolicy,
+      validationError: canonicalShadow.estimatePolicyError,
+    }, {
+      policy: legacyEstimatePolicy,
+      validationError: legacyShadow.estimatePolicyError,
+    }),
+  ].filter(Boolean);
+  return {
+    schemaVersion: 1,
+    kind: "verification-metadata-shadow-comparison",
+    equal: comparisons.length === 0,
+    zeroSpawn: true,
+    metadataSourceIdentity: structuredClone(VERIFICATION_METADATA_SOURCE_IDENTITY),
+    authoredSurfacesBefore: 5,
+    authoredSurfacesAfter: 1,
+    projections: {
+      verificationRecords: canonicalVerificationRecords.length,
+      routes: canonicalSelectorRoutes.length,
+      commands: canonicalPrepared.authority.length,
+      catalogEntries: canonicalPrepared.catalog.entries.length,
+      leaves: canonicalPrepared.catalog.entries.filter((entry) => entry.kind === "leaf").length,
+      suites: canonicalPrepared.catalog.entries.filter((entry) => entry.kind === "suite").length,
+      portfolioScripts: canonicalPortfolio.scripts.length,
+      superseders: Object.keys(canonicalSupersession).length,
+      supersessionEdges: Object.values(canonicalSupersession).flat().length,
+    },
+    mismatches: comparisons,
   };
 }
 
@@ -1901,37 +2156,36 @@ function buildVerificationSelectionPlanInternal(catalog, commandRefs, {
 
 /** Expand selected suites into a stable, fail-closed whole-lane execution plan. */
 export function buildVerificationSelectionPlan(catalog, commandRefs, options = {}) {
+  if (catalog?.sourceMode === "shadow" || options.preparedCatalog?.sourceMode === "shadow") {
+    throw repositorySourceAuthorityDrift("shadow-planning-forbidden");
+  }
   if (options.preparedCatalog) assertPreparedVerificationCatalog(options.preparedCatalog, catalog);
   else assertRepositorySourceConsistency(catalog, options.sourceInputs);
   return buildVerificationSelectionPlanInternal(catalog, commandRefs, options);
 }
 
 /** Atomically build, verify, and plan the repository catalog for Phase 2 consumption. */
-export function buildRepositoryVerificationSelectionPlan({
-  packageScripts,
-  roots,
-  verificationRecords = VERIFICATION_DOMAINS,
-  selectorRoutes = buildRouteIndex(),
-  repoRoot = process.cwd(),
-  platform = process.platform,
-  supersession = VERIFICATION_COMMAND_SUPERSESSION,
-} = {}) {
+export function buildRepositoryVerificationSelectionPlan(options = {}) {
+  const {
+    roots,
+    repoRoot = process.cwd(),
+    platform = process.platform,
+  } = options;
+  const canonical = repositoryAuthorityInputs(options);
   const catalog = buildRepositoryVerificationCatalog({
-    packageScripts,
-    verificationRecords,
-    selectorRoutes,
     repoRoot,
     platform,
   });
   return buildVerificationSelectionPlan(catalog, roots, {
     platform,
-    supersession,
+    supersession: canonical.supersession,
     sourceInputs: {
-      packageScripts,
-      verificationRecords,
-      selectorRoutes,
+      packageScripts: canonical.packageScripts,
+      verificationRecords: canonical.verificationRecords,
+      selectorRoutes: canonical.selectorRoutes,
       repoRoot,
       platform,
+      estimatePolicy: canonical.estimatePolicy,
     },
   });
 }
@@ -1990,6 +2244,8 @@ export function buildScriptPortfolio(scripts, {
   return {
     schemaVersion: SCRIPT_PORTFOLIO_SCHEMA_VERSION,
     kind: "verification-script-portfolio",
+    metadataSourceIdentity: structuredClone(VERIFICATION_METADATA_SOURCE_IDENTITY),
+    metadataProjection: verificationMetadataSourceSummary(),
     canonicalEntrypoints: [...CANONICAL_VERIFICATION_ENTRYPOINTS],
     tierEntrypoints: VERIFICATION_TIER_ENTRYPOINTS.map((entry) => ({ ...entry })),
     productJourneyEntrypoints: VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS.map((entry) => ({ ...entry })),
@@ -2006,7 +2262,10 @@ export function buildScriptPortfolio(scripts, {
 export function readPackageScriptPortfolio(packagePath = path.resolve("package.json"), options = {}) {
   const resolvedPath = path.resolve(packagePath);
   const packageJson = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
-  return buildScriptPortfolio(packageJson.scripts || {}, options);
+  const scripts = resolvedPath === path.resolve("package.json")
+    ? repositoryAuthorityInputs({ packageScripts: packageJson.scripts || {} }).packageScripts
+    : packageJson.scripts || {};
+  return buildScriptPortfolio(scripts, options);
 }
 
 export function formatScriptPortfolioJson(portfolio) {
@@ -2055,7 +2314,7 @@ export function formatScriptPortfolioMarkdown(portfolio) {
 export function parseScriptPortfolioArgs(argv) {
   const args = [...argv];
   const action = args.shift() || "list";
-  if (!new Set(["list", "check"]).has(action)) {
+  if (!new Set(["list", "check", "shadow-check"]).has(action)) {
     throw new Error(`script-portfolio-unknown-action:${action}`);
   }
   let format = "summary";
@@ -2084,8 +2343,20 @@ export function runScriptPortfolioCli(argv, {
   stdout = process.stdout,
   verificationRecords = VERIFICATION_DOMAINS,
   selectorRoutes = buildRouteIndex(),
+  shadowComparator = compareVerificationMetadataShadow,
 } = {}) {
   const options = parseScriptPortfolioArgs(argv);
+  const packageJson = JSON.parse(fs.readFileSync(options.packagePath, "utf8"));
+  const packageScripts = packageJson.scripts || {};
+  if (options.action === "shadow-check") {
+    const report = shadowComparator({ packageScripts });
+    stdout.write(`${JSON.stringify(report, null, options.format === "json" ? 2 : 0)}\n`);
+    return report.equal ? 0 : 2;
+  }
+  if (options.action === "check" && options.packagePath === path.resolve("package.json")) {
+    const shadow = shadowComparator({ packageScripts });
+    if (!shadow.equal) return 2;
+  }
   const portfolio = readPackageScriptPortfolio(options.packagePath);
   const formatters = {
     json: formatScriptPortfolioJson,
@@ -2096,8 +2367,6 @@ export function runScriptPortfolioCli(argv, {
   if (options.action !== "check") return 0;
   if (!portfolio.summary.complete) return 1;
   if (options.packagePath !== path.resolve("package.json")) return 0;
-  const packageJson = JSON.parse(fs.readFileSync(options.packagePath, "utf8"));
-  const packageScripts = packageJson.scripts || {};
   const catalog = buildRepositoryVerificationCatalog({
     packageScripts,
     verificationRecords,

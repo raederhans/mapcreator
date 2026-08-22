@@ -1,4 +1,8 @@
-export const VERIFICATION_COMMAND_SUPERSESSION = Object.freeze({
+import { VERIFICATION_METADATA_SOURCE } from "./verification_catalog_source.mjs";
+import { VERIFICATION_METADATA_SOURCE_IDENTITY } from "./verification_catalog_projection.mjs";
+
+// Shadow-only baseline retained for deterministic legacy/canonical comparison.
+export const LEGACY_VERIFICATION_COMMAND_SUPERSESSION = Object.freeze({
   "verify:supervisor-contracts": Object.freeze([
     "test:node:supervisor-contracts",
     "test:node:supervisor-routing",
@@ -67,6 +71,9 @@ export const VERIFICATION_COMMAND_SUPERSESSION = Object.freeze({
     "verify:dist-drift",
   ]),
 });
+
+export const VERIFICATION_COMMAND_SUPERSESSION = VERIFICATION_METADATA_SOURCE.supersession;
+export const COMMAND_SUPERSESSION_SOURCE_IDENTITY = VERIFICATION_METADATA_SOURCE_IDENTITY;
 
 function commandSupersessionCycleError(nodes) {
   const stableNodes = [...new Set(nodes)].sort();

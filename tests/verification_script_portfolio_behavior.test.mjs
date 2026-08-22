@@ -14,6 +14,7 @@ import {
   assertPreparedVerificationCatalog,
   buildScriptPortfolio,
   CANONICAL_VERIFICATION_ENTRYPOINTS,
+  compareVerificationMetadataShadow,
   VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS,
   VERIFICATION_TIER_ENTRYPOINTS,
   checkVerificationCatalogConsistency,
@@ -22,17 +23,249 @@ import {
   formatScriptPortfolioSummary,
   parseScriptPortfolioArgs,
   normalizeVerificationPath,
+  prepareVerificationCatalog,
   prepareRepositoryVerificationCatalog,
+  runScriptPortfolioCli,
   sealVerificationCatalog,
+  VERIFICATION_METADATA_SOURCE_IDENTITY,
 } from "../tools/verification/script_portfolio.mjs";
-import { buildRouteIndex } from "../tools/test_route_registry.mjs";
 import {
+  buildRouteIndex,
+  ROUTE_REGISTRY_SOURCE_IDENTITY,
+} from "../tools/test_route_registry.mjs";
+import { COMMAND_SUPERSESSION_SOURCE_IDENTITY } from "../tools/verification/command_supersession.mjs";
+import {
+  LEGACY_VERIFICATION_ESTIMATE_POLICY,
   VERIFICATION_DOMAINS,
   VERIFICATION_ESTIMATE_POLICY,
 } from "../tools/verification/verification_domains.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CLI_PATH = path.join(REPO_ROOT, "tools", "verification", "script_portfolio.mjs");
+
+test("canonical metadata source owns every projection and shadows the retained legacy surfaces", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
+  const report = compareVerificationMetadataShadow({ packageScripts });
+  assert.equal(report.equal, true);
+  assert.equal(report.zeroSpawn, true);
+  assert.deepEqual(report.mismatches, []);
+  assert.equal(report.authoredSurfacesBefore, 5);
+  assert.equal(report.authoredSurfacesAfter, 1);
+  assert.deepEqual(report.projections, {
+    verificationRecords: 129,
+    routes: 374,
+    commands: 333,
+    catalogEntries: 428,
+    leaves: 399,
+    suites: 29,
+    portfolioScripts: 330,
+    superseders: 15,
+    supersessionEdges: 37,
+  });
+  assert.deepEqual(ROUTE_REGISTRY_SOURCE_IDENTITY, VERIFICATION_METADATA_SOURCE_IDENTITY);
+  assert.deepEqual(COMMAND_SUPERSESSION_SOURCE_IDENTITY, VERIFICATION_METADATA_SOURCE_IDENTITY);
+  const prepared = prepareRepositoryVerificationCatalog({ packageScripts });
+  assert.deepEqual(prepared.sourceIdentity.metadataSourceIdentity, VERIFICATION_METADATA_SOURCE_IDENTITY);
+  const driftedScripts = { ...packageScripts, "verify:edit": "node forged-edit.mjs" };
+  assert.throws(
+    () => prepareRepositoryVerificationCatalog({ packageScripts: driftedScripts }),
+    /verification-catalog-package-shadow-drift/,
+  );
+});
+
+test("shadow comparison reports deterministic metadata drift and exits two before spawning", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
+  const driftedRoutes = buildRouteIndex();
+  const driftedRoute = driftedRoutes.find((entry) => entry.id.startsWith("e2e:"));
+  driftedRoute.cost = driftedRoute.cost === "fast" ? "contract" : "fast";
+  const drifted = compareVerificationMetadataShadow({
+    packageScripts,
+    canonicalSelectorRoutes: driftedRoutes,
+  });
+  assert.equal(drifted.equal, false);
+  assert.equal(drifted.zeroSpawn, true);
+  assert.deepEqual(drifted.mismatches.map((entry) => entry.field), ["authority", "catalog"]);
+
+  const output = [];
+  let comparatorCalls = 0;
+  const exitCode = runScriptPortfolioCli(["shadow-check", "--format", "json"], {
+    stdout: { write: (value) => output.push(value) },
+    shadowComparator() {
+      comparatorCalls += 1;
+      return drifted;
+    },
+  });
+  assert.equal(comparatorCalls, 1);
+  assert.equal(exitCode, 2);
+  assert.equal(JSON.parse(output.join("")).equal, false);
+});
+
+test("repository builders reject every caller-owned authority surface before planning", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const forgedRoute = {
+    ...structuredClone(selectorRoutes[0]),
+    id: "forged:repository-authority",
+    sourceRef: "tests/forged_repository_authority.test.mjs",
+  };
+  const customEstimatePolicy = structuredClone(VERIFICATION_ESTIMATE_POLICY);
+  customEstimatePolicy.costClasses.fast.perLeafCostUnits += 1;
+  let runnerSpawns = 0;
+  const forbiddenRunner = () => {
+    runnerSpawns += 1;
+    throw new Error("forbidden-runner-spawned");
+  };
+
+  assert.throws(
+    () => buildRepositoryVerificationCatalog({
+      packageScripts,
+      verificationRecords: VERIFICATION_DOMAINS.slice(1),
+      catalogBuilder: forbiddenRunner,
+    }),
+    /verification-catalog-repository-authority-override:verificationRecords/,
+  );
+  assert.throws(
+    () => prepareRepositoryVerificationCatalog({
+      packageScripts,
+      selectorRoutes: [...selectorRoutes, forgedRoute],
+      authorityReconciler: forbiddenRunner,
+    }),
+    /verification-catalog-repository-authority-override:selectorRoutes/,
+  );
+  assert.throws(
+    () => buildRepositoryVerificationSelectionPlan({
+      packageScripts,
+      roots: [],
+      estimatePolicy: customEstimatePolicy,
+      catalogBuilder: forbiddenRunner,
+    }),
+    /verification-catalog-repository-authority-override:estimatePolicy/,
+  );
+  assert.equal(runnerSpawns, 0);
+});
+
+test("fixture builders cannot self-report repository or shadow authority", () => {
+  const fixtureInput = {
+    packageScripts: { forged: "node --test tests/forged.test.mjs" },
+    selectorRoutes: [{ ...route("forged", "forged"), id: "fixture:forged" }],
+  };
+  for (const sourceMode of ["repository", "shadow"]) {
+    assert.throws(
+      () => prepareVerificationCatalog({ ...fixtureInput, sourceMode }),
+      new RegExp(`verification-catalog-fixture-source-mode-forbidden:${sourceMode}`),
+    );
+    assert.throws(
+      () => buildVerificationCatalog({ ...fixtureInput, sourceMode }),
+      new RegExp(`verification-catalog-fixture-source-mode-forbidden:${sourceMode}`),
+    );
+  }
+  const preparedFixture = prepareVerificationCatalog(fixtureInput);
+  assert.equal(preparedFixture.sourceMode, "fixture");
+  assert.equal(preparedFixture.catalog.sourceMode, "fixture");
+});
+
+test("production planning rejects self-consistent forged repository authority before execution", () => {
+  const fixtureInput = {
+    packageScripts: { forged: "node --test tests/forged.test.mjs" },
+    selectorRoutes: [{ ...route("forged", "forged"), id: "fixture:forged" }],
+  };
+  const fixture = prepareVerificationCatalog(fixtureInput);
+  const forgedPrepared = structuredClone(fixture);
+  forgedPrepared.sourceMode = "repository";
+  forgedPrepared.sourceIdentity.sourceMode = "repository";
+  forgedPrepared.sourceInputs.sourceMode = "repository";
+  forgedPrepared.catalog = sealVerificationCatalog({
+    ...forgedPrepared.catalog,
+    sourceMode: "repository",
+  });
+  forgedPrepared.catalogDigest = forgedPrepared.catalog.sourceIntegrity.digest;
+  let executions = 0;
+  let runnerSpawns = 0;
+  assert.throws(
+    () => {
+      const plan = buildVerificationSelectionPlan(forgedPrepared.catalog, ["forged"], {
+        preparedCatalog: forgedPrepared,
+        runner() {
+          runnerSpawns += 1;
+        },
+      });
+      executions = plan.executions.length;
+    },
+    /verification-plan-source-authority-drift/,
+  );
+  assert.equal(executions, 0);
+  assert.equal(runnerSpawns, 0);
+
+  const forgedCatalog = sealVerificationCatalog({
+    ...fixture.catalog,
+    sourceMode: "repository",
+  });
+  assert.throws(
+    () => buildVerificationSelectionPlan(forgedCatalog, ["forged"], {
+      sourceInputs: {
+        ...fixture.sourceInputs,
+        sourceMode: "repository",
+      },
+    }),
+    /verification-plan-source-authority-drift/,
+  );
+  const shadowCatalog = sealVerificationCatalog({
+    ...fixture.catalog,
+    sourceMode: "shadow",
+  });
+  assert.throws(
+    () => buildVerificationSelectionPlan(shadowCatalog, ["forged"]),
+    /verification-plan-source-authority-drift/,
+  );
+  assert.equal(executions, 0);
+  assert.equal(runnerSpawns, 0);
+});
+
+test("shadow estimate comparison covers aggregation and every cost-class field", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
+  const mutations = [{
+    label: "aggregation",
+    mutate(policy) {
+      policy.aggregation = "forged-aggregation";
+    },
+  }];
+  for (const costClass of ["fast", "contract", "heavy"]) {
+    for (const field of [
+      "groupBaseRuntimeSeconds",
+      "perLeafRuntimeSeconds",
+      "groupBaseCostUnits",
+      "perLeafCostUnits",
+    ]) {
+      mutations.push({
+        label: `${costClass}.${field}`,
+        mutate(policy) {
+          policy.costClasses[costClass][field] += 1;
+        },
+      });
+    }
+  }
+
+  let runnerSpawns = 0;
+  for (const mutation of mutations) {
+    const legacyEstimatePolicy = structuredClone(LEGACY_VERIFICATION_ESTIMATE_POLICY);
+    mutation.mutate(legacyEstimatePolicy);
+    const report = compareVerificationMetadataShadow({ packageScripts, legacyEstimatePolicy });
+    assert.equal(report.equal, false, mutation.label);
+    assert.equal(report.zeroSpawn, true, mutation.label);
+    assert.deepEqual(report.mismatches.map((entry) => entry.field), ["estimatePolicy"], mutation.label);
+    const exitCode = runScriptPortfolioCli(["shadow-check", "--format", "json"], {
+      stdout: { write() {} },
+      shadowComparator() {
+        return report;
+      },
+      spawn() {
+        runnerSpawns += 1;
+      },
+    });
+    assert.equal(exitCode, 2, mutation.label);
+  }
+  assert.equal(runnerSpawns, 0);
+});
 
 function completeFixture(extra = {}) {
   return {
@@ -1158,15 +1391,30 @@ test("repository planning fails when current package or route sources drift", ()
     executionOwner: "child-safe",
     ciProfile: "pr-fast",
   };
-  const catalog = buildRepositoryVerificationCatalog({
+  assert.throws(
+    () => buildRepositoryVerificationCatalog({
+      packageScripts: { a: "node --test tests/a.test.mjs" },
+      verificationRecords: [],
+      selectorRoutes: [authorityRoute],
+      repoRoot: REPO_ROOT,
+      platform: process.platform,
+    }),
+    /verification-catalog-package-shadow-drift/,
+  );
+  const fixtureCatalog = buildVerificationCatalog({
     packageScripts: { a: "node --test tests/a.test.mjs" },
-    verificationRecords: [],
+    records: [authorityRoute],
     selectorRoutes: [authorityRoute],
     repoRoot: REPO_ROOT,
     platform: process.platform,
+    sourceMode: "fixture",
+  });
+  const forgedRepositoryCatalog = sealVerificationCatalog({
+    ...fixtureCatalog,
+    sourceMode: "repository",
   });
   assert.throws(
-    () => buildVerificationSelectionPlan(catalog, ["a"], {
+    () => buildVerificationSelectionPlan(forgedRepositoryCatalog, ["a"], {
       platform: process.platform,
       sourceInputs: {
         packageScripts: { a: "node --test tests/b.test.mjs" },
@@ -1174,10 +1422,13 @@ test("repository planning fails when current package or route sources drift", ()
         selectorRoutes: [authorityRoute],
         repoRoot: REPO_ROOT,
         platform: process.platform,
+        sourceMode: "repository",
       },
     }),
     /verification-plan-source-authority-drift/,
   );
+  const plan = buildVerificationSelectionPlan(fixtureCatalog, ["a"], { platform: process.platform });
+  assert.deepEqual(plan.normalizedLeaves, ["node-test:tests/a.test.mjs"]);
 });
 
 test("reconciled authority rejects route source drift mechanically", () => {
@@ -1367,6 +1618,6 @@ test("canonical catalog seals entrypoint depth eligibility with cost and owner a
     .entrypointPolicy.minimumDepth = "pr";
   assert.throws(
     () => assertPreparedVerificationCatalog(driftedPrepared, driftedPrepared.catalog),
-    /verification-plan-prepared-source-drift/,
+    /verification-plan-source-authority-drift/,
   );
 });

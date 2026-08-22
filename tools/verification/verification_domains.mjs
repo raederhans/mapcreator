@@ -1,4 +1,27 @@
-export const VERIFICATION_RESOURCE_LOCKS = Object.freeze([
+import {
+  buildCanonicalVerificationRecords,
+  VERIFICATION_METADATA_SOURCE,
+  VERIFICATION_METADATA_SOURCE_IDENTITY,
+} from "./verification_catalog_projection.mjs";
+
+export const VERIFICATION_RESOURCE_LOCKS = VERIFICATION_METADATA_SOURCE.enums.resourceLocks;
+export const VERIFICATION_EXECUTION_OWNERS = VERIFICATION_METADATA_SOURCE.enums.executionOwners;
+export const VERIFICATION_COSTS = VERIFICATION_METADATA_SOURCE.enums.costs;
+export const VERIFICATION_ESTIMATE_POLICY = VERIFICATION_METADATA_SOURCE.estimatePolicy;
+export const VERIFICATION_LAYERS = VERIFICATION_METADATA_SOURCE.enums.layers;
+export const VERIFICATION_CI_PROFILES = VERIFICATION_METADATA_SOURCE.enums.ciProfiles;
+export const VERIFICATION_ENTRYPOINT_DEPTHS = VERIFICATION_METADATA_SOURCE.enums.entrypointDepths;
+export const VERIFICATION_ENTRYPOINT_IDS = VERIFICATION_METADATA_SOURCE.enums.entrypointIds;
+export const VERIFICATION_SELECTOR_SANITY_COMMAND_REF = VERIFICATION_METADATA_SOURCE.commandRefs.selectorSanity;
+export const ADAPTIVE_RECURSIVE_COMMAND_REF = VERIFICATION_METADATA_SOURCE.commandRefs.adaptiveRecursive;
+export const VERIFICATION_EXACT_DIRECT_COMMAND_REFS = VERIFICATION_METADATA_SOURCE.commandRefs.exactDirect;
+export const VERIFY_CORE_GROUPS = VERIFICATION_METADATA_SOURCE.verifyCoreGroups;
+export const VERIFY_CORE_MAIN_THREAD_GROUP = VERIFICATION_METADATA_SOURCE.verifyCoreMainThreadGroup;
+
+export { VERIFICATION_METADATA_SOURCE_IDENTITY };
+
+// Shadow-only baseline retained until canonical projection equality has proven stable.
+export const LEGACY_VERIFICATION_RESOURCE_LOCKS = Object.freeze([
   "browser-dev-server",
   "perf-dev-server",
   "playwright-browser",
@@ -10,19 +33,19 @@ export const VERIFICATION_RESOURCE_LOCKS = Object.freeze([
   "system-power-scheme",
 ]);
 
-export const VERIFICATION_EXECUTION_OWNERS = Object.freeze([
+export const LEGACY_VERIFICATION_EXECUTION_OWNERS = Object.freeze([
   "child-safe",
   "main-thread",
   "ci-only",
 ]);
 
-export const VERIFICATION_COSTS = Object.freeze([
+export const LEGACY_VERIFICATION_COSTS = Object.freeze([
   "fast",
   "contract",
   "heavy",
 ]);
 
-export const VERIFICATION_ESTIMATE_POLICY = Object.freeze({
+export const LEGACY_VERIFICATION_ESTIMATE_POLICY = Object.freeze({
   schemaVersion: 1,
   kind: "verification-estimate-policy",
   aggregation: "sum-process-group-base-plus-leaf-scale",
@@ -48,7 +71,7 @@ export const VERIFICATION_ESTIMATE_POLICY = Object.freeze({
   }),
 });
 
-export const VERIFICATION_LAYERS = Object.freeze([
+export const LEGACY_VERIFICATION_LAYERS = Object.freeze([
   "smoke",
   "contract",
   "regression",
@@ -56,7 +79,7 @@ export const VERIFICATION_LAYERS = Object.freeze([
   "heavy",
 ]);
 
-export const VERIFICATION_CI_PROFILES = Object.freeze([
+export const LEGACY_VERIFICATION_CI_PROFILES = Object.freeze([
   "pr-fast",
   "pr-smoke",
   "demo",
@@ -66,14 +89,14 @@ export const VERIFICATION_CI_PROFILES = Object.freeze([
   "scenario-contract-matrix",
 ]);
 
-export const VERIFICATION_ENTRYPOINT_DEPTHS = Object.freeze([
+export const LEGACY_VERIFICATION_ENTRYPOINT_DEPTHS = Object.freeze([
   "local",
   "pr",
   "nightly",
   "release",
 ]);
 
-export const VERIFICATION_ENTRYPOINT_IDS = Object.freeze([
+export const LEGACY_VERIFICATION_ENTRYPOINT_IDS = Object.freeze([
   "edit",
   "impact",
   "pr",
@@ -81,16 +104,16 @@ export const VERIFICATION_ENTRYPOINT_IDS = Object.freeze([
   "release",
 ]);
 
-export const VERIFICATION_SELECTOR_SANITY_COMMAND_REF = "node tools/select_verification_targets.mjs --check";
-export const ADAPTIVE_RECURSIVE_COMMAND_REF = "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread";
-export const VERIFICATION_EXACT_DIRECT_COMMAND_REFS = Object.freeze([
+export const LEGACY_VERIFICATION_SELECTOR_SANITY_COMMAND_REF = "node tools/select_verification_targets.mjs --check";
+export const LEGACY_ADAPTIVE_RECURSIVE_COMMAND_REF = "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread";
+export const LEGACY_VERIFICATION_EXACT_DIRECT_COMMAND_REFS = Object.freeze([
   VERIFICATION_SELECTOR_SANITY_COMMAND_REF,
   ADAPTIVE_RECURSIVE_COMMAND_REF,
 ]);
 
 const PYTHON_QUICK_COMMAND = "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q";
 
-export const VERIFY_CORE_GROUPS = Object.freeze([
+export const LEGACY_VERIFY_CORE_GROUPS = Object.freeze([
   Object.freeze({ id: "infra", title: "Infrastructure contracts" }),
   Object.freeze({ id: "python-quick", title: "Quick Python contracts" }),
   Object.freeze({ id: "startup-node", title: "Startup Node contracts" }),
@@ -99,7 +122,7 @@ export const VERIFY_CORE_GROUPS = Object.freeze([
   Object.freeze({ id: "pages", title: "Pages contract checks" }),
 ]);
 
-export const VERIFY_CORE_MAIN_THREAD_GROUP = Object.freeze({
+export const LEGACY_VERIFY_CORE_MAIN_THREAD_GROUP = Object.freeze({
   id: "main-thread-e2e",
   title: "Main-thread E2E checks",
 });
@@ -260,7 +283,7 @@ function createP3PassFamilyRoute({
   });
 }
 
-export const VERIFICATION_DOMAINS = Object.freeze([
+export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
   Object.freeze({
     id: "infra:local-verification-closure",
     commandRef: "verify:local-infra",
@@ -2891,3 +2914,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     supervisorDomain: "test-routing",
   })),
 ].map(applyMeasuredRuntimeMetadata));
+
+export const VERIFICATION_DOMAINS = Object.freeze(
+  buildCanonicalVerificationRecords().map((record) => Object.freeze(record)),
+);

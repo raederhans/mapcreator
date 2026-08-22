@@ -60,6 +60,7 @@ import {
   prepareRepositoryVerificationCatalog,
 } from "../tools/verification/script_portfolio.mjs";
 import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
+import { VERIFICATION_METADATA_SOURCE_IDENTITY } from "../tools/verification/verification_catalog_projection.mjs";
 
 const PACKAGE_SCRIPTS = {
   "test:node:city-points-render-owner": "node --test tests/city_points_render_owner_behavior.test.mjs tests/urban_city_policy_strategic_values_behavior.test.mjs",
@@ -2170,24 +2171,32 @@ test("selector sanity omission and command rename cannot silently satisfy local 
     ...packageScripts,
     "verify:local-infra": "node --test tests/verification_script_portfolio_behavior.test.mjs tests/verification_metadata_behavior.test.mjs tests/verify_core_runner_behavior.test.mjs tests/verification_profile_behavior.test.mjs && npm run python -- -m unittest tests.test_e2e_structural_tooling -q",
   };
-  const binding = prepareRepositoryVerificationCatalogBinding({
+  assert.throws(() => prepareRepositoryVerificationCatalogBinding({
     packageScripts: missingSelectorScripts,
     verificationRecords: VERIFICATION_DOMAINS,
     selectorRoutes,
     repoRoot: process.cwd(),
     platform: process.platform,
+  }), /verification-catalog-package-shadow-drift/);
+  const preparedCatalog = prepareVerificationCatalog({
+    packageScripts: missingSelectorScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+    sourceMode: "fixture",
   });
   const raw = buildAdaptiveEntrypointRecommendation(
     ["tools/run_adaptive_tests.mjs"],
     selectorRoutes,
-    { entrypoint: "impact", routeAuthority: binding.preparedCatalog.authority },
+    { entrypoint: "impact", routeAuthority: preparedCatalog.authority },
   );
-  const projected = binding.bindSelectionReport(constrainAdaptiveEntrypointSelection(raw, "impact", {
-    preparedCatalog: binding.preparedCatalog,
-  }));
+  const projected = bindSelectionToPreparedCatalog(constrainAdaptiveEntrypointSelection(raw, "impact", {
+    preparedCatalog,
+  }), preparedCatalog);
   const plan = buildExecutionPlan(projected, {
     packageScripts: missingSelectorScripts,
-    preparedCatalog: binding.preparedCatalog,
+    preparedCatalog,
   });
   assert.equal(projected.localLeafEquivalence.status, "gap");
   assert.ok(projected.localLeafEquivalence.missingLeaves.includes(
@@ -2928,6 +2937,10 @@ test("real selector CLI artifact binds to the repository catalog and drives stru
   assert.deepEqual(artifact.routeAuthority, binding.preparedCatalog.authority);
   assert.equal(artifact.catalogDigest, binding.preparedCatalog.catalogDigest);
   assert.deepEqual(artifact.catalogSourceIdentity, binding.preparedCatalog.sourceIdentity);
+  assert.deepEqual(
+    artifact.catalogSourceIdentity.metadataSourceIdentity,
+    VERIFICATION_METADATA_SOURCE_IDENTITY,
+  );
   assert.deepEqual(artifact.selectorRootSet, currentSelection.selectorRootSet);
 
   const loaded = readSelectionArtifact(artifactPath, changedFiles, {
