@@ -1897,7 +1897,10 @@ test("local entrypoints project the canonical selector to child-safe work only",
   assert.ok(projected.rawCanonicalRoots.length > projected.recommendedCommands.length);
   assert.ok(projected.deferredByTier.length > 0);
   assert.ok(projected.matchedByFile[0].matchedRouteIds.includes("infra:local-verification-closure"));
-  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), ["verify:local-infra"]);
+  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), [
+    "test:node:scenario-chunk-contracts:quick",
+    "verify:local-infra",
+  ]);
   assert.equal(projected.localEntrypointPolicy.source, "canonical-verification-catalog");
   assert.equal(projected.localLeafEquivalence.status, "equivalent");
   for (const forbidden of [
@@ -1984,10 +1987,15 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
   );
   assert.deepEqual(
     projected.recommendedCommands.map((entry) => entry.commandRef),
-    ["verify:local-infra"],
+    ["test:node:scenario-chunk-contracts:quick", "verify:local-infra"],
   );
   for (const entry of projected.matchedByFile) {
-    assert.deepEqual(entry.recommendedCommands.map((command) => command.commandRef), ["verify:local-infra"]);
+    assert.deepEqual(
+      entry.recommendedCommands.map((command) => command.commandRef),
+      entry.changedFile === "package.json"
+        ? ["test:node:scenario-chunk-contracts:quick", "verify:local-infra"]
+        : ["verify:local-infra"],
+    );
   }
 
   const plan = applyLocalEntrypointExecutionBudget(
@@ -2008,6 +2016,9 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
   assert.ok(plan.selectedLeaves.some((entry) => (
     entry.leafId === "node-test:tests/verification_profile_behavior.test.mjs"
   )));
+  assert.ok(plan.selectedLeaves.some((entry) => (
+    entry.leafId === "node-test:tests/scenario_chunk_contracts.quick.test.mjs"
+  )));
   assert.equal(plan.localEntrypointBudget.entrypoint, "impact");
   assert.deepEqual(plan.localEntrypointBudget.limits, {
     maxCommands: 4,
@@ -2017,11 +2028,11 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
     maxEstimatedCostUnits: 4,
   });
   assert.deepEqual(plan.localEntrypointBudget.actual, {
-    commandCount: 1,
-    leafCount: 6,
-    processGroupCount: 3,
-    estimatedRuntimeSeconds: 90,
-    estimatedCostUnits: 3,
+    commandCount: 2,
+    leafCount: 7,
+    processGroupCount: 4,
+    estimatedRuntimeSeconds: 115,
+    estimatedCostUnits: 3.75,
   });
   assert.ok(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds >= 90);
   assert.ok(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds <= 120);
@@ -2266,6 +2277,77 @@ test("production adaptive CLI dry-run reaches a valid local execution boundary",
   assert.equal(artifact.executionResults, null);
   assert.equal(artifact.executionStatus, "planned");
   assertEverySelectorRootHasCanonicalOutcome(artifact);
+});
+
+test("production adaptive CLI plans the exact PR7A history diff with one protected shared-leaf authority", (t) => {
+  const runtimeTmp = path.join(process.cwd(), ".runtime", "tmp");
+  fs.mkdirSync(runtimeTmp, { recursive: true });
+  const tempRoot = fs.mkdtempSync(path.join(runtimeTmp, "pr7a-adaptive-history-"));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const jsonPath = path.join(tempRoot, "selection.json");
+  const markdownPath = path.join(tempRoot, "selection.md");
+  const profilePath = path.join(tempRoot, "profile.json");
+  const historyBase = "41803bf510987b8bd36178de221e7c035a57a40a";
+  const expectedChangedFiles = [
+    "package.json",
+    "tests/helpers/scenario_chunk_contract_support.mjs",
+    "tests/scenario_chunk_contract_shadow_behavior.test.mjs",
+    "tests/scenario_chunk_contracts.heavy.test.mjs",
+    "tests/scenario_chunk_contracts.quick.test.mjs",
+    "tests/scenario_chunk_contracts.test.mjs",
+    "tests/test_e2e_structural_tooling.py",
+    "tests/verification_metadata_behavior.test.mjs",
+    "tests/verification_script_portfolio_behavior.test.mjs",
+    "tests/verify_core_runner_behavior.test.mjs",
+    "tools/test_route_registry.mjs",
+    "tools/verification/test_shadow_equivalence.mjs",
+    "tools/verification/verification_catalog_source.mjs",
+    "tools/verification/verification_domains.mjs",
+  ];
+  const result = spawnSync(process.execPath, [
+    "tools/run_adaptive_tests.mjs",
+    "--history-base", historyBase,
+    "--defer-main-thread",
+    "--json-out", jsonPath,
+    "--md-out", markdownPath,
+    "--profile-out", profilePath,
+  ], { cwd: process.cwd(), encoding: "utf8" });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const artifact = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+  assert.deepEqual(artifact.changedFiles, expectedChangedFiles);
+  assert.equal(artifact.recommendedCommands.length, 237);
+  assert.equal(artifact.mainThreadSerialVerification.length, 27);
+  assert.deepEqual(artifact.unmatchedChangedFiles, []);
+  assert.deepEqual(artifact.executionPlan.routeGaps, []);
+  assert.equal(artifact.executionPlan.blockedMainThreadCommands.length, 27);
+  assert.equal(artifact.executionStatus, "planned");
+  assert.equal(artifact.executionResults, null);
+  assert.ok(fs.existsSync(markdownPath));
+  assert.ok(fs.existsSync(profilePath));
+
+  const expectedLocks = [".runtime-output", "heavy-geo", "scenario-data"];
+  const sharedLeaf = artifact.executionPlan.deferredMainThreadLeaves.find((entry) => (
+    entry.leafId === "node-test:tests/scenario_chunk_contracts.test.mjs"
+  ));
+  assert.ok(sharedLeaf);
+  assert.deepEqual(sharedLeaf.resourceLocks, expectedLocks);
+  assert.deepEqual(sharedLeaf.sourceRootRefs, [
+    "test:node:p4:p4-2b",
+    "verify:tno-coverage-chain",
+  ]);
+  for (const commandRef of [
+    "test:node:p4:p4-1",
+    "test:node:p4:p4-2a",
+    "test:node:p4:p4-2b",
+    "test:node:p4:p4-2c",
+    "test:node:p4:p4-3",
+    "verify:tno-coverage-chain",
+  ]) {
+    const root = artifact.mainThreadSerialVerification.find((entry) => entry.commandRef === commandRef);
+    assert.ok(root, commandRef);
+    assert.deepEqual(root.resourceLocks, expectedLocks, commandRef);
+  }
 });
 
 test("production adaptive CLI rejects fixture and selection identity drift", (t) => {

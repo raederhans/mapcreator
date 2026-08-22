@@ -37,13 +37,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 330);
-  assert.equal(summary.contributorRecords, 416);
+  assert.equal(summary.packageScriptCount, 334);
+  assert.equal(summary.contributorRecords, 420);
   assert.equal(summary.verificationRecordProjectionCount, 129);
-  assert.equal(summary.routeProjectionCount, 374);
-  assert.equal(summary.commandCount, 333);
+  assert.equal(summary.routeProjectionCount, 378);
+  assert.equal(summary.commandCount, 337);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 416);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 420);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -199,6 +199,43 @@ test("verification metadata validates against package scripts and supervisor dom
   );
 });
 
+test("scenario chunk split routes keep quick local and defer data-reading paths to full", () => {
+  const byCommand = (commandRef) => VERIFICATION_METADATA_SOURCE.records.find((entry) => (
+    entry.commandRef === commandRef && entry.selector !== null
+  ));
+  const quick = byCommand("test:node:scenario-chunk-contracts:quick");
+  assert.ok(quick);
+  assert.equal(quick.cost, "fast");
+  assert.deepEqual(quick.resourceLocks, []);
+  assert.deepEqual(quick.executionOwners, ["child-safe"]);
+  assert.deepEqual(quick.profiles, ["pr-fast"]);
+  assert.deepEqual(
+    VERIFICATION_METADATA_SOURCE.entrypointPolicies[quick.entrypointPolicyIndex].eligibleEntrypoints,
+    ["edit", "impact", "pr"],
+  );
+
+  for (const commandRef of [
+    "test:node:scenario-chunk-contracts:heavy",
+    "test:node:scenario-chunk-contracts:split",
+    "test:node:scenario-chunk-contracts:shadow",
+  ]) {
+    const entry = byCommand(commandRef);
+    assert.ok(entry);
+    assert.equal(entry.cost, "heavy");
+    assert.deepEqual(entry.executionOwners, ["main-thread"]);
+    assert.deepEqual(entry.profiles, ["full"]);
+    assert.deepEqual(
+      VERIFICATION_METADATA_SOURCE.entrypointPolicies[entry.entrypointPolicyIndex].eligibleEntrypoints,
+      ["nightly"],
+    );
+    assert.ok(entry.resourceLocks.includes("scenario-data"));
+  }
+  assert.deepEqual(byCommand("test:node:scenario-chunk-contracts:shadow").resourceLocks, [
+    ".runtime-output",
+    "scenario-data",
+  ]);
+});
+
 test("P4.0 state ownership policy owns its files, routes, and verify-core commands", () => {
   const policyEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:state-writer-policy"
@@ -242,6 +279,8 @@ test("P4.0 state ownership policy owns its files, routes, and verify-core comman
   }
 });
 
+const P4_SHARED_NODE_LOCKS = [".runtime-output", "heavy-geo", "scenario-data"];
+
 test("P4.1 full boot root and exact gate stay in the nightly main-thread tier", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-1-boot-actions"
@@ -263,7 +302,7 @@ test("P4.1 full boot root and exact gate stay in the nightly main-thread tier", 
     assert.equal(entry.executionOwner, "main-thread");
     assert.equal(entry.cost, "heavy");
     assert.equal(entry.ciProfile, "full");
-    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
+    assert.deepEqual(entry.resourceLocks, P4_SHARED_NODE_LOCKS);
     assert.equal(entry.supervisorDomain, "state-ownership");
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
@@ -327,9 +366,13 @@ test("P4.3 routes include the render perf owner and its behavior contract", () =
   }
 
   const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");
+  const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-3-renderer-actions"
+  ));
   const boundaryEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-3-renderer-boundary"
   ));
+  assert.deepEqual(actionEntry.resourceLocks, P4_SHARED_NODE_LOCKS);
   assert.equal(boundaryEntry.executionOwner, "main-thread");
   assert.equal(boundaryEntry.cost, "heavy");
   assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
@@ -396,7 +439,7 @@ test("P4.2a full scenario root and exact gate stay in the nightly main-thread ti
     assert.equal(entry.executionOwner, "main-thread");
     assert.equal(entry.cost, "heavy");
     assert.equal(entry.ciProfile, "full");
-    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
+    assert.deepEqual(entry.resourceLocks, P4_SHARED_NODE_LOCKS);
     assert.equal(entry.supervisorDomain, "state-ownership");
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
@@ -450,7 +493,7 @@ test("P4.2b full scenario chunk root stays in the nightly main-thread tier", () 
     assert.equal(entry.executionOwner, "main-thread");
     assert.equal(entry.cost, "heavy");
     assert.equal(entry.ciProfile, "full");
-    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
+    assert.deepEqual(entry.resourceLocks, P4_SHARED_NODE_LOCKS);
     assert.equal(entry.routeRegistry, true);
   }
   assert.equal(boundaryEntry.executionOwner, "main-thread");
@@ -511,7 +554,7 @@ test("P4.2c full scenario health root stays in the nightly main-thread tier", ()
     assert.equal(entry.executionOwner, "main-thread");
     assert.equal(entry.cost, "heavy");
     assert.equal(entry.ciProfile, "full");
-    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
+    assert.deepEqual(entry.resourceLocks, P4_SHARED_NODE_LOCKS);
     assert.equal(entry.supervisorDomain, "state-ownership");
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));

@@ -1,4 +1,5 @@
 import {
+  buildCanonicalRouteIndex,
   buildCanonicalVerificationRecords,
   VERIFICATION_METADATA_SOURCE,
   VERIFICATION_METADATA_SOURCE_IDENTITY,
@@ -241,12 +242,19 @@ const P4_RUNTIME_HEAVY_COMMANDS = new Set([
   "test:node:p4:p4-3",
 ]);
 
+const P4_RUNTIME_METADATA_BY_ID = new Map(
+  buildCanonicalRouteIndex()
+    .filter((entry) => P4_RUNTIME_HEAVY_COMMANDS.has(entry.commandRef))
+    .map((entry) => [entry.id, entry]),
+);
+
 function applyMeasuredRuntimeMetadata(entry) {
   if (!P4_RUNTIME_HEAVY_COMMANDS.has(entry.commandRef)) return entry;
+  const canonicalEntry = P4_RUNTIME_METADATA_BY_ID.get(entry.id);
   return Object.freeze({
     ...entry,
     cost: "heavy",
-    resourceLocks: [".runtime-output"],
+    resourceLocks: canonicalEntry.resourceLocks,
     executionOwner: "main-thread",
     ciProfile: "full",
   });
@@ -284,6 +292,24 @@ function createP3PassFamilyRoute({
 }
 
 export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
+  // New A1 routes have no pre-canonical side table. Project them from the
+  // authored source so the retained PR6 shadow stays exact without creating
+  // another metadata authority.
+  ...buildCanonicalRouteIndex()
+    .filter((entry) => [
+      "test:node:scenario-chunk-contracts:quick",
+      "test:node:scenario-chunk-contracts:heavy",
+      "test:node:scenario-chunk-contracts:split",
+      "test:node:scenario-chunk-contracts:shadow",
+    ].includes(entry.commandRef))
+    .map((entry) => Object.freeze({
+      ...entry,
+      commandType: "package-script",
+      packageScriptRequired: true,
+      sourceRefs: entry.sourceRef.split(","),
+      supervisorDomain: entry.domain,
+      routeRegistry: true,
+    })),
   Object.freeze({
     id: "infra:local-verification-closure",
     commandRef: "verify:local-infra",

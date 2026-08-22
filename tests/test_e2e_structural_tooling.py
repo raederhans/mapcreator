@@ -889,7 +889,26 @@ if (
 ) {
   throw new Error(`full P4 policy route must preserve its serialized lane: ${JSON.stringify(fullP4PolicyRoute)}`);
 }
-const prNodeRoutes = nodeRoutes.filter((route) => route !== fullP4PolicyRoute);
+const scenarioChunkDeferredCommands = new Set([
+  'test:node:scenario-chunk-contracts:heavy',
+  'test:node:scenario-chunk-contracts:split',
+  'test:node:scenario-chunk-contracts:shadow',
+]);
+const scenarioChunkDeferredRoutes = nodeRoutes.filter((route) => scenarioChunkDeferredCommands.has(route.commandRef));
+if (
+  scenarioChunkDeferredRoutes.length !== scenarioChunkDeferredCommands.size
+  || scenarioChunkDeferredRoutes.some((route) => (
+    route.executionOwner !== 'main-thread'
+    || route.cost !== 'heavy'
+    || route.ciProfile !== 'full'
+    || !route.resourceLocks.includes('scenario-data')
+  ))
+) {
+  throw new Error(`scenario chunk deferred routes must stay full and scenario-data locked: ${JSON.stringify(scenarioChunkDeferredRoutes)}`);
+}
+const prNodeRoutes = nodeRoutes.filter((route) => (
+  route !== fullP4PolicyRoute && !scenarioChunkDeferredCommands.has(route.commandRef)
+));
 if (prNodeRoutes.some((route) => route.executionOwner !== 'child-safe' || route.resourceLocks.length > 0 || route.ciProfile !== 'pr-fast')) {
   throw new Error('focused node routes must stay child-safe, lock-free, and pr-fast');
 }
@@ -1630,7 +1649,7 @@ const page = {
         )
         self.assert_command_ok(selector_result)
         selector_payload = json.loads(selector_json_path.read_text(encoding="utf-8"))
-        self.assertEqual(len(selector_payload["routeAuthority"]), 333)
+        self.assertEqual(len(selector_payload["routeAuthority"]), 337)
         self.assertTrue(selector_payload["catalogDigest"])
         self.assertTrue(selector_payload["catalogSourceIdentity"]["digest"])
         self.assertEqual(

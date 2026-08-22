@@ -663,11 +663,19 @@ function collectFileDependencies(baseRepoPath) {
     return [];
   }
   const content = fs.readFileSync(absolutePath, "utf8");
-  return uniqueValues(
+  const directDependencies = uniqueValues(
     extractSpecifiers(content)
       .map((specifier) => resolveRepoSpecifier(baseRepoPath, specifier))
       .filter(Boolean),
   ).sort();
+  if (baseRepoPath !== "tests/scenario_chunk_contracts.test.mjs") return directDependencies;
+  const supportDependency = "tests/helpers/scenario_chunk_contract_support.mjs";
+  return uniqueValues([
+    ...directDependencies,
+    ...(directDependencies.includes(supportDependency)
+      ? collectFileDependencies(supportDependency)
+      : []),
+  ]).sort();
 }
 
 function resolveNodeRouteDomain(scriptName, sourceRefs) {
@@ -1085,7 +1093,7 @@ export function buildLegacyRouteIndex() {
     ...INFRASTRUCTURE_ROUTES.filter((route) => !metadataRouteIds.has(route.id)),
     ...buildE2eRoutes(),
     ...buildDirectE2EScriptRoutes(),
-    ...buildNodeRoutes(),
+    ...buildNodeRoutes().filter((route) => !metadataRouteIds.has(route.id)),
     ...buildPythonRoutes(),
   ];
 }

@@ -312,6 +312,10 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:political-raster-worker-packet": "node --test tests/political_raster_worker_packet_behavior.test.mjs",
     "test:node:perf-probe-snapshot-behavior": "node --test tests/perf_probe_snapshot_behavior.test.mjs",
     "test:node:scenario-chunk-contracts": "node --test tests/scenario_chunk_contracts.test.mjs",
+    "test:node:scenario-chunk-contracts:quick": "node --test tests/scenario_chunk_contracts.quick.test.mjs",
+    "test:node:scenario-chunk-contracts:heavy": "node --test tests/scenario_chunk_contracts.heavy.test.mjs",
+    "test:node:scenario-chunk-contracts:split": "node --test tests/scenario_chunk_contracts.quick.test.mjs tests/scenario_chunk_contracts.heavy.test.mjs",
+    "test:node:scenario-chunk-contracts:shadow": "node tools/verification/test_shadow_equivalence.mjs --shadow",
     "test:node:physical-layer-contracts": "node --test tests/physical_layer_contracts.test.mjs",
     "test:node:physical-layer-owner": "node --test tests/physical_layer_render_owner_behavior.test.mjs",
     "test:node:scenario-relief-overlay-owner": "node --test tests/scenario_relief_overlay_render_owner_behavior.test.mjs",
@@ -6187,6 +6191,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tests/state_writer_policy_batch_scan_behavior.test.mjs",
         "tests/scenario_chunk_state_actions_behavior.test.mjs",
         "tests/scenario_chunk_contracts.test.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
         "tests/scenario_chunk_promotion_helpers_behavior.test.mjs",
         "tests/scenario_refresh_plans_behavior.test.mjs",
         "tests/scenario_runtime_state_behavior.test.mjs",
@@ -6354,6 +6359,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tests/renderer_runtime_state_behavior.test.mjs",
         "tests/physical_layer_contracts.test.mjs",
         "tests/scenario_chunk_contracts.test.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
         "tools/run_p4_phase_verification.mjs",
         "tools/build_state_writer_policy.mjs",
         "tools/state_action_delegation_contract.mjs",
@@ -9121,10 +9127,174 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
+      "id": "node:test:node:scenario-chunk-contracts:quick",
+      "commandRef": "test:node:scenario-chunk-contracts:quick",
+      "sourceRefs": [
+        "package.json",
+        "tests/scenario_chunk_contracts.quick.test.mjs",
+        "tests/scenario_chunk_contracts.test.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
+        "js/core/feature_identity.js",
+        "js/core/frame_scheduler.js",
+        "js/core/political_raster_worker_client.js",
+        "js/core/renderer/color_resolution_strategy.js",
+        "js/core/renderer/render_cache_owner.js",
+        "js/core/renderer/spatial_index_runtime_builders.js",
+        "js/core/scenario/bundle_loader.js",
+        "js/core/scenario/chunk_runtime.js",
+        "js/core/scenario_chunk_manager.js",
+        "js/core/scenario_runtime_queries.js",
+        "js/core/state/actions/scenario_activation_actions.js",
+        "js/core/state/actions/scenario_apply_request_actions.js",
+        "js/core/state/actions/scenario_chunk_promotion_actions.js",
+        "js/core/state/actions/scenario_chunk_runtime_actions.js",
+        "js/core/state/actions/scenario_presentation_actions.js"
+      ],
+      "ownerHints": ["scenario-runtime"],
+      "domains": ["scenario-runtime"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 374,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "node:test:node:scenario-chunk-contracts:heavy",
+      "commandRef": "test:node:scenario-chunk-contracts:heavy",
+      "sourceRefs": [
+        "tests/scenario_chunk_contracts.heavy.test.mjs",
+        "tests/scenario_chunk_contracts.test.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
+        "data/scenarios/tno_1962",
+        "vendor/d3.v7.min.js",
+        "js/bootstrap/deferred_ui_bootstrap.js",
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/bootstrap/startup_data_pipeline.js",
+        "js/bootstrap/startup_scenario_boot.js",
+        "js/core/frame_scheduler.js",
+        "js/core/map_renderer.js",
+        "js/core/map_renderer/canvas_layer_manager.js",
+        "js/core/map_renderer/draw_canvas_orchestration_owner.js",
+        "js/core/map_renderer/exact_after_settle_refresh_plans.js",
+        "js/core/map_renderer/exact_after_settle_scheduler.js",
+        "js/core/map_renderer/interaction_hit_candidates.js",
+        "js/core/map_renderer/political_raster_worker_packet.js",
+        "js/core/map_renderer/render_invalidation_catalog.js",
+        "js/core/map_renderer/render_pass_catalog.js",
+        "js/core/map_renderer/render_pass_commit_accounting_owner.js",
+        "js/core/map_renderer/render_phase_lifecycle_owner.js",
+        "js/core/map_renderer/render_request_boundary_owner.js",
+        "js/core/map_renderer/scenario_refresh_plans.js",
+        "js/core/map_renderer/scenario_refresh_runtime.js",
+        "js/core/map_renderer/scenario_visual_invalidation_executor.js",
+        "js/core/map_renderer/set_map_data_transaction_owner.js",
+        "js/core/map_renderer/transformed_frame_compositor_owner.js",
+        "js/core/political_raster_worker_client.js",
+        "js/core/renderer/cached_pass_compositor_owner.js",
+        "js/core/renderer/city_points_render_owner.js",
+        "js/core/renderer/context_pass_orchestrator_owner.js",
+        "js/core/renderer/exact_after_settle_pass_catalog.js",
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/projected_geometry_bounds_owner.js",
+        "js/core/renderer/render_cache_owner.js",
+        "js/core/renderer/render_pipeline_passes.js",
+        "js/core/renderer/render_transform_reuse_policy_owner.js",
+        "js/core/renderer/scenario_chunk_promotion_helpers.js",
+        "js/core/renderer/scenario_water_cache_policy_owner.js",
+        "js/core/renderer/spatial_index_runtime_builders.js",
+        "js/core/renderer/spatial_index_runtime_owner.js",
+        "js/core/renderer/spatial_query_index.js",
+        "js/core/renderer/urban_city_policy.js",
+        "js/core/renderer/visible_frame_diagnostics_owner.js",
+        "js/core/renderer/zoom_interaction_lifecycle_owner.js",
+        "js/core/scenario_apply_pipeline.js",
+        "js/core/scenario_chunk_manager.js",
+        "js/core/scenario_manager.js",
+        "js/core/scenario_ownership_editor.js",
+        "js/core/scenario_post_apply_effects.js",
+        "js/core/scenario/bundle_loader.js",
+        "js/core/scenario/bundle_runtime.js",
+        "js/core/scenario/chunk_runtime.js",
+        "js/core/scenario/scenario_renderer_bridge.js",
+        "js/core/scenario/startup_hydration.js",
+        "js/core/state/renderer_runtime_state.js",
+        "js/main.js",
+        "js/workers/political_raster.worker.js",
+        "ops/browser-mcp/editor-performance-benchmark.py",
+        "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/political-pixel-probe.js",
+        "tools/check_scenario_contracts.py",
+        "tools/scenario_chunk_assets.py"
+      ],
+      "ownerHints": ["scenario-runtime"],
+      "domains": ["scenario-runtime"],
+      "tiers": ["heavy"],
+      "cost": "heavy",
+      "resourceLocks": ["scenario-data"],
+      "executionOwners": ["main-thread"],
+      "profiles": ["full"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": null,
+      "selectorOrder": 375,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "node:test:node:scenario-chunk-contracts:split",
+      "commandRef": "test:node:scenario-chunk-contracts:split",
+      "sourceRefs": [
+        "tests/scenario_chunk_contracts.quick.test.mjs",
+        "tests/scenario_chunk_contracts.heavy.test.mjs"
+      ],
+      "ownerHints": ["scenario-runtime"],
+      "domains": ["scenario-runtime"],
+      "tiers": ["heavy"],
+      "cost": "heavy",
+      "resourceLocks": ["scenario-data"],
+      "executionOwners": ["main-thread"],
+      "profiles": ["full"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": null,
+      "selectorOrder": 376,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "node:test:node:scenario-chunk-contracts:shadow",
+      "commandRef": "test:node:scenario-chunk-contracts:shadow",
+      "sourceRefs": [
+        "tests/scenario_chunk_contract_shadow_behavior.test.mjs",
+        "tools/verification/test_shadow_equivalence.mjs"
+      ],
+      "ownerHints": ["scenario-runtime"],
+      "domains": ["scenario-runtime"],
+      "tiers": ["heavy"],
+      "cost": "heavy",
+      "resourceLocks": [".runtime-output", "scenario-data"],
+      "executionOwners": ["main-thread"],
+      "profiles": ["full"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": null,
+      "selectorOrder": 377,
+      "verification": null,
+      "selector": {}
+    },
+    {
       "id": "node:test:node:scenario-chunk-contracts",
       "commandRef": "test:node:scenario-chunk-contracts",
       "sourceRefs": [
         "tests/scenario_chunk_contracts.test.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
         "js/core/feature_identity.js",
         "js/core/frame_scheduler.js",
         "js/core/political_raster_worker_client.js",
@@ -13598,7 +13768,9 @@ const AUTHORED_VERIFICATION_METADATA = {
       ],
       "cost": "heavy",
       "resourceLocks": [
-        ".runtime-output"
+        ".runtime-output",
+        "heavy-geo",
+        "scenario-data"
       ],
       "executionOwners": [
         "main-thread"
@@ -13704,7 +13876,9 @@ const AUTHORED_VERIFICATION_METADATA = {
       ],
       "cost": "heavy",
       "resourceLocks": [
-        ".runtime-output"
+        ".runtime-output",
+        "heavy-geo",
+        "scenario-data"
       ],
       "executionOwners": [
         "main-thread"
@@ -13825,7 +13999,9 @@ const AUTHORED_VERIFICATION_METADATA = {
       ],
       "cost": "heavy",
       "resourceLocks": [
-        ".runtime-output"
+        ".runtime-output",
+        "heavy-geo",
+        "scenario-data"
       ],
       "executionOwners": [
         "main-thread"
@@ -13941,7 +14117,9 @@ const AUTHORED_VERIFICATION_METADATA = {
       ],
       "cost": "heavy",
       "resourceLocks": [
-        ".runtime-output"
+        ".runtime-output",
+        "heavy-geo",
+        "scenario-data"
       ],
       "executionOwners": [
         "main-thread"
@@ -14065,7 +14243,9 @@ const AUTHORED_VERIFICATION_METADATA = {
       ],
       "cost": "heavy",
       "resourceLocks": [
-        ".runtime-output"
+        ".runtime-output",
+        "heavy-geo",
+        "scenario-data"
       ],
       "executionOwners": [
         "main-thread"
