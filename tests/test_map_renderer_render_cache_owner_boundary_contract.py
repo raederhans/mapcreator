@@ -11,6 +11,160 @@ LEGACY_MODERN_CITY_LIGHTS_RENDER_OWNER_JS = (
     REPO_ROOT / "js" / "core" / "renderer" / "modern_city_lights_render_owner.js"
 )
 
+CITY_LIGHTS_RESPONSIBILITIES = {
+    "owner_state_and_caches": (
+        "modernCityLightsGeometryCache",
+        "modernCityLightsPopulationBoostCache",
+        "modernCityLightsStaticLayerCache",
+        "historicalCityLightsDerivedGlowCache",
+        "historicalCityLightsFallbackCache",
+        "DEFAULT_MODERN_DAY_NIGHT_CONFIG",
+    ),
+    "shared_render_helpers": (
+        "getNightLightPalette",
+        "getUrbanLightWeight",
+        "drawLightEllipse",
+        "getLightBlobRgb",
+        "toRgbaString",
+        "drawSoftLightBlob",
+        "getSignedHashUnit",
+    ),
+    "modern_geometry_and_sampling": (
+        "getModernCityLightsProjectionKey",
+        "getModernCityLightsGridValue",
+        "getModernCityLightsNormalizationDenominator",
+        "normalizeModernCityLightsValue",
+        "sampleModernCityLightsGridNormalized",
+        "getModernCityLightsGeometry",
+        "shouldCullModernLightEntry",
+        "getModernCityLightsZoomProfile",
+        "getModernGridEntryJitter",
+        "getModernCityLightLatitudeFade",
+    ),
+    "modern_population_and_static_canvas": (
+        "getModernDayNightNumber",
+        "isModernPopulationBoostEnabled",
+        "getModernPopulationBoostStrength",
+        "getModernCityLightsPopulationBoostData",
+        "getModernCityLightsStaticConfigSignature",
+        "getModernCityLightsStaticLayerKey",
+        "createModernCityLightsStaticLayerCanvas",
+        "getModernCityLightsStaticLayerCanvas",
+    ),
+    "modern_draw_bodies": (
+        "drawModernCityLightsTexture",
+        "drawModernCityLightsCorridors",
+        "collectModernUrbanCoreEntries",
+        "drawModernCityLightsCores",
+        "drawModernCityFallbackLights",
+        "drawModernCityLightsPopulationBoostLayer",
+        "drawModernCityLightsStaticLayer",
+        "drawModernNightLightsLayer",
+    ),
+    "historical_fallback_sanitization_and_thresholds": (
+        "getHistoricalCityLightsDensity",
+        "getHistoricalCityLightsSecondaryRetention",
+        "interpolateHistoricalThreshold",
+        "getHistoricalCityLightCapitalBoost",
+        "sanitizeHistoricalCityLightEntry",
+        "shouldRenderHistoricalCityLightEntry",
+        "getHistoricalProxyAssetEntries",
+        "computeHistoricalFallbackCityLightWeight",
+        "shouldIncludeHistoricalFallbackCity",
+        "getHistoricalProxyFallbackEntries",
+        "getHistoricalNightLightEntries",
+        "getHistoricalDerivedGlowEntries",
+    ),
+    "historical_draw_and_dispatch": (
+        "drawHistoricalDerivedGlowLayer",
+        "drawHistoricalNightLightsLayer",
+        "drawNightLightsLayer",
+    ),
+}
+
+# getZoomTransform remains a shared host/runtime primitive; this inventory is limited to
+# City Lights-specific state, policy, geometry, sampling, canvas, and draw responsibilities.
+
+CITY_LIGHTS_HOST_FACADES = {
+    "drawLightEllipse",
+    "drawModernNightLightsLayer",
+    "drawNightLightsLayer",
+    "getModernDayNightNumber",
+    "getSignedHashUnit",
+    "toRgbaString",
+}
+
+
+def city_lights_responsibility_symbols():
+    return {
+        symbol
+        for symbols in CITY_LIGHTS_RESPONSIBILITIES.values()
+        for symbol in symbols
+    }
+
+
+def find_symbol_definitions(source, symbols):
+    found = set()
+    for symbol in symbols:
+        escaped = re.escape(symbol)
+        patterns = (
+            rf"\bfunction\s+{escaped}\s*\(",
+            rf"\b(?:const|let|var)\s+{escaped}\s*=",
+            rf"(?<![\w$]){escaped}\s*=(?!=)",
+            rf"\.\s*{escaped}\s*=(?!=)",
+            rf"(?:^|[,{{;])\s*(?:async\s+)?{escaped}\s*\([^;{{}}]*\)\s*{{",
+            rf"\b{escaped}\s*:\s*(?:function\b|(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)",
+        )
+        if any(re.search(pattern, source, re.MULTILINE) for pattern in patterns):
+            found.add(symbol)
+    return found
+
+
+def extract_callable(source, symbol):
+    escaped = re.escape(symbol)
+    patterns = (
+        rf"\bfunction\s+{escaped}\s*\((?P<params>[^)]*)\)\s*{{",
+        rf"\b(?:const|let|var)\s+{escaped}\s*=\s*(?:async\s*)?\((?P<params>[^)]*)\)\s*=>\s*{{",
+        rf"\b(?:const|let|var)\s+{escaped}\s*=\s*(?:async\s*)?function\s*\((?P<params>[^)]*)\)\s*{{",
+    )
+    match = next((candidate for pattern in patterns if (candidate := re.search(pattern, source))), None)
+    if match is None:
+        return None
+    opening_brace = match.end() - 1
+    depth = 0
+    for index in range(opening_brace, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return match.group("params"), source[opening_brace + 1:index]
+    return None
+
+
+def is_thin_city_lights_delegate(source, symbol):
+    callable_definition = extract_callable(source, symbol)
+    if callable_definition is None:
+        return False
+    params, body = callable_definition
+    body = re.sub(r"/\*[\s\S]*?\*/|//[^\n]*", "", body)
+    body = re.sub(r"\s+", " ", body).strip()
+    escaped = re.escape(symbol)
+    direct = re.fullmatch(
+        rf"return\s+getCityLightsRenderOwner\(\)\s*\.\s*{escaped}\s*\((?P<args>[^;{{}}]*)\)\s*;?",
+        body,
+    )
+    local = re.fullmatch(
+        rf"(?:const|let)\s+(?P<owner>[A-Za-z_$][\w$]*)\s*=\s*getCityLightsRenderOwner\(\)\s*;\s*"
+        rf"return\s+(?P=owner)\s*\.\s*{escaped}\s*\((?P<args>[^;{{}}]*)\)\s*;?",
+        body,
+    )
+    delegate = direct or local
+    if delegate is None:
+        return False
+    compact = lambda value: re.sub(r"\s+", "", value)
+    return compact(params) == compact(delegate.group("args"))
+
 
 class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
     def test_map_renderer_keeps_cache_facade_while_render_cache_owner_holds_canvas_and_signature_state(self):
@@ -181,58 +335,58 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
     def test_city_lights_implementation_responsibilities_cannot_flow_back_to_map_renderer(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         owner_content = CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        responsibilities = city_lights_responsibility_symbols()
+        owner_definitions = find_symbol_definitions(owner_content, responsibilities)
+        host_definitions = find_symbol_definitions(renderer_content, responsibilities)
 
-        cache_declarations = (
-            "const modernCityLightsGeometryCache = {",
-            "const modernCityLightsPopulationBoostCache = {",
-            "const modernCityLightsStaticLayerCache = {",
-            "const historicalCityLightsDerivedGlowCache = {",
-            "const historicalCityLightsFallbackCache = {",
-        )
-        implementation_functions = (
-            "drawModernCityLightsTexture",
-            "drawModernCityLightsCorridors",
-            "collectModernUrbanCoreEntries",
-            "drawModernCityLightsCores",
-            "drawModernCityFallbackLights",
-            "drawModernCityLightsPopulationBoostLayer",
-            "drawModernCityLightsStaticLayer",
-            "drawHistoricalDerivedGlowLayer",
-            "drawHistoricalNightLightsLayer",
-            "getHistoricalCityLightsDensity",
-            "getHistoricalCityLightsSecondaryRetention",
-            "interpolateHistoricalThreshold",
-            "getHistoricalCityLightCapitalBoost",
-            "sanitizeHistoricalCityLightEntry",
-            "shouldRenderHistoricalCityLightEntry",
-            "getHistoricalProxyAssetEntries",
-            "computeHistoricalFallbackCityLightWeight",
-            "getHistoricalProxyFallbackEntries",
-            "getHistoricalNightLightEntries",
-            "getHistoricalDerivedGlowEntries",
-        )
+        self.assertEqual(owner_definitions, responsibilities)
+        self.assertEqual(host_definitions - CITY_LIGHTS_HOST_FACADES, set())
+        self.assertEqual(host_definitions & CITY_LIGHTS_HOST_FACADES, CITY_LIGHTS_HOST_FACADES)
+        for facade_symbol in CITY_LIGHTS_HOST_FACADES:
+            with self.subTest(facade_symbol=facade_symbol):
+                self.assertTrue(is_thin_city_lights_delegate(renderer_content, facade_symbol))
 
-        for declaration in cache_declarations:
-            with self.subTest(declaration=declaration):
-                self.assertNotIn(declaration, renderer_content)
-                self.assertIn(declaration, owner_content)
+    def test_city_lights_definition_scanner_rejects_common_host_reflow_shapes(self):
+        hostile_sources = {
+            "function declaration": "function drawSoftLightBlob() { return 1; }",
+            "const arrow": "const getModernCityLightsGeometry = () => ({ entries: [] });",
+            "assignment": "getModernCityLightsStaticLayerCanvas = function () { return canvas; };",
+            "member assignment": "host.getModernCityLightsPopulationBoostData = () => cache;",
+            "object method": "const host = { shouldIncludeHistoricalFallbackCity(feature) { return !!feature; } };",
+            "property arrow": "const host = { drawHistoricalDerivedGlowLayer: (entries) => entries };",
+        }
+        responsibilities = city_lights_responsibility_symbols()
+        for shape, source in hostile_sources.items():
+            with self.subTest(shape=shape):
+                self.assertEqual(len(find_symbol_definitions(source, responsibilities)), 1)
 
-        for function_name in implementation_functions:
-            declaration_pattern = rf"function\s+{re.escape(function_name)}\s*\("
-            with self.subTest(function_name=function_name):
-                self.assertIsNone(re.search(declaration_pattern, renderer_content))
-                self.assertIsNotNone(re.search(declaration_pattern, owner_content))
+        benign_calls = "drawSoftLightBlob(entry); owner.getModernCityLightsGeometry();"
+        self.assertEqual(find_symbol_definitions(benign_calls, responsibilities), set())
 
-        modern_wrapper_match = re.search(
-            r"function drawModernNightLightsLayer\(\.\.\.args\) \{(?P<body>[\s\S]*?)\n\}",
-            renderer_content,
-        )
-        self.assertIsNotNone(modern_wrapper_match)
-        self.assertEqual(
-            modern_wrapper_match.group("body").strip(),
-            "return getCityLightsRenderOwner().drawModernNightLightsLayer(...args);",
-        )
-        self.assertIn("function drawModernNightLightsLayer(k, config, solarState) {", owner_content)
+    def test_city_lights_thin_delegate_contract_allows_equivalent_formatting_and_local_owner(self):
+        equivalent = """
+            function drawModernNightLightsLayer(...args) {
+              const owner = getCityLightsRenderOwner();
+              return owner.drawModernNightLightsLayer(
+                ...args
+              );
+            }
+        """
+        implementation_body = """
+            function drawModernNightLightsLayer(...args) {
+              const cache = {};
+              return getCityLightsRenderOwner().drawModernNightLightsLayer(...args);
+            }
+        """
+        wrong_delegate = """
+            function drawModernNightLightsLayer(...args) {
+              return getCityLightsRenderOwner().drawNightLightsLayer(...args);
+            }
+        """
+
+        self.assertTrue(is_thin_city_lights_delegate(equivalent, "drawModernNightLightsLayer"))
+        self.assertFalse(is_thin_city_lights_delegate(implementation_body, "drawModernNightLightsLayer"))
+        self.assertFalse(is_thin_city_lights_delegate(wrong_delegate, "drawModernNightLightsLayer"))
 
     def test_legacy_modern_city_lights_owner_path_stays_removed(self):
         self.assertFalse(LEGACY_MODERN_CITY_LIGHTS_RENDER_OWNER_JS.exists())

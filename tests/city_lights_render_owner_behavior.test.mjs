@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createCityLightsRenderOwner } from "../js/core/renderer/city_lights_render_owner.js";
+import { normalizeDayNightStyleConfig } from "../js/core/state_defaults.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -114,15 +115,7 @@ function createOwner(overrides = {}) {
       getEffectiveCityCollection: () => cityCollection,
       getTransformSignature: (transform) => `${transform.x}:${transform.y}:${transform.k}`,
       getUrbanCityPolicyOwner: () => policyOwner,
-      normalizeDayNightStyleConfig: (config = {}) => ({
-        cityLightsCorridorStrength: 0.5,
-        cityLightsCoreSharpness: 0.4,
-        cityLightsIntensity: 0.8,
-        cityLightsPopulationBoostEnabled: true,
-        cityLightsPopulationBoostStrength: 0.6,
-        cityLightsTextureOpacity: 0.7,
-        ...config,
-      }),
+      normalizeDayNightStyleConfig,
       normalizeIntensityFieldsState: (fields) => fields,
       normalizeLongitude: (value) => value,
       stableJson,
@@ -183,45 +176,53 @@ function createDispatchProbe() {
   return { calls, owner };
 }
 
-test("city lights dispatcher reaches the modern draw body after style normalization", () => {
-  for (const style of ["modern", " MODERN ", "", null, undefined]) {
+function drawWithNormalizedConfig(owner, rawConfig) {
+  const config = normalizeDayNightStyleConfig(rawConfig);
+  owner.drawNightLightsLayer(1, config, {});
+  return config;
+}
+
+test("city lights dispatcher reaches the modern draw body through the real config normalizer", () => {
+  const rawConfigs = [
+    {},
+    { cityLightsStyle: "unknown" },
+    { cityLightsStyle: " MODERN " },
+  ];
+  for (const rawConfig of rawConfigs) {
     const { calls, owner } = createDispatchProbe();
 
-    owner.drawNightLightsLayer(1, {
-      cityLightsEnabled: true,
-      cityLightsIntensity: 1,
-      cityLightsStyle: style,
-      cityLightsTextureOpacity: 0,
-      cityLightsCorridorStrength: 0,
-      cityLightsPopulationBoostEnabled: false,
-    }, {});
+    const config = drawWithNormalizedConfig(owner, rawConfig);
 
-    assert.equal(calls.filter((call) => call === "modern-static-canvas-create").length, 1, String(style));
-    assert.equal(calls.includes("historical-ellipse"), false, String(style));
+    assert.equal(config.cityLightsEnabled, true);
+    assert.equal(config.cityLightsStyle, "modern");
+    assert.equal(config.cityLightsIntensity, 1.15);
+    assert.equal(calls.filter((call) => call === "modern-static-canvas-create").length, 1);
+    assert.equal(calls.includes("historical-ellipse"), false);
   }
 });
 
-test("city lights dispatcher reaches the historical draw body after style normalization", () => {
-  for (const style of ["historical_1930s", " Historical_1930s "]) {
+test("city lights dispatcher reaches the historical draw body through the real config normalizer", () => {
+  for (const style of ["historical_1930s", " Historical_1930s ", " HISTORICAL_1930S "]) {
     const { calls, owner } = createDispatchProbe();
 
-    owner.drawNightLightsLayer(1, {
-      cityLightsEnabled: true,
-      cityLightsIntensity: 1,
-      cityLightsStyle: style,
-    }, {});
+    const config = drawWithNormalizedConfig(owner, { cityLightsStyle: style });
 
+    assert.equal(config.cityLightsStyle, "historical_1930s");
     assert.ok(calls.filter((call) => call === "historical-ellipse").length >= 2, style);
     assert.equal(calls.includes("modern-static-canvas-create"), false, style);
   }
 });
 
 test("city lights dispatcher exits silently for disabled and null config", () => {
-  for (const config of [null, undefined, {}, { cityLightsEnabled: false }]) {
+  {
     const { calls, owner } = createDispatchProbe();
-
-    owner.drawNightLightsLayer(1, config, {});
-
+    owner.drawNightLightsLayer(1, null, {});
+    assert.deepEqual(calls, []);
+  }
+  {
+    const { calls, owner } = createDispatchProbe();
+    const config = drawWithNormalizedConfig(owner, { cityLightsEnabled: false });
+    assert.equal(config.cityLightsEnabled, false);
     assert.deepEqual(calls, []);
   }
 });
