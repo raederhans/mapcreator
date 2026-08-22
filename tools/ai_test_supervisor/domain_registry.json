@@ -285,7 +285,9 @@
       "typicalSourceGlobs": [
         "js/**city**",
         "data/**city**",
+        "tools/**city**",
         "tests/*city*.test.mjs",
+        "tests/fixtures/city_lights/**",
         "tests/test_city_*.py",
         "tests/e2e/city_*.spec.js"
       ],
@@ -525,11 +527,15 @@
       "typicalSourceGlobs": [
         "data/CATALOG.json",
         "data/CATALOG.md",
+        "data/manifest.json",
+        "data/source_ledger.json",
         "data/runtime_asset_registry.json",
         "data/scenarios/index.json",
         "data/thematic_layers/**",
         "tools/data_health.py",
-        "tools/build_data_catalog.py"
+        "tools/build_data_catalog.py",
+        "tools/check_data_catalog.py",
+        "tools/check_source_ledger.py"
       ],
       "preferredChildSafeChecks": [
         "python tools/data_health.py --json",

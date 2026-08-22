@@ -398,6 +398,24 @@
     "local_presence": "required"
   },
   {
+    "source_id": "nasa_black_marble_2016_3km_gray",
+    "local_path": ".runtime/tmp/city_lights/BlackMarble_2016_3km_gray.jpg",
+    "origin_kind": "download",
+    "upstream_url": "https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144897/BlackMarble_2016_3km_gray.jpg",
+    "immutable_ref": "product=Black Marble 2016; image=3km grayscale; input_sha256=unavailable; attestation=not_attested",
+    "current_local_sha256": "",
+    "license": "requires source authority confirmation",
+    "citation": "https://earthobservatory.nasa.gov/features/NightLights",
+    "consumers": [
+      "tools/build_city_lights_modern_asset.py",
+      "js/core/city_lights_modern_asset.js"
+    ],
+    "rebuild_command": "python tools/build_city_lights_modern_asset.py --source-descriptor data/city_lights/modern_source_descriptor.json --require-attested-input",
+    "provenance_sidecar": "data/city_lights/modern_source_descriptor.json",
+    "status": "pending_upgrade_review",
+    "local_presence": "optional_cache"
+  },
+  {
     "source_id": "natural_earth_populated_places_10m",
     "local_path": "data/ne_10m_populated_places.zip",
     "origin_kind": "download",

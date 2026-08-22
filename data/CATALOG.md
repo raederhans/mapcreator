@@ -1,8 +1,8 @@
 # Data Catalog
 
-- generated_at: 2026-06-14T00:58:50.128793Z
+- generated_at: 2026-08-14T20:52:35.840939+00:00
 - version: 1
-- entries: 658
+- entries: 659
 
 ## Counts by role
 
@@ -32,6 +32,7 @@
 | historical_1930_city_lights_asset | 1 |
 | locales | 1 |
 | modern_city_lights_asset | 1 |
+| modern_city_lights_source_descriptor | 1 |
 | palette_audit | 5 |
 | palette_map | 5 |
 | palette_pack | 5 |
@@ -69,6 +70,7 @@
 | source:gb_chn_adm2 | data/china_adm2.geojson | source_ledger_asset | geojson | json | schema://geojson/feature_collection/v1 | data/source_ledger.json::gb_chn_adm2::current_local_sha256 | default | source_ledger | gb_chn_adm2 |
 | city_aliases | data/city_aliases.json | city_aliases | json | json | schema://json/object/v1 | data/manifest.json::outputs::city_aliases.json::sha256 | default | init_map_data.world_cities |  |
 | city_lights:historical_1930:entries | data/city_lights/historical_1930_entries.json | city_lights_entries | json | json | schema://json/object/v1 |  | default | runtime_asset_registry.assets.city_lights:historical_1930:entries |  |
+| manifest_output:city_lights/modern_source_descriptor.json | data/city_lights/modern_source_descriptor.json | modern_city_lights_source_descriptor | json | json | schema://city_lights/source_descriptor/v1 | data/manifest.json::outputs::city_lights/modern_source_descriptor.json::sha256 | default | source_authority.city_lights_modern_descriptor |  |
 | country_feature_policies | data/country_feature_policies.json | country_feature_policies | json | json | schema://json/object/v1 | data/manifest.json::outputs::country_feature_policies.json::sha256 | default | data/country_feature_policies.json |  |
 | context_layer:physical | data/europe_physical.geojson | context_layer | geojson | json | schema://geojson/feature_collection/v1 |  | default | runtime_asset_registry.assets.context_layer:physical |  |
 | manifest_output:europe_topology.json | data/europe_topology.json | primary_topology | topojson | json | schema://topology/political_bundle_v1 | data/manifest.json::outputs::europe_topology.json::sha256 | default | init_map_data.primary_topology_bundle |  |

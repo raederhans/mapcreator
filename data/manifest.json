@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 26947,
-      "sha256": "9678b719381ff610cc0c25e6c2263662de21155795589b00d7bafff12f07d8ba"
+      "size_bytes": 27434,
+      "sha256": "b77433836e6897315120e5babc2ef1ad7f6367414bf95400f83bfb1331a67123"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -548,6 +548,19 @@
       "state_count": 11894,
       "country_count": 1431,
       "mapped_province_count": 20781
+    },
+    "city_lights/modern_source_descriptor.json": {
+      "role": "modern_city_lights_source_descriptor",
+      "artifact_class": "source_descriptor",
+      "owner": "source_authority.city_lights_modern_descriptor",
+      "description": "Production source identity, provenance, licensing, and grid contract for modern city lights.",
+      "size_bytes": 1118,
+      "sha256": "1376c8bf53ac0049cfe4443ecd42531f72dd2ec62c60a141b9b26afb8086b0ec",
+      "schema_ref": "schema://city_lights/source_descriptor/v1",
+      "type": "modern_city_lights_source_descriptor",
+      "source_id": "nasa_black_marble_2016_3km_gray",
+      "input_identity_status": "unavailable",
+      "input_attestation": "not_attested"
     },
     "js/core/city_lights_modern_asset.js": {
       "role": "modern_city_lights_asset",
@@ -1004,6 +1017,16 @@
         "url": "data/unit_counter_libraries/hoi4/manifest.json",
         "role": "unit_counter_manifest",
         "family_id": "hoi4"
+      },
+      "city_lights:modern:asset": {
+        "url": "js/core/city_lights_modern_asset.js",
+        "role": "city_lights_asset",
+        "family_id": "modern"
+      },
+      "city_lights:modern:source_descriptor": {
+        "url": "data/city_lights/modern_source_descriptor.json",
+        "role": "city_lights_source_descriptor",
+        "family_id": "modern"
       },
       "city_lights:historical_1930:asset": {
         "url": "js/core/city_lights_historical_1930_asset.js",
@@ -1474,6 +1497,10 @@
       "uk_mineral_resources": "transport_manifest:uk_mineral_resources"
     },
     "city_lights": {
+      "modern": {
+        "asset_key": "city_lights:modern:asset",
+        "source_descriptor_key": "city_lights:modern:source_descriptor"
+      },
       "historical_1930": {
         "asset_key": "city_lights:historical_1930:asset",
         "entries_key": "city_lights:historical_1930:entries",

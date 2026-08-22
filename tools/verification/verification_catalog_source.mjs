@@ -4803,7 +4803,19 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:node:city-lights-assets",
       "sourceRefs": [
         "tests/city_lights_asset_contract.test.mjs",
+        "tests/fixtures/city_lights/.gitattributes",
+        "tests/fixtures/city_lights/modern_source_fixture.pgm",
+        "tests/fixtures/city_lights/modern_source_fixture_descriptor.json",
+        "tools/build_city_lights_modern_asset.py",
+        "data/CATALOG.json",
+        "data/CATALOG.md",
+        "data/city_lights/.gitattributes",
+        "data/city_lights/modern_source_descriptor.json",
         "data/city_lights/historical_1930_entries.json",
+        "data/manifest.json",
+        "data/runtime_asset_registry.json",
+        "data/source_ledger.json",
+        "js/core/city_lights_modern_asset.js",
         "js/core/city_lights_historical_1930_asset.js"
       ],
       "ownerHints": [

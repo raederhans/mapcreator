@@ -202,6 +202,16 @@
       "role": "unit_counter_manifest",
       "family_id": "hoi4"
     },
+    "city_lights:modern:asset": {
+      "url": "js/core/city_lights_modern_asset.js",
+      "role": "city_lights_asset",
+      "family_id": "modern"
+    },
+    "city_lights:modern:source_descriptor": {
+      "url": "data/city_lights/modern_source_descriptor.json",
+      "role": "city_lights_source_descriptor",
+      "family_id": "modern"
+    },
     "city_lights:historical_1930:asset": {
       "url": "js/core/city_lights_historical_1930_asset.js",
       "role": "city_lights_asset",
@@ -671,6 +681,10 @@
     "uk_mineral_resources": "transport_manifest:uk_mineral_resources"
   },
   "city_lights": {
+    "modern": {
+      "asset_key": "city_lights:modern:asset",
+      "source_descriptor_key": "city_lights:modern:source_descriptor"
+    },
     "historical_1930": {
       "asset_key": "city_lights:historical_1930:asset",
       "entries_key": "city_lights:historical_1930:entries",

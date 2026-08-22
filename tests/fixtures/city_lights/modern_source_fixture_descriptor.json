@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "descriptor_id": "repository_city_lights_fixture_v1",
+  "ownership_class": "test_fixture_descriptor",
+  "product": {
+    "provider": "Scenario Forge tests",
+    "name": "City lights luminance fixture",
+    "version": "1",
+    "known_url": "fixture://city-lights/modern-source-v1"
+  },
+  "provenance": {
+    "reference": "tests/fixtures/city_lights/modern_source_fixture.pgm",
+    "license_reference": "repository_test_fixture",
+    "license_status": "repository_owned"
+  },
+  "grid": {
+    "width": 4,
+    "height": 2,
+    "base_threshold": 2,
+    "corridor_threshold": 14
+  },
+  "input_identity": {
+    "algorithm": "sha256",
+    "status": "available",
+    "attestation": "attested",
+    "sha256": "8ec01347bdb141615ba8ef6a6f876bff4a82c51f56d3bf0274726f895b0902b6"
+  }
+}

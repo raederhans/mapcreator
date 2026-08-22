@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import math
 import sys
 import urllib.request
@@ -21,9 +23,8 @@ except ImportError as exc:  # pragma: no cover - dependency guard
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "js" / "core" / "city_lights_modern_asset.js"
-DEFAULT_SOURCE_URL = (
-    "https://eoimages.gsfc.nasa.gov/images/imagerecords/"
-    "144000/144897/BlackMarble_2016_3km_gray.jpg"
+DEFAULT_SOURCE_DESCRIPTOR_PATH = (
+    PROJECT_ROOT / "data" / "city_lights" / "modern_source_descriptor.json"
 )
 DEFAULT_GRID_WIDTH = 720
 DEFAULT_GRID_HEIGHT = 360
@@ -36,9 +37,19 @@ def parse_args() -> argparse.Namespace:
         description="Build a modern night-lights asset module from NASA Black Marble."
     )
     parser.add_argument(
+        "--source-descriptor",
+        default=str(DEFAULT_SOURCE_DESCRIPTOR_PATH),
+        help="Source ownership and input-identity descriptor JSON.",
+    )
+    parser.add_argument(
         "--source-url",
-        default=DEFAULT_SOURCE_URL,
-        help="Remote grayscale equirectangular source image URL.",
+        default="",
+        help="Optional source URL override; must match the descriptor known URL.",
+    )
+    parser.add_argument(
+        "--require-attested-input",
+        action="store_true",
+        help="Fail unless the descriptor attests the exact local input SHA256.",
     )
     parser.add_argument(
         "--source-file",
@@ -53,36 +64,110 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--grid-width",
         type=int,
-        default=DEFAULT_GRID_WIDTH,
+        default=None,
         help="Output grid width in cells.",
     )
     parser.add_argument(
         "--grid-height",
         type=int,
-        default=DEFAULT_GRID_HEIGHT,
+        default=None,
         help="Output grid height in cells.",
     )
     parser.add_argument(
         "--base-threshold",
         type=int,
-        default=DEFAULT_BASE_THRESHOLD,
+        default=None,
         help="Recommended runtime base luminance threshold.",
     )
     parser.add_argument(
         "--corridor-threshold",
         type=int,
-        default=DEFAULT_CORRIDOR_THRESHOLD,
+        default=None,
         help="Recommended runtime corridor threshold.",
     )
     return parser.parse_args()
 
 
-def fetch_source_image(source_url: str, source_file: str) -> tuple[Path, str]:
+def load_source_descriptor(descriptor_path: Path) -> dict[str, object]:
+    try:
+        payload = json.loads(descriptor_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"Invalid source descriptor {descriptor_path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise SystemExit("Source descriptor must be a JSON object.")
+    required_paths = {
+        "descriptor_id": payload.get("descriptor_id"),
+        "ownership_class": payload.get("ownership_class"),
+        "product": payload.get("product"),
+        "provenance": payload.get("provenance"),
+        "grid": payload.get("grid"),
+        "input_identity": payload.get("input_identity"),
+    }
+    missing = sorted(key for key, value in required_paths.items() if not value)
+    if missing:
+        raise SystemExit(f"Source descriptor missing required fields: {missing}")
+    return payload
+
+
+def descriptor_source_url(descriptor: dict[str, object], source_url_override: str) -> str:
+    product = descriptor.get("product")
+    known_url = str(product.get("known_url") if isinstance(product, dict) else "").strip()
+    if not known_url:
+        raise SystemExit("Source descriptor product.known_url must be non-empty.")
+    override = source_url_override.strip()
+    if override and override != known_url:
+        raise SystemExit("--source-url must match source descriptor product.known_url.")
+    return known_url
+
+
+def descriptor_grid_value(descriptor: dict[str, object], key: str, fallback: int) -> int:
+    grid = descriptor.get("grid")
+    value = grid.get(key) if isinstance(grid, dict) else None
+    return int(value if value is not None else fallback)
+
+
+def sha256_path(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def attest_input_identity(
+    descriptor: dict[str, object],
+    source_path: Path,
+    *,
+    require_attested: bool,
+) -> tuple[str, bool, str]:
+    identity = descriptor.get("input_identity")
+    identity_payload = identity if isinstance(identity, dict) else {}
+    status = str(identity_payload.get("status") or "unavailable").strip()
+    attestation = str(identity_payload.get("attestation") or "not_attested").strip()
+    expected_sha = str(identity_payload.get("sha256") or "").strip().lower()
+    is_attested = (
+        status == "available"
+        and attestation == "attested"
+        and len(expected_sha) == 64
+    )
+    if require_attested and not is_attested:
+        raise SystemExit(
+            "Authenticated rebuild unavailable: source descriptor input identity is not attested."
+        )
+    actual_sha = sha256_path(source_path)
+    if is_attested and actual_sha != expected_sha:
+        raise SystemExit(
+            f"Source input SHA256 mismatch: descriptor={expected_sha} actual={actual_sha}"
+        )
+    return actual_sha, bool(require_attested and is_attested), status
+
+
+def fetch_source_image(source_url: str, source_file: str) -> Path:
     if source_file:
         source_path = Path(source_file).expanduser().resolve()
         if not source_path.exists():
             raise SystemExit(f"Source file not found: {source_path}")
-        return source_path, source_path.as_uri()
+        return source_path
 
     build_cache_dir = PROJECT_ROOT / ".runtime" / "tmp" / "city_lights"
     build_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -90,7 +175,7 @@ def fetch_source_image(source_url: str, source_file: str) -> tuple[Path, str]:
     if not target_path.exists():
         with urllib.request.urlopen(source_url, timeout=60) as response:
             target_path.write_bytes(response.read())
-    return target_path, source_url
+    return target_path
 
 
 def load_grid_values(source_path: Path, width: int, height: int) -> list[int]:
@@ -174,6 +259,10 @@ def write_module(
     output_path: Path,
     *,
     source_ref: str,
+    source_descriptor_id: str,
+    source_input_sha256: str,
+    source_input_identity_status: str,
+    authenticated_rebuild: bool,
     width: int,
     height: int,
     base_threshold: int,
@@ -190,6 +279,10 @@ def write_module(
 export const MODERN_CITY_LIGHTS_SOURCE = Object.freeze({{
   name: "NASA Black Marble 2016 (grayscale)",
   url: {source_ref!r},
+  descriptorId: {source_descriptor_id!r},
+  inputSha256: {source_input_sha256!r},
+  inputIdentityStatus: {source_input_identity_status!r},
+  authenticatedRebuild: {str(authenticated_rebuild).lower()},
 }});
 
 export const MODERN_CITY_LIGHTS_GRID_WIDTH = {width};
@@ -218,23 +311,50 @@ export const MODERN_CITY_LIGHTS_GRID = new Uint8Array([
 
 def main() -> int:
     args = parse_args()
+    descriptor_path = Path(args.source_descriptor).expanduser().resolve()
+    descriptor = load_source_descriptor(descriptor_path)
+    source_url = descriptor_source_url(descriptor, args.source_url)
+    default_grid_width = descriptor_grid_value(descriptor, "width", DEFAULT_GRID_WIDTH)
+    default_grid_height = descriptor_grid_value(descriptor, "height", DEFAULT_GRID_HEIGHT)
+    grid_width = args.grid_width if args.grid_width is not None else default_grid_width
+    grid_height = args.grid_height if args.grid_height is not None else default_grid_height
+    base_threshold = (
+        args.base_threshold
+        if args.base_threshold is not None
+        else descriptor_grid_value(descriptor, "base_threshold", DEFAULT_BASE_THRESHOLD)
+    )
+    corridor_threshold = (
+        args.corridor_threshold
+        if args.corridor_threshold is not None
+        else descriptor_grid_value(descriptor, "corridor_threshold", DEFAULT_CORRIDOR_THRESHOLD)
+    )
     output_path = Path(args.output).expanduser().resolve()
-    source_path, source_ref = fetch_source_image(args.source_url, args.source_file)
-    values = load_grid_values(source_path, args.grid_width, args.grid_height)
+    source_path = fetch_source_image(source_url, args.source_file)
+    source_sha256, authenticated_rebuild, identity_status = attest_input_identity(
+        descriptor,
+        source_path,
+        require_attested=args.require_attested_input,
+    )
+    values = load_grid_values(source_path, grid_width, grid_height)
     stats = build_stats(values)
     write_module(
         output_path,
-        source_ref=source_ref,
-        width=args.grid_width,
-        height=args.grid_height,
-        base_threshold=args.base_threshold,
-        corridor_threshold=args.corridor_threshold,
+        source_ref=source_url,
+        source_descriptor_id=str(descriptor["descriptor_id"]),
+        source_input_sha256=source_sha256,
+        source_input_identity_status=identity_status,
+        authenticated_rebuild=authenticated_rebuild,
+        width=grid_width,
+        height=grid_height,
+        base_threshold=base_threshold,
+        corridor_threshold=corridor_threshold,
         values=values,
         stats=stats,
     )
     print(
         f"Built modern city lights asset: {output_path} "
-        f"(cells={args.grid_width}x{args.grid_height}, source={source_ref}, "
+        f"(cells={grid_width}x{grid_height}, source={source_url}, "
+        f"authenticated={authenticated_rebuild}, "
         f"max={stats['max']}, p90={stats['p90']}, nonzero={stats['nonzeroCount']})"
     )
     return 0

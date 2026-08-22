@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-06-14T00:58:50.128793Z",
+  "generated_at": "2026-08-14T20:52:35.840939+00:00",
   "counts": {
-    "entries": 658,
+    "entries": 659,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -28,6 +28,7 @@
       "historical_1930_city_lights_asset": 1,
       "locales": 1,
       "modern_city_lights_asset": 1,
+      "modern_city_lights_source_descriptor": 1,
       "palette_audit": 5,
       "palette_map": 5,
       "palette_pack": 5,
@@ -62,12 +63,12 @@
       "bmp": 1,
       "geojson": 147,
       "javascript": 2,
-      "json": 340,
+      "json": 341,
       "topojson": 168
     },
     "by_read_mode": {
       "binary": 1,
-      "json": 655,
+      "json": 656,
       "module": 2
     }
   },
@@ -112,6 +113,21 @@
       "sourceId": "",
       "readMode": "json",
       "aliases": []
+    },
+    {
+      "key": "manifest_output:city_lights/modern_source_descriptor.json",
+      "url": "data/city_lights/modern_source_descriptor.json",
+      "role": "modern_city_lights_source_descriptor",
+      "format": "json",
+      "schemaRef": "schema://city_lights/source_descriptor/v1",
+      "hashRef": "data/manifest.json::outputs::city_lights/modern_source_descriptor.json::sha256",
+      "owner": "source_authority.city_lights_modern_descriptor",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "city_lights:modern:source_descriptor"
+      ]
     },
     {
       "key": "country_feature_policies",
@@ -10443,7 +10459,9 @@
       "cachePolicy": "module",
       "sourceId": "",
       "readMode": "module",
-      "aliases": []
+      "aliases": [
+        "city_lights:modern:asset"
+      ]
     }
   ]
 }

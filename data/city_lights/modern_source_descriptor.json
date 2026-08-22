@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "descriptor_id": "nasa_black_marble_2016_3km_gray",
+  "ownership_class": "production_source_descriptor",
+  "product": {
+    "provider": "NASA Earth Observatory",
+    "name": "Black Marble 2016 3km grayscale",
+    "version": "2016",
+    "known_url": "https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144897/BlackMarble_2016_3km_gray.jpg"
+  },
+  "provenance": {
+    "reference": "https://earthobservatory.nasa.gov/features/NightLights",
+    "license_reference": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+    "license_status": "requires_source_authority_confirmation"
+  },
+  "grid": {
+    "width": 720,
+    "height": 360,
+    "base_threshold": 2,
+    "corridor_threshold": 14
+  },
+  "input_identity": {
+    "algorithm": "sha256",
+    "status": "unavailable",
+    "attestation": "not_attested",
+    "sha256": null
+  },
+  "authority": {
+    "required_for": [
+      "source_download",
+      "source_retention",
+      "license_confirmation",
+      "production_input_replacement",
+      "authenticated_rebuild_claim"
+    ],
+    "status": "source_authority_required"
+  }
+}
