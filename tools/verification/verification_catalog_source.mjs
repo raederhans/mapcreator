@@ -4802,7 +4802,9 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "node:test:node:city-lights-assets",
       "commandRef": "test:node:city-lights-assets",
       "sourceRefs": [
+        ".gitattributes",
         "tests/city_lights_asset_contract.test.mjs",
+        "tests/test_data_manifest_contract.py",
         "tests/fixtures/city_lights/.gitattributes",
         "tests/fixtures/city_lights/modern_source_fixture.pgm",
         "tests/fixtures/city_lights/modern_source_fixture_descriptor.json",

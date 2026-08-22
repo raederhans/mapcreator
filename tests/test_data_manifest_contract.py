@@ -11,6 +11,18 @@ from tools.build_data_catalog import validate_catalog_entry_contract
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+CANONICAL_LF_MANIFEST_OUTPUTS = {
+    "js/core/city_lights_modern_asset.js",
+    "js/core/city_lights_historical_1930_asset.js",
+}
+
+
+def _canonical_manifest_bytes(relative_path: str, output_bytes: bytes) -> bytes:
+    if relative_path in CANONICAL_LF_MANIFEST_OUTPUTS:
+        return output_bytes.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return output_bytes
+
+
 DATA_MANIFEST = REPO_ROOT / "data" / "manifest.json"
 DATA_LOADER = REPO_ROOT / "js" / "core" / "data_loader.js"
 RUNTIME_ASSET_REGISTRY_SOURCE = REPO_ROOT / "data" / "runtime_asset_registry.json"
@@ -66,8 +78,8 @@ class DataManifestContractTest(unittest.TestCase):
             if not output_path.is_file():
                 mismatches.append(f"{relative_path}: missing")
                 continue
-            output_bytes = output_path.read_bytes()
-            actual_size = output_path.stat().st_size
+            output_bytes = _canonical_manifest_bytes(relative_path, output_path.read_bytes())
+            actual_size = len(output_bytes)
             actual_sha = hashlib.sha256(output_bytes).hexdigest()
             if metadata.get("size_bytes") != actual_size or metadata.get("sha256") != actual_sha:
                 mismatches.append(f"{relative_path}: size/hash drift")

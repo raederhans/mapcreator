@@ -38,6 +38,9 @@ data/scenarios/**/geo_locale_patch*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json.gz binary
 
+# City Lights runtime modules are manifest-bound to canonical Git LF bytes.
+js/core/city_lights_*_asset.js text eol=lf
+
 # Pages dist manifest 会记录这些文本资产的字节数；换行必须固定。
 dist/pages-dist-manifest.json text eol=lf
 dist/index.html text eol=lf

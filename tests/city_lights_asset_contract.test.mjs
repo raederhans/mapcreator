@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,7 @@ const fixtureSourceUrl = new URL("./fixtures/city_lights/modern_source_fixture.p
 const manifestUrl = new URL("../data/manifest.json", import.meta.url);
 const catalogUrl = new URL("../data/CATALOG.json", import.meta.url);
 const generatorUrl = new URL("../tools/build_city_lights_modern_asset.py", import.meta.url);
+const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 const assetSource = await readFile(assetUrl, "utf8");
 const entriesPayload = JSON.parse(await readFile(entriesUrl, "utf8"));
 const modernDescriptor = JSON.parse(await readFile(modernDescriptorUrl, "utf8"));
@@ -37,12 +38,37 @@ function findCity(nameAscii, countryCode) {
 }
 
 function runModernGenerator(args) {
+  return runPython([fileURLToPath(generatorUrl), ...args]);
+}
+
+function runPython(args) {
   const command = process.platform === "win32" ? "py" : "python3";
   const prefixArgs = process.platform === "win32" ? ["-3"] : [];
-  return spawnSync(command, [...prefixArgs, fileURLToPath(generatorUrl), ...args], {
+  return spawnSync(command, [...prefixArgs, ...args], {
     encoding: "utf8",
     windowsHide: true,
   });
+}
+
+function readGitBlob(ref, repoPath) {
+  const result = spawnSync("git", ["cat-file", "blob", `${ref}:${repoPath}`], {
+    cwd: repoRoot,
+    encoding: null,
+    windowsHide: true,
+  });
+  assert.equal(result.status, 0, result.stderr?.toString("utf8"));
+  return result.stdout;
+}
+
+function assertCliFailure(result, messagePattern) {
+  assert.equal(result.status, 2, result.stderr || result.stdout);
+  assert.match(result.stderr, messagePattern);
+  assert.equal(result.stderr.includes("Traceback"), false, result.stderr);
+}
+
+async function writeDescriptor(path, payload, newline = "\n") {
+  const canonical = `${JSON.stringify(payload, null, 2)}\n`;
+  await writeFile(path, canonical.replaceAll("\n", newline), "utf8");
 }
 
 test("city lights ownership separates source descriptor, generated data, runtime module, and fixtures", async () => {
@@ -84,46 +110,271 @@ test("city lights ownership separates source descriptor, generated data, runtime
   assert.equal(JSON.stringify(dataManifest).includes("tests/fixtures/city_lights"), false);
   assert.equal(JSON.stringify(dataCatalog).includes("tests/fixtures/city_lights"), false);
 
-  const runtimeBytes = await readFile(modernAssetUrl);
+  const runtimeBytes = readGitBlob("HEAD", "js/core/city_lights_modern_asset.js");
+  const baseRuntimeBytes = readGitBlob(
+    "2d42b83bdcf25b837d125a71d98fcbb0349f6570",
+    "js/core/city_lights_modern_asset.js",
+  );
+  const historicalRuntimeBytes = readGitBlob("HEAD", "js/core/city_lights_historical_1930_asset.js");
+  const baseHistoricalRuntimeBytes = readGitBlob(
+    "2d42b83bdcf25b837d125a71d98fcbb0349f6570",
+    "js/core/city_lights_historical_1930_asset.js",
+  );
+  assert.deepEqual(runtimeBytes, baseRuntimeBytes);
+  assert.deepEqual(historicalRuntimeBytes, baseHistoricalRuntimeBytes);
   assert.equal(
     createHash("sha256").update(runtimeBytes).digest("hex"),
-    "e310035f7fbd8e327ea9b5558a8fab6edb92aa2a312b7532a65319d2d5d6ec1d",
+    "d2438a7372c12411e048ea95fc55758fd4c95a1089547f54dd36258d60555dae",
+  );
+  assert.equal(runtimeOutput.size_bytes, runtimeBytes.length);
+  assert.equal(runtimeOutput.sha256, createHash("sha256").update(runtimeBytes).digest("hex"));
+  const historicalOutput = dataManifest.outputs["js/core/city_lights_historical_1930_asset.js"];
+  assert.equal(historicalOutput.size_bytes, historicalRuntimeBytes.length);
+  assert.equal(
+    historicalOutput.sha256,
+    createHash("sha256").update(historicalRuntimeBytes).digest("hex"),
   );
 });
 
-test("modern city lights fixture rebuild is offline, attested, and byte-identical", async (t) => {
+test("modern city lights fixture rebuild is LF-stable across descriptor checkouts", async (t) => {
   const tempRoot = await mkdtemp(join(tmpdir(), "city-lights-generator-"));
   t.after(() => rm(tempRoot, { recursive: true, force: true }));
-  const firstOutput = join(tempRoot, "first.js");
-  const secondOutput = join(tempRoot, "second.js");
+  const lfDescriptor = join(tempRoot, "fixture-lf.json");
+  const crlfDescriptor = join(tempRoot, "fixture-crlf.json");
+  const lfOutput = join(tempRoot, "lf.js");
+  const crlfOutput = join(tempRoot, "crlf.js");
+  await writeDescriptor(lfDescriptor, fixtureDescriptor, "\n");
+  await writeDescriptor(crlfDescriptor, fixtureDescriptor, "\r\n");
   const sharedArgs = [
-    "--source-descriptor", fileURLToPath(fixtureDescriptorUrl),
     "--source-file", fileURLToPath(fixtureSourceUrl),
     "--require-attested-input",
   ];
-  const first = runModernGenerator([...sharedArgs, "--output", firstOutput]);
-  const second = runModernGenerator([...sharedArgs, "--output", secondOutput]);
-  assert.equal(first.status, 0, first.stderr || first.stdout);
-  assert.equal(second.status, 0, second.stderr || second.stdout);
-  const firstBytes = await readFile(firstOutput);
-  const secondBytes = await readFile(secondOutput);
-  assert.deepEqual(firstBytes, secondBytes);
-  const generatedSource = firstBytes.toString("utf8");
+  const lfResult = runModernGenerator([
+    "--source-descriptor", lfDescriptor,
+    ...sharedArgs,
+    "--output", lfOutput,
+  ]);
+  const crlfResult = runModernGenerator([
+    "--source-descriptor", crlfDescriptor,
+    ...sharedArgs,
+    "--output", crlfOutput,
+  ]);
+  assert.equal(lfResult.status, 0, lfResult.stderr || lfResult.stdout);
+  assert.equal(crlfResult.status, 0, crlfResult.stderr || crlfResult.stdout);
+  const lfBytes = await readFile(lfOutput);
+  const crlfBytes = await readFile(crlfOutput);
+  assert.deepEqual(lfBytes, crlfBytes);
+  assert.equal(lfBytes.includes(13), false, "generated module must contain LF line endings only");
+  assert.equal(
+    createHash("sha256").update(lfBytes).digest("hex"),
+    createHash("sha256").update(crlfBytes).digest("hex"),
+  );
+  const generatedSource = lfBytes.toString("utf8");
   assert.match(generatedSource, /descriptorId: 'repository_city_lights_fixture_v1'/);
   assert.match(generatedSource, /inputIdentityStatus: 'available'/);
   assert.match(generatedSource, /authenticatedRebuild: true/);
   assert.equal(generatedSource.includes(fileURLToPath(fixtureSourceUrl)), false);
 });
 
-test("modern production descriptor fails closed for authenticated rebuild claims", () => {
-  const result = runModernGenerator([
-    "--source-descriptor", fileURLToPath(modernDescriptorUrl),
-    "--source-file", fileURLToPath(fixtureSourceUrl),
-    "--require-attested-input",
-    "--output", join(tmpdir(), "city-lights-production-unattested.js"),
+test("modern production descriptor fails before network, cache, or source access", async (t) => {
+  const tempRoot = await mkdtemp(join(tmpdir(), "city-lights-preflight-"));
+  t.after(() => rm(tempRoot, { recursive: true, force: true }));
+  const outputPath = join(tempRoot, "production-unattested.js");
+  const probe = String.raw`
+import importlib.util
+import json
+import sys
+
+spec = importlib.util.spec_from_file_location("city_lights_generator", sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+counts = {"network_calls": 0, "cache_writes": 0, "source_accesses": 0}
+original_urlopen = module.urllib.request.urlopen
+original_mkdir = module.Path.mkdir
+original_exists = module.Path.exists
+original_write_bytes = module.Path.write_bytes
+
+def is_cache_path(path):
+    return ".runtime/tmp/city_lights" in str(path).replace("\\", "/")
+
+def guarded_urlopen(*args, **kwargs):
+    counts["network_calls"] += 1
+    raise AssertionError("network access reached")
+
+def guarded_mkdir(path, *args, **kwargs):
+    if is_cache_path(path):
+        counts["cache_writes"] += 1
+    return original_mkdir(path, *args, **kwargs)
+
+def guarded_exists(path, *args, **kwargs):
+    if is_cache_path(path):
+        counts["source_accesses"] += 1
+    return original_exists(path, *args, **kwargs)
+
+def guarded_write_bytes(path, *args, **kwargs):
+    if is_cache_path(path):
+        counts["cache_writes"] += 1
+    return original_write_bytes(path, *args, **kwargs)
+
+module.urllib.request.urlopen = guarded_urlopen
+module.Path.mkdir = guarded_mkdir
+module.Path.exists = guarded_exists
+module.Path.write_bytes = guarded_write_bytes
+sys.argv = [sys.argv[1], "--source-descriptor", sys.argv[2], "--require-attested-input", "--output", sys.argv[3]]
+message = ""
+try:
+    module.main()
+except module.GeneratorContractError as exc:
+    message = str(exc)
+print(json.dumps({"counts": counts, "message": message}, sort_keys=True))
+if counts != {"network_calls": 0, "cache_writes": 0, "source_accesses": 0}:
+    raise SystemExit(4)
+if "input identity is not attested" not in message:
+    raise SystemExit(5)
+`;
+  const result = runPython([
+    "-c", probe,
+    fileURLToPath(generatorUrl),
+    fileURLToPath(modernDescriptorUrl),
+    outputPath,
   ]);
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /input identity is not attested/);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const report = JSON.parse(result.stdout.trim());
+  assert.deepEqual(report.counts, {
+    cache_writes: 0,
+    network_calls: 0,
+    source_accesses: 0,
+  });
+  assert.equal(await readFile(outputPath).then(() => true, () => false), false);
+});
+
+test("modern generator rejects malformed identity algorithms, hashes, and enum values", async (t) => {
+  const tempRoot = await mkdtemp(join(tmpdir(), "city-lights-identity-"));
+  t.after(() => rm(tempRoot, { recursive: true, force: true }));
+  const cases = [
+    {
+      name: "algorithm",
+      mutate: (descriptor) => { descriptor.input_identity.algorithm = "sha512"; },
+      message: /algorithm must be exactly 'sha256'/,
+    },
+    {
+      name: "nonhex",
+      mutate: (descriptor) => { descriptor.input_identity.sha256 = "g".repeat(64); },
+      message: /64 lowercase hexadecimal characters/,
+    },
+    {
+      name: "short",
+      mutate: (descriptor) => { descriptor.input_identity.sha256 = "a".repeat(63); },
+      message: /64 lowercase hexadecimal characters/,
+    },
+    {
+      name: "uppercase",
+      mutate: (descriptor) => { descriptor.input_identity.sha256 = descriptor.input_identity.sha256.toUpperCase(); },
+      message: /64 lowercase hexadecimal characters/,
+    },
+    {
+      name: "status-enum",
+      mutate: (descriptor) => { descriptor.input_identity.status = "known"; },
+      message: /status must be one of: available, unavailable/,
+    },
+    {
+      name: "attestation-enum",
+      mutate: (descriptor) => { descriptor.input_identity.attestation = "verified"; },
+      message: /attestation must be one of: attested, not_attested/,
+    },
+    {
+      name: "invalid-combination",
+      mutate: (descriptor) => {
+        descriptor.input_identity.status = "unavailable";
+        descriptor.input_identity.attestation = "attested";
+      },
+      message: /Attested input identity requires status 'available'/,
+    },
+  ];
+
+  for (const testCase of cases) {
+    const descriptor = structuredClone(fixtureDescriptor);
+    testCase.mutate(descriptor);
+    const descriptorPath = join(tempRoot, `${testCase.name}.json`);
+    await writeDescriptor(descriptorPath, descriptor);
+    const result = runModernGenerator([
+      "--source-descriptor", descriptorPath,
+      "--source-file", fileURLToPath(fixtureSourceUrl),
+      "--require-attested-input",
+      "--output", join(tempRoot, `${testCase.name}.js`),
+    ]);
+    assertCliFailure(result, testCase.message);
+  }
+});
+
+test("modern generator bounds grid and threshold parameters before source access", async (t) => {
+  const tempRoot = await mkdtemp(join(tmpdir(), "city-lights-parameters-"));
+  t.after(() => rm(tempRoot, { recursive: true, force: true }));
+  const cases = [
+    { args: ["--grid-width", "0"], message: /Grid width.*1\.\.4096/ },
+    { args: ["--grid-height", "-1"], message: /Grid height.*1\.\.4096/ },
+    { args: ["--grid-width", "4097"], message: /Grid width.*1\.\.4096/ },
+    {
+      args: ["--grid-width", "4096", "--grid-height", "4096"],
+      message: /Grid cell count must not exceed 4194304/,
+    },
+    { args: ["--base-threshold", "-1"], message: /Base threshold.*0\.\.255/ },
+    { args: ["--corridor-threshold", "256"], message: /Corridor threshold.*0\.\.255/ },
+  ];
+
+  for (const [index, testCase] of cases.entries()) {
+    const missingSource = join(tempRoot, `missing-${index}.pgm`);
+    const result = runModernGenerator([
+      "--source-descriptor", fileURLToPath(fixtureDescriptorUrl),
+      "--source-file", missingSource,
+      ...testCase.args,
+      "--output", join(tempRoot, `invalid-${index}.js`),
+    ]);
+    assertCliFailure(result, testCase.message);
+    assert.equal(result.stderr.includes("Source file not found"), false, result.stderr);
+  }
+});
+
+test("modern generator rejects output overlap using resolved Windows path semantics", async (t) => {
+  const tempRoot = await mkdtemp(join(tmpdir(), "city-lights-paths-"));
+  t.after(() => rm(tempRoot, { recursive: true, force: true }));
+  const sourcePath = fileURLToPath(fixtureSourceUrl);
+  const descriptorPath = fileURLToPath(fixtureDescriptorUrl);
+  const sourceBefore = createHash("sha256").update(await readFile(sourcePath)).digest("hex");
+  const descriptorBefore = createHash("sha256").update(await readFile(descriptorPath)).digest("hex");
+  const baseArgs = [
+    "--source-descriptor", descriptorPath,
+    "--source-file", sourcePath,
+  ];
+
+  const sourceOverlap = runModernGenerator([...baseArgs, "--output", sourcePath]);
+  assertCliFailure(sourceOverlap, /Output path must differ from source image path/);
+
+  const descriptorOverlap = runModernGenerator([...baseArgs, "--output", descriptorPath]);
+  assertCliFailure(descriptorOverlap, /Output path must differ from source descriptor path/);
+
+  const cacheOverlap = runModernGenerator([
+    "--source-descriptor", descriptorPath,
+    "--output", join(repoRoot, ".runtime", "tmp", "city_lights", "modern-source-v1"),
+  ]);
+  assertCliFailure(cacheOverlap, /Output path must differ from source image path/);
+
+  if (process.platform === "win32") {
+    const caseVariantOverlap = runModernGenerator([
+      ...baseArgs,
+      "--output", descriptorPath.toUpperCase(),
+    ]);
+    assertCliFailure(caseVariantOverlap, /Output path must differ from source descriptor path/);
+  }
+
+  assert.equal(
+    createHash("sha256").update(await readFile(sourcePath)).digest("hex"),
+    sourceBefore,
+  );
+  assert.equal(
+    createHash("sha256").update(await readFile(descriptorPath)).digest("hex"),
+    descriptorBefore,
+  );
 });
 
 test("historical 1930 city lights asset exposes calibrated exports", () => {

@@ -7,7 +7,11 @@ import argparse
 import hashlib
 import json
 import math
+import os
+import re
 import sys
+import urllib.error
+import urllib.parse
 import urllib.request
 import warnings
 from pathlib import Path
@@ -30,6 +34,15 @@ DEFAULT_GRID_WIDTH = 720
 DEFAULT_GRID_HEIGHT = 360
 DEFAULT_BASE_THRESHOLD = 2
 DEFAULT_CORRIDOR_THRESHOLD = 14
+MAX_GRID_DIMENSION = 4096
+MAX_GRID_CELLS = 4_194_304
+ALLOWED_IDENTITY_STATUSES = frozenset({"available", "unavailable"})
+ALLOWED_ATTESTATIONS = frozenset({"attested", "not_attested"})
+LOWERCASE_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+
+
+class GeneratorContractError(Exception):
+    """Stable CLI contract failure without a Python traceback."""
 
 
 def parse_args() -> argparse.Namespace:
@@ -91,10 +104,10 @@ def parse_args() -> argparse.Namespace:
 def load_source_descriptor(descriptor_path: Path) -> dict[str, object]:
     try:
         payload = json.loads(descriptor_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise SystemExit(f"Invalid source descriptor {descriptor_path}: {exc}") from exc
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise GeneratorContractError(f"Invalid source descriptor: {exc}") from None
     if not isinstance(payload, dict):
-        raise SystemExit("Source descriptor must be a JSON object.")
+        raise GeneratorContractError("Source descriptor must be a JSON object.")
     required_paths = {
         "descriptor_id": payload.get("descriptor_id"),
         "ownership_class": payload.get("ownership_class"),
@@ -105,7 +118,7 @@ def load_source_descriptor(descriptor_path: Path) -> dict[str, object]:
     }
     missing = sorted(key for key, value in required_paths.items() if not value)
     if missing:
-        raise SystemExit(f"Source descriptor missing required fields: {missing}")
+        raise GeneratorContractError(f"Source descriptor missing required fields: {missing}")
     return payload
 
 
@@ -113,17 +126,154 @@ def descriptor_source_url(descriptor: dict[str, object], source_url_override: st
     product = descriptor.get("product")
     known_url = str(product.get("known_url") if isinstance(product, dict) else "").strip()
     if not known_url:
-        raise SystemExit("Source descriptor product.known_url must be non-empty.")
+        raise GeneratorContractError("Source descriptor product.known_url must be non-empty.")
     override = source_url_override.strip()
     if override and override != known_url:
-        raise SystemExit("--source-url must match source descriptor product.known_url.")
+        raise GeneratorContractError("--source-url must match source descriptor product.known_url.")
     return known_url
 
 
-def descriptor_grid_value(descriptor: dict[str, object], key: str, fallback: int) -> int:
+def descriptor_grid_value(descriptor: dict[str, object], key: str, fallback: int) -> object:
     grid = descriptor.get("grid")
     value = grid.get(key) if isinstance(grid, dict) else None
-    return int(value if value is not None else fallback)
+    return value if value is not None else fallback
+
+
+def validate_input_identity(descriptor: dict[str, object]) -> dict[str, object]:
+    identity = descriptor.get("input_identity")
+    if not isinstance(identity, dict):
+        raise GeneratorContractError("Source descriptor input_identity must be an object.")
+
+    algorithm = identity.get("algorithm")
+    if algorithm != "sha256":
+        raise GeneratorContractError("input_identity.algorithm must be exactly 'sha256'.")
+
+    status = identity.get("status")
+    if not isinstance(status, str) or status not in ALLOWED_IDENTITY_STATUSES:
+        raise GeneratorContractError(
+            "input_identity.status must be one of: available, unavailable."
+        )
+
+    attestation = identity.get("attestation")
+    if not isinstance(attestation, str) or attestation not in ALLOWED_ATTESTATIONS:
+        raise GeneratorContractError(
+            "input_identity.attestation must be one of: attested, not_attested."
+        )
+
+    expected_sha = identity.get("sha256")
+    if attestation == "attested":
+        if status != "available":
+            raise GeneratorContractError(
+                "Attested input identity requires status 'available'."
+            )
+        if not isinstance(expected_sha, str) or not LOWERCASE_SHA256_PATTERN.fullmatch(expected_sha):
+            raise GeneratorContractError(
+                "input_identity.sha256 must be 64 lowercase hexadecimal characters."
+            )
+    else:
+        if status != "unavailable":
+            raise GeneratorContractError(
+                "Non-attested input identity requires status 'unavailable'."
+            )
+        if expected_sha is not None:
+            raise GeneratorContractError(
+                "Non-attested input identity requires sha256 null."
+            )
+
+    return identity
+
+
+def require_attested_identity(identity: dict[str, object], *, required: bool) -> None:
+    if required and identity["attestation"] != "attested":
+        raise GeneratorContractError(
+            "Authenticated rebuild unavailable: source descriptor input identity is not attested."
+        )
+
+
+def validate_integer_range(name: str, value: object, minimum: int, maximum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
+        raise GeneratorContractError(
+            f"{name} must be an integer in range {minimum}..{maximum}."
+        )
+    return value
+
+
+def resolve_generation_parameters(
+    descriptor: dict[str, object],
+    args: argparse.Namespace,
+) -> tuple[int, int, int, int]:
+    width = validate_integer_range(
+        "Grid width",
+        args.grid_width if args.grid_width is not None else descriptor_grid_value(
+            descriptor, "width", DEFAULT_GRID_WIDTH
+        ),
+        1,
+        MAX_GRID_DIMENSION,
+    )
+    height = validate_integer_range(
+        "Grid height",
+        args.grid_height if args.grid_height is not None else descriptor_grid_value(
+            descriptor, "height", DEFAULT_GRID_HEIGHT
+        ),
+        1,
+        MAX_GRID_DIMENSION,
+    )
+    if width * height > MAX_GRID_CELLS:
+        raise GeneratorContractError(
+            f"Grid cell count must not exceed {MAX_GRID_CELLS}."
+        )
+    base_threshold = validate_integer_range(
+        "Base threshold",
+        args.base_threshold if args.base_threshold is not None else descriptor_grid_value(
+            descriptor, "base_threshold", DEFAULT_BASE_THRESHOLD
+        ),
+        0,
+        255,
+    )
+    corridor_threshold = validate_integer_range(
+        "Corridor threshold",
+        args.corridor_threshold if args.corridor_threshold is not None else descriptor_grid_value(
+            descriptor, "corridor_threshold", DEFAULT_CORRIDOR_THRESHOLD
+        ),
+        0,
+        255,
+    )
+    return width, height, base_threshold, corridor_threshold
+
+
+def resolved_path(path_value: str | Path) -> Path:
+    return Path(path_value).expanduser().resolve(strict=False)
+
+
+def paths_equivalent(left: Path, right: Path) -> bool:
+    left_text = os.path.normcase(str(resolved_path(left)))
+    right_text = os.path.normcase(str(resolved_path(right)))
+    return left_text == right_text
+
+
+def cache_target_path(source_url: str) -> Path:
+    source_name = Path(urllib.parse.urlparse(source_url).path).name
+    if not source_name:
+        raise GeneratorContractError("Source URL must end with a file name.")
+    return PROJECT_ROOT / ".runtime" / "tmp" / "city_lights" / source_name
+
+
+def resolve_generation_paths(
+    *,
+    descriptor_path: Path,
+    source_url: str,
+    source_file: str,
+    output: str,
+) -> tuple[Path, Path]:
+    output_path = resolved_path(output)
+    planned_source_path = (
+        resolved_path(source_file) if source_file else resolved_path(cache_target_path(source_url))
+    )
+    if paths_equivalent(output_path, descriptor_path):
+        raise GeneratorContractError("Output path must differ from source descriptor path.")
+    if paths_equivalent(output_path, planned_source_path):
+        raise GeneratorContractError("Output path must differ from source image path.")
+    return output_path, planned_source_path
 
 
 def sha256_path(path: Path) -> str:
@@ -134,54 +284,57 @@ def sha256_path(path: Path) -> str:
     return digest.hexdigest()
 
 
-def attest_input_identity(
-    descriptor: dict[str, object],
+def verify_input_identity(
+    identity: dict[str, object],
     source_path: Path,
     *,
     require_attested: bool,
 ) -> tuple[str, bool, str]:
-    identity = descriptor.get("input_identity")
-    identity_payload = identity if isinstance(identity, dict) else {}
-    status = str(identity_payload.get("status") or "unavailable").strip()
-    attestation = str(identity_payload.get("attestation") or "not_attested").strip()
-    expected_sha = str(identity_payload.get("sha256") or "").strip().lower()
-    is_attested = (
-        status == "available"
-        and attestation == "attested"
-        and len(expected_sha) == 64
-    )
-    if require_attested and not is_attested:
-        raise SystemExit(
-            "Authenticated rebuild unavailable: source descriptor input identity is not attested."
-        )
-    actual_sha = sha256_path(source_path)
+    status = str(identity["status"])
+    is_attested = identity["attestation"] == "attested"
+    expected_sha = str(identity["sha256"] or "")
+    try:
+        actual_sha = sha256_path(source_path)
+    except OSError as exc:
+        raise GeneratorContractError(f"Unable to read source image: {exc}") from None
     if is_attested and actual_sha != expected_sha:
-        raise SystemExit(
+        raise GeneratorContractError(
             f"Source input SHA256 mismatch: descriptor={expected_sha} actual={actual_sha}"
         )
     return actual_sha, bool(require_attested and is_attested), status
 
 
-def fetch_source_image(source_url: str, source_file: str) -> Path:
+def fetch_source_image(source_url: str, source_file: str, planned_source_path: Path) -> Path:
     if source_file:
-        source_path = Path(source_file).expanduser().resolve()
+        source_path = planned_source_path
         if not source_path.exists():
-            raise SystemExit(f"Source file not found: {source_path}")
+            raise GeneratorContractError(f"Source file not found: {source_path}")
+        if not source_path.is_file():
+            raise GeneratorContractError(f"Source path must be a file: {source_path}")
         return source_path
 
-    build_cache_dir = PROJECT_ROOT / ".runtime" / "tmp" / "city_lights"
-    build_cache_dir.mkdir(parents=True, exist_ok=True)
-    target_path = build_cache_dir / Path(source_url).name
+    build_cache_dir = planned_source_path.parent
+    try:
+        build_cache_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise GeneratorContractError(f"Unable to create source cache: {exc}") from None
+    target_path = planned_source_path
     if not target_path.exists():
-        with urllib.request.urlopen(source_url, timeout=60) as response:
-            target_path.write_bytes(response.read())
+        try:
+            with urllib.request.urlopen(source_url, timeout=60) as response:
+                target_path.write_bytes(response.read())
+        except (OSError, urllib.error.URLError) as exc:
+            raise GeneratorContractError(f"Unable to download source image: {exc}") from None
     return target_path
 
 
 def load_grid_values(source_path: Path, width: int, height: int) -> list[int]:
     warnings.simplefilter("ignore", Image.DecompressionBombWarning)
     Image.MAX_IMAGE_PIXELS = None
-    image = Image.open(source_path).convert("L")
+    try:
+        image = Image.open(source_path).convert("L")
+    except OSError as exc:
+        raise GeneratorContractError(f"Unable to decode source image: {exc}") from None
     source_width, source_height = image.size
     pixels = image.load()
     values: list[int] = []
@@ -305,33 +458,34 @@ export const MODERN_CITY_LIGHTS_GRID = new Uint8Array([
 {format_uint8_array(values)}
 ]);
 """
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(module_text, encoding="utf-8")
+    canonical_module_text = module_text.replace("\r\n", "\n").replace("\r", "\n")
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(canonical_module_text.encode("utf-8"))
+    except OSError as exc:
+        raise GeneratorContractError(f"Unable to write output module: {exc}") from None
 
 
 def main() -> int:
     args = parse_args()
-    descriptor_path = Path(args.source_descriptor).expanduser().resolve()
+    descriptor_path = resolved_path(args.source_descriptor)
     descriptor = load_source_descriptor(descriptor_path)
+    identity = validate_input_identity(descriptor)
+    require_attested_identity(identity, required=args.require_attested_input)
     source_url = descriptor_source_url(descriptor, args.source_url)
-    default_grid_width = descriptor_grid_value(descriptor, "width", DEFAULT_GRID_WIDTH)
-    default_grid_height = descriptor_grid_value(descriptor, "height", DEFAULT_GRID_HEIGHT)
-    grid_width = args.grid_width if args.grid_width is not None else default_grid_width
-    grid_height = args.grid_height if args.grid_height is not None else default_grid_height
-    base_threshold = (
-        args.base_threshold
-        if args.base_threshold is not None
-        else descriptor_grid_value(descriptor, "base_threshold", DEFAULT_BASE_THRESHOLD)
-    )
-    corridor_threshold = (
-        args.corridor_threshold
-        if args.corridor_threshold is not None
-        else descriptor_grid_value(descriptor, "corridor_threshold", DEFAULT_CORRIDOR_THRESHOLD)
-    )
-    output_path = Path(args.output).expanduser().resolve()
-    source_path = fetch_source_image(source_url, args.source_file)
-    source_sha256, authenticated_rebuild, identity_status = attest_input_identity(
+    grid_width, grid_height, base_threshold, corridor_threshold = resolve_generation_parameters(
         descriptor,
+        args,
+    )
+    output_path, planned_source_path = resolve_generation_paths(
+        descriptor_path=descriptor_path,
+        source_url=source_url,
+        source_file=args.source_file,
+        output=args.output,
+    )
+    source_path = fetch_source_image(source_url, args.source_file, planned_source_path)
+    source_sha256, authenticated_rebuild, identity_status = verify_input_identity(
+        identity,
         source_path,
         require_attested=args.require_attested_input,
     )
@@ -361,4 +515,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except GeneratorContractError as exc:
+        print(f"city-lights-generator: {exc}", file=sys.stderr)
+        sys.exit(2)
