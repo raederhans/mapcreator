@@ -7,6 +7,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_CACHE_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_cache_owner.js"
 CITY_LIGHTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_lights_render_owner.js"
+LEGACY_MODERN_CITY_LIGHTS_RENDER_OWNER_JS = (
+    REPO_ROOT / "js" / "core" / "renderer" / "modern_city_lights_render_owner.js"
+)
 
 
 class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
@@ -174,6 +177,65 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("function getHistoricalCityLightsDensity(config) {", renderer_content)
         self.assertNotIn("allowStaticBuild", renderer_content)
         self.assertNotIn("allowBuild: allowStaticBuild", renderer_content)
+
+    def test_city_lights_implementation_responsibilities_cannot_flow_back_to_map_renderer(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        owner_content = CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
+
+        cache_declarations = (
+            "const modernCityLightsGeometryCache = {",
+            "const modernCityLightsPopulationBoostCache = {",
+            "const modernCityLightsStaticLayerCache = {",
+            "const historicalCityLightsDerivedGlowCache = {",
+            "const historicalCityLightsFallbackCache = {",
+        )
+        implementation_functions = (
+            "drawModernCityLightsTexture",
+            "drawModernCityLightsCorridors",
+            "collectModernUrbanCoreEntries",
+            "drawModernCityLightsCores",
+            "drawModernCityFallbackLights",
+            "drawModernCityLightsPopulationBoostLayer",
+            "drawModernCityLightsStaticLayer",
+            "drawHistoricalDerivedGlowLayer",
+            "drawHistoricalNightLightsLayer",
+            "getHistoricalCityLightsDensity",
+            "getHistoricalCityLightsSecondaryRetention",
+            "interpolateHistoricalThreshold",
+            "getHistoricalCityLightCapitalBoost",
+            "sanitizeHistoricalCityLightEntry",
+            "shouldRenderHistoricalCityLightEntry",
+            "getHistoricalProxyAssetEntries",
+            "computeHistoricalFallbackCityLightWeight",
+            "getHistoricalProxyFallbackEntries",
+            "getHistoricalNightLightEntries",
+            "getHistoricalDerivedGlowEntries",
+        )
+
+        for declaration in cache_declarations:
+            with self.subTest(declaration=declaration):
+                self.assertNotIn(declaration, renderer_content)
+                self.assertIn(declaration, owner_content)
+
+        for function_name in implementation_functions:
+            declaration_pattern = rf"function\s+{re.escape(function_name)}\s*\("
+            with self.subTest(function_name=function_name):
+                self.assertIsNone(re.search(declaration_pattern, renderer_content))
+                self.assertIsNotNone(re.search(declaration_pattern, owner_content))
+
+        modern_wrapper_match = re.search(
+            r"function drawModernNightLightsLayer\(\.\.\.args\) \{(?P<body>[\s\S]*?)\n\}",
+            renderer_content,
+        )
+        self.assertIsNotNone(modern_wrapper_match)
+        self.assertEqual(
+            modern_wrapper_match.group("body").strip(),
+            "return getCityLightsRenderOwner().drawModernNightLightsLayer(...args);",
+        )
+        self.assertIn("function drawModernNightLightsLayer(k, config, solarState) {", owner_content)
+
+    def test_legacy_modern_city_lights_owner_path_stays_removed(self):
+        self.assertFalse(LEGACY_MODERN_CITY_LIGHTS_RENDER_OWNER_JS.exists())
 
     def test_modern_city_lights_advanced_controls_reach_draw_algorithms(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

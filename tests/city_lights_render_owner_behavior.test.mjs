@@ -87,11 +87,13 @@ function createOwner(overrides = {}) {
       MODERN_CITY_LIGHTS_STATS: { p90: 20, max: 255 },
       MODERN_CITY_LIGHTS_STEP_LAT_DEG: 90,
       MODERN_CITY_LIGHTS_STEP_LON_DEG: 180,
+      ...overrides.assets,
     },
     getters: {
       getContext: () => context,
       getPathCanvas: () => {},
       getProjection: () => projection,
+      ...overrides.getters,
     },
     helpers: {
       clamp,
@@ -131,9 +133,98 @@ function createOwner(overrides = {}) {
         }
         return Math.abs(hash);
       },
+      ...overrides.helpers,
     },
   });
 }
+
+function createDispatchProbe() {
+  const calls = [];
+  const context = {
+    canvas: createCanvasContext().canvas,
+    beginPath: () => calls.push("begin-path"),
+    clip: () => calls.push("clip"),
+    drawImage: () => calls.push("modern-draw-image"),
+    ellipse: () => calls.push("historical-ellipse"),
+    fill: () => calls.push("fill"),
+    restore: () => calls.push("restore"),
+    save: () => calls.push("save"),
+    setTransform: () => calls.push("set-transform"),
+  };
+  const owner = createOwner({
+    assets: {
+      MODERN_CITY_LIGHTS_GRID: [],
+      MODERN_CITY_LIGHTS_GRID_HEIGHT: 0,
+      MODERN_CITY_LIGHTS_GRID_WIDTH: 0,
+    },
+    cityCollection: { type: "FeatureCollection", features: [] },
+    context,
+    historicalEntries: [
+      {
+        lon: 12,
+        lat: 34,
+        weight: 0.9,
+        capitalKind: "country_capital",
+        population: 1000,
+        nameAscii: "Historical Probe",
+      },
+    ],
+    getters: {
+      getPathCanvas: () => () => calls.push("night-mask-path"),
+    },
+    helpers: {
+      buildNightHemisphereFeature: () => ({ type: "Feature" }),
+      createCanvas: () => {
+        calls.push("modern-static-canvas-create");
+        return null;
+      },
+    },
+  });
+  return { calls, owner };
+}
+
+test("city lights dispatcher reaches the modern draw body after style normalization", () => {
+  for (const style of ["modern", " MODERN ", "", null, undefined]) {
+    const { calls, owner } = createDispatchProbe();
+
+    owner.drawNightLightsLayer(1, {
+      cityLightsEnabled: true,
+      cityLightsIntensity: 1,
+      cityLightsStyle: style,
+      cityLightsTextureOpacity: 0,
+      cityLightsCorridorStrength: 0,
+      cityLightsPopulationBoostEnabled: false,
+    }, {});
+
+    assert.equal(calls.filter((call) => call === "modern-static-canvas-create").length, 1, String(style));
+    assert.equal(calls.includes("historical-ellipse"), false, String(style));
+  }
+});
+
+test("city lights dispatcher reaches the historical draw body after style normalization", () => {
+  for (const style of ["historical_1930s", " Historical_1930s "]) {
+    const { calls, owner } = createDispatchProbe();
+
+    owner.drawNightLightsLayer(1, {
+      cityLightsEnabled: true,
+      cityLightsIntensity: 1,
+      cityLightsStyle: style,
+    }, {});
+
+    assert.ok(calls.filter((call) => call === "historical-ellipse").length >= 2, style);
+    assert.equal(calls.includes("modern-static-canvas-create"), false, style);
+  }
+});
+
+test("city lights dispatcher exits silently for disabled and null config", () => {
+  for (const config of [null, undefined, {}, { cityLightsEnabled: false }]) {
+    const { calls, owner } = createDispatchProbe();
+
+    owner.drawNightLightsLayer(1, config, {});
+
+    assert.deepEqual(calls, []);
+  }
+});
 
 test("modern city lights owner keeps color helpers deterministic", () => {
   const owner = createOwner();
