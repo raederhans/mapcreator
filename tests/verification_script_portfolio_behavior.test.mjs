@@ -11,6 +11,7 @@ import {
   buildRepositoryVerificationCatalog,
   buildRepositoryVerificationSelectionPlan,
   buildVerificationSelectionPlan,
+  assertPreparedVerificationCatalog,
   buildScriptPortfolio,
   CANONICAL_VERIFICATION_ENTRYPOINTS,
   VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS,
@@ -21,6 +22,7 @@ import {
   formatScriptPortfolioSummary,
   parseScriptPortfolioArgs,
   normalizeVerificationPath,
+  prepareRepositoryVerificationCatalog,
   sealVerificationCatalog,
 } from "../tools/verification/script_portfolio.mjs";
 import { buildRouteIndex } from "../tools/test_route_registry.mjs";
@@ -1283,4 +1285,88 @@ test("real package scripts and verification domains form one mechanically consis
   const catalogIds = new Set(catalog.entries.map((entry) => entry.id));
   assert.ok(catalogIds.has("node tools/select_verification_targets.mjs --check"));
   assert.ok(catalogIds.has(directRefs.find((commandRef) => commandRef.includes("tests.test_app_entry_resolver"))));
+});
+
+test("canonical catalog seals entrypoint depth eligibility with cost and owner authority", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+  const selectorRoutes = buildRouteIndex();
+  const catalog = buildRepositoryVerificationCatalog({
+    packageScripts: packageJson.scripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: REPO_ROOT,
+  });
+  const authority = new Map(catalog.authority.map((entry) => [entry.commandRef, entry]));
+
+  assert.deepEqual(authority.get("verify:local-infra").entrypointPolicy, {
+    schemaVersion: 1,
+    eligibleEntrypoints: ["edit", "impact", "pr"],
+    minimumDepth: "local",
+    executionTarget: "child-safe",
+    deferredReason: null,
+    plannerDisposition: "planned",
+    blockedReason: null,
+    localProjection: {
+      mode: "indivisible",
+      proof: "canonical-local-leaf-equivalence",
+    },
+  });
+  assert.deepEqual(
+    authority.get("node tools/select_verification_targets.mjs --check").entrypointPolicy,
+    {
+      schemaVersion: 1,
+      eligibleEntrypoints: ["edit", "impact", "pr"],
+      minimumDepth: "local",
+      executionTarget: "child-safe",
+      deferredReason: null,
+      plannerDisposition: "planned",
+      blockedReason: null,
+      localProjection: null,
+    },
+  );
+  assert.deepEqual(
+    authority.get("node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread")
+      .entrypointPolicy,
+    {
+      schemaVersion: 1,
+      eligibleEntrypoints: ["edit", "impact", "pr"],
+      minimumDepth: "local",
+      executionTarget: "child-safe",
+      deferredReason: null,
+      plannerDisposition: "blocked",
+      blockedReason: "adaptive-recursion-forbidden",
+      localProjection: null,
+    },
+  );
+  assert.deepEqual(authority.get("test:node:p4:p4-3").entrypointPolicy.eligibleEntrypoints, ["nightly"]);
+  assert.equal(authority.get("test:node:p4:p4-3").executionOwner, "main-thread");
+  assert.equal(authority.get("test:node:p4:p4-3").cost, "heavy");
+  assert.equal(authority.get("test:e2e:pages-public-release-gate").entrypointPolicy.minimumDepth, "release");
+  assert.equal(authority.get("test:e2e:pages-public-release-gate").entrypointPolicy.executionTarget, "deployed-target");
+  assert.equal(authority.get("verify:tno-coverage-chain").entrypointPolicy.minimumDepth, "nightly");
+  assert.equal(authority.get("test:node:transport-workbench-controller").entrypointPolicy.minimumDepth, "pr");
+  assert.equal(authority.get("test:node:thematic-layer-catalog").entrypointPolicy.minimumDepth, "pr");
+
+  const forged = structuredClone(catalog);
+  forged.sourceMode = "fixture";
+  forged.authority.find((entry) => entry.commandRef === "verify:local-infra")
+    .entrypointPolicy.eligibleEntrypoints = ["pr"];
+  assert.throws(
+    () => buildVerificationSelectionPlan(forged, ["verify:local-infra"], { allowUnverifiedCatalog: false }),
+    /verification-plan-(?:authority-gap:verify:local-infra:entrypointPolicy|catalog-source-drift)/,
+  );
+
+  const prepared = prepareRepositoryVerificationCatalog({
+    packageScripts: packageJson.scripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: REPO_ROOT,
+  });
+  const driftedPrepared = structuredClone(prepared);
+  driftedPrepared.authority.find((entry) => entry.commandRef === "verify:local-infra")
+    .entrypointPolicy.minimumDepth = "pr";
+  assert.throws(
+    () => assertPreparedVerificationCatalog(driftedPrepared, driftedPrepared.catalog),
+    /verification-plan-prepared-source-drift/,
+  );
 });

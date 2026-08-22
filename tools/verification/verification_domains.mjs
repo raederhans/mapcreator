@@ -66,6 +66,28 @@ export const VERIFICATION_CI_PROFILES = Object.freeze([
   "scenario-contract-matrix",
 ]);
 
+export const VERIFICATION_ENTRYPOINT_DEPTHS = Object.freeze([
+  "local",
+  "pr",
+  "nightly",
+  "release",
+]);
+
+export const VERIFICATION_ENTRYPOINT_IDS = Object.freeze([
+  "edit",
+  "impact",
+  "pr",
+  "nightly",
+  "release",
+]);
+
+export const VERIFICATION_SELECTOR_SANITY_COMMAND_REF = "node tools/select_verification_targets.mjs --check";
+export const ADAPTIVE_RECURSIVE_COMMAND_REF = "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread";
+export const VERIFICATION_EXACT_DIRECT_COMMAND_REFS = Object.freeze([
+  VERIFICATION_SELECTOR_SANITY_COMMAND_REF,
+  ADAPTIVE_RECURSIVE_COMMAND_REF,
+]);
+
 const PYTHON_QUICK_COMMAND = "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q";
 
 export const VERIFY_CORE_GROUPS = Object.freeze([
@@ -82,11 +104,7 @@ export const VERIFY_CORE_MAIN_THREAD_GROUP = Object.freeze({
   title: "Main-thread E2E checks",
 });
 
-export const LOCAL_ADAPTIVE_FAST_CLOSURES = Object.freeze([
-  Object.freeze({
-    id: "local:verification-infrastructure",
-    commandRef: "verify:local-infra",
-    sourceRefs: Object.freeze([
+const LOCAL_INFRA_SOURCE_REFS = Object.freeze([
       ".github/workflows/nightly-verification.yml",
       ".github/workflows/release-verification.yml",
       "package.json",
@@ -100,9 +118,85 @@ export const LOCAL_ADAPTIVE_FAST_CLOSURES = Object.freeze([
       "tools/test_route_registry.mjs",
       "tools/verification/script_portfolio.mjs",
       "tools/verification/verification_domains.mjs",
-    ]),
-  }),
 ]);
+
+const LOCAL_PROFILE_SOURCE_REFS = Object.freeze([
+  ...LOCAL_INFRA_SOURCE_REFS,
+  "tests/verification_profile_behavior.test.mjs",
+  "tools/verification/verification_profile.mjs",
+]);
+
+const LOCAL_ELIGIBLE_COMMANDS = new Set([
+  "verify:local-infra",
+  "test:node:verification-profile",
+  VERIFICATION_SELECTOR_SANITY_COMMAND_REF,
+  ADAPTIVE_RECURSIVE_COMMAND_REF,
+]);
+
+const LOCAL_PROJECTION_COMMANDS = new Set([
+  "verify:local-infra",
+]);
+
+export function deriveVerificationEntrypointPolicy({
+  commandRef,
+  cost,
+  executionOwner,
+  resourceLocks = [],
+  ciProfiles = [],
+}) {
+  const profiles = new Set(ciProfiles);
+  const locks = new Set(resourceLocks);
+  const plannerDisposition = commandRef === ADAPTIVE_RECURSIVE_COMMAND_REF ? "blocked" : "planned";
+  const blockedReason = plannerDisposition === "blocked" ? "adaptive-recursion-forbidden" : null;
+  const localEligible = LOCAL_ELIGIBLE_COMMANDS.has(commandRef)
+    && executionOwner === "child-safe"
+    && cost !== "heavy"
+    && locks.size === 0;
+  let minimumDepth;
+  let eligibleEntrypoints;
+  let executionTarget;
+
+  if (localEligible) {
+    minimumDepth = "local";
+    eligibleEntrypoints = ["edit", "impact", "pr"];
+    executionTarget = "child-safe";
+  } else if (profiles.has("deploy-minimal")) {
+    minimumDepth = "release";
+    eligibleEntrypoints = ["release"];
+    executionTarget = "deployed-target";
+  } else if (locks.has("scenario-data")
+    || locks.has("heavy-geo")
+    || profiles.has("full")
+    || profiles.has("scenario-contract-matrix")) {
+    minimumDepth = "nightly";
+    eligibleEntrypoints = ["nightly"];
+    executionTarget = executionOwner === "child-safe"
+      ? "child-safe"
+      : executionOwner === "ci-only" ? "ci-only" : "main-thread";
+  } else {
+    minimumDepth = "pr";
+    eligibleEntrypoints = ["pr"];
+    executionTarget = executionOwner === "child-safe"
+      ? "child-safe"
+      : executionOwner === "ci-only" ? "ci-only" : "main-thread";
+  }
+
+  return Object.freeze({
+    schemaVersion: 1,
+    eligibleEntrypoints: Object.freeze(eligibleEntrypoints),
+    minimumDepth,
+    executionTarget,
+    deferredReason: minimumDepth === "local" ? null : `requires-${minimumDepth}-verification`,
+    plannerDisposition,
+    blockedReason,
+    localProjection: LOCAL_PROJECTION_COMMANDS.has(commandRef)
+      ? Object.freeze({
+        mode: "indivisible",
+        proof: "canonical-local-leaf-equivalence",
+      })
+      : null,
+  });
+}
 
 const P4_RUNTIME_HEAVY_COMMANDS = new Set([
   "verify:p4:state-writer-policy",
@@ -117,6 +211,11 @@ const P4_RUNTIME_HEAVY_COMMANDS = new Set([
   "verify:p4:p4-2b",
   "verify:p4:p4-2c",
   "verify:p4:p4-3",
+  "test:node:p4:p4-1",
+  "test:node:p4:p4-2a",
+  "test:node:p4:p4-2b",
+  "test:node:p4:p4-2c",
+  "test:node:p4:p4-3",
 ]);
 
 function applyMeasuredRuntimeMetadata(entry) {
@@ -164,10 +263,26 @@ function createP3PassFamilyRoute({
 export const VERIFICATION_DOMAINS = Object.freeze([
   Object.freeze({
     id: "infra:local-verification-closure",
-    commandRef: LOCAL_ADAPTIVE_FAST_CLOSURES[0].commandRef,
+    commandRef: "verify:local-infra",
     commandType: "package-script",
     packageScriptRequired: true,
-    sourceRefs: LOCAL_ADAPTIVE_FAST_CLOSURES[0].sourceRefs,
+    sourceRefs: LOCAL_PROFILE_SOURCE_REFS,
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    supervisorDomain: "test-routing",
+    routeRegistry: true,
+  }),
+  Object.freeze({
+    id: "infra:verification-profile",
+    commandRef: "test:node:verification-profile",
+    commandType: "package-script",
+    packageScriptRequired: true,
+    sourceRefs: LOCAL_PROFILE_SOURCE_REFS,
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -202,10 +317,11 @@ export const VERIFICATION_DOMAINS = Object.freeze([
   }),
   Object.freeze({
     id: "infra:verification-selector",
-    commandRef: "node tools/select_verification_targets.mjs --check",
+    commandRef: VERIFICATION_SELECTOR_SANITY_COMMAND_REF,
     commandType: "direct",
     packageScriptRequired: false,
     sourceRefs: [
+      ...LOCAL_PROFILE_SOURCE_REFS,
       ".gitignore",
       "tools/run_adaptive_tests.mjs",
       "tools/verification/command_supersession.mjs",
@@ -226,6 +342,26 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     verifyCoreDefaultGroup: "infra",
     supervisorDomain: "test-routing",
     routeRegistry: true,
+  }),
+  Object.freeze({
+    id: "infra:adaptive-recursion-policy",
+    commandRef: ADAPTIVE_RECURSIVE_COMMAND_REF,
+    commandType: "direct",
+    packageScriptRequired: false,
+    sourceRefs: [
+      "tools/run_adaptive_tests.mjs",
+      "tests/fixtures/adaptive_local_cli_recursive.json",
+      "tests/verify_core_runner_behavior.test.mjs",
+    ],
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    supervisorDomain: "test-routing",
+    routeRegistry: false,
   }),
   Object.freeze({
     id: "infra:sf-ats-contracts",
@@ -286,6 +422,11 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tools/run_core_verification.mjs",
       "tools/verification/resumable_verification.mjs",
       "tools/verification/command_supersession.mjs",
+      "tests/fixtures/adaptive_local_cli_source_mismatch.json",
+      "tests/fixtures/adaptive_local_cli_missing_selector.json",
+      "tests/fixtures/adaptive_local_cli_renamed_selector.json",
+      "tests/fixtures/adaptive_local_cli_valid.json",
+      "tests/fixtures/adaptive_local_cli_recursive.json",
       "tests/verify_core_runner_behavior.test.mjs",
       "docs/testing/verify-core.md",
       "docs/active/test-verification-reform-20260813",

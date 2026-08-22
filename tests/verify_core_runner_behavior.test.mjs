@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -180,6 +181,16 @@ function adaptiveContributor(commandRef, {
   isolation = "process",
   maxLeaves = 64,
   maxArgvBytes = TEST_MAX_ARGV_BYTES,
+  entrypointPolicy = {
+    schemaVersion: 1,
+    eligibleEntrypoints: disposition === "child-safe" ? ["edit", "impact", "pr"] : ["nightly"],
+    minimumDepth: disposition === "child-safe" ? "local" : "nightly",
+    executionTarget: disposition === "child-safe" ? "child-safe" : "main-thread",
+    deferredReason: disposition === "child-safe" ? null : "requires-nightly-verification",
+    plannerDisposition: "planned",
+    blockedReason: null,
+    localProjection: null,
+  },
 } = {}) {
   return {
     commandRef,
@@ -195,6 +206,7 @@ function adaptiveContributor(commandRef, {
     ciProfiles,
     routeIds,
     safetyContributorRouteIds,
+    entrypointPolicy,
     provenance: {
       routeIds: [...routeIds],
       safetyContributorRouteIds: [...safetyContributorRouteIds],
@@ -250,6 +262,154 @@ function assertNoRendererRuntimeSelection(report) {
       assert.equal(command.ownerHints.includes("renderer-runtime"), false);
     }
   }
+}
+
+function runAdaptiveLocalCliFixture(t, fixtureName) {
+  const fixturePath = path.join(
+    process.cwd(),
+    "tests",
+    "fixtures",
+    `adaptive_local_cli_${fixtureName}.json`,
+  );
+  const fixtureBytes = fs.readFileSync(fixturePath);
+  const fixture = JSON.parse(fixtureBytes.toString("utf8"));
+  const fixtureDigest = createHash("sha256").update(fixtureBytes).digest("hex");
+  const runtimeTmp = path.join(process.cwd(), ".runtime", "tmp");
+  fs.mkdirSync(runtimeTmp, { recursive: true });
+  const tempRoot = fs.mkdtempSync(path.join(runtimeTmp, `adaptive-local-cli-${fixtureName}-`));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const changedFileByFixture = {
+    source_mismatch: "package.json",
+    missing_selector: "tools/run_adaptive_tests.mjs",
+    renamed_selector: "tools/select_verification_targets.mjs",
+    recursive: "tools/run_adaptive_tests.mjs",
+  };
+  const changedFile = changedFileByFixture[fixtureName];
+  const selectionPath = path.join(tempRoot, "selection.json");
+  const selectionMarkdownPath = path.join(tempRoot, "selection.md");
+  const selectionProfilePath = path.join(tempRoot, "selection-profile.json");
+  const commonArgs = [
+    "tools/run_adaptive_tests.mjs",
+    "--verification-catalog-fixture",
+    fixturePath,
+    "--verification-catalog-fixture-sha256",
+    fixtureDigest,
+    "--entrypoint",
+    "impact",
+    "--defer-main-thread",
+    "--changed-file",
+    changedFile,
+  ];
+  const seedResult = spawnSync(process.execPath, [
+    ...commonArgs,
+    "--dry-run",
+    "--json-out",
+    selectionPath,
+    "--md-out",
+    selectionMarkdownPath,
+    "--profile-out",
+    selectionProfilePath,
+  ], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(seedResult.status, 2, seedResult.stderr || seedResult.stdout);
+  assert.equal(fs.existsSync(selectionPath), true);
+
+  const artifactPath = path.join(tempRoot, "evidence.json");
+  const result = spawnSync(process.execPath, [
+    ...commonArgs,
+    "--execute",
+    "--selection-json",
+    selectionPath,
+    "--json-out",
+    artifactPath,
+    "--md-out",
+    path.join(tempRoot, "evidence.md"),
+    "--profile-out",
+    path.join(tempRoot, "evidence-profile.json"),
+  ], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 2, result.stderr || result.stdout);
+  assert.equal(fs.existsSync(artifactPath), true);
+  return {
+    artifact: JSON.parse(fs.readFileSync(artifactPath, "utf8")),
+    commonArgs,
+    fixture,
+    fixtureDigest,
+    fixturePath,
+    result,
+    seedArtifact: JSON.parse(fs.readFileSync(selectionPath, "utf8")),
+    selectionPath,
+    seedResult,
+    tempRoot,
+  };
+}
+
+function runAdaptivePositiveCliFixture(t) {
+  const fixturePath = path.join(
+    process.cwd(),
+    "tests",
+    "fixtures",
+    "adaptive_local_cli_valid.json",
+  );
+  const fixtureBytes = fs.readFileSync(fixturePath);
+  const fixtureDigest = createHash("sha256").update(fixtureBytes).digest("hex");
+  const runtimeTmp = path.join(process.cwd(), ".runtime", "tmp");
+  fs.mkdirSync(runtimeTmp, { recursive: true });
+  const tempRoot = fs.mkdtempSync(path.join(runtimeTmp, "adaptive-local-cli-valid-"));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const artifactPath = path.join(tempRoot, "evidence.json");
+  const result = spawnSync(process.execPath, [
+    "tools/run_adaptive_tests.mjs",
+    "--verification-catalog-fixture",
+    fixturePath,
+    "--verification-catalog-fixture-sha256",
+    fixtureDigest,
+    "--entrypoint",
+    "impact",
+    "--dry-run",
+    "--defer-main-thread",
+    "--changed-file",
+    "tools/verification/verification_profile.mjs",
+    "--json-out",
+    artifactPath,
+    "--md-out",
+    path.join(tempRoot, "evidence.md"),
+    "--profile-out",
+    path.join(tempRoot, "evidence-profile.json"),
+  ], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return {
+    artifact: JSON.parse(fs.readFileSync(artifactPath, "utf8")),
+    fixtureDigest,
+  };
+}
+
+function assertEverySelectorRootHasCanonicalOutcome(artifact) {
+  assert.deepEqual(
+    artifact.executionPlan.selectorRootOutcomes.map((entry) => entry.commandRef).sort(),
+    artifact.rawCanonicalRoots.map((entry) => entry.commandRef).sort(),
+  );
+  assert.ok(artifact.executionPlan.selectorRootOutcomes.every((entry) => (
+    [
+      "requested",
+      "requested-superseded",
+      "deferred-main-thread",
+      "deferred-main-thread-superseded",
+      "deferred-ci-only",
+      "deferred-ci-only-superseded",
+      "deferred-by-tier",
+      "superseded-by-projection",
+      "blocked",
+      "gap",
+    ].includes(entry.disposition)
+  )));
 }
 
 test("verify-core runner node route stays in test-routing domain", () => {
@@ -1566,6 +1726,8 @@ test("adaptive history discovery requires its exact base and rejects last-commit
     includeMainThread: false,
     deferMainThread: false,
     selectionJson: "",
+    verificationCatalogFixture: "",
+    verificationCatalogFixtureSha256: "",
     jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-selection.json"),
     mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-selection.md"),
     profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "test-adaptive-profile.json"),
@@ -1708,10 +1870,22 @@ test("impact entrypoint binds a clean exact base and rejects ambiguous authority
 });
 
 test("local entrypoints project the canonical selector to child-safe work only", () => {
-  const report = buildAdaptiveEntrypointRecommendation(["package.json"], buildRouteIndex(), {
-    entrypoint: "impact",
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
   });
-  const projected = constrainAdaptiveEntrypointSelection(report, "impact");
+  const report = buildAdaptiveEntrypointRecommendation(["package.json"], selectorRoutes, {
+    entrypoint: "impact",
+    routeAuthority: binding.preparedCatalog.authority,
+  });
+  const projected = constrainAdaptiveEntrypointSelection(report, "impact", {
+    preparedCatalog: binding.preparedCatalog,
+  });
   assert.ok(projected.recommendedCommands.length > 0);
   assert.ok(projected.recommendedCommands.every((entry) => (
     entry.executionOwners.length === 1 && entry.executionOwners[0] === "child-safe"
@@ -1719,17 +1893,12 @@ test("local entrypoints project the canonical selector to child-safe work only",
   assert.deepEqual(projected.mainThreadSerialVerification, []);
   assert.deepEqual(projected.ciOnlyVerification, []);
   assert.deepEqual(projected.blockedVerification, []);
-  assert.deepEqual(projected.localEntrypointPolicy.excludedCommands, []);
-  assert.deepEqual(projected.matchedByFile[0].matchedRouteIds, ["infra:local-verification-closure"]);
+  assert.ok(projected.rawCanonicalRoots.length > projected.recommendedCommands.length);
+  assert.ok(projected.deferredByTier.length > 0);
+  assert.ok(projected.matchedByFile[0].matchedRouteIds.includes("infra:local-verification-closure"));
   assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), ["verify:local-infra"]);
-  assert.equal(
-    projected.localEntrypointPolicy.fastClosures[0].commandRef,
-    "verify:local-infra",
-  );
-  assert.equal(
-    projected.localEntrypointPolicy.fastClosures[0].sourceRefs.includes("tools/verification"),
-    false,
-  );
+  assert.equal(projected.localEntrypointPolicy.source, "canonical-verification-catalog");
+  assert.equal(projected.localLeafEquivalence.status, "equivalent");
   for (const forbidden of [
     "perf:gate",
     "verify:pages-dist-and-drift",
@@ -1740,33 +1909,9 @@ test("local entrypoints project the canonical selector to child-safe work only",
     assert.equal(projected.recommendedCommands.some((entry) => entry.commandRef === forbidden), false);
   }
 
-  const uncovered = constrainAdaptiveEntrypointSelection({
-      changedFiles: ["data/heavy-only.bin"],
-      recommendedCommands: [{
-        commandRef: "heavy-only",
-        executionOwners: ["main-thread"],
-        resourceLocks: [".runtime-output"],
-        cost: "heavy",
-      }],
-      childAgentStaticTasks: [],
-      mainThreadSerialVerification: [],
-      ciOnlyVerification: [],
-      blockedVerification: [],
-      matchedByFile: [{
-        changedFile: "data/heavy-only.bin",
-        matchedRouteIds: ["heavy-only-route"],
-        recommendedCommands: [{
-          commandRef: "heavy-only",
-          executionOwners: ["main-thread"],
-          resourceLocks: [".runtime-output"],
-          cost: "heavy",
-        }],
-      }],
-    }, "impact");
-  assert.equal(uncovered.localEntrypointRouteGaps[0].code, "adaptive-impact-file-without-child-safe-closure");
 });
 
-test("local projection preserves the verification profile leaf outside exact fast closures", () => {
+test("local projection preserves the verification profile leaf within the impact budget", () => {
   const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
   const selectorRoutes = buildRouteIndex();
   const binding = prepareRepositoryVerificationCatalogBinding({
@@ -1784,9 +1929,10 @@ test("local projection preserves the verification profile leaf outside exact fas
   const projected = binding.bindSelectionReport(constrainAdaptiveEntrypointSelection(report, "impact", {
     preparedCatalog: binding.preparedCatalog,
   }));
-  assert.ok(projected.recommendedCommands.some((entry) => (
+  assert.ok(projected.rawLocalEligibleRoots.some((entry) => (
     entry.commandRef === "test:node:verification-profile"
   )));
+  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), ["verify:local-infra"]);
   const plan = applyLocalEntrypointExecutionBudget(buildExecutionPlan(projected, {
     packageScripts,
     preparedCatalog: binding.preparedCatalog,
@@ -1794,9 +1940,13 @@ test("local projection preserves the verification profile leaf outside exact fas
   assert.ok(plan.selectedLeaves.some((entry) => (
     entry.leafId === "node-test:tests/verification_profile_behavior.test.mjs"
   )));
-  assert.ok(plan.routeGaps.some((gap) => gap.code === "adaptive-impact-leaf-budget-exceeded"));
-  assert.deepEqual(plan.executionCommands, []);
-  assert.equal(adaptivePlanningExitCode(projected, plan), 2);
+  assert.ok(plan.selectedLeaves.some((entry) => (
+    entry.leafId === "node-script:tools/select_verification_targets.mjs"
+  )));
+  assert.deepEqual(plan.routeGaps, []);
+  assert.equal(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds, 90);
+  assert.equal(plan.executionCommands.length, 3);
+  assert.equal(adaptivePlanningExitCode(projected, plan), 0);
 });
 
 test("local infra diffs resolve to one canonical fast closure within expanded Tier 1 budgets", () => {
@@ -1809,6 +1959,7 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
     "tests/verify_core_runner_behavior.test.mjs",
     "tools/ai_test_supervisor/domain_registry.json",
     "tools/run_adaptive_tests.mjs",
+    "tools/select_verification_targets.mjs",
     "tools/verification/script_portfolio.mjs",
     "tools/verification/verification_domains.mjs",
   ];
@@ -1847,6 +1998,15 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
     { preparedCatalog: binding.preparedCatalog },
   );
   assert.deepEqual(plan.routeGaps, []);
+  assert.equal(projected.deferredByTier.some((entry) => (
+    entry.minimumDepth === "local" || entry.reason === "local-route-source-mismatch"
+  )), false);
+  assert.ok(plan.selectedLeaves.some((entry) => (
+    entry.leafId === "node-script:tools/select_verification_targets.mjs"
+  )));
+  assert.ok(plan.selectedLeaves.some((entry) => (
+    entry.leafId === "node-test:tests/verification_profile_behavior.test.mjs"
+  )));
   assert.equal(plan.localEntrypointBudget.entrypoint, "impact");
   assert.deepEqual(plan.localEntrypointBudget.limits, {
     maxCommands: 4,
@@ -1857,16 +2017,45 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
   });
   assert.deepEqual(plan.localEntrypointBudget.actual, {
     commandCount: 1,
-    leafCount: 4,
-    processGroupCount: 2,
-    estimatedRuntimeSeconds: 60,
-    estimatedCostUnits: 2,
+    leafCount: 6,
+    processGroupCount: 3,
+    estimatedRuntimeSeconds: 90,
+    estimatedCostUnits: 3,
   });
-  assert.ok(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds >= 60);
+  assert.ok(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds >= 90);
   assert.ok(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds <= 120);
 });
 
-test("local fast closure replacement fails closed when canonical leaves are not equivalent", () => {
+test("renamed heavy commands remain deferred through canonical eligibility", () => {
+  const commandRef = "renamed-state-suite";
+  const preparedCatalog = prepareVerificationCatalog({
+    packageScripts: { [commandRef]: "node --test tests/renamed_state_suite.test.mjs" },
+    selectorRoutes: [{
+      id: "fixture:renamed-heavy",
+      commandRef,
+      sourceRef: "tests/renamed_state_suite.test.mjs",
+      domain: "state-ownership",
+      ownerHint: "state-ownership",
+      layer: "heavy",
+      cost: "heavy",
+      executionOwner: "main-thread",
+      resourceLocks: [".runtime-output"],
+      ciProfile: "full",
+    }],
+    selectorCommandRefs: [commandRef],
+    platform: process.platform,
+    sourceMode: "fixture",
+  });
+  const renamed = preparedCatalog.authority[0];
+  assert.deepEqual(renamed.entrypointPolicy.eligibleEntrypoints, ["nightly"]);
+  assert.equal(renamed.entrypointPolicy.minimumDepth, "nightly");
+  assert.equal(renamed.entrypointPolicy.eligibleEntrypoints.includes("impact"), false);
+  const runnerSource = fs.readFileSync(path.join(process.cwd(), "tools", "run_adaptive_tests.mjs"), "utf8");
+  assert.equal(runnerSource.includes("LOCAL_ENTRYPOINT_FORBIDDEN_ROOTS"), false);
+  assert.equal(runnerSource.includes("/^verify:p4:/"), false);
+});
+
+test("local projection covers selector sanity as an exact canonical local leaf", () => {
   const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
   const selectorRoutes = buildRouteIndex();
   const binding = prepareRepositoryVerificationCatalogBinding({
@@ -1876,23 +2065,275 @@ test("local fast closure replacement fails closed when canonical leaves are not 
     repoRoot: process.cwd(),
     platform: process.platform,
   });
-  const raw = buildRecommendation(["tools/run_adaptive_tests.mjs"], selectorRoutes, {
-    routeAuthority: binding.preparedCatalog.authority,
-  });
+  const raw = buildAdaptiveEntrypointRecommendation(
+    ["tools/run_adaptive_tests.mjs"],
+    selectorRoutes,
+    { entrypoint: "impact", routeAuthority: binding.preparedCatalog.authority },
+  );
   const projected = constrainAdaptiveEntrypointSelection(raw, "impact", {
     preparedCatalog: binding.preparedCatalog,
   });
-  assert.deepEqual(projected.matchedByFile[0].recommendedCommands, []);
+
+  const rawSelector = projected.rawCanonicalRoots.find((entry) => (
+    entry.commandRef === "node tools/select_verification_targets.mjs --check"
+  ));
+  assert.equal(rawSelector.canonicalIdentity.commandRef, rawSelector.commandRef);
+  assert.equal(rawSelector.canonicalIdentity.catalogIdentity.digest, binding.preparedCatalog.catalogDigest);
+  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), ["verify:local-infra"]);
+  const localSelector = projected.rawLocalEligibleRoots.find((entry) => (
+    entry.commandRef === "node tools/select_verification_targets.mjs --check"
+  ));
+  assert.equal(localSelector.entrypointPolicy.minimumDepth, "local");
+  assert.equal(localSelector.canonicalIdentity.catalogIdentity.digest, binding.preparedCatalog.catalogDigest);
+  assert.equal(projected.deferredByTier.some((entry) => (
+    entry.commandRef === "node tools/select_verification_targets.mjs --check"
+  )), false);
+  assert.equal(projected.localLeafEquivalence.status, "equivalent");
+  assert.deepEqual(projected.localLeafEquivalence.missingLeaves, []);
+  assert.ok(projected.localLeafEquivalence.projectedLocalLeaves.includes(
+    "node-script:tools/select_verification_targets.mjs",
+  ));
+});
+
+test("local-eligible source mismatch creates a route gap and blocks execution", () => {
+  const commandRef = "test:node:verification-profile";
+  const contributor = adaptiveContributor(commandRef, {
+    sourceRefs: ["tools/verification/verification_profile.mjs"],
+    routeIds: ["route:local-source-mismatch"],
+    safetyContributorRouteIds: ["route:local-source-mismatch"],
+  });
+  const report = {
+    ...adaptiveReport({ selected: [contributor] }),
+    changedFiles: ["package.json"],
+    matchedByFile: [{
+      changedFile: "package.json",
+      matchedRouteIds: ["route:local-source-mismatch"],
+      recommendedCommands: [structuredClone(contributor)],
+    }],
+  };
+  const preparedCatalog = prepareVerificationCatalog({
+    packageScripts: {
+      [commandRef]: "node --test tests/verification_profile_behavior.test.mjs",
+    },
+    selectorRoutes: [{
+      ...contributor,
+      id: "route:local-source-mismatch",
+      authoritySource: "selector-route",
+    }],
+    selectorCommandRefs: [commandRef],
+    platform: process.platform,
+    sourceMode: "fixture",
+  });
+  const projected = constrainAdaptiveEntrypointSelection(report, "impact", { preparedCatalog });
   assert.ok(projected.localEntrypointRouteGaps.some((gap) => (
-    gap.code === "adaptive-impact-fast-closure-coverage-gap"
-      && gap.detail.includes("missing-leaves=")
+    gap.code === "adaptive-impact-local-source-mismatch"
+      && gap.commandRef === commandRef
   )));
+  assert.equal(projected.deferredByTier.some((entry) => entry.commandRef === commandRef), false);
   const plan = buildExecutionPlan(projected, {
-    packageScripts,
-    preparedCatalog: binding.preparedCatalog,
+    packageScripts: preparedCatalog.sourceInputs.packageScripts,
+    preparedCatalog,
   });
   assert.deepEqual(plan.executionCommands, []);
   assert.equal(adaptivePlanningExitCode(projected, plan), 2);
+});
+
+test("production adaptive CLI blocks local source mismatch with catalog-bound evidence", (t) => {
+  const { artifact, fixture, fixtureDigest, fixturePath } = runAdaptiveLocalCliFixture(t, "source_mismatch");
+
+  assert.equal(artifact.verificationCatalogFixture.id, fixture.id);
+  assert.equal(artifact.verificationCatalogFixture.path, path.resolve(fixturePath).replaceAll("\\", "/"));
+  assert.equal(artifact.verificationCatalogFixture.identity.digest, fixtureDigest);
+  assert.equal(artifact.catalogDigest, artifact.verificationCatalogFixture.catalogIdentity.digest);
+  assert.deepEqual(
+    artifact.catalogSourceIdentity,
+    artifact.verificationCatalogFixture.catalogIdentity.sourceIdentity,
+  );
+  assert.equal(artifact.selectionArtifactValidation.status, "validated");
+  assert.ok(artifact.rawLocalEligibleRoots.some((entry) => (
+    entry.commandRef === "test:node:verification-profile"
+  )));
+  assert.ok(artifact.executionPlan.routeGaps.some((gap) => (
+    gap.code === "adaptive-impact-local-source-mismatch"
+      && gap.commandRef === "test:node:verification-profile"
+  )));
+  assert.deepEqual(artifact.executionPlan.executionCommands, []);
+  assert.deepEqual(artifact.executionResults, []);
+  assert.equal(artifact.executionStatus, "blocked");
+  assertEverySelectorRootHasCanonicalOutcome(artifact);
+});
+
+test("selector sanity omission and command rename cannot silently satisfy local projection", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const missingSelectorScripts = {
+    ...packageScripts,
+    "verify:local-infra": "node --test tests/verification_script_portfolio_behavior.test.mjs tests/verification_metadata_behavior.test.mjs tests/verify_core_runner_behavior.test.mjs tests/verification_profile_behavior.test.mjs && npm run python -- -m unittest tests.test_e2e_structural_tooling -q",
+  };
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts: missingSelectorScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+  });
+  const raw = buildAdaptiveEntrypointRecommendation(
+    ["tools/run_adaptive_tests.mjs"],
+    selectorRoutes,
+    { entrypoint: "impact", routeAuthority: binding.preparedCatalog.authority },
+  );
+  const projected = binding.bindSelectionReport(constrainAdaptiveEntrypointSelection(raw, "impact", {
+    preparedCatalog: binding.preparedCatalog,
+  }));
+  const plan = buildExecutionPlan(projected, {
+    packageScripts: missingSelectorScripts,
+    preparedCatalog: binding.preparedCatalog,
+  });
+  assert.equal(projected.localLeafEquivalence.status, "gap");
+  assert.ok(projected.localLeafEquivalence.missingLeaves.includes(
+    "node-script:tools/select_verification_targets.mjs",
+  ));
+  assert.deepEqual(plan.executionCommands, []);
+  assert.equal(adaptivePlanningExitCode(projected, plan), 2);
+
+  const renamedCommand = "node tools/select_verification_targets_renamed.mjs --check";
+  const renamedCatalog = prepareVerificationCatalog({
+    packageScripts: {},
+    selectorRoutes: [{
+      id: "fixture:renamed-selector",
+      commandRef: renamedCommand,
+      sourceRef: "tools/select_verification_targets_renamed.mjs",
+      domain: "test-routing",
+      ownerHint: "test-infra",
+      layer: "contract",
+      cost: "fast",
+      executionOwner: "child-safe",
+      resourceLocks: [],
+      ciProfile: "pr-fast",
+    }],
+    selectorCommandRefs: [renamedCommand],
+    platform: process.platform,
+    sourceMode: "fixture",
+  });
+  assert.deepEqual(renamedCatalog.authority[0].entrypointPolicy.eligibleEntrypoints, ["pr"]);
+  assert.equal(renamedCatalog.authority[0].entrypointPolicy.minimumDepth, "pr");
+});
+
+test("production adaptive CLI blocks missing and renamed selector sanity", (t) => {
+  const missing = runAdaptiveLocalCliFixture(t, "missing_selector").artifact;
+  assert.equal(missing.selectionArtifactValidation.status, "validated");
+  assert.equal(missing.localLeafEquivalence.status, "gap");
+  assert.ok(missing.localLeafEquivalence.missingLeaves.includes(
+    "node-script:tools/select_verification_targets.mjs",
+  ));
+  assert.ok(missing.executionPlan.routeGaps.some((gap) => (
+    gap.code === "adaptive-impact-local-leaf-equivalence-gap"
+  )));
+  assert.deepEqual(missing.executionPlan.executionCommands, []);
+  assert.deepEqual(missing.executionResults, []);
+  assert.equal(missing.executionStatus, "blocked");
+  assertEverySelectorRootHasCanonicalOutcome(missing);
+
+  const renamed = runAdaptiveLocalCliFixture(t, "renamed_selector").artifact;
+  const renamedCommand = "node tools/select_verification_targets.mjs --check-renamed";
+  assert.ok(renamed.executionPlan.routeGaps.some((gap) => (
+    gap.code === "adaptive-selection-artifact-error"
+      && gap.detail.includes(renamedCommand)
+      && gap.detail.includes("not a package script or known command")
+  )));
+  assert.deepEqual(renamed.executionPlan.executionCommands, []);
+  assert.deepEqual(renamed.executionResults, []);
+  assert.equal(renamed.executionStatus, "blocked");
+});
+
+test("production adaptive CLI dry-run reaches a valid local execution boundary", (t) => {
+  const { artifact, fixtureDigest } = runAdaptivePositiveCliFixture(t);
+
+  assert.equal(artifact.verificationCatalogFixture.identity.digest, fixtureDigest);
+  assert.deepEqual(artifact.unmatchedChangedFiles, []);
+  assert.deepEqual(artifact.executionPlan.routeGaps, []);
+  assert.ok(artifact.executionPlan.executionCommands.length > 0);
+  assert.ok(artifact.executionPlan.executionCommands.every((entry) => entry.cost !== "heavy"));
+  assert.equal(artifact.executionResults, null);
+  assert.equal(artifact.executionStatus, "planned");
+  assertEverySelectorRootHasCanonicalOutcome(artifact);
+});
+
+test("production adaptive CLI rejects fixture and selection identity drift", (t) => {
+  const fixtureRun = runAdaptiveLocalCliFixture(t, "source_mismatch");
+  const wrongFixtureSha = `${fixtureRun.fixtureDigest.slice(0, -1)}${fixtureRun.fixtureDigest.endsWith("0") ? "1" : "0"}`;
+  const wrongShaPath = path.join(fixtureRun.tempRoot, "wrong-sha.json");
+  const wrongShaArgs = fixtureRun.commonArgs.map((entry, index, args) => (
+    index > 0 && args[index - 1] === "--verification-catalog-fixture-sha256"
+      ? wrongFixtureSha
+      : entry
+  ));
+  const wrongShaResult = spawnSync(process.execPath, [
+    ...wrongShaArgs,
+    "--dry-run",
+    "--json-out",
+    wrongShaPath,
+    "--md-out",
+    path.join(fixtureRun.tempRoot, "wrong-sha.md"),
+    "--profile-out",
+    path.join(fixtureRun.tempRoot, "wrong-sha-profile.json"),
+  ], { cwd: process.cwd(), encoding: "utf8" });
+  assert.equal(wrongShaResult.status, 2, wrongShaResult.stderr || wrongShaResult.stdout);
+  const wrongShaArtifact = JSON.parse(fs.readFileSync(wrongShaPath, "utf8"));
+  assert.ok(wrongShaArtifact.executionPlan.routeGaps.some((gap) => (
+    gap.code === "adaptive-verification-catalog-fixture-sha256-mismatch"
+  )));
+  assert.deepEqual(wrongShaArtifact.executionPlan.executionCommands, []);
+  assert.deepEqual(wrongShaArtifact.executionResults, []);
+
+  for (const field of ["catalogDigest", "catalogSourceIdentity"]) {
+    const forgedSelection = structuredClone(fixtureRun.seedArtifact);
+    forgedSelection[field] = field === "catalogDigest"
+      ? "forged-catalog-digest"
+      : { ...forgedSelection.catalogSourceIdentity, digest: "forged-source-identity" };
+    const forgedSelectionPath = path.join(fixtureRun.tempRoot, `forged-${field}.json`);
+    fs.writeFileSync(forgedSelectionPath, `${JSON.stringify(forgedSelection, null, 2)}\n`, "utf8");
+    const forgedEvidencePath = path.join(fixtureRun.tempRoot, `forged-${field}-evidence.json`);
+    const forgedResult = spawnSync(process.execPath, [
+      ...fixtureRun.commonArgs,
+      "--execute",
+      "--selection-json",
+      forgedSelectionPath,
+      "--json-out",
+      forgedEvidencePath,
+      "--md-out",
+      path.join(fixtureRun.tempRoot, `forged-${field}-evidence.md`),
+      "--profile-out",
+      path.join(fixtureRun.tempRoot, `forged-${field}-profile.json`),
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    assert.equal(forgedResult.status, 2, forgedResult.stderr || forgedResult.stdout);
+    const forgedArtifact = JSON.parse(fs.readFileSync(forgedEvidencePath, "utf8"));
+    assert.equal(forgedArtifact.selectionArtifactValidation.status, "rejected");
+    assert.ok(forgedArtifact.executionPlan.routeGaps.some((gap) => (
+      gap.code === "adaptive-selection-catalog-drift" && gap.detail.includes(field)
+    )));
+    assert.deepEqual(forgedArtifact.executionPlan.executionCommands, []);
+    assert.deepEqual(forgedArtifact.executionResults, []);
+  }
+});
+
+test("production adaptive CLI blocks the exact canonical recursive root", (t) => {
+  const { artifact } = runAdaptiveLocalCliFixture(t, "recursive");
+  const recursiveCommand = "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread";
+
+  assert.equal(artifact.selectionArtifactValidation.status, "validated");
+  assert.ok(artifact.executionPlan.routeGaps.some((gap) => (
+    gap.code === "adaptive-canonical-command-blocked"
+      && gap.commandRef === recursiveCommand
+  )));
+  assert.ok(artifact.executionPlan.selectorRootOutcomes.some((entry) => (
+    entry.commandRef === recursiveCommand
+      && entry.disposition === "blocked"
+  )));
+  assert.deepEqual(artifact.executionPlan.executionCommands, []);
+  assert.deepEqual(artifact.executionResults, []);
+  assert.equal(artifact.executionStatus, "blocked");
+  assertEverySelectorRootHasCanonicalOutcome(artifact);
 });
 
 test("catalog-bound local estimates scale monotonically with canonical leaves", () => {
@@ -1983,11 +2424,13 @@ test("local estimates fail closed on missing policy authority, policy drift, and
 });
 
 test("local entrypoints fail closed when any matched file loses child-safe closure", () => {
-  const fast = adaptiveContributor("node --test tests/fast.test.mjs", {
+  const fast = adaptiveContributor("test:node:verification-profile", {
+    sourceRefs: ["tests/fast.test.mjs"],
     routeIds: ["route:fast"],
     safetyContributorRouteIds: ["route:fast"],
   });
   const heavy = adaptiveContributor("node --test tests/heavy.test.mjs", {
+    sourceRefs: ["tests/heavy.test.mjs"],
     disposition: "main-thread",
     executionOwners: ["main-thread"],
     cost: "heavy",
@@ -2011,28 +2454,32 @@ test("local entrypoints fail closed when any matched file loses child-safe closu
       },
     ],
   };
-  const projected = constrainAdaptiveEntrypointSelection(report, "impact");
+  const preparedCatalog = prepareVerificationCatalog({
+    packageScripts: {
+      [fast.commandRef]: "node --test tests/fast.test.mjs",
+      [heavy.commandRef]: "node --test tests/heavy.test.mjs",
+    },
+    selectorRoutes: [fast, heavy].map((entry) => ({
+      ...entry,
+      id: entry.routeIds[0],
+      authoritySource: "selector-route",
+    })),
+    selectorCommandRefs: [fast.commandRef, heavy.commandRef],
+    platform: process.platform,
+    sourceMode: "fixture",
+  });
+  const projected = constrainAdaptiveEntrypointSelection(report, "impact", { preparedCatalog });
   assert.deepEqual(projected.matchedByFile[1].recommendedCommands, []);
   assert.deepEqual(projected.localEntrypointRouteGaps, [{
-    code: "adaptive-impact-file-without-child-safe-closure",
+    code: "adaptive-impact-local-entrypoint-no-eligible-coverage",
     commandRef: "tests/heavy.test.mjs",
-    detail: "matched-routes=route:heavy",
+    detail: "matched-routes=route:heavy;required-depth=nightly",
   }]);
   const plan = buildExecutionPlan(projected, {
-    packageScripts: {},
-    preparedCatalog: prepareVerificationCatalog({
-      packageScripts: {},
-      selectorRoutes: [fast, heavy].map((entry, index) => ({
-        ...entry,
-        id: entry.routeIds[0],
-        authoritySource: "selector-route",
-      })),
-      selectorCommandRefs: [fast.commandRef, heavy.commandRef],
-      platform: process.platform,
-      sourceMode: "fixture",
-    }),
+    packageScripts: preparedCatalog.sourceInputs.packageScripts,
+    preparedCatalog,
   });
-  assert.ok(plan.routeGaps.some((gap) => gap.code === "adaptive-impact-file-without-child-safe-closure"));
+  assert.ok(plan.routeGaps.some((gap) => gap.code === "adaptive-impact-local-entrypoint-no-eligible-coverage"));
   assert.deepEqual(plan.executionCommands, []);
   assert.equal(adaptivePlanningExitCode(projected, plan), 2);
 });
@@ -2477,7 +2924,7 @@ test("real selector CLI artifact binds to the repository catalog and drives stru
   const currentSelection = binding.bindSelectionReport(buildRecommendation(changedFiles, selectorRoutes, {
     routeAuthority: binding.preparedCatalog.authority,
   }));
-  assert.equal(artifact.routeAuthority.length, 332);
+  assert.equal(artifact.routeAuthority.length, binding.preparedCatalog.authority.length);
   assert.deepEqual(artifact.routeAuthority, binding.preparedCatalog.authority);
   assert.equal(artifact.catalogDigest, binding.preparedCatalog.catalogDigest);
   assert.deepEqual(artifact.catalogSourceIdentity, binding.preparedCatalog.sourceIdentity);

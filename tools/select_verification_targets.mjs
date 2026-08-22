@@ -433,6 +433,7 @@ function executionAuthorityForCommand(entry, disposition = classifyExecutionOwne
     ciProfiles,
     routeIds,
     safetyContributorRouteIds,
+    entrypointPolicy: structuredClone(entry.entrypointPolicy),
     provenance: {
       routeIds,
       safetyContributorRouteIds,
@@ -511,6 +512,7 @@ function buildCommandEntries(routes, allRoutes = buildRouteIndex(), reconciledAu
         expandedSpecs: [...entry.expandedSpecs].sort(),
         matchedFiles: [...entry.matchedFiles].sort(),
         guidance: guidanceSetsToObject(entry.guidance),
+        entrypointPolicy: structuredClone(authority?.entrypointPolicy),
       };
     })
     .sort(compareCommandEntries);

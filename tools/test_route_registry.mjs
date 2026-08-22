@@ -5,11 +5,15 @@ import {
   buildVerificationMetadataRoutes,
 } from "./verification/verification_metadata_helpers.mjs";
 import {
+  VERIFICATION_EXACT_DIRECT_COMMAND_REFS,
   VERIFICATION_CI_PROFILES,
   VERIFICATION_COSTS,
   VERIFICATION_EXECUTION_OWNERS,
+  VERIFICATION_ENTRYPOINT_DEPTHS,
+  VERIFICATION_ENTRYPOINT_IDS,
   VERIFICATION_LAYERS,
   VERIFICATION_RESOURCE_LOCKS,
+  deriveVerificationEntrypointPolicy,
 } from "./verification/verification_domains.mjs";
 
 export const REPO_ROOT = process.cwd();
@@ -664,6 +668,7 @@ function resolveNodeRouteDomain(scriptName, sourceRefs) {
   const haystack = `${scriptName},${sourceRefs.join(",")}`;
   if (haystack.includes("release-smoke") || haystack.includes("release_smoke") || haystack.includes("pages_public_release_gate")) return "release-smoke";
   if (scriptName.includes("p4:state-writer-policy")) return "state-ownership";
+  if (scriptName === "test:node:verification-profile") return "test-routing";
   if (
     haystack.includes("test:node:verify-core-runner")
     || haystack.includes("verify_core_runner")
@@ -896,6 +901,18 @@ export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) 
     const ciProfiles = sortedRouteValues(contributors.flatMap((entry) => entry.ciProfiles));
     const presence = Object.fromEntries(Object.keys(contributors[0].presence)
       .map((field) => [field, contributors.every((entry) => entry.presence[field] === true)]));
+    const resourceLocks = sortedRouteValues(contributors.flatMap((entry) => entry.resourceLocks));
+    const entrypointPolicy = deriveVerificationEntrypointPolicy({
+      commandRef,
+      cost,
+      executionOwner,
+      resourceLocks,
+      ciProfiles,
+    });
+    if (!VERIFICATION_ENTRYPOINT_DEPTHS.includes(entrypointPolicy.minimumDepth)
+      || entrypointPolicy.eligibleEntrypoints.some((entrypoint) => !VERIFICATION_ENTRYPOINT_IDS.includes(entrypoint))) {
+      throw new Error(`verification-route-authority-invalid-entrypoint-policy:${commandRef}`);
+    }
     return {
       commandRef,
       routeIds: contributors.map((entry) => entry.id),
@@ -908,9 +925,10 @@ export function reconcileVerificationRouteAuthority(routes = buildRouteIndex()) 
       executionOwner,
       cost,
       platforms: platforms.length > 0 ? platforms : ["all"],
-      resourceLocks: sortedRouteValues(contributors.flatMap((entry) => entry.resourceLocks)),
+      resourceLocks,
       tiers: sortedRouteValues(contributors.flatMap((entry) => entry.tiers)),
       ciProfiles,
+      entrypointPolicy,
       presence,
       metadataComplete: COSTS.includes(cost)
         && EXECUTION_OWNERS.includes(executionOwner)
@@ -1110,11 +1128,11 @@ export function validateRoute(route, packageJson = readJson(PACKAGE_JSON_PATH)) 
   }
   validateRouteGuidance(route);
   const scripts = packageJson.scripts || {};
+  const exactDirectCommands = new Set(VERIFICATION_EXACT_DIRECT_COMMAND_REFS);
   const knownCommand =
     route.commandRef in scripts ||
     route.commandRef.startsWith("node tools/e2e_layering.mjs ") ||
-    route.commandRef.startsWith("node tools/select_verification_targets.mjs ") ||
-    route.commandRef.startsWith("node tools/run_adaptive_tests.mjs ") ||
+    exactDirectCommands.has(route.commandRef) ||
     route.commandRef.startsWith("python -m pytest ") ||
     route.commandRef.startsWith("python -m unittest ") ||
     route.commandRef.startsWith("python tools/");

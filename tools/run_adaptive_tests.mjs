@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
@@ -10,7 +11,6 @@ import {
 } from "./select_verification_targets.mjs";
 import { buildRouteIndex } from "./test_route_registry.mjs";
 import {
-  LOCAL_ADAPTIVE_FAST_CLOSURES,
   VERIFICATION_DOMAINS,
 } from "./verification/verification_domains.mjs";
 import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
@@ -71,12 +71,6 @@ export const LOCAL_ENTRYPOINT_BUDGETS = Object.freeze({
     maxEstimatedCostUnits: 4,
   }),
 });
-const LOCAL_ENTRYPOINT_FORBIDDEN_ROOTS = Object.freeze([
-  /^verify:p4:/,
-  /^test:node:p4:p4-/,
-  /^test:node:p4:state-writer-policy$/,
-]);
-
 export function parseArgs(argv) {
   const args = {
     changedFiles: [],
@@ -89,6 +83,8 @@ export function parseArgs(argv) {
     includeMainThread: false,
     deferMainThread: false,
     selectionJson: "",
+    verificationCatalogFixture: "",
+    verificationCatalogFixtureSha256: "",
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
     profileOut: DEFAULT_ADAPTIVE_VERIFICATION_PROFILE_OUT,
@@ -145,6 +141,18 @@ export function parseArgs(argv) {
     else if (token === "--include-main-thread") args.includeMainThread = true;
     else if (token === "--defer-main-thread") args.deferMainThread = true;
     else if (token === "--selection-json") args.selectionJson = argv[++index];
+    else if (token === "--verification-catalog-fixture") {
+      args.verificationCatalogFixture = String(argv[++index] || "").trim();
+      if (!args.verificationCatalogFixture) {
+        args.inputErrors.push("adaptive-verification-catalog-fixture-path-empty");
+      }
+    }
+    else if (token === "--verification-catalog-fixture-sha256") {
+      args.verificationCatalogFixtureSha256 = String(argv[++index] || "").trim().toLowerCase();
+      if (!args.verificationCatalogFixtureSha256) {
+        args.inputErrors.push("adaptive-verification-catalog-fixture-sha256-empty");
+      }
+    }
     else if (token === "--json-out") args.jsonOut = argv[++index];
     else if (token === "--md-out") args.mdOut = argv[++index];
     else if (token === "--profile-out") args.profileOut = argv[++index];
@@ -255,6 +263,27 @@ function resolveCommitAuthority(ref, runner) {
 
 export function assertAdaptiveEntrypointAuthority(args, { runner = spawnSync } = {}) {
   const entrypoint = String(args?.entrypoint || "").trim();
+  const fixturePath = String(args?.verificationCatalogFixture || "").trim();
+  const fixtureSha256 = String(args?.verificationCatalogFixtureSha256 || "").trim();
+  const fixtureMode = Boolean(fixturePath || fixtureSha256);
+  if (fixtureMode) {
+    if (!fixturePath || !/^[0-9a-f]{64}$/iu.test(fixtureSha256)) {
+      throw adaptiveEntrypointError("adaptive-verification-catalog-fixture-authority-incomplete");
+    }
+    if (entrypoint !== "impact") {
+      throw adaptiveEntrypointError("adaptive-verification-catalog-fixture-entrypoint-forbidden", entrypoint);
+    }
+    if (!args.changedFilesProvided || args.includeBranchHistory || args.historyBase) {
+      throw adaptiveEntrypointError("adaptive-verification-catalog-fixture-changed-files-authority");
+    }
+    if (!args.deferMainThread || args.includeMainThread) {
+      throw adaptiveEntrypointError("adaptive-verification-catalog-fixture-main-thread-forbidden");
+    }
+    if (!args.dryRun && !args.selectionJson) {
+      throw adaptiveEntrypointError("adaptive-verification-catalog-fixture-selection-required");
+    }
+    return { historyBase: "", head: "", fixtureMode: true };
+  }
   if (!entrypoint) return { historyBase: String(args?.historyBase || "").trim(), head: "" };
   if (!new Set(["edit", "impact"]).has(entrypoint)) {
     throw adaptiveEntrypointError("adaptive-entrypoint-unknown", entrypoint);
@@ -295,30 +324,12 @@ export function assertAdaptiveEntrypointAuthority(args, { runner = spawnSync } =
   return { historyBase, head };
 }
 
-function localClosureMatchesFile(closure, changedFile) {
-  const normalizedFile = String(changedFile || "").replaceAll("\\", "/").replace(/^\.\//, "");
-  return closure.sourceRefs.some((sourceRef) => (
-    normalizedFile === String(sourceRef).replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "")
-  ));
-}
-
 export function buildAdaptiveEntrypointRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
-  entrypoint = "",
+  entrypoint: _entrypoint = "",
   routeAuthority = null,
 } = {}) {
-  const localEntrypoint = new Set(["edit", "impact"]).has(entrypoint);
   return buildRecommendation(changedFiles, allRoutes, {
     routeAuthority,
-    matchedRouteProjector: localEntrypoint
-      ? ({ changedFile, matchedRoutes }) => {
-        const closureCommandRefs = new Set(LOCAL_ADAPTIVE_FAST_CLOSURES
-          .filter((closure) => localClosureMatchesFile(closure, changedFile))
-          .map((closure) => closure.commandRef));
-        return closureCommandRefs.size > 0
-          ? matchedRoutes.filter((route) => closureCommandRefs.has(route.commandRef))
-          : matchedRoutes;
-      }
-      : null,
   });
 }
 
@@ -339,79 +350,178 @@ export function constrainAdaptiveEntrypointSelection(report, entrypoint, {
   preparedCatalog = null,
 } = {}) {
   if (!new Set(["edit", "impact"]).has(entrypoint)) return report;
-  const isChildSafe = (entry) => classifyExecutionOwners(entry.executionOwners || []) === "child-safe";
-  const isLocalEntrypointCommand = (entry) => isChildSafe(entry)
-    && LOCAL_ENTRYPOINT_FORBIDDEN_ROOTS.every((pattern) => !pattern.test(entry.commandRef));
+  const catalogIdentity = preparedCatalog ? {
+    schemaVersion: preparedCatalog.schemaVersion,
+    kind: preparedCatalog.kind,
+    digest: preparedCatalog.catalogDigest,
+    sourceIdentity: structuredClone(preparedCatalog.sourceIdentity),
+  } : null;
+  const policyByCommand = new Map((preparedCatalog?.authority || []).map((entry) => (
+    [entry.commandRef, entry.entrypointPolicy]
+  )));
+  const canonicalPolicy = (entry) => policyByCommand.get(entry?.commandRef) || null;
+  const isEligible = (entry) => canonicalPolicy(entry)?.eligibleEntrypoints?.includes(entrypoint) === true;
+  const isProjection = (entry) => canonicalPolicy(entry)?.localProjection?.mode === "indivisible";
+  const projectionMatchesFile = (command, changedFile) => {
+    const normalizedFile = String(changedFile || "").replaceAll("\\", "/").replace(/^\.\//, "");
+    return (command.sourceRefs || []).some((sourceRef) => {
+      const normalizedRef = String(sourceRef || "").replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
+      return normalizedFile === normalizedRef || normalizedFile.startsWith(`${normalizedRef}/`);
+    });
+  };
   const selectedCommandRefs = new Set();
   const localEntrypointRouteGaps = [];
+  const deferredByCommand = new Map();
+  const rawByCommand = new Map();
+  const localEligibleByCommand = new Map();
   const matchedByFile = (report.matchedByFile || []).map((entry) => {
-    const closureCommandRefs = new Set(
-      LOCAL_ADAPTIVE_FAST_CLOSURES
-        .filter((closure) => localClosureMatchesFile(closure, entry.changedFile))
-        .map((closure) => closure.commandRef),
-    );
-    const childSafeCommands = (entry.recommendedCommands || []).filter(isLocalEntrypointCommand);
-    let recommendedCommands = childSafeCommands;
-    if (closureCommandRefs.size > 0) {
-      const closureCommands = childSafeCommands.filter((command) => closureCommandRefs.has(command.commandRef));
-      const replacedCommands = childSafeCommands.filter((command) => !closureCommandRefs.has(command.commandRef));
-      recommendedCommands = closureCommands;
-      if (closureCommands.length === 0) {
+    const rawCommands = entry.recommendedCommands || [];
+    for (const command of rawCommands) {
+      rawByCommand.set(command.commandRef, command);
+      if (!canonicalPolicy(command)) {
         localEntrypointRouteGaps.push(planGap(
-          `adaptive-${entrypoint}-fast-closure-authority-gap`,
-          entry.changedFile,
-          `closure=${[...closureCommandRefs].join(",")}`,
+          `adaptive-${entrypoint}-canonical-eligibility-missing`,
+          command.commandRef,
+          `changed-file=${entry.changedFile}`,
         ));
-        recommendedCommands = [];
-      } else if (replacedCommands.length > 0) {
-        try {
-          const closureLeaves = new Set(canonicalLeavesForRoots(
-            preparedCatalog,
-            closureCommands.map((command) => command.commandRef),
-          ));
-          const replacedLeaves = canonicalLeavesForRoots(
-            preparedCatalog,
-            replacedCommands.map((command) => command.commandRef),
-          );
-          const missingLeaves = replacedLeaves.filter((leaf) => !closureLeaves.has(leaf));
-          if (missingLeaves.length > 0) {
-            localEntrypointRouteGaps.push(planGap(
-              `adaptive-${entrypoint}-fast-closure-coverage-gap`,
-              entry.changedFile,
-              `closure=${closureCommands.map((command) => command.commandRef).join(",")};missing-leaves=${missingLeaves.join(",")}`,
-            ));
-            recommendedCommands = [];
-          }
-        } catch (error) {
-          localEntrypointRouteGaps.push(planGap(
-            `adaptive-${entrypoint}-fast-closure-coverage-authority-gap`,
-            entry.changedFile,
-            String(error?.message || error),
-          ));
-          recommendedCommands = [];
-        }
       }
+    }
+    const policyEligibleCommands = rawCommands.filter(isEligible);
+    for (const command of policyEligibleCommands) {
+      localEligibleByCommand.set(command.commandRef, command);
+    }
+    const localEligibleCommands = policyEligibleCommands.filter((command) => (
+      projectionMatchesFile(command, entry.changedFile)
+    ));
+    const localSourceMismatches = policyEligibleCommands.filter((command) => (
+      !localEligibleCommands.includes(command)
+    ));
+    for (const command of localSourceMismatches) {
+      localEntrypointRouteGaps.push(planGap(
+        `adaptive-${entrypoint}-local-source-mismatch`,
+        command.commandRef,
+        `changed-file=${entry.changedFile};source-refs=${(command.sourceRefs || []).join(",") || "missing"}`,
+      ));
+    }
+    const projectionCommands = localEligibleCommands.filter(isProjection);
+    const recommendedCommands = projectionCommands.length > 0 ? projectionCommands : localEligibleCommands;
+    const deferredCommands = rawCommands.filter((command) => !policyEligibleCommands.includes(command));
+    for (const command of deferredCommands) {
+      const existing = deferredByCommand.get(command.commandRef) || {
+        commandRef: command.commandRef,
+        executionOwner: command.executionOwner,
+        executionOwners: [...(command.executionOwners || [])],
+        cost: command.cost,
+        tiers: [...(command.tiers || [])],
+        ciProfiles: [...(command.ciProfiles || [])],
+        resourceLocks: [...(command.resourceLocks || [])],
+        minimumDepth: canonicalPolicy(command)?.minimumDepth || "unknown",
+        executionTarget: canonicalPolicy(command)?.executionTarget || "unknown",
+        reason: canonicalPolicy(command)?.deferredReason || "canonical-entrypoint-policy-missing",
+        routeIds: new Set(),
+        changedFiles: new Set(),
+        catalogIdentity,
+      };
+      for (const routeId of command.routeIds || []) existing.routeIds.add(routeId);
+      existing.changedFiles.add(entry.changedFile);
+      deferredByCommand.set(command.commandRef, existing);
     }
     for (const command of recommendedCommands) selectedCommandRefs.add(command.commandRef);
     if ((entry.matchedRouteIds || []).length > 0 && recommendedCommands.length === 0) {
+      const deeperTiers = [...new Set(deferredCommands
+        .map((command) => canonicalPolicy(command)?.minimumDepth)
+        .filter(Boolean))].sort();
       localEntrypointRouteGaps.push(planGap(
-        `adaptive-${entrypoint}-file-without-child-safe-closure`,
+        `adaptive-${entrypoint}-local-entrypoint-no-eligible-coverage`,
         entry.changedFile,
-        `matched-routes=${entry.matchedRouteIds.join(",")}`,
+        `matched-routes=${entry.matchedRouteIds.join(",")};required-depth=${deeperTiers.join("+") || "unknown"}`,
       ));
     }
-    return { ...entry, recommendedCommands };
+    return {
+      ...entry,
+      rawCanonicalCommands: rawCommands,
+      rawLocalEligibleCommands: policyEligibleCommands,
+      localEligibleCommands,
+      localSourceMismatches: localSourceMismatches.map((command) => ({
+        commandRef: command.commandRef,
+        sourceRefs: [...(command.sourceRefs || [])],
+        catalogIdentity,
+      })),
+      deferredByTier: deferredCommands.map((command) => ({
+        commandRef: command.commandRef,
+        executionOwner: command.executionOwner,
+        cost: command.cost,
+        tiers: [...(command.tiers || [])],
+        minimumDepth: canonicalPolicy(command)?.minimumDepth || "unknown",
+        executionTarget: canonicalPolicy(command)?.executionTarget || "unknown",
+        reason: canonicalPolicy(command)?.deferredReason || "canonical-entrypoint-policy-missing",
+        catalogIdentity,
+      })),
+      recommendedCommands,
+    };
   });
   const recommendedCommands = (report.recommendedCommands || [])
     .filter((entry) => selectedCommandRefs.has(entry.commandRef));
-  const excludedCommands = (report.recommendedCommands || [])
-    .filter((entry) => !selectedCommandRefs.has(entry.commandRef))
-    .map((entry) => ({
+  const withCanonicalIdentity = (entry) => ({
+    ...entry,
+    canonicalIdentity: {
       commandRef: entry.commandRef,
-      executionOwners: [...(entry.executionOwners || [])],
-      cost: entry.cost,
-      resourceLocks: [...(entry.resourceLocks || [])],
-    }));
+      catalogIdentity,
+    },
+  });
+  const rawCanonicalRoots = [...rawByCommand.values()].map(withCanonicalIdentity)
+    .sort((left, right) => left.commandRef.localeCompare(right.commandRef));
+  const rawLocalEligibleRoots = [...localEligibleByCommand.values()].map(withCanonicalIdentity)
+    .sort((left, right) => left.commandRef.localeCompare(right.commandRef));
+  const deferredByTier = [...deferredByCommand.values()].map((entry) => ({
+    ...entry,
+    routeIds: [...entry.routeIds].sort(),
+    changedFiles: [...entry.changedFiles].sort(),
+  })).sort((left, right) => left.commandRef.localeCompare(right.commandRef));
+  let localLeafEquivalence = {
+    status: "unverified",
+    rawLocalEligibleLeaves: [],
+    projectedLocalLeaves: [],
+    missingLeaves: [],
+    unexpectedLeaves: [],
+    catalogIdentity,
+  };
+  try {
+    if (!preparedCatalog) throw new Error("canonical-catalog-required");
+    const rawLeaves = canonicalLeavesForRoots(
+      preparedCatalog,
+      rawLocalEligibleRoots.map((command) => command.commandRef),
+    );
+    const projectedLeaves = canonicalLeavesForRoots(
+      preparedCatalog,
+      recommendedCommands.map((command) => command.commandRef),
+    );
+    const rawSet = new Set(rawLeaves);
+    const projectedSet = new Set(projectedLeaves);
+    const missingLeaves = rawLeaves.filter((leaf) => !projectedSet.has(leaf));
+    const unexpectedLeaves = projectedLeaves.filter((leaf) => !rawSet.has(leaf));
+    localLeafEquivalence = {
+      status: missingLeaves.length === 0 && unexpectedLeaves.length === 0 ? "equivalent" : "gap",
+      rawLocalEligibleLeaves: rawLeaves,
+      projectedLocalLeaves: projectedLeaves,
+      missingLeaves,
+      unexpectedLeaves,
+      catalogIdentity,
+    };
+    if (localLeafEquivalence.status === "gap") {
+      localEntrypointRouteGaps.push(planGap(
+        `adaptive-${entrypoint}-local-leaf-equivalence-gap`,
+        "canonical-local-projection",
+        `missing-leaves=${missingLeaves.join(",")};unexpected-leaves=${unexpectedLeaves.join(",")}`,
+      ));
+    }
+  } catch (error) {
+    localEntrypointRouteGaps.push(planGap(
+      `adaptive-${entrypoint}-local-leaf-equivalence-authority-gap`,
+      "canonical-local-projection",
+      String(error?.message || error),
+    ));
+  }
   return {
     ...report,
     recommendedCommands,
@@ -421,16 +531,16 @@ export function constrainAdaptiveEntrypointSelection(report, entrypoint, {
     ciOnlyVerification: [],
     blockedVerification: [],
     matchedByFile,
+    rawCanonicalRoots,
+    rawLocalEligibleRoots,
+    deferredByTier,
+    localLeafEquivalence,
     localEntrypointRouteGaps,
     localEntrypointPolicy: {
       entrypoint,
-      executionOwner: "child-safe",
-      fastClosures: LOCAL_ADAPTIVE_FAST_CLOSURES.map((closure) => ({
-        id: closure.id,
-        commandRef: closure.commandRef,
-        sourceRefs: [...closure.sourceRefs],
-      })),
-      excludedCommands,
+      source: "canonical-verification-catalog",
+      catalogIdentity,
+      projectionMode: "canonical-eligibility-with-indivisible-local-projection",
     },
   };
 }
@@ -477,6 +587,74 @@ function uniqueSorted(values) {
 function readPackageScripts(packagePath = path.join(REPO_ROOT, "package.json")) {
   const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
   return packageJson.scripts || {};
+}
+
+function verificationCatalogFixtureError(code, detail = "") {
+  const error = new Error(`${code}${detail ? `:${detail}` : ""}`);
+  error.code = code;
+  error.detail = detail;
+  return error;
+}
+
+export function readVerificationCatalogFixture(fixturePath, expectedSha256) {
+  const normalizedExpected = String(expectedSha256 || "").trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/u.test(normalizedExpected)) {
+    throw verificationCatalogFixtureError("adaptive-verification-catalog-fixture-sha256-invalid");
+  }
+  let fixtureBytes;
+  try {
+    fixtureBytes = fs.readFileSync(fixturePath);
+  } catch (error) {
+    throw verificationCatalogFixtureError("adaptive-verification-catalog-fixture-unreadable", error.message);
+  }
+  const actualSha256 = createHash("sha256").update(fixtureBytes).digest("hex");
+  if (actualSha256 !== normalizedExpected) {
+    throw verificationCatalogFixtureError(
+      "adaptive-verification-catalog-fixture-sha256-mismatch",
+      `expected=${normalizedExpected};actual=${actualSha256}`,
+    );
+  }
+  let fixture;
+  try {
+    fixture = JSON.parse(fixtureBytes.toString("utf8"));
+  } catch (error) {
+    throw verificationCatalogFixtureError("adaptive-verification-catalog-fixture-json", error.message);
+  }
+  const allowedFields = new Set(["schemaVersion", "kind", "id", "packageScripts", "routes"]);
+  const unknownField = Object.keys(fixture || {}).find((field) => !allowedFields.has(field));
+  if (!fixture
+    || typeof fixture !== "object"
+    || Array.isArray(fixture)
+    || fixture.schemaVersion !== 1
+    || fixture.kind !== "adaptive-verification-catalog-fixture"
+    || typeof fixture.id !== "string"
+    || !fixture.id.trim()
+    || !fixture.packageScripts
+    || typeof fixture.packageScripts !== "object"
+    || Array.isArray(fixture.packageScripts)
+    || Object.entries(fixture.packageScripts).some(([name, command]) => (
+      !name.trim() || typeof command !== "string" || !command.trim()
+    ))
+    || !Array.isArray(fixture.routes)
+    || fixture.routes.length === 0
+    || fixture.routes.some((route) => !route || typeof route !== "object" || Array.isArray(route))
+    || unknownField) {
+    throw verificationCatalogFixtureError(
+      "adaptive-verification-catalog-fixture-schema",
+      unknownField || String(fixture?.id || "missing"),
+    );
+  }
+  return {
+    fixture,
+    binding: {
+      id: fixture.id,
+      path: path.resolve(fixturePath).replaceAll("\\", "/"),
+      identity: {
+        algorithm: "sha256",
+        digest: actualSha256,
+      },
+    },
+  };
 }
 
 function planGap(code, commandRef, detail = "") {
@@ -1080,6 +1258,7 @@ function authorityMetadata(entry) {
     ciProfiles: uniqueSorted(entry.ciProfiles),
     routeIds: uniqueSorted(entry.routeIds),
     safetyContributorRouteIds: uniqueSorted(entry.safetyContributorRouteIds),
+    entrypointPolicy: structuredClone(entry.entrypointPolicy),
     provenance: {
       routeIds: uniqueSorted(entry.provenance?.routeIds),
       safetyContributorRouteIds: uniqueSorted(entry.provenance?.safetyContributorRouteIds),
@@ -1136,6 +1315,22 @@ function validateAuthorityContributor(entry, expectedDisposition, platform, rout
   }
   if (typeof entry.cost !== "string" || !entry.cost.trim()) {
     routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.cost`));
+    return null;
+  }
+  const entrypointPolicy = entry.entrypointPolicy;
+  if (!entrypointPolicy
+    || entrypointPolicy.schemaVersion !== 1
+    || !Array.isArray(entrypointPolicy.eligibleEntrypoints)
+    || entrypointPolicy.eligibleEntrypoints.length === 0
+    || !["local", "pr", "nightly", "release"].includes(entrypointPolicy.minimumDepth)
+    || typeof entrypointPolicy.executionTarget !== "string"
+    || !["planned", "blocked"].includes(entrypointPolicy.plannerDisposition)
+    || (entrypointPolicy.plannerDisposition === "planned" && entrypointPolicy.blockedReason !== null)
+    || (entrypointPolicy.plannerDisposition === "blocked"
+      && (typeof entrypointPolicy.blockedReason !== "string" || !entrypointPolicy.blockedReason))
+    || (entrypointPolicy.minimumDepth === "local" && entrypointPolicy.deferredReason !== null)
+    || (entrypointPolicy.minimumDepth !== "local" && typeof entrypointPolicy.deferredReason !== "string")) {
+    routeGaps.push(planGap("adaptive-selection-authority-field", commandRef, `${field}.entrypointPolicy`));
     return null;
   }
   if (!AUTHORITY_DISPOSITIONS.has(entry.disposition)) {
@@ -1292,8 +1487,12 @@ function validateSelectionArtifactProvenance(report, authority, { platform = pro
       routeGaps.push(planGap("adaptive-selection-provenance-field", normalizedFile, `matchedByFile[${index}]`));
       continue;
     }
+    const explicitRouteGap = (report.localEntrypointRouteGaps || []).some((gap) => (
+      gap?.commandRef === normalizedFile
+        || String(gap?.detail || "").includes(`changed-file=${normalizedFile}`)
+    ));
     if (!unmatchedFiles.has(normalizedFile)
-      && (matchedRouteIds.length === 0 || entry.recommendedCommands.length === 0)) {
+      && (matchedRouteIds.length === 0 || (entry.recommendedCommands.length === 0 && !explicitRouteGap))) {
       routeGaps.push(planGap("adaptive-selection-provenance-empty", normalizedFile, `matchedByFile[${index}]`));
       continue;
     }
@@ -1595,12 +1794,23 @@ export function buildExecutionPlan(report, {
       error.message,
     ));
   }
-  // run_adaptive_tests 自身可能被 selector 推荐；这里过滤递归命令，避免执行模式套娃。
-  const withoutAdaptiveRecursion = (entries) => entries
-    .filter((entry) => !entry.commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
-  const childSafeContributors = withoutAdaptiveRecursion(authority.byDisposition.get("child-safe") || []);
-  const mainThreadContributors = withoutAdaptiveRecursion(authority.byDisposition.get("main-thread") || []);
-  const ciOnlyContributors = withoutAdaptiveRecursion(authority.byDisposition.get("ci-only") || []);
+  const canonicalPolicyByCommand = new Map((currentPreparedCatalog?.authority || []).map((entry) => (
+    [entry.commandRef, entry.entrypointPolicy]
+  )));
+  const canonicalBlockedCommands = new Map();
+  for (const commandRef of authority.recommendedByCommand.keys()) {
+    const policy = canonicalPolicyByCommand.get(commandRef);
+    if (policy?.plannerDisposition !== "blocked") continue;
+    canonicalBlockedCommands.set(commandRef, policy.blockedReason);
+    routeGaps.push(planGap(
+      "adaptive-canonical-command-blocked",
+      commandRef,
+      `reason=${policy.blockedReason};catalog=${currentPreparedCatalog?.catalogDigest || "missing"}`,
+    ));
+  }
+  const childSafeContributors = authority.byDisposition.get("child-safe") || [];
+  const mainThreadContributors = authority.byDisposition.get("main-thread") || [];
+  const ciOnlyContributors = authority.byDisposition.get("ci-only") || [];
   const childSafeCommands = childSafeContributors.map((entry) => entry.commandRef);
   const mainThreadCommands = mainThreadContributors.map((entry) => entry.commandRef);
   const ciOnlyCommands = ciOnlyContributors.map((entry) => entry.commandRef);
@@ -1676,6 +1886,68 @@ export function buildExecutionPlan(report, {
   const superseded = (projection) => (projection.plan?.rootRecords || [])
     .filter((entry) => entry.disposition === "superseded")
     .map(({ commandRef, supersededBy }) => ({ commandRef, supersededBy }));
+  const plannedOutcomeByCommand = new Map();
+  for (const [disposition, projection] of [
+    ["requested", selectedProjection],
+    ["deferred-main-thread", deferredMainProjection],
+    ["deferred-ci-only", deferredCiProjection],
+  ]) {
+    for (const rootRecord of projection.plan?.rootRecords || []) {
+      plannedOutcomeByCommand.set(rootRecord.commandRef, {
+        commandRef: rootRecord.commandRef,
+        disposition: rootRecord.disposition === "superseded" ? `${disposition}-superseded` : disposition,
+        ...(rootRecord.supersededBy ? { supersededBy: rootRecord.supersededBy } : {}),
+      });
+    }
+  }
+  const deferredByCommand = new Map((report.deferredByTier || []).map((entry) => [entry.commandRef, entry]));
+  const rawLocalEligibleRefs = new Set((report.rawLocalEligibleRoots || []).map((entry) => entry.commandRef));
+  const projectedRootRefs = uniqueSorted([...authority.recommendedByCommand.keys()]);
+  const selectorRootRefs = uniqueSorted([
+    ...(report.rawCanonicalRoots || []).map((entry) => entry.commandRef),
+    ...authority.recommendedByCommand.keys(),
+  ]);
+  const selectorRootOutcomes = selectorRootRefs.map((commandRef) => {
+    const blockedReason = canonicalBlockedCommands.get(commandRef);
+    if (blockedReason) {
+      return { commandRef, disposition: "blocked", reason: blockedReason };
+    }
+    const planned = plannedOutcomeByCommand.get(commandRef);
+    if (planned) return planned;
+    const deferred = deferredByCommand.get(commandRef);
+    if (deferred) {
+      return {
+        commandRef,
+        disposition: "deferred-by-tier",
+        reason: deferred.reason,
+        minimumDepth: deferred.minimumDepth,
+      };
+    }
+    if (report.localLeafEquivalence?.status === "equivalent"
+      && rawLocalEligibleRefs.has(commandRef)
+      && projectedRootRefs.length > 0) {
+      return {
+        commandRef,
+        disposition: "superseded-by-projection",
+        supersededBy: projectedRootRefs,
+        proof: "canonical-local-leaf-equivalence",
+      };
+    }
+    const matchingGap = routeGaps.find((gap) => gap.commandRef === commandRef);
+    if (matchingGap) {
+      return { commandRef, disposition: "gap", reason: matchingGap.code };
+    }
+    if (routeGaps.length > 0) {
+      routeGaps.push(planGap(
+        "adaptive-selector-root-blocked-by-plan-gap",
+        commandRef,
+        `blocking-gaps=${uniqueSorted(routeGaps.map((gap) => gap.code)).join(",")}`,
+      ));
+      return { commandRef, disposition: "blocked", reason: "planning-gap" };
+    }
+    routeGaps.push(planGap("adaptive-selector-root-unaccounted", commandRef, "canonical-outcome=missing"));
+    return { commandRef, disposition: "gap", reason: "adaptive-selector-root-unaccounted" };
+  });
   const uniqueRouteGaps = [...new Map(routeGaps.map((gap) => [
     `${gap.code}\u0000${gap.commandRef}\u0000${gap.detail}`,
     gap,
@@ -1711,6 +1983,7 @@ export function buildExecutionPlan(report, {
     },
     executionCommands: uniqueRouteGaps.length > 0 ? [] : executionGroups,
     routeGaps: uniqueRouteGaps,
+    selectorRootOutcomes,
     plannerInvocations,
     closure: {
       authorityContributorCount: authority.recommendedByCommand.size,
@@ -2108,7 +2381,8 @@ export function readSelectionArtifact(selectionPath, changedFiles, {
   if (artifactChangedFiles.length > 0
     && report.recommendedCommands.length === 0
     && report.unmatchedChangedFiles.length === 0
-    && report.blockedVerification.length === 0) {
+    && report.blockedVerification.length === 0
+    && (!Array.isArray(report.localEntrypointRouteGaps) || report.localEntrypointRouteGaps.length === 0)) {
     throw selectionArtifactError("adaptive-selection-artifact-empty-closure", artifactChangedFiles.join(","));
   }
   if (preparedCatalog) {
@@ -2193,30 +2467,68 @@ function main() {
   let selectedReport;
   let packageScripts = null;
   let preparedCatalog = null;
+  let verificationCatalogFixture = null;
+  let selectionArtifactValidation = args.selectionJson
+    ? { status: "not-reached", path: path.resolve(args.selectionJson).replaceAll("\\", "/") }
+    : { status: "not-requested", path: null };
   try {
-    packageScripts = readPackageScriptsForProfile();
-    const selectorRoutes = buildRouteIndex();
-    const catalogBinding = prepareRepositoryVerificationCatalogBinding({
-      packageScripts,
-      verificationRecords: VERIFICATION_DOMAINS,
-      selectorRoutes,
-      repoRoot: REPO_ROOT,
-      platform: process.platform,
-    });
-    preparedCatalog = catalogBinding.preparedCatalog;
+    let selectorRoutes;
+    let bindSelectionReport;
+    if (args.verificationCatalogFixture) {
+      const fixtureInput = readVerificationCatalogFixture(
+        args.verificationCatalogFixture,
+        args.verificationCatalogFixtureSha256,
+      );
+      packageScripts = fixtureInput.fixture.packageScripts;
+      selectorRoutes = fixtureInput.fixture.routes;
+      preparedCatalog = prepareVerificationCatalog({
+        packageScripts,
+        selectorRoutes,
+        selectorCommandRefs: selectorRoutes.map((route) => route.commandRef),
+        repoRoot: REPO_ROOT,
+        platform: process.platform,
+        sourceMode: "fixture",
+      });
+      verificationCatalogFixture = {
+        ...fixtureInput.binding,
+        catalogIdentity: {
+          digest: preparedCatalog.catalogDigest,
+          sourceIdentity: structuredClone(preparedCatalog.sourceIdentity),
+        },
+      };
+      bindSelectionReport = (report) => bindSelectionToPreparedCatalog(report, preparedCatalog);
+    } else {
+      packageScripts = readPackageScriptsForProfile();
+      selectorRoutes = buildRouteIndex();
+      const catalogBinding = prepareRepositoryVerificationCatalogBinding({
+        packageScripts,
+        verificationRecords: VERIFICATION_DOMAINS,
+        selectorRoutes,
+        repoRoot: REPO_ROOT,
+        platform: process.platform,
+      });
+      preparedCatalog = catalogBinding.preparedCatalog;
+      bindSelectionReport = catalogBinding.bindSelectionReport;
+    }
     const recommendation = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
       entrypoint: args.entrypoint,
       routeAuthority: preparedCatalog.authority,
     });
-    const currentSelection = catalogBinding.bindSelectionReport(
+    const currentSelection = bindSelectionReport(
       constrainAdaptiveEntrypointSelection(recommendation, args.entrypoint, { preparedCatalog }),
     );
-    selectedReport = args.selectionJson
-      ? readSelectionArtifact(args.selectionJson, changedFiles, {
+    if (args.selectionJson) {
+      selectedReport = readSelectionArtifact(args.selectionJson, changedFiles, {
         preparedCatalog,
         expectedSelectorRootSet: currentSelection.selectorRootSet,
-      })
-      : currentSelection;
+      });
+      selectionArtifactValidation = {
+        status: "validated",
+        path: path.resolve(args.selectionJson).replaceAll("\\", "/"),
+      };
+    } else {
+      selectedReport = currentSelection;
+    }
   } catch (error) {
     const gap = planGap(error.code || "adaptive-selection-artifact-error", "selection-artifact", error.message);
     const failedReport = {
@@ -2225,8 +2537,19 @@ function main() {
       discoveryMode: "explicit-input",
       mainThreadDisposition: args.includeMainThread ? "included" : args.deferMainThread ? "deferred" : "blocked",
       selectionArtifact: args.selectionJson || null,
+      selectionArtifactValidation: {
+        ...selectionArtifactValidation,
+        status: selectionArtifactValidation.status === "not-requested" ? "not-requested" : "rejected",
+        errorCode: error.code || "adaptive-selection-artifact-error",
+      },
+      verificationCatalogFixture,
+      catalogDigest: preparedCatalog?.catalogDigest || null,
+      catalogSourceIdentity: preparedCatalog?.sourceIdentity || null,
     };
-    const failedPlan = buildExecutionPlan(failedReport);
+    const failedPlan = buildExecutionPlan(failedReport, {
+      packageScripts: packageScripts || undefined,
+      preparedCatalog,
+    });
     failedPlan.routeGaps = [gap];
     failedPlan.executionCommands = [];
     writeAdaptiveOutputs(failedReport, args, [], failedPlan, { terminalState: "blocked" });
@@ -2250,6 +2573,8 @@ function main() {
         ? "deferred"
         : "blocked",
     selectionArtifact: args.selectionJson || null,
+    selectionArtifactValidation,
+    verificationCatalogFixture,
   };
   const executionPlan = applyLocalEntrypointExecutionBudget(
     buildExecutionPlan(report, {

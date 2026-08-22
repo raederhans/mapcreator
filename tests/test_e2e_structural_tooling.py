@@ -638,6 +638,16 @@ const authority = (commandRef, disposition, resourceLocks, ciProfiles) => ({
   ciProfiles,
   routeIds: [`synthetic:${disposition}:${commandRef}`],
   safetyContributorRouteIds: [`synthetic:${disposition}:${commandRef}`],
+  entrypointPolicy: {
+    schemaVersion: 1,
+    eligibleEntrypoints: disposition === 'child-safe' ? ['pr'] : ['nightly'],
+    minimumDepth: disposition === 'child-safe' ? 'pr' : 'nightly',
+    executionTarget: disposition === 'child-safe' ? 'child-safe' : 'main-thread',
+    deferredReason: disposition === 'child-safe' ? 'requires-pr-verification' : 'requires-nightly-verification',
+    plannerDisposition: 'planned',
+    blockedReason: null,
+    localProjection: null,
+  },
   provenance: {
     routeIds: [`synthetic:${disposition}:${commandRef}`],
     safetyContributorRouteIds: [`synthetic:${disposition}:${commandRef}`],
@@ -1620,7 +1630,7 @@ const page = {
         )
         self.assert_command_ok(selector_result)
         selector_payload = json.loads(selector_json_path.read_text(encoding="utf-8"))
-        self.assertEqual(len(selector_payload["routeAuthority"]), 332)
+        self.assertEqual(len(selector_payload["routeAuthority"]), 333)
         self.assertTrue(selector_payload["catalogDigest"])
         self.assertTrue(selector_payload["catalogSourceIdentity"]["digest"])
         self.assertEqual(

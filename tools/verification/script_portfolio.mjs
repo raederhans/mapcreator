@@ -43,6 +43,12 @@ const EXECUTION_OWNER_ORDER = Object.freeze(["child-safe", "main-thread", "ci-on
 const DEFAULT_EXECUTION_MAX_LEAVES = 64;
 const DEFAULT_WINDOWS_ARGV_BYTES = 30_000;
 const DEFAULT_POSIX_ARGV_BYTES = 131_072;
+const ENTRYPOINT_POLICY_BY_DEPTH = Object.freeze({
+  local: Object.freeze(["edit", "impact", "pr"]),
+  pr: Object.freeze(["pr"]),
+  nightly: Object.freeze(["nightly"]),
+  release: Object.freeze(["release"]),
+});
 
 function sortedUnique(values) {
   return [...new Set((values || []).filter((value) => value !== undefined && value !== null).map(String))].sort();
@@ -50,6 +56,40 @@ function sortedUnique(values) {
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function assertEntrypointPolicy(commandRef, entry) {
+  const policy = entry?.entrypointPolicy;
+  const expectedEntrypoints = ENTRYPOINT_POLICY_BY_DEPTH[policy?.minimumDepth];
+  const projection = policy?.localProjection;
+  const validPlannerDisposition = policy?.plannerDisposition === "planned"
+    ? policy.blockedReason === null
+    : policy?.plannerDisposition === "blocked"
+      && typeof policy.blockedReason === "string"
+      && policy.blockedReason.length > 0;
+  const validProjection = projection === null || (
+    policy?.minimumDepth === "local"
+    && projection?.mode === "indivisible"
+    && projection?.proof === "canonical-local-leaf-equivalence"
+  );
+  const validTarget = policy?.minimumDepth === "release"
+    ? policy?.executionTarget === "deployed-target"
+    : entry?.executionOwner === "child-safe"
+      ? policy?.executionTarget === "child-safe"
+      : ["main-thread", "ci-only"].includes(policy?.executionTarget);
+  if (!policy
+    || policy.schemaVersion !== 1
+    || !expectedEntrypoints
+    || JSON.stringify(policy.eligibleEntrypoints) !== JSON.stringify(expectedEntrypoints)
+    || !validPlannerDisposition
+    || !validTarget
+    || !validProjection
+    || (policy.minimumDepth === "local" && policy.deferredReason !== null)
+    || (policy.minimumDepth !== "local" && policy.deferredReason !== `requires-${policy.minimumDepth}-verification`)
+    || (policy.minimumDepth === "local"
+      && (entry.executionOwner !== "child-safe" || entry.cost === "heavy" || entry.resourceLocks.length > 0))) {
+    throw new Error(`verification-plan-authority-gap:${commandRef}:entrypointPolicy`);
+  }
 }
 
 function catalogIntegrityPayload(catalog) {
@@ -105,6 +145,7 @@ function assertCatalogAuthorityCompleteness(authority) {
     if (!Object.hasOwn(entry, "resourceLocks") || !Array.isArray(entry.resourceLocks)) {
       throw new Error(`verification-plan-authority-gap:${commandRef}:resourceLocks`);
     }
+    assertEntrypointPolicy(commandRef, entry);
     const presenceFields = [
       "sourceRefs",
       "domains",

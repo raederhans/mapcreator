@@ -12,6 +12,7 @@ import {
   buildNodeRoutes,
   buildRouteIndex,
   reconcileVerificationRouteAuthority,
+  validateRouteIndex,
 } from "../tools/test_route_registry.mjs";
 import {
   VERIFICATION_DOMAINS,
@@ -160,7 +161,7 @@ test("P4.0 state ownership policy owns its files, routes, and verify-core comman
   }
 });
 
-test("P4.1 boot actions keep historical route metadata while adaptive selection upgrades the stale exact gate", () => {
+test("P4.1 full boot root and exact gate stay in the nightly main-thread tier", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-1-boot-actions"
   ));
@@ -178,7 +179,10 @@ test("P4.1 boot actions keep historical route metadata while adaptive selection 
   for (const entry of [actionEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
-    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.executionOwner, "main-thread");
+    assert.equal(entry.cost, "heavy");
+    assert.equal(entry.ciProfile, "full");
+    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
     assert.equal(entry.supervisorDomain, "state-ownership");
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
@@ -290,7 +294,7 @@ test("shared P4 control files select only the policy current exact phase gate", 
   }
 });
 
-test("P4.2a scenario actions own their routes and exact phase verification stays out of verify-core", () => {
+test("P4.2a full scenario root and exact gate stay in the nightly main-thread tier", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-2a-scenario-actions"
   ));
@@ -308,7 +312,10 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
   for (const entry of [actionEntry]) {
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
-    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.executionOwner, "main-thread");
+    assert.equal(entry.cost, "heavy");
+    assert.equal(entry.ciProfile, "full");
+    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
     assert.equal(entry.supervisorDomain, "state-ownership");
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
@@ -344,7 +351,7 @@ test("P4.2a scenario actions own their routes and exact phase verification stays
   }
 });
 
-test("P4.2b scenario chunk actions keep focused checks child-safe and exact verification serialized", () => {
+test("P4.2b full scenario chunk root stays in the nightly main-thread tier", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-2b-scenario-chunk-actions"
   ));
@@ -359,7 +366,10 @@ test("P4.2b scenario chunk actions keep focused checks child-safe and exact veri
     assert.ok(entry);
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
-    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.executionOwner, "main-thread");
+    assert.equal(entry.cost, "heavy");
+    assert.equal(entry.ciProfile, "full");
+    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
     assert.equal(entry.routeRegistry, true);
   }
   assert.equal(boundaryEntry.executionOwner, "main-thread");
@@ -402,7 +412,7 @@ test("P4.2b scenario chunk actions keep focused checks child-safe and exact veri
   assert.equal(defaultCommandRefs.has(exactPhaseEntry.commandRef), false);
 });
 
-test("P4.2c Scenario health actions keep focused checks child-safe and exact verification serialized", () => {
+test("P4.2c full scenario health root stays in the nightly main-thread tier", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-2c-scenario-health-actions"
   ));
@@ -417,7 +427,10 @@ test("P4.2c Scenario health actions keep focused checks child-safe and exact ver
     assert.ok(entry);
     assert.equal(entry.domain, "state-ownership");
     assert.equal(entry.ownerHint, "state-ownership");
-    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.executionOwner, "main-thread");
+    assert.equal(entry.cost, "heavy");
+    assert.equal(entry.ciProfile, "full");
+    assert.deepEqual(entry.resourceLocks, [".runtime-output"]);
     assert.equal(entry.supervisorDomain, "state-ownership");
     assert.equal(entry.routeRegistry, true);
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
@@ -813,6 +826,66 @@ test("metadata files route to test-routing without unmatched changed files", () 
   assert.deepEqual(report.unmatchedChangedFiles, []);
   assert.ok(report.coveredDomains.includes("test-routing"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:verification-metadata"));
+});
+
+test("adaptive production CLI JSON fixtures use exact core-runner route scope", () => {
+  const fixturePaths = [
+    "tests/fixtures/adaptive_local_cli_source_mismatch.json",
+    "tests/fixtures/adaptive_local_cli_missing_selector.json",
+    "tests/fixtures/adaptive_local_cli_renamed_selector.json",
+    "tests/fixtures/adaptive_local_cli_valid.json",
+    "tests/fixtures/adaptive_local_cli_recursive.json",
+  ];
+  const report = buildRecommendation(fixturePaths);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const entry of report.matchedByFile) {
+    assert.ok(entry.matchedRouteIds.includes("infra:core-verification-runner"));
+    assert.ok(entry.recommendedCommands.some((command) => (
+      command.commandRef === "test:node:verify-core-runner"
+    )));
+  }
+
+  const route = buildRouteIndex().find((entry) => entry.id === "infra:core-verification-runner");
+  const sourceRefs = route.sourceRef.split(",");
+  for (const fixturePath of fixturePaths) assert.ok(sourceRefs.includes(fixturePath));
+  assert.equal(sourceRefs.includes("tests/fixtures/adaptive_local_cli_fixture.mjs"), false);
+
+  const adjacentPaths = [
+    "tests/fixtures/adaptive_local_cli_source_mismatch_renamed.json",
+    "tests/fixtures/adaptive_local_cli_budget_gap.json",
+  ];
+  const adjacentReport = buildRecommendation(adjacentPaths);
+  assert.deepEqual(adjacentReport.unmatchedChangedFiles, adjacentPaths.sort());
+  assert.equal(adjacentReport.matchedByFile.some((entry) => (
+    entry.matchedRouteIds.includes("infra:core-verification-runner")
+  )), false);
+});
+
+test("adaptive and selector direct route commands require exact parameter contracts", () => {
+  const route = {
+    id: "fixture:exact-direct-command",
+    commandRef: "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread",
+    sourceRef: "tools/run_adaptive_tests.mjs",
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  };
+  assert.equal(validateRouteIndex([route]).count, 1);
+  for (const commandRef of [
+    "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread-renamed",
+    "node tools/run_adaptive_tests.mjs --execute --defer-main-thread",
+    "node tools/select_verification_targets.mjs --check-renamed",
+  ]) {
+    assert.throws(
+      () => validateRouteIndex([{ ...route, id: `fixture:${commandRef}`, commandRef }]),
+      /commandRef is not a package script or known command/,
+    );
+  }
 });
 
 test("renderer runtime context foundation files route to renderer owner verification", () => {
