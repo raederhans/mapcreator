@@ -560,16 +560,23 @@ function skippedHeavyRoutes(allRoutes, selectedRoutes) {
 
 function buildRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
   routeAuthority = null,
+  matchedRouteProjector = null,
 } = {}) {
   validateRouteIndex(allRoutes);
   const reconciledRouteAuthority = routeAuthority || reconcileVerificationRouteAuthority(allRoutes);
   const p4ExactPhaseSelection = resolveP4ExactPhaseSelection(allRoutes);
   const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
   const importGraph = readImportGraph();
-  const matchedRoutesByFile = normalizedChangedFiles.map((file) => ({
-    changedFile: file,
-    routes: currentPhaseRoutesForChangedFile(allRoutes, file, importGraph, p4ExactPhaseSelection),
-  }));
+  const matchedRoutesByFile = normalizedChangedFiles.map((file) => {
+    const routes = currentPhaseRoutesForChangedFile(allRoutes, file, importGraph, p4ExactPhaseSelection);
+    const projectedRoutes = matchedRouteProjector
+      ? matchedRouteProjector({ changedFile: file, matchedRoutes: routes, allRoutes })
+      : routes;
+    if (!Array.isArray(projectedRoutes) || projectedRoutes.some((route) => !routes.includes(route))) {
+      throw new Error(`verification-selector-invalid-route-projection:${file}`);
+    }
+    return { changedFile: file, routes: projectedRoutes };
+  });
   const matchedRoutes = matchedRoutesByFile.flatMap((entry) => entry.routes);
   const commandEntries = buildCommandEntries(matchedRoutes, allRoutes, reconciledRouteAuthority);
   for (const entry of matchedRoutesByFile) {

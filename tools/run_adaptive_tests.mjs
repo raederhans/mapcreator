@@ -9,9 +9,13 @@ import {
   normalizeChangedFiles,
 } from "./select_verification_targets.mjs";
 import { buildRouteIndex } from "./test_route_registry.mjs";
-import { VERIFICATION_DOMAINS } from "./verification/verification_domains.mjs";
+import {
+  LOCAL_ADAPTIVE_FAST_CLOSURES,
+  VERIFICATION_DOMAINS,
+} from "./verification/verification_domains.mjs";
 import { atomicWriteJsonSync } from "./verification/resumable_verification.mjs";
 import {
+  assertPreparedVerificationCatalog,
   bindSelectionReportToPreparedCatalog,
   buildVerificationSelectionPlan,
   prepareRepositoryVerificationCatalogBinding,
@@ -51,6 +55,27 @@ const WINDOWS_MAX_ARGV_BYTES = 30_000;
 const POSIX_MAX_ARGV_BYTES = 131_072;
 const AUTHORITY_DISPOSITIONS = new Set(["child-safe", "main-thread", "ci-only", "blocked"]);
 const EXECUTION_ISOLATIONS = new Set(["batch", "root", "process", "leaf"]);
+export const LOCAL_ENTRYPOINT_BUDGETS = Object.freeze({
+  edit: Object.freeze({
+    maxCommands: 3,
+    maxLeaves: 8,
+    maxProcessGroups: 3,
+    maxEstimatedRuntimeSeconds: 90,
+    maxEstimatedCostUnits: 3,
+  }),
+  impact: Object.freeze({
+    maxCommands: 4,
+    maxLeaves: 12,
+    maxProcessGroups: 4,
+    maxEstimatedRuntimeSeconds: 120,
+    maxEstimatedCostUnits: 4,
+  }),
+});
+const LOCAL_ENTRYPOINT_FORBIDDEN_ROOTS = Object.freeze([
+  /^verify:p4:/,
+  /^test:node:p4:p4-/,
+  /^test:node:p4:state-writer-policy$/,
+]);
 
 export function parseArgs(argv) {
   const args = {
@@ -60,6 +85,7 @@ export function parseArgs(argv) {
     dryRun: true,
     includeBranchHistory: false,
     historyBase: "",
+    entrypoint: "",
     includeMainThread: false,
     deferMainThread: false,
     selectionJson: "",
@@ -102,9 +128,18 @@ export function parseArgs(argv) {
     } else if (token === "--dry-run") args.dryRun = true;
     else if (token === "--execute") args.dryRun = false;
     else if (token === "--include-branch-history") args.includeBranchHistory = true;
+    else if (token === "--entrypoint") {
+      args.entrypoint = String(argv[++index] || "").trim();
+      if (!args.entrypoint) throw new Error("--entrypoint requires edit or impact");
+    }
     else if (token === "--history-base") {
       args.historyBase = String(argv[++index] || "").trim();
       if (!args.historyBase) throw new Error("--history-base requires a non-empty Git revision");
+      args.includeBranchHistory = true;
+    }
+    else if (token === "--base") {
+      args.historyBase = String(argv[++index] || "").trim();
+      if (!args.historyBase) throw new Error("--base requires a non-empty Git revision");
       args.includeBranchHistory = true;
     }
     else if (token === "--include-main-thread") args.includeMainThread = true;
@@ -141,6 +176,7 @@ export function discoverChangedFiles({
   runner = spawnSync,
   includeBranchHistory = false,
   historyBase = "",
+  historyHead = "HEAD",
 } = {}) {
   const discovered = new Set();
   // workspace 与 branch history 合并时只收集路径；实际 route 判定交给 selector，避免 Git 探测层携带业务语义。
@@ -150,7 +186,7 @@ export function discoverChangedFiles({
       "diff",
       "--name-only",
       normalizedHistoryBase,
-      "HEAD",
+      String(historyHead || "HEAD").trim(),
       "--diff-filter=ACMRD",
       "-z",
     ]]
@@ -188,6 +224,215 @@ export function discoverChangedFiles({
     throw error;
   }
   return [...discovered].sort();
+}
+
+function adaptiveEntrypointError(code, detail = "") {
+  const error = new Error(`${code}${detail ? `:${detail}` : ""}`);
+  error.code = code;
+  error.detail = detail;
+  return error;
+}
+
+function runGitAuthorityCommand(gitArgs, runner = spawnSync) {
+  return runner("git", ["-c", "core.quotepath=false", ...gitArgs], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    shell: false,
+  });
+}
+
+function resolveCommitAuthority(ref, runner) {
+  const result = runGitAuthorityCommand(
+    ["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`],
+    runner,
+  );
+  const revision = String(result.stdout || "").trim();
+  if (result.status !== 0 || !/^[0-9a-f]{40}$/i.test(revision)) {
+    throw adaptiveEntrypointError("adaptive-impact-authority-unresolved", ref);
+  }
+  return revision.toLowerCase();
+}
+
+export function assertAdaptiveEntrypointAuthority(args, { runner = spawnSync } = {}) {
+  const entrypoint = String(args?.entrypoint || "").trim();
+  if (!entrypoint) return { historyBase: String(args?.historyBase || "").trim(), head: "" };
+  if (!new Set(["edit", "impact"]).has(entrypoint)) {
+    throw adaptiveEntrypointError("adaptive-entrypoint-unknown", entrypoint);
+  }
+  if (args.dryRun || !args.deferMainThread || args.includeMainThread) {
+    throw adaptiveEntrypointError(`adaptive-${entrypoint}-main-thread-forbidden`);
+  }
+  if (entrypoint === "edit") {
+    if (args.includeBranchHistory || args.historyBase) {
+      throw adaptiveEntrypointError("adaptive-edit-history-forbidden");
+    }
+    return { historyBase: "", head: "" };
+  }
+  const requestedBase = String(args.historyBase || "").trim();
+  if (!requestedBase) throw adaptiveEntrypointError("adaptive-impact-base-required");
+  if (args.changedFilesProvided) {
+    throw adaptiveEntrypointError("adaptive-impact-explicit-changed-files-forbidden");
+  }
+  if (args.selectionJson) {
+    throw adaptiveEntrypointError("adaptive-impact-selection-artifact-forbidden");
+  }
+  const historyBase = resolveCommitAuthority(requestedBase, runner);
+  const head = resolveCommitAuthority("HEAD", runner);
+  const status = runGitAuthorityCommand(["status", "--porcelain=v1", "-z"], runner);
+  if (status.status !== 0) {
+    throw adaptiveEntrypointError("adaptive-impact-worktree-authority-unresolved");
+  }
+  if (String(status.stdout || "").length > 0) {
+    throw adaptiveEntrypointError("adaptive-impact-dirty-worktree");
+  }
+  const ancestry = runGitAuthorityCommand(["merge-base", "--is-ancestor", historyBase, head], runner);
+  if (ancestry.status === 1) {
+    throw adaptiveEntrypointError("adaptive-impact-base-not-ancestor", requestedBase);
+  }
+  if (ancestry.status !== 0) {
+    throw adaptiveEntrypointError("adaptive-impact-ancestry-unresolved", requestedBase);
+  }
+  return { historyBase, head };
+}
+
+function localClosureMatchesFile(closure, changedFile) {
+  const normalizedFile = String(changedFile || "").replaceAll("\\", "/").replace(/^\.\//, "");
+  return closure.sourceRefs.some((sourceRef) => (
+    normalizedFile === String(sourceRef).replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "")
+  ));
+}
+
+export function buildAdaptiveEntrypointRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
+  entrypoint = "",
+  routeAuthority = null,
+} = {}) {
+  const localEntrypoint = new Set(["edit", "impact"]).has(entrypoint);
+  return buildRecommendation(changedFiles, allRoutes, {
+    routeAuthority,
+    matchedRouteProjector: localEntrypoint
+      ? ({ changedFile, matchedRoutes }) => {
+        const closureCommandRefs = new Set(LOCAL_ADAPTIVE_FAST_CLOSURES
+          .filter((closure) => localClosureMatchesFile(closure, changedFile))
+          .map((closure) => closure.commandRef));
+        return closureCommandRefs.size > 0
+          ? matchedRoutes.filter((route) => closureCommandRefs.has(route.commandRef))
+          : matchedRoutes;
+      }
+      : null,
+  });
+}
+
+function canonicalLeavesForRoots(preparedCatalog, commandRefs) {
+  assertPreparedVerificationCatalog(preparedCatalog);
+  if (commandRefs.length === 0) return [];
+  return buildVerificationSelectionPlan(
+    preparedCatalog.catalog,
+    commandRefs,
+    {
+      preparedCatalog,
+      platform: preparedCatalog.sourceInputs?.platform || process.platform,
+    },
+  ).normalizedLeaves;
+}
+
+export function constrainAdaptiveEntrypointSelection(report, entrypoint, {
+  preparedCatalog = null,
+} = {}) {
+  if (!new Set(["edit", "impact"]).has(entrypoint)) return report;
+  const isChildSafe = (entry) => classifyExecutionOwners(entry.executionOwners || []) === "child-safe";
+  const isLocalEntrypointCommand = (entry) => isChildSafe(entry)
+    && LOCAL_ENTRYPOINT_FORBIDDEN_ROOTS.every((pattern) => !pattern.test(entry.commandRef));
+  const selectedCommandRefs = new Set();
+  const localEntrypointRouteGaps = [];
+  const matchedByFile = (report.matchedByFile || []).map((entry) => {
+    const closureCommandRefs = new Set(
+      LOCAL_ADAPTIVE_FAST_CLOSURES
+        .filter((closure) => localClosureMatchesFile(closure, entry.changedFile))
+        .map((closure) => closure.commandRef),
+    );
+    const childSafeCommands = (entry.recommendedCommands || []).filter(isLocalEntrypointCommand);
+    let recommendedCommands = childSafeCommands;
+    if (closureCommandRefs.size > 0) {
+      const closureCommands = childSafeCommands.filter((command) => closureCommandRefs.has(command.commandRef));
+      const replacedCommands = childSafeCommands.filter((command) => !closureCommandRefs.has(command.commandRef));
+      recommendedCommands = closureCommands;
+      if (closureCommands.length === 0) {
+        localEntrypointRouteGaps.push(planGap(
+          `adaptive-${entrypoint}-fast-closure-authority-gap`,
+          entry.changedFile,
+          `closure=${[...closureCommandRefs].join(",")}`,
+        ));
+        recommendedCommands = [];
+      } else if (replacedCommands.length > 0) {
+        try {
+          const closureLeaves = new Set(canonicalLeavesForRoots(
+            preparedCatalog,
+            closureCommands.map((command) => command.commandRef),
+          ));
+          const replacedLeaves = canonicalLeavesForRoots(
+            preparedCatalog,
+            replacedCommands.map((command) => command.commandRef),
+          );
+          const missingLeaves = replacedLeaves.filter((leaf) => !closureLeaves.has(leaf));
+          if (missingLeaves.length > 0) {
+            localEntrypointRouteGaps.push(planGap(
+              `adaptive-${entrypoint}-fast-closure-coverage-gap`,
+              entry.changedFile,
+              `closure=${closureCommands.map((command) => command.commandRef).join(",")};missing-leaves=${missingLeaves.join(",")}`,
+            ));
+            recommendedCommands = [];
+          }
+        } catch (error) {
+          localEntrypointRouteGaps.push(planGap(
+            `adaptive-${entrypoint}-fast-closure-coverage-authority-gap`,
+            entry.changedFile,
+            String(error?.message || error),
+          ));
+          recommendedCommands = [];
+        }
+      }
+    }
+    for (const command of recommendedCommands) selectedCommandRefs.add(command.commandRef);
+    if ((entry.matchedRouteIds || []).length > 0 && recommendedCommands.length === 0) {
+      localEntrypointRouteGaps.push(planGap(
+        `adaptive-${entrypoint}-file-without-child-safe-closure`,
+        entry.changedFile,
+        `matched-routes=${entry.matchedRouteIds.join(",")}`,
+      ));
+    }
+    return { ...entry, recommendedCommands };
+  });
+  const recommendedCommands = (report.recommendedCommands || [])
+    .filter((entry) => selectedCommandRefs.has(entry.commandRef));
+  const excludedCommands = (report.recommendedCommands || [])
+    .filter((entry) => !selectedCommandRefs.has(entry.commandRef))
+    .map((entry) => ({
+      commandRef: entry.commandRef,
+      executionOwners: [...(entry.executionOwners || [])],
+      cost: entry.cost,
+      resourceLocks: [...(entry.resourceLocks || [])],
+    }));
+  return {
+    ...report,
+    recommendedCommands,
+    childAgentStaticTasks: (report.childAgentStaticTasks || [])
+      .filter((entry) => selectedCommandRefs.has(entry.commandRef)),
+    mainThreadSerialVerification: [],
+    ciOnlyVerification: [],
+    blockedVerification: [],
+    matchedByFile,
+    localEntrypointRouteGaps,
+    localEntrypointPolicy: {
+      entrypoint,
+      executionOwner: "child-safe",
+      fastClosures: LOCAL_ADAPTIVE_FAST_CLOSURES.map((closure) => ({
+        id: closure.id,
+        commandRef: closure.commandRef,
+        sourceRefs: [...closure.sourceRefs],
+      })),
+      excludedCommands,
+    },
+  };
 }
 
 export function commandToProcess(commandRef, platform = process.platform) {
@@ -1329,9 +1574,13 @@ export function buildExecutionPlan(report, {
   executionPlanner = buildVerificationSelectionPlan,
 } = {}) {
   const authority = resolveSelectionAuthority(report, { platform });
-  const routeGaps = [...authority.routeGaps, ...(report.blockedVerification || []).map((entry) => (
+  const routeGaps = [
+    ...authority.routeGaps,
+    ...(report.localEntrypointRouteGaps || []),
+    ...(report.blockedVerification || []).map((entry) => (
     planGap("adaptive-route-owner-gap", entry.commandRef, entry.reason)
-  ))];
+    )),
+  ];
   let currentPreparedCatalog = preparedCatalog;
   try {
     currentPreparedCatalog ||= prepareAdaptiveCatalog(report, packageScripts, platform);
@@ -1477,6 +1726,115 @@ export function buildExecutionPlan(report, {
   };
 }
 
+export function applyLocalEntrypointExecutionBudget(executionPlan, entrypoint, {
+  preparedCatalog = null,
+  limits: limitOverrides = {},
+} = {}) {
+  if (!new Set(["edit", "impact"]).has(entrypoint)) return executionPlan;
+  const limits = { ...LOCAL_ENTRYPOINT_BUDGETS[entrypoint], ...limitOverrides };
+  const estimatePolicyGaps = [];
+  let estimatePolicy = null;
+  if (!preparedCatalog) {
+    estimatePolicyGaps.push(planGap(
+      `adaptive-${entrypoint}-estimate-policy-authority-missing`,
+      entrypoint,
+      "prepared-catalog=missing",
+    ));
+  } else if (!preparedCatalog.catalog?.estimatePolicy) {
+    estimatePolicyGaps.push(planGap(
+      `adaptive-${entrypoint}-estimate-policy-authority-missing`,
+      entrypoint,
+      "catalog-policy=missing",
+    ));
+  } else {
+    try {
+      assertPreparedVerificationCatalog(preparedCatalog);
+      if (executionPlan.catalogDigest && executionPlan.catalogDigest !== preparedCatalog.catalogDigest) {
+        throw new Error("verification-plan-estimate-policy-catalog-drift");
+      }
+      estimatePolicy = preparedCatalog.catalog.estimatePolicy;
+    } catch (error) {
+      estimatePolicyGaps.push(planGap(
+        `adaptive-${entrypoint}-estimate-policy-integrity-mismatch`,
+        entrypoint,
+        String(error?.message || error),
+      ));
+    }
+  }
+  const groupEstimates = (executionPlan.executionGroups || []).map((group) => {
+    const costClass = estimatePolicy?.costClasses?.[group.cost];
+    const leafCount = Array.isArray(group.leafIds) ? group.leafIds.length : Number(group.leafCount || 0);
+    if (!costClass || !Number.isInteger(leafCount) || leafCount < 1) {
+      estimatePolicyGaps.push(planGap(
+        `adaptive-${entrypoint}-estimate-policy-${costClass ? "leaf-count-invalid" : "unknown-cost"}`,
+        group.groupId,
+        `cost=${group.cost || "missing"};leaves=${leafCount}`,
+      ));
+    }
+    return {
+      groupId: group.groupId,
+      cost: group.cost,
+      leafCount,
+      runtimeSeconds: costClass
+        ? costClass.groupBaseRuntimeSeconds + costClass.perLeafRuntimeSeconds * leafCount
+        : limits.maxEstimatedRuntimeSeconds + 1,
+      costUnits: costClass
+        ? costClass.groupBaseCostUnits + costClass.perLeafCostUnits * leafCount
+        : limits.maxEstimatedCostUnits + 1,
+      estimateAuthority: costClass ? `catalog:${preparedCatalog?.catalogDigest}` : "missing",
+    };
+  });
+  const actual = {
+    commandCount: (executionPlan.commandsToRun || []).length,
+    leafCount: (executionPlan.selectedLeaves || []).length,
+    processGroupCount: (executionPlan.executionGroups || []).length,
+    estimatedRuntimeSeconds: groupEstimates.reduce((total, entry) => total + entry.runtimeSeconds, 0),
+    estimatedCostUnits: groupEstimates.reduce((total, entry) => total + entry.costUnits, 0),
+  };
+  const checks = [
+    ["command", actual.commandCount, limits.maxCommands],
+    ["leaf", actual.leafCount, limits.maxLeaves],
+    ["process-group", actual.processGroupCount, limits.maxProcessGroups],
+    ["runtime", actual.estimatedRuntimeSeconds, limits.maxEstimatedRuntimeSeconds],
+    ["cost", actual.estimatedCostUnits, limits.maxEstimatedCostUnits],
+  ];
+  const budgetGaps = [
+    ...estimatePolicyGaps,
+    ...checks
+    .filter(([, observed, maximum]) => observed > maximum)
+    .map(([dimension, observed, maximum]) => planGap(
+      `adaptive-${entrypoint}-${dimension}-budget-exceeded`,
+      entrypoint,
+      `observed=${observed};maximum=${maximum}`,
+    )),
+  ];
+  const routeGaps = [...(executionPlan.routeGaps || []), ...budgetGaps];
+  return {
+    ...executionPlan,
+    routeGaps,
+    executionCommands: routeGaps.length > 0 ? [] : executionPlan.executionCommands,
+    localEntrypointBudget: {
+      entrypoint,
+      limits,
+      actual,
+      groupEstimates,
+      estimatePolicy: estimatePolicy ? {
+        schemaVersion: estimatePolicy.schemaVersion,
+        kind: estimatePolicy.kind,
+        aggregation: estimatePolicy.aggregation,
+        catalogDigest: preparedCatalog.catalogDigest,
+      } : null,
+      status: budgetGaps.length > 0 ? "blocked" : "ready",
+    },
+  };
+}
+
+export function adaptivePlanningExitCode(report, executionPlan) {
+  return (report.unmatchedChangedFiles || []).length > 0 || (executionPlan.routeGaps || []).length > 0
+    ? 2
+    : 0;
+}
+
 function renderMarkdown(report, executionResults, executionPlan = null) {
   const lines = [
     "# test-adaptive-selection",
@@ -1529,6 +1887,16 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
     lines.push(`- main-thread leaves: ${executionPlan.closure?.deferredMainThreadLeafCount || 0}`);
     lines.push(`- ci-only roots: ${executionPlan.closure?.deferredCiOnlyRootCount || 0}`);
     lines.push(`- ci-only leaves: ${executionPlan.closure?.deferredCiOnlyLeafCount || 0}`);
+    if (executionPlan.localEntrypointBudget) {
+      const { actual, limits, status } = executionPlan.localEntrypointBudget;
+      lines.push("", "## Local entrypoint budget");
+      lines.push(`- status: ${status}`);
+      lines.push(`- commands: ${actual.commandCount}/${limits.maxCommands}`);
+      lines.push(`- leaves: ${actual.leafCount}/${limits.maxLeaves}`);
+      lines.push(`- process groups: ${actual.processGroupCount}/${limits.maxProcessGroups}`);
+      lines.push(`- estimated runtime seconds: ${actual.estimatedRuntimeSeconds}/${limits.maxEstimatedRuntimeSeconds}`);
+      lines.push(`- estimated cost units: ${actual.estimatedCostUnits}/${limits.maxEstimatedCostUnits}`);
+    }
     lines.push("", "## Route gaps");
     lines.push(...((executionPlan.routeGaps || []).length
       ? executionPlan.routeGaps.map((gap) => `- ${gap.code}: ${gap.commandRef}${gap.detail ? ` (${gap.detail})` : ""}`)
@@ -1788,14 +2156,18 @@ function main() {
   if (args.includeMainThread && args.deferMainThread) {
     throw new Error("--include-main-thread and --defer-main-thread are mutually exclusive");
   }
-  const rawChangedFiles = args.changedFilesProvided
-    ? args.changedFiles
-    : discoverChangedFiles({
-      includeBranchHistory: args.includeBranchHistory,
-      historyBase: args.historyBase,
-    });
-  const changedFiles = normalizeChangedFiles(rawChangedFiles);
+  let changedFiles = [];
+  let authority = { historyBase: args.historyBase, head: "" };
   try {
+    authority = assertAdaptiveEntrypointAuthority(args);
+    const rawChangedFiles = args.changedFilesProvided
+      ? args.changedFiles
+      : discoverChangedFiles({
+        includeBranchHistory: args.includeBranchHistory,
+        historyBase: authority.historyBase,
+        historyHead: authority.head || "HEAD",
+      });
+    changedFiles = normalizeChangedFiles(rawChangedFiles);
     if (args.inputErrors.length > 0) {
       const error = new Error(args.inputErrors.join(";"));
       error.code = "adaptive-execution-input-error";
@@ -1807,7 +2179,7 @@ function main() {
     const failedReport = {
       ...emptySelectionReport(changedFiles, gap),
       adaptiveMode: args.dryRun ? "dry-run" : "execute",
-      discoveryMode: "explicit-input",
+      discoveryMode: args.entrypoint === "impact" ? "impact-base" : "explicit-input",
       mainThreadDisposition: args.includeMainThread ? "included" : args.deferMainThread ? "deferred" : "blocked",
       selectionArtifact: args.selectionJson || null,
     };
@@ -1832,8 +2204,12 @@ function main() {
       platform: process.platform,
     });
     preparedCatalog = catalogBinding.preparedCatalog;
+    const recommendation = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
+      entrypoint: args.entrypoint,
+      routeAuthority: preparedCatalog.authority,
+    });
     const currentSelection = catalogBinding.bindSelectionReport(
-      buildRecommendation(changedFiles, selectorRoutes, { routeAuthority: preparedCatalog.authority }),
+      constrainAdaptiveEntrypointSelection(recommendation, args.entrypoint, { preparedCatalog }),
     );
     selectedReport = args.selectionJson
       ? readSelectionArtifact(args.selectionJson, changedFiles, {
@@ -1860,6 +2236,9 @@ function main() {
   const report = {
     ...selectedReport,
     adaptiveMode: args.dryRun ? "dry-run" : "execute",
+    verificationEntrypoint: args.entrypoint || null,
+    baseRevision: args.entrypoint === "impact" ? authority.historyBase : null,
+    headRevision: args.entrypoint === "impact" ? authority.head : null,
     discoveryMode: args.changedFilesProvided
       ? "explicit-input"
       : args.includeBranchHistory
@@ -1872,11 +2251,15 @@ function main() {
         : "blocked",
     selectionArtifact: args.selectionJson || null,
   };
-  const executionPlan = buildExecutionPlan(report, {
-    includeMainThread: args.includeMainThread,
-    packageScripts,
-    preparedCatalog,
-  });
+  const executionPlan = applyLocalEntrypointExecutionBudget(
+    buildExecutionPlan(report, {
+      includeMainThread: args.includeMainThread,
+      packageScripts,
+      preparedCatalog,
+    }),
+    args.entrypoint,
+    { preparedCatalog },
+  );
   let preparedProfilePlan = null;
   let profilePreparationError = null;
   try {
@@ -1905,7 +2288,7 @@ function main() {
         `Adaptive planning failed closed with ${report.unmatchedChangedFiles.length} unmatched file(s) `
         + `and ${executionPlan.routeGaps.length} route gap(s).`,
       );
-      process.exit(2);
+      process.exit(adaptivePlanningExitCode(report, executionPlan));
     }
     console.log(
       `Adaptive selection recommended ${report.recommendedCommands.length} commands; `
@@ -1925,7 +2308,7 @@ function main() {
       `Adaptive selection found ${report.unmatchedChangedFiles.length} unmatched changed files. `
       + "Add route coverage before running --execute.",
     );
-    process.exit(2);
+    process.exit(adaptivePlanningExitCode(report, executionPlan));
   }
 
   if ((executionPlan.routeGaps || []).length > 0) {
@@ -1938,7 +2321,7 @@ function main() {
       `Adaptive execution plan found ${executionPlan.routeGaps.length} route or command gap(s). `
       + "Repair the selector/alias contract before execution.",
     );
-    process.exit(2);
+    process.exit(adaptivePlanningExitCode(report, executionPlan));
   }
 
   if (executionPlan.blockedMainThreadCommands.length > 0 && !args.deferMainThread) {

@@ -7,7 +7,10 @@ import {
   buildCommandSupersessionPlan,
   VERIFICATION_COMMAND_SUPERSESSION,
 } from "./command_supersession.mjs";
-import { VERIFICATION_DOMAINS } from "./verification_domains.mjs";
+import {
+  VERIFICATION_DOMAINS,
+  VERIFICATION_ESTIMATE_POLICY,
+} from "./verification_domains.mjs";
 import {
   buildRouteIndex,
   reconcileVerificationRouteAuthority,
@@ -19,11 +22,19 @@ export const SCRIPT_PORTFOLIO_SCHEMA_VERSION = 1;
 export const VERIFICATION_CATALOG_SCHEMA_VERSION = 1;
 export const VERIFICATION_CATALOG_KIND = "verification-test-catalog";
 export const PREPARED_VERIFICATION_CATALOG_KIND = "prepared-verification-test-catalog";
+export const VERIFICATION_TIER_ENTRYPOINTS = Object.freeze([
+  Object.freeze({ tier: 0, id: "edit", commandRef: "verify:edit", executionScope: "child-safe" }),
+  Object.freeze({ tier: 1, id: "impact", commandRef: "verify:impact", executionScope: "child-safe" }),
+  Object.freeze({ tier: 2, id: "pr", commandRef: "verify:pr", executionScope: "pr" }),
+  Object.freeze({ tier: 3, id: "nightly", commandRef: "verify:nightly", executionScope: "nightly" }),
+  Object.freeze({ tier: 4, id: "release", commandRef: "verify:release", executionScope: "release" }),
+]);
+export const VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS = Object.freeze([
+  Object.freeze({ id: "demo", commandRef: "verify:demo", consumer: "pr-verify-demo" }),
+]);
 export const CANONICAL_VERIFICATION_ENTRYPOINTS = Object.freeze([
-  "verify:pr",
-  "verify:demo",
-  "verify:nightly",
-  "verify:release",
+  ...VERIFICATION_TIER_ENTRYPOINTS.map((entry) => entry.commandRef),
+  ...VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS.map((entry) => entry.commandRef),
 ]);
 
 const CLASSIFICATIONS = Object.freeze(["canonical", "internal", "superseded"]);
@@ -48,6 +59,7 @@ function catalogIntegrityPayload(catalog) {
     sourceMode: catalog?.sourceMode,
     identity: catalog?.identity,
     authority: catalog?.authority,
+    estimatePolicy: catalog?.estimatePolicy,
     selectorCommandRefs: catalog?.selectorCommandRefs,
     entries: catalog?.entries,
   });
@@ -113,6 +125,37 @@ function assertCatalogAuthorityCompleteness(authority) {
   }
 }
 
+export function assertVerificationEstimatePolicy(policy) {
+  if (!policy || typeof policy !== "object") {
+    throw new Error("verification-plan-estimate-policy-missing");
+  }
+  if (policy.schemaVersion !== 1
+    || policy.kind !== "verification-estimate-policy"
+    || policy.aggregation !== "sum-process-group-base-plus-leaf-scale"
+    || !policy.costClasses
+    || typeof policy.costClasses !== "object") {
+    throw new Error("verification-plan-estimate-policy-unknown-authority");
+  }
+  for (const cost of COST_ORDER) {
+    const costClass = policy.costClasses[cost];
+    if (!costClass) throw new Error(`verification-plan-estimate-policy-unknown:${cost}`);
+    for (const field of [
+      "groupBaseRuntimeSeconds",
+      "perLeafRuntimeSeconds",
+      "groupBaseCostUnits",
+      "perLeafCostUnits",
+    ]) {
+      if (!Number.isFinite(costClass[field]) || costClass[field] < 0) {
+        throw new Error(`verification-plan-estimate-policy-invalid:${cost}:${field}`);
+      }
+    }
+    if (costClass.perLeafRuntimeSeconds === 0 || costClass.perLeafCostUnits === 0) {
+      throw new Error(`verification-plan-estimate-policy-unscaled:${cost}`);
+    }
+  }
+  return policy;
+}
+
 function assertCatalogSourceIntegrity(catalog, { allowUnverifiedCatalog = false } = {}) {
   if (allowUnverifiedCatalog) return;
   if (!catalog?.sourceIntegrity?.digest || catalog.sourceIntegrity.algorithm !== "sha256") {
@@ -122,6 +165,7 @@ function assertCatalogSourceIntegrity(catalog, { allowUnverifiedCatalog = false 
     throw new Error(`verification-plan-catalog-identity:${String(catalog?.schemaVersion)}:${String(catalog?.kind)}`);
   }
   assertCatalogAuthorityCompleteness(catalog?.authority);
+  assertVerificationEstimatePolicy(catalog?.estimatePolicy);
   const actual = sourceIntegrityForCatalog(catalog);
   if (actual.digest !== catalog.sourceIntegrity.digest) {
     throw new Error("verification-plan-catalog-source-drift");
@@ -595,6 +639,10 @@ export function buildVerificationCatalog(input, options = {}) {
   });
   const repoRoot = input?.packageScripts ? input.repoRoot || process.cwd() : options.repoRoot || process.cwd();
   const platform = input?.packageScripts ? input.platform || process.platform : options.platform || process.platform;
+  const estimatePolicy = input?.packageScripts
+    ? input.estimatePolicy || VERIFICATION_ESTIMATE_POLICY
+    : options.estimatePolicy || VERIFICATION_ESTIMATE_POLICY;
+  assertVerificationEstimatePolicy(estimatePolicy);
   const pathOptions = { repoRoot, platform };
   const authorityByCommand = new Map(authority.map((entry) => [entry.commandRef, entry]));
   const scripts = normalizeScripts(packageScripts);
@@ -662,6 +710,7 @@ export function buildVerificationCatalog(input, options = {}) {
     sourceMode: input?.sourceMode || "fixture",
     identity: { repoRoot: normalizeVerificationPath(repoRoot, { repoRoot: "", platform }), platform },
     authority,
+    estimatePolicy: structuredClone(estimatePolicy),
     selectorCommandRefs,
     entries,
   };
@@ -675,6 +724,7 @@ export function buildRepositoryVerificationCatalog({
   selectorRoutes = buildRouteIndex(),
   repoRoot = process.cwd(),
   platform = process.platform,
+  estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
 } = {}) {
   return buildVerificationCatalog({
     packageScripts,
@@ -683,6 +733,7 @@ export function buildRepositoryVerificationCatalog({
     selectorCommandRefs: selectorRoutes.map((route) => route.commandRef),
     repoRoot,
     platform,
+    estimatePolicy,
     sourceMode: "repository",
   });
 }
@@ -695,6 +746,7 @@ function preparedCatalogSourceIdentity({
   repoRoot,
   platform,
   sourceMode,
+  estimatePolicy,
 }) {
   const payload = JSON.stringify({
     schemaVersion: VERIFICATION_CATALOG_SCHEMA_VERSION,
@@ -706,6 +758,7 @@ function preparedCatalogSourceIdentity({
     verificationRecords,
     selectorRoutes,
     authority,
+    estimatePolicy,
   });
   return {
     algorithm: "sha256",
@@ -725,6 +778,7 @@ export function prepareVerificationCatalog({
   repoRoot = process.cwd(),
   platform = process.platform,
   sourceMode = "fixture",
+  estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
   catalogBuilder = buildVerificationCatalog,
   authorityReconciler = reconcileVerificationRouteAuthority,
 } = {}) {
@@ -745,6 +799,7 @@ export function prepareVerificationCatalog({
     repoRoot,
     platform,
     sourceMode,
+    estimatePolicy,
   });
   const catalog = catalogBuilder({
     packageScripts,
@@ -753,6 +808,7 @@ export function prepareVerificationCatalog({
     selectorCommandRefs: selectorCommandRefs || selectorRoutes.map((route) => route.commandRef),
     repoRoot,
     platform,
+    estimatePolicy,
     sourceMode,
   });
   return {
@@ -769,6 +825,7 @@ export function prepareVerificationCatalog({
       selectorRoutes,
       repoRoot,
       platform,
+      estimatePolicy,
       sourceMode,
     },
   };
@@ -780,6 +837,7 @@ export function prepareRepositoryVerificationCatalog({
   selectorRoutes = buildRouteIndex(),
   repoRoot = process.cwd(),
   platform = process.platform,
+  estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
   catalogBuilder = buildVerificationCatalog,
   authorityReconciler = reconcileVerificationRouteAuthority,
 } = {}) {
@@ -790,6 +848,7 @@ export function prepareRepositoryVerificationCatalog({
     selectorCommandRefs: selectorRoutes.map((route) => route.commandRef),
     repoRoot,
     platform,
+    estimatePolicy,
     sourceMode: "repository",
     catalogBuilder,
     authorityReconciler,
@@ -849,6 +908,7 @@ function assertRepositorySourceConsistency(catalog, sourceInputs) {
     selectorRoutes: sourceInputs.selectorRoutes || buildRouteIndex(),
     repoRoot: sourceInputs.repoRoot || process.cwd(),
     platform: sourceInputs.platform || process.platform,
+    estimatePolicy: sourceInputs.estimatePolicy || VERIFICATION_ESTIMATE_POLICY,
     sourceMode: "repository",
   });
   if (!consistency.consistent) {
@@ -867,6 +927,7 @@ export function checkVerificationCatalogConsistency(catalog, {
   repoRoot = process.cwd(),
   platform = process.platform,
   sourceMode = "fixture",
+  estimatePolicy = VERIFICATION_ESTIMATE_POLICY,
 } = {}) {
   const byId = catalogEntries(catalog);
   const expectedCatalog = buildVerificationCatalog({
@@ -877,6 +938,7 @@ export function checkVerificationCatalogConsistency(catalog, {
     selectorCommandRefs: selectorRoutes.length > 0 ? selectorRoutes.map((route) => route.commandRef) : undefined,
     repoRoot,
     platform,
+    estimatePolicy,
     sourceMode,
   });
   const expectedById = catalogEntries(expectedCatalog);
@@ -955,7 +1017,7 @@ export function checkVerificationCatalogConsistency(catalog, {
   const authorityMismatches = JSON.stringify(actualAuthority) === JSON.stringify(expectedCatalog.authority)
     ? []
     : ["authority"];
-  const catalogIdentityMismatches = ["schemaVersion", "kind", "sourceMode", "identity", "selectorCommandRefs"]
+  const catalogIdentityMismatches = ["schemaVersion", "kind", "sourceMode", "identity", "estimatePolicy", "selectorCommandRefs"]
     .filter((field) => JSON.stringify(catalog?.[field]) !== JSON.stringify(expectedCatalog[field]));
   const expectedSourceIntegrity = sourceIntegrityForCatalog(catalog);
   const sourceIntegrityMismatches = catalog?.sourceIntegrity?.algorithm === "sha256"
@@ -1888,6 +1950,8 @@ export function buildScriptPortfolio(scripts, {
     schemaVersion: SCRIPT_PORTFOLIO_SCHEMA_VERSION,
     kind: "verification-script-portfolio",
     canonicalEntrypoints: [...CANONICAL_VERIFICATION_ENTRYPOINTS],
+    tierEntrypoints: VERIFICATION_TIER_ENTRYPOINTS.map((entry) => ({ ...entry })),
+    productJourneyEntrypoints: VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS.map((entry) => ({ ...entry })),
     missingCanonicalEntrypoints,
     summary: {
       total: entries.length,

@@ -96,6 +96,105 @@ def parse_job_scalar(job_block: str, key: str) -> str | list[str] | None:
     return value
 
 
+def parse_job_steps(job_block: str) -> list[dict[str, object]]:
+    lines = job_block.splitlines()
+    steps_header = [index for index, line in enumerate(lines) if line == "    steps:"]
+    if len(steps_header) != 1:
+        raise AssertionError(f"job must contain exactly one steps block, found {len(steps_header)}")
+    steps: list[dict[str, object]] = []
+    current: dict[str, object] | None = None
+    for line in lines[steps_header[0] + 1:]:
+        if line.startswith("      - name: "):
+            if current is not None:
+                steps.append(current)
+            current = {"name": line.removeprefix("      - name: ").strip(), "lines": []}
+            continue
+        if line.startswith("      - "):
+            raise AssertionError(f"workflow step must have an explicit name: {line.strip()}")
+        if line and not line.startswith("        "):
+            raise AssertionError(f"unparseable workflow step content: {line.strip()}")
+        if current is not None:
+            current["lines"].append(line)
+    if current is not None:
+        steps.append(current)
+    if not steps:
+        raise AssertionError("job steps block is empty")
+    return steps
+
+
+def parse_job_env(job_block: str) -> dict[str, str]:
+    lines = job_block.splitlines()
+    env_headers = [index for index, line in enumerate(lines) if line == "    env:"]
+    if len(env_headers) != 1:
+        raise AssertionError(f"job must contain exactly one env block, found {len(env_headers)}")
+    result: dict[str, str] = {}
+    for line in lines[env_headers[0] + 1:]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line.startswith("      "):
+            break
+        match = re.fullmatch(r"      ([A-Z][A-Z0-9_]*):\s*(.+)", line)
+        if match is None:
+            raise AssertionError(f"unparseable job env entry: {line.strip()}")
+        key, value = match.groups()
+        if key in result:
+            raise AssertionError(f"duplicate job env key: {key}")
+        result[key] = value.strip()
+    return result
+
+
+def parse_step_run(step: dict[str, object]) -> str:
+    lines = [str(line) for line in step["lines"]]
+    run_indexes = [index for index, line in enumerate(lines) if line.startswith("        run:")]
+    if len(run_indexes) != 1:
+        raise AssertionError(f"step must contain exactly one run field, found {len(run_indexes)}")
+    run_line = lines[run_indexes[0]]
+    scalar = run_line.removeprefix("        run:").strip()
+    if scalar and scalar != "|":
+        return scalar
+    if scalar != "|":
+        raise AssertionError("step run field must be a scalar or literal block")
+    body: list[str] = []
+    for line in lines[run_indexes[0] + 1:]:
+        if line.startswith("          "):
+            body.append(line[10:])
+        elif not line:
+            body.append("")
+        else:
+            break
+    if not body:
+        raise AssertionError("step literal run block is empty")
+    return "\n".join(body)
+
+
+def parse_workflow_dispatch_inputs(workflow: str) -> dict[str, dict[str, str]]:
+    lines = workflow.splitlines()
+    dispatch_headers = [index for index, line in enumerate(lines) if line == "  workflow_dispatch:"]
+    if len(dispatch_headers) != 1:
+        raise AssertionError(f"workflow must contain exactly one workflow_dispatch block, found {len(dispatch_headers)}")
+    start = dispatch_headers[0]
+    if start + 1 >= len(lines) or lines[start + 1] != "    inputs:":
+        raise AssertionError("workflow_dispatch must contain an inputs block")
+    inputs: dict[str, dict[str, str]] = {}
+    current: str | None = None
+    for line in lines[start + 2:]:
+        if line and not line.startswith("      "):
+            break
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        input_match = re.fullmatch(r"      ([a-z][a-z0-9_]*):", line)
+        if input_match:
+            current = input_match.group(1)
+            inputs[current] = {}
+            continue
+        field_match = re.fullmatch(r"        ([a-z][a-z0-9_-]*):\s*(.+)", line)
+        if current is None or field_match is None:
+            raise AssertionError(f"unparseable workflow_dispatch input: {line.strip()}")
+        key, value = field_match.groups()
+        inputs[current][key] = value.strip()
+    return inputs
+
+
 def extract_required_aggregator_script(job_block: str) -> str:
     lines = job_block.splitlines()
     try:
@@ -1521,7 +1620,7 @@ const page = {
         )
         self.assert_command_ok(selector_result)
         selector_payload = json.loads(selector_json_path.read_text(encoding="utf-8"))
-        self.assertEqual(len(selector_payload["routeAuthority"]), 331)
+        self.assertEqual(len(selector_payload["routeAuthority"]), 332)
         self.assertTrue(selector_payload["catalogDigest"])
         self.assertTrue(selector_payload["catalogSourceIdentity"]["digest"])
         self.assertEqual(
@@ -1715,6 +1814,103 @@ jobs:
         self.assertIn("full|pr-fast|pr-smoke|demo|deploy-minimal", workflow)
         self.assertIn("unknown verification profile", workflow)
         self.assertIn("exit 2", workflow[validation_index:setup_python_index])
+
+    def test_nightly_and_release_consumers_call_one_canonical_command(self) -> None:
+        cases = {
+            "nightly-verification.yml": {
+                "command": "npm run verify:nightly",
+                "trigger": "schedule:",
+                "timeout": "timeout-minutes: 90",
+            },
+            "release-verification.yml": {
+                "command": "npm run verify:release",
+                "trigger": "workflow_dispatch:",
+                "timeout": "timeout-minutes: 120",
+            },
+        }
+        for filename, expected in cases.items():
+            with self.subTest(filename=filename):
+                workflow = (REPO_ROOT / ".github" / "workflows" / filename).read_text(encoding="utf-8")
+                self.assertIn(expected["trigger"], workflow)
+                self.assertIn("workflow_dispatch:", workflow)
+                self.assertIn("concurrency:", workflow)
+                self.assertIn(expected["timeout"], workflow)
+                self.assertEqual(workflow.count(expected["command"]), 1)
+                self.assertEqual(len(re.findall(r"npm run verify:[A-Za-z0-9:_-]+", workflow)), 1)
+                self.assertIn("if: always()", workflow)
+                self.assertIn("actions/upload-artifact@", workflow)
+                self.assertIn(".runtime/reports/generated/**", workflow)
+                self.assertNotIn("actions/deploy-", workflow)
+                route_result = run_command(
+                    "node",
+                    "tools/select_verification_targets.mjs",
+                    f".github/workflows/{filename}",
+                    "--json",
+                )
+                self.assert_command_ok(route_result)
+                route_payload = json.loads(route_result.stdout)
+                self.assertEqual(route_payload["unmatchedChangedFiles"], [])
+                commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+                self.assertIn("verify:script-portfolio", commands)
+                self.assertIn("node tools/select_verification_targets.mjs --check", commands)
+
+    def test_nightly_and_release_install_locked_python_dependencies_before_canonical_command(self) -> None:
+        for filename, job_id, canonical_step in (
+            ("nightly-verification.yml", "verify-nightly", "Run canonical Nightly verification"),
+            ("release-verification.yml", "verify-release", "Run canonical Release verification"),
+        ):
+            with self.subTest(filename=filename):
+                workflow = (REPO_ROOT / ".github" / "workflows" / filename).read_text(encoding="utf-8")
+                job = parse_workflow_job_blocks(workflow)[job_id]
+                steps = parse_job_steps(job)
+                names = [str(step["name"]) for step in steps]
+                download_index = names.index("Download Python wheel cache")
+                install_index = names.index("Install Python test dependencies")
+                guard_index = names.index("Check minimal CI dependency guardrails")
+                canonical_index = names.index(canonical_step)
+                self.assertLess(download_index, install_index)
+                self.assertLess(install_index, guard_index)
+                self.assertLess(guard_index, canonical_index)
+                by_name = {str(step["name"]): step for step in steps}
+                download_run = parse_step_run(by_name["Download Python wheel cache"])
+                install_run = parse_step_run(by_name["Install Python test dependencies"])
+                guard_run = parse_step_run(by_name["Check minimal CI dependency guardrails"])
+                self.assertRegex(download_run, r"(?m)^python -m pip download -r requirements-dev\.lock\.txt ")
+                self.assertRegex(install_run, r"^python -m pip install --no-index --find-links ")
+                self.assertIn("-r requirements-dev.lock.txt", install_run)
+                self.assertEqual(guard_run, "python tools/check_min_ci_requirements.py")
+
+    def test_release_dispatch_binds_required_pages_url_authority_at_job_scope(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "release-verification.yml").read_text(encoding="utf-8")
+        inputs = parse_workflow_dispatch_inputs(workflow)
+        self.assertEqual(inputs["pages_url"]["required"], "true")
+        self.assertEqual(inputs["pages_url"]["type"], "string")
+        job = parse_workflow_job_blocks(workflow)["verify-release"]
+        self.assertEqual(parse_job_env(job)["SCENARIO_FORGE_PAGES_URL"], "${{ inputs.pages_url }}")
+        steps = parse_job_steps(job)
+        names = [str(step["name"]) for step in steps]
+        authority_index = names.index("Validate Pages URL authority")
+        canonical_index = names.index("Run canonical Release verification")
+        self.assertLess(authority_index, canonical_index)
+        authority_run = parse_step_run(steps[authority_index])
+        self.assertRegex(
+            authority_run,
+            r'(?m)^if \[ -z "\$\{SCENARIO_FORGE_PAGES_URL//\[\[:space:\]\]/\}" \]; then$',
+        )
+        self.assertRegex(authority_run, r"(?m)^  exit 2$")
+
+        commented_dependency = workflow.replace(
+            "      - name: Install Python test dependencies",
+            "      # - name: Install Python test dependencies",
+        )
+        with self.assertRaisesRegex(AssertionError, "unparseable workflow step content"):
+            parse_job_steps(parse_workflow_job_blocks(commented_dependency)["verify-release"])
+        wrong_scope = workflow.replace(
+            "      SCENARIO_FORGE_PAGES_URL: ${{ inputs.pages_url }}",
+            "    SCENARIO_FORGE_PAGES_URL: ${{ inputs.pages_url }}",
+        )
+        wrong_scope_env = parse_job_env(parse_workflow_job_blocks(wrong_scope)["verify-release"])
+        self.assertNotIn("SCENARIO_FORGE_PAGES_URL", wrong_scope_env)
 
     def test_failure_context_reporter_tracks_failure_context_attachment(self) -> None:
         script = """

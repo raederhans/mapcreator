@@ -22,6 +22,32 @@ export const VERIFICATION_COSTS = Object.freeze([
   "heavy",
 ]);
 
+export const VERIFICATION_ESTIMATE_POLICY = Object.freeze({
+  schemaVersion: 1,
+  kind: "verification-estimate-policy",
+  aggregation: "sum-process-group-base-plus-leaf-scale",
+  costClasses: Object.freeze({
+    fast: Object.freeze({
+      groupBaseRuntimeSeconds: 20,
+      perLeafRuntimeSeconds: 5,
+      groupBaseCostUnits: 0.5,
+      perLeafCostUnits: 0.25,
+    }),
+    contract: Object.freeze({
+      groupBaseRuntimeSeconds: 30,
+      perLeafRuntimeSeconds: 10,
+      groupBaseCostUnits: 1,
+      perLeafCostUnits: 0.5,
+    }),
+    heavy: Object.freeze({
+      groupBaseRuntimeSeconds: 120,
+      perLeafRuntimeSeconds: 30,
+      groupBaseCostUnits: 4,
+      perLeafCostUnits: 1,
+    }),
+  }),
+});
+
 export const VERIFICATION_LAYERS = Object.freeze([
   "smoke",
   "contract",
@@ -55,6 +81,28 @@ export const VERIFY_CORE_MAIN_THREAD_GROUP = Object.freeze({
   id: "main-thread-e2e",
   title: "Main-thread E2E checks",
 });
+
+export const LOCAL_ADAPTIVE_FAST_CLOSURES = Object.freeze([
+  Object.freeze({
+    id: "local:verification-infrastructure",
+    commandRef: "verify:local-infra",
+    sourceRefs: Object.freeze([
+      ".github/workflows/nightly-verification.yml",
+      ".github/workflows/release-verification.yml",
+      "package.json",
+      "tests/test_e2e_structural_tooling.py",
+      "tests/verification_metadata_behavior.test.mjs",
+      "tests/verification_script_portfolio_behavior.test.mjs",
+      "tests/verify_core_runner_behavior.test.mjs",
+      "tools/ai_test_supervisor/domain_registry.json",
+      "tools/run_adaptive_tests.mjs",
+      "tools/select_verification_targets.mjs",
+      "tools/test_route_registry.mjs",
+      "tools/verification/script_portfolio.mjs",
+      "tools/verification/verification_domains.mjs",
+    ]),
+  }),
+]);
 
 const P4_RUNTIME_HEAVY_COMMANDS = new Set([
   "verify:p4:state-writer-policy",
@@ -115,6 +163,22 @@ function createP3PassFamilyRoute({
 
 export const VERIFICATION_DOMAINS = Object.freeze([
   Object.freeze({
+    id: "infra:local-verification-closure",
+    commandRef: LOCAL_ADAPTIVE_FAST_CLOSURES[0].commandRef,
+    commandType: "package-script",
+    packageScriptRequired: true,
+    sourceRefs: LOCAL_ADAPTIVE_FAST_CLOSURES[0].sourceRefs,
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    supervisorDomain: "test-routing",
+    routeRegistry: true,
+  }),
+  Object.freeze({
     id: "infra:e2e-layer-manifest",
     commandRef: "verify:test:e2e-layers",
     commandType: "package-script",
@@ -149,6 +213,8 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tools/test_route_registry.mjs",
       ".github/workflows/pr-verify.yml",
       ".github/workflows/verify-shared.yml",
+      ".github/workflows/nightly-verification.yml",
+      ".github/workflows/release-verification.yml",
     ],
     domain: "test-routing",
     ownerHint: "test-infra",
@@ -271,6 +337,8 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tests/verification_script_portfolio_behavior.test.mjs",
       ".github/workflows/pr-verify.yml",
       ".github/workflows/verify-shared.yml",
+      ".github/workflows/nightly-verification.yml",
+      ".github/workflows/release-verification.yml",
     ],
     domain: "test-routing",
     ownerHint: "test-infra",

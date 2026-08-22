@@ -13,6 +13,8 @@ import {
   buildVerificationSelectionPlan,
   buildScriptPortfolio,
   CANONICAL_VERIFICATION_ENTRYPOINTS,
+  VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS,
+  VERIFICATION_TIER_ENTRYPOINTS,
   checkVerificationCatalogConsistency,
   formatScriptPortfolioJson,
   formatScriptPortfolioMarkdown,
@@ -22,13 +24,18 @@ import {
   sealVerificationCatalog,
 } from "../tools/verification/script_portfolio.mjs";
 import { buildRouteIndex } from "../tools/test_route_registry.mjs";
-import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
+import {
+  VERIFICATION_DOMAINS,
+  VERIFICATION_ESTIMATE_POLICY,
+} from "../tools/verification/verification_domains.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CLI_PATH = path.join(REPO_ROOT, "tools", "verification", "script_portfolio.mjs");
 
 function completeFixture(extra = {}) {
   return {
+    "verify:edit": "node edit.mjs",
+    "verify:impact": "node impact.mjs",
     "verify:release": "node release.mjs",
     "verify:pr": "node pr.mjs",
     "verify:nightly": "node nightly.mjs",
@@ -43,17 +50,21 @@ test("classifies every script exactly once with stable name ordering", () => {
     alpha: "node alpha.mjs",
   }));
   assert.deepEqual(portfolio.canonicalEntrypoints, CANONICAL_VERIFICATION_ENTRYPOINTS);
+  assert.deepEqual(portfolio.tierEntrypoints, VERIFICATION_TIER_ENTRYPOINTS);
+  assert.deepEqual(portfolio.productJourneyEntrypoints, VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS);
   assert.deepEqual(portfolio.scripts.map((entry) => entry.name), [
     "alpha",
     "verify:demo",
+    "verify:edit",
+    "verify:impact",
     "verify:nightly",
     "verify:pr",
     "verify:release",
     "zeta",
   ]);
   assert.deepEqual(portfolio.summary, {
-    total: 6,
-    canonical: 4,
+    total: 8,
+    canonical: 6,
     internal: 2,
     superseded: 0,
     complete: true,
@@ -93,9 +104,11 @@ test("does not infer supersession when the exact superseder is absent", () => {
 test("reports every missing canonical entrypoint in contract order", () => {
   const portfolio = buildScriptPortfolio({ "verify:pr": "node pr.mjs" });
   assert.deepEqual(portfolio.missingCanonicalEntrypoints, [
-    "verify:demo",
+    "verify:edit",
+    "verify:impact",
     "verify:nightly",
     "verify:release",
+    "verify:demo",
   ]);
   assert.equal(portfolio.summary.complete, false);
 });
@@ -112,7 +125,7 @@ test("JSON, Markdown, and summary formats are deterministic", () => {
   assert.match(formatScriptPortfolioMarkdown(portfolio), /\| internal \| internal \|  \| node x\.mjs \\| tee out \|/);
   assert.equal(
     formatScriptPortfolioSummary(portfolio),
-    "scripts=5 canonical=4 internal=1 superseded=0 complete=true missingCanonical=none\n",
+    "scripts=7 canonical=6 internal=1 superseded=0 complete=true missingCanonical=none\n",
   );
 });
 
@@ -457,7 +470,7 @@ test("reports mechanical consistency gaps across catalog, scripts, and route rec
     selectorPlanFailures: [{ commandRef: "missing-route", error: "verification-plan-unresolved-ref:missing-route" }],
     supersessionMismatches: [],
     authorityMismatches: ["authority"],
-    catalogIdentityMismatches: ["schemaVersion", "kind", "sourceMode", "identity", "selectorCommandRefs"],
+    catalogIdentityMismatches: ["schemaVersion", "kind", "sourceMode", "identity", "estimatePolicy", "selectorCommandRefs"],
     sourceIntegrityMismatches: ["sourceIntegrity"],
     unclassifiedCatalogEntries: [],
     targetlessDiscoveryEntries: [],
@@ -784,6 +797,42 @@ test("reports deterministic command, target, and execution metadata drift", () =
     checkVerificationCatalogConsistency(staleSeal, { packageScripts, records }).sourceIntegrityMismatches,
     ["sourceIntegrity"],
   );
+});
+
+test("catalog identity seals the canonical estimate policy", () => {
+  const inputs = {
+    packageScripts: { a: "node --test tests/a.test.mjs" },
+    records: [route("a", "a")],
+  };
+  const catalog = buildVerificationCatalog(inputs);
+  assert.deepEqual(catalog.estimatePolicy, VERIFICATION_ESTIMATE_POLICY);
+
+  const drifted = structuredClone(catalog);
+  drifted.estimatePolicy.costClasses.fast.perLeafRuntimeSeconds += 1;
+  assert.throws(
+    () => buildVerificationSelectionPlan(drifted, ["a"]),
+    /verification-plan-catalog-source-drift/,
+  );
+
+  const missing = structuredClone(catalog);
+  delete missing.estimatePolicy;
+  assert.throws(
+    () => buildVerificationSelectionPlan(sealVerificationCatalog(missing), ["a"]),
+    /verification-plan-estimate-policy-missing/,
+  );
+
+  assert.throws(
+    () => buildVerificationCatalog({
+      ...inputs,
+      estimatePolicy: { ...VERIFICATION_ESTIMATE_POLICY, kind: "unknown-estimate-policy" },
+    }),
+    /verification-plan-estimate-policy-unknown-authority/,
+  );
+
+  const resealedDrift = sealVerificationCatalog(drifted);
+  const consistency = checkVerificationCatalogConsistency(resealedDrift, inputs);
+  assert.equal(consistency.consistent, false);
+  assert.ok(consistency.catalogIdentityMismatches.includes("estimatePolicy"));
 });
 
 test("catalog schema and kind remain fixed after mutation and resealing", () => {
