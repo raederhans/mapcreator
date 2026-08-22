@@ -594,6 +594,7 @@ internal static partial class ScenarioForgeWindowsJobRunnerCore
         RunnerSpec spec,
         string status,
         uint rootPid,
+        int workloadSpawnCount,
         int rootExitCode,
         bool timedOut,
         bool assignedBeforeResume,
@@ -618,6 +619,7 @@ internal static partial class ScenarioForgeWindowsJobRunnerCore
             "\"provider\":\"windows-job-object\"," +
             "\"status\":\"" + JsonEscape(status) + "\"," +
             "\"rootPid\":" + rootPid + "," +
+            "\"workloadSpawnCount\":" + workloadSpawnCount + "," +
             "\"rootExitCode\":" + rootExitCode + "," +
             "\"timedOut\":" + timedOut.ToString().ToLowerInvariant() + "," +
             "\"createSuspended\":true," +
@@ -655,6 +657,7 @@ internal static partial class ScenarioForgeWindowsJobRunnerCore
         IntPtr attributeList = IntPtr.Zero;
         IntPtr handleList = IntPtr.Zero;
         uint rootPid = 0;
+        int workloadSpawnCount = 0;
         int rootExitCode = 3;
         bool timedOut = false;
         bool assignedBeforeResume = false;
@@ -708,6 +711,7 @@ internal static partial class ScenarioForgeWindowsJobRunnerCore
                 CloseIfValid(ref outputHandle);
                 CloseIfValid(ref errorHandle);
                 if (!created) throw new Win32Exception(createError, "CreateProcessW failed");
+                workloadSpawnCount = 1;
 
                 processHandle = processInformation.hProcess;
                 threadHandle = processInformation.hThread;
@@ -829,6 +833,7 @@ internal static partial class ScenarioForgeWindowsJobRunnerCore
                     spec,
                     status,
                     rootPid,
+                    workloadSpawnCount,
                     rootExitCode,
                     timedOut,
                         assignedBeforeResume,

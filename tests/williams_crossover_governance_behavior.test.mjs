@@ -13,6 +13,7 @@ import {
   WILLIAMS_DRIFT_PAIRS,
   WILLIAMS_EXIT_CODES,
   WILLIAMS_SCENARIOS,
+  WILLIAMS_STABILIZATION_POLICY,
   WILLIAMS_TELEMETRY_CADENCE,
   analyzeWilliamsCrossoverEvidence,
   buildWilliamsBlockCommand,
@@ -32,7 +33,9 @@ import {
   parseWilliamsArgs,
   requireWilliamsJobRunnerReady,
   resolveServerMetadataProbeTarget,
+  runWilliamsFixedStabilization,
   runWilliamsBlockWithTestAdapters,
+  runWilliamsPreparationAdmission,
   runWilliamsPreBlockAdmission,
   runWilliamsCli,
   validateMeasurementSnapshot,
@@ -168,7 +171,7 @@ function literalWilliamsCommand({
       "--scenarios", scenarioOrder.join(","),
       "--runs", "2",
       "--warmups", "1",
-      "--render-sample-run-profile", "p2-williams-crossover-v7",
+      "--render-sample-run-profile", WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
       "--baseline-json", path.join(directory, "baseline.json"),
       "--baseline-md", path.join(directory, "baseline.md"),
       "--raw-dir", path.join(directory, "raw"),
@@ -214,7 +217,8 @@ function canonicalSnapshot(scenarioId, durationMs) {
 }
 
 function telemetryWindow(phase, blockOrdinal, cwd, gitHead) {
-  const baseMs = Date.UTC(2026, 6, 11, 0, 0, (blockOrdinal - 1) * 20 + (phase === "post" ? 10 : 0));
+  const blockStartedAtMs = Date.UTC(2026, 6, 11, 0, 0, (blockOrdinal - 1) * 33);
+  const baseMs = blockStartedAtMs + 12_000 + (phase === "post" ? 10_000 : 0);
   const primingCompletedAtMs = baseMs - 1000;
   const windowStartedAtMs = primingCompletedAtMs - 3717;
   const windowCompletedAtMs = baseMs + 4700;
@@ -318,6 +322,63 @@ function standardPerfAdmissionDecision(gitHead = CONTROL_HEAD, overrides = {}) {
   );
 }
 
+function preparationAdmissionDecision(overrides = {}) {
+  return {
+    ...standardPerfAdmissionDecision(CANDIDATE_HEAD, {
+      startedAt: "2026-07-10T23:58:40.000Z",
+      completedAt: "2026-07-10T23:58:47.000Z",
+      ...overrides,
+    }),
+    phase: "preparation",
+    attemptOrdinal: 1,
+    retryCount: 0,
+  };
+}
+
+function stabilizationReceipt({
+  phase,
+  fromBlockId,
+  toBlockId,
+  startedAt,
+  elapsedMs = WILLIAMS_STABILIZATION_POLICY.delayMs,
+  overrides = {},
+}) {
+  return {
+    schemaVersion: 1,
+    policyId: WILLIAMS_STABILIZATION_POLICY.policyId,
+    receiptType: "fixed-stabilization",
+    phase,
+    attemptOrdinal: 1,
+    retryCount: 0,
+    configuredDelayMs: 5000,
+    toleranceMs: 1000,
+    fromBlockId,
+    toBlockId,
+    startedAt,
+    completedAt: new Date(Date.parse(startedAt) + elapsedMs).toISOString(),
+    elapsedMs,
+    status: "complete",
+    ...overrides,
+  };
+}
+
+function completeStabilizationReceipts() {
+  return [
+    stabilizationReceipt({
+      phase: "initial",
+      fromBlockId: null,
+      toBlockId: "block-01",
+      startedAt: "2026-07-10T23:59:54.000Z",
+    }),
+    ...WILLIAMS_BLOCK_SEQUENCE.slice(0, -1).map((block, index) => stabilizationReceipt({
+      phase: "inter-block",
+      fromBlockId: block.id,
+      toBlockId: WILLIAMS_BLOCK_SEQUENCE[index + 1].id,
+      startedAt: new Date(Date.UTC(2026, 6, 11, 0, 0, index * 33 + 27)).toISOString(),
+    })),
+  ];
+}
+
 function deriveTestQuietWindow(telemetry, decision = standardPerfAdmissionDecision(
   telemetry?.environment?.gitHead || CONTROL_HEAD,
 )) {
@@ -381,6 +442,7 @@ function jobObjectEvidence(rootPid = 4242, {
     remainingPids: [],
     unverifiedPids: [],
     cleanupValid: true,
+    workloadSpawnCount: 1,
     commandExecutablePath: command.bin,
     commandWorkingDirectory: cwd,
     commandArguments: [...command.args],
@@ -446,6 +508,8 @@ function jobRunnerPreparation(
     schemaVersion: 1,
     status: "available",
     error: null,
+    attemptOrdinal: 1,
+    retryCount: 0,
     compiledAt: "2026-07-10T23:59:00.000Z",
     capabilityProbedAt: "2026-07-10T23:59:30.000Z",
     source: structuredClone(source),
@@ -488,7 +552,7 @@ function powerSchemeLifecycle() {
     events: actions.map((action, index) => {
       const cleanupStartIndex = actions.indexOf("restore");
       const at = index >= cleanupStartIndex
-        ? new Date(Date.UTC(2026, 6, 11, 0, 3, index - cleanupStartIndex)).toISOString()
+        ? new Date(Date.UTC(2026, 6, 11, 0, 10, index - cleanupStartIndex)).toISOString()
         : new Date(Date.UTC(2026, 6, 10, 23, 59, 40 + index)).toISOString();
       return {
         action,
@@ -531,7 +595,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     candidateHead: CANDIDATE_HEAD,
     controlWorktree: CONTROL_WORKTREE,
     candidateWorktree: CANDIDATE_WORKTREE,
-    generatedAt: "2026-07-10T23:59:50.000Z",
+    generatedAt: "2026-07-10T23:59:53.000Z",
     expectedPowerSchemeGuid: EXPECTED_POWER_SCHEME_GUID,
     powerSchemeHelper: artifactDescriptor("tools/perf/williams_crossover_power_scheme.ps1"),
     jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
@@ -577,6 +641,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
       scenarioOrder: block.scenarioOrder,
     });
     return {
+      policyId: WILLIAMS_CROSSOVER_POLICY_ID,
       ordinal: block.ordinal,
       id: block.id,
       side: block.side,
@@ -606,17 +671,25 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
           jobRunnerBinary: jobRunnerBinaryDescriptor(),
         },
       },
-      preBlockAdmission: evaluateStandardPerfAdmission(
-        standardPerfAdmissionEvidence({
-          git: {
-            status: "available",
-            head: expectedHead,
-            entries: [],
-            detail: "",
-          },
-        }),
-        STANDARD_PERF_ADMISSION_POLICY,
-      ),
+      preBlockAdmission: {
+        ...evaluateStandardPerfAdmission(
+          standardPerfAdmissionEvidence({
+            startedAt: new Date(Date.UTC(2026, 6, 11, 0, 0, (block.ordinal - 1) * 33)).toISOString(),
+            completedAt: new Date(Date.UTC(2026, 6, 11, 0, 0, (block.ordinal - 1) * 33 + 7)).toISOString(),
+            git: {
+              status: "available",
+              head: expectedHead,
+              entries: [],
+              detail: "",
+            },
+          }),
+          STANDARD_PERF_ADMISSION_POLICY,
+        ),
+        phase: "pre-block",
+        blockId: block.id,
+        attemptOrdinal: 1,
+        retryCount: 0,
+      },
       telemetry: {
         pre: telemetryWindow("pre", block.ordinal, cwd, expectedHead),
         post: telemetryWindow("post", block.ordinal, cwd, expectedHead),
@@ -624,6 +697,9 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
       cleanup: {
         valid: true,
         processTreeCaptureStatus: "available",
+        workloadSpawnCount: 1,
+        workloadStarted: true,
+        cleanupRequired: true,
         terminationSucceeded: true,
         terminationResults: [],
         taskOwnedPidsRemaining: [],
@@ -639,7 +715,12 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
       jobObject: jobObjectEvidence(4000 + block.ordinal, { command, cwd }),
       command,
       quietWindow: { status: "valid", valid: true },
-      blockResult: { status: "complete", exitCode: 0 },
+      blockResult: {
+        policyId: WILLIAMS_CROSSOVER_POLICY_ID,
+        status: "complete",
+        exitCode: 0,
+        workloadSpawnCount: 1,
+      },
       baseline: {
         schemaVersion: 2,
         benchmarkMetricsSchemaVersion: "3.3",
@@ -674,10 +755,12 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     trustedRevisionIdentity: trustedRevisionIdentity(),
     rawRoot: EVIDENCE_RAW_ROOT,
     preregistration,
+    preparationAdmission: preparationAdmissionDecision(),
     jobRunnerPreparation: jobRunnerPreparation(
       preregistration.workloadContract.processContainment.identity.source,
       preregistration.workloadContract.processContainment.identity.sourceSet,
     ),
+    stabilizationReceipts: completeStabilizationReceipts(),
     powerSchemeLifecycle: powerSchemeLifecycle(),
     blocks,
     manifestValidation: { status: "valid", errors: [], measuredRawFileCount: 32 },
@@ -687,9 +770,15 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
 function applyNotStartedBlockEvidence(evidence, blockIndex = 0) {
   const block = evidence.blocks[blockIndex];
   const expectedHead = block.side === "A" ? CONTROL_HEAD : CANDIDATE_HEAD;
-  const rejectedAdmission = standardPerfAdmissionDecision(expectedHead, {
-    cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
-  });
+  const rejectedAdmission = {
+    ...standardPerfAdmissionDecision(expectedHead, {
+      cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
+    }),
+    phase: "pre-block",
+    blockId: block.id,
+    attemptOrdinal: 1,
+    retryCount: 0,
+  };
   const notStartedJob = notStartedJobObjectEvidence({
     command: block.command,
     cwd: block.identity.cwd,
@@ -720,6 +809,7 @@ function applyNotStartedBlockEvidence(evidence, blockIndex = 0) {
   block.jobObject = structuredClone(notStartedJob);
   block.blockResult = {
     schemaVersion: 1,
+    policyId: WILLIAMS_CROSSOVER_POLICY_ID,
     status: "invalid",
     exitCode: WILLIAMS_EXIT_CODES.invalidExperiment,
     timedOut: false,
@@ -789,16 +879,29 @@ async function materializeEvidenceRoot(evidence) {
     block.identity.artifacts.jobRunnerBinary = currentToolIdentity.jobRunnerBinary;
   }
   await writeJson(path.join(root, "preregistration.json"), evidence.preregistration);
+  await writeJson(
+    path.join(root, "harness", "preparation-standard-perf-admission.json"),
+    evidence.preparationAdmission,
+  );
   const preparation = jobRunnerPreparation(currentToolIdentity.jobRunnerSource, currentToolIdentity.jobRunnerSources);
   preparation.binary = currentToolIdentity.jobRunnerBinary;
   evidence.jobRunnerPreparation = preparation;
   await writeJson(path.join(root, "harness", "job-runner-preparation.json"), preparation);
   await writeJson(path.join(root, "harness", "power-scheme-lifecycle.json"), evidence.powerSchemeLifecycle);
+  const stabilizationPaths = [
+    evidence.preregistration.stabilizationContract.initial.path,
+    ...evidence.preregistration.stabilizationContract.interBlock.map((entry) => entry.path),
+  ];
+  for (const [index, receipt] of evidence.stabilizationReceipts.entries()) {
+    await writeJson(path.join(root, stabilizationPaths[index]), receipt);
+  }
   await fs.mkdir(path.join(root, "tooling"), { recursive: true });
   await fs.writeFile(path.join(root, JOB_RUNNER_EVIDENCE_PATH), JOB_RUNNER_FIXTURE_BYTES);
   for (const block of evidence.blocks) {
     const directory = path.join(root, "blocks", block.id);
     await writeJson(path.join(directory, "block-metadata.json"), {
+      schemaVersion: 1,
+      policyId: block.policyId,
       ordinal: block.ordinal,
       id: block.id,
       side: block.side,
@@ -851,6 +954,15 @@ async function synchronizeRawRevisionEvidence(root, overrides = {}) {
   preregistration.candidate.worktree = revision.candidateWorktree;
   preregistration.candidate.head = revision.candidateHead;
   await writeJson(preregistrationPath, preregistration);
+
+  const preparationAdmissionPath = path.join(
+    root,
+    "harness",
+    "preparation-standard-perf-admission.json",
+  );
+  const preparationAdmission = JSON.parse(await fs.readFile(preparationAdmissionPath, "utf8"));
+  preparationAdmission.git.head = revision.candidateHead;
+  await writeJson(preparationAdmissionPath, preparationAdmission);
 
   for (const block of WILLIAMS_BLOCK_SEQUENCE) {
     const directory = path.join(root, "blocks", block.id);
@@ -1304,9 +1416,218 @@ test("execute preflight keeps physical-root, Git-top-level, and candidate-commit
   }
 });
 
-test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
-  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v7");
-  assert.deepEqual(buildWilliamsPreregistration().workloadContract.report.renderSampleRunProfile, {
+test("Williams v8 preparation rejection makes compile, power, blocks, workload, and stabilization unreachable", async (t) => {
+  const fixture = await loadDetachedAnalyzerFixture();
+  const outputRoot = await makeRuntimeTemp("williams-v8-preparation-rejection-");
+  t.after(() => Promise.all([
+    removeDetachedAnalyzerFixture(fixture),
+    fs.rm(outputRoot, { recursive: true, force: true }),
+  ]));
+  const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
+  const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+  const events = [];
+  const calls = {
+    admission: 0,
+    compile: 0,
+    power: 0,
+    block: 0,
+    stabilization: 0,
+  };
+
+  await assert.rejects(
+    fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity, {
+      collectPreparationAdmissionEvidence: async () => {
+        calls.admission += 1;
+        return standardPerfAdmissionEvidence({
+          cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
+          git: { status: "available", head: fixture.head, entries: [], detail: "" },
+        });
+      },
+      prepareWindowsJobRunnerFn: async () => { calls.compile += 1; },
+      withPowerSchemeSessionFn: async () => { calls.power += 1; },
+      runBlockFn: async () => { calls.block += 1; },
+      stabilizationSleepFn: async () => { calls.stabilization += 1; },
+      onExecutionEvent: async (event) => { events.push(event); },
+    }),
+    (error) => (
+      error instanceof fixture.runner.WilliamsInvalidExperimentError
+      && error.code === "preparation-standard-perf-admission-rejected"
+      && fixture.runner.getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
+    ),
+  );
+
+  assert.deepEqual(calls, {
+    admission: 1,
+    compile: 0,
+    power: 0,
+    block: 0,
+    stabilization: 0,
+  });
+  assert.deepEqual(events, [
+    "preparation-admission:start",
+    "job-runner-cleanup:start",
+    "job-runner-cleanup:complete",
+  ]);
+  const admission = JSON.parse(await fs.readFile(
+    path.join(options.rawRoot, "harness", "preparation-standard-perf-admission.json"),
+    "utf8",
+  ));
+  assert.equal(admission.status, "rejected");
+  assert.equal(admission.phase, "preparation");
+  assert.equal(admission.attemptOrdinal, 1);
+  assert.equal(admission.retryCount, 0);
+  for (const relativePath of [
+    "harness/job-runner-preparation.json",
+    "harness/power-scheme-lifecycle.json",
+    "preregistration.json",
+    "harness/initial-stabilization.json",
+    "blocks",
+  ]) {
+    await assert.rejects(
+      fs.access(path.join(options.rawRoot, ...relativePath.split("/"))),
+      (error) => error?.code === "ENOENT",
+      relativePath,
+    );
+  }
+});
+
+test("Williams v8 execute adapters enforce preparation, activation, preregistration, eight stabilizations, then blocks", async (t) => {
+  const fixture = await loadDetachedAnalyzerFixture();
+  const outputRoot = await makeRuntimeTemp("williams-v8-execute-order-");
+  t.after(() => Promise.all([
+    removeDetachedAnalyzerFixture(fixture),
+    fs.rm(outputRoot, { recursive: true, force: true }),
+  ]));
+  const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, outputRoot);
+  const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+  const harness = await fixture.runner.buildCurrentHarnessArtifacts({
+    trustedRevisionIdentity: trustedIdentity,
+  });
+  const events = [];
+  const sleepCalls = [];
+  const blockCalls = [];
+  let compileCalls = 0;
+  let cleanupCalls = 0;
+  let clock = Date.UTC(2026, 6, 11, 0, 0, 0);
+
+  const report = await fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity, {
+    collectPreparationAdmissionEvidence: async () => standardPerfAdmissionEvidence({
+      git: { status: "available", head: fixture.head, entries: [], detail: "" },
+    }),
+    prepareWindowsJobRunnerFn: async ({ evidenceBinaryPath, evidenceBinaryDescriptorPath }) => {
+      compileCalls += 1;
+      await fs.mkdir(path.dirname(evidenceBinaryPath), { recursive: true });
+      await fs.writeFile(evidenceBinaryPath, JOB_RUNNER_FIXTURE_BYTES);
+      return {
+        status: "available",
+        error: null,
+        compiledAt: "2026-07-10T23:59:00.000Z",
+        capabilityProbedAt: "2026-07-10T23:59:30.000Z",
+        sourceSet: harness.jobRunnerSources,
+        binary: {
+          path: evidenceBinaryDescriptorPath,
+          sha256: crypto.createHash("sha256").update(JOB_RUNNER_FIXTURE_BYTES).digest("hex"),
+          bytes: JOB_RUNNER_FIXTURE_BYTES.length,
+        },
+        cleanup: async () => { cleanupCalls += 1; },
+      };
+    },
+    withPowerSchemeSessionFn: async ({ sessionPath, operation }) => {
+      const result = await operation(EXPECTED_POWER_SCHEME_GUID);
+      await writeJson(sessionPath, powerSchemeLifecycle());
+      return result;
+    },
+    runBlockFn: async ({ block, preparedRunner }) => {
+      assert.equal(preparedRunner.status, "available");
+      blockCalls.push(block.id);
+      return { complete: true, blockResult: { status: "complete", policyId: WILLIAMS_CROSSOVER_POLICY_ID } };
+    },
+    stabilizationSleepFn: async (delayMs) => { sleepCalls.push(delayMs); },
+    stabilizationNowFn: () => {
+      const value = clock;
+      clock += 5000;
+      return value;
+    },
+    onExecutionEvent: async (event, detail) => { events.push({ event, detail }); },
+  });
+
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.equal(compileCalls, 1);
+  assert.equal(cleanupCalls, 1);
+  assert.deepEqual(blockCalls, WILLIAMS_BLOCK_SEQUENCE.map((block) => block.id));
+  assert.deepEqual(sleepCalls, Array(8).fill(5000));
+  assert.deepEqual(
+    events.filter(({ event }) => event === "stabilization:complete").map(({ detail }) => [
+      detail.phase,
+      detail.fromBlockId,
+      detail.toBlockId,
+      detail.attemptOrdinal,
+      detail.retryCount,
+    ]),
+    completeStabilizationReceipts().map((receipt) => [
+      receipt.phase,
+      receipt.fromBlockId,
+      receipt.toBlockId,
+      1,
+      0,
+    ]),
+  );
+  const eventNames = events.map(({ event }) => event);
+  assert.ok(eventNames.indexOf("preparation-admission:complete") < eventNames.indexOf("job-runner-preparation:start"));
+  assert.ok(eventNames.indexOf("job-runner-preparation:complete") < eventNames.indexOf("power-session:active"));
+  assert.ok(eventNames.indexOf("power-session:active") < eventNames.indexOf("preregistration:written"));
+  assert.ok(eventNames.indexOf("preregistration:written") < eventNames.indexOf("stabilization:start"));
+  assert.ok(eventNames.indexOf("stabilization:complete") < eventNames.indexOf("block:start"));
+  assert.ok(eventNames.lastIndexOf("block:complete") < eventNames.indexOf("power-session:complete"));
+  assert.ok(eventNames.indexOf("power-session:complete") < eventNames.indexOf("job-runner-cleanup:start"));
+});
+
+test("Williams v8 sequence, stabilization, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
+  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v8");
+  assert.deepEqual(WILLIAMS_STABILIZATION_POLICY, {
+    policyId: "p2-williams-fixed-stabilization-v1",
+    delayMs: 5000,
+    elapsedToleranceMs: 1000,
+    initialReceiptCount: 1,
+    interBlockReceiptCount: 7,
+    maxHandoffLagMs: 1000,
+    attemptOrdinal: 1,
+    retryCount: 0,
+    scheduler: "one-shot-fixed-delay",
+  });
+  const preregistration = buildWilliamsPreregistration();
+  assert.deepEqual(preregistration.preparationAdmissionContract, {
+    policyId: "standard-perf-admission-v1",
+    phase: "preparation",
+    attemptCount: 1,
+    attemptOrdinal: 1,
+    retryCount: 0,
+    timing: "before-job-runner-compile-and-capability-probe",
+    rejection: "terminal-invalid-experiment-requires-fresh-raw-root",
+  });
+  assert.equal(preregistration.stabilizationContract.delayMs, 5000);
+  assert.equal(preregistration.stabilizationContract.elapsedToleranceMs, 1000);
+  assert.equal(preregistration.stabilizationContract.maxHandoffLagMs, 1000);
+  assert.equal(preregistration.stabilizationContract.attemptOrdinal, 1);
+  assert.equal(preregistration.stabilizationContract.retryCount, 0);
+  assert.deepEqual(preregistration.stabilizationContract.initial, {
+    path: "harness/initial-stabilization.json",
+    fromBlockId: null,
+    toBlockId: "block-01",
+  });
+  assert.deepEqual(
+    preregistration.stabilizationContract.interBlock,
+    WILLIAMS_BLOCK_SEQUENCE.slice(0, -1).map((block, index) => ({
+      path: `blocks/${block.id}-to-${WILLIAMS_BLOCK_SEQUENCE[index + 1].id}/stabilization.json`,
+      fromBlockId: block.id,
+      toBlockId: WILLIAMS_BLOCK_SEQUENCE[index + 1].id,
+    })),
+  );
+  assert.equal(
+    preregistration.stabilizationContract.selectionPolicy,
+    "fixed-preregistered-delay-no-threshold-polling-or-window-selection",
+  );
+  assert.deepEqual(preregistration.workloadContract.report.renderSampleRunProfile, {
     id: WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
     measuredRunsPerScenario: 2,
     reportSchemaVersion: 2,
@@ -1357,9 +1678,230 @@ test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are froze
   ]);
 });
 
+test("Williams v8 stabilization receipts form an exact closed eight-receipt set", () => {
+  const evidence = createEvidence();
+  assert.equal(evidence.stabilizationReceipts.length, 8);
+  assert.deepEqual(
+    evidence.stabilizationReceipts.map(({ phase, fromBlockId, toBlockId, attemptOrdinal, retryCount }) => ({
+      phase,
+      fromBlockId,
+      toBlockId,
+      attemptOrdinal,
+      retryCount,
+    })),
+    [
+      { phase: "initial", fromBlockId: null, toBlockId: "block-01", attemptOrdinal: 1, retryCount: 0 },
+      ...WILLIAMS_BLOCK_SEQUENCE.slice(0, -1).map((block, index) => ({
+        phase: "inter-block",
+        fromBlockId: block.id,
+        toBlockId: WILLIAMS_BLOCK_SEQUENCE[index + 1].id,
+        attemptOrdinal: 1,
+        retryCount: 0,
+      })),
+    ],
+  );
+  const report = analyzeWilliamsCrossoverEvidence(evidence);
+  assert.equal(report.decision.status, "accepted", report.decision.invalidReasons.join("\n"));
+});
+
+test("Williams v8 stabilization evidence fails closed on missing, drift, order, timing, extra, and retry", () => {
+  const cases = [
+    ["missing", (evidence) => { evidence.stabilizationReceipts.pop(); }, "stabilization.receiptCount"],
+    ["policy drift", (evidence) => {
+      evidence.stabilizationReceipts[0].policyId = "p2-williams-fixed-stabilization-v0";
+    }, "stabilization.initial.policyId"],
+    ["order drift", (evidence) => {
+      [evidence.stabilizationReceipts[1], evidence.stabilizationReceipts[2]] = [
+        evidence.stabilizationReceipts[2],
+        evidence.stabilizationReceipts[1],
+      ];
+    }, "stabilization.interBlock-1.fromBlockId"],
+    ["short timing", (evidence) => {
+      evidence.stabilizationReceipts[3].completedAt = new Date(
+        Date.parse(evidence.stabilizationReceipts[3].startedAt) + 4999,
+      ).toISOString();
+      evidence.stabilizationReceipts[3].elapsedMs = 4999;
+    }, "stabilization.interBlock-3.elapsedMs"],
+    ["timestamp drift", (evidence) => {
+      evidence.stabilizationReceipts[4].completedAt = new Date(
+        Date.parse(evidence.stabilizationReceipts[4].startedAt) + 5500,
+      ).toISOString();
+      evidence.stabilizationReceipts[4].elapsedMs = 5000;
+    }, "stabilization.interBlock-4.timestampElapsedMs"],
+    ["extra", (evidence) => {
+      evidence.stabilizationReceipts.push(structuredClone(evidence.stabilizationReceipts.at(-1)));
+    }, "stabilization.receiptCount"],
+    ["attempt", (evidence) => { evidence.stabilizationReceipts[5].attemptOrdinal = 2; }, "stabilization.interBlock-5.attemptOrdinal"],
+    ["retry", (evidence) => { evidence.stabilizationReceipts[6].retryCount = 1; }, "stabilization.interBlock-6.retryCount"],
+  ];
+  for (const [label, mutate, reason] of cases) {
+    const evidence = createEvidence();
+    mutate(evidence);
+    const report = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.equal(report.decision.status, "invalid-experiment", label);
+    assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, label);
+    assert.ok(report.decision.invalidReasons.includes(reason), `${label}: ${reason}`);
+  }
+});
+
+test("Williams v8 admission timestamps and every stabilization handoff fail closed on malformed or overlapping evidence", () => {
+  const preparationCases = [
+    ["missing startedAt", (evidence) => { delete evidence.preparationAdmission.startedAt; }, "preparationAdmission.startedAt"],
+    ["invalid startedAt", (evidence) => { evidence.preparationAdmission.startedAt = "invalid"; }, "preparationAdmission.startedAt"],
+    ["missing completedAt", (evidence) => { delete evidence.preparationAdmission.completedAt; }, "preparationAdmission.completedAt"],
+    ["invalid completedAt", (evidence) => { evidence.preparationAdmission.completedAt = "invalid"; }, "preparationAdmission.completedAt"],
+    ["reverse timestamps", (evidence) => {
+      evidence.preparationAdmission.startedAt = new Date(
+        Date.parse(evidence.preparationAdmission.completedAt) + 1,
+      ).toISOString();
+    }, "preparationAdmission.timestamp-order"],
+  ];
+  for (const [label, mutate, reason] of preparationCases) {
+    const evidence = createEvidence();
+    mutate(evidence);
+    const report = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, label);
+    assert.ok(report.decision.invalidReasons.includes(reason), `${label}: ${report.decision.invalidReasons.join(",")}`);
+  }
+
+  for (const [index, expectedBlock] of WILLIAMS_BLOCK_SEQUENCE.entries()) {
+    const blockPrefix = `${expectedBlock.id}.preBlockAdmission`;
+    const stabilizationPrefix = `stabilization.${index === 0 ? "initial" : `interBlock-${index}`}`;
+    const timestampCases = [
+      ["missing startedAt", (admission) => { delete admission.startedAt; }, `${blockPrefix}.startedAt`],
+      ["invalid startedAt", (admission) => { admission.startedAt = "invalid"; }, `${blockPrefix}.startedAt`],
+      ["missing completedAt", (admission) => { delete admission.completedAt; }, `${blockPrefix}.completedAt`],
+      ["invalid completedAt", (admission) => { admission.completedAt = "invalid"; }, `${blockPrefix}.completedAt`],
+      ["reverse timestamps", (admission) => {
+        admission.startedAt = new Date(Date.parse(admission.completedAt) + 1).toISOString();
+      }, `${blockPrefix}.timestamp-order`],
+    ];
+    for (const [label, mutate, reason] of timestampCases) {
+      const evidence = createEvidence();
+      mutate(evidence.blocks[index].preBlockAdmission);
+      const report = analyzeWilliamsCrossoverEvidence(evidence);
+      assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, `${expectedBlock.id} ${label}`);
+      assert.ok(
+        report.decision.invalidReasons.includes(reason),
+        `${expectedBlock.id} ${label}: ${report.decision.invalidReasons.join(",")}`,
+      );
+    }
+
+    const admissionOverlap = createEvidence();
+    admissionOverlap.blocks[index].preBlockAdmission.startedAt = new Date(
+      Date.parse(admissionOverlap.stabilizationReceipts[index].completedAt) - 1,
+    ).toISOString();
+    let report = analyzeWilliamsCrossoverEvidence(admissionOverlap);
+    assert.ok(
+      report.decision.invalidReasons.includes(`${stabilizationPrefix}.admission-order`),
+      `${stabilizationPrefix} admission overlap: ${report.decision.invalidReasons.join(",")}`,
+    );
+
+    const excessiveHandoffLag = createEvidence();
+    excessiveHandoffLag.blocks[index].preBlockAdmission.startedAt = new Date(
+      Date.parse(excessiveHandoffLag.stabilizationReceipts[index].completedAt) + 1001,
+    ).toISOString();
+    report = analyzeWilliamsCrossoverEvidence(excessiveHandoffLag);
+    assert.ok(
+      report.decision.invalidReasons.includes(`${stabilizationPrefix}.handoff-lag`),
+      `${stabilizationPrefix} handoff lag: ${report.decision.invalidReasons.join(",")}`,
+    );
+
+    const telemetryOverlap = createEvidence();
+    telemetryOverlap.blocks[index].preBlockAdmission.completedAt = new Date(
+      Date.parse(telemetryOverlap.blocks[index].telemetry.pre.startedAt) + 1,
+    ).toISOString();
+    report = analyzeWilliamsCrossoverEvidence(telemetryOverlap);
+    assert.ok(
+      report.decision.invalidReasons.includes(`${stabilizationPrefix}.telemetry-pre-order`),
+      `${stabilizationPrefix} telemetry overlap: ${report.decision.invalidReasons.join(",")}`,
+    );
+  }
+});
+
+test("Williams successful workload count is exactly one across Job, cleanup, and block-result surfaces", () => {
+  const surfaces = [
+    {
+      label: "Job evidence",
+      reason: "block-01.jobObject.workloadSpawnCount",
+      target: (evidence) => evidence.blocks[0].jobObject,
+    },
+    {
+      label: "cleanup Job evidence",
+      reason: "block-01.cleanup.jobObject.workloadSpawnCount",
+      target: (evidence) => evidence.blocks[0].cleanup.jobObject,
+    },
+    {
+      label: "cleanup summary",
+      reason: "block-01.cleanup.workloadSpawnCount",
+      target: (evidence) => evidence.blocks[0].cleanup,
+    },
+    {
+      label: "block result",
+      reason: "block-01.blockResult.workloadSpawnCount",
+      target: (evidence) => evidence.blocks[0].blockResult,
+    },
+  ];
+  for (const surface of surfaces) {
+    for (const value of [undefined, 0, 2]) {
+      const evidence = createEvidence();
+      const target = surface.target(evidence);
+      if (value === undefined) delete target.workloadSpawnCount;
+      else target.workloadSpawnCount = value;
+      const report = analyzeWilliamsCrossoverEvidence(evidence);
+      assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, `${surface.label}=${value}`);
+      assert.ok(
+        report.decision.invalidReasons.includes(surface.reason),
+        `${surface.label}=${value}: ${report.decision.invalidReasons.join(",")}`,
+      );
+    }
+  }
+
+  const crossSurfaceDrift = createEvidence();
+  crossSurfaceDrift.blocks[0].cleanup.jobObject.workloadSpawnCount = 2;
+  crossSurfaceDrift.blocks[0].cleanup.workloadSpawnCount = 2;
+  crossSurfaceDrift.blocks[0].blockResult.workloadSpawnCount = 2;
+  let report = analyzeWilliamsCrossoverEvidence(crossSurfaceDrift);
+  assert.ok(report.decision.invalidReasons.includes("block-01.cleanup.jobObject.workloadSpawnCount"));
+  assert.ok(report.decision.invalidReasons.includes("block-01.cleanup.workloadSpawnCount"));
+  assert.ok(report.decision.invalidReasons.includes("block-01.blockResult.workloadSpawnCount"));
+  assert.ok(report.decision.invalidReasons.includes("block-01.jobObject.cleanup-canonical"));
+
+  const rejected = createEvidence();
+  applyNotStartedBlockEvidence(rejected, 0);
+  report = analyzeWilliamsCrossoverEvidence(rejected);
+  assert.deepEqual(
+    report.decision.invalidReasons.filter((reason) => [
+      "block-01.jobObject.workloadSpawnCount",
+      "block-01.cleanup.jobObject.workloadSpawnCount",
+      "block-01.cleanup.workloadSpawnCount",
+      "block-01.blockResult.workloadSpawnCount",
+    ].includes(reason)),
+    [],
+  );
+  assert.equal(rejected.blocks[0].jobObject.workloadSpawnCount, 0);
+  assert.equal(rejected.blocks[0].cleanup.jobObject.workloadSpawnCount, 0);
+  assert.equal(rejected.blocks[0].cleanup.workloadSpawnCount, 0);
+  assert.equal(rejected.blocks[0].blockResult.workloadSpawnCount, 0);
+});
+
+test("Williams v8 rejects mixed v7 policy evidence", () => {
+  const preregistrationV7 = createEvidence();
+  preregistrationV7.preregistration.policyId = "p2-williams-crossover-v7";
+  let report = analyzeWilliamsCrossoverEvidence(preregistrationV7);
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.ok(report.decision.invalidReasons.includes("preregistration.policyId"));
+
+  const blockV7 = createEvidence();
+  blockV7.blocks[0].policyId = "p2-williams-crossover-v7";
+  report = analyzeWilliamsCrossoverEvidence(blockV7);
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.ok(report.decision.invalidReasons.includes("block-01.policyId"));
+});
+
 test("accepted experiment uses four B-A pair deltas and keeps pooled medians diagnostic", () => {
   const report = analyzeWilliamsCrossoverEvidence(createEvidence());
-  assert.equal(report.decision.status, "accepted");
+  assert.equal(report.decision.status, "accepted", report.decision.invalidReasons.join(","));
   assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.accepted);
   assert.equal(report.primary.tno_1962.startup.pairCount, 4);
   assert.equal(report.primary.tno_1962.startup.deltaMs, 0);
@@ -1631,7 +2173,6 @@ test("Williams pre-block standard perf admission preserves standard policy parit
   const events = [];
   let telemetryCount = 0;
   let workloadSpawnCount = 0;
-  let preparationCount = 0;
   const result = await runWilliamsBlockWithTestAdapters({
     block: {
       ordinal: 1,
@@ -1644,19 +2185,9 @@ test("Williams pre-block standard perf admission preserves standard policy parit
       directory,
       command,
     },
+    harnessArtifacts: {},
+    preparedRunner: {},
     packageLock: {},
-    lazyPreparationAuthority: async ({ admission, validation }) => {
-      const persistedAdmission = JSON.parse(await fs.readFile(
-        path.join(directory, "pre-block-standard-perf-admission.json"),
-        "utf8",
-      ));
-      assert.deepEqual(persistedAdmission, admission);
-      assert.equal(validation.valid, true);
-      assert.equal(preparationCount, 0);
-      preparationCount += 1;
-      events.push("job-preparation");
-      return { harnessArtifacts: {}, preparedRunner: {}, packageLock: {} };
-    },
   }, {
     collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
     collectAdmissionEvidence: async () => {
@@ -1697,12 +2228,259 @@ test("Williams pre-block standard perf admission preserves standard policy parit
   });
   assert.equal(result.complete, true);
   assert.equal(result.blockResult.workloadSpawnCount, 1);
-  assert.equal(preparationCount, 1);
   assert.equal(workloadSpawnCount, 1);
-  assert.ok(events.indexOf("standard-admission-collected") < events.indexOf("job-preparation"));
-  assert.ok(events.indexOf("job-preparation") < events.indexOf("workload-spawned"));
   assert.ok(events.indexOf("standard-admission-collected") < events.indexOf("workload-spawned"));
   assert.ok(events.indexOf("telemetry-1") < events.indexOf("workload-spawned"));
+});
+
+test("Williams runBlock preserves producer workload count and never defaults or rewrites missing evidence", async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-run-block-spawn-count-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  for (const [label, producerValue, expectedValue, expectedComplete] of [
+    ["missing", undefined, null, false],
+    ["zero", 0, 0, false],
+    ["duplicate", 2, 2, false],
+    ["exactly-one", 1, 1, true],
+  ]) {
+    const directory = path.join(outputRoot, label);
+    const command = { bin: process.execPath, args: ["--version"] };
+    const producerEvidence = jobObjectEvidence(4321, { command, cwd: CONTROL_WORKTREE });
+    if (producerValue === undefined) delete producerEvidence.workloadSpawnCount;
+    else producerEvidence.workloadSpawnCount = producerValue;
+    const commandResult = {
+      pid: 4321,
+      exitCode: 0,
+      timedOut: false,
+      skipped: false,
+      taskOwnedTree: {
+        rootPids: [4321],
+        pids: [4321],
+        processes: [],
+        captureStatus: "available",
+        captureErrors: [],
+      },
+      jobEvidence: structuredClone(producerEvidence),
+    };
+    if (producerValue !== undefined) commandResult.workloadSpawnCount = producerValue;
+    let telemetryCount = 0;
+    const result = await runWilliamsBlockWithTestAdapters({
+      block: {
+        ordinal: 1,
+        id: "block-01",
+        side: "A",
+        orderId: "tno-hoi4",
+        scenarioOrder: ["tno_1962", "hoi4_1939"],
+        cwd: CONTROL_WORKTREE,
+        expectedHead: CONTROL_HEAD,
+        directory,
+        command,
+      },
+      harnessArtifacts: {},
+      preparedRunner: {},
+      packageLock: {},
+    }, {
+      collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
+      collectAdmissionEvidence: async () => standardPerfAdmissionEvidence(),
+      collectTelemetry: async () => {
+        telemetryCount += 1;
+        return telemetryWindow(telemetryCount === 1 ? "pre" : "post", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+      },
+      runLoggedCommand: async (_command, options) => {
+        await writeJson(options.jobEvidencePath, producerEvidence);
+        return structuredClone(commandResult);
+      },
+    });
+
+    assert.equal(result.complete, expectedComplete, label);
+    assert.equal(result.blockResult.workloadSpawnCount, expectedValue, label);
+    const persistedJob = JSON.parse(await fs.readFile(path.join(directory, "job-object.json"), "utf8"));
+    const cleanup = JSON.parse(await fs.readFile(path.join(directory, "cleanup.json"), "utf8"));
+    assert.deepEqual(persistedJob, producerEvidence, `${label}: persisted producer evidence`);
+    assert.deepEqual(cleanup.jobObject, producerEvidence, `${label}: cleanup producer evidence`);
+    assert.equal(cleanup.workloadSpawnCount, expectedValue, `${label}: cleanup count`);
+    assert.equal(
+      Object.hasOwn(persistedJob, "workloadSpawnCount"),
+      producerValue !== undefined,
+      `${label}: no synthesized Job field`,
+    );
+  }
+});
+
+test("Williams v8 preparation admission is single-attempt, durable, and fail closed", async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-v8-preparation-admission-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  const acceptedPath = path.join(outputRoot, "accepted.json");
+  let collectionCount = 0;
+  const accepted = await runWilliamsPreparationAdmission({
+    worktree: CANDIDATE_WORKTREE,
+    expectedGitHead: CANDIDATE_HEAD,
+    artifactPath: acceptedPath,
+    collectEvidence: async ({ cwd }) => {
+      collectionCount += 1;
+      assert.equal(cwd, CANDIDATE_WORKTREE);
+      return standardPerfAdmissionEvidence({
+        git: { status: "available", head: CANDIDATE_HEAD, entries: [], detail: "" },
+      });
+    },
+  });
+  assert.equal(collectionCount, 1);
+  assert.equal(accepted.status, "admitted");
+  assert.equal(accepted.phase, "preparation");
+  assert.equal(accepted.attemptOrdinal, 1);
+  assert.equal(accepted.retryCount, 0);
+  assert.deepEqual(JSON.parse(await fs.readFile(acceptedPath, "utf8")), accepted);
+
+  const rejectedPath = path.join(outputRoot, "rejected.json");
+  await assert.rejects(
+    runWilliamsPreparationAdmission({
+      worktree: CANDIDATE_WORKTREE,
+      expectedGitHead: CANDIDATE_HEAD,
+      artifactPath: rejectedPath,
+      collectEvidence: async () => standardPerfAdmissionEvidence({
+        cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
+        git: { status: "available", head: CANDIDATE_HEAD, entries: [], detail: "" },
+      }),
+    }),
+    (error) => (
+      error instanceof WilliamsInvalidExperimentError
+      && error.code === "preparation-standard-perf-admission-rejected"
+      && getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment
+    ),
+  );
+  const rejected = JSON.parse(await fs.readFile(rejectedPath, "utf8"));
+  assert.equal(rejected.status, "rejected");
+  assert.equal(rejected.phase, "preparation");
+  assert.equal(rejected.attemptOrdinal, 1);
+  assert.equal(rejected.retryCount, 0);
+  assert.deepEqual(rejected.failures.map((entry) => entry.code), ["cpu-average-high"]);
+});
+
+test("Williams v8 fixed stabilization writes one exact 5000 ms receipt with zero retry", async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-v8-fixed-stabilization-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  const artifactPath = path.join(outputRoot, "initial.json");
+  const times = [Date.UTC(2026, 6, 11, 0, 0, 0), Date.UTC(2026, 6, 11, 0, 0, 5)];
+  const sleepCalls = [];
+  const receipt = await runWilliamsFixedStabilization({
+    artifactPath,
+    phase: "initial",
+    fromBlockId: null,
+    toBlockId: "block-01",
+    sleepFn: async (delayMs) => { sleepCalls.push(delayMs); },
+    nowFn: () => times.shift(),
+  });
+  assert.deepEqual(sleepCalls, [5000]);
+  assert.deepEqual(receipt, {
+    schemaVersion: 1,
+    policyId: WILLIAMS_STABILIZATION_POLICY.policyId,
+    receiptType: "fixed-stabilization",
+    phase: "initial",
+    attemptOrdinal: 1,
+    retryCount: 0,
+    configuredDelayMs: 5000,
+    toleranceMs: 1000,
+    fromBlockId: null,
+    toBlockId: "block-01",
+    startedAt: "2026-07-11T00:00:00.000Z",
+    completedAt: "2026-07-11T00:00:05.000Z",
+    elapsedMs: 5000,
+    status: "complete",
+  });
+  assert.deepEqual(JSON.parse(await fs.readFile(artifactPath, "utf8")), receipt);
+
+  const invalidPath = path.join(outputRoot, "short.json");
+  const invalidTimes = [Date.UTC(2026, 6, 11, 0, 1, 0), Date.UTC(2026, 6, 11, 0, 1, 4, 999)];
+  await assert.rejects(
+    runWilliamsFixedStabilization({
+      artifactPath: invalidPath,
+      phase: "inter-block",
+      fromBlockId: "block-01",
+      toBlockId: "block-02",
+      sleepFn: async (delayMs) => { assert.equal(delayMs, 5000); },
+      nowFn: () => invalidTimes.shift(),
+    }),
+    (error) => error instanceof WilliamsInvalidExperimentError && error.code === "stabilization-elapsed-invalid",
+  );
+  const invalid = JSON.parse(await fs.readFile(invalidPath, "utf8"));
+  assert.equal(invalid.elapsedMs, 4999);
+  assert.equal(invalid.status, "invalid");
+  assert.equal(invalid.attemptOrdinal, 1);
+  assert.equal(invalid.retryCount, 0);
+});
+
+test("Williams pre-block and Job preparation receipts reject a same-path second write without changing original bytes", async (t) => {
+  const outputRoot = await makeRuntimeTemp("williams-v8-exclusive-receipts-");
+  t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
+  const preBlockPath = path.join(outputRoot, "pre-block-standard-perf-admission.json");
+  await runWilliamsPreBlockAdmission({
+    worktree: CONTROL_WORKTREE,
+    artifactPath: preBlockPath,
+    collectEvidence: async () => standardPerfAdmissionEvidence(),
+    attemptMetadata: { phase: "pre-block", blockId: "block-01", attemptOrdinal: 1, retryCount: 0 },
+  });
+  const originalPreBlockBytes = await fs.readFile(preBlockPath);
+  await assert.rejects(
+    runWilliamsPreBlockAdmission({
+      worktree: CONTROL_WORKTREE,
+      artifactPath: preBlockPath,
+      collectEvidence: async () => standardPerfAdmissionEvidence({
+        cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
+      }),
+      attemptMetadata: { phase: "pre-block", blockId: "block-01", attemptOrdinal: 1, retryCount: 0 },
+    }),
+    (error) => error?.code === "EEXIST",
+  );
+  assert.deepEqual(await fs.readFile(preBlockPath), originalPreBlockBytes);
+
+  const fixture = await loadDetachedAnalyzerFixture();
+  const executeRoot = path.join(outputRoot, "job-preparation");
+  t.after(() => removeDetachedAnalyzerFixture(fixture));
+  const options = buildDetachedExecutePreflightOptions(fixture.runner, fixture, executeRoot);
+  const trustedIdentity = fixture.runner.buildWilliamsTrustedRevisionIdentity(options);
+  const harness = await fixture.runner.buildCurrentHarnessArtifacts({
+    trustedRevisionIdentity: trustedIdentity,
+  });
+  const jobPreparationPath = path.join(options.rawRoot, "harness", "job-runner-preparation.json");
+  const originalJobPreparationBytes = Buffer.from("{\"sentinel\":\"original-job-preparation\"}\n", "utf8");
+  let preparationCleanupCount = 0;
+  let powerSessionCount = 0;
+  await assert.rejects(
+    fixture.runner.executeWilliamsExperimentWithTestAdapters(options, trustedIdentity, {
+      collectPreparationAdmissionEvidence: async () => standardPerfAdmissionEvidence({
+        git: { status: "available", head: fixture.head, entries: [], detail: "" },
+      }),
+      prepareWindowsJobRunnerFn: async ({ evidenceBinaryPath, evidenceBinaryDescriptorPath }) => {
+        await fs.mkdir(path.dirname(evidenceBinaryPath), { recursive: true });
+        await fs.writeFile(evidenceBinaryPath, JOB_RUNNER_FIXTURE_BYTES);
+        return {
+          status: "available",
+          error: null,
+          compiledAt: "2026-07-10T23:59:00.000Z",
+          capabilityProbedAt: "2026-07-10T23:59:30.000Z",
+          sourceSet: harness.jobRunnerSources,
+          binary: {
+            path: evidenceBinaryDescriptorPath,
+            sha256: crypto.createHash("sha256").update(JOB_RUNNER_FIXTURE_BYTES).digest("hex"),
+            bytes: JOB_RUNNER_FIXTURE_BYTES.length,
+          },
+          cleanup: async () => { preparationCleanupCount += 1; },
+        };
+      },
+      withPowerSchemeSessionFn: async () => {
+        powerSessionCount += 1;
+        throw new Error("power session reached after duplicate Job preparation receipt");
+      },
+      onExecutionEvent: async (event) => {
+        if (event !== "preparation-admission:complete") return;
+        await fs.mkdir(path.dirname(jobPreparationPath), { recursive: true });
+        await fs.writeFile(jobPreparationPath, originalJobPreparationBytes);
+      },
+    }),
+    (error) => error?.code === "EEXIST",
+  );
+  assert.deepEqual(await fs.readFile(jobPreparationPath), originalJobPreparationBytes);
+  assert.equal(preparationCleanupCount, 1);
+  assert.equal(powerSessionCount, 0);
 });
 
 test("Williams pre-block standard perf admission rejects every governed resource dimension with zero workload spawn", async (t) => {
@@ -1750,7 +2528,6 @@ test("Williams pre-block standard perf admission rejects every governed resource
     const command = { bin: process.execPath, args: ["--version"] };
     let telemetryCount = 0;
     let workloadSpawnCount = 0;
-    let preparationCount = 0;
     const result = await runWilliamsBlockWithTestAdapters({
       block: {
         ordinal: 1,
@@ -1763,11 +2540,9 @@ test("Williams pre-block standard perf admission rejects every governed resource
         directory,
         command,
       },
+      harnessArtifacts: {},
+      preparedRunner: {},
       packageLock: {},
-      lazyPreparationAuthority: async () => {
-        preparationCount += 1;
-        throw new Error("Job preparation must stay unreachable after standard admission rejection");
-      },
     }, {
       collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
       collectAdmissionEvidence: async () => evidence,
@@ -1792,14 +2567,13 @@ test("Williams pre-block standard perf admission rejects every governed resource
     assert.equal(result.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, testCase.label);
     assert.equal(result.blockResult.workloadSpawnCount, 0, testCase.label);
     assert.equal(result.blockResult.skipReason, "standard-perf-admission-rejected", testCase.label);
-    assert.equal(preparationCount, 0, testCase.label);
     assert.equal(workloadSpawnCount, 0, testCase.label);
     assert.equal(admission.status, "rejected", testCase.label);
     assert.equal(admission.exitCode, STANDARD_PERF_ADMISSION_EXIT_CODES.admissionRejected, testCase.label);
     assert.ok(admission.failures.some((failure) => failure.code === testCase.failureCode), testCase.label);
     assert.match(stderr, /^standard-perf-admission-rejected: /, testCase.label);
     assert.ok(stderr.includes(testCase.failureCode), testCase.label);
-    assert.equal(cleanup.valid, true, testCase.label);
+    assert.equal(cleanup.valid, false, testCase.label);
     assert.equal(cleanup.workloadSpawnCount, 0, testCase.label);
     assert.equal(cleanup.workloadStarted, false, testCase.label);
     assert.equal(cleanup.cleanupRequired, false, testCase.label);
@@ -1813,7 +2587,6 @@ test("Williams pre-block standard perf admission rejects every governed resource
   const collectionFailureDirectory = path.join(outputRoot, "collection-failure");
   let collectionFailureTelemetryCount = 0;
   let collectionFailureSpawnCount = 0;
-  let collectionFailurePreparationCount = 0;
   const collectionFailureResult = await runWilliamsBlockWithTestAdapters({
     block: {
       ordinal: 1,
@@ -1826,11 +2599,9 @@ test("Williams pre-block standard perf admission rejects every governed resource
       directory: collectionFailureDirectory,
       command: { bin: process.execPath, args: ["--version"] },
     },
+    harnessArtifacts: {},
+    preparedRunner: {},
     packageLock: {},
-    lazyPreparationAuthority: async () => {
-      collectionFailurePreparationCount += 1;
-      throw new Error("Job preparation must stay unreachable after collection failure");
-    },
   }, {
     collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
     collectAdmissionEvidence: async () => { throw new Error("collector unavailable"); },
@@ -1854,14 +2625,12 @@ test("Williams pre-block standard perf admission rejects every governed resource
   ));
   assert.equal(collectionFailureResult.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
   assert.equal(collectionFailureResult.blockResult.workloadSpawnCount, 0);
-  assert.equal(collectionFailurePreparationCount, 0);
   assert.equal(collectionFailureSpawnCount, 0);
   assert.equal(collectionFailureAdmission.status, "rejected");
   assert.ok(collectionFailureAdmission.degradedCapabilities.includes("standard-perf-admission-collection"));
   assert.ok(collectionFailureAdmission.failures.some((failure) => failure.code === "cpu-samples-invalid"));
 
   const forgedDirectory = path.join(outputRoot, "forged-admitted-envelope");
-  let forgedPreparationCount = 0;
   let forgedSpawnCount = 0;
   const forgedResult = await runWilliamsBlockWithTestAdapters({
     block: {
@@ -1875,11 +2644,9 @@ test("Williams pre-block standard perf admission rejects every governed resource
       directory: forgedDirectory,
       command: { bin: process.execPath, args: ["--version"] },
     },
+    harnessArtifacts: {},
+    preparedRunner: {},
     packageLock: {},
-    lazyPreparationAuthority: async () => {
-      forgedPreparationCount += 1;
-      throw new Error("Job preparation must stay unreachable after full validator rejection");
-    },
   }, {
     collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
     collectAdmissionEvidence: async () => standardPerfAdmissionEvidence({
@@ -1908,7 +2675,6 @@ test("Williams pre-block standard perf admission rejects every governed resource
   const forgedStderr = await fs.readFile(path.join(forgedDirectory, "runner.stderr.log"), "utf8");
   assert.match(forgedStderr, /standard-perf-admission-invalid/);
   assert.match(forgedStderr, /git-evidence-invalid/);
-  assert.equal(forgedPreparationCount, 0);
   assert.equal(forgedSpawnCount, 0);
 });
 
@@ -1916,7 +2682,6 @@ test("Williams quiet-window rejection publishes cadence and environment stderr w
   const outputRoot = await makeRuntimeTemp("williams-quiet-window-rejection-");
   t.after(() => fs.rm(outputRoot, { recursive: true, force: true }));
   const directory = path.join(outputRoot, "block-01");
-  let preparationCount = 0;
   let workloadSpawnCount = 0;
   const result = await runWilliamsBlockWithTestAdapters({
     block: {
@@ -1930,11 +2695,9 @@ test("Williams quiet-window rejection publishes cadence and environment stderr w
       directory,
       command: { bin: process.execPath, args: ["--version"] },
     },
+    harnessArtifacts: {},
+    preparedRunner: {},
     packageLock: {},
-    lazyPreparationAuthority: async () => {
-      preparationCount += 1;
-      return { harnessArtifacts: {}, preparedRunner: {}, packageLock: {} };
-    },
   }, {
     collectBlockIdentity: async () => ({ actualHead: CONTROL_HEAD }),
     collectAdmissionEvidence: async () => standardPerfAdmissionEvidence(),
@@ -1962,7 +2725,6 @@ test("Williams quiet-window rejection publishes cadence and environment stderr w
   assert.equal(result.blockResult.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
   assert.equal(result.blockResult.skipReason, "williams-quiet-window-invalid");
   assert.equal(result.blockResult.workloadSpawnCount, 0);
-  assert.equal(preparationCount, 1);
   assert.equal(workloadSpawnCount, 0);
   assert.match(stderr, /^williams-quiet-window-invalid: /);
   assert.match(stderr, /telemetry\.samples\.interval/);
@@ -2185,7 +2947,7 @@ test("CLI defaults to list and the plan keeps live execution explicit", () => {
       "--scenarios", "hoi4_1939,tno_1962",
       "--runs", "2",
       "--warmups", "1",
-      "--render-sample-run-profile", "p2-williams-crossover-v7",
+      "--render-sample-run-profile", WILLIAMS_CROSSOVER_RENDER_SAMPLE_RUN_PROFILE_ID,
       "--baseline-json", path.join(plan.blocks[2].directory, "baseline.json"),
       "--baseline-md", path.join(plan.blocks[2].directory, "baseline.md"),
       "--raw-dir", path.join(plan.blocks[2].directory, "raw"),
@@ -2728,7 +3490,7 @@ test("Williams admission binds preparation, activation, preregistration, telemet
   assert.ok(report.decision.invalidReasons.includes("power-lifecycle.preregistration-order"));
 
   const preregistrationAfterTelemetryStart = createEvidence();
-  preregistrationAfterTelemetryStart.preregistration.generatedAt = "2026-07-11T00:00:00.000Z";
+  preregistrationAfterTelemetryStart.preregistration.generatedAt = "2026-07-11T00:00:08.000Z";
   report = analyzeWilliamsCrossoverEvidence(preregistrationAfterTelemetryStart);
   assert.ok(report.decision.invalidReasons.includes("telemetry.preregistration-order"));
 
@@ -2740,8 +3502,8 @@ test("Williams admission binds preparation, activation, preregistration, telemet
 
   const sampleCompletesAfterRestore = createEvidence();
   const finalPost = sampleCompletesAfterRestore.blocks.at(-1).telemetry.post;
-  finalPost.samples.at(-1).completedAt = "2026-07-11T00:03:01.000Z";
-  finalPost.completedAt = "2026-07-11T00:03:02.000Z";
+  finalPost.samples.at(-1).completedAt = "2026-07-11T00:10:01.000Z";
+  finalPost.completedAt = "2026-07-11T00:10:02.000Z";
   report = analyzeWilliamsCrossoverEvidence(sampleCompletesAfterRestore);
   assert.ok(report.decision.invalidReasons.includes("block-08.telemetry.post.power-lifecycle-window"));
 });
@@ -3113,7 +3875,12 @@ test("final raw-root and analyze CLI authority cover accepted 0, valid regressio
       "--candidate-head", fixtureRepository.head,
     ], { encoding: "utf8", windowsHide: true });
     process.stdout.write(`# direct-cli-matrix ${label} exit=${result.status}\n`);
-    assert.equal(result.status, expectedExitCode, `${label}/CLI: ${result.stderr}`);
+    const cliReport = JSON.parse(await fs.readFile(path.join(reportRoot, `${label}.json`), "utf8"));
+    assert.equal(
+      result.status,
+      expectedExitCode,
+      `${label}/CLI: ${result.stderr}\n${JSON.stringify(cliReport.decision.invalidReasons)}`,
+    );
   }
 });
 
@@ -3181,9 +3948,15 @@ test("raw analyzer revalidates manifest-consistent pre-block standard admission 
   assert.ok(report.decision.invalidReasons.includes("block-01.preBlockAdmission.cpu-evidence-invalid"));
 
   const blockRoot = path.join(notStartedRoot, "blocks", "block-01");
-  const rejectedAdmission = standardPerfAdmissionDecision(CONTROL_HEAD, {
-    cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
-  });
+  const rejectedAdmission = {
+    ...standardPerfAdmissionDecision(CONTROL_HEAD, {
+      cpuSamples: Array(STANDARD_PERF_ADMISSION_POLICY.sampleCount).fill(21),
+    }),
+    phase: "pre-block",
+    blockId: "block-01",
+    attemptOrdinal: 1,
+    retryCount: 0,
+  };
   const command = JSON.parse(await fs.readFile(path.join(blockRoot, "command.json"), "utf8"));
   const notStartedJob = notStartedJobObjectEvidence({
     command,
@@ -3213,6 +3986,7 @@ test("raw analyzer revalidates manifest-consistent pre-block standard admission 
   });
   const blockResult = {
     schemaVersion: 1,
+    policyId: WILLIAMS_CROSSOVER_POLICY_ID,
     status: "invalid",
     exitCode: WILLIAMS_EXIT_CODES.invalidExperiment,
     timedOut: false,
@@ -3358,6 +4132,33 @@ test("raw analyzer rejects both extra and missing measured files", async (t) => 
   assert.ok(extraReport.manifestValidation.errors.some((error) => error.includes("raw.extra:")));
   assert.equal(missingReport.decision.status, "invalid-experiment");
   assert.ok(missingReport.manifestValidation.errors.some((error) => error.includes("raw.missing:")));
+});
+
+test("raw authority rejects physical extras from every governed Williams receipt family", async (t) => {
+  const root = await materializeEvidenceRoot(createEvidence());
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const extras = [
+    ["harness/initial-stabilization-02.json", completeStabilizationReceipts()[0]],
+    ["harness/job-runner-preparation-02.json", jobRunnerPreparation()],
+    ["harness/power-scheme-lifecycle-02.json", powerSchemeLifecycle()],
+    [
+      "blocks/block-01/pre-block-standard-perf-admission-02.json",
+      createEvidence().blocks[0].preBlockAdmission,
+    ],
+  ];
+  for (const [relativePath, payload] of extras) {
+    await writeJson(path.join(root, ...relativePath.split("/")), payload);
+  }
+
+  const report = await analyzeTrustedRawRoot(root);
+  assert.equal(report.manifestValidation.status, "invalid");
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  for (const [relativePath] of extras) {
+    assert.ok(
+      report.manifestValidation.errors.includes(`protocol-receipt.inventory.extra:${relativePath}`),
+      `${relativePath}: ${report.manifestValidation.errors.join(",")}`,
+    );
+  }
 });
 
 test("raw manifest rejects extra metadata, tampering, and current tool identity mismatch", async (t) => {
@@ -3686,22 +4487,37 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   const runBlockIndex = runnerSource.indexOf("async function runBlock");
   const admissionIndex = runnerSource.indexOf("const preBlockAdmission = await runWilliamsPreBlockAdmission", runBlockIndex);
   const admissionValidationIndex = runnerSource.indexOf("validateStandardPerfAdmissionDecision", admissionIndex);
-  const lazyPreparationIndex = runnerSource.indexOf("await lazyPreparationAuthority", admissionValidationIndex);
+  const preTelemetryIndex = runnerSource.indexOf("const preTelemetry = await collectTelemetry", admissionValidationIndex);
+  const workloadIndex = runnerSource.indexOf("commandResult = await runLoggedCommandFn", preTelemetryIndex);
   const executeIndex = runnerSource.indexOf("async function executeExperiment");
-  const powerOperationIndex = runnerSource.indexOf("operation: async (expectedPowerSchemeGuid)", executeIndex);
-  const productionLazyAuthorityIndex = runnerSource.indexOf("const lazyPreparationAuthority = async", powerOperationIndex);
+  const preparationAdmissionIndex = runnerSource.indexOf("runWilliamsPreparationAdmission", executeIndex);
   const productionPreparationIndex = runnerSource.indexOf(
     "preparation = await prepareWilliamsJobRunnerForExecution",
-    productionLazyAuthorityIndex,
+    preparationAdmissionIndex,
   );
+  const powerSessionIndex = runnerSource.indexOf("await withPowerSchemeSessionFn", productionPreparationIndex);
+  const powerOperationIndex = runnerSource.indexOf("operation: async (expectedPowerSchemeGuid)", executeIndex);
+  const preregistrationIndex = runnerSource.indexOf("const preregistration =", powerOperationIndex);
+  const initialStabilizationIndex = runnerSource.indexOf("const initialStabilization = await runWilliamsFixedStabilization", preregistrationIndex);
+  const blockLoopIndex = runnerSource.indexOf("for (const [index, block] of finalPlan.blocks.entries())", initialStabilizationIndex);
+  const blockRunIndex = runnerSource.indexOf("const result = await runBlockFn", blockLoopIndex);
+  const blockRejectionBreakIndex = runnerSource.indexOf("if (!result.complete) break", blockRunIndex);
+  const transitionIndex = runnerSource.indexOf("const nextBlock = finalPlan.blocks[index + 1]", blockRejectionBreakIndex);
   assert.ok(runBlockIndex >= 0);
   assert.ok(runBlockIndex < admissionIndex);
   assert.ok(admissionIndex < admissionValidationIndex);
-  assert.ok(admissionValidationIndex < lazyPreparationIndex);
-  assert.ok(executeIndex < powerOperationIndex);
-  assert.doesNotMatch(runnerSource.slice(executeIndex, powerOperationIndex), /prepareWindowsJobRunnerFn\s*\(/);
-  assert.ok(powerOperationIndex < productionLazyAuthorityIndex);
-  assert.ok(productionLazyAuthorityIndex < productionPreparationIndex);
+  assert.ok(admissionValidationIndex < preTelemetryIndex);
+  assert.ok(preTelemetryIndex < workloadIndex);
+  assert.ok(executeIndex < preparationAdmissionIndex);
+  assert.ok(preparationAdmissionIndex < productionPreparationIndex);
+  assert.ok(productionPreparationIndex < powerSessionIndex);
+  assert.ok(powerSessionIndex < powerOperationIndex);
+  assert.ok(powerOperationIndex < preregistrationIndex);
+  assert.ok(preregistrationIndex < initialStabilizationIndex);
+  assert.ok(initialStabilizationIndex < blockLoopIndex);
+  assert.ok(blockLoopIndex < blockRunIndex);
+  assert.ok(blockRunIndex < blockRejectionBreakIndex);
+  assert.ok(blockRejectionBreakIndex < transitionIndex);
   assert.doesNotMatch(runnerSource, /newBrowserPids\.length === 0/);
   assert.match(runnerSource, /newBrowserPids,/);
   assert.match(runnerSource, /mode: "list"/);

@@ -60,6 +60,8 @@ test("Windows Job runner preserves argv and kills a detached descendant on Job c
   assert.equal(result.containmentStatus, "available", result.containmentErrors?.join("\n"));
   assert.equal(result.exitCode, 7);
   assert.equal(result.timedOut, false);
+  assert.equal(result.workloadSpawnCount, 1);
+  assert.equal(result.jobEvidence.workloadSpawnCount, 1);
   assert.equal(result.jobEvidence.cleanupValid, true);
   assert.deepEqual(result.jobEvidence.remainingPids, []);
   assert.deepEqual(result.jobEvidence.unverifiedPids, []);

@@ -14,7 +14,7 @@ import {
 } from "../process_containment/ordered_source_set_identity.mjs";
 import { validateStandardPerfAdmissionDecision } from "./standard_perf_admission.mjs";
 
-export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v7";
+export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v8";
 export const WILLIAMS_CROSSOVER_SCHEMA_VERSION = 1;
 export const WILLIAMS_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 export const WILLIAMS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
@@ -26,6 +26,17 @@ export const WILLIAMS_JOB_RUNNER_SOURCE_PATHS = Object.freeze([
 ]);
 export const WILLIAMS_JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
 export const WILLIAMS_BASELINE_RUNNER_PATH = "tools/perf/run_baseline.mjs";
+export const WILLIAMS_STABILIZATION_POLICY = Object.freeze({
+  policyId: "p2-williams-fixed-stabilization-v1",
+  delayMs: 5000,
+  elapsedToleranceMs: 1000,
+  initialReceiptCount: 1,
+  interBlockReceiptCount: 7,
+  attemptOrdinal: 1,
+  retryCount: 0,
+  scheduler: "one-shot-fixed-delay",
+  maxHandoffLagMs: 1000,
+});
 
 export function buildWilliamsBlockCommand({
   candidateWorktree,
@@ -292,6 +303,7 @@ function validateJobObjectEvidence(
     exitCode = null,
     blockResult = null,
     admissionValidation = null,
+    expectedWorkloadSpawnCount = null,
   } = {},
 ) {
   if (!jobObject || typeof jobObject !== "object") return [`${prefix}.missing`];
@@ -386,6 +398,9 @@ function validateJobObjectEvidence(
   if (jobObject.jobCloseSucceeded !== true) errors.push(`${prefix}.jobCloseSucceeded`);
   if (jobObject.rootTerminationConfirmed !== true) errors.push(`${prefix}.rootTerminationConfirmed`);
   if (jobObject.cleanupValid !== true) errors.push(`${prefix}.cleanupValid`);
+  if (expectedWorkloadSpawnCount !== null && jobObject.workloadSpawnCount !== expectedWorkloadSpawnCount) {
+    errors.push(`${prefix}.workloadSpawnCount`);
+  }
   if (!Array.isArray(jobObject.remainingPids) || jobObject.remainingPids.length !== 0) errors.push(`${prefix}.remainingPids`);
   if (!Array.isArray(jobObject.unverifiedPids) || jobObject.unverifiedPids.length !== 0) errors.push(`${prefix}.unverifiedPids`);
   if (jobObject.timedOut === true && jobObject.terminateJobSucceeded !== true) {
@@ -404,6 +419,8 @@ function validateWilliamsJobRunnerPreparation(preparation, preregistration) {
   const errors = [];
   const containmentIdentity = preregistration?.workloadContract?.processContainment?.identity || {};
   if (preparation.schemaVersion !== 1) errors.push("job-runner-preparation.schemaVersion");
+  if (preparation.attemptOrdinal !== 1) errors.push("job-runner-preparation.attemptOrdinal");
+  if (preparation.retryCount !== 0) errors.push("job-runner-preparation.retryCount");
   if (preparation.status !== "available") errors.push("job-runner-preparation.status");
   if (preparation.error !== null) errors.push("job-runner-preparation.error");
   const compiledAt = Date.parse(String(preparation.compiledAt || ""));
@@ -439,8 +456,124 @@ function validateWilliamsJobRunnerPreparation(preparation, preregistration) {
   errors.push(...validateJobObjectEvidence(
     preparation.capabilityEvidence,
     "job-runner-preparation.capabilityEvidence",
-    { command: capabilityCommand, cwd: capabilityCommand?.cwd, exitCode: 0 },
+    { command: capabilityCommand, cwd: capabilityCommand?.cwd, exitCode: 0, expectedWorkloadSpawnCount: 1 },
   ));
+  return errors;
+}
+
+export function validateWilliamsPreparationAdmission(
+  preparationAdmission,
+  trustedRevisionIdentity,
+  jobRunnerPreparation,
+) {
+  const errors = [];
+  const expectedHead = trustedSideRevision(trustedRevisionIdentity, "B").head;
+  const validation = validateStandardPerfAdmissionDecision(preparationAdmission, {
+    expectedPlatform: "win32",
+    expectedGitHead: expectedHead,
+  });
+  errors.push(...validation.reasons.map((reason) => `preparationAdmission.${reason}`));
+  if (preparationAdmission?.phase !== "preparation") errors.push("preparationAdmission.phase");
+  if (preparationAdmission?.attemptOrdinal !== 1) errors.push("preparationAdmission.attemptOrdinal");
+  if (preparationAdmission?.retryCount !== 0) errors.push("preparationAdmission.retryCount");
+  const startedAtMs = Date.parse(String(preparationAdmission?.startedAt || ""));
+  const completedAtMs = Date.parse(String(preparationAdmission?.completedAt || ""));
+  const compiledAtMs = Date.parse(String(jobRunnerPreparation?.compiledAt || ""));
+  if (!Number.isFinite(startedAtMs)) errors.push("preparationAdmission.startedAt");
+  if (!Number.isFinite(completedAtMs)) errors.push("preparationAdmission.completedAt");
+  if (Number.isFinite(startedAtMs) && Number.isFinite(completedAtMs) && completedAtMs < startedAtMs) {
+    errors.push("preparationAdmission.timestamp-order");
+  }
+  if (Number.isFinite(completedAtMs) && Number.isFinite(compiledAtMs) && compiledAtMs < completedAtMs) {
+    errors.push("preparationAdmission.job-runner-order");
+  }
+  return errors;
+}
+
+export function validateWilliamsStabilizationReceipts(
+  receipts,
+  preregistration,
+  blocks,
+  powerLifecycleWindow,
+) {
+  const errors = [];
+  const expected = [
+    preregistration?.stabilizationContract?.initial,
+    ...(Array.isArray(preregistration?.stabilizationContract?.interBlock)
+      ? preregistration.stabilizationContract.interBlock
+      : []),
+  ];
+  const actual = Array.isArray(receipts) ? receipts : [];
+  if (actual.length !== WILLIAMS_STABILIZATION_POLICY.initialReceiptCount + WILLIAMS_STABILIZATION_POLICY.interBlockReceiptCount) {
+    errors.push("stabilization.receiptCount");
+  }
+  const blocksById = new Map((Array.isArray(blocks) ? blocks : []).map((block) => [block?.id, block]));
+  const preregisteredAtMs = Date.parse(String(preregistration?.generatedAt || ""));
+  const powerActiveAtMs = finite(powerLifecycleWindow?.activeAtMs);
+  expected.forEach((expectedReceipt, index) => {
+    const receipt = actual[index];
+    const prefix = `stabilization.${index === 0 ? "initial" : `interBlock-${index}`}`;
+    if (!receipt || typeof receipt !== "object") {
+      errors.push(`${prefix}.missing`);
+      return;
+    }
+    if (receipt.schemaVersion !== 1) errors.push(`${prefix}.schemaVersion`);
+    if (receipt.policyId !== WILLIAMS_STABILIZATION_POLICY.policyId) errors.push(`${prefix}.policyId`);
+    if (receipt.receiptType !== "fixed-stabilization") errors.push(`${prefix}.receiptType`);
+    if (receipt.phase !== (index === 0 ? "initial" : "inter-block")) errors.push(`${prefix}.phase`);
+    if (receipt.attemptOrdinal !== WILLIAMS_STABILIZATION_POLICY.attemptOrdinal) errors.push(`${prefix}.attemptOrdinal`);
+    if (receipt.retryCount !== WILLIAMS_STABILIZATION_POLICY.retryCount) errors.push(`${prefix}.retryCount`);
+    if (receipt.configuredDelayMs !== WILLIAMS_STABILIZATION_POLICY.delayMs) errors.push(`${prefix}.configuredDelayMs`);
+    if (receipt.toleranceMs !== WILLIAMS_STABILIZATION_POLICY.elapsedToleranceMs) errors.push(`${prefix}.toleranceMs`);
+    if (receipt.fromBlockId !== (expectedReceipt?.fromBlockId ?? null)) errors.push(`${prefix}.fromBlockId`);
+    if (receipt.toBlockId !== expectedReceipt?.toBlockId) errors.push(`${prefix}.toBlockId`);
+    if (receipt.status !== "complete") errors.push(`${prefix}.status`);
+    const startedAtMs = Date.parse(String(receipt.startedAt || ""));
+    const completedAtMs = Date.parse(String(receipt.completedAt || ""));
+    if (!Number.isFinite(startedAtMs)) errors.push(`${prefix}.startedAt`);
+    if (!Number.isFinite(completedAtMs)) errors.push(`${prefix}.completedAt`);
+    if (
+      finite(receipt.elapsedMs) === null
+      || receipt.elapsedMs < WILLIAMS_STABILIZATION_POLICY.delayMs
+      || receipt.elapsedMs > WILLIAMS_STABILIZATION_POLICY.delayMs + WILLIAMS_STABILIZATION_POLICY.elapsedToleranceMs
+    ) errors.push(`${prefix}.elapsedMs`);
+    if (
+      Number.isFinite(startedAtMs)
+      && Number.isFinite(completedAtMs)
+      && Math.abs((completedAtMs - startedAtMs) - receipt.elapsedMs) > 5
+    ) errors.push(`${prefix}.timestampElapsedMs`);
+    const previousBlock = expectedReceipt?.fromBlockId ? blocksById.get(expectedReceipt.fromBlockId) : null;
+    const nextBlock = blocksById.get(expectedReceipt?.toBlockId);
+    const lowerBoundMs = index === 0
+      ? Math.max(preregisteredAtMs, powerActiveAtMs ?? Number.NEGATIVE_INFINITY)
+      : Date.parse(String(previousBlock?.telemetry?.post?.completedAt || ""));
+    const upperBoundMs = Date.parse(String(nextBlock?.preBlockAdmission?.startedAt || ""));
+    if (Number.isFinite(lowerBoundMs) && Number.isFinite(startedAtMs) && startedAtMs < lowerBoundMs) {
+      errors.push(`${prefix}.start-order`);
+    }
+    if (Number.isFinite(upperBoundMs) && Number.isFinite(completedAtMs) && completedAtMs > upperBoundMs) {
+      errors.push(`${prefix}.admission-order`);
+    }
+    if (Number.isFinite(lowerBoundMs) && Number.isFinite(startedAtMs) && startedAtMs - lowerBoundMs > WILLIAMS_STABILIZATION_POLICY.maxHandoffLagMs) {
+      errors.push(`${prefix}.handoff-lag`);
+    }
+    if (Number.isFinite(upperBoundMs) && Number.isFinite(completedAtMs) && upperBoundMs - completedAtMs > WILLIAMS_STABILIZATION_POLICY.maxHandoffLagMs) {
+      errors.push(`${prefix}.handoff-lag`);
+    }
+    const admissionCompletedAtMs = Date.parse(String(nextBlock?.preBlockAdmission?.completedAt || ""));
+    const telemetryPreStartedAtMs = Date.parse(String(nextBlock?.telemetry?.pre?.startedAt || ""));
+    if (Number.isFinite(upperBoundMs) && Number.isFinite(admissionCompletedAtMs) && admissionCompletedAtMs < upperBoundMs) {
+      errors.push(`${prefix}.admission-order`);
+    }
+    if (Number.isFinite(admissionCompletedAtMs) && Number.isFinite(telemetryPreStartedAtMs) && telemetryPreStartedAtMs < admissionCompletedAtMs) {
+      errors.push(`${prefix}.telemetry-pre-order`);
+    }
+    if (
+      Number.isFinite(admissionCompletedAtMs)
+      && Number.isFinite(telemetryPreStartedAtMs)
+      && telemetryPreStartedAtMs - admissionCompletedAtMs > WILLIAMS_STABILIZATION_POLICY.maxHandoffLagMs
+    ) errors.push(`${prefix}.handoff-lag`);
+  });
   return errors;
 }
 
@@ -505,6 +638,9 @@ function normalizePreregistration(preregistration = {}) {
     primaryEstimator: String(preregistration.primaryEstimator || ""),
     blockEstimator: String(preregistration.blockEstimator || ""),
     pairRegressionPolicy: preregistration.pairRegressionPolicy || {},
+    preparationAdmissionContract: preregistration.preparationAdmissionContract || {},
+    blockAdmissionContract: preregistration.blockAdmissionContract || {},
+    stabilizationContract: preregistration.stabilizationContract || {},
     telemetry: preregistration.telemetry || {},
     workloadContract: preregistration.workloadContract || {},
     rawContract: preregistration.rawContract || {},
@@ -553,6 +689,39 @@ export function buildWilliamsPreregistration({
       oneOfFour: "diagnostic",
       twoOfFour: "invalid-experiment",
       threeOrFourOfFour: "valid-regression",
+    },
+    preparationAdmissionContract: {
+      policyId: "standard-perf-admission-v1",
+      phase: "preparation",
+      attemptCount: 1,
+      attemptOrdinal: 1,
+      retryCount: 0,
+      timing: "before-job-runner-compile-and-capability-probe",
+      rejection: "terminal-invalid-experiment-requires-fresh-raw-root",
+    },
+    blockAdmissionContract: {
+      policyId: "standard-perf-admission-v1",
+      phase: "pre-block",
+      blockCount: WILLIAMS_BLOCK_SEQUENCE.length,
+      attemptsPerBlock: 1,
+      attemptOrdinal: 1,
+      retryCount: 0,
+      timing: "after-preregistered-stabilization-before-pre-telemetry-and-workload",
+      rejection: "terminal-invalid-experiment-requires-fresh-raw-root",
+    },
+    stabilizationContract: {
+      ...WILLIAMS_STABILIZATION_POLICY,
+      initial: {
+        path: "harness/initial-stabilization.json",
+        fromBlockId: null,
+        toBlockId: WILLIAMS_BLOCK_SEQUENCE[0].id,
+      },
+      interBlock: WILLIAMS_BLOCK_SEQUENCE.slice(0, -1).map((block, index) => ({
+        path: `blocks/${block.id}-to-${WILLIAMS_BLOCK_SEQUENCE[index + 1].id}/stabilization.json`,
+        fromBlockId: block.id,
+        toBlockId: WILLIAMS_BLOCK_SEQUENCE[index + 1].id,
+      })),
+      selectionPolicy: "fixed-preregistered-delay-no-threshold-polling-or-window-selection",
     },
     telemetry: {
       platform: "win32",
@@ -729,6 +898,15 @@ export function validateWilliamsPreregistration(preregistration, trustedRevision
   if (normalized.blockEstimator !== expected.blockEstimator) errors.push("preregistration.blockEstimator");
   if (JSON.stringify(normalized.pairRegressionPolicy) !== JSON.stringify(expected.pairRegressionPolicy)) {
     errors.push("preregistration.pairRegressionPolicy");
+  }
+  if (JSON.stringify(normalized.preparationAdmissionContract) !== JSON.stringify(expected.preparationAdmissionContract)) {
+    errors.push("preregistration.preparationAdmissionContract");
+  }
+  if (JSON.stringify(normalized.blockAdmissionContract) !== JSON.stringify(expected.blockAdmissionContract)) {
+    errors.push("preregistration.blockAdmissionContract");
+  }
+  if (JSON.stringify(normalized.stabilizationContract) !== JSON.stringify(expected.stabilizationContract)) {
+    errors.push("preregistration.stabilizationContract");
   }
   if (JSON.stringify(normalized.telemetry) !== JSON.stringify(expected.telemetry)) {
     errors.push("preregistration.telemetry");
@@ -1426,12 +1604,14 @@ function validateCleanup(cleanup, block, evidence, expectedCommand, expectedCwd,
     expectedPlatform: "win32",
     expectedGitHead,
   });
+  const successfulBlock = evidence?.blockResult?.status === "complete" && evidence?.blockResult?.exitCode === 0;
   errors.push(...validateJobObjectEvidence(jobObject, `${block.id}.cleanup.jobObject`, {
     command: expectedCommand,
     cwd: expectedCwd,
     exitCode: evidence?.blockResult?.exitCode,
     blockResult: evidence?.blockResult,
     admissionValidation,
+    expectedWorkloadSpawnCount: successfulBlock ? 1 : null,
   }));
   errors.push(...validateJobObjectEvidence(evidence?.jobObject, `${block.id}.jobObject`, {
     command: expectedCommand,
@@ -1439,9 +1619,24 @@ function validateCleanup(cleanup, block, evidence, expectedCommand, expectedCwd,
     exitCode: evidence?.blockResult?.exitCode,
     blockResult: evidence?.blockResult,
     admissionValidation,
+    expectedWorkloadSpawnCount: successfulBlock ? 1 : null,
   }));
   if (canonicalJson(evidence?.jobObject) !== canonicalJson(jobObject)) {
     errors.push(`${block.id}.jobObject.cleanup-canonical`);
+  }
+  if (successfulBlock && cleanup.workloadSpawnCount !== 1) errors.push(`${block.id}.cleanup.workloadSpawnCount`);
+  if (successfulBlock && cleanup.workloadStarted !== true) errors.push(`${block.id}.cleanup.workloadStarted`);
+  if (successfulBlock && cleanup.cleanupRequired !== true) errors.push(`${block.id}.cleanup.cleanupRequired`);
+  if (successfulBlock) {
+    const counts = [
+      evidence?.jobObject?.workloadSpawnCount,
+      jobObject?.workloadSpawnCount,
+      cleanup.workloadSpawnCount,
+      evidence?.blockResult?.workloadSpawnCount,
+    ];
+    if (counts.some((count) => count !== 1) || new Set(counts).size !== 1) {
+      errors.push(`${block.id}.workloadSpawnCount.canonical`);
+    }
   }
   if (jobObject?.status === "not-started") {
     if (cleanup.workloadSpawnCount !== 0) errors.push(`${block.id}.cleanup.zeroSpawn.workloadSpawnCount`);
@@ -1463,6 +1658,8 @@ function validateCleanup(cleanup, block, evidence, expectedCommand, expectedCwd,
 function validateBlockResult(blockResult, block) {
   const errors = [];
   if (!blockResult || typeof blockResult !== "object") return [`${block.id}.blockResult.missing`];
+  if (blockResult.policyId !== WILLIAMS_CROSSOVER_POLICY_ID) errors.push(`${block.id}.blockResult.policyId`);
+  if (blockResult.status === "complete" && blockResult.workloadSpawnCount !== 1) errors.push(`${block.id}.blockResult.workloadSpawnCount`);
   if (finite(blockResult.exitCode) !== 0) errors.push(`${block.id}.blockResult.exitCode`);
   if (blockResult.status !== "complete") errors.push(`${block.id}.blockResult.status`);
   return errors;
@@ -1476,12 +1673,25 @@ function validateQuietWindow(quietWindow, block) {
 }
 
 function validatePreBlockStandardPerfAdmission(decision, block, trustedRevisionIdentity) {
+  const errors = [];
   const expectedGitHead = trustedSideRevision(trustedRevisionIdentity, block.side).head;
   const validation = validateStandardPerfAdmissionDecision(decision, {
     expectedPlatform: "win32",
     expectedGitHead,
   });
-  return validation.reasons.map((reason) => `${block.id}.preBlockAdmission.${reason}`);
+  errors.push(...validation.reasons.map((reason) => `${block.id}.preBlockAdmission.${reason}`));
+  if (decision?.phase !== "pre-block") errors.push(`${block.id}.preBlockAdmission.phase`);
+  if (decision?.blockId !== block.id) errors.push(`${block.id}.preBlockAdmission.blockId`);
+  if (decision?.attemptOrdinal !== 1) errors.push(`${block.id}.preBlockAdmission.attemptOrdinal`);
+  if (decision?.retryCount !== 0) errors.push(`${block.id}.preBlockAdmission.retryCount`);
+  const startedAtMs = Date.parse(String(decision?.startedAt || ""));
+  const completedAtMs = Date.parse(String(decision?.completedAt || ""));
+  if (!Number.isFinite(startedAtMs)) errors.push(`${block.id}.preBlockAdmission.startedAt`);
+  if (!Number.isFinite(completedAtMs)) errors.push(`${block.id}.preBlockAdmission.completedAt`);
+  if (Number.isFinite(startedAtMs) && Number.isFinite(completedAtMs) && completedAtMs < startedAtMs) {
+    errors.push(`${block.id}.preBlockAdmission.timestamp-order`);
+  }
+  return errors;
 }
 
 function validateBaselineIdentity(baseline, block, preregistration, trustedRevisionIdentity) {
@@ -1847,7 +2057,9 @@ function validateCrossBlockIdentity(blocks) {
 export function analyzeWilliamsCrossoverEvidence({
   trustedRevisionIdentity,
   preregistration,
+  preparationAdmission,
   jobRunnerPreparation,
+  stabilizationReceipts = [],
   powerSchemeLifecycle,
   blocks = [],
   manifestValidation = { status: "missing", errors: ["manifest.missing"] },
@@ -1862,8 +2074,19 @@ export function analyzeWilliamsCrossoverEvidence({
   const invalidReasons = [
     ...validateWilliamsTrustedRevisionIdentity(trustedRevisionIdentity),
     ...validateWilliamsPreregistration(preregistration, trustedRevisionIdentity),
+    ...validateWilliamsPreparationAdmission(
+      preparationAdmission,
+      trustedRevisionIdentity,
+      jobRunnerPreparation,
+    ),
     ...validateWilliamsJobRunnerPreparation(jobRunnerPreparation, preregistration),
     ...powerLifecycleValidation.errors,
+    ...validateWilliamsStabilizationReceipts(
+      stabilizationReceipts,
+      preregistration,
+      blocks,
+      powerLifecycleValidation,
+    ),
     ...(manifestValidation?.status === "valid" ? [] : (manifestValidation?.errors || ["manifest.invalid"])),
   ];
   const blockValues = new Map();
@@ -1883,6 +2106,9 @@ export function analyzeWilliamsCrossoverEvidence({
     if (!evidence) {
       invalidReasons.push(`${expectedBlock.id}.missing`);
       continue;
+    }
+    if (evidence.policyId !== WILLIAMS_CROSSOVER_POLICY_ID) {
+      invalidReasons.push(`${expectedBlock.id}.policyId`);
     }
     if (
       evidence.id !== expectedBlock.id
@@ -2043,6 +2269,8 @@ export function analyzeWilliamsCrossoverEvidence({
     },
     trustedRevisionIdentity,
     preregistration,
+    preparationAdmission,
+    stabilizationReceipts,
     powerSchemeLifecycle,
     manifestValidation,
     blocks: normalizedBlocks,

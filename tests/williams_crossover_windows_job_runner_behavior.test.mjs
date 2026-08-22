@@ -31,6 +31,7 @@ function createFakeChild({
   stdinThrow = null,
   closeOnEnd = false,
   prematureCloseOnKill = false,
+  onStdinEnd = null,
 } = {}) {
   const child = new EventEmitter();
   child.stdout = new PassThrough();
@@ -48,7 +49,10 @@ function createFakeChild({
   child.stdin.end = () => {
     if (stdinThrow) throw stdinThrow;
     if (stdinError) queueMicrotask(() => child.stdin.emit("error", stdinError));
-    if (closeOnEnd) close(0);
+    Promise.resolve(onStdinEnd?.()).then(
+      () => { if (closeOnEnd) close(0); },
+      (error) => child.stdin.emit("error", error),
+    );
   };
   child.kill = () => {
     child.killCount += 1;
@@ -145,6 +149,7 @@ function validJobEvidence(command, cwd) {
     remainingPids: [],
     unverifiedPids: [],
     cleanupValid: true,
+    workloadSpawnCount: 1,
     commandExecutablePath: command.bin,
     commandWorkingDirectory: cwd,
     commandArguments: [...command.args],
@@ -190,11 +195,21 @@ test("tracked job runner source locks suspended assign-before-resume containment
   const mainStart = core.indexOf("public static int Run(string protocolId)");
   const mainSource = core.slice(mainStart);
   const createIndex = mainSource.indexOf("CreateProcessW(");
+  const spawnCountIndex = mainSource.indexOf("workloadSpawnCount = 1;", createIndex);
   const assignIndex = mainSource.indexOf("AssignProcessToJobObject(", createIndex);
   const membershipIndex = mainSource.indexOf("IsProcessInJob(", assignIndex);
   const resumeIndex = mainSource.indexOf("ResumeThread(", membershipIndex);
   assert.ok(mainStart >= 0);
-  assert.ok(createIndex >= 0 && createIndex < assignIndex && assignIndex < membershipIndex && membershipIndex < resumeIndex);
+  assert.match(mainSource, /int workloadSpawnCount = 0;/);
+  assert.equal(mainSource.match(/workloadSpawnCount = 1;/g)?.length, 1);
+  assert.ok(source.includes('"\\"workloadSpawnCount\\":" + workloadSpawnCount'));
+  assert.ok(
+    createIndex >= 0
+    && createIndex < spawnCountIndex
+    && spawnCountIndex < assignIndex
+    && assignIndex < membershipIndex
+    && membershipIndex < resumeIndex,
+  );
   assert.doesNotMatch(source, /CREATE_BREAKAWAY_FROM_JOB|JOB_OBJECT_LIMIT_(?:SILENT_)?BREAKAWAY_OK/);
   assert.doesNotMatch(source, /Win32_ProcessStartTrace|Register-CimIndicationEvent|Register-WmiEvent/);
 });
@@ -211,6 +226,57 @@ test("runtime validates evidence schema and owns stdin plus async finish failure
   assert.match(runtimeSource, /class WilliamsJobRunnerTransportError extends Error/);
   assert.match(runtimeSource, /child\.stdin\?\.once\("error"/);
   assert.match(runtimeSource, /job-runner-output-write-error/);
+});
+
+test("runtime rejects missing, zero, or duplicate workload counts and returns the exact producer value", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "williams-job-spawn-count-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const command = { bin: process.execPath, args: ["--version"] };
+  for (const [label, producerValue, expectedReturnedValue, expectedStatus] of [
+    ["missing", undefined, null, "invalid"],
+    ["zero", 0, 0, "invalid"],
+    ["duplicate", 2, 2, "invalid"],
+    ["exactly one", 1, 1, "available"],
+  ]) {
+    const caseRoot = path.join(root, label.replaceAll(" ", "-"));
+    const evidencePath = path.join(caseRoot, "job.json");
+    const evidence = validJobEvidence(command, caseRoot);
+    if (producerValue === undefined) delete evidence.workloadSpawnCount;
+    else evidence.workloadSpawnCount = producerValue;
+    const validationErrors = windowsRuntime.validateJobRunnerEvidence(evidence, {
+      command,
+      cwd: caseRoot,
+    });
+    assert.equal(
+      validationErrors.includes("job-evidence.workloadSpawnCount"),
+      expectedStatus === "invalid",
+      label,
+    );
+    const child = createFakeChild({
+      closeOnEnd: true,
+      onStdinEnd: async () => {
+        await fs.mkdir(caseRoot, { recursive: true });
+        await fs.writeFile(evidencePath, `${JSON.stringify(evidence)}\n`, "utf8");
+      },
+    });
+    const result = await windowsRuntime.runWindowsJobCommand(command, {
+      preparedRunner: { status: "available", executablePath: "runner.exe", binary: {} },
+      cwd: caseRoot,
+      stdoutPath: path.join(caseRoot, "stdout.log"),
+      stderrPath: path.join(caseRoot, "stderr.log"),
+      evidencePath,
+      timeoutMs: 100,
+      spawnFn: () => child,
+    });
+    assert.equal(result.containmentStatus, expectedStatus, label);
+    assert.equal(result.workloadSpawnCount, expectedReturnedValue, label);
+    assert.equal(result.jobEvidence.workloadSpawnCount, producerValue, label);
+    assert.equal(
+      result.containmentErrors.includes("job-evidence.workloadSpawnCount"),
+      expectedStatus === "invalid",
+      label,
+    );
+  }
 });
 
 test("runtime rejects stdin EPIPE with a typed transport error", async (t) => {

@@ -323,6 +323,7 @@ export function validateJobRunnerEvidence(evidence, { command = null, cwd = null
   if (evidence.jobCloseSucceeded !== true) errors.push("job-evidence.jobCloseSucceeded");
   if (evidence.rootTerminationConfirmed !== true) errors.push("job-evidence.rootTerminationConfirmed");
   if (evidence.cleanupValid !== true) errors.push("job-evidence.cleanupValid");
+  if (evidence.workloadSpawnCount !== 1) errors.push("job-evidence.workloadSpawnCount");
   if (!Array.isArray(evidence.remainingPids) || evidence.remainingPids.length !== 0) {
     errors.push("job-evidence.remainingPids");
   }
@@ -558,6 +559,9 @@ export async function runWindowsJobCommand(command, {
           stderrPath,
           jobEvidencePath: evidencePath,
           jobEvidence: evidence,
+          workloadSpawnCount: Number.isInteger(evidence?.workloadSpawnCount)
+            ? evidence.workloadSpawnCount
+            : null,
           jobRunnerBinary: preparedRunner.binary,
           containmentStatus: containmentAvailable ? "available" : "invalid",
           containmentErrors: evidenceErrors,
