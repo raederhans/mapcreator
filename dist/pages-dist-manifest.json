@@ -17,7 +17,7 @@
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 299447,
+      "size_bytes": 299494,
       "source_kind": "generated_ignored"
     },
     {
@@ -37082,7 +37082,7 @@
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 57732,
+      "size_bytes": 58145,
       "source_kind": "generated_ignored"
     },
     {
@@ -37227,7 +37227,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 26681,
+      "size_bytes": 27023,
       "source_kind": "generated_ignored"
     },
     {
@@ -47547,7 +47547,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2061274,
+      "size_bytes": 2061302,
       "source_kind": "dist"
     },
     {
@@ -47672,7 +47672,7 @@
       {
         "file_count": 205,
         "id": "startup-critical",
-        "size_bytes": 6402565
+        "size_bytes": 6402954
       },
       {
         "file_count": 85,
@@ -47682,7 +47682,7 @@
       {
         "file_count": 815,
         "id": "on-demand-product",
-        "size_bytes": 252901584
+        "size_bytes": 252902025
       },
       {
         "file_count": 8390,
@@ -61701,7 +61701,7 @@
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 6076148,
+        "initial_graph_bytes": 6076537,
         "initial_graph_file_count": 234,
         "initial_module_count": 220,
         "initial_resource_count": 14,
@@ -61711,7 +61711,7 @@
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 963689498,
+        "untraversed_dist_bytes": 963689939,
         "untraversed_dist_file_count": 9145,
         "untraversed_module_count": 5
       },
@@ -61726,7 +61726,7 @@
         "path_exceptions": [
           {
             "path": "app/data/CATALOG.json",
-            "size_bytes": 299447
+            "size_bytes": 299494
           },
           {
             "path": "app/data/city_lights/historical_1930_entries.json",
@@ -61738,11 +61738,11 @@
           },
           {
             "path": "app/data/runtime_asset_registry.json",
-            "size_bytes": 26681
+            "size_bytes": 27023
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 667792
+        "size_bytes": 668181
       },
       {
         "basis": "html-entrypoint",
@@ -63036,7 +63036,7 @@
           },
           {
             "path": "app/data/manifest.json",
-            "size_bytes": 57732
+            "size_bytes": 58145
           },
           {
             "path": "app/data/ru_city_overrides.geojson",
@@ -63068,7 +63068,7 @@
             "size_bytes": 1095022
           }
         ],
-        "size_bytes": 124705183
+        "size_bytes": 124705596
       },
       {
         "basis": "product-registry:on-demand-module-entries",
@@ -63287,11 +63287,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2061274
+            "size_bytes": 2061302
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2061274
+        "size_bytes": 2061302
       },
       {
         "basis": "product-registry:thematic-product-data",
@@ -63893,10 +63893,10 @@
               "app/data/global_contours.major.topo.json",
               "app/data/global_contours.minor.topo.json",
               "app/data/global_bathymetry.topo.json",
-              "app/data/historical_city_lights_1930_exclusions.json"
+              "app/data/historical_city_lights_1930_exclusions.json",
+              "app/data/city_lights/historical_1930_entries.json"
             ],
             "prefixes": [
-              "app/data/city_lights/",
               "app/data/feature-migrations/",
               "app/data/palette-maps/",
               "app/data/palettes/",
@@ -63904,7 +63904,7 @@
             ]
           },
           "owner": "editor-data-runtime",
-          "size_bytes": 124705183
+          "size_bytes": 124705596
         },
         {
           "category": "on-demand-product",
@@ -64007,7 +64007,7 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2061274
+          "size_bytes": 2061302
         }
       ],
       "status": "complete",
@@ -64050,7 +64050,7 @@
     {
       "file_count": 9449,
       "path": "app",
-      "size_bytes": 965896529
+      "size_bytes": 965897331
     },
     {
       "file_count": 57,
@@ -64060,7 +64060,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2061274
+      "size_bytes": 2061302
     },
     {
       "file_count": 1,
@@ -64083,5 +64083,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973056164
+  "total_bytes": 973056994
 }

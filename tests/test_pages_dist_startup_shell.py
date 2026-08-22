@@ -1323,6 +1323,49 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 module_graph=empty_graph,
             )
 
+    def test_city_lights_pages_publication_allowlist_is_exact(self) -> None:
+        empty_graph = {
+            "schema_version": build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION,
+            "module_entrypoint": build_pages_dist.PAGES_MODULE_ENTRYPOINT,
+            "entrypoints": [],
+            "summary": {},
+            "initial_resource_paths": [],
+            "deferred_resource_paths": [],
+            "nodes": [],
+            "unresolved_references": [],
+        }
+        published_path = "app/data/city_lights/historical_1930_entries.json"
+        excluded_paths = (
+            "app/data/city_lights/modern_source_descriptor.json",
+            "app/data/city_lights/.gitattributes",
+            "tests/fixtures/city_lights/modern_source_fixture_descriptor.json",
+            "tests/fixtures/city_lights/modern_source_fixture.pgm",
+        )
+        records = [
+            {"path": path, "size_bytes": 1, "source_kind": "generated_ignored"}
+            for path in (published_path, *excluded_paths)
+        ]
+
+        self.assertIn("city_lights/historical_1930_entries.json", build_pages_dist.DATA_RUNTIME_FILES)
+        self.assertNotIn("city_lights", build_pages_dist.DATA_RUNTIME_DIRS)
+        inventory = build_pages_dist.build_pages_reachability_inventory(records, module_graph=empty_graph)
+        self.assertEqual(inventory["admission"]["status"], "incomplete")
+        self.assertEqual(inventory["admission"]["blocking_unknown_file_count"], len(excluded_paths))
+        self.assertEqual(inventory["product_inventory"]["unknown_paths"], sorted(excluded_paths))
+        editor_data_rule = next(
+            rule
+            for rule in inventory["product_inventory"]["registry_rules"]
+            if rule["id"] == "editor-product-data"
+        )
+        self.assertIn(published_path, editor_data_rule["match"]["exact_paths"])
+        self.assertNotIn("app/data/city_lights/", editor_data_rule["match"]["prefixes"])
+        with self.assertRaisesRegex(ValueError, f"unknown_files={len(excluded_paths)}"):
+            build_pages_dist.build_dist_manifest_payload(
+                records,
+                len(records),
+                module_graph=empty_graph,
+            )
+
     def test_appearance_transport_contract_modules_have_exact_product_ownership(self) -> None:
         reachable_graph = {
             "schema_version": build_pages_dist.PAGES_REACHABILITY_SCHEMA_VERSION,
@@ -2503,6 +2546,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
             with self.subTest(expected_path=expected_path):
                 self.assertIn(expected_path, paths)
 
+        city_lights_entries_path = "app/data/city_lights/historical_1930_entries.json"
+        self.assertEqual(
+            json.loads((REPO_ROOT / "dist" / city_lights_entries_path).read_text(encoding="utf-8")),
+            json.loads(
+                (REPO_ROOT / "data" / "city_lights" / "historical_1930_entries.json").read_text(encoding="utf-8")
+            ),
+        )
+
         for expected_path in expected_landing_asset_paths:
             with self.subTest(asset_copy=expected_path):
                 self.assertEqual(
@@ -2550,6 +2601,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/europe_topology.highres.json",
             "app/data/europe_topology.json.bak",
             "app/data/europe_topology.na_v1.json",
+            "app/data/city_lights/modern_source_descriptor.json",
+            "app/data/city_lights/.gitattributes",
+            "tests/fixtures/city_lights/modern_source_fixture_descriptor.json",
+            "tests/fixtures/city_lights/modern_source_fixture.pgm",
             "app/js/ui/dev_workspace/scenario_country_color_editor.js",
         ):
             with self.subTest(excluded_path=excluded_path):
