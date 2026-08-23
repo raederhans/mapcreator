@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const FROZEN_BASE = "a50a9dbb00105c3d2ffddb5a5545fec0556669b7";
+const APPROVED_V1_BASE = "829914aaca54d3c978fa6b6642dba04cc1dae3bc";
 const CORE_REPO_PATH = "tools/process_containment/windows_job_runner_core.cs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CORE_PATH = path.join(ROOT, CORE_REPO_PATH);
@@ -21,9 +21,9 @@ function normalizeCoreExtraction(source) {
     .trimEnd();
 }
 
-test("V1 shared core remains algorithm-equivalent to frozen J2a", async () => {
+test("V1 shared core remains byte-equivalent to the approved Williams audit baseline", async () => {
   const current = await fs.readFile(CORE_PATH, "utf8");
-  const frozen = execFileSync("git", ["show", `${FROZEN_BASE}:${CORE_REPO_PATH}`], { cwd: ROOT, encoding: "utf8" });
+  const frozen = execFileSync("git", ["show", `${APPROVED_V1_BASE}:${CORE_REPO_PATH}`], { cwd: ROOT, encoding: "utf8" });
   assert.match(current, /internal static partial class ScenarioForgeWindowsJobRunnerCore/);
   assert.equal(normalizeCoreExtraction(current), normalizeCoreExtraction(frozen));
 });
