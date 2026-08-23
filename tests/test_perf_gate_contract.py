@@ -28,6 +28,11 @@ def load_editor_benchmark_module():
     return module
 
 
+def canonical_text_sha256(path):
+    canonical_bytes = path.read_text(encoding="utf-8").encode("utf-8")
+    return hashlib.sha256(canonical_bytes).hexdigest()
+
+
 class PerfGateContractTest(unittest.TestCase):
     def test_package_perf_gate_uses_real_gate_scenarios(self):
         package_payload = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))
@@ -549,11 +554,11 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertEqual(ratified.get("generatedAt"), baseline_payload.get("generatedAt"))
         self.assertEqual(
             ratified.get("jsonSha256"),
-            hashlib.sha256(BASELINE_JSON.read_bytes()).hexdigest(),
+            canonical_text_sha256(BASELINE_JSON),
         )
         self.assertEqual(
             ratified.get("markdownSha256"),
-            hashlib.sha256(BASELINE_MD.read_bytes()).hexdigest(),
+            canonical_text_sha256(BASELINE_MD),
         )
         self.assertEqual(ratified.get("rawEvidence"), baseline_payload.get("rawEvidence"))
 
