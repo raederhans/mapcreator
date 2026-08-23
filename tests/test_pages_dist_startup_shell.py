@@ -2694,7 +2694,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(set(hgo_manifest["tags"].keys()), expected_published_tags)
         self.assertEqual(set(source_hgo_manifest["tags"].keys()) - set(hgo_manifest["tags"].keys()), full_only_tags)
 
-    def test_dist_hgo_runtime_registry_excludes_local_preview_payload(self) -> None:
+    def test_dist_runtime_registry_excludes_unpublished_payloads(self) -> None:
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
@@ -2707,13 +2707,17 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "hgo_runtime_seed": "data/hgo_runtime/seed.json",
             "hgo_runtime_provinces_bmp": "data/hgo_runtime/provinces.bmp",
         }
+        unpublished_assets = {
+            **local_preview_assets,
+            "city_lights:modern:source_descriptor": "data/city_lights/modern_source_descriptor.json",
+        }
         local_preview_outputs = {
             "hgo_runtime/manifest.json",
             "hgo_runtime/provinces.bmp",
             "hgo_runtime/seed.json",
         }
 
-        for key, url in local_preview_assets.items():
+        for key, url in unpublished_assets.items():
             with self.subTest(key=key):
                 self.assertNotIn(key, registry.get("assets", {}))
                 self.assertNotIn(key, data_manifest.get("runtime_asset_registry", {}).get("assets", {}))
@@ -2722,11 +2726,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
         self.assertEqual(
             registry.get("pages_dist_policy", {}).get("removed_unpublished_asset_keys"),
-            sorted(local_preview_assets),
+            sorted(unpublished_assets),
         )
         self.assertEqual(
             data_manifest.get("runtime_asset_registry", {}).get("pages_dist_policy", {}).get("removed_unpublished_asset_keys"),
-            sorted(local_preview_assets),
+            sorted(unpublished_assets),
         )
         for output_key in local_preview_outputs:
             with self.subTest(output_key=output_key):
@@ -2739,7 +2743,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
         catalog = json.loads((REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
         catalog_entries = {entry["key"]: entry for entry in catalog.get("entries") or []}
-        for key in local_preview_assets:
+        for key in unpublished_assets:
             with self.subTest(catalog_key=key):
                 self.assertNotIn(key, catalog_entries)
 
