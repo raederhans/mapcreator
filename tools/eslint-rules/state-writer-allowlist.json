@@ -110,7 +110,7 @@
     "tests/project_support_diagnostics_controller_behavior.test.mjs",
     "tests/render_transaction_diagnostics_behavior.test.mjs",
     "tests/renderer_runtime_state_behavior.test.mjs",
-    "tests/scenario_chunk_contracts.test.mjs",
+    "tests/helpers/scenario_chunk_contract_support.mjs",
     "tests/scenario_context_bar_controller_behavior.test.mjs",
     "tests/scenario_refresh_plans_behavior.test.mjs",
     "tests/scenario_lifecycle_runtime_behavior.test.mjs",

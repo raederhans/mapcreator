@@ -105913,7 +105913,7 @@
       ]
     },
     {
-      "path": "tests/scenario_chunk_contracts.test.mjs",
+      "path": "tests/helpers/scenario_chunk_contract_support.mjs",
       "surface": "test",
       "domain": "cross-domain",
       "authority": "legacy-direct",
