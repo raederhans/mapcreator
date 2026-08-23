@@ -4851,7 +4851,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:node:city-lights-render-owner",
       "sourceRefs": [
         "tests/city_lights_render_owner_behavior.test.mjs",
-        "js/core/renderer/city_lights_render_owner.js"
+        "js/core/renderer/city_lights_render_owner.js",
+        "js/core/state_defaults.js"
       ],
       "ownerHints": [
         "city-runtime"
@@ -5973,7 +5974,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:node:modern-city-lights-owner",
       "sourceRefs": [
         "tests/city_lights_render_owner_behavior.test.mjs",
-        "js/core/renderer/city_lights_render_owner.js"
+        "js/core/renderer/city_lights_render_owner.js",
+        "js/core/state_defaults.js"
       ],
       "ownerHints": [
         "city-runtime"

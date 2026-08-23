@@ -292,11 +292,12 @@ function createP3PassFamilyRoute({
 }
 
 export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
-  // New A1 routes have no pre-canonical side table. Project them from the
-  // authored source so the retained PR6 shadow stays exact without creating
-  // another metadata authority.
+  // Post-PR6 routes and authority expansions have no pre-canonical side table.
+  // Project them from the authored source so the retained PR6 shadow stays
+  // exact without creating another metadata authority.
   ...buildCanonicalRouteIndex()
     .filter((entry) => [
+      "test:node:city-lights-assets",
       "test:node:scenario-chunk-contracts:quick",
       "test:node:scenario-chunk-contracts:heavy",
       "test:node:scenario-chunk-contracts:split",
