@@ -105422,6 +105422,36 @@
       ]
     },
     {
+      "path": "tests/helpers/scenario_chunk_contract_support.mjs",
+      "surface": "test",
+      "domain": "cross-domain",
+      "authority": "legacy-direct",
+      "migrationPhase": "multi-phase",
+      "bindings": [
+        {
+          "id": "test-file-root:appState",
+          "kind": "test-file-root",
+          "name": "appState",
+          "authority": "test-fixture",
+          "grants": []
+        },
+        {
+          "id": "test-file-root:runtimeState",
+          "kind": "test-file-root",
+          "name": "runtimeState",
+          "authority": "test-fixture",
+          "grants": []
+        },
+        {
+          "id": "test-file-root:state",
+          "kind": "test-file-root",
+          "name": "state",
+          "authority": "test-fixture",
+          "grants": []
+        }
+      ]
+    },
+    {
       "path": "tests/legend_manager_generation_behavior.test.mjs",
       "surface": "test",
       "domain": "content",
@@ -105909,36 +105939,6 @@
               "unsupportedSites": []
             }
           ]
-        }
-      ]
-    },
-    {
-      "path": "tests/helpers/scenario_chunk_contract_support.mjs",
-      "surface": "test",
-      "domain": "cross-domain",
-      "authority": "legacy-direct",
-      "migrationPhase": "multi-phase",
-      "bindings": [
-        {
-          "id": "test-file-root:appState",
-          "kind": "test-file-root",
-          "name": "appState",
-          "authority": "test-fixture",
-          "grants": []
-        },
-        {
-          "id": "test-file-root:runtimeState",
-          "kind": "test-file-root",
-          "name": "runtimeState",
-          "authority": "test-fixture",
-          "grants": []
-        },
-        {
-          "id": "test-file-root:state",
-          "kind": "test-file-root",
-          "name": "state",
-          "authority": "test-fixture",
-          "grants": []
         }
       ]
     },
