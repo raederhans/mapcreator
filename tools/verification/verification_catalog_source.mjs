@@ -12900,6 +12900,41 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
+      "id": "python-heavy:geo_stack:tests/test_polar_water_spherical_safety.py",
+      "commandRef": "python -m pytest tests/test_polar_water_spherical_safety.py -q",
+      "sourceRefs": [
+        "tests/test_polar_water_spherical_safety.py"
+      ],
+      "ownerHints": [
+        "tno-water"
+      ],
+      "domains": [
+        "tno-water"
+      ],
+      "tiers": [
+        "heavy"
+      ],
+      "cost": "heavy",
+      "resourceLocks": [
+        "heavy-geo",
+        ".runtime-output"
+      ],
+      "executionOwners": [
+        "main-thread"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": null,
+      "selectorOrder": 378,
+      "verification": null,
+      "selector": {}
+    },
+    {
       "id": "python-heavy:geo_stack:tests/test_transport_country_source_contracts.py",
       "commandRef": "python -m unittest tests.test_transport_country_source_contracts -q",
       "sourceRefs": [

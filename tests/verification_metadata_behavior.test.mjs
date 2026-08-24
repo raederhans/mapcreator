@@ -38,12 +38,12 @@ test("authored catalog source covers command authority, policies, and every proj
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
   assert.equal(summary.packageScriptCount, 333);
-  assert.equal(summary.contributorRecords, 418);
+  assert.equal(summary.contributorRecords, 419);
   assert.equal(summary.verificationRecordProjectionCount, 128);
-  assert.equal(summary.routeProjectionCount, 377);
+  assert.equal(summary.routeProjectionCount, 378);
   assert.equal(summary.commandCount, 336);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 418);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 419);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
