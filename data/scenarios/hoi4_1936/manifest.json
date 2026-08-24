@@ -94,10 +94,10 @@
   "runtime_topology_url": "data/scenarios/hoi4_1936/runtime_topology.topo.json",
   "scenario_contract_profile": "hoi4_chunked",
   "scenario_id": "hoi4_1936",
-  "snapshot_fingerprint": "0f6b59f1b8128a5561fdc3dbc13167ac720d8001e089e712bc2ccaaafca5e503",
+  "snapshot_fingerprint": "30f4c09b3267ab65f8378a9579cc9ffac1cbf93c46336d359514053171aff43c",
   "source": {
-    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "0775535bf2f5088e248acf65170773f39bad5ab4a72ffc561b29e8a4493a645c",
+    "base_topology_sha256": "fb14c9f83cc27fd9884ecffbb3624debea5f5f86fc2be269e2c0bc645f5bacd9",
+    "detail_chunk_manifest_sha256": "1d026cd9396922d741ce9ec4a1d68d3cf5f0573dbc7a4c1438dc1a3867a8f9e1",
     "runtime_bootstrap_topology_sha256": "74d6f39ab2280fa524109d9bd35e15149df48681688deb22ecfac60911527115",
     "runtime_topology_sha256": "50cad6f666725fa6518b8aa5f8519a1b520946f3b4c2e46614029234ad8be0c3"
   },

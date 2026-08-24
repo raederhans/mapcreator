@@ -32,9 +32,9 @@
   "runtime_topology_url": "data/scenarios/blank_base/runtime_topology.topo.json",
   "scenario_contract_profile": "lightweight_base",
   "scenario_id": "blank_base",
-  "snapshot_fingerprint": "aaa3ee5611b9a22106a58612b8e87bd2337b8770fa6c0702252636bb08aa732b",
+  "snapshot_fingerprint": "52c1990966a9fb9018d3eeda265b066f6bf6e4a309375db9b3e5da5c4db6ac69",
   "source": {
-    "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
+    "base_topology_sha256": "fb14c9f83cc27fd9884ecffbb3624debea5f5f86fc2be269e2c0bc645f5bacd9",
     "ownerless_topology_source": "data/scenarios/modern_world/runtime_topology.topo.json",
     "runtime_topology_sha256": "ffe47c9e06585ca4ce7167358024584899d59914d7ac711e0d1dfb3d8ad8cd1e"
   },

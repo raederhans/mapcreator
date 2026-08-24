@@ -7,18 +7,18 @@
   "feature_count": 11294,
   "generated_at": "2026-06-17T00:00:00.000Z",
   "input_sha": {
-    "capital_hints.json": "fc0ee65251b5d4293a5967804980d01836807a38921327e0b4b0c2fdd69d933f",
-    "city_overrides.json": "49bbcaf58b7a052cd327b997b73b5a2211d830ddc2d1f889f21429fe6e7688c2",
+    "capital_hints.json": "f3929d4411be868e94d6b00fcc8a298ca5714b01c906faeb654b6d6dcd36e513",
+    "city_overrides.json": "2169e76f45d76b5f5c70333ea6a6e77203957d94e1165a931510189a920979dc",
     "cores.by_feature.json": "2dab11f5bebf058fb19d364aad8e78bfceacda7712c57c62aa3cd328faf032b7",
     "countries.json": "6e1ba0512272bfb6006a457216b04ebb2f9159ca69cd63a31bf080ae0ac1f3ed",
     "owners.by_feature.json": "9a9fe4f08ebcc955eb8917103740ef925211736ff3930b8afca9396848fed49b",
     "runtime_topology.topo.json": "ffe47c9e06585ca4ce7167358024584899d59914d7ac711e0d1dfb3d8ad8cd1e",
-    "special_zone_layers.json": "9e34b1f10517e1b1279d140dce6c5bedce8fbb3e5b9051c8428a2fc0d53d3df2"
+    "special_zone_layers.json": "4565092b196e374cdf1054eaf5bf0f2982f7f028f14ff7d183984f7dfa75b56f"
   },
   "output_sha": {},
   "profile": "lightweight_base",
   "report_paths": {},
   "scenario_id": "blank_base",
-  "snapshot_fingerprint": "aaa3ee5611b9a22106a58612b8e87bd2337b8770fa6c0702252636bb08aa732b",
+  "snapshot_fingerprint": "52c1990966a9fb9018d3eeda265b066f6bf6e4a309375db9b3e5da5c4db6ac69",
   "water_count": 0
 }

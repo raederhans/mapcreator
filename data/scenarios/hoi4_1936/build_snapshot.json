@@ -19,20 +19,20 @@
   },
   "output_sha": {
     "context_lod.manifest.json": "5c075f2e024f679232bc957d6619d791cfb2d3aa185f3eda96cff4cd6b9198c6",
-    "detail_chunks.manifest.json": "0775535bf2f5088e248acf65170773f39bad5ab4a72ffc561b29e8a4493a645c",
+    "detail_chunks.manifest.json": "1d026cd9396922d741ce9ec4a1d68d3cf5f0573dbc7a4c1438dc1a3867a8f9e1",
     "geo_aliases.startup.json": "fb6d88ce15016c44207d1b0ac03a8b32fe5148000742bf946bfc2004b3ba1c36",
-    "locales.startup.json": "cc5ce2ef8b724e5fc98ac67ee91c2b50371e45db948538b246f7b9839a0d7153",
+    "locales.startup.json": "eedb33a0b0450684864bb2698d2791340eaffcd72811d2a7a01d16b46db0c98d",
     "mesh_pack.json": "a6f675ce23b7e1acf67da83fec2dec7fed20b66b8b731838f74f15a7ef741bc5",
     "runtime_meta.json": "d3f37900f0ef3a2ef10af9b31f860692c6b91123ee826f20733e7e2024894760",
     "runtime_topology.bootstrap.topo.json": "74d6f39ab2280fa524109d9bd35e15149df48681688deb22ecfac60911527115",
-    "startup.bundle.en.json": "6b642e65af858ab37e9ecc3a270d384e19ee9496a5006a2e542654163c1946c7",
-    "startup.bundle.en.json.gz": "03f0e34d5f7f878cf874ba7d49cfe9e698de2e6224062622126362eef7f5e34b",
-    "startup.bundle.zh.json": "844cf5370725ee53d2d0f57119d759741af86ed673b68e8da26f1629c66514a9",
-    "startup.bundle.zh.json.gz": "6a2a9e777cffa85bea0f75bc83335adf879fc9469215dfddcd3c25f4d576b816"
+    "startup.bundle.en.json": "40c56be56b75c84ba0cf38efefd9819ea4aa12c7a63d3e36960c018d41436854",
+    "startup.bundle.en.json.gz": "4879443f7e5a5c99b14ecadfbaa11529702b9694e0882ac2607b875f4fed043a",
+    "startup.bundle.zh.json": "bac7a90005940da23a9c807277fef7b2ab32558b80690b5eda2db9c161940999",
+    "startup.bundle.zh.json.gz": "d393a382909ea5818367785e191d65c57d8593c7976c17736032d306c6e46b6b"
   },
   "profile": "hoi4_chunked",
   "report_paths": {},
   "scenario_id": "hoi4_1936",
-  "snapshot_fingerprint": "0f6b59f1b8128a5561fdc3dbc13167ac720d8001e089e712bc2ccaaafca5e503",
+  "snapshot_fingerprint": "30f4c09b3267ab65f8378a9579cc9ffac1cbf93c46336d359514053171aff43c",
   "water_count": 0
 }
