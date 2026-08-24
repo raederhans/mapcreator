@@ -220,6 +220,7 @@ import {
 } from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createVisualEffectsPassOwner } from "./renderer/visual_effects_pass_owner.js";
+import { createDayNightRuntimeOwner } from "./renderer/day_night_runtime_owner.js";
 import { createContextPassOrchestratorOwner } from "./renderer/context_pass_orchestrator_owner.js";
 import { createPoliticalPassOrchestratorOwner } from "./renderer/political_pass_orchestrator_owner.js";
 import { createRenderPerfMetricsRuntimeOwner } from "./renderer/render_perf_metrics_runtime_owner.js";
@@ -857,8 +858,6 @@ const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set([
   "refresh-colors",
   "progressive-political-full-cache-ready",
 ]);
-const DAY_NIGHT_CLOCK_INTERVAL_MS = 15_000;
-const DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS = 1000 / 30;
 // exact-after-settle 的延后刷新只补 context/text 这批轻量 pass；
 // political pass 仍走单独的 guarded dirty 路径，避免和局部重绘缓存语义混线。
 const POLITICAL_PARTIAL_REPAINT_FEATURE_THRESHOLD = 48;
@@ -993,6 +992,7 @@ let oceanRenderOwner = null;
 let physicalLayerRenderOwner = null;
 let scenarioReliefOverlayRenderOwner = null;
 let cityLightsRenderOwner = null;
+let dayNightRuntimeOwner = null;
 let transportOverviewRenderOwner = null;
 let strategicOverlayRenderOwner = null;
 let borderMeshOwner = null;
@@ -2390,6 +2390,37 @@ function getCityLightsRenderOwner() {
   return cityLightsRenderOwner;
 }
 
+function getDayNightRuntimeOwner() {
+  if (dayNightRuntimeOwner) {
+    return dayNightRuntimeOwner;
+  }
+  dayNightRuntimeOwner = createDayNightRuntimeOwner({
+    runtimeState,
+    rendererSurfaceHost,
+    constants: {
+      renderPhaseIdle: RENDER_PHASE_IDLE,
+    },
+    getters: {
+      isBootInteractionReady,
+    },
+    helpers: {
+      clamp,
+      normalizeDayNightStyleConfig,
+      normalizeLongitude,
+      nowMs,
+      stableJson,
+    },
+    effects: {
+      drawNightLightsLayer,
+      invalidateRenderPasses,
+      renderFallback: render,
+      requestRender: requestRendererRender,
+      setPendingDayNightRefreshState,
+    },
+  });
+  return dayNightRuntimeOwner;
+}
+
 function getTransportOverviewRenderOwner() {
   if (transportOverviewRenderOwner) {
     return transportOverviewRenderOwner;
@@ -3143,21 +3174,18 @@ function getVisualEffectsPassOwner() {
   visualEffectsPassOwner = createVisualEffectsPassOwner({
     getters: {
       getTextureStyleConfig,
-      getDayNightStyleConfig,
       isBootInteractionReady,
       isHgoRuntimePreviewReady,
     },
     helpers: {
       normalizeTextureMode,
-      getCurrentSolarState,
     },
     effects: {
       drawOldPaperTexture,
       drawGraticuleTextureLines,
       drawDraftGridTexture,
       drawGraticuleTextureLabels,
-      drawDayNightShadowLayer,
-      drawNightLightsLayer,
+      drawDayNightRuntimePass: (k, options) => getDayNightRuntimeOwner().drawDayNightPass(k, options),
       recordRenderPerfMetric,
     },
   });
@@ -3381,10 +3409,6 @@ let facilityInfoCardCloseBtn = null;
 let facilityInfoCardMoreBtn = null;
 let facilityInfoCardExpanded = false;
 let facilityInfoCardAnchor = null;
-let dayNightClockTimerId = null;
-let dayNightClockFrameHandle = null;
-let lastDayNightClockToken = "";
-let lastDayNightCycleFrameAt = 0;
 let pendingIndexUiRefreshHandle = null;
 let pendingIndexUiRefreshState = null;
 let deferredIndexUiRefreshHandle = null;
@@ -5121,14 +5145,10 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
     ].join("::");
   }
   if (passName === "dayNight") {
-    const dayNightConfig = getDayNightStyleConfig();
-    return [
+    return getDayNightRuntimeOwner().buildDayNightPassSignature(
       transformSignature,
-      runtimeState.topologyRevision || 0,
-      `field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`,
-      stableJson(dayNightConfig),
-      getDayNightSignatureClockToken(dayNightConfig),
-    ].join("::");
+      intensityFields.channels.urbanGlow?.revision,
+    );
   }
   if (passName === "borders") {
     return [
@@ -14334,11 +14354,7 @@ function requestTextureRerender() {
 }
 
 function getDayNightStyleConfig() {
-  if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
-    runtimeState.styleConfig = {};
-  }
-  runtimeState.styleConfig.dayNight = normalizeDayNightStyleConfig(runtimeState.styleConfig.dayNight);
-  return runtimeState.styleConfig.dayNight;
+  return getDayNightRuntimeOwner().getDayNightStyleConfig();
 }
 
 function normalizeLongitude(value) {
@@ -14348,95 +14364,12 @@ function normalizeLongitude(value) {
   return normalized;
 }
 
-function getUtcDateKey(date = new Date()) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function getDayNightSignatureClockToken(...args) {
+  return getDayNightRuntimeOwner().getDayNightSignatureClockToken(...args);
 }
 
-function getUtcDayOfYear(date = new Date()) {
-  const yearStart = Date.UTC(date.getUTCFullYear(), 0, 1);
-  const todayUtc = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  return Math.max(1, Math.floor((todayUtc - yearStart) / 86_400_000) + 1);
-}
-
-function getCurrentUtcMinutesFromDate(date = new Date()) {
-  return date.getUTCHours() * 60 + date.getUTCMinutes();
-}
-
-function getCurrentUtcMinutes() {
-  return getCurrentUtcMinutesFromDate(new Date());
-}
-
-function getCycleUtcMinutes(config = getDayNightStyleConfig(), now = new Date()) {
-  const secondsPerDay = clamp(Number(config.cycleSecondsPerDay) || 120, 10, 600);
-  const elapsedSeconds = (now.getTime() / 1000) % secondsPerDay;
-  return clamp((elapsedSeconds / secondsPerDay) * 24 * 60, 0, 24 * 60 - 1);
-}
-
-function getDayNightSignatureClockToken(config = getDayNightStyleConfig(), now = new Date()) {
-  const dayKey = getUtcDateKey(now);
-  if (config.mode === "utc") {
-    return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
-  }
-  if (config.mode === "cycle") {
-    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now).toFixed(2)}`;
-  }
-  return `${dayKey}|manual:${config.manualUtcMinutes}`;
-}
-
-function getDayNightLiveClockToken(config = getDayNightStyleConfig(), now = new Date()) {
-  const dayKey = getUtcDateKey(now);
-  if (config.mode === "utc") {
-    return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
-  }
-  if (config.mode === "cycle") {
-    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now).toFixed(2)}`;
-  }
-  return `${dayKey}|manual-day`;
-}
-
-function getSolarDeclinationRadians(date = new Date(), utcMinutes = getCurrentUtcMinutesFromDate(date)) {
-  const dayOfYear = getUtcDayOfYear(date);
-  const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + ((utcMinutes / 60) - 12) / 24);
-  return (
-    0.006918
-    - 0.399912 * Math.cos(gamma)
-    + 0.070257 * Math.sin(gamma)
-    - 0.006758 * Math.cos(2 * gamma)
-    + 0.000907 * Math.sin(2 * gamma)
-    - 0.002697 * Math.cos(3 * gamma)
-    + 0.00148 * Math.sin(3 * gamma)
-  );
-}
-
-function getCurrentSolarState(config = getDayNightStyleConfig()) {
-  const now = new Date();
-  const mode = String(config.mode || "manual");
-  const utcMinutes = mode === "utc"
-    ? getCurrentUtcMinutesFromDate(now)
-    : mode === "cycle"
-      ? getCycleUtcMinutes(config, now)
-      : clamp(Math.round(Number(config.manualUtcMinutes) || 0), 0, 24 * 60 - 1);
-  const declinationDeg = getSolarDeclinationRadians(now, utcMinutes) * (180 / Math.PI);
-  const subsolarLongitude = normalizeLongitude(180 - (utcMinutes / 4));
-  return {
-    now,
-    utcMinutes,
-    declinationDeg,
-    subsolarLongitude,
-    antisolarLongitude: normalizeLongitude(subsolarLongitude + 180),
-    antisolarLatitude: clamp(-declinationDeg, -89.5, 89.5),
-  };
-}
-
-function buildNightHemisphereFeature(solarState, radiusDeg = 90) {
-  if (!solarState || !globalThis.d3?.geoCircle) return null;
-  return globalThis.d3.geoCircle()
-    .center([solarState.antisolarLongitude, solarState.antisolarLatitude])
-    .radius(clamp(Number(radiusDeg) || 90, 1, 90))
-    .precision(2)();
+function buildNightHemisphereFeature(...args) {
+  return getDayNightRuntimeOwner().buildNightHemisphereFeature(...args);
 }
 
 function getFeatureGeoCentroid(feature) {
@@ -14454,14 +14387,6 @@ function getFeatureGeoCentroid(feature) {
   return normalized;
 }
 
-function getModernDayNightNumber(...args) {
-  return getCityLightsRenderOwner().getModernDayNightNumber(...args);
-}
-
-function drawLightEllipse(...args) {
-  return getCityLightsRenderOwner().drawLightEllipse(...args);
-}
-
 function toRgbaString(...args) {
   return getCityLightsRenderOwner().toRgbaString(...args);
 }
@@ -14470,157 +14395,12 @@ function getSignedHashUnit(...args) {
   return getCityLightsRenderOwner().getSignedHashUnit(...args);
 }
 
-function drawModernNightLightsLayer(...args) {
-  return getCityLightsRenderOwner().drawModernNightLightsLayer(...args);
-}
-
-function drawDayNightShadowLayer(_k, config, solarState) {
-  const twilightBand = buildNightHemisphereFeature(solarState, 90);
-  if (!twilightBand) return;
-  const coreRadius = clamp(90 - Number(config.twilightWidthDeg || 10), 56, 89);
-  const nightCore = buildNightHemisphereFeature(solarState, coreRadius);
-
-  rendererSurfaceHost.getContext().save();
-  rendererSurfaceHost.getContext().globalCompositeOperation = "source-over";
-
-  rendererSurfaceHost.getContext().fillStyle = "#24374c";
-  rendererSurfaceHost.getContext().globalAlpha = clamp(config.shadowOpacity * 0.5, 0, 0.5);
-  rendererSurfaceHost.getContext().beginPath();
-  rendererSurfaceHost.getPathCanvas()(twilightBand);
-  rendererSurfaceHost.getContext().fill();
-
-  if (nightCore) {
-    rendererSurfaceHost.getContext().fillStyle = "#081423";
-    rendererSurfaceHost.getContext().globalAlpha = clamp(config.shadowOpacity, 0, 0.85);
-    rendererSurfaceHost.getContext().beginPath();
-    rendererSurfaceHost.getPathCanvas()(nightCore);
-    rendererSurfaceHost.getContext().fill();
-  }
-
-  rendererSurfaceHost.getContext().strokeStyle = "#8aa1ba";
-  rendererSurfaceHost.getContext().globalAlpha = clamp(config.shadowOpacity * 0.28, 0, 0.24);
-  rendererSurfaceHost.getContext().lineWidth = 1.1 / Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
-  rendererSurfaceHost.getContext().beginPath();
-  rendererSurfaceHost.getPathCanvas()(twilightBand);
-  rendererSurfaceHost.getContext().stroke();
-
-  rendererSurfaceHost.getContext().restore();
-}
-
 function drawNightLightsLayer(k, config, solarState) {
   return getCityLightsRenderOwner().drawNightLightsLayer(k, config, solarState);
 }
 
-function clearDayNightClockTimer() {
-  if (dayNightClockTimerId) {
-    globalThis.clearInterval(dayNightClockTimerId);
-    dayNightClockTimerId = null;
-  }
-  if (dayNightClockFrameHandle) {
-    if (dayNightClockFrameHandle.kind === "raf" && typeof globalThis.cancelAnimationFrame === "function") {
-      globalThis.cancelAnimationFrame(dayNightClockFrameHandle.id);
-    } else {
-      globalThis.clearTimeout(dayNightClockFrameHandle.id);
-    }
-    dayNightClockFrameHandle = null;
-  }
-  lastDayNightCycleFrameAt = 0;
-}
-
-function scheduleDayNightCycleFrame(callback) {
-  if (typeof globalThis.requestAnimationFrame === "function") {
-    return {
-      kind: "raf",
-      id: globalThis.requestAnimationFrame(callback),
-    };
-  }
-  return {
-    kind: "timeout",
-    id: globalThis.setTimeout(() => callback(nowMs()), DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS),
-  };
-}
-
-function requestDayNightClockRender(reason) {
-  if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    setPendingDayNightRefreshState(runtimeState, true);
-    return;
-  }
-  invalidateRenderPasses("dayNight", reason);
-  requestRendererRender(reason, {
-    fallback: () => {
-      if (rendererSurfaceHost.getContext()) {
-        render();
-      }
-    },
-  });
-}
-
-function syncDayNightCycleAnimation(initialConfig) {
-  if (dayNightClockTimerId) {
-    globalThis.clearInterval(dayNightClockTimerId);
-    dayNightClockTimerId = null;
-  }
-  if (dayNightClockFrameHandle) return true;
-  lastDayNightClockToken = getDayNightLiveClockToken(initialConfig);
-  const step = (timestamp = nowMs()) => {
-    dayNightClockFrameHandle = null;
-    const config = getDayNightStyleConfig();
-    const mode = String(config.mode || "manual");
-    if (!config.enabled || mode !== "cycle") {
-      clearDayNightClockTimer();
-      return;
-    }
-    const currentTime = Number.isFinite(timestamp) ? timestamp : nowMs();
-    if (lastDayNightCycleFrameAt && currentTime - lastDayNightCycleFrameAt < DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS) {
-      dayNightClockFrameHandle = scheduleDayNightCycleFrame(step);
-      return;
-    }
-    lastDayNightCycleFrameAt = currentTime;
-    const nextToken = getDayNightLiveClockToken(config);
-    if (nextToken !== lastDayNightClockToken) {
-      lastDayNightClockToken = nextToken;
-      if (globalThis.document?.visibilityState !== "hidden") {
-        requestDayNightClockRender("day-night-cycle-frame");
-      }
-    }
-    dayNightClockFrameHandle = scheduleDayNightCycleFrame(step);
-  };
-  dayNightClockFrameHandle = scheduleDayNightCycleFrame(step);
-  return true;
-}
-
 function syncDayNightClockTimer() {
-  const initialConfig = getDayNightStyleConfig();
-  const initialMode = String(initialConfig.mode || "manual");
-  if (!initialConfig.enabled || (initialMode !== "utc" && initialMode !== "cycle")) {
-    clearDayNightClockTimer();
-    return false;
-  }
-  if (initialMode === "cycle") {
-    return syncDayNightCycleAnimation(initialConfig);
-  }
-  if (dayNightClockFrameHandle) {
-    clearDayNightClockTimer();
-  }
-  if (dayNightClockTimerId) return true;
-  lastDayNightClockToken = getDayNightLiveClockToken(initialConfig);
-  dayNightClockTimerId = globalThis.setInterval(() => {
-    const config = getDayNightStyleConfig();
-    const mode = String(config.mode || "manual");
-    if (!config.enabled || (mode !== "utc" && mode !== "cycle")) {
-      clearDayNightClockTimer();
-      return;
-    }
-    const nextToken = getDayNightLiveClockToken(config);
-    if (nextToken === lastDayNightClockToken) return;
-    lastDayNightClockToken = nextToken;
-    if (typeof runtimeState.updateToolbarInputsFn === "function") {
-      runtimeState.updateToolbarInputsFn();
-    }
-    if (!config.enabled) return;
-    requestDayNightClockRender("day-night-clock");
-  }, DAY_NIGHT_CLOCK_INTERVAL_MS);
-  return true;
+  return getDayNightRuntimeOwner().syncDayNightClockTimer();
 }
 
 function resolvePaperTextureAssetUrl(assetId) {

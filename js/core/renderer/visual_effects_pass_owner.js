@@ -10,10 +10,6 @@ export function createVisualEffectsPassOwner({ getters = {}, helpers = {}, effec
     getters.getTextureStyleConfig,
     "getters.getTextureStyleConfig",
   );
-  const getDayNightStyleConfig = requireFunction(
-    getters.getDayNightStyleConfig,
-    "getters.getDayNightStyleConfig",
-  );
   const isBootInteractionReady = requireFunction(
     getters.isBootInteractionReady,
     "getters.isBootInteractionReady",
@@ -25,10 +21,6 @@ export function createVisualEffectsPassOwner({ getters = {}, helpers = {}, effec
   const normalizeTextureMode = requireFunction(
     helpers.normalizeTextureMode,
     "helpers.normalizeTextureMode",
-  );
-  const getCurrentSolarState = requireFunction(
-    helpers.getCurrentSolarState,
-    "helpers.getCurrentSolarState",
   );
   const drawOldPaperTexture = requireFunction(
     effects.drawOldPaperTexture,
@@ -46,13 +38,9 @@ export function createVisualEffectsPassOwner({ getters = {}, helpers = {}, effec
     effects.drawGraticuleTextureLabels,
     "effects.drawGraticuleTextureLabels",
   );
-  const drawDayNightShadowLayer = requireFunction(
-    effects.drawDayNightShadowLayer,
-    "effects.drawDayNightShadowLayer",
-  );
-  const drawNightLightsLayer = requireFunction(
-    effects.drawNightLightsLayer,
-    "effects.drawNightLightsLayer",
+  const drawDayNightRuntimePass = requireFunction(
+    effects.drawDayNightRuntimePass,
+    "effects.drawDayNightRuntimePass",
   );
   const recordRenderPerfMetric = requireFunction(
     effects.recordRenderPerfMetric,
@@ -96,12 +84,7 @@ export function createVisualEffectsPassOwner({ getters = {}, helpers = {}, effec
   }
 
   function drawDayNightPass(k, { interactive = false } = {}) {
-    const config = getDayNightStyleConfig();
-    if (!config.enabled) return;
-    if (!isBootInteractionReady()) return;
-    const solarState = getCurrentSolarState(config);
-    drawDayNightShadowLayer(k, config, solarState);
-    drawNightLightsLayer(k, config, solarState);
+    drawDayNightRuntimePass(k, { interactive });
   }
 
   return Object.freeze({

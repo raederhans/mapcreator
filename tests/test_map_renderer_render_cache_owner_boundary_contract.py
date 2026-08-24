@@ -86,10 +86,7 @@ CITY_LIGHTS_RESPONSIBILITIES = {
 # City Lights-specific state, policy, geometry, sampling, canvas, and draw responsibilities.
 
 CITY_LIGHTS_HOST_FACADES = {
-    "drawLightEllipse",
-    "drawModernNightLightsLayer",
     "drawNightLightsLayer",
-    "getModernDayNightNumber",
     "getSignedHashUnit",
     "toRgbaString",
 }

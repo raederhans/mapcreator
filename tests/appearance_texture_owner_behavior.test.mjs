@@ -319,12 +319,15 @@ test("day-night owner toggles mode panels and writes cycle speed", () => {
 });
 
 test("day-night renderer supports utc and cycle clock tokens", () => {
-  const source = readFileSync(join(process.cwd(), "js", "core", "map_renderer.js"), "utf8");
+  const source = readFileSync(
+    join(process.cwd(), "js", "core", "renderer", "day_night_runtime_owner.js"),
+    "utf8",
+  );
 
-  assert.match(source, /function getCycleUtcMinutes\(config = getDayNightStyleConfig\(\), now = new Date\(\)\)/);
+  assert.match(source, /function getCycleUtcMinutes\(config = getDayNightStyleConfig\(\), now = createDate\(\)\)/);
   assert.match(source, /if \(config\.mode === "cycle"\) \{\s*return `\$\{dayKey\}\|cycle:/);
   assert.match(source, /getCycleUtcMinutes\(config, now\)\.toFixed\(2\)/);
-  assert.match(source, /const DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS = 1000 \/ 30;/);
+  assert.match(source, /const cycleFrameIntervalMs = Number\(constants\.cycleFrameIntervalMs\) \|\| \(1000 \/ 30\);/);
   assert.match(source, /function scheduleDayNightCycleFrame\(callback\)/);
   assert.match(source, /requestAnimationFrame\(callback\)/);
   assert.match(source, /function syncDayNightCycleAnimation\(initialConfig\)/);

@@ -49,6 +49,7 @@ const FILES = Object.freeze({
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   visualEffectsPassOwner: "js/core/renderer/visual_effects_pass_owner.js",
+  dayNightRuntimeOwner: "js/core/renderer/day_night_runtime_owner.js",
   contextPassOrchestratorOwner: "js/core/renderer/context_pass_orchestrator_owner.js",
   politicalPassOrchestratorOwner: "js/core/renderer/political_pass_orchestrator_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
@@ -154,7 +155,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 23154,
+  [FILES.renderer]: 22933,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -166,6 +167,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.viewportReadModelOwner]: 260,
   [FILES.viewportCommandOwner]: 220,
   [FILES.contextPassOrchestratorOwner]: 280,
+  [FILES.dayNightRuntimeOwner]: 360,
   [FILES.politicalPassOrchestratorOwner]: 280,
   [FILES.rendererViewportUpdateOwner]: 220,
   [FILES.rendererStartupTransactionOwner]: 220,
@@ -490,6 +492,7 @@ function collectFailures() {
   const transformedFrameCompositorOwner = readProjectFile(FILES.transformedFrameCompositorOwner);
   const transformedFrameCompositorOwnerTest = readProjectFile(FILES.transformedFrameCompositorOwnerTest);
   const visualEffectsPassOwner = readProjectFile(FILES.visualEffectsPassOwner);
+  const dayNightRuntimeOwner = readProjectFile(FILES.dayNightRuntimeOwner);
   const contextPassOrchestratorOwner = readProjectFile(FILES.contextPassOrchestratorOwner);
   const politicalPassOrchestratorOwner = readProjectFile(FILES.politicalPassOrchestratorOwner);
   const rendererFrameCompositorBoundaryTest = readProjectFile(FILES.rendererFrameCompositorBoundaryTest);
@@ -619,6 +622,7 @@ function collectFailures() {
     [FILES.transformedFrameCompositorOwner]: transformedFrameCompositorOwner,
     [FILES.transformedFrameCompositorOwnerTest]: transformedFrameCompositorOwnerTest,
     [FILES.visualEffectsPassOwner]: visualEffectsPassOwner,
+    [FILES.dayNightRuntimeOwner]: dayNightRuntimeOwner,
     [FILES.contextPassOrchestratorOwner]: contextPassOrchestratorOwner,
     [FILES.politicalPassOrchestratorOwner]: politicalPassOrchestratorOwner,
     [FILES.rendererFrameCompositorBoundaryTest]: rendererFrameCompositorBoundaryTest,

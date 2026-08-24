@@ -5,23 +5,16 @@ import { createVisualEffectsPassOwner } from "../js/core/renderer/visual_effects
 
 function createHarness({
   textureMode = "paper",
-  dayNightEnabled = true,
   bootReady = true,
   hgoReady = false,
 } = {}) {
   const events = [];
   const texture = { mode: textureMode };
-  const dayNight = { enabled: dayNightEnabled };
-  const solarState = { longitude: 12, latitude: -4 };
   const owner = createVisualEffectsPassOwner({
     getters: {
       getTextureStyleConfig: () => {
         events.push("get-texture");
         return texture;
-      },
-      getDayNightStyleConfig: () => {
-        events.push("get-day-night");
-        return dayNight;
       },
       isBootInteractionReady: () => {
         events.push("boot-ready");
@@ -37,40 +30,33 @@ function createHarness({
         events.push(`normalize:${String(mode)}`);
         return String(mode || "none").trim().toLowerCase();
       },
-      getCurrentSolarState: (config) => {
-        events.push(`solar:${config === dayNight}`);
-        return solarState;
-      },
     },
     effects: {
       drawOldPaperTexture: (k, options) => events.push(["paper", k, options]),
       drawGraticuleTextureLines: (k, options) => events.push(["graticule-lines", k, options]),
       drawDraftGridTexture: (k, options) => events.push(["draft-grid", k, options]),
       drawGraticuleTextureLabels: (k) => events.push(["graticule-labels", k]),
-      drawDayNightShadowLayer: (k, config, solar) => events.push(["shadow", k, config, solar]),
-      drawNightLightsLayer: (k, config, solar) => events.push(["lights", k, config, solar]),
+      drawDayNightRuntimePass: (k, options) => events.push(["day-night-runtime", k, options]),
       recordRenderPerfMetric: (...args) => events.push(["metric", ...args]),
     },
   });
-  return { dayNight, events, owner, solarState, texture };
+  return { events, owner, texture };
 }
 
 test("factory validates every dependency and freezes the public API", () => {
   const dependencyNames = {
     getters: [
       "getTextureStyleConfig",
-      "getDayNightStyleConfig",
       "isBootInteractionReady",
       "isHgoRuntimePreviewReady",
     ],
-    helpers: ["normalizeTextureMode", "getCurrentSolarState"],
+    helpers: ["normalizeTextureMode"],
     effects: [
       "drawOldPaperTexture",
       "drawGraticuleTextureLines",
       "drawDraftGridTexture",
       "drawGraticuleTextureLabels",
-      "drawDayNightShadowLayer",
-      "drawNightLightsLayer",
+      "drawDayNightRuntimePass",
       "recordRenderPerfMetric",
     ],
   };
@@ -175,24 +161,10 @@ test("texture labels preserve graticule and readiness branches", () => {
   assert.deepEqual(skippedByMode.events, ["hgo-ready", "get-texture", "boot-ready"]);
 });
 
-test("day-night pass preserves enabled, readiness, solar, shadow, and lights order", () => {
-  const { dayNight, events, owner, solarState } = createHarness();
+test("day-night pass preserves the visual-effects facade and runtime-owner delegation", () => {
+  const { events, owner } = createHarness();
   owner.drawDayNightPass(12, { interactive: true });
-  assert.deepEqual(events, [
-    "get-day-night",
-    "boot-ready",
-    "solar:true",
-    ["shadow", 12, dayNight, solarState],
-    ["lights", 12, dayNight, solarState],
-  ]);
-
-  const disabled = createHarness({ dayNightEnabled: false });
-  disabled.owner.drawDayNightPass(13);
-  assert.deepEqual(disabled.events, ["get-day-night"]);
-
-  const skippedByBoot = createHarness({ bootReady: false });
-  skippedByBoot.owner.drawDayNightPass(14);
-  assert.deepEqual(skippedByBoot.events, ["get-day-night", "boot-ready"]);
+  assert.deepEqual(events, [["day-night-runtime", 12, { interactive: true }]]);
 });
 
 test("null options throw before any getter or effect while omitted options keep defaults", () => {

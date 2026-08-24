@@ -76,6 +76,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:city-lights-assets": "node --test tests/city_lights_asset_contract.test.mjs",
     "test:node:city-lights-render-owner": "node --test tests/city_lights_render_owner_behavior.test.mjs",
     "test:node:modern-city-lights-owner": "npm run test:node:city-lights-render-owner",
+    "test:node:day-night-runtime-owner": "node --test tests/day_night_runtime_owner_behavior.test.mjs",
     "test:node:data-service-runtime": "node --test tests/data_service_runtime_behavior.test.mjs",
     "test:node:intensity-field": "node --test tests/intensity_field.node.test.mjs",
     "test:node:intensity-field-mask": "node --test tests/intensity_field_mask_owner.node.test.mjs",
@@ -153,7 +154,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:python:p4:p4-2c-boundary": "npm run python -- -m unittest tests.test_scenario_health_actions_boundary_contract tests.test_startup_hydration_boundary_contract tests.test_scenario_data_health_boundary_contract tests.test_scenario_presentation_runtime_boundary_contract tests.test_scenario_lifecycle_runtime_boundary_contract tests.test_scenario_rollback_boundary_contract tests.test_scenario_runtime_state_boundary_contract tests.test_scenario_state_actions_boundary_contract tests.test_state_write_guardrail_contract -q",
     "verify:p4:p4-2c": "node tools/run_p4_phase_verification.mjs --phase P4.2c",
     "test:node:p4:p4-3": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/state_action_delegation_edges_behavior.test.mjs tests/state_writer_policy_batch_scan_behavior.test.mjs tests/renderer_phase_actions_behavior.test.mjs tests/renderer_interaction_actions_behavior.test.mjs tests/renderer_exact_refresh_actions_behavior.test.mjs tests/render_pass_cache_state_normalizer_behavior.test.mjs tests/renderer_cache_actions_behavior.test.mjs tests/renderer_diagnostics_actions_behavior.test.mjs tests/render_perf_metrics_runtime_owner_behavior.test.mjs tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs tests/renderer_render_phase_lifecycle_inventory.test.mjs tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs tests/zoom_interaction_lifecycle_owner_behavior.test.mjs tests/renderer_runtime_state_behavior.test.mjs tests/physical_layer_contracts.test.mjs tests/scenario_chunk_contracts.test.mjs",
-    "test:python:p4:p4-3-boundary": "npm run python -- -m unittest tests.test_renderer_control_actions_boundary_contract tests.test_renderer_exact_refresh_actions_boundary_contract tests.test_renderer_cache_actions_boundary_contract tests.test_renderer_diagnostics_actions_boundary_contract tests.test_renderer_runtime_state_boundary_contract tests.test_map_renderer_interaction_context_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_state_write_guardrail_contract -q",
+    "test:python:p4:p4-3-boundary": "npm run python -- -m unittest tests.test_renderer_control_actions_boundary_contract tests.test_renderer_exact_refresh_actions_boundary_contract tests.test_renderer_cache_actions_boundary_contract tests.test_renderer_diagnostics_actions_boundary_contract tests.test_renderer_runtime_state_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_state_write_guardrail_contract -q",
     "verify:p4:p4-3": "node tools/run_p4_phase_verification.mjs --phase P4.3",
     "verify:p4:routes": "node tools/check_p4_state_action_routes.mjs",
     "verify:ui-rework-mainline": "npm run python -- -m unittest tests/test_ui_rework_plan02_mainline_contract.py",
@@ -258,6 +259,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:renderer-runtime-context-interaction": "node --test tests/renderer_runtime_context_interaction_behavior.test.mjs",
     "test:node:renderer-runtime-context-hit-hover": "node --test tests/renderer_runtime_context_hit_hover_behavior.test.mjs",
     "test:python:map-renderer-render-cache-owner-boundary": "npm run python -- -m unittest tests.test_map_renderer_render_cache_owner_boundary_contract -q",
+    "test:python:day-night-runtime-owner-boundary": "npm run python -- -m unittest tests.test_day_night_runtime_owner_boundary_contract -q",
     "test:python:map-renderer-projection-viewport-context-boundary": "npm run python -- -m unittest tests.test_map_renderer_projection_viewport_context_boundary_contract -q",
     "test:python:map-renderer-viewport-mutation-context-boundary": "npm run python -- -m unittest tests.test_map_renderer_viewport_mutation_context_boundary_contract -q",
     "test:python:map-renderer-interaction-context-boundary": "npm run python -- -m unittest tests.test_map_renderer_interaction_context_boundary_contract -q",
@@ -4871,9 +4873,15 @@ const AUTHORED_VERIFICATION_METADATA = {
         "all"
       ],
       "entrypointPolicyIndex": 4,
-      "verificationOrder": null,
+      "verificationOrder": 128,
       "selectorOrder": 158,
-      "verification": null,
+      "verification": {
+        "commandType": "package-script",
+        "packageScriptRequired": true,
+        "verifyCoreDefaultGroup": "renderer-owner",
+        "supervisorDomain": "city-runtime",
+        "routeRegistry": true
+      },
       "selector": {}
     },
     {
@@ -12333,7 +12341,6 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tests/test_renderer_cache_actions_boundary_contract.py",
         "tests/test_renderer_diagnostics_actions_boundary_contract.py",
         "tests/test_renderer_runtime_state_boundary_contract.py",
-        "tests/test_map_renderer_interaction_context_boundary_contract.py",
         "tests/test_scenario_chunk_refresh_contracts.py",
         "tests/test_state_write_guardrail_contract.py",
         "tests/verification_metadata_behavior.test.mjs",
@@ -14307,7 +14314,6 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tests/test_renderer_diagnostics_actions_boundary_contract.py",
         "tests/render_perf_metrics_runtime_owner_behavior.test.mjs",
         "tests/test_renderer_runtime_state_boundary_contract.py",
-        "tests/test_map_renderer_interaction_context_boundary_contract.py",
         "tests/test_scenario_chunk_refresh_contracts.py",
         "tests/test_state_write_guardrail_contract.py",
         "package.json"
@@ -17191,6 +17197,71 @@ const AUTHORED_VERIFICATION_METADATA = {
         "supervisorDomain": "scenario-runtime"
       },
       "selector": null
+    },
+    {
+      "id": "node:test:node:day-night-runtime-owner",
+      "commandRef": "test:node:day-night-runtime-owner",
+      "sourceRefs": [
+        "js/core/map_renderer.js",
+        "js/core/renderer/day_night_runtime_owner.js",
+        "js/core/renderer/visual_effects_pass_owner.js",
+        "js/core/state_defaults.js",
+        "js/core/state/actions/renderer_phase_actions.js",
+        "tests/day_night_runtime_owner_behavior.test.mjs",
+        "tests/visual_effects_pass_owner_behavior.test.mjs",
+        "package.json"
+      ],
+      "ownerHints": ["renderer-runtime"],
+      "domains": ["renderer-runtime"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 129,
+      "selectorOrder": 379,
+      "verification": {
+        "commandType": "package-script",
+        "packageScriptRequired": true,
+        "verifyCoreDefaultGroup": "renderer-owner",
+        "supervisorDomain": "renderer-runtime",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "verify-core:test:python:day-night-runtime-owner-boundary",
+      "commandRef": "test:python:day-night-runtime-owner-boundary",
+      "sourceRefs": [
+        "js/core/map_renderer.js",
+        "js/core/renderer/day_night_runtime_owner.js",
+        "js/core/renderer/visual_effects_pass_owner.js",
+        "js/core/state/actions/renderer_phase_actions.js",
+        "tests/test_day_night_runtime_owner_boundary_contract.py",
+        "tests/test_map_renderer_render_pipeline_passes_boundary_contract.py",
+        "package.json"
+      ],
+      "ownerHints": ["renderer-runtime"],
+      "domains": ["renderer-runtime"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 130,
+      "selectorOrder": 380,
+      "verification": {
+        "commandType": "package-script",
+        "packageScriptRequired": true,
+        "verifyCoreDefaultGroup": "renderer-owner",
+        "supervisorDomain": "renderer-runtime",
+        "routeRegistry": true
+      },
+      "selector": {}
     }
   ]
 };

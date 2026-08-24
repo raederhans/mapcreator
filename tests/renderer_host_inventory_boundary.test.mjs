@@ -73,6 +73,7 @@ test("renderer host imports current owner and runtime modules", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const requiredTokens = [
     "createRenderPipelinePassesOwner",
+    "createDayNightRuntimeOwner",
     "createRenderCacheOwner",
     "createScenarioRefreshRuntime",
     "createExactAfterSettleScheduler",

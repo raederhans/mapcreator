@@ -39,6 +39,15 @@ export function setPendingDayNightRefreshState(target, pending) {
   return nextPending;
 }
 
+export function setDayNightStyleConfigState(target, config) {
+  assertStateTarget(target);
+  if (!target.styleConfig || typeof target.styleConfig !== "object") {
+    target.styleConfig = {};
+  }
+  target.styleConfig.dayNight = config;
+  return config;
+}
+
 export function setAdaptiveSettleProfileState(target, settleProfile = null) {
   assertStateTarget(target);
   target.adaptiveSettleProfile = settleProfile;

@@ -37,13 +37,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 333);
-  assert.equal(summary.contributorRecords, 419);
-  assert.equal(summary.verificationRecordProjectionCount, 128);
-  assert.equal(summary.routeProjectionCount, 378);
-  assert.equal(summary.commandCount, 336);
+  assert.equal(summary.packageScriptCount, 335);
+  assert.equal(summary.contributorRecords, 421);
+  assert.equal(summary.verificationRecordProjectionCount, 131);
+  assert.equal(summary.routeProjectionCount, 380);
+  assert.equal(summary.commandCount, 338);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 419);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 421);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -687,6 +687,24 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
 test("P3.1 through P3.3b pass-family contracts stay in the child-safe renderer lane", () => {
   const expectedEntries = [
     {
+      id: "node:test:node:day-night-runtime-owner",
+      commandRef: "test:node:day-night-runtime-owner",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/day_night_runtime_owner.js",
+        "tests/day_night_runtime_owner_behavior.test.mjs",
+      ],
+    },
+    {
+      id: "verify-core:test:python:day-night-runtime-owner-boundary",
+      commandRef: "test:python:day-night-runtime-owner-boundary",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/day_night_runtime_owner.js",
+        "tests/test_day_night_runtime_owner_boundary_contract.py",
+      ],
+    },
+    {
       id: "verify-core:test:node:visual-effects-pass-owner",
       commandRef: "test:node:visual-effects-pass-owner",
       requiredSourceRefs: [
@@ -892,8 +910,8 @@ test("verify-core default plan preserves metadata closure before command superse
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 88);
-  assert.equal(plan.commandsToRun.length, 82);
+  assert.equal(metadataDefaultRefs.length, 91);
+  assert.equal(plan.commandsToRun.length, 85);
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [

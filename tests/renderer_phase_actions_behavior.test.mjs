@@ -15,6 +15,7 @@ test("renderer phase actions reject invalid targets", async () => {
   const {
     commitRendererDprStageState,
     setAdaptiveSettleProfileState,
+    setDayNightStyleConfigState,
     setPendingDayNightRefreshState,
     setPhaseEnteredAtState,
     setRendererIsInteractingState,
@@ -29,6 +30,7 @@ test("renderer phase actions reject invalid targets", async () => {
     assert.throws(() => setRendererIsInteractingState(target, false), /target must be an object/);
     assert.throws(() => setPendingDayNightRefreshState(target, true), /target must be an object/);
     assert.throws(() => setAdaptiveSettleProfileState(target, null), /target must be an object/);
+    assert.throws(() => setDayNightStyleConfigState(target, {}), /target must be an object/);
     assert.throws(() => commitRendererDprStageState(target, {}), /target must be an object/);
   }
 });
@@ -84,6 +86,15 @@ test("pending day-night refresh normalizes to a boolean", async () => {
   assert.equal(target.pendingDayNightRefresh, true);
   assert.equal(setPendingDayNightRefreshState(target, 0), false);
   assert.equal(target.pendingDayNightRefresh, false);
+});
+
+test("day-night style config initializes its container and preserves config identity", async () => {
+  const { setDayNightStyleConfigState } = await loadActions();
+  const target = {};
+  const config = { enabled: true, mode: "cycle" };
+
+  assert.equal(setDayNightStyleConfigState(target, config), config);
+  assert.equal(target.styleConfig.dayNight, config);
 });
 
 test("DPR stage and switch timestamp commit as one exact pair", async () => {

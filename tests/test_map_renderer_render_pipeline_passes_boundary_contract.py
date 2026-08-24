@@ -8,6 +8,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_passes.js"
 RENDER_PIPELINE_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_catalog.js"
 VISUAL_EFFECTS_PASS_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "visual_effects_pass_owner.js"
+DAY_NIGHT_RUNTIME_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "day_night_runtime_owner.js"
 CONTEXT_PASS_ORCHESTRATOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "context_pass_orchestrator_owner.js"
 POLITICAL_PASS_ORCHESTRATOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "political_pass_orchestrator_owner.js"
 EXACT_AFTER_SETTLE_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "exact_after_settle_pass_catalog.js"
@@ -28,6 +29,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         draw_canvas_owner_content = DRAW_CANVAS_ORCHESTRATION_OWNER_JS.read_text(encoding="utf-8")
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
         visual_effects_owner_content = VISUAL_EFFECTS_PASS_OWNER_JS.read_text(encoding="utf-8")
+        day_night_owner_content = DAY_NIGHT_RUNTIME_OWNER_JS.read_text(encoding="utf-8")
         context_pass_owner_content = CONTEXT_PASS_ORCHESTRATOR_OWNER_JS.read_text(encoding="utf-8")
         political_pass_owner_content = POLITICAL_PASS_ORCHESTRATOR_OWNER_JS.read_text(encoding="utf-8")
         pipeline_catalog_content = RENDER_PIPELINE_CATALOG_JS.read_text(encoding="utf-8")
@@ -44,6 +46,10 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         )
         self.assertIn(
             "import { createVisualEffectsPassOwner } from './renderer/visual_effects_pass_owner.js';",
+            renderer_imports,
+        )
+        self.assertIn(
+            "import { createDayNightRuntimeOwner } from './renderer/day_night_runtime_owner.js';",
             renderer_imports,
         )
         self.assertIn(
@@ -126,10 +132,10 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "drawGraticuleTextureLines",
             "drawGraticuleTextureLabels",
             "drawDraftGridTexture",
-            "drawDayNightShadowLayer",
             "drawNightLightsLayer",
         ):
             self.assertIn(f"function {function_name}(", renderer_content)
+        self.assertIn("function drawDayNightShadowLayer(", day_night_owner_content)
         for function_name in (
             "drawPhysicalContourLayer",
             "drawUrbanLayer",
