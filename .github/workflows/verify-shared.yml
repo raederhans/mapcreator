@@ -42,7 +42,7 @@ jobs:
           cache: 'pip'
 
       - name: Setup Node
-        if: inputs.profile == 'full' || inputs.profile == 'pr-fast' || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'
+        if: inputs.profile == 'full' || inputs.profile == 'pr-fast' || inputs.profile == 'pr-smoke' || inputs.profile == 'demo' || inputs.profile == 'deploy-minimal'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
@@ -72,7 +72,7 @@ jobs:
         run: python tools/check_min_ci_requirements.py
 
       - name: Install Node dependencies
-        if: inputs.profile == 'full' || inputs.profile == 'pr-fast' || inputs.profile == 'pr-smoke' || inputs.profile == 'demo'
+        if: inputs.profile == 'full' || inputs.profile == 'pr-fast' || inputs.profile == 'pr-smoke' || inputs.profile == 'demo' || inputs.profile == 'deploy-minimal'
         run: npm ci
 
       - name: Explain verification selector

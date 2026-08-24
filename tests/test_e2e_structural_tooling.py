@@ -1649,7 +1649,7 @@ const page = {
         )
         self.assert_command_ok(selector_result)
         selector_payload = json.loads(selector_json_path.read_text(encoding="utf-8"))
-        self.assertEqual(len(selector_payload["routeAuthority"]), 337)
+        self.assertEqual(len(selector_payload["routeAuthority"]), 336)
         self.assertTrue(selector_payload["catalogDigest"])
         self.assertTrue(selector_payload["catalogSourceIdentity"]["digest"])
         self.assertEqual(
@@ -1843,6 +1843,20 @@ jobs:
         self.assertIn("full|pr-fast|pr-smoke|demo|deploy-minimal", workflow)
         self.assertIn("unknown verification profile", workflow)
         self.assertIn("exit 2", workflow[validation_index:setup_python_index])
+
+    def test_deploy_minimal_installs_locked_node_dependencies_before_pages_build(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        setup_node_index = workflow.index("- name: Setup Node")
+        install_node_index = workflow.index("- name: Install Node dependencies")
+        build_pages_index = workflow.index("- name: Build Pages dist")
+        setup_node_step = workflow[setup_node_index:install_node_index]
+        install_node_step = workflow[install_node_index:build_pages_index]
+
+        self.assertIn("inputs.profile == 'deploy-minimal'", setup_node_step)
+        self.assertIn("inputs.profile == 'deploy-minimal'", install_node_step)
+        self.assertIn("run: npm ci", install_node_step)
+        self.assertLess(setup_node_index, install_node_index)
+        self.assertLess(install_node_index, build_pages_index)
 
     def test_nightly_and_release_consumers_call_one_canonical_command(self) -> None:
         cases = {
