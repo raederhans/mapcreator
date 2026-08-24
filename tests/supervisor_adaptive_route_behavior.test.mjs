@@ -111,8 +111,8 @@ test("primary polar water outputs stay on the heavy spherical safety route", () 
 
   assert.deepEqual(report.unmatchedChangedFiles, []);
   assert.ok(route);
-  assert.deepEqual(route.domains, ["geo-contract"]);
-  assert.deepEqual(route.ownerHints, ["polar-water-spherical-safety"]);
+  assert.deepEqual(route.domains, ["geo-contract", "tno-water"]);
+  assert.deepEqual(route.ownerHints, ["polar-water-spherical-safety", "tno-water"]);
   assert.deepEqual(route.executionOwners, ["main-thread"]);
   assert.deepEqual(route.resourceLocks, [".runtime-output", "heavy-geo"]);
 });
