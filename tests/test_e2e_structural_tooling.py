@@ -1878,6 +1878,13 @@ jobs:
                 self.assertIn("workflow_dispatch:", workflow)
                 self.assertIn("concurrency:", workflow)
                 self.assertIn(expected["timeout"], workflow)
+                checkout_step = next(step for step in parse_job_steps(
+                    parse_workflow_job_blocks(workflow)[
+                        "verify-nightly" if filename == "nightly-verification.yml" else "verify-release"
+                    ]
+                ) if step.get("name") == "Checkout")
+                checkout_body = "\n".join(str(line) for line in checkout_step["lines"])
+                self.assertIn("          fetch-depth: 0", checkout_body)
                 self.assertEqual(workflow.count(expected["command"]), 1)
                 self.assertEqual(len(re.findall(r"npm run verify:[A-Za-z0-9:_-]+", workflow)), 1)
                 self.assertIn("if: always()", workflow)
