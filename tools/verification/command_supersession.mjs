@@ -56,9 +56,6 @@ export const LEGACY_VERIFICATION_COMMAND_SUPERSESSION = Object.freeze({
     "test:node:renderer-render-phase-lifecycle",
     "test:node:zoom-interaction-lifecycle-owner",
   ]),
-  "test:node:hit-canvas-scheduling-owner-suite": Object.freeze([
-    "test:node:renderer-hit-canvas-scheduling-inventory",
-  ]),
   "verify:tno-coverage-chain": Object.freeze([
     "verify:scenario-contracts:strict",
     "verify:tno-coverage-ledger",

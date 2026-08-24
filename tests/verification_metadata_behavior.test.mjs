@@ -37,13 +37,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 334);
-  assert.equal(summary.contributorRecords, 420);
-  assert.equal(summary.verificationRecordProjectionCount, 129);
-  assert.equal(summary.routeProjectionCount, 378);
-  assert.equal(summary.commandCount, 337);
+  assert.equal(summary.packageScriptCount, 333);
+  assert.equal(summary.contributorRecords, 418);
+  assert.equal(summary.verificationRecordProjectionCount, 128);
+  assert.equal(summary.routeProjectionCount, 377);
+  assert.equal(summary.commandCount, 336);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 420);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 418);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -63,7 +63,7 @@ test("authored catalog source covers command authority, policies, and every proj
     assert.ok(VERIFICATION_METADATA_SOURCE.entrypointPolicies[entry.entrypointPolicyIndex]);
   }
   assert.equal(VERIFICATION_METADATA_SOURCE.estimatePolicy.kind, "verification-estimate-policy");
-  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 15);
+  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 14);
 });
 
 test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
@@ -892,13 +892,12 @@ test("verify-core default plan preserves metadata closure before command superse
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 89);
+  assert.equal(metadataDefaultRefs.length, 88);
   assert.equal(plan.commandsToRun.length, 82);
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [
       "test:node:renderer-render-phase-lifecycle",
-      "test:node:renderer-hit-canvas-scheduling-inventory",
       "test:node:zoom-interaction-lifecycle-owner",
       "test:node:scenario-chunk-contracts",
       "test:node:scenario-apply-transaction-ownership",

@@ -135,10 +135,9 @@ const PACKAGE_SCRIPTS = {
   "test:python:map-renderer-click-selection-transaction-boundary": "npm run python -- -m unittest tests.test_map_renderer_click_selection_transaction_boundary_contract -q",
   "test:node:render-pass-catalog": "node --test tests/render_pass_catalog_behavior.test.mjs",
   "test:node:render-pipeline-catalog": "node --test tests/render_pipeline_catalog_behavior.test.mjs",
-  "test:node:renderer-hit-canvas-scheduling-inventory": "node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
   "test:node:render-pass-cache-host-owner-suite": "npm run test:node:render-pass-cache-host-owner && npm run test:node:render-pass-cache-host-owner-inventory && npm run test:node:renderer-render-pass-cache-host-inventory",
   "test:node:render-pass-commit-accounting-owner-suite": "npm run test:node:render-pass-commit-accounting-owner && npm run test:node:render-pass-commit-accounting-inventory",
-  "test:node:hit-canvas-scheduling-owner-suite": "npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && npm run test:node:renderer-hit-canvas-scheduling-inventory",
+  "test:node:hit-canvas-scheduling-owner-suite": "npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
   "test:node:map-interaction-event-binding-owner": "node --test tests/map_interaction_event_binding_owner_behavior.test.mjs",
   "test:node:visible-frame-diagnostics": "npm run test:node:visible-frame-diagnostics-owner && npm run test:node:visible-frame-diagnostics-inventory",
   "test:node:render-cache-owner": "node --test tests/render_cache_owner_invalidation_behavior.test.mjs",
@@ -533,11 +532,11 @@ test("default core plan applies strict command closure without changing test cov
     )),
   )].sort();
 
-  assert.equal(rawPlan.commandsToRun.length, 89);
+  assert.equal(rawPlan.commandsToRun.length, 88);
   assert.equal(plan.commandsToRun.length, 82);
-  assert.equal(rawLeaves.length, 105);
+  assert.equal(rawLeaves.length, 104);
   assert.equal(retainedLeaves.length, 97);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 71);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 70);
   assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 63);
   assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
   assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
@@ -545,7 +544,6 @@ test("default core plan applies strict command closure without changing test cov
   assert.deepEqual(
     plan.supersededCommands.map(({ commandRef }) => commandRef).sort(),
     [
-      "test:node:renderer-hit-canvas-scheduling-inventory",
       "test:node:renderer-render-phase-lifecycle",
       "test:node:scenario-apply-transaction-ownership",
       "test:node:scenario-chunk-contracts",
@@ -1479,9 +1477,6 @@ const STRICT_COMMAND_CLOSURE_SUPERSESSION = Object.freeze({
   "test:node:p4:p4-3": Object.freeze([
     "test:node:renderer-render-phase-lifecycle",
     "test:node:zoom-interaction-lifecycle-owner",
-  ]),
-  "test:node:hit-canvas-scheduling-owner-suite": Object.freeze([
-    "test:node:renderer-hit-canvas-scheduling-inventory",
   ]),
 });
 

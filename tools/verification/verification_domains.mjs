@@ -2807,7 +2807,6 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     "test:node:render-pipeline-catalog",
     "test:node:renderer-render-request-boundary",
     "test:node:renderer-render-phase-lifecycle",
-    "test:node:renderer-hit-canvas-scheduling-inventory",
     "test:node:render-pass-cache-host-owner-suite",
     "test:node:render-pass-commit-accounting-owner-suite",
     "test:node:hit-canvas-scheduling-owner-suite",

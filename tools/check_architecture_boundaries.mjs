@@ -4286,7 +4286,7 @@ function collectFailures() {
     "only P47 production hit canvas scheduling owner and no broad render lifecycle owner exist",
     "schedule wrapper must keep old falsy contract",
     "scenario refresh runtime must keep injected hit canvas scheduling boundary",
-    "package exposes P47 hit canvas scheduling scripts",
+    "package exposes the canonical P47 hit canvas scheduling suite",
   ]) {
     if (!rendererHitCanvasSchedulingInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererHitCanvasSchedulingInventoryTest} must lock P47 scheduling inventory token: ${token}`);
@@ -4295,12 +4295,14 @@ function collectFailures() {
   for (const token of [
     "\"test:node:hit-canvas-scheduling-owner\": \"node --test tests/hit_canvas_scheduling_owner_behavior.test.mjs\"",
     "\"test:node:hit-canvas-scheduling-owner-inventory\": \"node --test tests/hit_canvas_scheduling_owner_inventory.test.mjs\"",
-    "\"test:node:hit-canvas-scheduling-owner-suite\": \"npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && npm run test:node:renderer-hit-canvas-scheduling-inventory\"",
-    "\"test:node:renderer-hit-canvas-scheduling-inventory\": \"node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs\"",
+    "\"test:node:hit-canvas-scheduling-owner-suite\": \"npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs\"",
   ]) {
     if (!packageJson.includes(token)) {
       failures.push(`${FILES.packageJson} must expose P47 hit canvas scheduling script: ${token}`);
     }
+  }
+  if (packageJson.includes("\"test:node:renderer-hit-canvas-scheduling-inventory\":")) {
+    failures.push(`${FILES.packageJson} must keep the superseded P47 inventory alias retired.`);
   }
   if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
     failures.push("P47 must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");

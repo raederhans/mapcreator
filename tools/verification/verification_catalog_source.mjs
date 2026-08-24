@@ -282,8 +282,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:renderer-render-phase-lifecycle": "npm run test:node:renderer-render-phase-lifecycle-owner && npm run test:node:renderer-render-phase-lifecycle-inventory",
     "test:node:hit-canvas-scheduling-owner": "node --test tests/hit_canvas_scheduling_owner_behavior.test.mjs",
     "test:node:hit-canvas-scheduling-owner-inventory": "node --test tests/hit_canvas_scheduling_owner_inventory.test.mjs",
-    "test:node:hit-canvas-scheduling-owner-suite": "npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && npm run test:node:renderer-hit-canvas-scheduling-inventory",
-    "test:node:renderer-hit-canvas-scheduling-inventory": "node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
+    "test:node:hit-canvas-scheduling-owner-suite": "npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
     "test:node:map-hover-interaction-owner": "node --test tests/map_hover_interaction_owner_behavior.test.mjs",
     "test:node:map-hover-interaction-inventory": "node --test tests/map_hover_interaction_owner_inventory.test.mjs",
     "test:node:map-hover-interaction": "npm run test:node:map-hover-interaction-owner && npm run test:node:map-hover-interaction-inventory",
@@ -718,9 +717,6 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:p4:p4-3": [
       "test:node:renderer-render-phase-lifecycle",
       "test:node:zoom-interaction-lifecycle-owner"
-    ],
-    "test:node:hit-canvas-scheduling-owner-suite": [
-      "test:node:renderer-hit-canvas-scheduling-inventory"
     ],
     "verify:tno-coverage-chain": [
       "verify:scenario-contracts:strict",
@@ -7591,38 +7587,6 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
       "selectorOrder": 256,
-      "verification": null,
-      "selector": {}
-    },
-    {
-      "id": "node:test:node:renderer-hit-canvas-scheduling-inventory",
-      "commandRef": "test:node:renderer-hit-canvas-scheduling-inventory",
-      "sourceRefs": [
-        "tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs"
-      ],
-      "ownerHints": [
-        "renderer-runtime"
-      ],
-      "domains": [
-        "renderer-runtime"
-      ],
-      "tiers": [
-        "contract"
-      ],
-      "cost": "fast",
-      "resourceLocks": [],
-      "executionOwners": [
-        "child-safe"
-      ],
-      "profiles": [
-        "pr-fast"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "entrypointPolicyIndex": 4,
-      "verificationOrder": null,
-      "selectorOrder": 300,
       "verification": null,
       "selector": {}
     },
@@ -15584,44 +15548,6 @@ const AUTHORED_VERIFICATION_METADATA = {
         "routeRegistry": true
       },
       "selector": {}
-    },
-    {
-      "id": "verify-core:test:node:renderer-hit-canvas-scheduling-inventory",
-      "commandRef": "test:node:renderer-hit-canvas-scheduling-inventory",
-      "sourceRefs": [
-        "package.json",
-        "tests/verify_core_runner_behavior.test.mjs"
-      ],
-      "ownerHints": [
-        "renderer-runtime"
-      ],
-      "domains": [
-        "renderer-runtime"
-      ],
-      "tiers": [
-        "contract"
-      ],
-      "cost": "fast",
-      "resourceLocks": [],
-      "executionOwners": [
-        "child-safe"
-      ],
-      "profiles": [
-        "pr-fast"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "entrypointPolicyIndex": 4,
-      "verificationOrder": 103,
-      "selectorOrder": null,
-      "verification": {
-        "commandType": "package-script",
-        "packageScriptRequired": true,
-        "verifyCoreDefaultGroup": "renderer-owner",
-        "supervisorDomain": "renderer-runtime"
-      },
-      "selector": null
     },
     {
       "id": "verify-core:test:node:renderer-pass-family-inventory",

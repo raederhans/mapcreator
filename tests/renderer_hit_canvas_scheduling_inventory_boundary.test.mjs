@@ -303,15 +303,19 @@ test("public facade and state-write allowlist remain closed to hit canvas owner"
   }
 });
 
-test("package exposes P47 hit canvas scheduling scripts", () => {
+test("package exposes the canonical P47 hit canvas scheduling suite", () => {
   const packageSource = readRepoFile("package.json");
 
   for (const token of [
     "\"test:node:hit-canvas-scheduling-owner\": \"node --test tests/hit_canvas_scheduling_owner_behavior.test.mjs\"",
     "\"test:node:hit-canvas-scheduling-owner-inventory\": \"node --test tests/hit_canvas_scheduling_owner_inventory.test.mjs\"",
-    "\"test:node:hit-canvas-scheduling-owner-suite\": \"npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && npm run test:node:renderer-hit-canvas-scheduling-inventory\"",
-    "\"test:node:renderer-hit-canvas-scheduling-inventory\": \"node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs\"",
+    "\"test:node:hit-canvas-scheduling-owner-suite\": \"npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs\"",
   ]) {
     assertIncludes(packageSource, token, "package.json must expose P47 scheduling script");
   }
+  assertExcludes(
+    packageSource,
+    "\"test:node:renderer-hit-canvas-scheduling-inventory\":",
+    "package.json must keep the superseded P47 inventory alias retired",
+  );
 });
