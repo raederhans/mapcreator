@@ -1134,6 +1134,9 @@ export function checkVerificationCatalogConsistency(catalog, {
       });
     } catch (error) {
       const message = String(error?.message || error);
+      if (message === `verification-plan-platform-mismatch:${commandRef}:${platform}`) {
+        continue;
+      }
       selectorPlanFailures.push({ commandRef, error: message });
       const unclassified = /^verification-plan-unclassified-leaf:(.+)$/.exec(message);
       if (unclassified) unclassifiedCatalogEntries.add(unclassified[1]);

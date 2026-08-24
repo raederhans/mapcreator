@@ -656,6 +656,36 @@ test("normalizes Windows and Unix leaf paths without changing module names", () 
   assert.deepEqual(catalog.entries[0].platforms, ["win32"]);
 });
 
+test("catalog consistency accepts selector leaves that target another platform", () => {
+  const packageScripts = {
+    windows: "powershell.exe -File tools/check.ps1",
+  };
+  const selectorRoutes = [{
+    ...route("windows", "windows", { platforms: ["win32"] }),
+    id: "fixture:windows",
+    layer: "contract",
+  }];
+  const catalog = buildVerificationCatalog({
+    packageScripts,
+    selectorRoutes,
+    platform: "linux",
+  });
+  const consistency = checkVerificationCatalogConsistency(catalog, {
+    packageScripts,
+    selectorRoutes,
+    platform: "linux",
+  });
+  assert.equal(consistency.consistent, true);
+  assert.deepEqual(consistency.selectorPlanFailures, []);
+  assert.throws(
+    () => buildVerificationSelectionPlan(catalog, ["windows"], {
+      allowUnverifiedCatalog: true,
+      platform: "linux",
+    }),
+    /verification-plan-platform-mismatch:windows:linux/,
+  );
+});
+
 test("reports mechanical consistency gaps across catalog, scripts, and route records", () => {
   const scripts = {
     a: "node --test tests/a.test.mjs",
