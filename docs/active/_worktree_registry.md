@@ -1,5 +1,16 @@
 # Worktree Registry
 
+## SC P0-P3 integration snapshot — 2026-08-24
+
+- Primary integration worktree: `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator` on `codex/sc-p0-p3-integration-20260824`, based on `origin/main@a6833008`.
+- Integrated lineage: P0 `12b4a243`, P1/P2 `929b0ae1`, combined catalog-authority seam `b69ff0b5`, followed by this task-record closeout.
+- Auxiliary user-visible tasks: P0 `01a032dd-a0c8-7203-be07-9dc2c208e265` / worktree `9cb3`; P1/P2 `01a032dd-a0d6-70d2-a358-cfc79b4bcaa5` / worktree `9e29`; P3 plan `01a032dd-a0c8-7203-be07-9de998edb850` / worktree `4760`.
+- Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` stays on `codex/preserved-main-wip-20260823` with its 20 tracked modifications untouched.
+- Integration action: finish the bounded combined checks, fetch and require `origin/main` to remain at the recorded base, push normally to `origin/main`, verify exact SHA equality, and observe the workflows triggered by that SHA. No force-push, production-manual deployment, or remote-history rewrite is authorized.
+- P3 disposition: planning complete only. Start P3.1 serially after this integration closes; the five-slice plan and acceptance/deletion gates live in `docs/active/test-verification-reform-20260813/plan.md`.
+
+The older 2026-08-14 registry snapshot below is retained as historical evidence and is not the current topology authority.
+
 Last updated: 2026-08-14. Local `main@a4f18020` is the single checked-out worktree and contains the integrated P4.3 verification-runner lineage, Windows Job V2 containment, projected-bounds cache atomicity repair, P4 policy test parallelization, and resolved archive cleanup. Refreshed `origin/main@5461c24a` is an ancestor of local main by 65 commits. The final clean-main full P4 admission and `origin/main` push remain in progress under the primary integration owner.
 
 ## Integration Owner

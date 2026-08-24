@@ -232,3 +232,18 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Live owner | Root exclusively owns browser, Playwright, performance, power-scheme, ports 8000/8892, and `.runtime/admission` outputs. No live process is currently running. |
 | Stop condition | A deterministic failure is repaired before review. Any live invalid-experiment, regression, harness fault, cleanup uncertainty, revision drift, or remote divergence stops admission and downstream phases. |
 | Next checkpoint | Root commits these task records, freezes the third exact candidate ref, moves the clean review worktree to that SHA, and hands the cumulative boundary plus all three P2 acceptance clusters to the existing independent review task for two fresh explicit `CLEAR` verdicts. |
+
+## 2026-08-24 P0-P3 handoff context
+
+| Item | Current evidence |
+| --- | --- |
+| Integration owner | `codex/sc-p0-p3-integration-20260824` in `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator`, based on `origin/main@a6833008`. |
+| Preserved parent WIP | `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823`; its 20 tracked modifications were not staged, modified, or discarded. |
+| P0 task | Thread `01a032dd-a0c8-7203-be07-9dc2c208e265`, worktree `9cb3`, delivery commit integrated as `12b4a243`. |
+| P1/P2 task | Thread `01a032dd-a0d6-70d2-a358-cfc79b4bcaa5`, worktree `9e29`, delivery commit integrated as `929b0ae1`. |
+| P3 planning task | Thread `01a032dd-a0c8-7203-be07-9de998edb850`, worktree `4760`; read-only plan, no code/test/build changes. |
+| Combined seam | `b69ff0b5` records the polar heavy-group contributor in the canonical metadata source; shadow comparison returns `equal=true`, `zeroSpawn=true`, and no mismatches. |
+| P0 bounded evidence | Minimum CI heavy-test count is 14; four focused scenario contract tests pass; four strict scenario ratifications are idempotent; five scenario provenance records bind topology blob SHA-256 `fb14c9f8...5bacd9`. |
+| Blank-base boundary | Public materialization is byte-identical across two runs and the default contract passes. Strict mode still reports the three pre-existing ownerless/Arctic semantic gaps; no contract was weakened. |
+| P1 boundary | Observation only. It is not evidence for full/nightly/browser/Pages/performance/long-matrix admission. |
+| P3 next action | Start only P3.1 Day/Night Runtime Owner from the plan's exact boundary; do not overlap P3.2-P3.5 or delete tests before the five-part deletion gate passes. |

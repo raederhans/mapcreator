@@ -140,6 +140,56 @@ The repair acceptance boundary keeps performance thresholds, retry policy, power
 
 Stage 5b remains open. The single Williams attempt exited `3` after block 01 produced 4/32 raw samples and 0/8 completed blocks. The control baseline rejected the Williams two-run configuration against the canonical five-run role contract, and Windows PowerShell 5.1 failed to decode the BOM-less UTF-8 lifecycle journal with its default reader. Final report generation, performance acceptance, push, and remote CI stayed beyond the fail-closed admission boundary.
 
+## P3 business-complexity reduction plan — 2026-08-24
+
+P3 is planning-only in this delivery. The measured baseline is `origin/main@a6833008`: `js/core/map_renderer.js` has 23,153 split lines and the architecture ceiling is 23,154. Execute the following slices serially; each slice receives its own behavioral candidate, focused review, exact selector proof, and integration checkpoint before the next slice starts.
+
+### Invariants for every slice
+
+- Preserve the public renderer facade, state-write guardrail, event funnel, scenario/data provenance, canonical catalog/route authority, and Pages source/dist drift contract.
+- Keep orchestration and dependency injection in `map_renderer.js`; move one coherent runtime owner at a time. Do not introduce a second state authority, compatibility facade, retry, timeout increase, or allowlist widening.
+- Demonstrate behavior with a hostile fixture or mutation that would fail if ownership or ordering regressed. Source-shape tests alone are insufficient.
+- Run the smallest owner behavior and boundary checks first, then metadata/shadow/architecture, then the exact adaptive selection. Browser, Pages, performance, or main-thread lanes run only when the slice touches their actual contract.
+- Do not begin the next slice until the current candidate is committed, focused review is clear, and the integration boundary is recorded.
+
+### Serial slices and budgets
+
+| Slice | New owner and source boundary | Required result | Cumulative `map_renderer.js` ceiling |
+| --- | --- | --- | --- |
+| P3.1 Day/Night Runtime Owner | Add `js/core/renderer/day_night_runtime_owner.js`; extract the UTC/date/cycle, solar calculation, day/night rendering, and scheduler block currently around lines 14,344-14,623. | City Lights keeps light layout/draw/cache/fallback ownership; visual-effects keeps pass order; renderer keeps injection/getters/delegation. Remove only the three confirmed zero-reference facades `getModernDayNightNumber`, `drawLightEllipse`, and `drawModernNightLightsLayer`. Net reduction at least 220 lines. | 22,933 |
+| P3.2 Texture Effects Render Owner | Extract the texture/effects render block around lines 14,626-15,147 into one owner. | Preserve texture-label/effect order, cache identity, canvas state restoration, and City Lights interaction. Net reduction at least 430 lines. | 22,503 |
+| P3.3 Click Selection Transaction Owner | Extract `handleClick` transaction orchestration around lines 22,169-22,595. | Preserve the single event funnel, hit priority, selection/state transaction ordering, public facade, and render invalidation semantics. Net reduction at least 360 lines. | 22,143 |
+| P3.4 Political Background Render Owner | Extract the political background render block around lines 15,148-16,212. | Preserve full-pass ordering, color/source provenance, worker-disabled behavior, diagnostics, and state-write authority. Net reduction at least 850 lines. | 21,293 |
+| P3.5 Political Partial-Repaint / Worker Engine | Extract the partial-repaint and worker engine block around lines 16,213-17,186. | Preserve worker packet/result schemas, accepted-callback exceptions, coarse/fine error propagation, progressive recovery, opaque visible-item forwarding, and scheduling. Net reduction at least 780 lines. | 20,513 |
+
+The total planned reduction is at least 2,640 lines. P3.1 is the recommended first implementation because it has the narrowest ownership seam and the lowest interaction risk.
+
+### P3.1 exact first-candidate boundary
+
+- Retain `toRgbaString` and `getSignedHashUnit`; current consumers make them non-deletable.
+- Keep City Lights drawing/cache/fallback code in its existing owner and pass only the day/night runtime inputs and delegates needed by the new owner.
+- After behavior shadowing, consider removing duplicated City Lights source-shape coverage and the `test:node:modern-city-lights-owner` alias only through the deletion gate below.
+- Diagnose the current renderer-owner selector conflict `verification-plan-leaf-conflict:python-unittest:tests.test_map_renderer_interaction_context_boundary_contract:executionOwner` before executing the all-renderer-owner group. Also decide canonically whether City Lights behavior belongs in the default renderer-owner group; do not patch around the conflict in a local test command.
+
+### Test-deletion gate
+
+An old test or alias may be removed only when all five conditions are true:
+
+1. A new behavior test covers the same externally meaningful contract.
+2. A hostile fixture or mutation proves the new test detects the relevant break.
+3. The canonical route selects the new test for the changed production source.
+4. Old source-shape and new behavior coverage both pass once on the same frozen SHA.
+5. Removing the old entry leaves the adaptive production selection complete with zero unmatched files and route gaps.
+
+### Per-slice acceptance ladder
+
+1. Owner behavior and failure-path tests.
+2. Existing renderer boundary, state-write, and public-facade contracts affected by the slice.
+3. Verification metadata shadow equality, script-portfolio check, and architecture budgets.
+4. Exact SF-ATS dry-run for the frozen changed-file set; execute child-safe groups and report every deferred main-thread/CI-only root.
+5. Pages source/dist parity, focused browser lane, or performance admission only when selected by the real changed-source contract.
+6. Findings-first review of the exact committed candidate, then serial integration and task-record closeout.
+
 ## Williams nested-admission alignment repair — 2026-08-21
 
 - [x] Reproduce and mechanically cover the contract gap where the Williams pre-block quiet window admits an environment that the immediately following standard performance admission rejects.

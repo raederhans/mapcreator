@@ -191,3 +191,15 @@ Current artifacts:
 - post-P2 SF-ATS evidence: `.runtime/reports/generated/sc-841801cd-p2-closure/`
 - second coordinated review: `C:\Users\raede\.codex\worktrees\abb8\mapcreator\.runtime\reviews\sc-49492284-followup\`
 - second-review P2 SF-ATS evidence: `.runtime/reports/generated/sc-49492284-p2-test-closure/`
+
+## 2026-08-24 SC P0-P3 continuation
+
+- [x] P0: restore the minimum-CI heavy dependency classification for polar-water spherical safety, ratify the four strict public scenarios, and refresh the five scenario provenance bindings against the current topology blob.
+- [x] P0: regenerate `blank_base` through the public materializer twice and confirm byte identity; retain the three pre-existing strict semantic gaps as explicit follow-up instead of weakening the contract.
+- [x] P1: perform only the requested lightweight observation: 333 scripts after P2, one 18-command selector sample, zero duplicate commands, zero unmatched files, and zero route gaps. This is not full/nightly/browser/Pages/performance evidence.
+- [x] P2: remove only `test:node:renderer-hit-canvas-scheduling-inventory`; inline its third independent Node process into the canonical owner suite while preserving execution files, order, and process boundaries.
+- [x] P2: classify the remaining 28 superseded scripts rather than force-delete them: 12 P4 direct-runner, 6 adaptive child-safe, 3 supervisor-direct, and 7 diagnostic/report entries.
+- [x] Combined seam: add the new heavy-group polar route to the canonical verification metadata authority. Shadow comparison is zero-spawn and equal; 378 routes reconcile to the same 336 commands, 432 catalog entries, 403 leaves, and 29 suites.
+- [x] P3: complete planning only. The five serial renderer slices, ownership boundaries, reduction budgets, deletion gates, and verification ladder are recorded in `plan.md`; no P3 production code, generated dist, browser run, or performance run was performed.
+
+Delivery commits in the integration lineage are `12b4a243` (P0), `929b0ae1` (P1/P2), and `b69ff0b5` (combined catalog seam). Normal `origin/main` synchronization is owned by the primary integration task after the final combined checks.
