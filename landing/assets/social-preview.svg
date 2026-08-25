@@ -35,7 +35,7 @@
     <path d="M14 33c7-7 17-11 29-12" fill="none" stroke="url(#logo-mark)" stroke-width="3" stroke-linecap="round" />
   </g>
   <text x="138" y="95" fill="#f4ede4" font-family="Manrope, Segoe UI, Arial, sans-serif" font-size="30" font-weight="800" letter-spacing="-.4">Scenario Forge</text>
-  <text x="72" y="224" fill="#f4ede4" font-family="Manrope, Segoe UI, Arial, sans-serif" font-size="62" font-weight="800" letter-spacing="-1.8">Forge political maps</text>
+  <text x="72" y="224" fill="#f4ede4" font-family="Manrope, Segoe UI, Arial, sans-serif" font-size="50" font-weight="800" letter-spacing="-1.2">Forge political maps</text>
   <text x="72" y="292" fill="#d99a45" font-family="Fraunces, Georgia, serif" font-size="66" font-weight="700" letter-spacing="-1.2">that feel alive.</text>
   <rect x="74" y="326" width="72" height="4" rx="2" fill="#147f77" />
   <text x="72" y="374" fill="#b9cbd0" font-family="Manrope, Segoe UI, Arial, sans-serif" font-size="23" font-weight="600">Scenario-first political maps for</text>

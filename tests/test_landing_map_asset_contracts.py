@@ -291,6 +291,7 @@ class JapanWorkMapSemanticsTests(unittest.TestCase):
         self.assertIn("data/world_cities.geojson", metadata["sources"])
         self.assertIn('class="urban-anchors"', svg)
         self.assertNotIn('class="night-lights"', svg)
+        self.assertIn(">CENTRAL JAPAN TRANSPORT ATLAS</text>", svg)
 
 
 if __name__ == "__main__":

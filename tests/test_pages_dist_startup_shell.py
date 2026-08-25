@@ -281,13 +281,33 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "data/city_lights/historical_1930_entries.json",
         }
         self.assertEqual(set(payload["sources"]), expected_sources)
-        self.assertEqual(payload["scope"]["profile"], "japan main corridor")
+        self.assertEqual(payload["scope"]["profile"], "Japan main-islands preview")
+        self.assertIn("Okinawa is outside this frame", payload["scope"]["note"])
+        self.assertEqual(
+            payload["carrier_binding"],
+            {
+                "cross_mask_policy": "caller-must-provide-frame-for-lines-and-polygons",
+                "fit_geometry_type": "MultiPolygon",
+                "frame_id": "main",
+                "frame_label": "Japan four islands",
+                "source_file": "data/transport_layers/japan_corridor/carrier.json",
+            },
+        )
         self.assertEqual(payload["projection"]["name"], "geoConicConformal")
         self.assertEqual(payload["projection"]["center"], [136.5, 35.0])
         self.assertEqual(payload["projection"]["parallels"], [33.0, 37.0])
+        self.assertGreater(payload["projection"]["fit_scale"], 0)
+        self.assertEqual(payload["projection"]["scale_semantics"], "projection fit from carrier coordinates to SVG pixels")
+        self.assertEqual(payload["ui_zoom"]["ownership"], "landing/app.js consumer")
         self.assertEqual(payload["selection_policy"]["road_limit"], 260)
         self.assertEqual(payload["selection_policy"]["rail_limit"], 160)
         self.assertEqual(payload["selection_policy"]["main_corridor_limit"], 1)
+        self.assertEqual(payload["selection_policy"]["main_corridor_role"], "highlighted motorway")
+        self.assertEqual(payload["selection_policy"]["highlighted_motorway_ref"], "C4")
+        self.assertEqual(
+            payload["selection_policy"]["clip_frame"],
+            "carrier.frames.main.fitGeometry for lines, polygons, and points",
+        )
         self.assertEqual(payload["selection_policy"]["city_limit"], 32)
         self.assertEqual(payload["selection_policy"]["focus_city_names"], ["Tokyo", "Osaka", "Nagoya"])
         self.assertEqual(payload["counts"]["road_source_features"], 4794)
@@ -297,7 +317,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["counts"]["road_lines_rendered"], 260)
         self.assertEqual(payload["counts"]["rail_lines_rendered"], 160)
         self.assertEqual(payload["counts"]["main_corridor_paths_rendered"], 1)
-        self.assertEqual(len(payload["counts"]["main_corridor_titles"]), 1)
+        self.assertEqual(payload["counts"]["main_corridor_titles"], ["首都圏中央連絡自動車道 / C4"])
         self.assertGreater(payload["counts"]["city_source_features"], payload["counts"]["city_points_rendered"])
         self.assertGreater(payload["counts"]["city_eligible_points"], payload["counts"]["city_points_rendered"])
         self.assertEqual(payload["counts"]["city_points_rendered"], 32)
@@ -476,9 +496,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertEqual(payload["counts"], payload["feature_counts"])
                 if mode == "blank":
                     self.assertIn("data/scenarios/blank_base/manifest.json", payload["source_files"])
-                    self.assertIn("data/europe_topology.runtime_political_v1.json", payload["source_files"])
+                    self.assertIn("data/scenarios/blank_base/runtime_topology.topo.json", payload["source_files"])
+                    self.assertNotIn("data/europe_topology.runtime_political_v1.json", payload["source_files"])
                     self.assertIn("data/europe_land_bg.geojson", payload["source_files"])
                     self.assertTrue(payload["selection_policy"]["blank_canvas"])
+                    self.assertEqual(
+                        payload["selection_policy"]["runtime_topology_source"],
+                        "data/scenarios/blank_base/runtime_topology.topo.json",
+                    )
                     self.assertEqual(payload["selection_policy"]["land_simplify_tolerance"], 0.08)
                     self.assertEqual(payload["selection_policy"]["land_path_limit"], 8600)
                     self.assertEqual(payload["selection_policy"]["coastline_path_limit"], 1000)
@@ -487,7 +512,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertGreater(payload["feature_counts"]["land_paths"], 0)
                     self.assertGreater(payload["feature_counts"]["coastline_paths"], 0)
                     self.assertEqual(payload["feature_counts"]["land_path_limit"], 8600)
-                    self.assertEqual(payload["feature_counts"]["land_paths"], 8600)
+                    self.assertEqual(
+                        payload["feature_counts"]["land_paths"],
+                        min(
+                            payload["feature_counts"]["land_paths_available"],
+                            payload["feature_counts"]["land_path_limit"],
+                        ),
+                    )
                     self.assertEqual(payload["feature_counts"]["coastline_path_limit"], 1000)
                     self.assertEqual(payload["feature_counts"]["coastline_paths"], 1000)
                     self.assertGreater(
@@ -495,11 +526,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
                         payload["feature_counts"]["coastline_paths"],
                     )
                     self.assertGreater(payload["feature_counts"]["coastline_paths_dropped"], 0)
-                    self.assertGreater(
-                        payload["feature_counts"]["land_paths_available"],
-                        payload["feature_counts"]["land_paths"],
+                    self.assertEqual(
+                        payload["feature_counts"]["land_paths_dropped"],
+                        max(
+                            0,
+                            payload["feature_counts"]["land_paths_available"]
+                            - payload["feature_counts"]["land_path_limit"],
+                        ),
                     )
-                    self.assertGreater(payload["feature_counts"]["land_paths_dropped"], 0)
                     self.assertEqual(payload["territory_tags"], [])
                 else:
                     self.assertIn(f"data/scenarios/{scenario_id}/manifest.json", payload["source_files"])
@@ -527,9 +561,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn("data/europe_land_bg.geojson", payload["source_files"])
                     self.assertEqual(
                         payload["selection_policy"]["hero_geometry_source"],
-                        "runtime_topology base sea and political ownership crop",
+                        "runtime_topology political ownership crop",
                     )
-                    self.assertEqual(payload["selection_policy"]["atlantropa_overlay"], "disabled_for_landing_hero")
+                    self.assertEqual(
+                        payload["selection_policy"]["atlantropa_overlay"],
+                        "omitted_from_political_ownership_crop",
+                    )
                     self.assertEqual(
                         payload["selection_policy"]["base_underlay"],
                         "original Europe land and coastline for small Mediterranean islands",
@@ -540,19 +577,17 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     )
                     self.assertEqual(
                         payload["selection_policy"]["hero_capital_label_overrides"],
-                        {"BRG": "Nanzig", "SOV": "Moskau", "WRS": "Warshau"},
+                        {"BRG": "Nanzig"},
                     )
                     self.assertEqual(
                         payload["selection_policy"]["hero_capital_point_overrides"],
-                        {
-                            "BRG": [6.18496, 48.68439],
-                            "SOV": [37.61781, 55.75204],
-                            "WRS": [21.01178, 52.22977],
-                        },
+                        {"BRG": [6.18496, 48.68439]},
                     )
-                    for city_name in ("Madrid", "Kyiv", "Moskau", "Warshau", "Nanzig"):
+                    self.assertNotIn("SOV", payload["capital_tags"])
+                    self.assertIn("WRS", payload["capital_tags"])
+                    for city_name in ("Madrid", "Kyiv", "Severodvinsk", "Nanzig"):
                         self.assertIn(f">{city_name}</text>", svg_text)
-                    for replaced_name in ("Zagreb", "Bucharest", "Sofia", "Brussels"):
+                    for replaced_name in ("Moskau", "Warshau", "Zagreb", "Bucharest", "Sofia", "Brussels"):
                         self.assertNotIn(f">{replaced_name}</text>", svg_text)
                     self.assertEqual(payload["selection_policy"]["base_underlay_path_limit"], 360)
                     self.assertEqual(payload["selection_policy"]["base_underlay_coastline_limit"], 360)

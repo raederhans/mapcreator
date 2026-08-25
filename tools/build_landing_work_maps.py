@@ -562,7 +562,7 @@ def build_japan_corridor() -> None:
     nodes.append("  </g>")
     nodes.extend(
         [
-            '  <text x="34" y="398" fill="#f7ead0" font-family="Manrope, Arial, sans-serif" font-size="25" font-weight="900" letter-spacing="1.8">CENTRAL JAPAN LOCAL TRANSPORT ATLAS</text>',
+            '  <text x="34" y="398" fill="#f7ead0" font-family="Manrope, Arial, sans-serif" font-size="25" font-weight="900" letter-spacing="1.8">CENTRAL JAPAN TRANSPORT ATLAS</text>',
             '  <text x="34" y="53" fill="#cbe3e6" font-family="Manrope, Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.4" opacity=".78">roads · rail · stations · cities · terrain</text>',
         ]
     )
