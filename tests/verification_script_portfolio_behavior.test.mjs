@@ -55,9 +55,9 @@ test("canonical metadata source owns every projection and shadows the retained l
     verificationRecords: 131,
     routes: 380,
     commands: 338,
-    catalogEntries: 434,
-    leaves: 405,
-    suites: 29,
+    catalogEntries: 439,
+    leaves: 409,
+    suites: 30,
     portfolioScripts: 335,
     superseders: 14,
     supersessionEdges: 36,
@@ -1424,6 +1424,63 @@ test("City Lights layer keeps one canonical wrapper invocation beside the city a
     aggregateExecution.logicalArgv.includes("tests/e2e/city_lights_layer_regression.spec.js"),
     false,
   );
+});
+
+test("City rendering aggregate reuses one canonical layering invocation per spec", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+  const citySpecs = [
+    "tests/e2e/city_label_i18n_redraw.spec.js",
+    "tests/e2e/city_marker_visibility_regression.spec.js",
+    "tests/e2e/city_points_urban_runtime.spec.js",
+    "tests/e2e/city_reveal_plan_regression.spec.js",
+    "tests/e2e/city_urban_rendering_regression.spec.js",
+  ];
+  const wrappers = citySpecs.map((spec) => `node tools/e2e_layering.mjs run-spec ${spec}`);
+  const plan = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["test:e2e:city-rendering", ...wrappers],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  for (const spec of citySpecs) {
+    const executions = plan.executions.filter((entry) => entry.logicalArgv.includes(spec));
+    assert.equal(executions.length, 1, spec);
+    assert.deepEqual(executions[0].logicalArgv, [
+      "tools/e2e_layering.mjs",
+      "run-spec",
+      spec,
+    ]);
+  }
+});
+
+test("Scenario resilience keeps the canonical layering wrapper invocation", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+  const wrapper = "node tools/e2e_layering.mjs run-spec tests/e2e/scenario_apply_resilience.spec.js";
+  const plan = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["test:e2e:scenario-resilience", wrapper],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.deepEqual(
+    plan.rootRecords.map(({ commandRef, disposition }) => ({
+      commandRef,
+      disposition,
+    })),
+    [
+      { commandRef: "test:e2e:scenario-resilience", disposition: "planned" },
+      { commandRef: wrapper, disposition: "planned" },
+    ],
+  );
+  const resilienceExecutions = plan.executions.filter((entry) => (
+    entry.logicalArgv.includes("tests/e2e/scenario_apply_resilience.spec.js")
+  ));
+  assert.equal(resilienceExecutions.length, 1);
+  assert.deepEqual(resilienceExecutions[0].logicalArgv, [
+    "tools/e2e_layering.mjs",
+    "run-spec",
+    "tests/e2e/scenario_apply_resilience.spec.js",
+  ]);
 });
 
 test("plans distinct selector E2E roots by spec identity", () => {
