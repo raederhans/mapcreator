@@ -668,7 +668,9 @@ test("Day/Night actions have one registry owner and one live canonical handoff",
     }],
     recognizeCurrentContracts: false,
   });
-  assert.deepEqual(rawInventory.findings, []);
+  assert.ok(rawInventory.findings.some(({ reason }) => (
+    reason === "unsupported-call-mutation"
+  )), JSON.stringify(rawInventory.findings));
   assert.deepEqual(
     inventory.actionDelegations.map(({ actionExportName }) => actionExportName).sort(),
     ["setDayNightStyleConfigState", "setPendingDayNightRefreshState"],

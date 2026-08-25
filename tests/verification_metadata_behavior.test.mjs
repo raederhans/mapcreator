@@ -365,6 +365,8 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
     assert.ok(entry.sourceRefs.includes("tests/render_perf_metrics_runtime_owner_behavior.test.mjs"));
     assert.ok(entry.sourceRefs.includes("js/core/renderer/day_night_runtime_owner.js"));
     assert.ok(entry.sourceRefs.includes("tests/day_night_runtime_owner_behavior.test.mjs"));
+    assert.ok(entry.sourceRefs.includes("js/core/renderer/visual_effects_pass_owner.js"));
+    assert.ok(entry.sourceRefs.includes("tests/visual_effects_pass_owner_behavior.test.mjs"));
   }
 
   const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");

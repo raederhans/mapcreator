@@ -3554,6 +3554,7 @@ function analyzeBindingMutations(
   }
 
   function mutationDelegatingOwnerContractsForCurrentModule() {
+    if (!recognizeCurrentContracts) return [];
     const normalizedFilePath = String(filePath || "")
       .replaceAll("\\", "/")
       .replace(/^\.\//, "");
