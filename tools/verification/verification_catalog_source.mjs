@@ -3081,7 +3081,8 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/map_renderer/transformed_frame_compositor_owner.js",
         "js/core/renderer/visual_effects_pass_owner.js",
         "js/core/renderer/context_pass_orchestrator_owner.js",
-        "js/core/renderer/political_pass_orchestrator_owner.js"
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "perf-runtime"
@@ -6093,7 +6094,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "node:test:node:ocean-depth-layer-contracts",
       "commandRef": "test:node:ocean-depth-layer-contracts",
       "sourceRefs": [
-        "tests/ocean_depth_layer_contracts.test.mjs"
+        "tests/ocean_depth_layer_contracts.test.mjs",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "renderer-runtime"
@@ -11656,7 +11658,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "p3:political-pass:physical-layer-runtime",
       "commandRef": "test:e2e:physical-layer-runtime-contract",
       "sourceRefs": [
-        "js/core/renderer/political_pass_orchestrator_owner.js"
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "map-layer"
@@ -11697,7 +11700,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "p3:political-pass:progressive-recovery",
       "commandRef": "test:e2e:dev:political-progressive-recovery",
       "sourceRefs": [
-        "js/core/renderer/political_pass_orchestrator_owner.js"
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "renderer-runtime"
@@ -11739,6 +11743,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:node:scenario-chunk-contracts",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js",
         "tests/scenario_chunk_contracts.test.mjs"
       ],
       "ownerHints": [
@@ -11776,7 +11781,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "p3:political-pass:scenario-chunk-runtime",
       "commandRef": "test:e2e:dev:scenario-chunk-runtime",
       "sourceRefs": [
-        "js/core/renderer/political_pass_orchestrator_owner.js"
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "scenario-runtime"
@@ -11817,7 +11823,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "p3:political-pass:scenario-resilience",
       "commandRef": "test:e2e:scenario-resilience",
       "sourceRefs": [
-        "js/core/renderer/political_pass_orchestrator_owner.js"
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "scenario-runtime"
@@ -11858,7 +11865,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "p3:political-pass:tno-contracts",
       "commandRef": "test:e2e:tno-contracts",
       "sourceRefs": [
-        "js/core/renderer/political_pass_orchestrator_owner.js"
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "tno-startup"
@@ -11899,7 +11907,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "p3:political-pass:water-rendering",
       "commandRef": "test:e2e:water-rendering",
       "sourceRefs": [
-        "js/core/renderer/political_pass_orchestrator_owner.js"
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js"
       ],
       "ownerHints": [
         "scenario-runtime"
@@ -15238,6 +15247,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:node:political-pass-orchestrator-owner",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_background_render_owner.js",
         "tests/political_pass_orchestrator_owner_behavior.test.mjs",
         "docs/active/renderer-political-pass-orchestrator-owner-p3-3b-20260714.md",
         "package.json"

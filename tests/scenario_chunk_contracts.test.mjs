@@ -3714,6 +3714,12 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
       "renderer",
       "political_pass_orchestrator_owner.js",
     );
+    const politicalBackgroundOwnerSource = readRepoFile(
+      "js",
+      "core",
+      "renderer",
+      "political_background_render_owner.js",
+    );
     const cachedPassCompositorOwnerSource = readRepoFile("js", "core", "renderer", "cached_pass_compositor_owner.js");
     const scenarioManagerSource = readRepoFile("js", "core", "scenario_manager.js");
     const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
@@ -3760,27 +3766,27 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
             && body.includes("publishRenderDiagnostics();");
         })(),
       backgroundFillHelperKeepsScenarioMergeSplit:
-        /function drawPoliticalBackgroundFills\(options = \{\}\) \{[\s\S]*?if \(shouldUseScenarioPoliticalBackgroundMerge\(\)\) \{[\s\S]*?return drawScenarioPoliticalBackgroundFills\(options\);[\s\S]*?\}[\s\S]*?drawAdmin0BackgroundFills\(options\);/.test(rendererSource),
+        /function drawPoliticalBackgroundFills\(options = \{\}\) \{[\s\S]*?if \(shouldUseScenarioPoliticalBackgroundMerge\(\)\) \{[\s\S]*?return drawScenarioPoliticalBackgroundFills\(options\);[\s\S]*?\}[\s\S]*?drawAdmin0BackgroundFills\(options\);/.test(politicalBackgroundOwnerSource),
       backgroundFullPassCacheBuildsAndReplays:
-        /function getScenarioPoliticalBackgroundFullPassGroups\([\s\S]*?metricName = "scenarioPoliticalBackgroundCacheBuild"[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheReplay"[\s\S]*?recordRenderPerfMetric\(metricName/.test(rendererSource),
+        /function getScenarioPoliticalBackgroundFullPassGroups\([\s\S]*?metricName = "scenarioPoliticalBackgroundCacheBuild"[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundCacheReplay"[\s\S]*?recordRenderPerfMetric\(metricName/.test(politicalBackgroundOwnerSource),
       politicalRecoveryQualityDefaultsProgressiveWithExactOverride:
         rendererSource.includes('const POLITICAL_RECOVERY_QUALITY_PARAM = "political_recovery_quality";')
         && /function getPoliticalRecoveryQuality\(\) \{[\s\S]*?raw === POLITICAL_RECOVERY_QUALITY_EXACT[\s\S]*?POLITICAL_RECOVERY_QUALITY_EXACT[\s\S]*?POLITICAL_RECOVERY_QUALITY_PROGRESSIVE[\s\S]*?runtimeState\.politicalRecoveryQuality = resolved;[\s\S]*?return resolved;[\s\S]*?\}/.test(rendererSource),
       progressivePoliticalRecoveryUsesCoarseUnderlayAndDeferredFullCache:
-        rendererSource.includes("POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT")
+        politicalBackgroundOwnerSource.includes("POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT")
         && rendererSource.includes("POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS")
-        && rendererSource.includes('"progressive-political-full-cache-ready"')
-        && rendererSource.includes("function isScenarioPoliticalBackgroundFullPassCacheKeyReady")
-        && rendererSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
-        && rendererSource.includes("function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent")
-        && /function getScenarioPoliticalBackgroundFullPassIdentity\([\s\S]*?const sceneIdentity = getVisibleFrameIdentity\(transform\);[\s\S]*?sceneIdentity\.sceneGeneration[\s\S]*?sceneIdentity\.scenarioDataGeneration/.test(rendererSource)
-        && /function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent\(state, transform = runtimeState\.zoomTransform \|\| globalThis\.d3\?\.zoomIdentity\) \{[\s\S]*?const transformSignature = getTransformSignature\(transform\);[\s\S]*?String\(state\.transformSignature \|\| ""\) === transformSignature/.test(rendererSource)
-        && /function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\) \{[\s\S]*?state\.repaintDeferredRecorded = true;[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred"/.test(rendererSource)
-        && rendererSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
-        && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(rendererSource)
+        && politicalBackgroundOwnerSource.includes('"progressive-political-full-cache-ready"')
+        && politicalBackgroundOwnerSource.includes("function isScenarioPoliticalBackgroundFullPassCacheKeyReady")
+        && politicalBackgroundOwnerSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
+        && politicalBackgroundOwnerSource.includes("function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent")
+        && /function getScenarioPoliticalBackgroundFullPassIdentity\([\s\S]*?const sceneIdentity = getVisibleFrameIdentity\(transform\);[\s\S]*?sceneIdentity\.sceneGeneration[\s\S]*?sceneIdentity\.scenarioDataGeneration/.test(politicalBackgroundOwnerSource)
+        && /function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent\([\s\S]*?transform = getRuntimeState\(\)\.zoomTransform \|\| platform\.d3\?\.zoomIdentity[\s\S]*?const transformSignature = getTransformSignature\(transform\);[\s\S]*?String\(state\.transformSignature \|\| ""\) === transformSignature/.test(politicalBackgroundOwnerSource)
+        && /function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(deferredState\) \{[\s\S]*?deferredState\.repaintDeferredRecorded = true;[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred"/.test(politicalBackgroundOwnerSource)
+        && politicalBackgroundOwnerSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
+        && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(politicalBackgroundOwnerSource)
         && (() => {
-          const body = rendererSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n\}\r?\n\r?\nfunction scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
-          return body.includes("runtimeState.deferExactAfterSettle")
+          const body = politicalBackgroundOwnerSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n  \}\r?\n\s*function scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
+          return body.includes("getRuntimeState().deferExactAfterSettle")
             && body.includes("isExactAfterSettleControllerActive()")
             && body.includes("cache.dirty?.political")
             && body.includes('cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");')
@@ -3789,21 +3795,21 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
             && /!recoverySettled[\s\S]*?state\.index >= normalizedEntries\.length[\s\S]*?recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\);[\s\S]*?const startedAt = nowMs\(\)[\s\S]*?getPoliticalFeaturePathEntry\([\s\S]*?allowBuild: true/.test(body)
             && /if \(!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)\) \{[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork\([\s\S]*?runScenarioPoliticalBackgroundDeferredFullCacheSlice,[\s\S]*?\{ timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS \},[\s\S]*?\);[\s\S]*?recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\);[\s\S]*?return false;[\s\S]*?\}/.test(body);
         })()
-        && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(rendererSource)
+        && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(politicalBackgroundOwnerSource)
         && /const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?const progressiveRecoveryCoarseSkipCandidate = \([\s\S]*?coarseUnderlay \|\| ""\) === "admin0"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);[\s\S]*?if \(progressiveRecoveryCoarseSkipCandidate && !visiblePoliticalForegroundColorOverride\)/.test(politicalOwnerDrawSource)
         && /function clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedCount = 0,[\s\S]*?renderedIds = null,[\s\S]*?force = false,[\s\S]*?paintSource = "political-pass"[\s\S]*?\} = \{\}\) \{[\s\S]*?cache\.pendingPoliticalColorEditIds\.clear\(\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = -1;/.test(rendererSource)
         && /function drawPoliticalFeature\([\s\S]*?metricsCollector\.renderedIds instanceof Set[\s\S]*?metricsCollector\.renderedIds\.add\(id\);/.test(rendererSource)
         && /const featureMetrics = \{[\s\S]*?renderedIds: new Set\(\),[\s\S]*?\};[\s\S]*?return featureMetrics;/.test(politicalFineLoopSource)
         && /const featureMetrics = drawPoliticalFineFeatureLoop\([\s\S]*?recordRenderPerfMetric\("drawPoliticalFeatureFillLoop"[\s\S]*?recordRenderPerfMetric\("drawPoliticalFeatureStrokeLoop"[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: featureMetrics\.renderedIds,[\s\S]*?\}\);/.test(politicalOwnerDrawSource)
         && /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?const partialFeatureMetrics = \{[\s\S]*?renderedIds: new Set\(\),[\s\S]*?\};[\s\S]*?metricsCollector: partialFeatureMetrics,[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: partialFeatureMetrics\.renderedIds,[\s\S]*?\}\);/.test(rendererSource)
-        && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery"')
-        && rendererSource.includes('metricName: "scenarioPoliticalBackgroundDeferredFullCacheBuild"')
-        && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice"')
+        && politicalBackgroundOwnerSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery"')
+        && politicalBackgroundOwnerSource.includes('metricName: "scenarioPoliticalBackgroundDeferredFullCacheBuild"')
+        && politicalBackgroundOwnerSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice"')
         && politicalPassOwnerSource.includes('reason: "progressive-coarse-underlay"'),
       progressiveFullCacheReadyRequestsPoliticalRepaint:
         (() => {
-          const body = rendererSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n\}\r?\n\r?\nfunction scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
-          return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?const repaintRequested = requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?if \(rendererSurfaceHost\.getContext\(\)\) render\(\);[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest"[\s\S]*?repaintRequested: !!repaintRequested/.test(body);
+          const body = politicalBackgroundOwnerSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n  \}\r?\n\s*function scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
+          return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?recordProgressivePoliticalFullCacheReadyDiagnostics\(getRuntimeState\(\)[\s\S]*?const repaintRequested = requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?fallback: renderFallback,[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest"[\s\S]*?repaintRequested: !!repaintRequested/.test(body);
         })(),
       chunkedRuntimeSkipsBlockingDetailPromotion:
         /async function stageScenarioReadinessPatch\([\s\S]*?if \(startupReadonly \|\| supportsChunkedPoliticalRuntime\) \{[\s\S]*?detailPromoted: false,[\s\S]*?return stagedReadiness;/.test(scenarioApplyPipelineSource)
@@ -4021,6 +4027,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(40, "Atlantropa field-driven interaction contracts preserve explicit render and hit layers", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+    const politicalBackgroundOwnerSource = readRepoFile("js", "core", "renderer", "political_background_render_owner.js");
     const politicalFineLoopSource = extractRendererFunction(rendererSource, "drawPoliticalFineFeatureLoop");
     const projectedGeometryBoundsOwnerSource = readRepoFile("js", "core", "renderer", "projected_geometry_bounds_owner.js");
     const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
@@ -4091,11 +4098,11 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
       fieldDrivenAtlantropaUsesExplicitInteractionFlag:
         /function isAtlantropaSupportHelperFeature\(feature, featureId = null\) \{[\s\S]*?if \(isAtlantropaFieldDrivenFeature\(feature\)\) \{[\s\S]*?return feature\?\.properties\?\.atl_interactive !== true;[\s\S]*?\}/.test(rendererSource),
       backgroundMergeFiltersVisualHelpersButKeepsVisibleNonInteractiveLand:
-        /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(feature, id\)/.test(rendererSource)
-        && /function buildScenarioPoliticalBackgroundEntriesFromSpatialItems\(items = \[\]\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(entry\.feature, entry\.id\)/.test(rendererSource),
+        /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(feature, id\)/.test(politicalBackgroundOwnerSource)
+        && /function buildScenarioPoliticalBackgroundEntriesFromSpatialItems\(items = \[\]\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(entry\.feature, entry\.id\)/.test(politicalBackgroundOwnerSource),
       admin0BackgroundUsesDominantResolvedFillBeforeBaseColor:
         /function getAdmin0BackgroundFillColor\(countryCode\) \{[\s\S]*?const dominantFillColor = buildCountryDominantFillColorMap\(\)\.get\(canonicalCode\);[\s\S]*?return getSafeCanvasColor\(dominantFillColor, null\)[\s\S]*?getSafeCanvasColor\(getColorByCanonicalCountryCode\(runtimeState\.sovereignBaseColors, canonicalCode\), null\)[\s\S]*?getSafeCanvasColor\(getColorByCanonicalCountryCode\(runtimeState\.countryBaseColors, canonicalCode\), null\)[\s\S]*?\|\| LAND_FILL_COLOR;[\s\S]*?\}/.test(rendererSource)
-        && /function drawAdmin0BackgroundFills\([\s\S]*?const fillColor = getAdmin0BackgroundFillColor\(code\);/.test(rendererSource),
+        && /function drawAdmin0BackgroundFills\([\s\S]*?const fillColor = getAdmin0BackgroundFillColor\(code\);/.test(politicalBackgroundOwnerSource),
       colorCoverageOwnerDiagnosticsUseDisplayOwnerCode:
         /import\("\/js\/core\/feature_identity\.js"\)/.test(colorCoverageE2eSource)
         && /getCountryCode:\s*getSharedFeatureCountryCode/.test(colorCoverageE2eSource)
@@ -4125,18 +4132,18 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         && /const features = Array\.isArray\(state\.landDataFull\?\.features\) && state\.landDataFull\.features\.length[\s\S]*?\? state\.landDataFull\.features[\s\S]*?: \(Array\.isArray\(state\.landData\?\.features\) \? state\.landData\.features : \[\]\);/.test(afterZoomProbeSource)
         && /await waitForFullPoliticalColorCoverage\(page\);[\s\S]*?const beforeZoom = await page\.evaluate/.test(colorCoverageE2eSource),
       scenarioBackgroundMergeUsesVisualLandCollection:
-        /function getScenarioPoliticalBackgroundLandCollection\(\) \{[\s\S]*?return runtimeState\.landDataFull \|\| runtimeState\.landData;[\s\S]*?\}/.test(rendererSource)
-        && /function shouldUseScenarioPoliticalBackgroundMerge\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?runtimeState\.activeScenarioId[\s\S]*?landCollection\.features\.length/.test(rendererSource)
-        && /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);/.test(rendererSource)
-        && /function collectScenarioPoliticalBackgroundSpatialEntries\([\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?if \(landCollection !== runtimeState\.landData\)/.test(rendererSource),
+        /function getScenarioPoliticalBackgroundLandCollection\(\) \{[\s\S]*?return state\.landDataFull \|\| state\.landData;[\s\S]*?\}/.test(politicalBackgroundOwnerSource)
+        && /function shouldUseScenarioPoliticalBackgroundMerge\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?state\.activeScenarioId[\s\S]*?landCollection\.features\.length/.test(politicalBackgroundOwnerSource)
+        && /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);/.test(politicalBackgroundOwnerSource)
+        && /function collectScenarioPoliticalBackgroundSpatialEntries\([\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?if \(landCollection !== state\.landData\)/.test(politicalBackgroundOwnerSource),
       backgroundMergeEntriesCacheIsViewportIndependent:
         (() => {
-          const entriesBody = rendererSource.match(/function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction buildScenarioPoliticalBackgroundEntriesFromSpatialItems/)?.[0] || "";
+          const entriesBody = politicalBackgroundOwnerSource.match(/function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?\r?\n  \}\r?\n\s*function buildScenarioPoliticalBackgroundEntriesFromSpatialItems/)?.[0] || "";
           return !!entriesBody
             && !entriesBody.includes("pathBoundsInScreen")
             && entriesBody.includes("viewport filtering stays in the draw path");
         })()
-        && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const normalizedScreenRects = Array\.isArray\(screenRects\) && screenRects\.length[\s\S]*?const visibleEntries = normalizedScreenRects[\s\S]*?projectedBoundsIntersectScreenRects\(projectedBounds, normalizedScreenRects, \{ transform \}\)/.test(rendererSource),
+        && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const normalizedScreenRects = Array\.isArray\(screenRects\) && screenRects\.length[\s\S]*?const visibleEntries = normalizedScreenRects[\s\S]*?projectedBoundsIntersectScreenRects\(projectedBounds, normalizedScreenRects, \{ transform \}\)/.test(politicalBackgroundOwnerSource),
       spatialItemsCanCarryVisibleNonInteractiveLand:
         /function appendLandSpatialItemsRange\([\s\S]*?shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature[\s\S]*?if \(shouldExcludePoliticalVisualFeature\(feature, id\)\) continue;[\s\S]*?interactive: !shouldExcludePoliticalInteractionFeature\(feature, id\)/.test(spatialBuilderSource)
         && /shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature/.test(spatialOwnerSource)
@@ -4648,6 +4655,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(71, "political path cache reset exposes invalidation reason and previous size", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+    const politicalBackgroundOwnerSource = readRepoFile("js", "core", "renderer", "political_background_render_owner.js");
     const invalidateBody = rendererSource.match(/function invalidatePoliticalPathCache\(reason = "unspecified"\) \{[\s\S]*?\n\}/)?.[0] || "";
     assert.ok(invalidateBody.includes('recordRenderPerfMetric("politicalPathCacheReset"'));
     assert.ok(invalidateBody.includes("previousSize"));
@@ -4677,11 +4685,11 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
     assert.equal(entryBody.includes("projectionSignature"), false);
     const getEntryBody = rendererSource.match(/function getPoliticalFeaturePathEntry\([\s\S]*?\n\}/)?.[0] || "";
     assert.ok(getEntryBody.includes("if (cachedEntry?.path)"));
-    assert.ok(rendererSource.includes("pathCacheSizeBefore"));
-    assert.ok(rendererSource.includes("pathCacheSizeAfter"));
-    assert.ok(rendererSource.includes("pathCacheResetReason"));
-    assert.ok(rendererSource.includes("pathCacheResetPreviousSize"));
-    assert.ok(rendererSource.includes("pathCacheResetPreviousReason"));
+    assert.ok(politicalBackgroundOwnerSource.includes("pathCacheSizeBefore"));
+    assert.ok(politicalBackgroundOwnerSource.includes("pathCacheSizeAfter"));
+    assert.ok(politicalBackgroundOwnerSource.includes("pathCacheResetReason"));
+    assert.ok(politicalBackgroundOwnerSource.includes("pathCacheResetPreviousSize"));
+    assert.ok(politicalBackgroundOwnerSource.includes("pathCacheResetPreviousReason"));
   });
 }
 

@@ -911,6 +911,36 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
     );
   }
 
+  const politicalBackgroundReport = buildRecommendation([
+    "js/core/renderer/political_background_render_owner.js",
+  ]);
+  const politicalBackgroundCommandRefs = new Set(
+    politicalBackgroundReport.recommendedCommands.map((command) => command.commandRef),
+  );
+  assert.deepEqual(politicalBackgroundReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:ocean-depth-layer-contracts",
+    "test:node:political-background-render-owner",
+    "test:node:political-pass-orchestrator-owner",
+    "test:node:renderer-pass-family-inventory",
+    "test:python:map-renderer-political-background-render-owner-boundary",
+    "test:node:scenario-chunk-contracts",
+    "verify:pages-dist-and-drift",
+    "perf:gate",
+    "test:e2e:dev:political-progressive-recovery",
+    "test:e2e:dev:scenario-chunk-runtime",
+    "test:e2e:scenario-resilience",
+    "test:e2e:physical-layer-runtime-contract",
+    "test:e2e:water-rendering",
+    "test:e2e:tno-contracts",
+  ]) {
+    assert.equal(
+      politicalBackgroundCommandRefs.has(commandRef),
+      true,
+      `political background owner should select ${commandRef}`,
+    );
+  }
+
   assert.match(
     packageJson.scripts["test:python:map-renderer-render-pipeline-passes-boundary"],
     /tests\.test_map_renderer_render_pipeline_passes_boundary_contract[\s\S]*tests\.test_map_renderer_strategic_values_render_contract/,

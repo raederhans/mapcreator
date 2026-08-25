@@ -32,11 +32,16 @@ test("ocean depth intensity channel is registered as a background pass mask", ()
 
 test("background render pass composes ocean depth mask after ocean style", () => {
   const source = readText("js/core/map_renderer.js");
+  const backgroundOwnerSource = readText("js/core/renderer/political_background_render_owner.js");
   const oceanOwnerSource = readText("js/core/renderer/ocean_render_owner.js");
-  const drawBackgroundBody = extractFunction(source, "drawBackgroundPass");
-  const depthLayerBody = extractFunction(source, "drawOceanDepthMaskLayer");
+  const rootDrawBackgroundBody = extractFunction(source, "drawBackgroundPass");
+  const drawBackgroundBody = extractFunction(backgroundOwnerSource, "drawBackgroundPass");
+  const depthLayerBody = extractFunction(backgroundOwnerSource, "drawOceanDepthMaskLayer");
   const drawOceanStyleBody = extractFunction(source, "drawOceanStyle");
 
+  assert.match(source, /import \{ createPoliticalBackgroundRenderOwner \} from "\.\/renderer\/political_background_render_owner\.js";/);
+  assert.match(rootDrawBackgroundBody, /return getPoliticalBackgroundRenderOwner\(\)\.drawBackgroundPass\(\);/);
+  assert.match(source, /commitIntensityFieldsState: \(intensityFields\) => \{\s*runtimeState\.intensityFields = intensityFields;/);
   assert.match(source, /import \{ createOceanRenderOwner \} from "\.\/renderer\/ocean_render_owner\.js";/);
   assert.match(source, /function getOceanRenderOwner\(\)/);
   assert.match(drawOceanStyleBody, /return getOceanRenderOwner\(\)\.drawOceanStyle\(\);/);
@@ -44,14 +49,15 @@ test("background render pass composes ocean depth mask after ocean style", () =>
   assert.match(oceanOwnerSource, /export function createOceanRenderOwner/);
   assert.match(oceanOwnerSource, /function drawOceanStyle\(\)/);
   assert.match(oceanOwnerSource, /runtimeState\.oceanMaskMode = OCEAN_MASK_MODE_BATHYMETRY/);
-  assert.match(source, /createIntensityFieldMaskOwner/);
+  assert.match(source, /getIntensityFieldMaskOwner,/);
   assert.match(source, /`field:oceanDepth:\$\{Number\(intensityFields\.channels\.oceanDepth\?\.revision \|\| 0\)\}`/);
   assert.ok(drawBackgroundBody.indexOf("drawOceanStyle();") < drawBackgroundBody.indexOf("drawOceanDepthMaskLayer();"));
   assert.match(depthLayerBody, /getIntensityFieldMaskOwner\(\)\.getMaskCanvas\("oceanDepth"/);
-  assert.match(depthLayerBody, /applyOceanClipMask\(runtimeState\.oceanMaskMode \|\| OCEAN_MASK_MODE_TOPOLOGY\)/);
-  assert.match(depthLayerBody, /rendererSurfaceHost\.getContext\(\)\.globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE/);
-  assert.match(depthLayerBody, /rendererSurfaceHost\.getContext\(\)\.setTransform\(1, 0, 0, 1, 0, 0\)/);
-  assert.match(depthLayerBody, /rendererSurfaceHost\.getContext\(\)\.drawImage\(maskResult\.canvas, 0, 0\)/);
+  assert.match(depthLayerBody, /commitIntensityFieldsState\(intensityFields\)/);
+  assert.match(depthLayerBody, /applyOceanClipMask\(state\.oceanMaskMode \|\| OCEAN_MASK_MODE_TOPOLOGY\)/);
+  assert.match(depthLayerBody, /surface\.getContext\(\)\.globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE/);
+  assert.match(depthLayerBody, /surface\.getContext\(\)\.setTransform\(1, 0, 0, 1, 0, 0\)/);
+  assert.match(depthLayerBody, /surface\.getContext\(\)\.drawImage\(maskResult\.canvas, 0, 0\)/);
 });
 
 test("ocean appearance panel binds depth field editor to oceanDepth", () => {

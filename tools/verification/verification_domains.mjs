@@ -1708,6 +1708,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     packageScriptRequired: true,
     sourceRefs: [
       "js/core/renderer/political_pass_orchestrator_owner.js",
+      "js/core/renderer/political_background_render_owner.js",
       "tests/political_pass_orchestrator_owner_behavior.test.mjs",
       "docs/active/renderer-political-pass-orchestrator-owner-p3-3b-20260714.md",
       "package.json",
@@ -1755,6 +1756,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     commandRef: "test:node:scenario-chunk-contracts",
     sourceRefs: [
       "js/core/renderer/political_pass_orchestrator_owner.js",
+      "js/core/renderer/political_background_render_owner.js",
       "tests/scenario_chunk_contracts.test.mjs",
     ],
     domain: "scenario-runtime",
@@ -1788,7 +1790,10 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
   ].map(([id, commandRef, domain]) => createP3PassFamilyRoute({
     id,
     commandRef,
-    sourceRefs: ["js/core/renderer/political_pass_orchestrator_owner.js"],
+    sourceRefs: [
+      "js/core/renderer/political_pass_orchestrator_owner.js",
+      "js/core/renderer/political_background_render_owner.js",
+    ],
     domain,
     layer: "regression",
     cost: "heavy",
