@@ -253,10 +253,10 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Lane | Exact ownership and current state |
 | --- | --- |
 | Supervisor / integration | Thread `01a028e9-78d6-7a31-ae01-d81532018212`; clean worktree `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator`; branch `codex/sc-p0-p3-integration-20260824`; frozen start `f118a101d30373c507075da32267969b22197338`. Owns slice admission, integration commits, shared/long checks, task records, push, two-end SHA verification, and cleanup decisions. |
-| Serial implementation | Thread `01a03372-ff2a-7281-af36-65e58e243f9c`; worktree `d871`; P3.2 head `dcc83e8d`. Sole production-code owner. It delivers one committed slice at a time and must stop before the next slice until supervisor release. No push, merge, shared long test, or cleanup authority. |
-| Independent review | Thread `01a03372-ff2a-7281-af36-65fed97d06ee`; detached clean worktree `42a1` at `dcc83e8d`. Read-only baseline and exact-candidate findings-first review; no writes, commits, integration, push, or shared long tests. |
-| Independent verification | Thread `01a03372-ff0c-72e3-addf-b25981aa9311`; detached clean worktree `5152` at `dcc83e8d`. Owns focused exact-candidate verification and selector-conflict diagnosis; shared or long gates require explicit supervisor release. No production edits, integration, push, or cleanup. |
-| Serial boundary | P3.1 and P3.2 are integrated; active slice is P3.3 only. P3.4-P3.5 remain unopened until the preceding exact commit is reviewed, verified, integrated, and recorded. No live/shared process is currently running. |
+| Serial implementation | Thread `01a03372-ff2a-7281-af36-65e58e243f9c`; worktree `d871`; P3.3 head `039acb7d`. Sole production-code owner. It delivers one committed slice at a time and must stop before the next slice until supervisor release. No push, merge, shared long test, or cleanup authority. |
+| Independent review | Thread `01a03372-ff2a-7281-af36-65fed97d06ee`; detached clean worktree `42a1` at `039acb7d`. Read-only baseline and exact-candidate findings-first review; no writes, commits, integration, push, or shared long tests. |
+| Independent verification | Thread `01a03372-ff0c-72e3-addf-b25981aa9311`; detached clean worktree `5152` at `039acb7d`. Owns focused exact-candidate verification and selector-conflict diagnosis; shared or long gates require explicit supervisor release. No production edits, integration, push, or cleanup. |
+| Serial boundary | P3.1 through P3.3 are integrated; active slice is P3.4 only. P3.5 remains unopened until the preceding exact commit is reviewed, verified, integrated, and recorded. No live/shared process is currently running. |
 | Baseline identity | `a6833008:js/core/map_renderer.js` and `f118a101:js/core/map_renderer.js` resolve to the same blob `b5990105850cc7c79e5506c6f89dbee1ab111fae`; the planned 23,153 split-line baseline remains valid. |
 
 ### P3.1 admission checkpoint
@@ -278,3 +278,13 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Independent verification | `PASS`. Owner 6/6, Python pipeline 6/6, catalog 3/3, pass-family 6/6, cache-host 10/10, metadata, architecture, import graph, and P4.3 route all exit 0. |
 | Selector evidence | The five-file selector is exact with zero unmatched/blocked entries. Bound dry-run has zero route gaps, zero execution-owner conflicts, and zero process starts. |
 | Supervisor integration | Candidate was replayed as `41b3f538`; all five committed files are identical to `dcc83e8d`. Post-integration P4.3 route verification against `e00caa3c` reports five changed files, zero unmatched files, and zero route gaps. P3.3 is released. |
+
+### P3.3 admission checkpoint
+
+| Fact | Evidence and disposition |
+| --- | --- |
+| Final implementation candidate | `039acb7d513dd3cd5886218c14178196888f52e0`, comprising transaction ownership commit `d2420643` and checkout-stability fix `039acb7d`, direct descendants of `dcc83e8d`. The implementation worktree is clean. |
+| Independent review | Initial review found one CRLF-sensitive architecture matcher and returned `REQUEST CHANGES`; the two-file follow-up normalized source line endings and added LF/CRLF/token-drift coverage. Exact-candidate re-review returned `CLEAR`. |
+| Independent verification | `PASS`. Owner 22/22, inventory 11/11, interaction actions 8/8, Python boundary 6/6, focused delegation and metadata, architecture, route, and diff-check all exit 0. Ten action policy bindings match current source identities and coordinates exactly. |
+| Policy and selector evidence | Canonical producer records 207 writers; validator passes 75 production plus 43 test legacy-direct files with zero violations. The 22-file selector has zero unmatched or blocked entries. The bound plan starts zero processes and retains one inherited `sample_project_contracts.test.mjs:resourceLocks` planner conflict with 28 propagated gaps. |
+| Supervisor integration | Candidate commits were replayed as `5d6543fa` and `1c2f92f8`; the integrated `js/core`, `tests`, and `tools` tree matches `039acb7d`. Post-integration architecture, owner, inventory, and P4.3 route checks pass; route reports 22 changed files, zero unmatched files, and zero route gaps. P3.4 is released. |
