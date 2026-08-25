@@ -4222,7 +4222,8 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(41, "renderer shell fallback policy behaves as visual-only underlay coverage", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
-    const harness = createRendererShellPolicyHarness(rendererSource);
+    const politicalPartialOwnerSource = readRepoFile("js", "core", "renderer", "political_partial_repaint_owner.js");
+    const harness = createRendererShellPolicyHarness(rendererSource, politicalPartialOwnerSource);
     const shellFeature = {
       id: "RU_ARCTIC_FB_TYM_042",
       properties: {
@@ -4339,7 +4340,8 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(42, "post-edit visual override remains foreground after chunk promotion clears pending edit", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
-    const harness = createRendererShellPolicyHarness(rendererSource);
+    const politicalPartialOwnerSource = readRepoFile("js", "core", "renderer", "political_partial_repaint_owner.js");
+    const harness = createRendererShellPolicyHarness(rendererSource, politicalPartialOwnerSource);
     const primaryFallbackFeature = {
       id: "FR",
       properties: {
@@ -4523,6 +4525,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(68, "political patch overlay and first-pixel source are explicit layer contracts", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+    const politicalPartialOwnerSource = readRepoFile("js", "core", "renderer", "political_partial_repaint_owner.js");
     const drawCanvasOrchestrationOwnerSource = readRepoFile(
       "js",
       "core",
@@ -4543,7 +4546,9 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
     assert.ok(rendererSource.includes('recordRenderPerfMetric("politicalPatchOverlayPaint"'));
     assert.ok(rendererSource.includes('recordRenderPerfMetric("politicalPatchOverlayClear"'));
     assert.ok(rendererSource.includes('paintSource: "political-patch-overlay"'));
-    assert.ok(rendererSource.includes("buildWorkerPixelRingsForGeometry("));
+    assert.ok(/function buildPoliticalRasterWorkerPacket\(options = \{\}\) \{[\s\S]*?return getPoliticalPartialRepaintOwner\(\)\.buildPoliticalRasterWorkerPacket\(options\);/.test(rendererSource));
+    assert.ok(/function getPoliticalPartialRepaintOwner\(\) \{[\s\S]*?helpers: \{[\s\S]*?buildWorkerPixelRingsForGeometry,/.test(rendererSource));
+    assert.ok(politicalPartialOwnerSource.includes("helper.buildWorkerPixelRingsForGeometry("));
     assert.ok(packetSource.includes("function collectRasterPolygonalGeometryParts"));
     assert.ok(packetSource.includes('geometryType === "GeometryCollection"'));
     assert.ok(runtimeStateSource.includes("pendingPoliticalColorEditFirstPixelRecorded: false"));

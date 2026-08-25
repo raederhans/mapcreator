@@ -312,6 +312,45 @@ test("partial background and fine draw exceptions restore canvas and preserve fa
   }
 });
 
+test("partial commit effect exceptions propagate after the recoverable fallback boundary", async (t) => {
+  const cases = [
+    ["clear pending", "clearPendingPoliticalColorEdit"],
+    ["set reference", "setPassReferenceTransform"],
+  ];
+  for (const [name, effectName] of cases) {
+    await t.test(name, () => {
+      const commitError = new Error(`${name}-failed`);
+      const harness = createHarness({
+        effects: {
+          [effectName]: () => { throw commitError; },
+        },
+      });
+      assert.throws(
+        () => harness.owner.tryPartialPoliticalPassRepaint(harness.transform, "next", {}),
+        commitError,
+      );
+      const fallbackMetrics = harness.events.filter((entry) => Array.isArray(entry)
+        && entry[0] === "metric" && entry[1] === "politicalPartialRepaint" && entry[3]?.applied === false);
+      assert.equal(fallbackMetrics.length, 0);
+    });
+  }
+});
+
+test("partial noop commit effect exceptions propagate without fallback metrics", () => {
+  const commitError = new Error("noop-set-reference-failed");
+  const harness = createHarness({
+    helpers: { shouldExcludePoliticalVisualFeature: () => true },
+    effects: { setPassReferenceTransform: () => { throw commitError; } },
+  });
+  assert.throws(
+    () => harness.owner.tryPartialPoliticalPassRepaint(harness.transform, "next", {}),
+    commitError,
+  );
+  const fallbackMetrics = harness.events.filter((entry) => Array.isArray(entry)
+    && entry[0] === "metric" && entry[1] === "politicalPartialRepaint" && entry[3]?.applied === false);
+  assert.equal(fallbackMetrics.length, 0);
+});
+
 test("request and draw exceptions propagate through the owner boundary", () => {
   const requestError = new Error("request-failed");
   const requestHarness = createHarness({ effects: { requestPoliticalRasterWorkerPass: () => { throw requestError; } } });

@@ -458,7 +458,7 @@ function extractRendererPassSignatureBranch(source, passName) {
   return source.slice(start, next);
 }
 
-function createRendererShellPolicyHarness(rendererSource) {
+function createRendererShellPolicyHarness(rendererSource, politicalPartialOwnerSource) {
   const functionNames = [
     "isScenarioShellFeature",
     "isRuntimeOnlyShellFallbackPoliticalFeature",
@@ -474,8 +474,9 @@ function createRendererShellPolicyHarness(rendererSource) {
     "isPoliticalVisualRenderableFeature",
     "isPoliticalInteractionRenderableFeature",
     "getRuntimePoliticalBaseCollection",
-    "getPoliticalFeatureFillColor",
   ];
+  const partialFillSource = extractRendererFunction(politicalPartialOwnerSource, "getPoliticalFeatureFillColor");
+  assert.match(rendererSource, /function getPoliticalPartialRepaintOwner\(\) \{[\s\S]*?createPoliticalPartialRepaintOwner\(\{[\s\S]*?getRuntimeState: \(\) => runtimeState,[\s\S]*?getResolvedFeatureColor,[\s\S]*?effects: \{/);
   const source = `
     const runtimeState = {
       mapSemanticMode: "ownership",
@@ -503,6 +504,17 @@ function createRendererShellPolicyHarness(rendererSource) {
       || ""
     );
     const getRenderPassCacheState = () => runtimeState.renderPassCache;
+    const getRuntimeState = () => runtimeState;
+    const getDebugMode = () => debugMode;
+    const landFillColor = LAND_FILL_COLOR;
+    const surface = { getPathCanvas: () => ({ bounds: () => [[0, 0], [1, 1]] }) };
+    const helper = {
+      isAtlantropaSeaFeature,
+      getAtlantropaSeaPoliticalFillColor,
+      getSafeCanvasColor,
+      getResolvedFeatureColor,
+      hashToColor: () => "#abcdef",
+    };
     function hasPendingPoliticalColorEdit() {
       const cache = getRenderPassCacheState();
       return cache.pendingPoliticalColorEditIds instanceof Set
@@ -516,6 +528,7 @@ function createRendererShellPolicyHarness(rendererSource) {
     const isAtlantropaVisualSupportHelperFeature = () => false;
     const isAtlantropaSupportHelperFeature = () => false;
     ${functionNames.map((name) => extractRendererFunction(rendererSource, name)).join("\n")}
+    ${partialFillSource}
     globalThis.__shellPolicyHarness = {
       isScenarioShellFeature,
       isRuntimeOnlyShellFallbackPoliticalFeature,

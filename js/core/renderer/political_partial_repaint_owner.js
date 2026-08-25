@@ -356,7 +356,9 @@ export function createPoliticalPartialRepaintOwner({
       });
       return false;
     };
+    let commitSuccessfulRepaint = null;
     try {
+    recoverable: {
     if (state.renderPhase !== renderPhaseIdle || state.deferExactAfterSettle) return fallback("non-idle-phase");
     if (getDebugMode() !== "PROD") return fallback("non-prod-mode");
     if (String(cache.reasons?.political || "") !== "refresh-colors") return fallback("non-color-invalidation");
@@ -398,21 +400,24 @@ export function createPoliticalPartialRepaintOwner({
     });
     if (dirtyRects.some((rect) => !rect)) return fallback("missing-dirty-bounds");
     if (!dirtyRects.length) {
-      cache.signatures.political = nextSignature;
-      cache.dirty.political = false;
-      cache.partialPoliticalDirtyIds.clear();
-      cache.reasons.political = "partial-noop";
-      effect.setPassReferenceTransform("political", transform);
-      effect.incrementPerfCounter("politicalPartialRepaints");
-      effect.recordRenderPerfMetric("politicalPartialRepaint", 0, {
-        applied: true,
-        dirtyFeatureCount,
-        dirtyRectCount: 0,
-        viewportCoverage: 0,
-        affectedFeatureCount: 0,
-        noop: true,
-      });
-      return true;
+      commitSuccessfulRepaint = () => {
+        cache.signatures.political = nextSignature;
+        cache.dirty.political = false;
+        cache.partialPoliticalDirtyIds.clear();
+        cache.reasons.political = "partial-noop";
+        effect.setPassReferenceTransform("political", transform);
+        effect.incrementPerfCounter("politicalPartialRepaints");
+        effect.recordRenderPerfMetric("politicalPartialRepaint", 0, {
+          applied: true,
+          dirtyFeatureCount,
+          dirtyRectCount: 0,
+          viewportCoverage: 0,
+          affectedFeatureCount: 0,
+          noop: true,
+        });
+        return true;
+      };
+      break recoverable;
     }
     const mergedDirtyRects = mergeIntersectingRects(dirtyRects);
     const viewportCoverage = getViewportCoverageForRects(mergedDirtyRects);
@@ -523,35 +528,39 @@ export function createPoliticalPartialRepaintOwner({
     } finally {
       if (contextSaved) passContext.restore();
     }
-    cache.signatures.political = nextSignature;
-    cache.dirty.political = false;
-    cache.partialPoliticalDirtyIds.clear();
-    effect.clearPendingPoliticalColorEdit({
-      renderedCount: Number(partialFeatureMetrics.renderedCount || 0),
-      renderedIds: partialFeatureMetrics.renderedIds,
-      paintSource: "political-partial-repaint",
-    });
-    cache.reasons.political = "partial-repaint";
-    effect.setPassReferenceTransform("political", transform);
-    effect.incrementPerfCounter("politicalPartialRepaints");
-    effect.recordPassTiming(timings, "political", startedAt);
-    effect.recordRenderPerfMetric("politicalPartialRepaint", helper.nowMs() - startedAt, {
-      applied: true,
-      dirtyFeatureCount,
-      dirtyRectCount: mergedDirtyRects.length,
-      viewportCoverage: Number(viewportCoverage.toFixed(4)),
-      candidateCount,
-      affectedFeatureCount: Number(partialFeatureMetrics.renderedCount || 0),
-      backgroundGroupCount,
-      pathCacheMisses,
-      pathCacheMissRatio: Number(pathCacheMissRatio.toFixed(4)),
-    });
-    return true;
+    commitSuccessfulRepaint = () => {
+      cache.signatures.political = nextSignature;
+      cache.dirty.political = false;
+      cache.partialPoliticalDirtyIds.clear();
+      effect.clearPendingPoliticalColorEdit({
+        renderedCount: Number(partialFeatureMetrics.renderedCount || 0),
+        renderedIds: partialFeatureMetrics.renderedIds,
+        paintSource: "political-partial-repaint",
+      });
+      cache.reasons.political = "partial-repaint";
+      effect.setPassReferenceTransform("political", transform);
+      effect.incrementPerfCounter("politicalPartialRepaints");
+      effect.recordPassTiming(timings, "political", startedAt);
+      effect.recordRenderPerfMetric("politicalPartialRepaint", helper.nowMs() - startedAt, {
+        applied: true,
+        dirtyFeatureCount,
+        dirtyRectCount: mergedDirtyRects.length,
+        viewportCoverage: Number(viewportCoverage.toFixed(4)),
+        candidateCount,
+        affectedFeatureCount: Number(partialFeatureMetrics.renderedCount || 0),
+        backgroundGroupCount,
+        pathCacheMisses,
+        pathCacheMissRatio: Number(pathCacheMissRatio.toFixed(4)),
+      });
+      return true;
+    };
+    }
     } catch (error) {
       return fallback("partial-repaint-exception", {
         exceptionName: String(error?.name || "Error"),
       });
     }
+    return commitSuccessfulRepaint();
   }
 
   let workerSnapshotLastState = null;
