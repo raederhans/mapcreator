@@ -52,13 +52,13 @@ test("canonical metadata source owns every projection and shadows the retained l
   assert.equal(report.authoredSurfacesBefore, 5);
   assert.equal(report.authoredSurfacesAfter, 1);
   assert.deepEqual(report.projections, {
-    verificationRecords: 135,
-    routes: 386,
-    commands: 342,
-    catalogEntries: 443,
-    leaves: 413,
+    verificationRecords: 136,
+    routes: 387,
+    commands: 343,
+    catalogEntries: 444,
+    leaves: 414,
     suites: 30,
-    portfolioScripts: 339,
+    portfolioScripts: 340,
     superseders: 14,
     supersessionEdges: 36,
   });
@@ -1274,9 +1274,10 @@ test("preserves real build-test-drift and build-check chains as topological exec
   assert.deepEqual(pages.executions.map((entry) => entry.id), [
     "verify:pages-dist-and-drift#inline:01",
     "verify:pages-dist-and-drift#inline:02",
+    "test:py:landing-map-asset-contracts",
     "test:node:landing-showcase-view",
     "test:node:sample-project-contracts",
-    "verify:pages-dist-and-drift#inline:05",
+    "verify:pages-dist-and-drift#inline:06",
   ]);
   assert.deepEqual(pages.executions.map((entry) => entry.dependsOn), [
     [],
@@ -1284,6 +1285,7 @@ test("preserves real build-test-drift and build-check chains as topological exec
     ["execution:0002"],
     ["execution:0003"],
     ["execution:0004"],
+    ["execution:0005"],
   ]);
   assert.equal(pages.executions[0].effectiveArgv.at(-1), "tools/build_pages_dist.py");
   if (process.platform === "win32") {

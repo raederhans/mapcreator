@@ -65,6 +65,7 @@
     "night_light_belt_limit": 54,
     "day_night_visual_policy": "animated curved night mask with clipped deterministic texture, city-light smears, and ranked light belts",
     "city_label_source": "scenario capital hints plus world_cities major populated places",
+    "city_label_layout": "deterministic bounding-box avoidance including text stroke",
     "city_label_tier_limits": [
       8,
       16,
@@ -264,7 +265,7 @@
     },
     {
       "id": "cities",
-      "label": "capital anchors"
+      "label": "City labels and capital anchors"
     },
     {
       "id": "day-night",

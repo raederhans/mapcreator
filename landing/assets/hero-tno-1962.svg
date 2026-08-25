@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 680" role="img" aria-label="TNO 1962 Europe" data-hero-scenario="tno-1962" data-scenario-id="tno_1962">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 680" role="img" aria-label="TNO 1962 political ownership crop; Atlantropa overlay omitted" data-hero-scenario="tno-1962" data-scenario-id="tno_1962">
   <defs>
     <radialGradient id="heroSeaGlow" cx="50%" cy="44%" r="78%">
       <stop offset="0" stop-color="#244a68" />
@@ -1144,14 +1144,13 @@
       <path class="territory territory--wrs" data-tag="WRS" fill="#a3424c" d="M623.1 144.4 L623 144.4 L623.1 144.4 L623.1 144.4 Z" />
   </g>
   <g class="hero-capitals" data-layer="capitals">
-      <g class="capital capital--focus" data-tag="ENG"><title>London · Britain</title><circle cx="342.9" cy="375.8" r="5.8" /><text class="city-label" x="351.9" y="368.8">London</text></g>
-      <g class="capital capital--focus" data-tag="FRA"><title>Paris · France</title><circle cx="361.8" cy="418.3" r="5.8" /><text class="city-label" x="370.8" y="411.3">Paris</text></g>
-      <g class="capital capital--focus" data-tag="GER"><title>Berlin · Germany</title><circle cx="468.3" cy="366.4" r="5.8" /><text class="city-label" x="477.3" y="359.4">Berlin</text></g>
-      <g class="capital capital--focus" data-tag="ITA"><title>Rome · Italy</title><circle cx="465.4" cy="526" r="5.8" /><text class="city-label" x="474.4" y="519">Rome</text></g>
-      <g class="capital" data-tag="IBR"><title>Madrid · Iberian Union</title><circle cx="280.8" cy="534.3" r="5.8" /><text class="city-label" x="289.8" y="527.3">Madrid</text></g>
-      <g class="capital" data-tag="RKU"><title>Kyiv · Reichskommissariat Ukraine</title><circle cx="630.4" cy="370.7" r="5.8" /><text class="city-label" x="639.4" y="363.7">Kyiv</text></g>
-      <g class="capital capital--focus" data-tag="SOV"><title>Moskau · Soviet Union</title><circle cx="663.9" cy="274.2" r="5.8" /><text class="city-label" x="672.9" y="267.2">Moskau</text></g>
-      <g class="capital" data-tag="WRS"><title>Warshau · West Russian Revolutionary Front</title><circle cx="538" cy="363.9" r="5.8" /><text class="city-label" x="547" y="356.9">Warshau</text></g>
-      <g class="capital" data-tag="BRG"><title>Nanzig · Ordensstaat Burgund</title><circle cx="399.4" cy="423.7" r="5.8" /><text class="city-label" x="408.4" y="416.7">Nanzig</text></g>
+      <g class="capital capital--focus" data-tag="ENG" data-label-box="349.9,353,404.1,372.1"><title>London · Britain</title><circle cx="342.9" cy="375.8" r="5.8" /><text class="city-label" x="351.9" y="366.8">London</text></g>
+      <g class="capital capital--focus" data-tag="FRA" data-label-box="368.8,395.5,411.4,414.6"><title>Paris · France</title><circle cx="361.8" cy="418.3" r="5.8" /><text class="city-label" x="370.8" y="409.3">Paris</text></g>
+      <g class="capital capital--focus" data-tag="GER" data-label-box="475.3,343.6,522.7,362.7"><title>Berlin · Germany</title><circle cx="468.3" cy="366.4" r="5.8" /><text class="city-label" x="477.3" y="357.4">Berlin</text></g>
+      <g class="capital capital--focus" data-tag="ITA" data-label-box="472.4,503.3,510.2,522.4"><title>Rome · Italy</title><circle cx="465.4" cy="526" r="5.8" /><text class="city-label" x="474.4" y="517">Rome</text></g>
+      <g class="capital" data-tag="IBR" data-label-box="287.8,511.5,341.6,530.7"><title>Madrid · Iberian Union</title><circle cx="280.8" cy="534.3" r="5.8" /><text class="city-label" x="289.8" y="525.3">Madrid</text></g>
+      <g class="capital" data-tag="RKU" data-label-box="637.4,348,671.9,367.1"><title>Kyiv · Reichskommissariat Ukraine</title><circle cx="630.4" cy="370.7" r="5.8" /><text class="city-label" x="639.4" y="361.7">Kyiv</text></g>
+      <g class="capital" data-tag="WRS" data-label-box="630.7,123.2,730.2,142.4"><title>Severodvinsk · West Russian Revolutionary Front</title><circle cx="623.7" cy="146" r="5.8" /><text class="city-label" x="632.7" y="137">Severodvinsk</text></g>
+      <g class="capital" data-tag="BRG" data-label-box="406.4,433,457.1,452.1"><title>Nanzig · Ordensstaat Burgund</title><circle cx="399.4" cy="423.7" r="5.8" /><text class="city-label" x="408.4" y="446.7">Nanzig</text></g>
   </g>
 </svg>

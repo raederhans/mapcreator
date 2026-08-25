@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 440" role="img" aria-label="Japan night preview map generated from Scenario Forge data" data-preview-map="japan" data-preview-mode="night">
-  <metadata>{"counts":{"bathymetry_eligible_paths":0,"bathymetry_lines_rendered":0,"bathymetry_source_features":6,"carrier_paths":59,"city_eligible_points":758,"city_points_rendered":32,"city_source_features":773,"focus_city_points_rendered":3,"focus_city_titles":["Tokyo","Osaka","Nagoya \u00b7 Aichi"],"main_corridor_paths_rendered":1,"main_corridor_titles":["\u9996\u90fd\u570f\u4e2d\u592e\u9023\u7d61\u81ea\u52d5\u8eca\u9053 / C4"],"major_station_points_rendered":20,"night_anchor_candidates":54,"night_grid_candidates":297,"night_points_rendered":88,"rail_eligible_paths":226,"rail_lines_rendered":160,"rail_source_features":1105,"river_eligible_paths":9,"river_lines_rendered":9,"river_source_features":1473,"road_eligible_paths":3575,"road_lines_rendered":260,"road_source_features":4794,"selected_city_titles":["Tokyo","Osaka","Nagoya \u00b7 Aichi","Fukuoka","Sapporo \u00b7 Hokkaido","Sendai \u00b7 Miyagi","Hiroshima","Kyoto","Sendai \u00b7 Kagoshima","Kitakyushu \u00b7 Fukuoka","Chiba","Hamamatsu \u00b7 Shizuoka","Okayama","Sakai \u00b7 \u014csaka","Niigata","Kumamoto","Shizuoka","Utsunomiya \u00b7 Tochigi","Kagoshima","Nagano","Suginami \u00b7 Ibaraki","Kanazawa \u00b7 Ishikawa","Matsuyama \u00b7 Ehime","Himeji \u00b7 Hy\u014dgo","Tokushima","Nagasaki","Gifu","Yokosuka \u00b7 Kanagawa","Miyazaki","Takasaki \u00b7 Gunma","Nara-shi \u00b7 Nara","Iwaki \u00b7 Fukushima"],"terrain_major_eligible_paths":32,"terrain_major_lines_rendered":32,"terrain_major_source_features":15257,"terrain_minor_eligible_paths":179,"terrain_minor_lines_rendered":120,"terrain_minor_source_features":74861},"mode":"night"}</metadata>
+  <metadata>{"counts":{"bathymetry_eligible_paths":0,"bathymetry_lines_rendered":0,"bathymetry_source_features":6,"carrier_paths":59,"city_eligible_points":753,"city_points_rendered":32,"city_source_features":773,"focus_city_points_rendered":3,"focus_city_titles":["Tokyo","Osaka","Nagoya \u00b7 Aichi"],"main_corridor_paths_rendered":1,"main_corridor_titles":["\u9996\u90fd\u570f\u4e2d\u592e\u9023\u7d61\u81ea\u52d5\u8eca\u9053 / C4"],"major_station_points_rendered":20,"night_anchor_candidates":54,"night_grid_candidates":154,"night_points_rendered":88,"rail_eligible_paths":226,"rail_lines_rendered":160,"rail_source_features":1105,"river_eligible_paths":3,"river_lines_rendered":3,"river_source_features":1473,"road_eligible_paths":3575,"road_lines_rendered":260,"road_source_features":4794,"selected_city_titles":["Tokyo","Osaka","Nagoya \u00b7 Aichi","Fukuoka","Sapporo \u00b7 Hokkaido","Sendai \u00b7 Miyagi","Hiroshima","Kyoto","Sendai \u00b7 Kagoshima","Kitakyushu \u00b7 Fukuoka","Chiba","Hamamatsu \u00b7 Shizuoka","Okayama","Sakai \u00b7 \u014csaka","Niigata","Kumamoto","Shizuoka","Utsunomiya \u00b7 Tochigi","Kagoshima","Nagano","Suginami \u00b7 Ibaraki","Kanazawa \u00b7 Ishikawa","Matsuyama \u00b7 Ehime","Himeji \u00b7 Hy\u014dgo","Tokushima","Nagasaki","Gifu","Yokosuka \u00b7 Kanagawa","Miyazaki","Takasaki \u00b7 Gunma","Nara-shi \u00b7 Nara","Iwaki \u00b7 Fukushima"],"terrain_major_eligible_paths":23,"terrain_major_lines_rendered":23,"terrain_major_source_features":15257,"terrain_minor_eligible_paths":131,"terrain_minor_lines_rendered":120,"terrain_minor_source_features":74861},"mode":"night"}</metadata>
   <style>
     .sea{fill:#c6e4e3}.graticule{fill:none;stroke:#56706e;stroke-width:.6;opacity:.18}.land{fill:#f4ead5;stroke:#7c8a71;stroke-width:1.5}.road,.rail,.main-corridor,.terrain-major,.terrain-minor,.river,.bathymetry{fill:none;stroke-linecap:round;stroke-linejoin:round}.road{stroke:#e96b31;stroke-width:1.7}.rail{stroke:#fff7df;stroke-width:2.1;stroke-dasharray:6 6}.main-corridor{stroke:#ffb547;stroke-width:5;paint-order:stroke;filter:url(#corridorGlow)}.station{fill:#fff7df;stroke:#17324a;stroke-width:1.2}.city{fill:#28c7b7;stroke:#fff;stroke-width:1.6}.focus-city{fill:#ffd166;stroke:#073142;stroke-width:2.4;filter:url(#cityGlow)}.terrain-major{stroke:#6f8d4e;stroke-width:2.2}.terrain-minor{stroke:#8fa86b;stroke-width:1.2}.river{stroke:#4aa3bd;stroke-width:1.5}.bathymetry{stroke:#2d6f8f;stroke-width:1.2;stroke-dasharray:5 7}.night-light{fill:#ffd166;filter:url(#glow)}.road,.rail,.station{opacity:.18}.main-corridor{opacity:.62}.city{opacity:.42}.focus-city{opacity:.86}.terrain-major,.terrain-minor,.river,.bathymetry{opacity:.16}.night-light{opacity:.82}.sea{fill:#081324}.land{fill:#182b34;stroke:#334654}
   </style>
@@ -83,114 +83,81 @@
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M396.6 235.6 L385.6 247.4 L362.9 253.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M389.2 300.1 L385.6 279.1 L389.1 267.5 L414.6 252.9 L418 223.3 L425.3 185.3 L428.6 176.3 L441 189.1 L434.6 165.4 L421.6 151.3 L409.6 179 L420.2 187.8 L408 195.6 L415 205 L407.7 229.2 L411.6 211.6 L398.5 223.6 L405.8 238.5 L386.3 245.5 L362.9 254.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M351.9 304.4 L373.7 302.7 L375.2 297.2 L385.9 289.6 L383.8 268.1 L389.1 267 L410.4 240.2 L419.9 215 L394.9 228.7 L400.6 241.4 L391.4 237.6 L376.6 252.6 L370.5 256 L347.8 267.7 L326.2 289.4 L340.2 288.9 L352.6 297.5"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M173.8 255.7 L175.4 234.1"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M181.6 151.8 L198.6 114 L202.9 103.7 L197.6 97.7 L195.1 83.6 L203.4 86 L223.6 88.7 L226.1 69.3 L234.7 50.7 L234.6 38.5 L221.6 38.3 L219.8 34.9"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M208.3 22.7 L212.1 37.7 L189 61.8"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M189.4 48 L202.2 31.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M363.6 304.3 L373.4 283.9 L389.8 294.1 L384.1 280.5 L382.9 262.1 L403.3 255.1 L400.7 246.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M390.1 245.4 L375.4 272.4 L361.6 267.6 L358.3 255.7 L338.6 269.6 L333.2 287.5 L348.6 284.3"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M364.4 304.3 L375.7 285.7 L386.7 293.7 L378.6 275.6 L397.4 262.2 L400.8 250.2 L374.3 255.4 L365.4 269.8 L366.7 253.7 L350.9 276 L341.7 273.3 L345.6 283.4 L358.1 301.6 L362.7 296"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M362 300.6 L373.4 284.8 L384.5 297 L388.8 282.2 L383.7 262.6 L401.1 256.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M404.4 243.6 L379.7 254.4 L366.9 267.5"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M369 257.8 L347 267.3 L333.2 283.9 L340.9 286.1 L354.2 296.1"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M266.2 97.6 L285.3 93 L296.8 80.7 L306.8 68.3 L321.4 54.5 L333.8 40.1 L341.3 31.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M296 26.4 L292.1 42.5 L280.6 61.8 L276.5 59.3 L257.4 68.4 L258.7 88.9 L270.1 86.1"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M172.5 271.9 L178 238.7"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M181.5 152.7 L193.4 138.2 L199.9 116 L206.4 104.4 L201.1 98.9 L203.9 88.9 L227 91.7 L225.8 62.3 L236.7 51.2 L233.4 35.7 L233.3 25.4"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M356.8 254.3 L329.4 277.9 L301.4 297.4 L287.5 291.2 L265.6 297 L229.7 316.3 L217.5 324.4 L249 325.4 L277.9 303.8 L299.7 304.7"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M196.6 144 L199.6 120.1 L210.8 101.4 L221.8 96 L237.3 81 L234.8 62.8 L243.4 41.3 L234.9 32.9"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M174.5 275.2 L181.5 242.6"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M269.8 94.4 L295.4 80.7 L298.4 73.3 L306.9 59 L324.2 51.8 L329.7 37.8 L342 29.8"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M296.8 26.5 L292.6 48.1 L287.6 57.3 L267.1 69.3 L257 80.5 L263.6 91.9 L272.9 86.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M279.6 96.1 L293.9 86.7 L309.5 69.8 L326.3 53.6 L337.9 35"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M294.7 26.4 L277.3 56.1 L273.9 54.1 L270 47.5 L259.7 63.9 L254.8 81.8 L263.5 93.8 L278.3 91.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M390 299.2 L388.4 268.4 L419.6 263.3 L419.7 228.3 L425.3 201.4 L433.5 201 L442.5 189 L433 161.8 L417.3 153.3"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M463.4 114.3 L468.4 82.8 L480.2 81 L476 71.1 L465.4 60.2 L444.4 45.2 L450.5 66.3"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M442.6 73.8 L439.4 92.5 L461.1 111.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M188.5 86.4 L193.2 70 L202.7 75.3 L215.2 87.7 L233.2 79.4 L217.5 73 L220.9 62 L210.6 49.3 L199.9 64.9"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M495.3 59.8 L473.5 66.6 L460.4 58.2 L447 43.2 L442.4 46.8 L436.7 55.5 L440.9 67.8 L438.8 80.5 L449.3 105"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M494.7 60.7 L473.5 66.6 L460.4 58.2 L447 43.2 L442.4 46.8 L436.7 55.5 L440.9 67.8 L438.8 80.5 L449.3 105"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M230.7 328.3 L250 319.9 L273 311.9 L288.8 305.4 L292.9 291.3 L272.6 296.3 L250 299.7 L232.9 314.6"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M204.1 392.2 L220.3 377.4 L229.4 355.8 L226 343.2 L207.8 341.4 L207 356.5 L197.4 382.6"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M202.8 394.1 L220.3 377.4 L229.4 355.8 L226 343.2 L207.8 341.4 L207 356.5 L197.4 382.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M357.6 254.3 L330.1 277.9 L309.1 296.6 L330.9 297.6 L350.3 302.6 L375.3 304.1 L382.5 310.4"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M464.2 114.2 L466.8 80.6 L462.1 61.9 L447.7 65.1 L443 81.2 L449.1 101.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M403.1 161.7 L411.1 180.3 L410.1 191.9 L404.7 207.3 L394.8 226 L384.8 247.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M203.1 396.8 L220.3 377.4 L222.1 359.1 L209.4 341 L208.4 358.9 L193.3 382.8"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M303.5 58.1 L322.9 39.6 L333.2 30.8"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M327.9 26.8 L313.3 37.2 L305.2 32.5 L304.4 44.6 L298.6 57.5"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M271.3 92.6 L289.9 79.7 L288.8 64.3 L282.4 72 L272.7 69.4 L259.2 76 L272.4 79.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M358.3 254.3 L334 281.1 L336.3 290.7 L350.4 305.8 L376 302.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M250.1 317.6 L272.4 303.2 L298.2 299.2 L281.9 297.5 L261.7 298.3 L257.4 308.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M251.1 354 L272.9 342.2 L281.2 330.1 L253.3 337.5 L252.7 352.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M311.8 343.9 L329.3 317.4 L327 313.7 L314.3 323.7 L311 340.7"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M201.8 119.8 L212.3 101.5 L235.5 90.7 L241 63.1 L250.7 80.3"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M210.4 382 L223.3 366.1 L213.1 346.2 L205.5 353.6 L200 379.1"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M208.9 380.5 L213 364.2 L219.3 351.2 L207.1 353.7 L202.8 373.3"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M326.9 332 L333.2 302.7 L349.6 302.6 L375.3 304.5"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M251.4 63.5 L247 38.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M279.1 26 L273.6 40.1 L257.9 56.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M364.4 302.4 L371 284 L381.7 279.2 L367.9 279 L364.4 302.4"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M356.5 297.5 L361.4 258 L350.9 279.6 L356.5 297.5"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M250.4 350.7 L280.7 348.4 L255 332.5"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M187 356.2 L204.3 346.7 L195.2 377.9 L194.4 391.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M231 356.3 L222.1 342.1 L205.5 340.8 L186.7 347.4"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M187 356.2 L204.3 346.7"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M198.8 373.4 L191.4 388.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M462 114.4 L457.5 88.2 L475.3 91.2 L499.5 60.4"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M372.3 269.3 L388.9 260.2 L394.7 249 L377.4 256.8"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M222.6 347.3 L210.5 335.5 L201 336.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M358.8 291 L360.7 258 L354.9 288.3"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M181.9 147.7 L197.1 115.8 L187.6 108.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M358 291.1 L360.7 258 L350.2 284.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M215.3 86.8 L227.7 77.3 L212.5 75 L208 78.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M252.8 349 L271.5 338.1 L285.8 334.3 L250.6 345.7"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M267.7 332.9 L246.4 350.6 L275.3 344.6"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M247.7 340 L269.8 342.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M337.9 321 L334 297.6 L356.7 311.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M313.4 342.1 L323.7 334.8 L321.5 315.5 L308.7 335.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M305 314 L318.3 315.9 L310.2 340.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M181.7 149.8 L196.1 119 L200.4 109.5 L194.7 98.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M427.3 245.5 L424.6 202.8 L434.8 213.4"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M452.3 83.4 L465.8 76.5 L462.4 67 L456.9 67.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M466.7 109 L468.7 87.9 L494.3 73.4"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M452.4 84.8 L467 72.2 L454.4 61.4"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M391.5 296.8 L400 269.9 L415.8 262.5"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M428.3 80.6 L436.3 87.6 L455.3 109.7"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M428.8 81.4 L436.3 87.6 L455.3 109.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M306.6 314 L316.8 315.9 L302.4 333.7"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M403.9 163.5 L407.4 178.6 L408.3 185.5"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M181.9 147.4 L189.9 126.9 L185.1 113.5"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M272 90.8 L288.4 81.5 L273.1 79.2"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M404.1 163.7 L407.4 178.6 L408.3 185.5"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M439 192.4 L438.2 176.8 L430 176.3"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M495.3 59.8 L478.8 63 L458.7 52.8"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M316 48.4 L322.9 36.4"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M330.8 26.8 L318.1 44.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M214.1 357.3 L210.3 354.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M351.7 284.2 L360 266.2 L353.2 276"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M182 146 L190.3 130.1 L192.6 109 L185 114.5"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M230.8 326.9 L248.7 312.5 L228.8 319"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M313 71.7 L327 49.9 L345.4 27.9"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M492.9 62.9 L478.8 63 L458.7 52.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M418 259.6 L421.3 229.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M463.2 111 L450.8 93.3"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M253.8 323.7 L281.5 313.5"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M258.9 321.8 L286.3 312.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M382.7 288.8 L372.4 275.7 L378 285.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M314.2 337.5 L326.9 324.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M460 82.9 L464 70.6 L452.2 83"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M307.6 54.9 L312 36.3 L302.9 48.3"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M408.6 96.3 L416.7 103.8 L429.7 94.4"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M407.4 99 L423.2 106.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M420.3 106.5 L420.2 88.8 L420.9 103.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M251.4 345.7 L272.3 336.7 L251.4 345.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M382.7 287.4 L366.3 275.8"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M394.6 219.6 L379.3 240.2"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M221.7 319.6 L232.2 330.7"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M447.4 38.1 L436.2 46.2 L426.4 71.8"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M189.9 41.1 L197.9 34.4 L202.8 22.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M460.7 82.9 L460.4 68.9 L456.8 77.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M257.9 340.9 L256.4 338.5"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M439.4 67.4 L441.8 47.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M313.5 335.6 L323.8 321"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M391.3 262.4 L391.8 252.3 L387.4 258.8"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M447.4 38.1 L436.2 46.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M420.3 106.5 L416.2 93.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M462.4 109.2 L451.5 93.2"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M353 258.5 L328.6 277.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M342.5 282.9 L338.6 271 L342.5 282.9"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M409.5 238.4 L395.6 228.7"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M292 79.7 L289.4 69.9"></path>
-    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M193.2 33.1 L200.7 22.2"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M215.9 320.2 L233.8 330.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M356.3 279.6 L353.9 267.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M354 277.8 L356.1 263.1"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M365.1 302.4 L367.2 285.9"></path>
@@ -199,13 +166,40 @@
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M419.5 186.4 L414.5 174.7"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M434.2 185.8 L434.8 169.6"></path>
     <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M392.1 262.4 L387.2 250.6"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M178.3 255.6 L177.1 240.4"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M181.6 150.8 L196.9 119 L195.7 105.6 L186.9 89.7"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M186.5 86.4 L197.9 73.8 L202.6 76.4 L209 86.1 L228.9 81.7 L221 72.9 L220.3 60.4 L224.8 55.5 L233.3 50.9 L224.3 40.2 L211.2 51 L206.5 49.3 L188.8 63.9"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M189.8 42.4 L197.6 38"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M460.9 108 L460.9 108"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M411.1 220.4 L413.8 211.5"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M319.9 309.1 L327 307.3"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M365.9 300.6 L366.5 290.9"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M373.1 269.2 L375.9 256.8"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M497.9 58.2 L494.5 66.9"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M211.5 375.6 L205.2 373.4"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M403 223.9 L401.2 214.7"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M439.7 163.8 L415.6 146.9"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M401.5 116 L408.7 117.1"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M276.9 341.4 L273.1 337.7"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M424.3 99.8 L424.3 99.8"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M497.2 58.2 L499.5 59.9"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M373.1 269.2 L374.4 261"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M402.9 222 L407 209.5"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M392.8 262.3 L390.4 256.9"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M428.9 79.6 L426.5 72.8"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M373.1 269.2 L372.3 266"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M233.4 320.1 L235.2 315.6"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M452 79.7 L457.8 71"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M426.5 73.2 L434.9 74.2"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M414.2 203.2 L417 199"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M318.2 332.5 L319.8 325.1"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M415 203.2 L420 198.4"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M210.8 373.7 L209.6 366.7"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M419.9 180 L417.5 175"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M313.7 304.4 L309.9 299.3"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M402.9 220.2 L401.3 216.6"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M475.4 81.9 L475.8 78.1"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M309.8 309 L306.7 308"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M254.4 306.3 L252.1 304.4"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M211.6 373.8 L210.9 372.3"></path>
+    <path class="terrain-minor" data-layer="terrain" data-source="global-contours-minor" d="M410 131.9 L420.4 124.1"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M359.1 254.6 L330.1 276.3 L332.4 292.7 L348.7 290.9 L352.7 307.7 L367.5 305.3 L382.2 301.3 L392.2 293.8 L384.8 278.9 L386.8 264.2 L408.5 250.3 L420.7 215 L397.1 226.4 L402.1 240.9 L387.8 244 L369 255.9"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M270.6 92.7 L295.4 80 L306.1 66.7 L313.1 59 L326.3 40 L337.2 29.3"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M300.2 26.5 L294.2 36.4 L300.3 42.1 L289.1 52.5 L286.9 58.5 L273.5 66 L265.5 75.5 L260.2 88.2 L274.4 82.7"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M364.4 302.6 L372.6 283.7 L380.6 299.1 L387.2 282 L386.6 256.9 L392.9 264 L397.1 251.1 L382.8 257 L377 272.6 L367.9 279.2 L364.4 302.6"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M464 112.4 L468.2 80.2 L456.4 59.7 L452.6 66.9 L445.1 80.8 L449.9 102.2"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M211.2 382.2 L219.2 367.5 L217.3 357.4 L212 352.1 L203.8 369.9 L203.2 380.4"></path>
@@ -218,28 +212,19 @@
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M417.9 258.1 L424 240.9 L417.4 244.9"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M355.5 279.4 L358.6 275.7 L353.1 269.3"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M227.8 323.1 L244.8 311.1 L227.8 323.1"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M182.1 145 L189.9 126.8 L187.1 116"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M342.5 282.7 L345.5 268.9 L342.5 282.7"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M452.2 81.8 L462.9 74.1"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M421 105.1 L418.3 93.2"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M402.3 223.9 L401.2 213.9"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M413.5 205.2 L419.7 193"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M365.1 298.9 L366.5 292.5"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M182.7 136.6 L188.1 120.7"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M457 103.2 L453.3 100.6"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M392.8 260.4 L388.8 255.4"></path>
-    <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M206.8 34 L206.8 34"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M405.3 162.4 L403.8 160.6"></path>
     <path class="terrain-major" data-layer="terrain" data-source="global-contours-major" d="M400.9 251.9 L403.1 248.6"></path>
     <path class="river" data-layer="terrain" data-source="global-rivers" d="M459.8 71.5 L457 70.1 L455.7 68.6 L452 66.8 L449.1 67.4 L445.2 70.5 L440.8 72.8 L440 72.8 L438.9 73.6 L437.2 75.7 L437.6 78.5 L437.1 79 L436.9 80.2 L436.3 81.3 L435.2 82.3 L433.5 83.5 L433.3 85.5 L432.2 88.5 L428.7 87.6 L428.2 86.7"></path>
-    <path class="river" data-layer="terrain" data-source="global-rivers" d="M290.5 76.6 L286.9 77.8 L281.4 73.8 L282 70.8 L282.5 70.3 L283.2 68.7 L282 65.3 L281.5 64.3 L281.8 63.2 L281.5 60.5 L283.2 58 L285.1 56.2 L285.9 56.5 L285.9 54.1 L285.8 53.5 L287.1 51.7 L287.2 50.3 L286.1 50.2 L284.2 48.9 L281.4 49.1 L278.7 46.6 L278.5 45.8 L278.1 45.2 L277.9 44.7 L277.2 41.8 L276.5 39.8 L276 37.8 L277.7 36 L277.5 34.4 L277.1 33.5 L275.7 33.2 L275.2 30.5 L274.7 28.2 L274 27.2 L274.5 26.5"></path>
-    <path class="river" data-layer="terrain" data-source="global-rivers" d="M271.1 25.8 L269.3 28 L268.4 32 L268.7 34.8 L268.5 36.4 L266.8 38.1 L264.8 38.8"></path>
     <path class="river" data-layer="terrain" data-source="global-rivers" d="M387.1 255.6 L386.3 258 L385.5 261 L386.8 264.7 L386.8 267.6 L388 270.7 L389.8 272.4 L392.6 273.5 L396.3 274.7 L402.7 276.3 L407.1 281.3 L414.7 282.7 L417.7 281.5 L422.2 282.7 L424.6 284.8"></path>
     <path class="river" data-layer="terrain" data-source="global-rivers" d="M406.9 232.3 L408.4 225.7 L407 222.2 L407.7 220.2 L409.5 217.1 L411.4 217.1 L412.5 214.8 L412.5 212.6 L413.1 211.5 L412.7 210.3 L412.5 209.2 L411 208.5 L409.7 207.2 L403.4 203.6 L401.2 202"></path>
-    <path class="river" data-layer="terrain" data-source="global-rivers" d="M175.6 246.9 L176.4 248.6 L175.1 249.6 L174.7 249.9 L174.1 251.1"></path>
-    <path class="river" data-layer="terrain" data-source="global-rivers" d="M171 292.5 L171 295"></path>
-    <path class="river" data-layer="terrain" data-source="global-rivers" d="M184.5 113 L185.8 112 L187 111.7 L188.7 110.1 L188.4 109.5 L188.8 108.8 L189.1 108.1 L188.9 107.6 L189.6 107.3 L189.5 106.5 L189.8 105.8 L191.3 104.7 L191.9 104.6 L192.3 104.2 L193.1 104.5 L194.7 105.5 L195.6 106.5 L196.1 105.8 L196.9 104.8 L199 104.7 L199.9 101 L200.1 99.8 L200.9 98.8 L200.7 98.1 L200.7 96.7 L201.6 94.4 L202.7 91.4 L203.9 90.8 L203.4 90.2 L204.5 90 L205.6 91.3 L208.1 90.9 L207.9 92.3 L210.3 93.2 L210.4 98.4 L213 101.3 L213.5 101.7 L214.2 102.7 L214.6 101.3 L215.3 102.9 L215.6 104.4 L216.2 105.8 L217.5 107 L217.7 109.2"></path>
-    <path class="river" data-layer="terrain" data-source="global-rivers" d="M208.9 66.4 L210 63.7 L211 62.2 L212.8 58.8 L213.7 57.6 L214.3 56.1 L215.5 54.3 L214.7 52.9 L213.5 52.3 L213 51.2 L213.2 50.3 L214.1 48.4 L216.2 46.1 L217.2 43.7 L218.8 39.8 L220 36.8 L221.7 35.3 L222.3 33.5 L223.6 32.4 L226.7 28.5 L229 29.8 L232.4 30.8 L240.2 29.4 L242.4 29.8"></path>
   </g>
   <g data-layer="transport" data-source="data/transport_layers/japan_road/roads.preview.topo.json data/transport_layers/japan_rail/railways.preview.topo.json">
     <path class="road" data-layer="transport" data-source="japan-road-preview" d="M395.2 296.6 L394.8 296.4 L394.8 296 L394.8 295.3 L394.7 294.8 L394.8 294.3 L394.7 293.8 L394.8 293.6 L394.7 293.2 L394.5 292.5 L394.1 292 L393.6 291.8 L393.4 291.3 L392.7 290.3 L392.3 290.1 L392.3 289.7 L392.1 289.2 L391.9 288.5 L392.1 287.8 L392.4 287.2 L392.5 286.3 L392.7 285.5 L392.9 285.1 L393.4 284.8 L393.9 284.6 L394.3 284.3 L394.4 284 L394.2 283.4 L394.5 283.1 L394.4 282.7 L394.7 282.5 L394.7 282.2 L394.6 281.7 L395 281.2 L395.3 280.8 L395.5 280.6 L395.8 280.3 L396.5 279.8 L396.9 279.8 L397.4 279.4 L397.8 279.1 L398.2 278.9"></path>
@@ -729,77 +714,77 @@
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="413.3" cy="285.4" r="5.6"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="402.1" cy="272.6" r="5.6"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="391.8" cy="286.1" r="5.6"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="176.3" cy="294.5" r="5.6"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="305.6" cy="313.2" r="5.6"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="349.1" cy="313.4" r="5.5"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="206.3" cy="336.2" r="5.5"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="403" cy="299" r="5.5"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="349" cy="300.1" r="5.4"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="338.2" cy="313.4" r="5.4"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="412.8" cy="272.2" r="5.4"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="294.7" cy="313.1" r="5.4"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="421.2" cy="218.9" r="5.4"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="425.3" cy="85.5" r="5.4"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="360" cy="313.2" r="5.4"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="327.4" cy="300.2" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="381.4" cy="299.6" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="370.8" cy="313.1" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="348.7" cy="260.4" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="195.3" cy="335.6" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="194.5" cy="348.8" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="205.5" cy="349.5" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="435.7" cy="98.4" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="338.1" cy="260.5" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="401.7" cy="259.4" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="178.2" cy="268.1" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="273" cy="312.6" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="204.8" cy="362.7" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="239.8" cy="324.7" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="250.8" cy="325.1" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="390.4" cy="233.2" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="180.1" cy="241.7" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="411.8" cy="245.8" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="327.4" cy="273.7" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="424" cy="285" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="240.3" cy="85.5" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="465.1" cy="96.6" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="413.8" cy="298.7" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="217.3" cy="336.8" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="227.7" cy="350.6" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="444" cy="71.1" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="417.3" cy="126" r="5.3"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="435" cy="85" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="418.4" cy="152.6" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="428.4" cy="152.1" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="431.6" cy="218.4" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="182.6" cy="361.3" r="5.3"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="203.3" cy="389.1" r="5.3"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="204.1" cy="43.2" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="409.3" cy="179.5" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="429.7" cy="178.7" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="369.9" cy="260.2" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="422.9" cy="258.6" r="5.2"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="283.6" cy="326.1" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="250.3" cy="338.3" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="272.3" cy="339" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="259.2" cy="99.7" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="359.5" cy="273.6" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="327.4" cy="287" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="262.6" cy="299" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="472.9" cy="69.3" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="250" cy="86" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="200.5" cy="96.6" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="484.6" cy="95.2" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="426.6" cy="112.2" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="369.7" cy="246.9" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="223.9" cy="30.9" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="181.1" cy="228.5" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="381.7" cy="312.9" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="228.9" cy="324.2" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="438.5" cy="151.6" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="401.3" cy="246.1" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="227" cy="363.8" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="270.3" cy="59.9" r="5.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="400" cy="206.4" r="5.2"><title>light</title></circle>
-    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="190.7" cy="95.9" r="5.1"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="370.6" cy="299.9" r="5.1"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="284.2" cy="299.6" r="5.1"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="183.5" cy="348.1" r="5.1"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="193.7" cy="362" r="5.1"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="420.6" cy="205.6" r="5"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="430.3" cy="191.9" r="4.9"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="260.8" cy="351.9" r="4.9"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="483.6" cy="81.9" r="4.9"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="412.3" cy="259" r="4.8"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="370.1" cy="273.4" r="4.8"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="432.2" cy="31.5" r="4.8"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="305.8" cy="300" r="4.7"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="431" cy="205.2" r="4.7"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="434.3" cy="71.7" r="4.6"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="462.4" cy="56.6" r="4.6"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="440.6" cy="191.4" r="4.6"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="420.1" cy="192.4" r="4.6"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="338.1" cy="273.7" r="4.5"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="427.8" cy="138.8" r="4.4"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="192" cy="388.4" r="4.4"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="338" cy="247.2" r="4.4"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="370.4" cy="286.6" r="4.3"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="492.2" cy="67.8" r="4.3"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="359.6" cy="286.8" r="4.3"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="191.2" cy="401.7" r="4.3"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="416.1" cy="99.3" r="4.2"><title>light</title></circle>
+    <circle class="night-light" data-layer="night" data-source="nasa-black-marble-2016" cx="406.8" cy="113.1" r="4.2"><title>light</title></circle>
     <circle class="night-light" data-layer="night" data-source="historical-1930-city-light-entries" cx="401.4" cy="287.5" r="8"><title>Tokyo</title></circle>
     <circle class="night-light" data-layer="night" data-source="historical-1930-city-light-entries" cx="311" cy="314.8" r="7.8"><title>Osaka</title></circle>
     <circle class="night-light" data-layer="night" data-source="historical-1930-city-light-entries" cx="316.6" cy="306.2" r="7.5"><title>Kyoto</title></circle>

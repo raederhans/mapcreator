@@ -395,12 +395,13 @@ const AUTHORED_VERIFICATION_METADATA = {
     "verify:test-timing-summary": "node tools/test_timing_summary.mjs",
     "build:landing-showcase": "npm run python -- tools/build_landing_europe_1936_showcase.py",
     "build:landing-work-maps": "npm run python -- tools/build_landing_work_maps.py",
+    "test:py:landing-map-asset-contracts": "npm run python -- -m unittest tests.test_landing_map_asset_contracts -q",
     "test:node:landing-showcase-view": "node --test tests/landing_showcase_view_behavior.test.mjs",
     "test:node:sample-project-contracts": "node --test tests/sample_project_contracts.test.mjs",
     "test:node:release-smoke-helper": "node --test tests/release_smoke_retry_behavior.node.test.mjs",
     "test:py:pages-dist-startup-shell-heavy": "npm run python -- -m unittest tests.test_pages_dist_startup_shell_heavy -q",
-    "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts",
-    "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
+    "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts",
+    "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
     "verify:dist-drift": "npm run python -- tools/build_pages_dist.py && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
     "build:global-transport-roads": "npm run python -- tools/build_global_transport_roads.py",
     "build:global-transport-rail": "npm run python -- tools/build_global_transport_rail.py",
@@ -5795,6 +5796,70 @@ const AUTHORED_VERIFICATION_METADATA = {
       "verificationOrder": null,
       "selectorOrder": 229,
       "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "landing:map-asset-contracts",
+      "commandRef": "test:py:landing-map-asset-contracts",
+      "sourceRefs": [
+        "tests/test_landing_map_asset_contracts.py",
+        "tools/build_landing_europe_1936_showcase.py",
+        "tools/build_landing_japan_preview.py",
+        "tools/build_landing_work_maps.py",
+        "tools/rasterize_landing_assets.py",
+        "landing/assets/europe-1936-showcase.json",
+        "landing/assets/europe-1936-showcase.svg",
+        "landing/assets/hero-blank.json",
+        "landing/assets/hero-blank.svg",
+        "landing/assets/hero-hoi4-1936.json",
+        "landing/assets/hero-hoi4-1936.svg",
+        "landing/assets/hero-hoi4-1939.json",
+        "landing/assets/hero-hoi4-1939.svg",
+        "landing/assets/hero-tno-1962.json",
+        "landing/assets/hero-tno-1962.svg",
+        "landing/assets/japan-preview.json",
+        "landing/assets/japan-preview-cities.svg",
+        "landing/assets/japan-preview-night.svg",
+        "landing/assets/japan-preview-terrain.svg",
+        "landing/assets/japan-preview-transport.svg",
+        "landing/assets/work-alt-history-med.json",
+        "landing/assets/work-alt-history-med.svg",
+        "landing/assets/work-atlas-japan-corridor.json",
+        "landing/assets/work-atlas-japan-corridor.svg",
+        "landing/assets/work-scenario-switch-europe.json",
+        "landing/assets/work-scenario-switch-europe.svg"
+      ],
+      "ownerHints": [
+        "public-demo"
+      ],
+      "domains": [
+        "public-sample"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "heavy",
+      "resourceLocks": [
+        "heavy-geo"
+      ],
+      "executionOwners": [
+        "main-thread"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": null,
+      "selectorOrder": 379,
+      "verification": {
+        "commandType": "package-script",
+        "packageScriptRequired": true,
+        "supervisorDomain": "public-sample",
+        "routeRegistry": true
+      },
       "selector": {}
     },
     {
@@ -17433,7 +17498,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "platforms": ["all"],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 129,
-      "selectorOrder": 379,
+      "selectorOrder": 380,
       "verification": {
         "commandType": "package-script",
         "packageScriptRequired": true,
@@ -17465,7 +17530,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "platforms": ["all"],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 130,
-      "selectorOrder": 380,
+      "selectorOrder": 381,
       "verification": {
         "commandType": "package-script",
         "packageScriptRequired": true,

@@ -30,6 +30,14 @@ RASTER_TARGETS = (
     ("work-atlas-japan-corridor.svg", "work-atlas-japan-corridor.webp", 1360, 880, 78),
 )
 
+# Social cards are consumed as PNG by the Open Graph and Twitter metadata. Keep
+# this separate so the existing 16 SVG-to-WebP delivery targets remain stable.
+PNG_RASTER_TARGETS = (
+    ("social-preview.svg", "social-preview.png", 1200, 630, 100),
+)
+
+ALL_RASTER_TARGETS = (*RASTER_TARGETS, *PNG_RASTER_TARGETS)
+
 
 def optimize_svg_file(target: Path) -> None:
     npx = shutil.which("npx")
@@ -91,7 +99,7 @@ def rasterize_targets() -> None:
 
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     targets: list[dict[str, str | int]] = []
-    for source_name, output_name, width, height, quality in RASTER_TARGETS:
+    for source_name, output_name, width, height, quality in ALL_RASTER_TARGETS:
         source = ASSETS_DIR / source_name
         if not source.is_file():
             raise FileNotFoundError(f"Missing landing SVG source: {source}")
@@ -109,16 +117,22 @@ def rasterize_targets() -> None:
     script_path.write_text(build_playwright_script(targets), encoding="utf-8")
     subprocess.run(["node", str(script_path)], cwd=ROOT, check=True)
 
-    for target, (_source_name, output_name, _width, _height, quality) in zip(targets, RASTER_TARGETS):
+    for target, (_source_name, output_name, _width, _height, quality) in zip(targets, ALL_RASTER_TARGETS):
         output_path = ASSETS_DIR / output_name
         with Image.open(str(target["png"])) as image:
-            image.save(output_path, "WEBP", quality=quality, method=6)
+            if output_path.suffix.lower() == ".png":
+                image.save(output_path, "PNG")
+            else:
+                image.save(output_path, "WEBP", quality=quality, method=6)
 
 
 def main() -> None:
     run_svgo()
     rasterize_targets()
-    print(f"[rasterize_landing_assets] wrote {len(RASTER_TARGETS)} WebP assets")
+    print(
+        f"[rasterize_landing_assets] wrote {len(RASTER_TARGETS)} WebP assets "
+        f"and {len(PNG_RASTER_TARGETS)} PNG asset"
+    )
 
 
 if __name__ == "__main__":

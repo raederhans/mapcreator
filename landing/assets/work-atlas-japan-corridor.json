@@ -2,7 +2,7 @@
   "schema_version": 1,
   "asset_type": "landing_work_card_map",
   "asset_id": "work_atlas_japan_corridor",
-  "title": "Japan Tokaido Corridor Atlas Output",
+  "title": "Central Japan Local Transport Atlas",
   "scope": {
     "bbox": [
       134.1,
@@ -24,13 +24,13 @@
     "road_lines": 95,
     "rail_lines": 70,
     "major_stations": 18,
-    "city_light_points": 18,
+    "urban_anchor_points": 18,
     "city_points": 24,
     "terrain_lines": 20,
     "river_lines": 1
   },
   "selection_policy": {
-    "note": "Tokaido corridor bbox combining transport workbench resources with terrain and city light context.",
+    "note": "Central Japan local bbox combining real roads, railways, stations, terrain, rivers, and population-ranked city anchors; no singled-out corridor geometry.",
     "ranking": "intersect bbox, clip, sort by area or length, keep top visible features"
   }
 }

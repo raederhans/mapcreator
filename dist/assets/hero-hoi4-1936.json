@@ -84,11 +84,62 @@
     "ROM",
     "SOV"
   ],
+  "capital_points": [
+    {
+      "tag": "CZE",
+      "name": "Prague",
+      "lon": 14.42076,
+      "lat": 50.08804
+    },
+    {
+      "tag": "ENG",
+      "name": "London",
+      "lon": -0.12574,
+      "lat": 51.50853
+    },
+    {
+      "tag": "FRA",
+      "name": "Paris",
+      "lon": 2.3488,
+      "lat": 48.85341
+    },
+    {
+      "tag": "GER",
+      "name": "Berlin",
+      "lon": 13.41053,
+      "lat": 52.52437
+    },
+    {
+      "tag": "ITA",
+      "name": "Rome",
+      "lon": 12.51133,
+      "lat": 41.89193
+    },
+    {
+      "tag": "POL",
+      "name": "Warsaw",
+      "lon": 21.01178,
+      "lat": 52.22977
+    },
+    {
+      "tag": "ROM",
+      "name": "Bucharest",
+      "lon": 26.10626,
+      "lat": 44.43225
+    },
+    {
+      "tag": "SOV",
+      "name": "Moscow",
+      "lon": 37.61781,
+      "lat": 55.75204
+    }
+  ],
   "selection_policy": {
     "viewport": "Europe hero crop shared by all scenario chips",
     "blank_canvas": false,
     "ownership_fill": true,
     "capital_limit": 8,
-    "territory_path_limit_per_tag": 48
+    "territory_path_limit_per_tag": 48,
+    "capital_label_layout": "deterministic bounding-box avoidance including text stroke"
   }
 }

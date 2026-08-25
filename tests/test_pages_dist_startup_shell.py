@@ -7,6 +7,7 @@ import unittest
 import gzip
 import hashlib
 import json
+import struct
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -232,6 +233,36 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertTrue(asset.exists(), f"{asset_name} should be checked in for Pages delivery")
                 self.assertLess(asset.stat().st_size, 120_000)
 
+    def test_landing_social_preview_contract(self) -> None:
+        svg_path = LANDING_ASSETS / "social-preview.svg"
+        png_path = LANDING_ASSETS / "social-preview.png"
+        svg_text = svg_path.read_text(encoding="utf-8")
+        svg_root = ET.fromstring(svg_text)
+        self.assertEqual(svg_root.attrib.get("viewBox"), "0 0 1200 630")
+        self.assertEqual(svg_root.attrib.get("data-social-preview"), "scenario-forge")
+        self.assertIn("Scenario Forge", " ".join(svg_root.itertext()))
+        for brand_color in ("#07111f", "#147f77", "#d99a45"):
+            with self.subTest(brand_color=brand_color):
+                self.assertIn(brand_color, svg_text)
+
+        png_bytes = png_path.read_bytes()
+        self.assertEqual(png_bytes[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertGreaterEqual(len(png_bytes), 24)
+        self.assertEqual(struct.unpack(">II", png_bytes[16:24]), (1200, 630))
+
+        from tools import rasterize_landing_assets
+
+        self.assertEqual(len(rasterize_landing_assets.RASTER_TARGETS), 16)
+        self.assertTrue(all(output.endswith(".webp") for _, output, *_ in rasterize_landing_assets.RASTER_TARGETS))
+        self.assertEqual(
+            rasterize_landing_assets.PNG_RASTER_TARGETS,
+            (("social-preview.svg", "social-preview.png", 1200, 630, 100),),
+        )
+        self.assertEqual(
+            rasterize_landing_assets.ALL_RASTER_TARGETS,
+            rasterize_landing_assets.RASTER_TARGETS + rasterize_landing_assets.PNG_RASTER_TARGETS,
+        )
+
     def test_landing_japan_preview_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "japan-preview.json"
         self.assertTrue(metadata_path.exists(), "Japan preview metadata should be checked in")
@@ -250,13 +281,33 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "data/city_lights/historical_1930_entries.json",
         }
         self.assertEqual(set(payload["sources"]), expected_sources)
-        self.assertEqual(payload["scope"]["profile"], "japan main corridor")
+        self.assertEqual(payload["scope"]["profile"], "Japan main-islands preview")
+        self.assertIn("Okinawa is outside this frame", payload["scope"]["note"])
+        self.assertEqual(
+            payload["carrier_binding"],
+            {
+                "cross_mask_policy": "caller-must-provide-frame-for-lines-and-polygons",
+                "fit_geometry_type": "MultiPolygon",
+                "frame_id": "main",
+                "frame_label": "Japan four islands",
+                "source_file": "data/transport_layers/japan_corridor/carrier.json",
+            },
+        )
         self.assertEqual(payload["projection"]["name"], "geoConicConformal")
         self.assertEqual(payload["projection"]["center"], [136.5, 35.0])
         self.assertEqual(payload["projection"]["parallels"], [33.0, 37.0])
+        self.assertGreater(payload["projection"]["fit_scale"], 0)
+        self.assertEqual(payload["projection"]["scale_semantics"], "projection fit from carrier coordinates to SVG pixels")
+        self.assertEqual(payload["ui_zoom"]["ownership"], "landing/app.js consumer")
         self.assertEqual(payload["selection_policy"]["road_limit"], 260)
         self.assertEqual(payload["selection_policy"]["rail_limit"], 160)
         self.assertEqual(payload["selection_policy"]["main_corridor_limit"], 1)
+        self.assertEqual(payload["selection_policy"]["main_corridor_role"], "highlighted motorway")
+        self.assertEqual(payload["selection_policy"]["highlighted_motorway_ref"], "C4")
+        self.assertEqual(
+            payload["selection_policy"]["clip_frame"],
+            "carrier.frames.main.fitGeometry for lines, polygons, and points",
+        )
         self.assertEqual(payload["selection_policy"]["city_limit"], 32)
         self.assertEqual(payload["selection_policy"]["focus_city_names"], ["Tokyo", "Osaka", "Nagoya"])
         self.assertEqual(payload["counts"]["road_source_features"], 4794)
@@ -266,7 +317,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["counts"]["road_lines_rendered"], 260)
         self.assertEqual(payload["counts"]["rail_lines_rendered"], 160)
         self.assertEqual(payload["counts"]["main_corridor_paths_rendered"], 1)
-        self.assertEqual(len(payload["counts"]["main_corridor_titles"]), 1)
+        self.assertEqual(payload["counts"]["main_corridor_titles"], ["首都圏中央連絡自動車道 / C4"])
         self.assertGreater(payload["counts"]["city_source_features"], payload["counts"]["city_points_rendered"])
         self.assertGreater(payload["counts"]["city_eligible_points"], payload["counts"]["city_points_rendered"])
         self.assertEqual(payload["counts"]["city_points_rendered"], 32)
@@ -445,9 +496,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertEqual(payload["counts"], payload["feature_counts"])
                 if mode == "blank":
                     self.assertIn("data/scenarios/blank_base/manifest.json", payload["source_files"])
-                    self.assertIn("data/europe_topology.runtime_political_v1.json", payload["source_files"])
+                    self.assertIn("data/scenarios/blank_base/runtime_topology.topo.json", payload["source_files"])
+                    self.assertNotIn("data/europe_topology.runtime_political_v1.json", payload["source_files"])
                     self.assertIn("data/europe_land_bg.geojson", payload["source_files"])
                     self.assertTrue(payload["selection_policy"]["blank_canvas"])
+                    self.assertEqual(
+                        payload["selection_policy"]["runtime_topology_source"],
+                        "data/scenarios/blank_base/runtime_topology.topo.json",
+                    )
                     self.assertEqual(payload["selection_policy"]["land_simplify_tolerance"], 0.08)
                     self.assertEqual(payload["selection_policy"]["land_path_limit"], 8600)
                     self.assertEqual(payload["selection_policy"]["coastline_path_limit"], 1000)
@@ -456,7 +512,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertGreater(payload["feature_counts"]["land_paths"], 0)
                     self.assertGreater(payload["feature_counts"]["coastline_paths"], 0)
                     self.assertEqual(payload["feature_counts"]["land_path_limit"], 8600)
-                    self.assertEqual(payload["feature_counts"]["land_paths"], 8600)
+                    self.assertEqual(
+                        payload["feature_counts"]["land_paths"],
+                        min(
+                            payload["feature_counts"]["land_paths_available"],
+                            payload["feature_counts"]["land_path_limit"],
+                        ),
+                    )
                     self.assertEqual(payload["feature_counts"]["coastline_path_limit"], 1000)
                     self.assertEqual(payload["feature_counts"]["coastline_paths"], 1000)
                     self.assertGreater(
@@ -464,11 +526,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
                         payload["feature_counts"]["coastline_paths"],
                     )
                     self.assertGreater(payload["feature_counts"]["coastline_paths_dropped"], 0)
-                    self.assertGreater(
-                        payload["feature_counts"]["land_paths_available"],
-                        payload["feature_counts"]["land_paths"],
+                    self.assertEqual(
+                        payload["feature_counts"]["land_paths_dropped"],
+                        max(
+                            0,
+                            payload["feature_counts"]["land_paths_available"]
+                            - payload["feature_counts"]["land_path_limit"],
+                        ),
                     )
-                    self.assertGreater(payload["feature_counts"]["land_paths_dropped"], 0)
                     self.assertEqual(payload["territory_tags"], [])
                 else:
                     self.assertIn(f"data/scenarios/{scenario_id}/manifest.json", payload["source_files"])
@@ -496,9 +561,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn("data/europe_land_bg.geojson", payload["source_files"])
                     self.assertEqual(
                         payload["selection_policy"]["hero_geometry_source"],
-                        "runtime_topology base sea and political ownership crop",
+                        "runtime_topology political ownership crop",
                     )
-                    self.assertEqual(payload["selection_policy"]["atlantropa_overlay"], "disabled_for_landing_hero")
+                    self.assertEqual(
+                        payload["selection_policy"]["atlantropa_overlay"],
+                        "omitted_from_political_ownership_crop",
+                    )
                     self.assertEqual(
                         payload["selection_policy"]["base_underlay"],
                         "original Europe land and coastline for small Mediterranean islands",
@@ -509,19 +577,17 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     )
                     self.assertEqual(
                         payload["selection_policy"]["hero_capital_label_overrides"],
-                        {"BRG": "Nanzig", "SOV": "Moskau", "WRS": "Warshau"},
+                        {"BRG": "Nanzig"},
                     )
                     self.assertEqual(
                         payload["selection_policy"]["hero_capital_point_overrides"],
-                        {
-                            "BRG": [6.18496, 48.68439],
-                            "SOV": [37.61781, 55.75204],
-                            "WRS": [21.01178, 52.22977],
-                        },
+                        {"BRG": [6.18496, 48.68439]},
                     )
-                    for city_name in ("Madrid", "Kyiv", "Moskau", "Warshau", "Nanzig"):
+                    self.assertNotIn("SOV", payload["capital_tags"])
+                    self.assertIn("WRS", payload["capital_tags"])
+                    for city_name in ("Madrid", "Kyiv", "Severodvinsk", "Nanzig"):
                         self.assertIn(f">{city_name}</text>", svg_text)
-                    for replaced_name in ("Zagreb", "Bucharest", "Sofia", "Brussels"):
+                    for replaced_name in ("Moskau", "Warshau", "Zagreb", "Bucharest", "Sofia", "Brussels"):
                         self.assertNotIn(f">{replaced_name}</text>", svg_text)
                     self.assertEqual(payload["selection_policy"]["base_underlay_path_limit"], 360)
                     self.assertEqual(payload["selection_policy"]["base_underlay_coastline_limit"], 360)
@@ -1591,6 +1657,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")
         styles_css = LANDING_STYLES_CSS.read_text(encoding="utf-8")
 
+        self.assertEqual(
+            re.findall(r'<section id="([^"]+)"', html),
+            ["hero", "sample-runs", "story", "features", "data", "faq"],
+        )
+
         for expected_fragment in (
             './styles.css',
             './app.js',
@@ -1600,7 +1671,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="productStageLabel"',
             'class="brandmark__logo"',
             './assets/favicon.svg',
-            '<a href="#sample-runs" data-i18n="navWorks">Runs</a>',
+            '<a href="#sample-runs" data-i18n="navWorks">Outputs</a>',
             './assets/hero-hoi4-1936.webp',
             'data-hero-map',
             'data-hero-chip="blank"',
@@ -1608,26 +1679,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-hero-chip="hoi4-1939"',
             'data-hero-chip="tno-1962"',
             'data-stat-value="21338"',
-            'data-i18n="sourcesEyebrow"',
-            'class="source-marquee"',
-            'class="source-marquee__track"',
-            'aria-hidden="true"',
-            'href="https://github.com/nvkelso/natural-earth-vector"',
-            'href="https://github.com/wmgeolab/geoBoundaries"',
-            'href="https://download.geonames.org/export/dump/"',
-            'href="https://www.ncei.noaa.gov/products/etopo-global-relief-model"',
-            'href="https://blackmarble.gsfc.nasa.gov/"',
-            'href="https://planet.openstreetmap.org/"',
-            'href="https://download.geofabrik.de/"',
-            'href="https://nlftp.mlit.go.jp/ksj/index.html"',
-            'href="https://www.usgs.gov/programs/mineral-resources-program/mineral-resources-data"',
-            'href="https://www.data.gouv.fr/"',
-            'href="https://docs.camino.beta.gouv.fr/qgis/"',
-            'href="https://www.data.gouv.fr/datasets/base-de-donnees-des-installations-terminales-embranchees-fret-en-france-ite-3000"',
-            'href="https://railroads.dot.gov/maps-and-data/maps-geographic-information-system/maps-geographic-information-system"',
-            'href="https://www.opendatani.gov.uk/"',
-            'href="https://data-portal.networkrail.co.uk/"',
-            'href="https://www.data.gov.uk/dataset/naptan"',
+            '<meta name="robots" content="index,follow" />',
+            '<link rel="canonical" href="https://raederhans.github.io/scenario-forge/" />',
+            '<meta property="og:image" content="https://raederhans.github.io/scenario-forge/assets/social-preview.png" />',
+            '<meta name="twitter:card" content="summary_large_image" />',
             'data-i18n="showcaseEyebrow"',
             './assets/europe-1936-showcase.svg',
             'data-showcase-root',
@@ -1655,13 +1710,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-aria-label="previewZoomOut"',
             'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
-            'data-i18n="templatesEyebrow"',
-            './assets/template-modern.webp',
+            'data-preview-status role="status" aria-live="polite" hidden',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
-            'data-i18n="casesEyebrow"',
             'data-i18n="faqEyebrow"',
-            'data-i18n="updatesEyebrow"',
             'class="footer__brand"',
             'class="footer__sources"',
             'class="footer__actions"',
@@ -1740,6 +1792,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-story-step-button="export"',
             'data-story-compare="hoi4-1939"',
             'data-story-evidence-source="data/scenarios/index.json:public_baseline_ids.length"',
+            'data-showcase-status role="status" aria-live="polite" hidden',
             'data-i18n="storyEyebrow"',
             'data-i18n-aria-label="storyStageLabel"',
             'data-i18n="chipBlank"',
@@ -1761,7 +1814,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroTitleAccent",
             "formatMetricNumbers",
             "statsLabel",
-            "sourcesEyebrow",
+            "worksEyebrow",
+            "featuresEyebrow",
+            "dataEyebrow",
+            "faqEyebrow",
             "showcaseEyebrow",
             "showcaseLayerPoliticalTitle",
             "showcaseLayerRailTitle",
@@ -1823,11 +1879,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "syncHeroMap",
             "initMetricCountUp",
             "previewPanelTransportTitle",
+            "previewImageFallback",
+            "showcaseMetadataFallback",
             "dataCardOneTitle",
             "editionOneTitle",
             "faqOneQuestion",
-            "templatesEyebrow",
-            "updatesEyebrow",
             "productPreviewLabel",
             "productStageLabel",
             "heroChipsLabel",
@@ -1839,6 +1895,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltTno1962",
             "data-i18n-alt",
             "data-i18n-aria-label",
+            "metaTitle",
+            "metaDescription",
+            "metaOgDescription",
             "zh:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
@@ -1847,8 +1906,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", styles_css)
         self.assertIn('html[data-reveal="enabled"]', styles_css)
         self.assertIn(".is-revealed", styles_css)
-        self.assertIn(".source-marquee__track", styles_css)
-        self.assertIn("@keyframes sourceMarquee", styles_css)
         self.assertIn("min-height: 126px", styles_css)
         self.assertIn("height: 48px", styles_css)
         self.assertIn("height: 46px", styles_css)
@@ -1857,7 +1914,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("line-height: 1.1", styles_css)
         self.assertIn("overflow-wrap: anywhere", styles_css)
         self.assertIn(".hero-cartography", styles_css)
-        self.assertIn("translateY(-18px) perspective(1200px)", styles_css)
+        self.assertIn("translateY(-8px) perspective(1200px)", styles_css)
         hero_chips_style = re.search(r"\.hero__chips\s*\{(?P<body>[^}]*)\}", styles_css, re.S)
         self.assertIsNotNone(hero_chips_style)
         self.assertNotIn("position: absolute", hero_chips_style.group("body"))
@@ -1975,6 +2032,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         zh_table = app_js[zh_start:]
 
         for expected_fragment in (
+            "navWorks:",
+            "worksTitle:",
+            "sampleProjectDownloadsTitle:",
             "featureGroupOneTitle:",
             "featureGroupTwoTitle:",
             "featureGroupThreeTitle:",
@@ -1983,9 +2043,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'previewPanelTransportTitle:',
             "dataTitle:",
             "faqOneQuestion:",
-            "roadmapOneTitle:",
-            "roadmapTwoTitle:",
-            "templatesTitle:",
+            "faqSixQuestion:",
+            "editionsTitle:",
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
@@ -1996,6 +2055,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "previewZoomIn:",
             "previewZoomOut:",
             "previewZoomReset:",
+            "previewImageFallback:",
+            "showcaseMetadataFallback:",
             "storyTitle:",
             "storyStepBaselineTitle:",
             "storyStepExportProof:",
@@ -2007,13 +2068,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltHoi41936:",
             "heroAltHoi41939:",
             "heroAltTno1962:",
-            "templateModernAlt:",
-            "updatesTitle:",
+            "ctaTitle:",
+            "metaTitle:",
+            "metaDescription:",
+            "metaOgDescription:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, en_table)
 
         for expected_fragment in (
+            "navWorks:",
+            "worksTitle:",
+            "sampleProjectDownloadsTitle:",
             "featureGroupOneTitle:",
             "featureGroupTwoTitle:",
             "featureGroupThreeTitle:",
@@ -2022,17 +2088,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "previewPanelTransportTitle:",
             "dataTitle:",
             "faqOneQuestion:",
-            "workflowTitle:",
-            "audienceTitle:",
-            "roadmapOneTitle:",
-            "roadmapTwoTitle:",
+            "faqSixQuestion:",
+            "editionsTitle:",
             "ctaBody:",
-            "templatesTitle:",
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerDayNightTitle:",
+            "previewImageFallback:",
+            "showcaseMetadataFallback:",
             "storyTitle:",
             "storyStepBaselineTitle:",
             "storyStepExportProof:",
@@ -2044,9 +2109,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltHoi41936:",
             "heroAltHoi41939:",
             "heroAltTno1962:",
-            "templateModernAlt:",
-            "updatesTitle:",
             'metaTitle: "Scenario Forge — 场景优先政治地图工作台"',
+            "metaDescription:",
+            "metaOgDescription:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, zh_table)
@@ -2100,6 +2165,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.skipTest("dist/index.html is only available after build_pages_dist runs")
         html = DIST_ROOT_INDEX.read_text(encoding="utf-8")
 
+        self.assertEqual(
+            re.findall(r'<section id="([^"]+)"', html),
+            ["hero", "sample-runs", "story", "features", "data", "faq"],
+        )
+
         for expected_fragment in (
             "./styles.css",
             "./app.js",
@@ -2116,7 +2186,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-hero-chip="hoi4-1939"',
             'data-hero-chip="tno-1962"',
             'data-stat-value="21338"',
-            'data-i18n="sourcesEyebrow"',
+            '<meta name="robots" content="index,follow" />',
+            '<link rel="canonical" href="https://raederhans.github.io/scenario-forge/" />',
+            '<meta property="og:image" content="https://raederhans.github.io/scenario-forge/assets/social-preview.png" />',
+            '<meta name="twitter:card" content="summary_large_image" />',
             'data-i18n="showcaseEyebrow"',
             './assets/europe-1936-showcase.svg',
             'data-showcase-root',
@@ -2138,13 +2211,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-aria-label="previewZoomOut"',
             'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
-            'data-i18n="templatesEyebrow"',
-            './assets/template-modern.webp',
+            'data-preview-status role="status" aria-live="polite" hidden',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
-            'data-i18n="casesEyebrow"',
             'data-i18n="faqEyebrow"',
-            'data-i18n="updatesEyebrow"',
+            'data-showcase-status role="status" aria-live="polite" hidden',
             'data-i18n-aria-label="productPreviewLabel"',
             'data-i18n-aria-label="brandHomeLabel"',
             'data-i18n-aria-label="primaryNavLabel"',
@@ -2152,7 +2223,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-alt="productPreviewAlt"',
             'data-i18n-alt="workOneAlt"',
             'data-i18n="workOneTitle"',
-            '<a href="#sample-runs" data-i18n="navWorks">Runs</a>',
+            '<a href="#sample-runs" data-i18n="navWorks">Outputs</a>',
             'id="sample-runs"',
             'data-sample-runs-root',
             'data-sample-runs-manifest="./assets/sample-runs.json"',
@@ -2206,7 +2277,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroTitleAccent",
             "formatMetricNumbers",
             "statsLabel",
-            "sourcesEyebrow",
+            "worksEyebrow",
+            "featuresEyebrow",
+            "dataEyebrow",
+            "faqEyebrow",
             "showcaseEyebrow",
             "showcaseLayerPoliticalTitle",
             "showcaseLayerRailTitle",
@@ -2250,12 +2324,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "storyStageTitleExport",
             "syncProductStoryFromDom",
             "previewPanelTransportTitle",
+            "previewImageFallback",
+            "showcaseMetadataFallback",
             "dataCardOneTitle",
             "faqOneQuestion",
             "editionsEyebrow",
-            "casesEyebrow",
-            "templatesEyebrow",
-            "updatesEyebrow",
             "productPreviewLabel",
             "productStageLabel",
             "heroChipsLabel",
@@ -2272,6 +2345,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltHoi41939",
             "heroAltTno1962",
             "data-i18n-alt",
+            "metaTitle",
+            "metaDescription",
+            "metaOgDescription",
             "zh:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
@@ -2286,7 +2362,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertRegex(styles_css, re.compile(r'\[data-reveal(?:=["\']enabled["\'])?\]'))
         self.assertIn(".is-revealed", styles_css)
         self.assertIn(".hero-cartography", styles_css)
-        self.assertIn("translateY(-18px) perspective(1200px)", styles_css)
+        self.assertIn("translateY(-8px) perspective(1200px)", styles_css)
         hero_chips_style = re.search(r"\.hero__chips\s*\{(?P<body>[^}]*)\}", styles_css, re.S)
         self.assertIsNotNone(hero_chips_style)
         self.assertNotIn("position: absolute", hero_chips_style.group("body"))
@@ -2470,6 +2546,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "assets/work-atlas-japan-corridor.svg",
             "assets/work-atlas-japan-corridor.webp",
             "assets/work-atlas-japan-corridor.json",
+            "assets/social-preview.svg",
+            "assets/social-preview.png",
             "assets/sample-runs.json",
             "assets/sample-projects/blank-base-starter.project.json",
             "assets/sample-projects/modern-world-japan-corridor.project.json",

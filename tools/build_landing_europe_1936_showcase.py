@@ -61,14 +61,10 @@ HERO_CAPITAL_LIMIT = 8
 TNO_1962_HERO_CAPITAL_TAGS = ("ENG", "FRA", "GER", "ITA", "IBR", "RKU", "SOV", "WRS", "BRG")
 TNO_1962_HERO_CAPITAL_LABELS = {
     "BRG": "Nanzig",
-    "SOV": "Moskau",
-    "WRS": "Warshau",
 }
 TNO_1962_HERO_CAPITAL_POINTS = {
     # Nanzig is the TNO-localized Nancy feature (FR_ARR_54003), not Brussels.
     "BRG": (6.18496, 48.68439),
-    "SOV": (37.61781, 55.75204),
-    "WRS": (21.01178, 52.22977),
 }
 HERO_TERRITORY_PATH_LIMIT_PER_TAG = 48
 HERO_BLANK_LAND_PATH_LIMIT = 8600
@@ -122,7 +118,7 @@ SHOWCASE_BACKGROUND_TAGS = {
 SHOWCASE_LAYERS = (
     {"id": "political", "label": "1936 political ownership"},
     {"id": "rail", "label": "Europe rail network"},
-    {"id": "cities", "label": "capital anchors"},
+    {"id": "cities", "label": "City labels and capital anchors"},
     {"id": "day-night", "label": "day-night cycle"},
 )
 TAG_PATTERN = re.compile(r"^[A-Z0-9_]{2,12}$")
@@ -168,7 +164,7 @@ HERO_SCENARIOS = (
     HeroScenario(
         mode="tno-1962",
         scenario_id="tno_1962",
-        title="TNO 1962 Europe",
+        title="TNO 1962 political ownership crop; Atlantropa overlay omitted",
         manifest_path=TNO_1962_MANIFEST,
         palette_class="tno-1962",
         capital_defaults_path=REPO_ROOT / "data" / "scenarios" / "tno_1962" / "capital_defaults.partial.json",
@@ -613,6 +609,8 @@ def load_scenario_capitals(
                 "tag": tag,
                 "name": (display_names or {}).get(tag) or entry.get("city_name") or entry.get("name_ascii") or tag,
                 "country": country.get("display_name") or tag,
+                "lon": float(lon),
+                "lat": float(lat),
                 "x": x,
                 "y": y,
                 "focus": tag in SHOWCASE_FOCUS_TAGS,
@@ -966,27 +964,146 @@ def rail_nodes(paths: list[str]) -> str:
     return "\n".join(f'      <path class="rail-line" d="{path}" />' for path in paths)
 
 
-def capital_nodes(capitals: list[dict]) -> str:
+def estimated_label_width(text: str, font_size: float) -> float:
+    units = 0.0
+    for char in text:
+        if char in "ijlI1.,'`|":
+            units += 0.34
+        elif char in "MW@%":
+            units += 0.9
+        elif char.isupper():
+            units += 0.68
+        else:
+            units += 0.58
+    return max(font_size * 1.8, units * font_size)
+
+
+def boxes_intersect(first: tuple[float, float, float, float], second: tuple[float, float, float, float]) -> bool:
+    return not (
+        first[2] <= second[0]
+        or second[2] <= first[0]
+        or first[3] <= second[1]
+        or second[3] <= first[1]
+    )
+
+
+def layout_label_boxes(
+    items: list[dict],
+    *,
+    canvas_width: float,
+    canvas_height: float,
+    font_size: float,
+    stroke_width: float,
+    gap: float,
+) -> list[dict]:
+    placed: list[dict] = []
+    occupied: list[tuple[float, float, float, float]] = []
+    stroke_pad = stroke_width / 2.0
+    for item in items:
+        width = estimated_label_width(str(item["name"]), font_size)
+        anchor_x = float(item["x"])
+        anchor_y = float(item["y"])
+        above_y = anchor_y - gap
+        below_y = anchor_y + font_size + gap
+        candidates = [
+            (anchor_x + gap, above_y),
+            (anchor_x - gap - width, above_y),
+            (anchor_x + gap, below_y),
+            (anchor_x - gap - width, below_y),
+            (anchor_x + gap, above_y - font_size * 1.2),
+            (anchor_x - gap - width, above_y - font_size * 1.2),
+            (anchor_x + gap, below_y + font_size * 1.2),
+            (anchor_x - gap - width, below_y + font_size * 1.2),
+            (anchor_x - width / 2.0, above_y),
+            (anchor_x - width / 2.0, below_y),
+            (anchor_x - width / 2.0, above_y - font_size * 1.2),
+            (anchor_x - width / 2.0, below_y + font_size * 1.2),
+        ]
+        for offset_scale in (2.4, 3.6, 4.8):
+            high_y = above_y - font_size * offset_scale
+            low_y = below_y + font_size * offset_scale
+            candidates.extend(
+                (
+                    (anchor_x + gap, high_y),
+                    (anchor_x - gap - width, high_y),
+                    (anchor_x - width / 2.0, high_y),
+                    (anchor_x + gap, low_y),
+                    (anchor_x - gap - width, low_y),
+                    (anchor_x - width / 2.0, low_y),
+                )
+            )
+        chosen: tuple[float, float, tuple[float, float, float, float]] | None = None
+        for text_x, text_y in candidates:
+            label_box = (
+                text_x - stroke_pad,
+                text_y - font_size * 0.84 - stroke_pad,
+                text_x + width + stroke_pad,
+                text_y + font_size * 0.24 + stroke_pad,
+            )
+            in_bounds = (
+                label_box[0] >= 2.0
+                and label_box[1] >= 2.0
+                and label_box[2] <= canvas_width - 2.0
+                and label_box[3] <= canvas_height - 2.0
+            )
+            if in_bounds and all(not boxes_intersect(label_box, other) for other in occupied):
+                chosen = (text_x, text_y, label_box)
+                break
+        if chosen is None:
+            raise ValueError(
+                f"Could not place label {item.get('name')!r} without overlapping another label"
+            )
+        laid_out = dict(item)
+        laid_out["label_x"] = chosen[0]
+        laid_out["label_y"] = chosen[1]
+        laid_out["label_box"] = chosen[2]
+        placed.append(laid_out)
+        occupied.append(chosen[2])
+    return placed
+
+
+def label_box_attr(label_box: tuple[float, float, float, float]) -> str:
+    return ",".join(fmt(value) for value in label_box)
+
+
+def capital_nodes(capitals: list[dict], canvas: Canvas) -> str:
     nodes: list[str] = []
-    for item in capitals:
+    laid_out = layout_label_boxes(
+        capitals,
+        canvas_width=canvas.width,
+        canvas_height=canvas.height,
+        font_size=14.0,
+        stroke_width=4.0,
+        gap=9.0,
+    )
+    for item in laid_out:
         tag = validate_tag(item["tag"])
         escaped_tag = xml_escape(tag)
         escaped_name = xml_escape(str(item["name"]))
         escaped_country = xml_escape(str(item["country"]))
         focus_class = " capital--focus" if item["focus"] else ""
         nodes.append(
-            f'      <g class="capital{focus_class}" data-tag="{escaped_tag}">'
+            f'      <g class="capital{focus_class}" data-tag="{escaped_tag}" '
+            f'data-label-box="{label_box_attr(item["label_box"])}">'
             f"<title>{escaped_name} · {escaped_country}</title>"
             f'<circle cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="5.8" />'
-            f'<text class="city-label" x="{fmt(item["x"] + 9)}" y="{fmt(item["y"] - 7)}">{escaped_name}</text>'
+            f'<text class="city-label" x="{fmt(item["label_x"])}" y="{fmt(item["label_y"])}">{escaped_name}</text>'
             "</g>"
         )
     return "\n".join(nodes)
 
 
-def showcase_city_label_nodes(city_labels: list[dict]) -> str:
+def showcase_city_label_nodes(city_labels: list[dict], canvas: Canvas) -> str:
     nodes: list[str] = []
-    for item in city_labels:
+    laid_out = layout_label_boxes(
+        city_labels,
+        canvas_width=canvas.width,
+        canvas_height=canvas.height,
+        font_size=12.2,
+        stroke_width=3.2,
+        gap=8.4,
+    )
+    for item in laid_out:
         tier = int(item["tier"])
         escaped_name = xml_escape(str(item["name"]))
         escaped_country = xml_escape(str(item.get("country") or ""))
@@ -994,14 +1111,13 @@ def showcase_city_label_nodes(city_labels: list[dict]) -> str:
         capital_class = " showcase-city--capital" if item.get("capital") else ""
         focus_class = " showcase-city--focus" if item.get("focus") else ""
         radius = 4.8 if tier == 0 else 4.3 if tier == 1 else 3.8 if tier == 2 else 3.4
-        x_offset = 8.4 if tier <= 1 else 7.2
-        y_offset = -6.4 if tier <= 1 else -5.6
         nodes.append(
             f'      <g class="showcase-city showcase-city--tier-{tier}{capital_class}{focus_class}" '
-            f'data-city-tier="{tier}" data-city-source="{source}">'
+            f'data-city-tier="{tier}" data-city-source="{source}" '
+            f'data-label-box="{label_box_attr(item["label_box"])}">'
             f"<title>{escaped_name} · {escaped_country}</title>"
             f'<circle cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="{fmt(radius)}" />'
-            f'<text class="city-label" x="{fmt(item["x"] + x_offset)}" y="{fmt(item["y"] + y_offset)}">{escaped_name}</text>'
+            f'<text class="city-label" x="{fmt(item["label_x"])}" y="{fmt(item["label_y"])}">{escaped_name}</text>'
             "</g>"
         )
     return "\n".join(nodes)
@@ -1190,11 +1306,13 @@ def load_blank_coastline_paths(canvas: Canvas) -> tuple[list[str], dict[str, int
 
 def load_blank_land_paths(canvas: Canvas) -> tuple[list[str], list[str], dict[str, int | float], list[Path]]:
     clip = box(*canvas.bbox)
+    blank_paths = scenario_paths(BLANK_BASE_MANIFEST)
+    blank_topology = blank_paths["runtime_topology"]
     selected_paths: list[tuple[float, str]] = []
     inspected = 0
     candidate_count = 0
     clipped_count = 0
-    for feature in topology_features(EUROPE_BLANK_TOPOLOGY, "political"):
+    for feature in topology_features(blank_topology, "political"):
         geometry_payload = feature.get("geometry")
         if not geometry_payload:
             continue
@@ -1230,7 +1348,7 @@ def load_blank_land_paths(canvas: Canvas) -> tuple[list[str], list[str], dict[st
         "coastline_paths": len(limited_coastline_paths),
         "coastline_paths_available": len(coastline_paths),
         "coastline_paths_dropped": max(0, len(coastline_paths) - len(limited_coastline_paths)),
-    }, [BLANK_BASE_MANIFEST, EUROPE_BLANK_TOPOLOGY, EUROPE_BLANK_COASTLINE]
+    }, [BLANK_BASE_MANIFEST, blank_topology, EUROPE_BLANK_COASTLINE]
 
 
 def load_tno_base_underlay_paths(canvas: Canvas) -> tuple[list[str], list[str], dict[str, int | float], list[Path]]:
@@ -1345,7 +1463,7 @@ def build_hero_svg(
         base_layer = ""
     else:
         political_layer = territory_nodes(territories, include_scenario_only_class=False)
-        capital_layer = capital_nodes(capitals)
+        capital_layer = capital_nodes(capitals, canvas)
         base_layer = base_land_nodes(land_paths, coastline_paths or [])
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas.width} {canvas.height}" role="img" aria-label="{title}" data-hero-scenario="{xml_escape(scenario.mode)}" data-scenario-id="{xml_escape(scenario.scenario_id)}">
   <defs>
@@ -1404,6 +1522,7 @@ def build_hero_metadata(
         "ownership_fill": not scenario.blank,
         "capital_limit": 0 if scenario.blank else (len(scenario.hero_capital_tags) or HERO_CAPITAL_LIMIT),
         "territory_path_limit_per_tag": 0 if scenario.blank else HERO_TERRITORY_PATH_LIMIT_PER_TAG,
+        "capital_label_layout": "deterministic bounding-box avoidance including text stroke",
     }
     if scenario.hero_capital_tags:
         selection_policy["hero_capital_tags"] = list(scenario.hero_capital_tags)
@@ -1414,8 +1533,8 @@ def build_hero_metadata(
     if scenario.scenario_id == "tno_1962":
         selection_policy.update(
             {
-                "hero_geometry_source": "runtime_topology base sea and political ownership crop",
-                "atlantropa_overlay": "disabled_for_landing_hero",
+                "hero_geometry_source": "runtime_topology political ownership crop",
+                "atlantropa_overlay": "omitted_from_political_ownership_crop",
                 "base_underlay": "original Europe land and coastline for small Mediterranean islands",
                 "base_underlay_path_limit": HERO_BASE_UNDERLAY_PATH_LIMIT,
                 "base_underlay_coastline_limit": HERO_BASE_UNDERLAY_COASTLINE_LIMIT,
@@ -1431,6 +1550,7 @@ def build_hero_metadata(
                 "coastline_stroke_width": BLANK_COASTLINE_STROKE_WIDTH,
                 "coastline_path_limit": HERO_BLANK_COASTLINE_PATH_LIMIT,
                 "coastline_source": "data/europe_land_bg.geojson exterior rings",
+                "runtime_topology_source": repo_path(scenario_paths(BLANK_BASE_MANIFEST)["runtime_topology"]),
             }
         )
     return {
@@ -1456,6 +1576,15 @@ def build_hero_metadata(
         "counts": dict(counts),
         "territory_tags": sorted(item["tag"] for item in territories),
         "capital_tags": sorted(item["tag"] for item in capitals),
+        "capital_points": [
+            {
+                "tag": item["tag"],
+                "name": item["name"],
+                "lon": item["lon"],
+                "lat": item["lat"],
+            }
+            for item in capitals
+        ],
         "selection_policy": selection_policy,
     }
 
@@ -1660,7 +1789,7 @@ def build_svg(
 {country_label_nodes(territories)}
   </g>
   <g class="layer layer-cities" data-layer="cities">
-{showcase_city_label_nodes(city_labels)}
+{showcase_city_label_nodes(city_labels, canvas)}
   </g>
   <g class="layer layer-day-night" data-layer="day-night">
 {day_night_nodes(canvas, capitals, city_lights)}
@@ -1748,6 +1877,7 @@ def build_metadata(
             "night_light_belt_limit": NIGHT_LIGHT_BELT_LIMIT,
             "day_night_visual_policy": "animated curved night mask with clipped deterministic texture, city-light smears, and ranked light belts",
             "city_label_source": "scenario capital hints plus world_cities major populated places",
+            "city_label_layout": "deterministic bounding-box avoidance including text stroke",
             "city_label_tier_limits": list(SHOWCASE_CITY_TIER_LIMITS),
             "city_label_tier_min_distance_px": list(SHOWCASE_CITY_TIER_MIN_DISTANCE_PX),
             "country_label_source": "territory representative points",

@@ -267,16 +267,19 @@ class TestNode {
 }
 
 class ShowcaseRoot extends TestNode {
-  constructor(objectNode, tabs, panel) {
+  constructor(objectNode, tabs, panel, status = new TestNode()) {
     super();
     this.objectNode = objectNode;
     this.tabs = tabs;
     this.panel = panel;
+    this.status = status;
+    this.status.hidden = true;
   }
 
   querySelector(selector) {
     if (selector === "[data-showcase-object]") return this.objectNode;
     if (selector === "[role=\"tabpanel\"]") return this.panel;
+    if (selector === "[data-showcase-status]") return this.status;
     return null;
   }
 
@@ -288,21 +291,28 @@ class ShowcaseRoot extends TestNode {
 }
 
 class PreviewRoot extends TestNode {
-  constructor(surface, viewport, zoomButtons = []) {
+  constructor(surface, viewport, zoomButtons = [], images = [], status = new TestNode(), tabs = []) {
     super();
     this.surface = surface;
     this.viewport = viewport;
     this.zoomButtons = zoomButtons;
+    this.images = images;
+    this.status = status;
+    this.tabs = tabs;
+    this.status.hidden = true;
   }
 
   querySelector(selector) {
     if (selector === "[data-preview-surface]") return this.surface;
     if (selector === "[data-preview-viewport]") return this.viewport;
+    if (selector === "[data-preview-status]") return this.status;
     return null;
   }
 
   querySelectorAll(selector) {
     if (selector === "[data-preview-zoom]") return this.zoomButtons;
+    if (selector === "[data-preview-image]") return this.images;
+    if (selector === "[data-preview-tab]") return this.tabs;
     return [];
   }
 }
@@ -362,10 +372,31 @@ function createEvent(overrides = {}) {
   };
 }
 
-function createPreviewHarness() {
+function createPreviewHarness({ preFailedMode } = {}) {
   const surface = new TestNode();
   const viewport = new TestNode();
-  const root = new PreviewRoot(surface, viewport);
+  const images = ["transport", "cities", "terrain", "night"].map((mode) => {
+    const image = new TestNode();
+    image.setAttribute("data-preview-image", mode);
+    image.setAttribute("src", `./assets/japan-preview-${mode}.webp`);
+    if (mode === preFailedMode) {
+      image.complete = true;
+      image.naturalWidth = 0;
+    }
+    return image;
+  });
+  const status = new TestNode();
+  const tabs = ["transport", "cities", "terrain", "night"].map((mode) => {
+    const tab = new TestNode();
+    tab.setAttribute("data-preview-tab", mode);
+    return tab;
+  });
+  const panels = tabs.map((tab) => {
+    const panel = new TestNode();
+    panel.setAttribute("data-preview-panel", tab.getAttribute("data-preview-tab"));
+    return panel;
+  });
+  const root = new PreviewRoot(surface, viewport, [], images, status, tabs);
   const domContentLoaded = [];
   surface.setPointerCapture = () => {};
   surface.releasePointerCapture = () => {};
@@ -380,7 +411,8 @@ function createPreviewHarness() {
       if (selector === "[data-preview-root]") return root;
       return null;
     },
-    querySelectorAll() {
+    querySelectorAll(selector) {
+      if (selector === "[data-preview-panel]") return panels;
       return [];
     },
   };
@@ -400,14 +432,19 @@ function createPreviewHarness() {
     root,
     surface,
     viewport,
+    images,
+    status,
+    tabs,
+    panels,
   };
 }
 
-function createShowcaseHarness({ reducedMotion = true } = {}) {
+function createShowcaseHarness({ reducedMotion = true, fetchImpl } = {}) {
   const viewport = new TestNode();
   const svg = new TestNode();
   const objectNode = new TestNode();
   const panel = new TestNode();
+  const status = new TestNode();
   const tabs = ["political", "rail", "cities", "day-night"].map((layer, index) => {
     const tab = new TestNode();
     tab.id = `showcase-layer-${layer}`;
@@ -415,7 +452,7 @@ function createShowcaseHarness({ reducedMotion = true } = {}) {
     tab.setAttribute("aria-selected", index === 0 ? "true" : "false");
     return tab;
   });
-  const root = new ShowcaseRoot(objectNode, tabs, panel);
+  const root = new ShowcaseRoot(objectNode, tabs, panel, status);
   const domContentLoaded = [];
   svg.animationCalls = [];
   svg.pauseAnimations = () => svg.animationCalls.push("pause");
@@ -458,6 +495,7 @@ function createShowcaseHarness({ reducedMotion = true } = {}) {
         setItem: () => {},
       },
       matchMedia: () => ({ matches: reducedMotion }),
+      ...(fetchImpl ? { fetch: fetchImpl } : {}),
     },
     domContentLoaded,
     objectNode,
@@ -465,6 +503,7 @@ function createShowcaseHarness({ reducedMotion = true } = {}) {
     root,
     svg,
     tabs,
+    status,
     viewport,
   };
 }
@@ -1043,6 +1082,23 @@ test("landing showcase layer tabs pause and resume embedded SVG animation", () =
   assert.equal(harness.svg.animationCalls.at(-1), "pause");
 });
 
+test("landing showcase metadata failure exposes a visible status and clears on layer change", async () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createShowcaseHarness({
+    fetchImpl: () => Promise.reject(new Error("metadata fetch failed")),
+  });
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(harness.status.hidden, false);
+  assert.equal(harness.root.dataset.showcaseLayerError, "metadata");
+  harness.tabs.find((tab) => tab.getAttribute("data-showcase-layer-tab") === "rail").dispatchEvent("click");
+  assert.equal(harness.status.hidden, true);
+  assert.equal(harness.root.dataset.showcaseLayerError, undefined);
+});
+
 test("landing showcase day-night layer respects reduced motion", () => {
   const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
   const harness = createShowcaseHarness({ reducedMotion: true });
@@ -1167,4 +1223,26 @@ test("landing preview view keeps normal wheel scrolling and uses modified wheel 
   assert.equal(modifiedWheelEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.previewScaleIndex, "1");
   assert.equal(harness.root.dataset.previewZoomed, "true");
+});
+
+test("landing preview image failure is visible for the active layer and clears on recovery or tab change", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createPreviewHarness({ preFailedMode: "transport" });
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  assert.equal(harness.status.hidden, false);
+  assert.equal(harness.root.dataset.previewImageError, "transport");
+
+  harness.tabs.find((tab) => tab.getAttribute("data-preview-tab") === "cities").dispatchEvent("click");
+  assert.equal(harness.status.hidden, true);
+  assert.equal(harness.root.dataset.previewImageError, undefined);
+
+  const citiesImage = harness.images.find((image) => image.getAttribute("data-preview-image") === "cities");
+  citiesImage.dispatchEvent("error");
+  assert.equal(harness.status.hidden, false);
+  citiesImage.dispatchEvent("load");
+  assert.equal(harness.status.hidden, true);
+  assert.equal(harness.root.dataset.previewImageError, undefined);
 });

@@ -97,6 +97,15 @@ test("state ownership domain exposes P4 policy and route evidence", () => {
   assert.deepEqual(domain.preferredMainThreadChecks, []);
 });
 
+test("public sample domain exposes the landing map asset contract gate", () => {
+  const registry = readRegistry();
+  const domain = registry.domains.find((entry) => entry.id === "public-sample");
+
+  assert.ok(domain);
+  assert.ok(domain.typicalSourceGlobs.includes("landing/**"));
+  assert.ok(domain.preferredMainThreadChecks.includes("npm run test:py:landing-map-asset-contracts"));
+});
+
 test("every domain has required fields with expected shapes", () => {
   const registry = readRegistry();
 
