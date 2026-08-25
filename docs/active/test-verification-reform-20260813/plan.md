@@ -142,7 +142,7 @@ Stage 5b remains open. The single Williams attempt exited `3` after block 01 pro
 
 ## P3 business-complexity reduction plan — 2026-08-24
 
-P3 is planning-only in this delivery. The measured baseline is `origin/main@a6833008`: `js/core/map_renderer.js` has 23,153 split lines and the architecture ceiling is 23,154. Execute the following slices serially; each slice receives its own behavioral candidate, focused review, exact selector proof, and integration checkpoint before the next slice starts.
+P3 was planning-only in the preceding delivery. Implementation was authorized on 2026-08-24 and starts from clean `origin/main@f118a101`; the `js/core/map_renderer.js` blob is byte-identical to the measured `a6833008` baseline (`b5990105850cc7c79e5506c6f89dbee1ab111fae`), so the 23,153 split-line baseline and 23,154 architecture ceiling remain authoritative. Execute the following slices serially; each slice receives its own behavioral candidate, focused review, exact selector proof, and integration checkpoint before the next slice starts.
 
 ### Invariants for every slice
 
@@ -162,7 +162,7 @@ P3 is planning-only in this delivery. The measured baseline is `origin/main@a683
 | P3.4 Political Background Render Owner | Extract the political background render block around lines 15,148-16,212. | Preserve full-pass ordering, color/source provenance, worker-disabled behavior, diagnostics, and state-write authority. Net reduction at least 850 lines. | 21,293 |
 | P3.5 Political Partial-Repaint / Worker Engine | Extract the partial-repaint and worker engine block around lines 16,213-17,186. | Preserve worker packet/result schemas, accepted-callback exceptions, coarse/fine error propagation, progressive recovery, opaque visible-item forwarding, and scheduling. Net reduction at least 780 lines. | 20,513 |
 
-The total planned reduction is at least 2,640 lines. P3.1 is the recommended first implementation because it has the narrowest ownership seam and the lowest interaction risk.
+The total planned reduction is at least 2,640 lines. P3.1 is the recommended first implementation because it has the narrowest ownership seam and the lowest interaction risk. These line counts are directional architecture guardrails, not optimization targets: each slice is accepted on coherent ownership, preserved behavior, and verification closure; once the boundary is achieved, no extra formatting or code movement is required merely to hit a lower integer.
 
 ### P3.1 exact first-candidate boundary
 

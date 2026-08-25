@@ -247,3 +247,24 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Blank-base boundary | Public materialization is byte-identical across two runs and the default contract passes. Strict mode still reports the three pre-existing ownerless/Arctic semantic gaps; no contract was weakened. |
 | P1 boundary | Observation only. It is not evidence for full/nightly/browser/Pages/performance/long-matrix admission. |
 | P3 next action | Start only P3.1 Day/Night Runtime Owner from the plan's exact boundary; do not overlap P3.2-P3.5 or delete tests before the five-part deletion gate passes. |
+
+## 2026-08-24 P3 execution ownership
+
+| Lane | Exact ownership and current state |
+| --- | --- |
+| Supervisor / integration | Thread `01a028e9-78d6-7a31-ae01-d81532018212`; clean worktree `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator`; branch `codex/sc-p0-p3-integration-20260824`; frozen start `f118a101d30373c507075da32267969b22197338`. Owns slice admission, integration commits, shared/long checks, task records, push, two-end SHA verification, and cleanup decisions. |
+| Serial implementation | Thread `01a03372-ff2a-7281-af36-65e58e243f9c`; worktree `d871`; P3.1 head `fa015b53`. Sole production-code owner. It delivers one committed slice at a time and must stop before the next slice until supervisor release. No push, merge, shared long test, or cleanup authority. |
+| Independent review | Thread `01a03372-ff2a-7281-af36-65fed97d06ee`; detached clean worktree `42a1` at `fa015b53`. Read-only baseline and exact-candidate findings-first review; no writes, commits, integration, push, or shared long tests. |
+| Independent verification | Thread `01a03372-ff0c-72e3-addf-b25981aa9311`; detached clean worktree `5152` at `fa015b53`. Owns focused exact-candidate verification and selector-conflict diagnosis; shared or long gates require explicit supervisor release. No production edits, integration, push, or cleanup. |
+| Serial boundary | P3.1 is integrated; active slice is P3.2 only. P3.3-P3.5 remain unopened until the preceding exact commit is reviewed, verified, integrated, and recorded. No live/shared process is currently running. |
+| Baseline identity | `a6833008:js/core/map_renderer.js` and `f118a101:js/core/map_renderer.js` resolve to the same blob `b5990105850cc7c79e5506c6f89dbee1ab111fae`; the planned 23,153 split-line baseline remains valid. |
+
+### P3.1 admission checkpoint
+
+| Fact | Evidence and disposition |
+| --- | --- |
+| Final implementation candidate | `fa015b53500cfe4a18f1f2ce6073ac52bf3daab0`, cumulative child of `f118a101`, 25 committed files, implementation worktree clean. It closes the initial state-action registration, hostile scheduler, canonical invocation, raw scanner, and P4.3 Visual Effects route findings. |
+| Independent review | `CLEAR`. Day/Night is the single runtime authority; raw mode no longer borrows current contracts; unknown/unregistered/composition/factory hash drift remain fail-closed; Visual Effects is present in all required P4.3 direct routes. |
+| Independent verification | `PASS`. Final delta hostile delegation 1/1, metadata 3/3, architecture, and exact `verify:p4:routes --phase P4.3 --history-base f118a101` all exit 0; the detached worktree is clean. |
+| Policy and selector evidence | Canonical producer records 207 writers and final validator passes 75 production plus 43 test legacy-direct files. The 25-file selector is exact with zero unmatched/blocked entries. Bound dry-run starts zero processes; its single raw Water argv conflict plus 38 propagated gaps reproduce unchanged at the base. |
+| Supervisor integration | The four implementation commits were replayed as `79746feb`, `5689d9f9`, `c9c1e050`, and `dc256b8f`; the integrated committed tree is byte-for-byte equivalent to `fa015b53`. Post-integration P4.3 route verification passes with zero unmatched files and zero route gaps. P3.2 is released. |

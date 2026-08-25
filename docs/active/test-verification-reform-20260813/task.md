@@ -203,3 +203,18 @@ Current artifacts:
 - [x] P3: complete planning only. The five serial renderer slices, ownership boundaries, reduction budgets, deletion gates, and verification ladder are recorded in `plan.md`; no P3 production code, generated dist, browser run, or performance run was performed.
 
 Delivery commits in the integration lineage are `12b4a243` (P0), `929b0ae1` (P1/P2), and `b69ff0b5` (combined catalog seam). Normal `origin/main` synchronization is owned by the primary integration task after the final combined checks.
+
+## 2026-08-24 P3 serial execution
+
+- [x] Freeze the supervisor worktree at clean `codex/sc-p0-p3-integration-20260824@f118a101`; verify that its renderer blob is byte-identical to the planned `a6833008` baseline and that the parent WIP remains untouched.
+- [x] Establish three user-visible task lanes: one sole production-code implementer, one read-only exact-commit reviewer, and one independent verifier/test owner.
+- [x] P3.1 Day/Night Runtime Owner: candidate commit, findings-first review, focused exact-selector proof, supervisor integration checkpoint.
+- [ ] P3.2 Texture Effects Render Owner: candidate commit, findings-first review, focused exact-selector proof, supervisor integration checkpoint.
+- [ ] P3.3 Click Selection Transaction Owner: candidate commit, findings-first review, focused exact-selector proof, supervisor integration checkpoint.
+- [ ] P3.4 Political Background Render Owner: candidate commit, findings-first review, focused exact-selector proof, supervisor integration checkpoint.
+- [ ] P3.5 Political Partial-Repaint / Worker Engine: candidate commit, findings-first review, focused exact-selector proof, supervisor integration checkpoint.
+- [ ] Run the final bounded P3 acceptance ladder, close task records, push normally, and verify local/remote SHA equality. Production deployment and force-push remain unauthorized.
+
+Only one slice may modify `js/core/map_renderer.js` at a time. The implementer stops after each committed candidate; the reviewer and verifier consume the exact candidate SHA; the supervisor alone owns cherry-pick/integration, shared `.runtime` lanes, long gates, task-record commits, remote synchronization, and cleanup decisions.
+
+P3.1 is admitted and integrated. The implementation lineage is `1332bb51` → `b651a59f` → `423feb0b` → `fa015b53`; the supervisor replayed the same committed tree as `79746feb` → `5689d9f9` → `c9c1e050` → `dc256b8f`. Independent review returned `CLEAR` and independent verification returned `PASS` for the final six-file delta. Day/Night runtime ownership, canonical state-action delegation, raw/current scanner separation, Visual Effects P4.3 direct routing, hostile scheduler behavior, selector identity, and zero-spawn bound planning are closed. The remaining Water `river_layer_regression.spec.js:argv` planner conflict reproduces unchanged at `f118a101` and is a non-blocking inherited gap. P3.2 is now the only authorized production slice.
