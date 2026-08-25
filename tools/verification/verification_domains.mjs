@@ -1433,6 +1433,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       "tools/build_state_writer_policy.mjs",
       "tools/check_state_writer_policy.mjs",
       "tools/check_p4_state_action_routes.mjs",
+      "tools/test_route_registry.mjs",
       "tools/select_verification_targets.mjs",
       "tools/run_p4_phase_verification.mjs",
       "tools/verification/resumable_verification.mjs",
