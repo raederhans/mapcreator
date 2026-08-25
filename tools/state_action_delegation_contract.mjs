@@ -87,6 +87,18 @@ const SCENARIO_PRESENTATION_DAY_NIGHT_ACTION_EXPORT_NAMES = Object.freeze([
   "setDayNightStyleConfigState",
 ]);
 
+const SCENARIO_ACTIVATION_CLICK_ACTION_EXPORT_NAMES = Object.freeze([
+  "removeClickCountryColorsState",
+  "setClickCountryColorsState",
+]);
+
+const SCENARIO_PRESENTATION_CLICK_ACTION_EXPORT_NAMES = Object.freeze([
+  "clearClickScenarioHoverIdsState",
+  "setClickActiveSovereignCodeState",
+  "setClickSelectedSpecialRegionIdState",
+  "setClickSelectedWaterRegionIdState",
+]);
+
 const SCENARIO_PRESENTATION_CHUNK_CITY_ACTION_EXPORT_NAMES = Object.freeze([
   "applyScenarioChunkCityExternalEffectState",
   "finalizeScenarioChunkCityExternalEffectState",
@@ -154,6 +166,10 @@ const RENDERER_PHASE_ACTION_EXPORT_NAMES = Object.freeze([
 ]);
 
 const RENDERER_INTERACTION_ACTION_EXPORT_NAMES = Object.freeze([
+  "clearClickHoveredIdState",
+  "removeClickWaterRegionOverrideState",
+  "setClickHoverOverlayDirtyState",
+  "setClickSelectedColorState",
   "setZoomGestureStartTransformState",
   "setZoomGestureScaleDeltaState",
   "setPendingZoomTransformState",
@@ -266,6 +282,16 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
   Object.freeze({
     modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
     exportNames: SCENARIO_PRESENTATION_DAY_NIGHT_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_ACTIVATION_CLICK_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_PRESENTATION_CLICK_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.3",
   }),
   Object.freeze({
@@ -821,6 +847,25 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
   }),
   freezeMutationDelegatingOwnerEntry({
     compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getVisualEffectsPassOwner",
+    compositionSourceFingerprint:
+      "49bdaccfdc014c80ba5f6eba13ce8cbd8709d820be8b4ad6bf8e9669d9198db8",
+    factoryModulePath: "js/core/renderer/visual_effects_pass_owner.js",
+    factoryExportName: "createVisualEffectsPassOwner",
+    factorySourceFingerprint:
+      "6b8da5ec1ad7a35813e71a922e93685d41b29f0617257865219fa6d0c911e249",
+    ownerBindingName: "visualEffectsPassOwner",
+    methods: [
+      "drawEffectsPass",
+      "drawLineEffectsPass",
+      "drawTextureLabelEffectsPass",
+      "drawDayNightPass",
+      "invalidateTextureRasterCaches",
+    ],
+    actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
     compositionExportName: "getDayNightRuntimeOwner",
     compositionSourceFingerprint:
       "3ce0f2dde1cf99c3836747e3369daf71c0476bd8f8da60d1f136e0f7e2dd9596",
@@ -855,6 +900,45 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
       "setPendingDayNightRefreshState",
     ],
   }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getClickSelectionTransactionOwner",
+    compositionSourceFingerprint:
+      "23d06b6d8176a619f21f960eb4355b67432d0ad90befda18fc7ce798da3f622c",
+    factoryModulePath: "js/core/map_renderer/click_selection_transaction_owner.js",
+    factoryExportName: "createClickSelectionTransactionOwner",
+    factorySourceFingerprint:
+      "b4dfc67b04a28a3b3707ea2dffaaa1a27a02d7600ee9a178411e5f51ba844c47",
+    ownerBindingName: "clickSelectionTransactionOwner",
+    methods: ["handleClick"],
+    actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    actionModulePathsByExport: {
+      clearClickScenarioHoverIdsState:
+        SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+      removeClickCountryColorsState:
+        SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+      setClickActiveSovereignCodeState:
+        SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+      setClickCountryColorsState:
+        SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+      setClickSelectedSpecialRegionIdState:
+        SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+      setClickSelectedWaterRegionIdState:
+        SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    },
+    actionExports: [
+      "clearClickHoveredIdState",
+      "clearClickScenarioHoverIdsState",
+      "removeClickCountryColorsState",
+      "removeClickWaterRegionOverrideState",
+      "setClickActiveSovereignCodeState",
+      "setClickCountryColorsState",
+      "setClickHoverOverlayDirtyState",
+      "setClickSelectedColorState",
+      "setClickSelectedSpecialRegionIdState",
+      "setClickSelectedWaterRegionIdState",
+    ],
+  }),
 ]);
 
 export function validateStateMutationDelegatingOwnerContract(
@@ -874,9 +958,16 @@ export function validateStateMutationDelegatingOwnerContract(
       || !entry.methods?.length
       || !entry.methods.every(isValidExportName)
       || new Set(entry.methods).size !== entry.methods.length
-      || !entry.actionExports?.length
+      || !Array.isArray(entry.actionExports)
       || !entry.actionExports.every(isValidExportName)
       || new Set(entry.actionExports).size !== entry.actionExports.length
+      || (
+        entry.actionExports.length === 0
+        && (
+          Boolean(entry.actionModulePath)
+          || Object.keys(entry.actionModulePathsByExport || {}).length > 0
+        )
+      )
       || !Object.entries(entry.actionModulePathsByExport || {}).every(
         ([exportName, modulePath]) => entry.actionExports.includes(exportName)
           && /^js\/[^/].*\.js$/.test(modulePath),
@@ -3250,6 +3341,64 @@ export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
       actionExportName: "setPendingDayNightRefreshState",
       replacementActionSourceFingerprint:
         "44557915cacb4091ae86adc4d9571922d42603d5932c4667954451f8a1947ff4",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "color",
+      migrationPhase: "P4.4",
+      operation: "assign",
+      key: "activeSovereignCode",
+      retiredMutationSites: [{
+        enclosingFunctionIdentity:
+          createRendererFunctionIdentity("handleClick"),
+        sourceFingerprint:
+          "69fa89ec7f66f5dbfcbab885d80a60cbecf5067edf91e743c3c2b6bfb296e81b",
+        occurrenceIndex: 0,
+      }],
+      replacementCallerPath: "js/core/map_renderer.js",
+      replacementCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "getClickSelectionTransactionOwner",
+          "setClickActiveSovereignCode",
+        ),
+      actionModulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+      actionExportName: "setClickActiveSovereignCodeState",
+      targetArgumentIndex: 0,
+      replacementActionSourceFingerprint:
+        "2655a9f4972a0715f0bec40c32a1b3701354b05ba0cf81b41e45a9d6c4160f6d",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "color",
+      migrationPhase: "P4.4",
+      operation: "assign",
+      key: "selectedColor",
+      retiredMutationSites: [0, 1, 2, 3].map((occurrenceIndex) => ({
+        enclosingFunctionIdentity:
+          createRendererFunctionIdentity("handleClick"),
+        sourceFingerprint:
+          "44f205f7b042beac7faa6d0be234297e11f83fddafd1ad9e1fb29daedca94437",
+        occurrenceIndex,
+      })),
+      replacementCallerPath: "js/core/map_renderer.js",
+      replacementCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "getClickSelectionTransactionOwner",
+          "setClickSelectedColor",
+        ),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+      actionExportName: "setClickSelectedColorState",
+      targetArgumentIndex: 0,
+      replacementActionSourceFingerprint:
+        "cd41494ba0115eb7e2361708e925e2efccf0789ffb7dcfc48f4f2d5cbff87328",
     }),
     createRendererCrossBoundaryMigrationEntry({
       retiredCallerPath: "js/core/map_renderer.js",

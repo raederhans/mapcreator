@@ -5,6 +5,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
+CLICK_SELECTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "click_selection_transaction_owner.js"
 PUBLIC_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
 
@@ -119,10 +120,11 @@ class MapRendererInteractionContextBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("rendererRuntimeContext:", binding_owner)
 
     def test_click_selection_and_public_boundaries_remain_outside_p1_5(self):
+        owner_content = CLICK_SELECTION_OWNER_JS.read_text(encoding="utf-8")
         click_handler = slice_between(
-            self.renderer_content,
+            owner_content,
             "async function handleClick(event, _interactionContext = null)",
-            "async function handleDoubleClick(event, _interactionContext = null)",
+            "return Object.freeze({ handleClick });",
         )
         public_content = PUBLIC_FACADE_JS.read_text(encoding="utf-8")
         allowlist_content = STATE_WRITE_ALLOWLIST.read_text(encoding="utf-8")
@@ -140,8 +142,14 @@ class MapRendererInteractionContextBoundaryContractTest(unittest.TestCase):
             "getInteractionReceiverContext",
             "RendererRuntimeContext",
             "interactionContext.get",
+            "runtimeState",
         ]:
             self.assertNotIn(forbidden, click_handler)
+
+        self.assertIn(
+            "return getClickSelectionTransactionOwner().handleClick(event, interactionContext);",
+            self.renderer_content,
+        )
 
         self.assertNotIn("RendererRuntimeContext", public_content)
         self.assertNotIn("rendererRuntimeContext", allowlist_content)

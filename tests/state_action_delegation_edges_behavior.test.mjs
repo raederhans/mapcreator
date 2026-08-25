@@ -332,6 +332,40 @@ test("source-bound render perf owner proves factory composition and registered a
   }
 });
 
+test("source-bound visual effects owner proves exact facade methods without state action edges", () => {
+  const entry = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createVisualEffectsPassOwner",
+  );
+  assert.ok(entry);
+  assert.deepEqual(entry.actionExports, []);
+  assert.deepEqual(entry.methods, [
+    "drawEffectsPass",
+    "drawLineEffectsPass",
+    "drawTextureLabelEffectsPass",
+    "drawDayNightPass",
+    "invalidateTextureRasterCaches",
+  ]);
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource: fs.readFileSync(entry.compositionModulePath, "utf8"),
+    factorySource: fs.readFileSync(entry.factoryModulePath, "utf8"),
+    entry,
+  }).violations, []);
+  for (const invalidEntry of [
+    { ...entry, actionModulePath: "js/core/state/actions/renderer_phase_actions.js" },
+    {
+      ...entry,
+      actionModulePathsByExport: {
+        ghostAction: "js/core/state/actions/renderer_phase_actions.js",
+      },
+    },
+  ]) {
+    assert.deepEqual(
+      validateStateMutationDelegatingOwnerContract([invalidEntry]),
+      [{ code: "state-mutation-owner-entry-shape-invalid", index: 0 }],
+    );
+  }
+});
+
 test("spherical diagnostics cache exposes immutable or detached entry reads and rejects raw Map access", () => {
   const modulePath = "js/core/state/actions/renderer_cache_actions.js";
   const source = fs.readFileSync(modulePath, "utf8");
@@ -404,13 +438,13 @@ test("P4.2b optional and city action exports have one canonical owner", () => {
   assert.deepEqual(
     validateStateActionModulePhaseAdmissions({
       modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
-      phase: "P4.2b",
+      phase: "P4.3",
     }),
     [],
   );
   assert.ok(validateStateActionModulePhaseAdmissions({
     modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
-    phase: "P4.2a",
+    phase: "P4.2b",
   }).some(({ code }) => code === "state-action-module-phase-not-admitted"));
 });
 
@@ -708,6 +742,123 @@ test("Day/Night actions have one registry owner and one live canonical handoff",
     },
   );
   assert.ok(unknownOwnerInventory.findings.length > 0);
+});
+
+test("click selection actions have one registry owner and one source-bound transaction handoff", () => {
+  const expectedActions = [
+    "clearClickHoveredIdState",
+    "clearClickScenarioHoverIdsState",
+    "removeClickCountryColorsState",
+    "removeClickWaterRegionOverrideState",
+    "setClickActiveSovereignCodeState",
+    "setClickCountryColorsState",
+    "setClickHoverOverlayDirtyState",
+    "setClickSelectedColorState",
+    "setClickSelectedSpecialRegionIdState",
+    "setClickSelectedWaterRegionIdState",
+  ];
+  const moduleByAction = new Map([
+    ["clearClickScenarioHoverIdsState", "js/core/state/actions/scenario_presentation_actions.js"],
+    ["removeClickCountryColorsState", "js/core/state/actions/scenario_activation_actions.js"],
+    ["setClickActiveSovereignCodeState", "js/core/state/actions/scenario_presentation_actions.js"],
+    ["setClickCountryColorsState", "js/core/state/actions/scenario_activation_actions.js"],
+    ["setClickSelectedSpecialRegionIdState", "js/core/state/actions/scenario_presentation_actions.js"],
+    ["setClickSelectedWaterRegionIdState", "js/core/state/actions/scenario_presentation_actions.js"],
+  ]);
+  for (const exportName of expectedActions) {
+    const entries = STATE_ACTION_DELEGATION_CONTRACT.filter((entry) => entry.exportName === exportName);
+    assert.deepEqual(entries.map(({ modulePath, introducedInPhase }) => ({ modulePath, introducedInPhase })), [{
+      modulePath: moduleByAction.get(exportName) || "js/core/state/actions/renderer_interaction_actions.js",
+      introducedInPhase: "P4.3",
+    }]);
+  }
+
+  const ownerProof = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createClickSelectionTransactionOwner",
+  );
+  assert.ok(ownerProof);
+  assert.deepEqual(ownerProof.methods, ["handleClick"]);
+  assert.deepEqual([...ownerProof.actionExports].sort(), expectedActions.sort());
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource: fs.readFileSync(ownerProof.compositionModulePath, "utf8"),
+    factorySource: fs.readFileSync(ownerProof.factoryModulePath, "utf8"),
+    entry: ownerProof,
+  }).violations, []);
+
+  const rendererSource = fs.readFileSync("js/core/map_renderer.js", "utf8");
+  for (const [key, actionExportName, actionCall, retiredCount] of [
+    ["activeSovereignCode", "setClickActiveSovereignCodeState", "setClickActiveSovereignCodeState(runtimeState, ownerCode)", 1],
+    ["selectedColor", "setClickSelectedColorState", "setClickSelectedColorState(runtimeState, color)", 4],
+  ]) {
+    const proof = STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT.find((entry) => (
+      entry.retiredCallerPath === "js/core/map_renderer.js"
+      && entry.key === key
+      && entry.actionExportName === actionExportName
+    ));
+    assert.ok(proof, key);
+    assert.equal(proof.retiredMutationSites.length, retiredCount);
+    assert.equal(rendererSource.split(actionCall).length - 1, 1);
+    assert.equal(
+      createHash("sha256").update(actionCall).digest("hex"),
+      proof.replacementActionSourceFingerprint,
+    );
+  }
+
+  const rendererAst = parse(rendererSource.replaceAll("\r\n", "\n"), {
+    ecmaVersion: "latest",
+    sourceType: "module",
+  });
+  const compositionNode = rendererAst.body.find((statement) => (
+    statement.type === "FunctionDeclaration"
+    && statement.id?.name === ownerProof.compositionExportName
+  ));
+  assert.ok(compositionNode);
+  const compositionSource = rendererSource.replaceAll("\r\n", "\n")
+    .slice(compositionNode.start, compositionNode.end);
+  const scannerFixture = [
+    'import { state as runtimeState } from "./state.js";',
+    'import { createClickSelectionTransactionOwner } from "./map_renderer/click_selection_transaction_owner.js";',
+    ...[
+      "js/core/state/actions/renderer_interaction_actions.js",
+      "js/core/state/actions/scenario_activation_actions.js",
+      "js/core/state/actions/scenario_presentation_actions.js",
+    ].map((modulePath) => {
+      const exports = ownerProof.actionExports.filter(
+        (exportName) => (moduleByAction.get(exportName)
+          || "js/core/state/actions/renderer_interaction_actions.js") === modulePath,
+      );
+      return `import { ${exports.join(", ")} } from "./${modulePath.slice("js/core/".length)}";`;
+    }),
+    "let clickSelectionTransactionOwner = null;",
+    compositionSource,
+    "export function dispatchClick(event) { return getClickSelectionTransactionOwner().handleClick(event); }",
+    "",
+  ].join("\n");
+  const binding = {
+    id: "module:runtimeState",
+    kind: "module",
+    name: "runtimeState",
+    importSource: "./state.js",
+    importedName: "state",
+  };
+  const inventory = scanStateMutationInventory(scannerFixture, {
+    filePath: ownerProof.compositionModulePath,
+    bindings: [binding],
+  });
+  assert.deepEqual(inventory.findings, []);
+  assert.deepEqual(
+    inventory.actionDelegations.map(({ actionExportName }) => actionExportName).sort(),
+    [...ownerProof.actionExports].sort(),
+  );
+
+  const unregisteredMethodInventory = scanStateMutationInventory(
+    scannerFixture.replace(".handleClick(event)", ".unregisteredMethod(event)"),
+    { filePath: ownerProof.compositionModulePath, bindings: [binding] },
+  );
+  assert.deepEqual(unregisteredMethodInventory.actionDelegations, []);
+  assert.ok(unregisteredMethodInventory.findings.some(({ reason }) => (
+    reason === "unsupported-call-mutation"
+  )), JSON.stringify(unregisteredMethodInventory.findings));
 });
 
 test("compatibility API returns findings plus canonical named action delegation edges", () => {

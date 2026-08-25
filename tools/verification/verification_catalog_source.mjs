@@ -12296,6 +12296,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/renderer/render_perf_metrics_runtime_owner.js",
         "js/core/renderer/day_night_runtime_owner.js",
         "js/core/renderer/visual_effects_pass_owner.js",
+        "js/core/map_renderer/click_selection_transaction_owner.js",
         "js/core/map_renderer/exact_after_settle_scheduler.js",
         "js/bootstrap/startup_bootstrap_support.js",
         "js/core/scenario/chunk_runtime.js",

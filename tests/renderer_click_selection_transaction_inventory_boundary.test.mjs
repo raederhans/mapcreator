@@ -350,20 +350,21 @@ test("click entry remains in map_renderer and event binding keeps injected dispa
   const clickSelectionOwnerSource = readRepoFile(CLICK_SELECTION_TRANSACTION_OWNER_PATH);
   const eventBindingOwnerSource = readRepoFile(MAP_INTERACTION_EVENT_BINDING_OWNER_PATH);
   const interactionFunnelSource = readRepoFile(INTERACTION_FUNNEL_PATH);
-  const handleClickSource = extractFunctionSource(rendererSource, "handleClick");
+  const handleClickSource = extractFunctionSource(clickSelectionOwnerSource, "handleClick");
 
-  assertIncludes(rendererSource, "async function handleClick(event, _interactionContext = null)", "map_renderer must keep click handler entry");
+  assertIncludes(rendererSource, "async function handleClick(event, interactionContext = null)", "map_renderer must keep click facade entry");
+  assertIncludes(rendererSource, "return getClickSelectionTransactionOwner().handleClick(event, interactionContext);", "map_renderer must delegate the click transaction once");
   assertIncludes(rendererSource, "mapClick: handleClick", "map_renderer must inject click handler");
   assertIncludes(rendererSource, "dispatchMapClick", "map_renderer must keep click dispatcher wiring");
   assertIncludes(
     rendererSource,
-    "import { resolveClickSelectionDecision } from \"./map_renderer/click_selection_transaction_owner.js\";",
-    "map_renderer must import the P1.8 pure decision owner",
+    "createClickSelectionTransactionOwner,",
+    "map_renderer must import the click transaction owner factory",
   );
   assert.equal(
-    rendererSource.split("resolveClickSelectionDecision(").length - 1,
-    1,
-    "map_renderer must delegate to the P1.8 resolver exactly once",
+    clickSelectionOwnerSource.split("resolveClickSelectionDecision(").length - 1,
+    2,
+    "click owner must declare and invoke the resolver once",
   );
   assertIncludes(
     clickSelectionOwnerSource,
@@ -399,411 +400,64 @@ test("click entry remains in map_renderer and event binding keeps injected dispa
   );
 });
 
-test("handleClick keeps the global branch spine and branch-local transaction order", () => {
-  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+test("transaction owner keeps the global branch spine and branch-local order", () => {
+  const ownerSource = readRepoFile(CLICK_SELECTION_TRANSACTION_OWNER_PATH);
   const handleClickSource = sliceBetween(
-    rendererSource,
+    ownerSource,
     "async function handleClick(event, _interactionContext = null)",
-    "async function handleDoubleClick(event, _interactionContext = null)",
+    "return Object.freeze({ handleClick });",
   );
 
   assertOrderedSteps(handleClickSource, [
-    step.syncReadOnly("readonly admission", "if (runtimeState.startupReadonly) {"),
+    step.syncReadOnly("state snapshot", "let state = getClickState();"),
+    step.syncReadOnly("readonly admission", "if (state.startupReadonly) {"),
     step.syncReadOnly("action timing starts", "const actionStart = nowMs();"),
-    step.syncReadOnly("data availability guard", "if (!runtimeState.landData && !runtimeState.waterRegionsData && !runtimeState.scenarioSpecialRegionsData) return;"),
-    step.syncReadOnly("brush click suppression guard", "if (suppressNextClickAfterBrush) {"),
-    step.syncEffectful("brush click suppression reset", "suppressNextClickAfterBrush = false;"),
+    step.syncReadOnly("data availability guard", "if (!state.landData && !state.waterRegionsData && !state.scenarioSpecialRegionsData) return;"),
+    step.syncEffectful("brush click suppression", "if (consumeSuppressedBrushClick()) return;"),
     step.syncEffectful("onboarding hint dismissal", "dismissOnboardingHint();"),
-    step.syncReadOnly("intensity tool guard", "if (getIntensityFieldTool().active) {"),
-    step.syncReadOnly("special zone editor guard", "if (runtimeState.specialZoneEditor?.active) {"),
-    step.syncEffectful("special zone editor action", "appendSpecialZoneVertexFromEvent(event);"),
-    step.syncReadOnly("operational line editor guard", "if (runtimeState.operationalLineEditor?.active) {"),
-    step.syncEffectful("operational line editor action", "appendOperationalLineVertexFromEvent(event);"),
-    step.syncReadOnly("operation graphics editor guard", "if (runtimeState.operationGraphicsEditor?.active) {"),
-    step.syncEffectful("operation graphics editor action", "appendOperationGraphicVertexFromEvent(event);"),
-    step.syncReadOnly("unit counter editor guard", "if (runtimeState.unitCounterEditor?.active) {"),
-    step.syncEffectful("unit counter editor action", "placeUnitCounterFromEvent(event);"),
-    step.syncReadOnly("HGO click guard", "const hgoRuntimeClick = inspectHgoRuntimePreviewFromEvent(event, { eventType: \"click\" });"),
-    step.syncReadOnly("HGO active admission", "if (hgoRuntimeClick.active) {"),
-    step.syncReadOnly("facility click guard", "const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);"),
-    step.syncReadOnly("facility details admission", "if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {"),
-    step.syncReadOnly("facility block-underlying admission", "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {"),
-    step.syncReadOnly("selected facility clear admission", "\n  if (selectedFacilityEntry) {"),
+    step.syncReadOnly("HGO click admission", "const hgoRuntimeClick = inspectHgoRuntimePreviewFromEvent(event, { eventType: \"click\" });"),
+    step.syncReadOnly("facility admission", "const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);"),
     step.syncReadOnly("root hit resolution", "const hit = getHitFromEvent(event, {"),
     step.syncReadOnly("scalar hit projection", "const resolvedHit = {"),
     step.syncReadOnly("frozen modifier projection", "const readonlyModifiers = Object.freeze({"),
-    step.syncReadOnly("pure decision delegation", "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);"),
-    step.syncReadOnly("resolved id admission", "const id = target.id;"),
+    step.syncReadOnly("decision delegation", "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);"),
     step.syncReadOnly("empty branch", "if (target.kind === \"empty\" || !id) {"),
     step.syncEffectful("dev hit update", "updateDevSelectedHit(hit);"),
     step.syncEffectful("special-zone membership", "if (handleSpecialZoneMembershipClick(hit, event)) return;"),
     step.syncReadOnly("special branch", "if (target.kind === \"special\") {"),
     step.syncReadOnly("water branch", "if (target.kind === \"water\") {"),
     step.syncReadOnly("land admission", "if (target.kind !== \"land\") return;"),
-    step.syncReadOnly("land clears water selection", "if (runtimeState.selectedWaterRegionId) {"),
-    step.syncReadOnly("land clears special selection", "if (runtimeState.selectedSpecialRegionId) {"),
-    step.syncReadOnly("land hit admission", "let landHit = hit;"),
-    step.syncReadOnly("land feature lookup", "let feature = runtimeState.landIndex.get(landId);"),
     step.syncReadOnly("dev selection branch", "if (decision.devSelectionRequested) {"),
-    step.asyncEffectful("async detail hydration", "if (!(await ensureLeafDetailReady(countryCode, { announce: true }))) {"),
-    step.syncReadOnly("refreshed hit resolution", "const refreshedHit = getHitFromEvent(event, {"),
+    step.asyncEffectful("detail hydration", "if (!(await ensureLeafDetailReady(countryCode, { announce: true }))) {"),
+    step.syncReadOnly("post-hydration state refresh", "state = getClickState();"),
     step.syncReadOnly("target expansion", "const targetIds = resolveInteractionTargetIds(feature, landId);"),
-    step.syncReadOnly("preset admission", "if (runtimeState.isEditingPreset) {"),
-    step.syncReadOnly("land eraser branch", "if (runtimeState.currentTool === \"eraser\") {"),
-    step.syncReadOnly("land eyedropper branch", "if (runtimeState.currentTool === \"eyedropper\") {"),
-    step.syncReadOnly("land fill color", "const selectedColor = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);"),
-    step.syncReadOnly("land fill admission", "if (isSovereigntyModeActive()) {"),
-    step.syncReadOnly("country fill admission", "} else if (runtimeState.interactionGranularity === \"country\" && countryCode) {"),
-    step.syncEffectful("feature fill delegation", "applyVisualSubdivisionFill(targetIds, selectedColor, {"),
-    step.syncEffectful("fill recent color", "addRecentColor(selectedColor);"),
-    step.syncEffectful("fill render request", "requestInteractionRender(\"click-fill\");"),
+    step.syncReadOnly("preset admission", "if (state.isEditingPreset) {"),
+    step.syncReadOnly("eraser branch", "if (state.currentTool === \"eraser\") {"),
+    step.syncReadOnly("eyedropper branch", "if (state.currentTool === \"eyedropper\") {"),
+    step.syncReadOnly("fill color", "const selectedColor = getSafeCanvasColor(state.selectedColor, landFillColor);"),
+    step.syncEffectful("fill render", "requestInteractionRender(\"click-fill\");"),
     step.syncEffectful("fill metric", "noteRenderAction(\"click-fill\", actionStart);"),
-  ], "handleClick must keep the global branch spine");
+  ], "owner handleClick must keep the global branch spine");
 
-  const hgoActiveSource = sliceBetween(
-    handleClickSource,
-    "if (hgoRuntimeClick.active) {",
-    "const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);",
-  );
-  assertOrderedSteps(hgoActiveSource, [
-    step.syncReadOnly("HGO local admission", "if (hgoRuntimeClick.active) {"),
-    step.syncEffectful("HGO prevent default", "if (event?.preventDefault) event.preventDefault();"),
-    step.syncEffectful("HGO dev hit update", "updateDevSelectedHit(hgoRuntimeClick.hit?.id ? hgoRuntimeClick.hit : null);"),
-    step.syncEffectful("HGO hovered land clear", stateWriteToken("runtimeState", "hoveredId", " = null;")),
-    step.syncEffectful("HGO hovered water clear", stateWriteToken("runtimeState", "hoveredWaterRegionId", " = null;")),
-    step.syncEffectful("HGO hovered special clear", stateWriteToken("runtimeState", "hoveredSpecialRegionId", " = null;")),
-    step.syncEffectful("HGO tooltip clear", "queueTooltipUpdate({ visible: false });"),
-    step.syncEffectful("HGO overlay dirty", stateWriteToken("runtimeState", "hoverOverlayDirty", " = true;")),
-    step.syncEffectful("HGO overlay render", "renderHoverOverlayIfNeeded({ eventType: \"hgo-runtime-preview-click\" });"),
-    step.syncEffectful("HGO interaction render", "requestInteractionRender(\"hgo-runtime-preview-click\");"),
-    step.syncEffectful("HGO metric", "noteRenderAction(hgoRuntimeClick.hit?.id ? \"hgo-runtime-preview-select\" : \"hgo-runtime-preview-empty\", actionStart);"),
-    step.syncReadOnly("HGO branch return", "return;"),
-  ], "HGO active branch must keep selection, clear, render, metric, and return order");
-  assertReturnStatementCount(hgoActiveSource, 1, "HGO active branch return contract");
-
-  const facilityDetailsSource = sliceBetween(
-    handleClickSource,
-    "if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {",
-    "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {",
-  );
-  assertOrderedSteps(facilityDetailsSource, [
-    step.syncReadOnly("facility details local admission", "if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {"),
-    step.syncEffectful("facility details hover selection", "hoveredFacilityEntry = clickedFacilityEntry;"),
-    step.syncEffectful("facility details card selection", "selectedFacilityEntry = clickedFacilityEntry;"),
-    step.syncEffectful("facility details collapse", "facilityInfoCardExpanded = false;"),
-    step.syncEffectful("facility details tooltip clear", "queueTooltipUpdate({ visible: false });"),
-    step.syncEffectful("facility details card render", "applyFacilityInfoCardState(clickedFacilityEntry, {"),
-    step.syncEffectful("facility details overlay dirty", stateWriteToken("runtimeState", "hoverOverlayDirty", " = true;")),
-    step.syncEffectful("facility details overlay render", "renderHoverOverlayIfNeeded({ eventType: \"facility-card-open\" });"),
-    step.syncEffectful("facility details metric", "noteRenderAction(\"click-facility-info\", actionStart);"),
-    step.syncReadOnly("facility details return", "return;"),
-  ], "facility details branch must keep card, overlay, metric, and return order");
-  assertReturnStatementCount(facilityDetailsSource, 1, "facility details branch return contract");
-
-  const facilityBlockSource = sliceBetween(
-    handleClickSource,
-    "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {",
-    "\n  if (selectedFacilityEntry) {",
-  );
-  assertOrderedSteps(facilityBlockSource, [
-    step.syncReadOnly("facility block local admission", "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {"),
-    step.syncEffectful("facility block hover selection", "hoveredFacilityEntry = clickedFacilityEntry;"),
-    step.syncReadOnly("facility block card clear admission", "if (selectedFacilityEntry) {"),
-    step.syncEffectful("facility block card selection clear", "selectedFacilityEntry = null;"),
-    step.syncEffectful("facility block card clear", "applyFacilityInfoCardState(null);"),
-    step.syncEffectful("facility block tooltip clear", "queueTooltipUpdate({ visible: false });"),
-    step.syncEffectful("facility block overlay dirty", stateWriteToken("runtimeState", "hoverOverlayDirty", " = true;")),
-    step.syncEffectful("facility block overlay render", "renderHoverOverlayIfNeeded({ eventType: \"facility-click-block-underlying\" });"),
-    step.syncEffectful("facility block metric", "noteRenderAction(\"click-facility-block-underlying\", actionStart);"),
-    step.syncReadOnly("facility block return", "return;"),
-  ], "facility block-underlying branch must keep card clear, overlay, metric, and return order");
-  assertReturnStatementCount(facilityBlockSource, 1, "facility block-underlying branch return contract");
-
-  const selectedFacilityClearSource = sliceBetween(
-    handleClickSource,
-    "\n  if (selectedFacilityEntry) {",
-    "const hit = getHitFromEvent(event, {",
-  );
-  assertOrderedSteps(selectedFacilityClearSource, [
-    step.syncReadOnly("selected facility local admission", "\n  if (selectedFacilityEntry) {"),
-    step.syncEffectful("selected facility selection clear", "selectedFacilityEntry = null;"),
-    step.syncEffectful("selected facility card clear", "applyFacilityInfoCardState(null);"),
-    step.syncEffectful("selected facility overlay dirty", stateWriteToken("runtimeState", "hoverOverlayDirty", " = true;")),
-    step.syncEffectful("selected facility overlay render", "renderHoverOverlayIfNeeded({ eventType: \"facility-card-clear\" });"),
-  ], "selected facility clear branch must keep card and overlay clear order");
-  assertReturnStatementCount(selectedFacilityClearSource, 0, "selected facility clear branch return contract");
-
-  const emptyBranchSource = sliceBetween(
+  const emptyBranch = sliceBetween(
     handleClickSource,
     "if (target.kind === \"empty\" || !id) {",
     "updateDevSelectedHit(hit);",
   );
-  assertOrderedSteps(emptyBranchSource, [
-    step.syncReadOnly("empty water admission", "if (runtimeState.selectedWaterRegionId) {"),
-    step.syncReadOnly("empty water previous id", "const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || \"\").trim();"),
-    step.syncEffectful("empty water clear", stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";")),
-    step.syncEffectful("empty water sidebar", "refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);"),
-    step.syncEffectful("empty water render", "requestInteractionRender(\"clear-water-selection-empty-click\")"),
-    step.syncReadOnly("empty special admission", "if (runtimeState.selectedSpecialRegionId) {"),
-    step.syncReadOnly("empty special previous id", "const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || \"\").trim();"),
-    step.syncEffectful("empty special clear", stateWriteToken("runtimeState", "selectedSpecialRegionId", " = \"\";")),
-    step.syncEffectful("empty special sidebar", "refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);"),
-    step.syncEffectful("empty special render", "requestInteractionRender(\"clear-special-selection-empty-click\")"),
-  ], "empty click branch must keep clear order");
-  assertReturnStatementCount(emptyBranchSource, 1, "empty click branch return contract");
-
-  const specialBranchSource = sliceBetween(
-    handleClickSource,
-    "if (target.kind === \"special\") {",
-    "if (target.kind === \"water\") {",
-  );
-  assertOrderedSteps(specialBranchSource, [
-    step.syncReadOnly("special lookup", "const specialFeature = runtimeState.specialRegionsById.get(id);"),
-    step.syncReadOnly("special lookup admission", "if (!specialFeature) return;"),
-    step.syncReadOnly("special previous water", "const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || \"\").trim();"),
-    step.syncReadOnly("special previous special", "const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || \"\").trim();"),
-    step.syncEffectful("special water clear", stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";")),
-    step.syncEffectful("special selection write", stateWriteToken("runtimeState", "selectedSpecialRegionId", " = id;")),
-    step.syncEffectful("special water sidebar", "if (previousWaterRegionId) refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);"),
-    step.syncEffectful("special sidebar", "refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId, id]);"),
-    step.syncEffectful("special selection render", "requestInteractionRender(\"select-special-region\")"),
-    step.syncReadOnly("special eyedropper admission", "if (runtimeState.currentTool === \"eyedropper\") {"),
-    step.syncReadOnly("special eyedropper color", "const picked = getSpecialRegionColor(id, specialFeature);"),
-    step.syncEffectful("special selected color write", stateWriteToken("runtimeState", "selectedColor", " = picked;")),
-    step.syncEffectful("special swatch refresh", "runtimeState.updateSwatchUIFn();"),
-    step.syncEffectful("special eyedropper metric", "noteRenderAction(\"eyedropper-special\", actionStart);"),
-    step.syncEffectful("special selection metric", "noteRenderAction(\"select-special-region\", actionStart);"),
-  ], "special click branch must keep selection and eyedropper order");
-  assertReturnStatementCount(specialBranchSource, 3, "special click branch return contract");
-
-  const waterBranchSource = sliceBetween(
-    handleClickSource,
-    "if (target.kind === \"water\") {",
-    "if (target.kind !== \"land\") return;",
-  );
-  assertOrderedSteps(waterBranchSource, [
-    step.syncReadOnly("water lookup", "const waterFeature = runtimeState.waterRegionsById.get(id);"),
-    step.syncReadOnly("water lookup admission", "if (!waterFeature) return;"),
-    step.syncReadOnly("water previous special", "const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || \"\").trim();"),
-    step.syncReadOnly("water previous water", "const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || \"\").trim();"),
-    step.syncReadOnly("water toggle decision", "const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;"),
-    step.syncEffectful("water special clear", stateWriteToken("runtimeState", "selectedSpecialRegionId", " = \"\";")),
-    step.syncReadOnly("water toggle-off admission", "if (isSelectionToggle && previousWaterRegionId === id) {"),
-    step.syncEffectful("water toggle-off clear", stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";")),
-    step.syncEffectful("water toggle-off render", "requestInteractionRender(\"water-selection-toggle-off\")"),
-    step.syncEffectful("water toggle-off metric", "noteRenderAction(\"water-selection-toggle-off\", actionStart);"),
-    step.syncEffectful("water selection write", stateWriteToken("runtimeState", "selectedWaterRegionId", " = id;")),
-    step.syncEffectful("water selection sidebar", "refreshWaterRegionSidebarRowsNow([previousWaterRegionId, id]);"),
-    step.syncReadOnly("water toggle-on admission", "if (isSelectionToggle) {"),
-    step.syncEffectful("water toggle-on render", "requestInteractionRender(\"water-selection-toggle-on\")"),
-    step.syncEffectful("water toggle-on metric", "noteRenderAction(\"water-selection-toggle-on\", actionStart);"),
-    step.syncReadOnly("macro ocean admission", "if (macroOceanSelectionOnly) {"),
-    step.syncEffectful("macro ocean render", "requestInteractionRender(\"click-select-open-ocean\")"),
-    step.syncEffectful("macro ocean metric", "noteRenderAction(\"click-select-open-ocean\", actionStart);"),
-    step.syncReadOnly("water eraser admission", "if (runtimeState.currentTool === \"eraser\") {"),
-    step.syncReadOnly("water eraser history", "const historyBefore = captureHistoryState({ waterRegionIds: [id] });"),
-    step.syncEffectful("water eraser mutation", "delete runtimeState.waterRegionOverrides[id];"),
-    step.syncEffectful("water eraser dirty", "markDirty(\"erase-water-region-color\")"),
-    step.syncEffectful("water eraser history commit", "kind: \"erase-water-region-color\","),
-    step.syncEffectful("water eraser render", "requestInteractionRender(\"click-erase-water\")"),
-    step.syncEffectful("water eraser sidebar", "refreshSidebarAfterPaint({ waterRegionIds: [id] });"),
-    step.syncEffectful("water eraser metric", "noteRenderAction(\"click-erase-water\", actionStart);"),
-    step.syncReadOnly("water eyedropper admission", "if (runtimeState.currentTool === \"eyedropper\") {"),
-    step.syncReadOnly("water eyedropper color", "const picked = getWaterRegionColor(id);"),
-    step.syncEffectful("water selected color write", stateWriteToken("runtimeState", "selectedColor", " = picked;")),
-    step.syncEffectful("water eyedropper render", "requestInteractionRender(\"eyedropper-water\")"),
-    step.syncEffectful("water eyedropper metric", "noteRenderAction(\"eyedropper-water\", actionStart);"),
-    step.syncEffectful("water fill delegation", "applyWaterRegionFill(id, runtimeState.selectedColor, {"),
-  ], "water click branch must keep selection, erase, eyedropper, and fill order");
-  assertReturnStatementCount(waterBranchSource, 7, "water click branch return contract");
-
-  const afterWaterBranchSource = sliceFrom(
-    handleClickSource,
-    "applyWaterRegionFill(id, runtimeState.selectedColor, {",
-  );
-  const landSelectionClearSource = sliceBetween(
-    afterWaterBranchSource,
-    "if (runtimeState.selectedWaterRegionId) {",
-    "let countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);",
-  );
-  assertOrderedSteps(landSelectionClearSource, [
-    step.syncReadOnly("land water clear admission", "if (runtimeState.selectedWaterRegionId) {"),
-    step.syncReadOnly("land previous water id", "const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || \"\").trim();"),
-    step.syncEffectful("land water selection clear", stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";")),
-    step.syncEffectful("land water sidebar", "refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);"),
-    step.syncEffectful("land water clear render", "requestInteractionRender(\"clear-water-selection-land-click\");"),
-    step.syncReadOnly("land special clear admission", "if (runtimeState.selectedSpecialRegionId) {"),
-    step.syncReadOnly("land previous special id", "const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || \"\").trim();"),
-    step.syncEffectful("land special selection clear", stateWriteToken("runtimeState", "selectedSpecialRegionId", " = \"\";")),
-    step.syncEffectful("land special sidebar", "refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);"),
-    step.syncEffectful("land special clear render", "requestInteractionRender(\"clear-special-selection-land-click\");"),
-    step.syncReadOnly("land hit local", "let landHit = hit;"),
-    step.syncReadOnly("land id local", "let landId = id;"),
-    step.syncReadOnly("land feature local", "let feature = runtimeState.landIndex.get(landId);"),
-  ], "land selection clear must finish before land lookup and dev selection");
-
-  const landTransactionSource = sliceBetween(
-    handleClickSource,
-    "let landHit = hit;",
-    "const selectedColor = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);",
-  );
-  const devSelectionSource = sliceBetween(
-    landTransactionSource,
-    "if (decision.devSelectionRequested) {",
-    "let countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);",
-  );
-  assertOrderedSteps(devSelectionSource, [
-    step.syncReadOnly("dev selection decision admission", "if (decision.devSelectionRequested) {"),
-    step.syncEffectful("dev selection prevent default", "if (event?.preventDefault) event.preventDefault();"),
-    step.syncEffectful("dev selection toggle", "const changedSelection = toggleFeatureInDevSelection(landId);"),
-    step.syncEffectful("dev inspector sync", "syncInspectorCountryToLandSelection(feature, landId, landHit);"),
-    step.syncEffectful("dev selection metric", "noteRenderAction(changedSelection ? \"dev-selection-toggle\" : \"dev-selection-sync\", actionStart);"),
-  ], "dev-selection branch must keep modifier, toggle, inspector, and metric order");
-
-  const landEraserSource = sliceBetween(
-    landTransactionSource,
-    "if (runtimeState.currentTool === \"eraser\") {",
-    "if (runtimeState.currentTool === \"eyedropper\") {",
-  );
-  const sovereigntyEraseSource = sliceBetween(
-    landEraserSource,
-    "if (isSovereigntyModeActive()) {",
-    "} else if (runtimeState.interactionGranularity === \"country\" && countryCode) {",
-  );
-  assertOrderedSteps(sovereigntyEraseSource, [
-    step.syncReadOnly("sovereignty erase history", "sovereigntyFeatureIds: targetIds,"),
-    step.syncEffectful("sovereignty erase mutation", "const changed = resetFeatureOwnerCodes(targetIds);"),
-    step.syncEffectful("sovereignty erase color refresh", "refreshResolvedColorsForFeatures(targetIds, { renderNow: false });"),
-    step.syncEffectful("sovereignty erase dirty", "markDirty(\"erase-sovereignty\")"),
-    step.syncEffectful("sovereignty erase batch border", "scheduleDynamicBorderRecompute(\"sovereignty-batch-reset\", 90);"),
-    step.syncEffectful("sovereignty erase single border", "scheduleDynamicBorderRecompute(\"sovereignty-single-reset\", 150);"),
-    step.syncEffectful("sovereignty erase history kind", "kind: \"erase-sovereignty\","),
-    step.syncEffectful("sovereignty erase ownership flag", "affectsSovereignty: true,"),
-  ], "land sovereignty eraser subpath must keep effect order");
-  assertReturnStatementCount(sovereigntyEraseSource, 0, "land sovereignty eraser return contract");
-
-  const countryEraseSource = sliceBetween(
-    landEraserSource,
-    "} else if (runtimeState.interactionGranularity === \"country\" && countryCode) {",
-    "applyFeatureVisualOverrideTransaction(targetIds, null, {",
-  );
-  assertOrderedSteps(countryEraseSource, [
-    step.syncReadOnly("country erase history", "ownerCodes: [countryCode],"),
-    step.syncEffectful("country erase sovereign color", "delete runtimeState.sovereignBaseColors[countryCode];"),
-    step.syncEffectful("country erase country color", "delete runtimeState.countryBaseColors[countryCode];"),
-    step.syncEffectful("country erase legacy state", "markLegacyColorStateDirty();"),
-    step.syncEffectful("country erase color refresh", "refreshResolvedColorsForOwners([countryCode], { renderNow: false });"),
-    step.syncEffectful("country erase dirty", "markDirty(\"erase-country-color\")"),
-    step.syncEffectful("country erase history kind", "kind: \"erase-country-color\","),
-  ], "land country eraser subpath must keep effect order");
-  assertReturnStatementCount(countryEraseSource, 0, "land country eraser return contract");
-
-  const featureEraseSource = sliceBetween(
-    landEraserSource,
-    "featureIds: targetIds,",
-    "requestInteractionRender(\"click-erase\");",
-  );
-  assertOrderedSteps(featureEraseSource, [
-    step.syncReadOnly("feature erase history", "featureIds: targetIds,"),
-    step.syncEffectful("feature erase mutation", "applyFeatureVisualOverrideTransaction(targetIds, null, {"),
-    step.syncEffectful("feature erase remove flag", "remove: true,"),
-    step.syncEffectful("feature erase input label", "inputLabel: \"erase-feature-color\","),
-    step.syncEffectful("feature erase dirty", "markDirty(\"erase-feature-color\")"),
-    step.syncEffectful("feature erase history kind", "kind: \"erase-feature-color\","),
-  ], "land feature eraser subpath must keep effect order");
-  assertReturnStatementCount(featureEraseSource, 0, "land feature eraser return contract");
-
-  assertOrderedSteps(landEraserSource, [
-    step.syncEffectful("land eraser branch completion", "requestInteractionRender(\"click-erase\");"),
-    step.syncReadOnly("land eraser sidebar admission", "if (shouldRefreshCountryList) {"),
-    step.syncEffectful("land eraser sidebar", "refreshSidebarAfterPaint({"),
-    step.syncEffectful("land eraser metric", "noteRenderAction(\"click-erase\", actionStart);"),
-  ], "land eraser must keep shared render, sidebar, and metric tail");
-  assertReturnStatementCount(landEraserSource, 1, "land eraser wrapper return contract");
-
-  const landFillSource = sliceFrom(
-    handleClickSource,
-    "const selectedColor = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);",
-  );
-  assertOrderedSteps(landFillSource, [
-    step.syncReadOnly("land fill color resolve", "const selectedColor = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);"),
-    step.syncEffectful("land selected color write", stateWriteToken("runtimeState", "selectedColor", " = selectedColor;")),
-    step.syncReadOnly("sovereignty fill admission", "if (isSovereigntyModeActive()) {"),
-    step.syncReadOnly("sovereignty fill history", "sovereigntyFeatureIds: targetIds,"),
-    step.syncReadOnly("sovereignty fill active owner", "if (!runtimeState.activeSovereignCode) {"),
-    step.syncEffectful("sovereignty fill mutation", "const changed = setFeatureOwnerCodes(targetIds, runtimeState.activeSovereignCode);"),
-    step.syncEffectful("sovereignty fill dirty", "markDirty(\"fill-sovereignty\")"),
-    step.syncEffectful("sovereignty fill history kind", "kind: \"fill-sovereignty\","),
-    step.syncReadOnly("country fill admission", "} else if (runtimeState.interactionGranularity === \"country\" && countryCode) {"),
-    step.syncReadOnly("country fill history", "ownerCodes: [countryCode],"),
-    step.syncEffectful("country sovereign color write", stateWriteToken("runtimeState", "sovereignBaseColors[countryCode]", " = selectedColor;")),
-    step.syncEffectful("country base color write", stateWriteToken("runtimeState", "countryBaseColors[countryCode]", " = selectedColor;")),
-    step.syncEffectful("country fill legacy state", "markLegacyColorStateDirty();"),
-    step.syncEffectful("country fill color refresh", "refreshResolvedColorsForOwners([countryCode], { renderNow: false });"),
-    step.syncEffectful("country fill dirty", "markDirty(\"fill-country-color\")"),
-    step.syncEffectful("country fill history kind", "kind: \"fill-country-color\","),
-    step.syncReadOnly("feature fill click count", "const clickCount = Math.max(1, Number(event?.detail || 1));"),
-    step.syncReadOnly("feature fill double-click admission", "if (clickCount >= 2 && isDoubleClickBatchEligible(landHit, feature)) {"),
-    step.syncEffectful("feature fill delegation", "applyVisualSubdivisionFill(targetIds, selectedColor, {"),
-    step.syncEffectful("feature fill history kind", "kind: \"fill-feature-color\","),
-    step.syncEffectful("land fill recent color", "addRecentColor(selectedColor);"),
-    step.syncEffectful("land fill render", "requestInteractionRender(\"click-fill\");"),
-    step.syncReadOnly("land fill sidebar admission", "if (isSovereigntyModeActive() || (runtimeState.interactionGranularity === \"country\" && countryCode)) {"),
-    step.syncEffectful("land fill sidebar", "refreshSidebarAfterPaint({"),
-    step.syncEffectful("land fill metric", "noteRenderAction(\"click-fill\", actionStart);"),
-  ], "land fill branch must keep mutation, history, render, sidebar, and metric order");
-  assertReturnStatementCount(landFillSource, 3, "land fill branch return contract");
-
-  const applyWaterRegionFillSource = extractFunctionSource(rendererSource, "applyWaterRegionFill");
-  assertOrderedSteps(applyWaterRegionFillSource, [
-    step.syncReadOnly("water fill id normalize", "const resolvedId = String(targetId || \"\").trim();"),
-    step.syncReadOnly("water fill default color", "const defaultColor = getWaterRegionDefaultFillColorById(resolvedId);"),
-    step.syncReadOnly("water fill color resolve", "const color = getSafeCanvasColor(selectedColor, defaultColor);"),
-    step.syncReadOnly("water fill current color", "const currentColor = getWaterRegionColor(resolvedId);"),
-    step.syncEffectful("water fill selection write", stateWriteToken("runtimeState", "selectedWaterRegionId", " = resolvedId;")),
-    step.syncReadOnly("water fill unchanged admission", "if (currentColor === color) {"),
-    step.syncEffectful("water fill unchanged sidebar", "refreshWaterRegionSidebarRowsNow([resolvedId]);"),
-    step.syncReadOnly("water fill history", "const historyBefore = captureHistoryState({"),
-    step.syncEffectful("water fill override write", stateWriteToken("runtimeState", "waterRegionOverrides[resolvedId]", " = color;")),
-    step.syncEffectful("water fill dirty", "markDirty(dirtyReason);"),
-    step.syncEffectful("water fill history commit", "commitHistoryEntry({"),
-    step.syncEffectful("water fill recent color", "addRecentColor(color);"),
-    step.syncEffectful("water fill render", "requestInteractionRender(kind);"),
-    step.syncEffectful("water fill sidebar", "refreshSidebarAfterPaint({ waterRegionIds: [resolvedId] });"),
-    step.syncEffectful("water fill metric", "noteRenderAction(kind, actionStart);"),
-  ], "applyWaterRegionFill must keep transaction order");
-  const applyWaterUnchangedSource = sliceBetween(
-    applyWaterRegionFillSource,
-    "if (currentColor === color) {",
-    "const historyBefore = captureHistoryState({",
-  );
-  assertOrderedSteps(applyWaterUnchangedSource, [
-    step.syncEffectful("unchanged water sidebar", "refreshWaterRegionSidebarRowsNow([resolvedId]);"),
-    step.syncEffectful("unchanged water render", "requestInteractionRender(kind);"),
-    step.syncReadOnly("unchanged water result", "return false;"),
-  ], "unchanged water fill must render before returning false");
-  assertReturnStatementCount(applyWaterRegionFillSource, 3, "applyWaterRegionFill return contract");
-
-  const applyVisualSubdivisionFillSource = extractFunctionSource(rendererSource, "applyVisualSubdivisionFill");
-  assertOrderedSteps(applyVisualSubdivisionFillSource, [
-    step.syncReadOnly("visual fill target normalize", "const resolvedIds = normalizeFeatureOverrideTargetIds(targetIds);"),
-    step.syncReadOnly("visual fill color resolve", "const color = getSafeCanvasColor(selectedColor, LAND_FILL_COLOR);"),
-    step.syncReadOnly("visual fill history", "const historyBefore = captureHistoryState({"),
-    step.syncEffectful("visual fill mutation", "applyFeatureVisualOverrideTransaction(resolvedIds, color, {"),
-    step.syncEffectful("visual fill input label", "inputLabel: kind || \"fill-feature-color\","),
-    step.syncEffectful("visual fill dirty", "markDirty(dirtyReason);"),
-    step.syncEffectful("visual fill history commit", "commitHistoryEntry({"),
-    step.syncEffectful("visual fill recent color", "addRecentColor(color);"),
-    step.syncEffectful("visual fill render", "requestInteractionRender(kind);"),
-    step.syncEffectful("visual fill sidebar", "refreshSidebarAfterPaint({ featureIds: resolvedIds });"),
-    step.syncEffectful("visual fill metric", "noteRenderAction(kind, actionStart);"),
-  ], "applyVisualSubdivisionFill must keep transaction order");
-  assertReturnStatementCount(applyVisualSubdivisionFillSource, 2, "applyVisualSubdivisionFill return contract");
+  assertOrderedSteps(emptyBranch, [
+    step.syncEffectful("clear water action", "setClickSelectedWaterRegionId(\"\");"),
+    step.syncEffectful("water sidebar refresh", "refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);"),
+    step.syncEffectful("water invalidation", "requestInteractionRender(\"clear-water-selection-empty-click\");"),
+    step.syncEffectful("clear special action", "setClickSelectedSpecialRegionId(\"\");"),
+    step.syncEffectful("special sidebar refresh", "refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);"),
+    step.syncEffectful("special invalidation", "requestInteractionRender(\"clear-special-selection-empty-click\");"),
+  ], "empty click must preserve action, sidebar, and invalidation order");
 });
 
-test("land water special and empty click branches remain in map_renderer", () => {
+test("land water special and empty click branches remain in the transaction owner", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
-  const handleClickSource = extractFunctionSource(rendererSource, "handleClick");
+  const ownerSource = readRepoFile(CLICK_SELECTION_TRANSACTION_OWNER_PATH);
+  const handleClickSource = extractFunctionSource(ownerSource, "handleClick");
   const applyWaterRegionFillSource = extractFunctionSource(rendererSource, "applyWaterRegionFill");
   const applyVisualSubdivisionFillSource = extractFunctionSource(rendererSource, "applyVisualSubdivisionFill");
 
@@ -820,13 +474,13 @@ test("land water special and empty click branches remain in map_renderer", () =>
     "altKey: !!event?.altKey,",
     "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);",
     "if (target.kind === \"empty\" || !id) {",
-    stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";"),
+    'setClickSelectedWaterRegionId("")',
     "requestInteractionRender(\"clear-water-selection-empty-click\")",
-    stateWriteToken("runtimeState", "selectedSpecialRegionId", " = \"\";"),
+    'setClickSelectedSpecialRegionId("")',
     "requestInteractionRender(\"clear-special-selection-empty-click\")",
     "if (target.kind === \"special\") {",
-    stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";"),
-    stateWriteToken("runtimeState", "selectedSpecialRegionId", " = id;"),
+    'setClickSelectedWaterRegionId("")',
+    "setClickSelectedSpecialRegionId(id)",
     "requestInteractionRender(\"select-special-region\")",
     "if (target.kind === \"water\") {",
     "const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;",
@@ -836,7 +490,7 @@ test("land water special and empty click branches remain in map_renderer", () =>
     "markDirty(\"erase-water-region-color\")",
     "commitHistoryEntry({",
     "requestInteractionRender(\"click-erase-water\")",
-    "applyWaterRegionFill(id, runtimeState.selectedColor, {",
+    "applyWaterRegionFill(id, state.selectedColor, {",
     "requestInteractionRender(\"clear-water-selection-land-click\")",
     "requestInteractionRender(\"clear-special-selection-land-click\")",
     "if (target.kind !== \"land\") return;",
@@ -878,213 +532,16 @@ test("land water special and empty click branches remain in map_renderer", () =>
   }
 });
 
-test("returned target and decision drive executable handleClick admission", async () => {
-  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
-  const handleClickSource = extractFunctionSource(rendererSource, "handleClick");
-  const executableHandleClickSource = handleClickSource.startsWith("async ")
-    ? handleClickSource
-    : `async ${handleClickSource}`;
-  const dependencyNames = [
-    "runtimeState",
-    "nowMs",
-    "suppressNextClickAfterBrush",
-    "dismissOnboardingHint",
-    "getIntensityFieldTool",
-    "inspectHgoRuntimePreviewFromEvent",
-    "getHoveredFacilityEntryFromEvent",
-    "selectedFacilityEntry",
-    "getHitFromEvent",
-    "HIT_SNAP_RADIUS_CLICK_PX",
-    "resolveClickSelectionDecision",
-    "refreshWaterRegionSidebarRowsNow",
-    "refreshSpecialRegionSidebarRowsNow",
-    "requestInteractionRender",
-    "updateDevSelectedHit",
-    "handleSpecialZoneMembershipClick",
-    "noteRenderAction",
-    "isMacroOceanWaterRegion",
-    "isOpenOceanPaintEnabled",
-    "toggleFeatureInDevSelection",
-    "syncInspectorCountryToLandSelection",
-    "ensureLeafDetailReady",
-  ];
-  const handleClickFactory = new Function(
-    ...dependencyNames,
-    `"use strict"; return (${executableHandleClickSource});`,
-  );
-  const rawHit = Object.freeze({
-    targetType: "land",
-    id: "land-raw",
-    countryCode: "AA",
-    runtimeCountryCode: "AA",
-  });
-  const frozenModifierSnapshot = Object.freeze({
-    ctrlKey: false,
-    metaKey: false,
-    shiftKey: false,
-    altKey: false,
-  });
-
-  async function runAdmissionCase(target, decision = { devSelectionRequested: false }) {
-    const trace = [];
-    let seenResolvedHit = null;
-    let seenModifiers = null;
-    const runtimeState = {
-      startupReadonly: false,
-      landData: {},
-      waterRegionsData: {},
-      scenarioSpecialRegionsData: {},
-      specialZoneEditor: null,
-      operationalLineEditor: null,
-      operationGraphicsEditor: null,
-      unitCounterEditor: null,
-      selectedWaterRegionId: "water-old",
-      selectedSpecialRegionId: "special-old",
-      specialRegionsById: new Map([["special-1", {}]]),
-      waterRegionsById: new Map([["water-1", {}]]),
-      landIndex: new Map([["land-1", {}]]),
-      currentTool: "select",
-    };
-    const dependencies = {
-      runtimeState,
-      nowMs: () => 100,
-      suppressNextClickAfterBrush: false,
-      dismissOnboardingHint: () => trace.push("dismiss-onboarding"),
-      getIntensityFieldTool: () => ({ active: false }),
-      inspectHgoRuntimePreviewFromEvent: () => ({ active: false }),
-      getHoveredFacilityEntryFromEvent: () => null,
-      selectedFacilityEntry: null,
-      getHitFromEvent: () => {
-        trace.push("raw-hit:land:land-raw");
-        return rawHit;
-      },
-      HIT_SNAP_RADIUS_CLICK_PX: 4,
-      resolveClickSelectionDecision: (resolvedHit, modifiers) => {
-        seenResolvedHit = resolvedHit;
-        seenModifiers = modifiers;
-        trace.push(`resolve:${target.kind}:${target.id ?? "blank"}:${decision.devSelectionRequested}`);
-        return { decision, target };
-      },
-      refreshWaterRegionSidebarRowsNow: (ids) => trace.push(`refresh-water:${ids.join(",")}`),
-      refreshSpecialRegionSidebarRowsNow: (ids) => trace.push(`refresh-special:${ids.join(",")}`),
-      requestInteractionRender: (reason) => trace.push(`render:${reason}`),
-      updateDevSelectedHit: (hit) => trace.push(`update-dev-hit:${hit.id}`),
-      handleSpecialZoneMembershipClick: (hit) => {
-        trace.push(`special-zone-membership:${hit.id}`);
-        return false;
-      },
-      noteRenderAction: (reason) => trace.push(`note:${reason}`),
-      isMacroOceanWaterRegion: () => true,
-      isOpenOceanPaintEnabled: () => false,
-      toggleFeatureInDevSelection: (id) => {
-        trace.push(`dev-toggle:${id}`);
-        return true;
-      },
-      syncInspectorCountryToLandSelection: (_feature, id) => trace.push(`sync-inspector:${id}`),
-      ensureLeafDetailReady: async (countryCode) => {
-        trace.push(`ensure-leaf-detail:${countryCode}`);
-        return false;
-      },
-    };
-    const handleClick = handleClickFactory(...dependencyNames.map((name) => dependencies[name]));
-    await handleClick({
-      ctrlKey: false,
-      metaKey: false,
-      shiftKey: false,
-      altKey: false,
-      preventDefault: () => trace.push("prevent-default"),
-    });
-    assert.deepEqual(seenResolvedHit, rawHit);
-    assert.deepEqual(seenModifiers, frozenModifierSnapshot);
-    assert.equal(Object.isFrozen(seenModifiers), true);
-    return { runtimeState, trace };
+test("transaction behavior coverage executes the canonical owner factory", () => {
+  const ownerBehaviorSource = readRepoFile(CLICK_SELECTION_TRANSACTION_OWNER_TEST_PATH);
+  for (const token of [
+    "empty hit clears water then special and invalidates each selection exactly once",
+    "special water and land candidates retain their distinct transaction priority",
+    "missing candidate fails closed before selection actions and invalidation",
+    "action failure propagates and stops later sidebar and render work",
+  ]) {
+    assertIncludes(ownerBehaviorSource, token, "owner behavior suite must keep hostile transaction coverage");
   }
-
-  const canonicalEmpty = await runAdmissionCase({ kind: "empty" });
-  assert.deepEqual(canonicalEmpty.trace, [
-    "dismiss-onboarding",
-    "raw-hit:land:land-raw",
-    "resolve:empty:blank:false",
-    "refresh-water:water-old",
-    "render:clear-water-selection-empty-click",
-    "refresh-special:special-old",
-    "render:clear-special-selection-empty-click",
-  ]);
-  assert.equal(canonicalEmpty.runtimeState.selectedWaterRegionId, "");
-  assert.equal(canonicalEmpty.runtimeState.selectedSpecialRegionId, "");
-
-  const typedBlankTarget = {
-    kind: "land",
-    id: null,
-    countryCode: "AA",
-    runtimeCountryCode: "AA",
-  };
-  const typedBlank = await runAdmissionCase(typedBlankTarget);
-  assert.deepEqual(typedBlank.trace.slice(3), canonicalEmpty.trace.slice(3));
-  assert.deepEqual(typedBlankTarget, {
-    kind: "land",
-    id: null,
-    countryCode: "AA",
-    runtimeCountryCode: "AA",
-  });
-  assert.equal(typedBlank.runtimeState.selectedWaterRegionId, "");
-  assert.equal(typedBlank.runtimeState.selectedSpecialRegionId, "");
-
-  const special = await runAdmissionCase({
-    kind: "special",
-    id: "special-1",
-    countryCode: null,
-    runtimeCountryCode: null,
-  });
-  assert.deepEqual(special.trace, [
-    "dismiss-onboarding",
-    "raw-hit:land:land-raw",
-    "resolve:special:special-1:false",
-    "update-dev-hit:land-raw",
-    "special-zone-membership:land-raw",
-    "refresh-water:water-old",
-    "refresh-special:special-old,special-1",
-    "render:select-special-region",
-    "note:select-special-region",
-  ]);
-  assert.equal(special.runtimeState.selectedWaterRegionId, "");
-  assert.equal(special.runtimeState.selectedSpecialRegionId, "special-1");
-
-  const water = await runAdmissionCase({
-    kind: "water",
-    id: "water-1",
-    countryCode: null,
-    runtimeCountryCode: null,
-  });
-  assert.deepEqual(water.trace, [
-    "dismiss-onboarding",
-    "raw-hit:land:land-raw",
-    "resolve:water:water-1:false",
-    "update-dev-hit:land-raw",
-    "special-zone-membership:land-raw",
-    "refresh-special:special-old",
-    "refresh-water:water-old,water-1",
-    "render:click-select-open-ocean",
-    "note:click-select-open-ocean",
-  ]);
-  assert.equal(water.runtimeState.selectedWaterRegionId, "water-1");
-  assert.equal(water.runtimeState.selectedSpecialRegionId, "");
-
-  const landTarget = {
-    kind: "land",
-    id: "land-1",
-    countryCode: "AA",
-    runtimeCountryCode: "AA",
-  };
-  const landHydration = await runAdmissionCase(landTarget);
-  assert.equal(landHydration.trace.includes("ensure-leaf-detail:AA"), true);
-  assert.equal(landHydration.trace.some((entry) => entry.startsWith("dev-toggle:")), false);
-
-  const landDevToggle = await runAdmissionCase(landTarget, { devSelectionRequested: true });
-  assert.equal(landDevToggle.trace.includes("dev-toggle:land-1"), true);
-  assert.equal(landDevToggle.trace.includes("sync-inspector:land-1"), true);
-  assert.equal(landDevToggle.trace.includes("note:dev-selection-toggle"), true);
-  assert.equal(landDevToggle.trace.some((entry) => entry.startsWith("ensure-leaf-detail:")), false);
 });
 
 test("dev selection and fill remain in map_renderer and public facade stays stable", () => {
@@ -1170,9 +627,10 @@ test("hit candidates stay pure and hover owner does not own click selection", ()
 
 test("history dirty and render refresh calls remain in current paths", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const ownerSource = readRepoFile(CLICK_SELECTION_TRANSACTION_OWNER_PATH);
   const historyManagerSource = readRepoFile(HISTORY_MANAGER_PATH);
   const dirtyStateSource = readRepoFile(DIRTY_STATE_PATH);
-  const handleClickSource = extractFunctionSource(rendererSource, "handleClick");
+  const handleClickSource = extractFunctionSource(ownerSource, "handleClick");
 
   for (const token of [
     "import { captureHistoryState, pushHistoryEntry } from \"./history_manager.js\";",
@@ -1259,30 +717,22 @@ test("P1.8 keeps one pure click decision owner and preserves forbidden boundarie
 
   for (const token of [
     "import ",
-    "async ",
-    "await ",
     "globalThis",
     "runtimeState",
     "map_renderer.js",
     "document",
     "window",
-    "Event",
     "addEventListener",
-    "markDirty",
-    "captureHistoryState",
     "pushHistoryEntry",
-    "commitHistoryEntry",
-    "requestInteractionRender",
-    "selectedWaterRegionId",
-    "selectedSpecialRegionId",
-    "toggleFeatureInDevSelection",
-    "ensureLeafDetailReady",
-    "getHitFromEvent",
   ]) {
-    assertExcludes(ownerSource, token, "P1.8 owner must remain pure and effect-free");
+    assertExcludes(ownerSource, token, "click transaction owner must depend on injected ports");
   }
   for (const token of [
+    "export function createClickSelectionTransactionOwner(",
     "export function resolveClickSelectionDecision(resolvedHit, readonlyModifiers)",
+    "let state = getClickState();",
+    "state = getClickState();",
+    "return Object.freeze({ handleClick });",
     "devSelectionRequested: target.kind === \"land\" && (readonlyModifiers.ctrlKey || readonlyModifiers.metaKey)",
     "return { decision, target };",
   ]) {

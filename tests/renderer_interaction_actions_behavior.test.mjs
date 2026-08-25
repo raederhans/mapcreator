@@ -2,10 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const MODULE_PATH = "../js/core/state/actions/renderer_interaction_actions.js";
+const PRESENTATION_MODULE_PATH = "../js/core/state/actions/scenario_presentation_actions.js";
+const ACTIVATION_MODULE_PATH = "../js/core/state/actions/scenario_activation_actions.js";
 
 async function loadActions() {
   try {
-    return await import(MODULE_PATH);
+    return {
+      ...await import(MODULE_PATH),
+      ...await import(PRESENTATION_MODULE_PATH),
+      ...await import(ACTIVATION_MODULE_PATH),
+    };
   } catch (error) {
     assert.fail(`renderer interaction actions must exist: ${error?.message || error}`);
   }
@@ -150,4 +156,73 @@ test("interaction infrastructure preserves ready and in-flight fields for null o
   assert.equal(target.interactionInfrastructureReady, false);
   assert.equal(target.interactionInfrastructureBuildInFlight, true);
   assert.equal(target.sentinel, "preserved");
+});
+
+test("click selection actions reject invalid targets", async () => {
+  const actions = await loadActions();
+  const clickActions = [
+    ["clearClickHoveredIdState", []],
+    ["clearClickScenarioHoverIdsState", []],
+    ["setClickHoverOverlayDirtyState", [true]],
+    ["setClickSelectedWaterRegionIdState", ["water-1"]],
+    ["setClickSelectedSpecialRegionIdState", ["special-1"]],
+    ["setClickSelectedColorState", ["#123456"]],
+    ["removeClickWaterRegionOverrideState", ["water-1"]],
+    ["removeClickCountryColorsState", ["AA"]],
+    ["setClickActiveSovereignCodeState", ["AA"]],
+    ["setClickCountryColorsState", ["AA", "#123456"]],
+  ];
+  for (const target of [null, undefined, [], "state"]) {
+    for (const [name, args] of clickActions) {
+      assert.throws(() => actions[name](target, ...args), /target must be an object/);
+    }
+  }
+});
+
+test("click selection actions preserve normalization deletion and paired color writes", async () => {
+  const {
+    clearClickHoveredIdState,
+    clearClickScenarioHoverIdsState,
+    removeClickCountryColorsState,
+    removeClickWaterRegionOverrideState,
+    setClickActiveSovereignCodeState,
+    setClickCountryColorsState,
+    setClickHoverOverlayDirtyState,
+    setClickSelectedColorState,
+    setClickSelectedSpecialRegionIdState,
+    setClickSelectedWaterRegionIdState,
+  } = await loadActions();
+  const selectedColor = { css: "#123456" };
+  const target = {
+    countryBaseColors: { AA: "#aaaaaa", BB: "#bbbbbb" },
+    hoveredId: "land-1",
+    hoveredSpecialRegionId: "special-1",
+    hoveredWaterRegionId: "water-1",
+    sovereignBaseColors: { AA: "#aaaaaa", BB: "#bbbbbb" },
+    waterRegionOverrides: { "water-1": "#111111", "water-2": "#222222" },
+  };
+
+  clearClickHoveredIdState(target);
+  clearClickScenarioHoverIdsState(target);
+  assert.deepEqual(
+    [target.hoveredId, target.hoveredWaterRegionId, target.hoveredSpecialRegionId],
+    [null, null, null],
+  );
+  assert.equal(setClickHoverOverlayDirtyState(target, "dirty"), true);
+  assert.equal(setClickSelectedWaterRegionIdState(target, " water-2 "), "water-2");
+  assert.equal(setClickSelectedSpecialRegionIdState(target, null), "");
+  assert.equal(setClickSelectedColorState(target, selectedColor), selectedColor);
+  assert.equal(target.selectedColor, selectedColor);
+  assert.equal(removeClickWaterRegionOverrideState(target, " water-1 "), true);
+  assert.deepEqual(target.waterRegionOverrides, { "water-2": "#222222" });
+  assert.equal(removeClickCountryColorsState(target, " AA "), true);
+  assert.deepEqual(target.sovereignBaseColors, { BB: "#bbbbbb" });
+  assert.deepEqual(target.countryBaseColors, { BB: "#bbbbbb" });
+  assert.equal(setClickActiveSovereignCodeState(target, " CC "), "CC");
+  assert.equal(setClickCountryColorsState(target, " DD ", "#dddddd"), true);
+  assert.equal(target.sovereignBaseColors.DD, "#dddddd");
+  assert.equal(target.countryBaseColors.DD, "#dddddd");
+  assert.equal(removeClickWaterRegionOverrideState(target, ""), false);
+  assert.equal(removeClickCountryColorsState(target, ""), false);
+  assert.equal(setClickCountryColorsState(target, "", "#000000"), false);
 });

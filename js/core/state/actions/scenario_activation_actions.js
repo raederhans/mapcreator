@@ -66,6 +66,34 @@ function assertStateTarget(target) {
   }
 }
 
+export function removeClickCountryColorsState(target, countryCode) {
+  assertStateTarget(target);
+  const normalizedCode = String(countryCode || "").trim();
+  if (!normalizedCode) return false;
+  const nextSovereignColors = structuredClone(target.sovereignBaseColors || {});
+  const nextCountryColors = structuredClone(target.countryBaseColors || {});
+  const removedSovereign = Object.hasOwn(nextSovereignColors, normalizedCode);
+  const removedCountry = Object.hasOwn(nextCountryColors, normalizedCode);
+  delete nextSovereignColors[normalizedCode];
+  delete nextCountryColors[normalizedCode];
+  target.sovereignBaseColors = nextSovereignColors;
+  target.countryBaseColors = nextCountryColors;
+  return removedSovereign || removedCountry;
+}
+
+export function setClickCountryColorsState(target, countryCode, color) {
+  assertStateTarget(target);
+  const normalizedCode = String(countryCode || "").trim();
+  if (!normalizedCode) return false;
+  const nextSovereignColors = structuredClone(target.sovereignBaseColors || {});
+  const nextCountryColors = structuredClone(target.countryBaseColors || {});
+  nextSovereignColors[normalizedCode] = color;
+  nextCountryColors[normalizedCode] = color;
+  target.sovereignBaseColors = nextSovereignColors;
+  target.countryBaseColors = nextCountryColors;
+  return true;
+}
+
 function getOptionalLayerConfig(layerKey) {
   const normalizedLayerKey = String(layerKey || "").trim();
   const config = SCENARIO_CHUNK_OPTIONAL_LAYER_STATE_CONFIGS[normalizedLayerKey];

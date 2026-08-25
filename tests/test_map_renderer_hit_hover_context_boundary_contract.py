@@ -4,6 +4,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+CLICK_SELECTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "click_selection_transaction_owner.js"
 RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 PUBLIC_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
@@ -212,15 +213,28 @@ class MapRendererHitHoverContextBoundaryContractTest(unittest.TestCase):
         ]:
             self.assertNotIn(forbidden, owner_factory)
 
-    def test_click_public_and_state_write_boundaries_remain_root_owned(self):
-        click_handler = slice_between(
+    def test_click_transaction_is_owner_owned_with_one_private_root_facade(self):
+        click_facade = slice_between(
             self.renderer_content,
-            "async function handleClick(event, _interactionContext = null)",
+            "async function handleClick(event, interactionContext = null)",
             "async function handleDoubleClick(event, _interactionContext = null)",
+        )
+        owner_content = CLICK_SELECTION_OWNER_JS.read_text(encoding="utf-8")
+        click_handler = slice_between(
+            owner_content,
+            "async function handleClick(event, _interactionContext = null)",
+            "return Object.freeze({ handleClick });",
         )
         public_content = PUBLIC_FACADE_JS.read_text(encoding="utf-8")
         allowlist_content = STATE_WRITE_ALLOWLIST.read_text(encoding="utf-8")
 
+        self.assertEqual(
+            click_facade.strip(),
+            "async function handleClick(event, interactionContext = null) {\n"
+            "  return getClickSelectionTransactionOwner().handleClick(event, interactionContext);\n"
+            "}",
+        )
+        self.assertEqual(self.renderer_content.count(".handleClick(event, interactionContext)"), 1)
         for token in [
             "getHitFromEvent(event, {",
             'eventType: "click"',
@@ -230,6 +244,7 @@ class MapRendererHitHoverContextBoundaryContractTest(unittest.TestCase):
         ]:
             self.assertIn(token, click_handler)
         self.assertNotIn("hitHoverContext", click_handler)
+        self.assertNotIn("runtimeState", click_handler)
         self.assertNotIn("RendererRuntimeContext", public_content)
         self.assertNotIn("rendererRuntimeContext", allowlist_content)
 

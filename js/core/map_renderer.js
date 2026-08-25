@@ -36,8 +36,14 @@ import {
   setPhaseEnteredAtState, setRendererIsInteractingState,
   setRenderPhaseTimerIdState, setRenderPhaseValueState,
 } from "./state/actions/renderer_phase_actions.js";
-import { setDayNightStyleConfigState } from "./state/actions/scenario_presentation_actions.js";
 import {
+  clearClickScenarioHoverIdsState, setClickActiveSovereignCodeState,
+  setClickSelectedSpecialRegionIdState, setClickSelectedWaterRegionIdState, setDayNightStyleConfigState,
+} from "./state/actions/scenario_presentation_actions.js";
+import { removeClickCountryColorsState, setClickCountryColorsState } from "./state/actions/scenario_activation_actions.js";
+import {
+  clearClickHoveredIdState, removeClickWaterRegionOverrideState, setClickHoverOverlayDirtyState,
+  setClickSelectedColorState,
   beginInteractionRecoveryTaskState, endInteractionRecoveryTaskState,
   setInteractionInfrastructureStateFields, setPendingZoomTransformState,
   setZoomGestureEndedAtState, setZoomGestureScaleDeltaState,
@@ -188,7 +194,10 @@ import {
 } from "./map_renderer/renderer_runtime_context.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
-import { resolveClickSelectionDecision } from "./map_renderer/click_selection_transaction_owner.js";
+import {
+  createClickSelectionTransactionOwner,
+  resolveClickSelectionDecision,
+} from "./map_renderer/click_selection_transaction_owner.js";
 import { createRendererTransactionResetOwner } from "./map_renderer/renderer_transaction_reset_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
@@ -1018,6 +1027,7 @@ let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
 let mapInteractionEventBindingOwner = null;
+let clickSelectionTransactionOwner = null;
 let mapHoverInteractionOwner = null;
 let rendererTransactionResetOwner = null;
 let rendererSurfaceLifecycleOwner = null;
@@ -3089,6 +3099,134 @@ function getZoomInteractionLifecycleOwner() {
     },
   });
   return zoomInteractionLifecycleOwner;
+}
+
+function getClickSelectionTransactionOwner() {
+  if (clickSelectionTransactionOwner) return clickSelectionTransactionOwner;
+  clickSelectionTransactionOwner = createClickSelectionTransactionOwner({
+    constants: {
+      clickSnapRadiusPx: HIT_SNAP_RADIUS_CLICK_PX,
+      landFillColor: LAND_FILL_COLOR,
+    },
+    getters: {
+      getClickState: () => Object.freeze({
+        activeSovereignCode: runtimeState.activeSovereignCode,
+        colors: runtimeState.colors,
+        countryBaseColors: runtimeState.countryBaseColors,
+        currentTool: runtimeState.currentTool,
+        interactionGranularity: runtimeState.interactionGranularity,
+        isEditingPreset: runtimeState.isEditingPreset,
+        landData: runtimeState.landData,
+        landIndex: runtimeState.landIndex,
+        operationalLineEditor: runtimeState.operationalLineEditor,
+        operationGraphicsEditor: runtimeState.operationGraphicsEditor,
+        scenarioSpecialRegionsData: runtimeState.scenarioSpecialRegionsData,
+        selectedColor: runtimeState.selectedColor,
+        selectedSpecialRegionId: runtimeState.selectedSpecialRegionId,
+        selectedWaterRegionId: runtimeState.selectedWaterRegionId,
+        sovereignBaseColors: runtimeState.sovereignBaseColors,
+        specialRegionsById: runtimeState.specialRegionsById,
+        specialZoneEditor: runtimeState.specialZoneEditor,
+        startupReadonly: runtimeState.startupReadonly,
+        unitCounterEditor: runtimeState.unitCounterEditor,
+        waterRegionsById: runtimeState.waterRegionsById,
+        waterRegionsData: runtimeState.waterRegionsData,
+      }),
+      getSelectedFacilityEntry: () => selectedFacilityEntry,
+    },
+    effects: {
+      clearClickHoverIds: () => (clearClickHoveredIdState(runtimeState), clearClickScenarioHoverIdsState(runtimeState)),
+      consumeSuppressedBrushClick: () => {
+        if (!suppressNextClickAfterBrush) return false;
+        suppressNextClickAfterBrush = false;
+        return true;
+      },
+      removeClickCountryColors: (countryCode) => removeClickCountryColorsState(runtimeState, countryCode),
+      removeClickWaterRegionOverride: (regionId) => removeClickWaterRegionOverrideState(runtimeState, regionId),
+      setClickActiveSovereignCode: (ownerCode, { updateUi = false } = {}) => {
+        setClickActiveSovereignCodeState(runtimeState, ownerCode);
+        if (updateUi && typeof runtimeState.updateActiveSovereignUIFn === "function") {
+          runtimeState.updateActiveSovereignUIFn();
+        }
+      },
+      setClickCountryColors: (countryCode, color) => setClickCountryColorsState(runtimeState, countryCode, color),
+      setClickHoverOverlayDirty: (dirty) => setClickHoverOverlayDirtyState(runtimeState, dirty),
+      setClickSelectedColor: (color, { updateSwatch = false } = {}) => {
+        setClickSelectedColorState(runtimeState, color);
+        if (updateSwatch && typeof runtimeState.updateSwatchUIFn === "function") {
+          runtimeState.updateSwatchUIFn();
+        }
+      },
+      setClickSelectedSpecialRegionId: (regionId) => setClickSelectedSpecialRegionIdState(runtimeState, regionId),
+      setClickSelectedWaterRegionId: (regionId) => setClickSelectedWaterRegionIdState(runtimeState, regionId),
+      setFacilityInfoCardExpanded: (expanded) => {
+        facilityInfoCardExpanded = Boolean(expanded);
+      },
+      setHoveredFacilityEntry: (entry) => {
+        hoveredFacilityEntry = entry;
+      },
+      setSelectedFacilityEntry: (entry) => {
+        selectedFacilityEntry = entry;
+      },
+      togglePresetRegion: (landId) => {
+        if (typeof globalThis.togglePresetRegion === "function") globalThis.togglePresetRegion(landId);
+      },
+    },
+    services: {
+      addRecentColor,
+      appendOperationalLineVertexFromEvent,
+      appendOperationGraphicVertexFromEvent,
+      appendSpecialZoneVertexFromEvent,
+      applyFacilityInfoCardState,
+      applyFeatureVisualOverrideTransaction,
+      applyVisualSubdivisionFill,
+      applyWaterRegionFill,
+      blockStartupReadonlyInteraction,
+      captureHistoryState,
+      commitHistoryEntry,
+      dismissOnboardingHint,
+      ensureLeafDetailReady,
+      getFeatureCountryCodeNormalized,
+      getFeatureOwnerCode,
+      getHitFromEvent,
+      getHoveredFacilityEntryFromEvent,
+      getIntensityFieldTool,
+      getSafeCanvasColor,
+      getSpecialRegionColor,
+      getWaterRegionColor,
+      handleSpecialZoneMembershipClick,
+      inspectHgoRuntimePreviewFromEvent,
+      isDoubleClickBatchEligible,
+      isFacilityDetailsSurfaceActive,
+      isMacroOceanWaterRegion,
+      isOpenOceanPaintEnabled,
+      isSovereigntyModeActive,
+      markDirty,
+      markLegacyColorStateDirty,
+      noteRenderAction,
+      nowMs,
+      placeUnitCounterFromEvent,
+      queueTooltipUpdate,
+      refreshResolvedColorsForFeatures,
+      refreshResolvedColorsForOwners,
+      refreshSidebarAfterPaint,
+      refreshSpecialRegionSidebarRowsNow,
+      refreshWaterRegionSidebarRowsNow,
+      renderHoverOverlayIfNeeded,
+      requestInteractionRender,
+      resetFeatureOwnerCodes,
+      resolveInteractionTargetIds,
+      scheduleDynamicBorderRecompute,
+      setFeatureOwnerCodes,
+      shouldBlockUnderlyingSelectionForFacility,
+      shouldRequireLeafDetail,
+      syncInspectorCountryToLandSelection,
+      toggleFeatureInDevSelection,
+      updateDevSelectedHit,
+      warnMissingActiveSovereign: () => console.warn("[sovereignty] No active sovereign selected."),
+    },
+  });
+  return clickSelectionTransactionOwner;
 }
 
 function getMapInteractionEventBindingOwner() {
@@ -21443,434 +21581,9 @@ function handleBrushPointerMove(event) {
   }
 }
 
-async function handleClick(event, _interactionContext = null) {
-  if (runtimeState.startupReadonly) {
-    if (event?.preventDefault) event.preventDefault();
-    blockStartupReadonlyInteraction();
-    return;
-  }
-  const actionStart = nowMs();
-  if (!runtimeState.landData && !runtimeState.waterRegionsData && !runtimeState.scenarioSpecialRegionsData) return;
-  if (suppressNextClickAfterBrush) {
-    suppressNextClickAfterBrush = false;
-    return;
-  }
-  dismissOnboardingHint();
-  if (getIntensityFieldTool().active) {
-    return;
-  }
-  if (runtimeState.specialZoneEditor?.active) {
-    appendSpecialZoneVertexFromEvent(event);
-    return;
-  }
-  if (runtimeState.operationalLineEditor?.active) {
-    appendOperationalLineVertexFromEvent(event);
-    return;
-  }
-  if (runtimeState.operationGraphicsEditor?.active) {
-    appendOperationGraphicVertexFromEvent(event);
-    return;
-  }
-  if (runtimeState.unitCounterEditor?.active) {
-    placeUnitCounterFromEvent(event);
-    return;
-  }
-
-  const hgoRuntimeClick = inspectHgoRuntimePreviewFromEvent(event, { eventType: "click" });
-  if (hgoRuntimeClick.active) {
-    if (event?.preventDefault) event.preventDefault();
-    updateDevSelectedHit(hgoRuntimeClick.hit?.id ? hgoRuntimeClick.hit : null);
-    runtimeState.hoveredId = null;
-    runtimeState.hoveredWaterRegionId = null;
-    runtimeState.hoveredSpecialRegionId = null;
-    queueTooltipUpdate({ visible: false });
-    runtimeState.hoverOverlayDirty = true;
-    renderHoverOverlayIfNeeded({ eventType: "hgo-runtime-preview-click" });
-    requestInteractionRender("hgo-runtime-preview-click");
-    noteRenderAction(hgoRuntimeClick.hit?.id ? "hgo-runtime-preview-select" : "hgo-runtime-preview-empty", actionStart);
-    return;
-  }
-
-  const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);
-  if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {
-    hoveredFacilityEntry = clickedFacilityEntry;
-    selectedFacilityEntry = clickedFacilityEntry;
-    facilityInfoCardExpanded = false;
-    queueTooltipUpdate({ visible: false });
-    applyFacilityInfoCardState(clickedFacilityEntry, {
-      x: event?.clientX,
-      y: event?.clientY,
-    });
-    runtimeState.hoverOverlayDirty = true;
-    renderHoverOverlayIfNeeded({ eventType: "facility-card-open" });
-    noteRenderAction("click-facility-info", actionStart);
-    return;
-  }
-  if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {
-    hoveredFacilityEntry = clickedFacilityEntry;
-    if (selectedFacilityEntry) {
-      selectedFacilityEntry = null;
-      applyFacilityInfoCardState(null);
-    }
-    queueTooltipUpdate({ visible: false });
-    runtimeState.hoverOverlayDirty = true;
-    renderHoverOverlayIfNeeded({ eventType: "facility-click-block-underlying" });
-    noteRenderAction("click-facility-block-underlying", actionStart);
-    return;
-  }
-  if (selectedFacilityEntry) {
-    selectedFacilityEntry = null;
-    applyFacilityInfoCardState(null);
-    runtimeState.hoverOverlayDirty = true;
-    renderHoverOverlayIfNeeded({ eventType: "facility-card-clear" });
-  }
-
-  const hit = getHitFromEvent(event, {
-    enableSnap: true,
-    snapPx: HIT_SNAP_RADIUS_CLICK_PX,
-    eventType: "click",
-  });
-  const resolvedHit = {
-    targetType: hit.targetType ?? null,
-    id: hit.id ?? null,
-    countryCode: hit.countryCode ?? null,
-    runtimeCountryCode: hit.runtimeCountryCode ?? null,
-  };
-  const readonlyModifiers = Object.freeze({
-    ctrlKey: !!event?.ctrlKey,
-    metaKey: !!event?.metaKey,
-    shiftKey: !!event?.shiftKey,
-    altKey: !!event?.altKey,
-  });
-  const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);
-  // City points may influence hover messaging, but paint/select stays bound to
-  // the canonical land/water/special hit pipeline only.
-  const id = target.id;
-  if (target.kind === "empty" || !id) {
-    if (runtimeState.selectedWaterRegionId) {
-      const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
-      runtimeState.selectedWaterRegionId = "";
-      refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
-      requestInteractionRender("clear-water-selection-empty-click");
-    }
-    if (runtimeState.selectedSpecialRegionId) {
-      const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
-      runtimeState.selectedSpecialRegionId = "";
-      refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
-      requestInteractionRender("clear-special-selection-empty-click");
-    }
-    return;
-  }
-  updateDevSelectedHit(hit);
-  if (handleSpecialZoneMembershipClick(hit, event)) return;
-  if (target.kind === "special") {
-    const specialFeature = runtimeState.specialRegionsById.get(id);
-    if (!specialFeature) return;
-    const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
-    const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
-    runtimeState.selectedWaterRegionId = "";
-    runtimeState.selectedSpecialRegionId = id;
-    if (previousWaterRegionId) refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
-    refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId, id]);
-    requestInteractionRender("select-special-region");
-    if (runtimeState.currentTool === "eyedropper") {
-      const picked = getSpecialRegionColor(id, specialFeature);
-      if (picked) {
-        runtimeState.selectedColor = picked;
-        if (typeof runtimeState.updateSwatchUIFn === "function") {
-          runtimeState.updateSwatchUIFn();
-        }
-      }
-      noteRenderAction("eyedropper-special", actionStart);
-      return;
-    }
-    noteRenderAction("select-special-region", actionStart);
-    return;
-  }
-  if (target.kind === "water") {
-    const waterFeature = runtimeState.waterRegionsById.get(id);
-    if (!waterFeature) return;
-    const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
-    const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
-    const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;
-    if (isSelectionToggle && event?.preventDefault) event.preventDefault();
-    runtimeState.selectedSpecialRegionId = "";
-    if (isSelectionToggle && previousWaterRegionId === id) {
-      runtimeState.selectedWaterRegionId = "";
-      if (previousSpecialRegionId) refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
-      refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
-      requestInteractionRender("water-selection-toggle-off");
-      noteRenderAction("water-selection-toggle-off", actionStart);
-      return;
-    }
-    runtimeState.selectedWaterRegionId = id;
-    if (previousSpecialRegionId) refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
-    refreshWaterRegionSidebarRowsNow([previousWaterRegionId, id]);
-    if (isSelectionToggle) {
-      requestInteractionRender("water-selection-toggle-on");
-      noteRenderAction("water-selection-toggle-on", actionStart);
-      return;
-    }
-    const macroOceanSelectionOnly =
-      isMacroOceanWaterRegion(waterFeature) && !isOpenOceanPaintEnabled();
-    if (macroOceanSelectionOnly) {
-      requestInteractionRender("click-select-open-ocean");
-      noteRenderAction("click-select-open-ocean", actionStart);
-      return;
-    }
-    if (runtimeState.currentTool === "eraser") {
-      const historyBefore = captureHistoryState({ waterRegionIds: [id] });
-      delete runtimeState.waterRegionOverrides[id];
-      markDirty("erase-water-region-color");
-      commitHistoryEntry({
-        kind: "erase-water-region-color",
-        before: historyBefore,
-        after: captureHistoryState({ waterRegionIds: [id] }),
-      });
-      requestInteractionRender("click-erase-water");
-      refreshSidebarAfterPaint({ waterRegionIds: [id] });
-      noteRenderAction("click-erase-water", actionStart);
-      return;
-    }
-    if (runtimeState.currentTool === "eyedropper") {
-      const picked = getWaterRegionColor(id);
-      if (picked) {
-        runtimeState.selectedColor = picked;
-        if (typeof runtimeState.updateSwatchUIFn === "function") {
-          runtimeState.updateSwatchUIFn();
-        }
-      }
-      requestInteractionRender("eyedropper-water");
-      noteRenderAction("eyedropper-water", actionStart);
-      return;
-    }
-    applyWaterRegionFill(id, runtimeState.selectedColor, {
-      kind: "fill-water-region-color",
-      dirtyReason: "fill-water-region-color",
-    });
-    return;
-  }
-  if (target.kind !== "land") return;
-  if (runtimeState.selectedWaterRegionId) {
-    const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
-    runtimeState.selectedWaterRegionId = "";
-    refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);
-    requestInteractionRender("clear-water-selection-land-click");
-  }
-  if (runtimeState.selectedSpecialRegionId) {
-    const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
-    runtimeState.selectedSpecialRegionId = "";
-    refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);
-    requestInteractionRender("clear-special-selection-land-click");
-  }
-  let landHit = hit;
-  let landId = id;
-  let feature = runtimeState.landIndex.get(landId);
-  if (!feature) return;
-  if (decision.devSelectionRequested) {
-    if (event?.preventDefault) event.preventDefault();
-    const changedSelection = toggleFeatureInDevSelection(landId);
-    syncInspectorCountryToLandSelection(feature, landId, landHit);
-    noteRenderAction(changedSelection ? "dev-selection-toggle" : "dev-selection-sync", actionStart);
-    return;
-  }
-  let countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);
-  if (!(await ensureLeafDetailReady(countryCode, { announce: true }))) {
-    return;
-  }
-  if (shouldRequireLeafDetail(countryCode)) {
-    const refreshedHit = getHitFromEvent(event, {
-      enableSnap: true,
-      snapPx: HIT_SNAP_RADIUS_CLICK_PX,
-      eventType: "click",
-    });
-    const refreshedId = refreshedHit.id;
-    const refreshedFeature = refreshedId ? runtimeState.landIndex.get(refreshedId) : null;
-    if (refreshedHit.targetType === "land" && refreshedId && refreshedFeature) {
-      landHit = refreshedHit;
-      landId = refreshedId;
-      feature = refreshedFeature;
-      countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);
-      updateDevSelectedHit(landHit);
-    }
-  }
-  const targetIds = resolveInteractionTargetIds(feature, landId);
-
-  if (runtimeState.isEditingPreset) {
-    if (typeof globalThis.togglePresetRegion === "function") {
-      globalThis.togglePresetRegion(landId);
-    }
-    return;
-  }
-
-  if (runtimeState.currentTool === "eraser") {
-    const shouldRefreshCountryList = (!!countryCode);
-    let historyBefore = null;
-    if (isSovereigntyModeActive()) {
-      historyBefore = captureHistoryState({
-        sovereigntyFeatureIds: targetIds,
-      });
-      const changed = resetFeatureOwnerCodes(targetIds);
-      if (changed > 0) {
-        refreshResolvedColorsForFeatures(targetIds, { renderNow: false });
-        markDirty("erase-sovereignty");
-        if (targetIds.length > 1) {
-          scheduleDynamicBorderRecompute("sovereignty-batch-reset", 90);
-        } else {
-          scheduleDynamicBorderRecompute("sovereignty-single-reset", 150);
-        }
-        commitHistoryEntry({
-          kind: "erase-sovereignty",
-          before: historyBefore,
-          after: captureHistoryState({
-            sovereigntyFeatureIds: targetIds,
-          }),
-          affectsSovereignty: true,
-        });
-      }
-    } else if (runtimeState.interactionGranularity === "country" && countryCode) {
-      historyBefore = captureHistoryState({
-        ownerCodes: [countryCode],
-      });
-      delete runtimeState.sovereignBaseColors[countryCode];
-      delete runtimeState.countryBaseColors[countryCode];
-      markLegacyColorStateDirty();
-      refreshResolvedColorsForOwners([countryCode], { renderNow: false });
-      markDirty("erase-country-color");
-      commitHistoryEntry({
-        kind: "erase-country-color",
-        before: historyBefore,
-        after: captureHistoryState({
-          ownerCodes: [countryCode],
-        }),
-      });
-    } else {
-      historyBefore = captureHistoryState({
-        featureIds: targetIds,
-      });
-      applyFeatureVisualOverrideTransaction(targetIds, null, {
-        remove: true,
-        inputStartedAt: actionStart,
-        inputLabel: "erase-feature-color",
-      });
-      markDirty("erase-feature-color");
-      commitHistoryEntry({
-        kind: "erase-feature-color",
-        before: historyBefore,
-        after: captureHistoryState({
-          featureIds: targetIds,
-        }),
-      });
-    }
-    requestInteractionRender("click-erase");
-    if (shouldRefreshCountryList) {
-      refreshSidebarAfterPaint({
-        featureIds: targetIds,
-        ownerCodes: countryCode ? [countryCode] : [],
-      });
-    }
-    noteRenderAction("click-erase", actionStart);
-    return;
-  }
-
-  if (runtimeState.currentTool === "eyedropper") {
-    if (isSovereigntyModeActive()) {
-      const ownerCode = getFeatureOwnerCode(landId) || countryCode;
-      if (ownerCode) {
-        const previousActiveOwner = runtimeState.activeSovereignCode;
-        runtimeState.activeSovereignCode = ownerCode;
-        if (typeof runtimeState.updateActiveSovereignUIFn === "function") {
-          runtimeState.updateActiveSovereignUIFn();
-        }
-        refreshSidebarAfterPaint({
-          ownerCodes: [previousActiveOwner, ownerCode],
-        });
-      }
-    } else {
-      const picked =
-        (runtimeState.interactionGranularity === "country" && countryCode
-          ? getSafeCanvasColor(runtimeState.sovereignBaseColors?.[countryCode] || runtimeState.countryBaseColors?.[countryCode], null)
-          : null) ||
-        getSafeCanvasColor(runtimeState.colors[landId], null);
-      if (picked) {
-        runtimeState.selectedColor = picked;
-        if (typeof runtimeState.updateSwatchUIFn === "function") {
-          runtimeState.updateSwatchUIFn();
-        }
-      }
-    }
-    noteRenderAction("eyedropper", actionStart);
-    return;
-  }
-
-  const selectedColor = getSafeCanvasColor(runtimeState.selectedColor, LAND_FILL_COLOR);
-  runtimeState.selectedColor = selectedColor;
-  if (isSovereigntyModeActive()) {
-    const historyBefore = captureHistoryState({
-      sovereigntyFeatureIds: targetIds,
-    });
-    if (!runtimeState.activeSovereignCode) {
-      console.warn("[sovereignty] No active sovereign selected.");
-      return;
-    }
-    const changed = setFeatureOwnerCodes(targetIds, runtimeState.activeSovereignCode);
-    if (changed > 0) {
-      refreshResolvedColorsForFeatures(targetIds, { renderNow: false });
-      if (targetIds.length > 1) {
-        scheduleDynamicBorderRecompute("sovereignty-batch-fill", 90);
-      } else {
-        scheduleDynamicBorderRecompute("sovereignty-single-fill", 150);
-      }
-    }
-    if (changed > 0) {
-      markDirty("fill-sovereignty");
-      commitHistoryEntry({
-        kind: "fill-sovereignty",
-        before: historyBefore,
-        after: captureHistoryState({
-          sovereigntyFeatureIds: targetIds,
-        }),
-        affectsSovereignty: true,
-      });
-    }
-  } else if (runtimeState.interactionGranularity === "country" && countryCode) {
-    const historyBefore = captureHistoryState({
-      ownerCodes: [countryCode],
-    });
-    runtimeState.sovereignBaseColors[countryCode] = selectedColor;
-    runtimeState.countryBaseColors[countryCode] = selectedColor;
-    markLegacyColorStateDirty();
-    refreshResolvedColorsForOwners([countryCode], { renderNow: false });
-    markDirty("fill-country-color");
-    commitHistoryEntry({
-      kind: "fill-country-color",
-      before: historyBefore,
-      after: captureHistoryState({
-        ownerCodes: [countryCode],
-      }),
-    });
-  } else {
-    const clickCount = Math.max(1, Number(event?.detail || 1));
-    if (clickCount >= 2 && isDoubleClickBatchEligible(landHit, feature)) {
-      return;
-    }
-    applyVisualSubdivisionFill(targetIds, selectedColor, {
-      kind: "fill-feature-color",
-      dirtyReason: "fill-feature-color",
-    });
-    return;
-  }
-  addRecentColor(selectedColor);
-  requestInteractionRender("click-fill");
-  if (isSovereigntyModeActive() || (runtimeState.interactionGranularity === "country" && countryCode)) {
-    refreshSidebarAfterPaint({
-      featureIds: targetIds,
-      ownerCodes: countryCode ? [countryCode] : [],
-    });
-  }
-  noteRenderAction("click-fill", actionStart);
+async function handleClick(event, interactionContext = null) {
+  return getClickSelectionTransactionOwner().handleClick(event, interactionContext);
 }
-
 async function handleDoubleClick(event, _interactionContext = null) {
   if (runtimeState.startupReadonly) {
     if (event?.preventDefault) event.preventDefault();

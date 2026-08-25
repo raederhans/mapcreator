@@ -3353,6 +3353,8 @@ function analyzeBindingMutations(
     if (!helperNode || executionFunctionStack.includes(helperNode)) {
       return delegatedArgumentIndexes;
     }
+    const isSourceBoundMutationDelegatingOwnerGetter =
+      mutationDelegatingOwnerGetterContracts(node).length > 0;
     const parameterClassifications = [];
     for (
       let index = 0;
@@ -3372,8 +3374,14 @@ function analyzeBindingMutations(
       parameterClassifications[index] = classification;
     }
     if (
-      delegatedArgumentIndexes.size
-      || currentActionProofReachability()
+      (
+        delegatedArgumentIndexes.size
+        || currentActionProofReachability()
+      )
+      && !(
+        isSourceBoundMutationDelegatingOwnerGetter
+        && delegatedArgumentIndexes.size === 0
+      )
     ) {
       processFunction(helperNode, aliasRecords, {
         parameterClassifications,
@@ -5430,6 +5438,101 @@ function analyzeBindingMutations(
   } else {
     processStatement(analysis.ast, new Map());
   }
+
+  function collectSourceBoundMutationDelegatingOwnerActionEdges() {
+    const edges = [];
+    const suppressedRanges = new Set();
+    const targetRecords = resolution.targetRecords || new Set();
+    for (const contract of mutationDelegatingOwnerContractsForCurrentModule()) {
+      let compositionFunction = null;
+      walk.full(analysis.ast, (node) => {
+        if (
+          !compositionFunction
+          && isFunctionNode(node)
+          && hasExactMutationDelegatingOwnerCompositionFunction(contract, node)
+        ) compositionFunction = node;
+      });
+      if (!compositionFunction) continue;
+
+      const candidates = [];
+      walk.full(compositionFunction.body, (node) => {
+        if (node?.type !== "CallExpression") return;
+        const actionContract = importedTargetDelegation(node)?.actionContract;
+        if (!actionContract) return;
+        const actionModulePath =
+          contract.actionModulePathsByExport?.[actionContract.exportName]
+          || contract.actionModulePath;
+        if (
+          !contract.actionExports.includes(actionContract.exportName)
+          || actionModulePath !== actionContract.modulePath
+        ) return;
+        const target = unwrapChain(
+          node.arguments?.[actionContract.targetArgumentIndex],
+        );
+        if (target?.type !== "Identifier") return;
+        const targetRecord = analysis.resolveIdentifier(target);
+        if (
+          !targetRecords.has(targetRecord)
+          && target.name !== resolution.virtualModuleName
+        ) return;
+        suppressedRanges.add(`${node.start}:${node.end}`);
+        candidates.push({ actionContract, node });
+      });
+
+      const factoryCalls = [];
+      walk.full(compositionFunction.body, (node) => {
+        if (
+          node?.type === "CallExpression"
+          && mutationDelegatingOwnerFactoryContractForCall(node) === contract
+        ) factoryCalls.push(node);
+      });
+      if (factoryCalls.length !== 1) continue;
+
+      let hasRegisteredFacadeMethod = false;
+      walk.full(analysis.ast, (node) => {
+        if (hasRegisteredFacadeMethod || node?.type !== "CallExpression") return;
+        const member = unwrapChain(node.callee);
+        if (member?.type !== "MemberExpression") return;
+        const ownerGetterCall = unwrapChain(member.object);
+        const methodName = staticPropertyName(member.property, member.computed);
+        if (
+          contract.methods.includes(methodName)
+          && mutationDelegatingOwnerGetterContracts(ownerGetterCall).includes(contract)
+        ) hasRegisteredFacadeMethod = true;
+      });
+      if (!hasRegisteredFacadeMethod) continue;
+
+      const [factoryCall] = factoryCalls;
+      for (const { actionContract, node } of candidates) {
+        if (node.start < factoryCall.start || node.end > factoryCall.end) continue;
+        let enclosingFunction = analysis.parentNodeForNode(node);
+        while (enclosingFunction && !isFunctionNode(enclosingFunction)) {
+          enclosingFunction = analysis.parentNodeForNode(enclosingFunction);
+        }
+        edges.push(createActionDelegationEdge(
+          source,
+          filePath,
+          binding,
+          actionContract,
+          node,
+          functionIdentityContext.identityForFunctionNode(enclosingFunction),
+        ));
+      }
+    }
+    return { edges, suppressedRanges };
+  }
+
+  const sourceBoundOwnerProof =
+    collectSourceBoundMutationDelegatingOwnerActionEdges();
+  const retainedActionDelegations = actionDelegations.filter(
+    ({ start, end }) =>
+      !sourceBoundOwnerProof.suppressedRanges.has(`${start}:${end}`),
+  );
+  actionDelegations.length = 0;
+  actionDelegations.push(
+    ...retainedActionDelegations,
+    ...sourceBoundOwnerProof.edges,
+  );
 
   return {
     findings: functionIdentityContext.decorateSortedFindings(

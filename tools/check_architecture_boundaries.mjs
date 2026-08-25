@@ -155,7 +155,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 22503,
+  [FILES.renderer]: 22143,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -181,7 +181,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.cachedPassCompositorOwner]: 320,
   [FILES.transformedFrameCompositorOwner]: 420,
   [FILES.visualEffectsPassOwner]: 650,
-  [FILES.clickSelectionTransactionOwner]: 120,
+  [FILES.clickSelectionTransactionOwner]: 620,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
   [FILES.rendererTransactionResetOwner]: 260,
@@ -3459,7 +3459,7 @@ function collectFailures() {
     "const P54_DOC_HEADINGS = Object.freeze([",
     "function extractFunctionSource(source, functionName)",
     "function isClickSelectionTransactionOwnerPath(sourcePath)",
-    "async function handleClick(event, _interactionContext = null)",
+    "async function handleClick(event, interactionContext = null)",
     "mapClick: handleClick",
     "interactionRect.on(\\\"click\\\", requireFunction(handlers, \\\"dispatchMapClick\\\"));",
     "Land click transaction logic remains",
@@ -3467,8 +3467,8 @@ function collectFailures() {
     "Special region click transaction logic remains",
     "P1.8 must keep exactly one production click selection owner/helper path",
     "P1.8 must keep public facade, runtime context, and state allowlist unchanged",
-    "returned target and decision drive executable handleClick admission",
-    "const handleClickFactory = new Function(",
+    "transaction behavior coverage executes the canonical owner factory",
+    "action failure propagates and stops later sidebar and render work",
   ]) {
     if (!rendererClickSelectionTransactionInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererClickSelectionTransactionInventoryTest} must lock P54 inventory token: ${token}`);
@@ -3495,85 +3495,57 @@ function collectFailures() {
   if (!packageJson.includes("\"test:node:click-selection-transaction-owner\": \"node --test tests/click_selection_transaction_owner_behavior.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P1.8 click selection decision owner script.`);
   }
-  if (!renderer.includes("async function handleClick(event, _interactionContext = null)")) {
-    failures.push(`${FILES.renderer} must keep P54 click handler anchor.`);
+  const clickFacade = [
+    "async function handleClick(event, interactionContext = null) {",
+    "  return getClickSelectionTransactionOwner().handleClick(event, interactionContext);",
+    "}",
+  ].join("\n");
+  if (!renderer.includes(clickFacade)) {
+    failures.push(`${FILES.renderer} must keep the exact P3.3 click transaction facade.`);
   }
-  const handleClickSource = sliceBetween(
-    renderer,
-    "async function handleClick(event, _interactionContext = null)",
-    "async function handleDoubleClick(event, _interactionContext = null)",
-  );
   for (const token of [
-    "getHitFromEvent(event, {",
-    "eventType: \"click\"",
-    "const resolvedHit = {",
-    "targetType: hit.targetType ?? null,",
-    "id: hit.id ?? null,",
-    "countryCode: hit.countryCode ?? null,",
-    "runtimeCountryCode: hit.runtimeCountryCode ?? null,",
-    "const readonlyModifiers = Object.freeze({",
-    "ctrlKey: !!event?.ctrlKey,",
-    "metaKey: !!event?.metaKey,",
-    "shiftKey: !!event?.shiftKey,",
-    "altKey: !!event?.altKey,",
-    "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);",
-    "const id = target.id;",
-    "if (target.kind === \"empty\" || !id) {",
-    "requestInteractionRender(\"clear-water-selection-empty-click\")",
-    "requestInteractionRender(\"clear-special-selection-empty-click\")",
-    "if (target.kind === \"special\") {",
-    "runtimeState.selectedSpecialRegionId = id;",
-    "requestInteractionRender(\"select-special-region\")",
-    "if (target.kind === \"water\") {",
-    "const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;",
-    "requestInteractionRender(\"water-selection-toggle-off\")",
-    "requestInteractionRender(\"water-selection-toggle-on\")",
-    "requestInteractionRender(\"click-select-open-ocean\")",
-    "markDirty(\"erase-water-region-color\")",
-    "requestInteractionRender(\"click-erase-water\")",
-    "applyWaterRegionFill(id, runtimeState.selectedColor, {",
-    "requestInteractionRender(\"clear-water-selection-land-click\")",
-    "requestInteractionRender(\"clear-special-selection-land-click\")",
-    "if (target.kind !== \"land\") return;",
-    "if (decision.devSelectionRequested) {",
-    "const changedSelection = toggleFeatureInDevSelection(landId);",
-    "await ensureLeafDetailReady(countryCode, { announce: true })",
-    "markDirty(\"erase-sovereignty\")",
-    "markDirty(\"erase-country-color\")",
-    "markDirty(\"erase-feature-color\")",
-    "requestInteractionRender(\"click-erase\")",
-    "markDirty(\"fill-sovereignty\")",
-    "markDirty(\"fill-country-color\")",
-    "requestInteractionRender(\"click-fill\")",
+    "createClickSelectionTransactionOwner,",
+    "let clickSelectionTransactionOwner = null;",
+    "function getClickSelectionTransactionOwner()",
+    "clickSnapRadiusPx: HIT_SNAP_RADIUS_CLICK_PX,",
+    "landFillColor: LAND_FILL_COLOR,",
   ]) {
-    if (!handleClickSource.includes(token)) {
-      failures.push(`${FILES.renderer} handleClick must keep P54 transaction token: ${token}`);
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P3.3 click owner composition token: ${token}`);
     }
   }
-  if (!renderer.includes("import { resolveClickSelectionDecision } from \"./map_renderer/click_selection_transaction_owner.js\";")) {
-    failures.push(`${FILES.renderer} must import the P1.8 pure click selection decision owner.`);
-  }
-  if (renderer.split("resolveClickSelectionDecision(").length - 1 !== 1) {
-    failures.push(`${FILES.renderer} must delegate to resolveClickSelectionDecision exactly once.`);
-  }
-  if (
-    handleClickSource.includes("resolveClickSelectionDecision(hit")
-    || handleClickSource.includes("resolveClickSelectionDecision(event")
-  ) {
-    failures.push(`${FILES.renderer} must pass the exact scalar projection, never raw hit or event, to P1.8 owner.`);
-  }
-  const initialClickAdmissionSource = sliceBetween(
-    handleClickSource,
+  for (const token of [
+    "getHitFromEvent(event, {",
+    "const resolvedHit = {",
+    "const readonlyModifiers = Object.freeze({",
     "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);",
-    "const refreshedHit = getHitFromEvent(event, {",
-  );
-  for (const forbiddenToken of [
-    "if (hit.targetType === \"special\") {",
-    "if (hit.targetType === \"water\") {",
-    "if (event?.ctrlKey || event?.metaKey) {",
+    "if (target.kind === \"empty\" || !id) {",
+    "if (target.kind === \"special\") {",
+    "if (target.kind === \"water\") {",
+    "if (target.kind !== \"land\") return;",
+    "if (decision.devSelectionRequested) {",
+    "await ensureLeafDetailReady(countryCode, { announce: true })",
+    "setClickSelectedWaterRegionId(\"\")",
+    "setClickSelectedSpecialRegionId(id)",
+    "requestInteractionRender(\"clear-water-selection-empty-click\")",
+    "requestInteractionRender(\"select-special-region\")",
+    "requestInteractionRender(\"click-fill\")",
+    "return Object.freeze({ handleClick });",
   ]) {
-    if (initialClickAdmissionSource.includes(forbiddenToken)) {
-      failures.push(`${FILES.renderer} initial click admission must use P1.8 returned target/decision: ${forbiddenToken}`);
+    if (!clickSelectionTransactionOwner.includes(token)) {
+      failures.push(`${FILES.clickSelectionTransactionOwner} must keep P3.3 transaction token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "globalThis",
+    "document",
+    "window",
+    "addEventListener",
+    "State(runtimeState",
+  ]) {
+    if (clickSelectionTransactionOwner.includes(token)) {
+      failures.push(`${FILES.clickSelectionTransactionOwner} must use injected click ports and avoid token: ${token}`);
     }
   }
   for (const token of [
@@ -3718,32 +3690,20 @@ function collectFailures() {
   }
   for (const token of [
     "import ",
-    "async ",
-    "await ",
     "globalThis",
     "runtimeState",
     "map_renderer.js",
     "document",
     "window",
-    "Event",
     "addEventListener",
-    "markDirty",
-    "captureHistoryState",
     "pushHistoryEntry",
-    "commitHistoryEntry",
-    "requestInteractionRender",
-    "selectedWaterRegionId",
-    "selectedSpecialRegionId",
-    "toggleFeatureInDevSelection",
-    "ensureLeafDetailReady",
-    "getHitFromEvent",
   ]) {
     if (clickSelectionTransactionOwner.includes(token)) {
-      failures.push(`${FILES.clickSelectionTransactionOwner} must remain pure and avoid root-owned token: ${token}`);
+      failures.push(`${FILES.clickSelectionTransactionOwner} must keep injected ownership and avoid token: ${token}`);
     }
   }
   for (const token of [
-    "click selection decision owner module exists with one public resolver",
+    "click selection owner module exposes the transaction factory and pure resolver",
     "empty hit returns exact empty target and false decision",
     "land ctrl or meta requests dev selection while shift and alt stay inert",
     "water and special targets never reuse the land dev-selection decision",
@@ -3753,6 +3713,8 @@ function collectFailures() {
     "nonEnumerableKey",
     "Symbol(\"feature\")",
     "createResolvedHit({ id: undefined })",
+    "empty hit clears water then special and invalidates each selection exactly once",
+    "action failure propagates and stops later sidebar and render work",
   ]) {
     if (!clickSelectionTransactionOwnerTest.includes(token)) {
       failures.push(`${FILES.clickSelectionTransactionOwnerTest} must keep P1.8 behavior token: ${token}`);

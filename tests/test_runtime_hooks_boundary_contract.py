@@ -11,6 +11,7 @@ STATE_INDEX_JS = REPO_ROOT / "js" / "core" / "state" / "index.js"
 STATE_CONFIG_JS = REPO_ROOT / "js" / "core" / "state" / "config.js"
 STATE_BUS_JS = REPO_ROOT / "js" / "core" / "state" / "bus.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+CLICK_SELECTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "click_selection_transaction_owner.js"
 RENDER_RUNTIME_BINDING_JS = REPO_ROOT / "js" / "bootstrap" / "render_runtime_binding.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 MAP_HOVER_INTERACTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "map_hover_interaction_owner.js"
@@ -99,6 +100,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        click_owner_content = CLICK_SELECTION_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
         hover_owner_content = MAP_HOVER_INTERACTION_OWNER_JS.read_text(encoding="utf-8")
 
@@ -143,7 +145,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn("function normalizeHitPayload(", hgo_preview_owner_content)
         self.assertIn('if (targetType === "hgo") {', renderer_content)
         self.assertIn("normalized.hgoRuntime = hgoRuntime;", renderer_content)
-        self.assertIn('requestInteractionRender("hgo-runtime-preview-click");', renderer_content)
+        self.assertIn('requestInteractionRender("hgo-runtime-preview-click");', click_owner_content)
 
         hgo_hit_start = hgo_preview_owner_content.index('id: `hgo:province:${resolved.provinceId}`')
         hgo_hit_end = hgo_preview_owner_content.index("hgoRuntime: Object.freeze({", hgo_hit_start)
@@ -168,12 +170,18 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn('if (hgoRuntimeHover?.active) {', hover_owner_content)
         self.assertIn('return clearHoverForExclusiveMode(trace, "hgo-runtime-hover", hgoHit, hgoHit ? "pointer" : "");', hover_owner_content)
 
-        click_start = renderer_content.index("async function handleClick(event, _interactionContext = null) {")
-        click_end = renderer_content.index("const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);", click_start)
-        click_body = renderer_content[click_start:click_end]
+        click_start = click_owner_content.index("async function handleClick(event, _interactionContext = null) {")
+        click_end = click_owner_content.index("const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);", click_start)
+        click_body = click_owner_content[click_start:click_end]
         self.assertIn('inspectHgoRuntimePreviewFromEvent(event, { eventType: "click" });', click_body)
         self.assertIn("if (hgoRuntimeClick.active) {", click_body)
         self.assertIn("updateDevSelectedHit(hgoRuntimeClick.hit?.id ? hgoRuntimeClick.hit : null);", click_body)
+        self.assertEqual(
+            renderer_content.count(
+                "return getClickSelectionTransactionOwner().handleClick(event, interactionContext);"
+            ),
+            1,
+        )
 
     def test_physical_intensity_tool_hook_is_registered_for_renderer_mode(self):
         config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")

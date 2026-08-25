@@ -5,6 +5,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+CLICK_SELECTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "click_selection_transaction_owner.js"
 RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_passes.js"
 RENDER_PIPELINE_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_catalog.js"
 VISUAL_EFFECTS_PASS_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "visual_effects_pass_owner.js"
@@ -473,28 +474,29 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn('reason: "hgo-runtime-preview"', record_hgo_skip_body)
 
     def test_empty_click_clears_water_and_special_selection(self):
-        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        click_body = renderer_content.split("async function handleClick(event, _interactionContext = null) {", 1)[1].split(
-            "\nfunction handleRectangularSelection",
+        owner_content = CLICK_SELECTION_OWNER_JS.read_text(encoding="utf-8")
+        click_body = owner_content.split("async function handleClick(event, _interactionContext = null) {", 1)[1].split(
+            "\n\n  return Object.freeze({ handleClick });",
             1,
         )[0]
         empty_click_body = click_body.split('if (target.kind === "empty" || !id) {', 1)[1].split("\n  }", 1)[0]
 
-        self.assertIn("runtimeState.selectedWaterRegionId = \"\";", empty_click_body)
+        self.assertIn("setClickSelectedWaterRegionId(\"\");", empty_click_body)
         self.assertIn("refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);", empty_click_body)
         self.assertIn('requestInteractionRender("clear-water-selection-empty-click");', empty_click_body)
-        self.assertIn("runtimeState.selectedSpecialRegionId = \"\";", empty_click_body)
+        self.assertIn("setClickSelectedSpecialRegionId(\"\");", empty_click_body)
         self.assertIn("refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);", empty_click_body)
         self.assertIn('requestInteractionRender("clear-special-selection-empty-click");', empty_click_body)
 
     def test_selection_only_water_click_paths_request_interaction_render(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        click_body = renderer_content.split("async function handleClick(event, _interactionContext = null) {", 1)[1].split(
-            "\nfunction handleRectangularSelection",
+        owner_content = CLICK_SELECTION_OWNER_JS.read_text(encoding="utf-8")
+        click_body = owner_content.split("async function handleClick(event, _interactionContext = null) {", 1)[1].split(
+            "\n\n  return Object.freeze({ handleClick });",
             1,
         )[0]
         water_click_body = click_body.split('if (target.kind === "water") {', 1)[1].split(
-            "\n  if (runtimeState.selectedWaterRegionId)",
+            '\n    if (target.kind !== "land")',
             1,
         )[0]
         special_click_body = click_body.split('if (target.kind === "special") {', 1)[1].split(
@@ -505,7 +507,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertRegex(
             special_click_body,
             re.compile(
-                r'runtimeState\.selectedSpecialRegionId = id;[\s\S]*?'
+                r'setClickSelectedSpecialRegionId\(id\);[\s\S]*?'
                 r'refreshSpecialRegionSidebarRowsNow\(\[previousSpecialRegionId, id\]\);[\s\S]*?'
                 r'requestInteractionRender\("select-special-region"\);',
                 re.S,
@@ -522,7 +524,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertRegex(
             water_click_body,
             re.compile(
-                r'if \(runtimeState\.currentTool === "eyedropper"\) \{[\s\S]*?'
+                r'if \(state\.currentTool === "eyedropper"\) \{[\s\S]*?'
                 r'requestInteractionRender\("eyedropper-water"\);[\s\S]*?'
                 r'noteRenderAction\("eyedropper-water"',
                 re.S,
@@ -531,8 +533,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertRegex(
             click_body,
             re.compile(
-                r'if \(runtimeState\.selectedWaterRegionId\) \{[\s\S]*?'
-                r'runtimeState\.selectedWaterRegionId = "";[\s\S]*?'
+                r'if \(state\.selectedWaterRegionId\) \{[\s\S]*?'
+                r'setClickSelectedWaterRegionId\(""\);[\s\S]*?'
                 r'refreshWaterRegionSidebarRowsNow\(\[previousWaterRegionId\]\);[\s\S]*?'
                 r'requestInteractionRender\("clear-water-selection-land-click"\);',
                 re.S,
@@ -541,8 +543,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertRegex(
             click_body,
             re.compile(
-                r'if \(runtimeState\.selectedSpecialRegionId\) \{[\s\S]*?'
-                r'runtimeState\.selectedSpecialRegionId = "";[\s\S]*?'
+                r'if \(state\.selectedSpecialRegionId\) \{[\s\S]*?'
+                r'setClickSelectedSpecialRegionId\(""\);[\s\S]*?'
                 r'refreshSpecialRegionSidebarRowsNow\(\[previousSpecialRegionId\]\);[\s\S]*?'
                 r'requestInteractionRender\("clear-special-selection-land-click"\);',
                 re.S,

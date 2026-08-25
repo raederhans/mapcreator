@@ -370,6 +370,7 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
   }
 
   const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");
+  assert.ok(exactEntry.sourceRefs.includes("js/core/map_renderer/click_selection_transaction_owner.js"));
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-3-renderer-actions"
   ));

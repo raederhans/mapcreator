@@ -36,14 +36,25 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
         cls.owner_content = CLICK_SELECTION_TRANSACTION_OWNER_JS.read_text(encoding="utf-8")
         cls.click_handler = slice_between(
             cls.renderer_content,
-            "async function handleClick(event, _interactionContext = null)",
+            "async function handleClick(event, interactionContext = null)",
             "async function handleDoubleClick(event, _interactionContext = null)",
         )
+        cls.owner_click_handler = slice_between(
+            cls.owner_content,
+            "async function handleClick(event, _interactionContext = null)",
+            "return Object.freeze({ handleClick });",
+        )
 
-    def test_handle_click_delegates_initial_admission_and_owns_refreshed_hit_resolution(self):
+    def test_handle_click_facade_delegates_once_and_owner_owns_hit_resolution(self):
         self.assertIn(
-            'import { resolveClickSelectionDecision } from "./map_renderer/click_selection_transaction_owner.js";',
+            "createClickSelectionTransactionOwner,",
             self.renderer_content,
+        )
+        self.assertEqual(
+            self.click_handler.strip(),
+            "async function handleClick(event, interactionContext = null) {\n"
+            "  return getClickSelectionTransactionOwner().handleClick(event, interactionContext);\n"
+            "}",
         )
         for token in [
             "const hit = getHitFromEvent(event, {",
@@ -63,14 +74,14 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
             'if (target.kind === "empty" || !id) {',
             "updateDevSelectedHit(hit);",
             'if (target.kind === "special") {',
-            "const specialFeature = runtimeState.specialRegionsById.get(id);",
+            "const specialFeature = state.specialRegionsById.get(id);",
             'if (target.kind === "water") {',
-            "const waterFeature = runtimeState.waterRegionsById.get(id);",
+            "const waterFeature = state.waterRegionsById.get(id);",
             "const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;",
             'if (target.kind !== "land") return;',
             "let landHit = hit;",
             "let landId = id;",
-            "let feature = runtimeState.landIndex.get(landId);",
+            "let feature = state.landIndex.get(landId);",
             "if (decision.devSelectionRequested) {",
             "if (event?.preventDefault) event.preventDefault();",
             "const changedSelection = toggleFeatureInDevSelection(landId);",
@@ -79,18 +90,18 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
             "let countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);",
             "if (!(await ensureLeafDetailReady(countryCode, { announce: true }))) {",
             "const refreshedHit = getHitFromEvent(event, {",
-            "const refreshedFeature = refreshedId ? runtimeState.landIndex.get(refreshedId) : null;",
+            "const refreshedFeature = refreshedId ? state.landIndex.get(refreshedId) : null;",
             'if (refreshedHit.targetType === "land" && refreshedId && refreshedFeature) {',
             "updateDevSelectedHit(landHit);",
             "const targetIds = resolveInteractionTargetIds(feature, landId);",
         ]:
-            self.assertIn(token, self.click_handler)
+            self.assertIn(token, self.owner_click_handler)
 
-        self.assertEqual(self.renderer_content.count("resolveClickSelectionDecision("), 1)
-        self.assertNotIn("resolveClickSelectionDecision(hit", self.click_handler)
-        self.assertNotIn("resolveClickSelectionDecision(event", self.click_handler)
+        self.assertEqual(self.owner_content.count("resolveClickSelectionDecision("), 2)
+        self.assertNotIn("resolveClickSelectionDecision(hit", self.owner_click_handler)
+        self.assertNotIn("resolveClickSelectionDecision(event", self.owner_click_handler)
         initial_admission = slice_between(
-            self.click_handler,
+            self.owner_click_handler,
             "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);",
             "const refreshedHit = getHitFromEvent(event, {",
         )
@@ -98,7 +109,7 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
         self.assertNotIn('if (hit.targetType === "water") {', initial_admission)
         self.assertNotIn("if (event?.ctrlKey || event?.metaKey) {", initial_admission)
 
-    def test_handle_click_keeps_history_dirty_sidebar_render_and_metrics_root_owned(self):
+    def test_owner_keeps_history_dirty_sidebar_render_and_metrics_service_order(self):
         for token in [
             "captureHistoryState({",
             "commitHistoryEntry({",
@@ -118,10 +129,10 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
             "refreshSpecialRegionSidebarRowsNow(",
             "refreshSidebarAfterPaint(",
             "noteRenderAction(",
-            direct_state_write("runtimeState", "selectedWaterRegionId", " = \"\";"),
-            direct_state_write("runtimeState", "selectedSpecialRegionId", " = id;"),
+            'setClickSelectedWaterRegionId("")',
+            "setClickSelectedSpecialRegionId(id)",
         ]:
-            self.assertIn(token, self.click_handler)
+            self.assertIn(token, self.owner_click_handler)
 
     def test_history_dirty_and_render_wrappers_keep_existing_owners(self):
         history_content = HISTORY_MANAGER_JS.read_text(encoding="utf-8")
@@ -193,7 +204,7 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
         ]:
             self.assertNotIn(token, hit_candidates_content)
 
-    def test_unique_owner_is_pure_and_facade_allowlist_remain_unchanged(self):
+    def test_unique_owner_uses_injected_ports_and_facade_allowlist_remain_unchanged(self):
         public_content = PUBLIC_FACADE_JS.read_text(encoding="utf-8")
         allowlist_content = STATE_WRITE_ALLOWLIST.read_text(encoding="utf-8")
         owner_paths = sorted(
@@ -207,6 +218,7 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
             ["js/core/map_renderer/click_selection_transaction_owner.js"],
         )
         for token in [
+            "export function createClickSelectionTransactionOwner(",
             "export function resolveClickSelectionDecision(resolvedHit, readonlyModifiers)",
             "Reflect.ownKeys(",
             'target.kind === "land" && (readonlyModifiers.ctrlKey || readonlyModifiers.metaKey)',
@@ -215,25 +227,25 @@ class MapRendererClickSelectionTransactionBoundaryContractTest(unittest.TestCase
             self.assertIn(token, self.owner_content)
         for token in [
             "import ",
-            "async ",
-            "await ",
             "globalThis",
-            "Event",
             "addEventListener",
             "runtimeState",
             "map_renderer.js",
             "document",
             "window",
-            "markDirty",
-            "captureHistoryState",
-            "commitHistoryEntry",
-            "requestInteractionRender",
-            "selectedWaterRegionId",
-            "selectedSpecialRegionId",
-            "toggleFeatureInDevSelection",
-            "getHitFromEvent",
+            "State(runtimeState",
         ]:
             self.assertNotIn(token, self.owner_content)
+        for token in [
+            "let state = getClickState();",
+            "state = getClickState();",
+            "setClickSelectedWaterRegionId(",
+            "setClickSelectedSpecialRegionId(",
+            "requestInteractionRender(",
+            "return Object.freeze({ handleClick });",
+        ]:
+            self.assertIn(token, self.owner_content)
+        self.assertEqual(self.owner_content.count("getClickState();"), 2)
         for token in [
             "click_selection_transaction",
             "renderer_click_selection_transaction",
