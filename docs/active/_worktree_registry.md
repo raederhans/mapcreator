@@ -2,16 +2,17 @@
 
 ## SC P3 serial execution snapshot — 2026-08-24
 
-- Supervisor/integration: thread `01a028e9-78d6-7a31-ae01-d81532018212`, `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator`, branch `codex/sc-p0-p3-integration-20260824@1c2f92f8` before this task-record commit; sole owner of integration, shared/long checks, push, and cleanup decisions.
-- Sole production implementer: thread `01a03372-ff2a-7281-af36-65e58e243f9c`, worktree `d871`, branch `codex/sc-p3-1-day-night-runtime-owner@039acb7d`; one committed slice at a time, no merge/push/cleanup.
-- Read-only reviewer: thread `01a03372-ff2a-7281-af36-65fed97d06ee`, detached worktree `42a1@039acb7d`; exact-commit findings-first review only.
-- Independent verifier: thread `01a03372-ff0c-72e3-addf-b25981aa9311`, detached worktree `5152@039acb7d`; focused selector/test proof only unless the supervisor explicitly delegates a shared/long gate.
-- Active boundary: P3.1 through P3.3 are integrated and recorded. P3.4 Political Background Render Owner is the only open production slice; P3.5 may not overlap it. No live/shared process is currently running.
+- Supervisor/integration: thread `01a028e9-78d6-7a31-ae01-d81532018212`, `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator`, branch `codex/sc-p0-p3-integration-20260824@19c0ddf4` before this task-record commit; sole owner of integration, shared/long checks, push, and cleanup decisions.
+- Sole production implementer: thread `01a03372-ff2a-7281-af36-65e58e243f9c`, worktree `d871`, branch `codex/sc-p3-4-political-background-owner@a9f63bd6`; one committed slice at a time, no merge/push/cleanup.
+- Read-only reviewer: thread `01a03372-ff2a-7281-af36-65fed97d06ee`, detached worktree `42a1@a9f63bd6`; exact-commit findings-first review only.
+- Independent verifier: thread `01a03372-ff0c-72e3-addf-b25981aa9311`, detached worktree `5152@a9f63bd6`; focused selector/test proof only unless the supervisor explicitly delegates a shared/long gate.
+- Active boundary: P3.1 through P3.4 are integrated and recorded. P3.5 Political Partial-Repaint / Worker Engine is the only open production slice. No live/shared process is currently running.
 - Parent protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823` with its 20 tracked modifications outside this execution scope.
 - Baseline identity: the renderer blob at planned `a6833008` and current start `f118a101` is identical (`b5990105850cc7c79e5506c6f89dbee1ab111fae`), preserving the 23,153 split-line budget.
 - P3.1 admission: final implementation `fa015b53` received reviewer `CLEAR` and verifier `PASS`; supervisor commits `79746feb` through `dc256b8f` produce the same committed tree. Day/Night ownership, state-action guardrails, raw/current scanner separation, P4.3 direct routes, selector identity, and zero-spawn planning are closed. The Water river argv conflict is inherited from `f118a101` and is non-blocking for this slice.
 - P3.2 admission: implementation `dcc83e8d` received reviewer `CLEAR` and verifier `PASS`; supervisor commit `41b3f538` reproduces the same five files. Visual Effects owns paper/graticule/draft-grid/texture-label rendering and all four texture cache families; the exact selector, P4.3 routes, architecture, import graph, and zero-spawn plan pass with no owner conflict.
 - P3.3 admission: implementation `d2420643` plus checkout-stability fix `039acb7d` received reviewer `CLEAR` and verifier `PASS`; supervisor commits `5d6543fa` and `1c2f92f8` reproduce the same code, tests, tools, and generated policy. Click transaction ownership, live-state hydration refresh, canonical action authority, source-bound fail-closed proofs, CRLF-stable architecture matching, and P4.3 routing are closed.
+- P3.4 admission: implementation `56c40a91` plus contract/route follow-ups `208dc652` and `a9f63bd6` received reviewer `CLEAR` and verifier `PASS`; supervisor commits `c8deacb9`, `5dabccaf`, and `19c0ddf4` reproduce the same committed tree. Political background cache/deferred ownership, source/color provenance, stale-work fences, ocean/intensity effect delegation, source-bound contracts, canonical/legacy route parity, and the 18-command owner selector are closed. Blank-line trailing whitespace is a non-blocking cleanup carried into the single final P3.5 policy refresh.
 
 ## SC P0-P3 integration snapshot — 2026-08-24
 
