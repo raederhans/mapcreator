@@ -386,7 +386,7 @@ test("P3.3b installs one canonical owner and keeps protected architecture surfac
   assert.ok(politicalRecord);
   assert.equal(politicalRecord.implementationStatus, "owned-p3");
   assert.ok(politicalRecord.existingDependencyOwners.includes(CANONICAL_OWNER_PATH));
-  assert.equal(politicalRecord.plannedPhase, "P3.5");
+  assert.equal(politicalRecord.plannedPhase, "P3.3b");
   assert.ok(politicalRecord.existingDependencyOwners.includes(PARTIAL_OWNER_PATH));
   assert.ok(politicalRecord.browserLanes.includes("test:e2e:dev:political-progressive-recovery"));
 });

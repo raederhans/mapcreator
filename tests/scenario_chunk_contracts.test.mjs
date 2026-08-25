@@ -4097,9 +4097,9 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         && /function isPendingPoliticalColorEditFeature\(feature, featureId = null\) \{[\s\S]*?hasPendingPoliticalColorEdit\(\)[\s\S]*?pendingPoliticalColorEditIds[\s\S]*?pendingIds\.has\(id\);/.test(rendererSource)
         && /function isPoliticalForegroundFeature\(feature, featureId = null\) \{[\s\S]*?hasPoliticalForegroundColorOverride\(id\)[\s\S]*?isPendingPoliticalColorEditFeature\(feature, id\)/.test(rendererSource)
         && /function orderPoliticalShellUnderlayFirst\(entries = \[\]\) \{[\s\S]*?const underlayEntries = \[\];[\s\S]*?const detailEntries = \[\];[\s\S]*?const foregroundEntries = \[\];[\s\S]*?isPoliticalForegroundFeature\(feature, featureId\)[\s\S]*?isPoliticalUnderlayFeature\(feature, featureId\)[\s\S]*?return \[\.\.\.underlayEntries, \.\.\.detailEntries, \.\.\.foregroundEntries\];/.test(rendererSource)
-        && /orderPoliticalShellUnderlayFirst\(redrawEntries\)\.forEach/.test(rendererSource)
+        && /orderPoliticalShellUnderlayFirst\(redrawEntries\)\.forEach/.test(politicalPartialOwnerSource)
         && /orderPoliticalShellUnderlayFirst\(viewport\.visibleItems\)\.forEach/.test(politicalFineLoopSource)
-        && /const featureEntries = runtimeState\.landData\.features\.map/.test(politicalFineLoopSource)
+        && /const featureEntries = state\.landData\.features\.map/.test(politicalFineLoopSource)
         && /orderPoliticalShellUnderlayFirst\(featureEntries\)\.forEach/.test(politicalFineLoopSource),
       arcticShellOwnerHintsCanColorCoalescedShells:
         /scenario_shell_owner_hint/.test(rendererSource)

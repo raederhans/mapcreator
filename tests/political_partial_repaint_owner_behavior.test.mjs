@@ -268,6 +268,50 @@ test("partial success redraws background before fine feature and commits cache o
   assert.equal(events.filter((entry) => Array.isArray(entry) && entry[0] === "set-reference").length, 1);
 });
 
+test("partial background and fine draw exceptions restore canvas and preserve fallback state", async (t) => {
+  const cases = [
+    {
+      name: "background",
+      create: () => createHarness({
+        effects: {
+          drawPoliticalBackgroundFillsForEntries: () => { throw new Error("background-failed"); },
+        },
+      }),
+    },
+    {
+      name: "fine draw",
+      create: () => {
+        const harness = createHarness();
+        harness.context.fill = () => { throw new Error("fine-draw-failed"); };
+        return harness;
+      },
+    },
+  ];
+  for (const fixture of cases) {
+    await t.test(fixture.name, () => {
+      const { owner, cache, events, transform } = fixture.create();
+      assert.equal(owner.tryPartialPoliticalPassRepaint(transform, "next", {}), false);
+      assert.equal(events.filter((entry) => entry === "context:save").length, 1);
+      assert.equal(events.filter((entry) => entry === "context:restore").length, 1);
+      assert.equal(cache.signatures.political, "static");
+      assert.equal(cache.dirty.political, true);
+      assert.deepEqual([...cache.partialPoliticalDirtyIds], ["land-1"]);
+      assert.equal(cache.reasons.political, "refresh-colors");
+      assert.equal(events.some((entry) => Array.isArray(entry) && entry[0] === "clear-pending"), false);
+      assert.equal(events.some((entry) => Array.isArray(entry) && entry[0] === "set-reference"), false);
+      assert.equal(events.some((entry) => Array.isArray(entry) && entry[0] === "timing"), false);
+      assert.equal(events.some((entry) => Array.isArray(entry)
+        && entry[0] === "counter" && entry[1] === "politicalPartialRepaints"), false);
+      const successMetrics = events.filter((entry) => Array.isArray(entry)
+        && entry[0] === "metric" && entry[1] === "politicalPartialRepaint" && entry[3]?.applied === true);
+      assert.equal(successMetrics.length, 0);
+      const fallbackMetric = events.find((entry) => Array.isArray(entry)
+        && entry[0] === "metric" && entry[1] === "politicalPartialRepaint" && entry[3]?.applied === false);
+      assert.equal(fallbackMetric?.[3]?.fallbackReason, "partial-repaint-exception");
+    });
+  }
+});
+
 test("request and draw exceptions propagate through the owner boundary", () => {
   const requestError = new Error("request-failed");
   const requestHarness = createHarness({ effects: { requestPoliticalRasterWorkerPass: () => { throw requestError; } } });

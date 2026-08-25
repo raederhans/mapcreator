@@ -104,7 +104,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     entryFunction: "drawPoliticalPass",
     implementationStatus: "owned-p3",
     entryHostPath: "js/core/map_renderer.js",
-    plannedPhase: "P3.5",
+    plannedPhase: "P3.3b",
     riskTier: "high",
     stateReadClass: ["viewport", "appearance", "scenario", "map-data", "interaction", "render-cache", "diagnostics"],
     stateWriteClass: ["pass-surface", "owner-cache", "runtime-state", "diagnostics"],

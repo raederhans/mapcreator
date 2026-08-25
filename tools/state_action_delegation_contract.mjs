@@ -890,7 +890,7 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
     factoryModulePath: "js/core/renderer/political_partial_repaint_owner.js",
     factoryExportName: "createPoliticalPartialRepaintOwner",
     factorySourceFingerprint:
-      "af7721ec7db769d5748d16fe41a6af03c9884443b00d91b309889c05eab24343",
+      "cb2b0bf38cb174e553043a8483d7bc4f2cc84534b5d760ea0e00a01b22f444a7",
     ownerBindingName: "politicalPartialRepaintOwner",
     methods: [
       "buildPoliticalRasterWorkerPacket",

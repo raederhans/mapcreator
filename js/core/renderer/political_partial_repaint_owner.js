@@ -356,6 +356,7 @@ export function createPoliticalPartialRepaintOwner({
       });
       return false;
     };
+    try {
     if (state.renderPhase !== renderPhaseIdle || state.deferExactAfterSettle) return fallback("non-idle-phase");
     if (getDebugMode() !== "PROD") return fallback("non-prod-mode");
     if (String(cache.reasons?.political || "") !== "refresh-colors") return fallback("non-color-invalidation");
@@ -493,30 +494,35 @@ export function createPoliticalPartialRepaintOwner({
     const startedAt = helper.nowMs();
     let backgroundGroupCount = 0;
     const partialFeatureMetrics = { renderedCount: 0, renderedIds: new Set() };
-    passContext.save();
-    passContext.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
-    passContext.beginPath();
-    passRects.forEach((rect) => passContext.rect(rect.x, rect.y, rect.width, rect.height));
-    passContext.clip();
-    passContext.clearRect(0, 0, layout.paddedWidth, layout.paddedHeight);
-    passContext.translate(layout.offsetX, layout.offsetY);
-    passContext.translate(transform.x, transform.y);
-    passContext.scale(transform.k, transform.k);
-    effect.withRenderTarget(passContext, () => {
-      backgroundGroupCount = effect.drawPoliticalBackgroundFillsForEntries(redrawEntries);
-      helper.orderPoliticalShellUnderlayFirst(redrawEntries).forEach(({ feature, index, path }) => {
-        drawPoliticalFeature(feature, index, {
-          k: transform.k,
-          canvasWidth,
-          canvasHeight,
-          skipScreenCheck: true,
-          path,
-          transform,
-          metricsCollector: partialFeatureMetrics,
+    let contextSaved = false;
+    try {
+      passContext.save();
+      contextSaved = true;
+      passContext.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      passContext.beginPath();
+      passRects.forEach((rect) => passContext.rect(rect.x, rect.y, rect.width, rect.height));
+      passContext.clip();
+      passContext.clearRect(0, 0, layout.paddedWidth, layout.paddedHeight);
+      passContext.translate(layout.offsetX, layout.offsetY);
+      passContext.translate(transform.x, transform.y);
+      passContext.scale(transform.k, transform.k);
+      effect.withRenderTarget(passContext, () => {
+        backgroundGroupCount = effect.drawPoliticalBackgroundFillsForEntries(redrawEntries);
+        helper.orderPoliticalShellUnderlayFirst(redrawEntries).forEach(({ feature, index, path }) => {
+          drawPoliticalFeature(feature, index, {
+            k: transform.k,
+            canvasWidth,
+            canvasHeight,
+            skipScreenCheck: true,
+            path,
+            transform,
+            metricsCollector: partialFeatureMetrics,
+          });
         });
       });
-    });
-    passContext.restore();
+    } finally {
+      if (contextSaved) passContext.restore();
+    }
     cache.signatures.political = nextSignature;
     cache.dirty.political = false;
     cache.partialPoliticalDirtyIds.clear();
@@ -541,6 +547,11 @@ export function createPoliticalPartialRepaintOwner({
       pathCacheMissRatio: Number(pathCacheMissRatio.toFixed(4)),
     });
     return true;
+    } catch (error) {
+      return fallback("partial-repaint-exception", {
+        exceptionName: String(error?.name || "Error"),
+      });
+    }
   }
 
   let workerSnapshotLastState = null;
