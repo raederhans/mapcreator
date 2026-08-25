@@ -7,6 +7,7 @@ import unittest
 import gzip
 import hashlib
 import json
+import struct
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -231,6 +232,36 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 asset = LANDING_ASSETS / asset_name
                 self.assertTrue(asset.exists(), f"{asset_name} should be checked in for Pages delivery")
                 self.assertLess(asset.stat().st_size, 120_000)
+
+    def test_landing_social_preview_contract(self) -> None:
+        svg_path = LANDING_ASSETS / "social-preview.svg"
+        png_path = LANDING_ASSETS / "social-preview.png"
+        svg_text = svg_path.read_text(encoding="utf-8")
+        svg_root = ET.fromstring(svg_text)
+        self.assertEqual(svg_root.attrib.get("viewBox"), "0 0 1200 630")
+        self.assertEqual(svg_root.attrib.get("data-social-preview"), "scenario-forge")
+        self.assertIn("Scenario Forge", " ".join(svg_root.itertext()))
+        for brand_color in ("#07111f", "#147f77", "#d99a45"):
+            with self.subTest(brand_color=brand_color):
+                self.assertIn(brand_color, svg_text)
+
+        png_bytes = png_path.read_bytes()
+        self.assertEqual(png_bytes[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertGreaterEqual(len(png_bytes), 24)
+        self.assertEqual(struct.unpack(">II", png_bytes[16:24]), (1200, 630))
+
+        from tools import rasterize_landing_assets
+
+        self.assertEqual(len(rasterize_landing_assets.RASTER_TARGETS), 16)
+        self.assertTrue(all(output.endswith(".webp") for _, output, *_ in rasterize_landing_assets.RASTER_TARGETS))
+        self.assertEqual(
+            rasterize_landing_assets.PNG_RASTER_TARGETS,
+            (("social-preview.svg", "social-preview.png", 1200, 630, 100),),
+        )
+        self.assertEqual(
+            rasterize_landing_assets.ALL_RASTER_TARGETS,
+            rasterize_landing_assets.RASTER_TARGETS + rasterize_landing_assets.PNG_RASTER_TARGETS,
+        )
 
     def test_landing_japan_preview_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "japan-preview.json"
@@ -2470,6 +2501,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "assets/work-atlas-japan-corridor.svg",
             "assets/work-atlas-japan-corridor.webp",
             "assets/work-atlas-japan-corridor.json",
+            "assets/social-preview.svg",
+            "assets/social-preview.png",
             "assets/sample-runs.json",
             "assets/sample-projects/blank-base-starter.project.json",
             "assets/sample-projects/modern-world-japan-corridor.project.json",
