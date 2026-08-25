@@ -83,6 +83,10 @@ const SCENARIO_PRESENTATION_ACTION_EXPORT_NAMES = Object.freeze([
   "restoreScenarioTransactionPresentationState",
 ]);
 
+const SCENARIO_PRESENTATION_DAY_NIGHT_ACTION_EXPORT_NAMES = Object.freeze([
+  "setDayNightStyleConfigState",
+]);
+
 const SCENARIO_PRESENTATION_CHUNK_CITY_ACTION_EXPORT_NAMES = Object.freeze([
   "applyScenarioChunkCityExternalEffectState",
   "finalizeScenarioChunkCityExternalEffectState",
@@ -257,6 +261,11 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
   Object.freeze({
     modulePath: RENDERER_PHASE_ACTION_MODULE_PATH,
     exportNames: RENDERER_PHASE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_PRESENTATION_DAY_NIGHT_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.3",
   }),
   Object.freeze({
@@ -777,6 +786,11 @@ function freezeMutationDelegatingOwnerEntry(entry = {}) {
     methods: Object.freeze([...(entry.methods || [])].map(String)),
     actionModulePath: normalizeModulePath(entry.actionModulePath),
     actionExports: Object.freeze([...(entry.actionExports || [])].map(String)),
+    actionModulePathsByExport: Object.freeze(Object.fromEntries(
+      Object.entries(entry.actionModulePathsByExport || {}).map(
+        ([exportName, modulePath]) => [String(exportName), normalizeModulePath(modulePath)],
+      ),
+    )),
   });
 }
 
@@ -805,6 +819,42 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
       "setRenderPerfContextBreakdownState",
     ],
   }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getDayNightRuntimeOwner",
+    compositionSourceFingerprint:
+      "3ce0f2dde1cf99c3836747e3369daf71c0476bd8f8da60d1f136e0f7e2dd9596",
+    factoryModulePath: "js/core/renderer/day_night_runtime_owner.js",
+    factoryExportName: "createDayNightRuntimeOwner",
+    factorySourceFingerprint:
+      "ec2eceb9e94ff0559597ea365226f5b27907274855f1a35e0b1e86a2438a46b7",
+    ownerBindingName: "dayNightRuntimeOwner",
+    methods: [
+      "buildNightHemisphereFeature",
+      "buildDayNightPassSignature",
+      "clearDayNightClockTimer",
+      "drawDayNightShadowLayer",
+      "drawDayNightPass",
+      "getDayNightStyleConfig",
+      "getCurrentSolarState",
+      "getCurrentUtcMinutes",
+      "getCycleUtcMinutes",
+      "getDayNightLiveClockToken",
+      "getDayNightSignatureClockToken",
+      "getSolarDeclinationRadians",
+      "getUtcDateKey",
+      "getUtcDayOfYear",
+      "syncDayNightClockTimer",
+    ],
+    actionModulePath: RENDERER_PHASE_ACTION_MODULE_PATH,
+    actionModulePathsByExport: {
+      setDayNightStyleConfigState: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    },
+    actionExports: [
+      "setDayNightStyleConfigState",
+      "setPendingDayNightRefreshState",
+    ],
+  }),
 ]);
 
 export function validateStateMutationDelegatingOwnerContract(
@@ -827,9 +877,14 @@ export function validateStateMutationDelegatingOwnerContract(
       || !entry.actionExports?.length
       || !entry.actionExports.every(isValidExportName)
       || new Set(entry.actionExports).size !== entry.actionExports.length
+      || !Object.entries(entry.actionModulePathsByExport || {}).every(
+        ([exportName, modulePath]) => entry.actionExports.includes(exportName)
+          && /^js\/[^/].*\.js$/.test(modulePath),
+      )
       || !entry.actionExports.every((exportName) => (
         Boolean(findStateActionDelegationContractEntry(
-          entry.actionModulePath,
+          entry.actionModulePathsByExport?.[exportName]
+            || entry.actionModulePath,
           exportName,
         ))
       ))
@@ -1967,12 +2022,14 @@ export function inspectStateMutationDelegatingOwnerSources({
       ? options.properties.find((property) => property.key?.name === "effects")?.value
       : null;
     for (const actionExportName of entry.actionExports) {
+      const actionModulePath = entry.actionModulePathsByExport?.[actionExportName]
+        || entry.actionModulePath;
       const matches = [];
       walkSyntaxTree(effects, (node) => {
         if (node.type !== "CallExpression" || node.callee?.type !== "Identifier") return;
         const imported = imports.get(node.callee.name);
         if (
-          imported?.source === entry.actionModulePath
+          imported?.source === actionModulePath
           && imported.importedName === actionExportName
           && node.arguments?.[0]?.type === "Identifier"
           && node.arguments[0].name === "runtimeState"
@@ -2558,9 +2615,7 @@ function createScenarioHealthCrossFileMigrationEntry({
   });
 }
 
-function createRendererFunctionParameterBindingIdentity(
-  functionName,
-) {
+function createRendererFunctionParameterBindingIdentity(functionName) {
   return JSON.stringify({
     kind: "function-parameter",
     name: "",
@@ -3155,6 +3210,46 @@ export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
       actionExportName: "setFirstVisibleFramePaintedState",
       replacementActionSourceFingerprint:
         "4b37f18717c2ef312c44b44062011dc84feb3a63b103f7beffd88cd4a5ed1556",
+    }),
+    createRendererCrossBoundaryMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      key: "pendingDayNightRefresh",
+      retiredMutationSites:
+        createRendererRetiredMutationSites([
+          {
+            enclosingFunctionIdentity:
+              createRendererFunctionIdentity(
+                "getRenderPhaseLifecycleOwner",
+                "setPendingDayNightRefresh",
+              ),
+            sourceFingerprints: [
+              "68f881a110b597426dc8ade6193f716ef8acdcdfc189106533cb99647c46f12c",
+            ],
+          },
+          {
+            enclosingFunctionIdentity:
+              createRendererFunctionIdentity(
+                "requestDayNightClockRender",
+              ),
+            sourceFingerprints: [
+              "b1edfd5d6bca64d37fe89e11a9177b2c9f206a749b09d5272cd557d5b0550221",
+            ],
+          },
+        ]),
+      replacementCallerPath: "js/core/map_renderer.js",
+      replacementCallerBindingIdentity:
+        MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      replacementEnclosingFunctionIdentity:
+        createRendererFunctionIdentity(
+          "getDayNightRuntimeOwner",
+          "setPendingDayNightRefresh",
+        ),
+      actionModulePath: RENDERER_PHASE_ACTION_MODULE_PATH,
+      actionExportName: "setPendingDayNightRefreshState",
+      replacementActionSourceFingerprint:
+        "44557915cacb4091ae86adc4d9571922d42603d5932c4667954451f8a1947ff4",
     }),
     createRendererCrossBoundaryMigrationEntry({
       retiredCallerPath: "js/core/map_renderer.js",

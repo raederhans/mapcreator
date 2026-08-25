@@ -15,7 +15,6 @@ test("renderer phase actions reject invalid targets", async () => {
   const {
     commitRendererDprStageState,
     setAdaptiveSettleProfileState,
-    setDayNightStyleConfigState,
     setPendingDayNightRefreshState,
     setPhaseEnteredAtState,
     setRendererIsInteractingState,
@@ -30,7 +29,6 @@ test("renderer phase actions reject invalid targets", async () => {
     assert.throws(() => setRendererIsInteractingState(target, false), /target must be an object/);
     assert.throws(() => setPendingDayNightRefreshState(target, true), /target must be an object/);
     assert.throws(() => setAdaptiveSettleProfileState(target, null), /target must be an object/);
-    assert.throws(() => setDayNightStyleConfigState(target, {}), /target must be an object/);
     assert.throws(() => commitRendererDprStageState(target, {}), /target must be an object/);
   }
 });
@@ -89,7 +87,15 @@ test("pending day-night refresh normalizes to a boolean", async () => {
 });
 
 test("day-night style config initializes its container and preserves config identity", async () => {
-  const { setDayNightStyleConfigState } = await loadActions();
+  const { setDayNightStyleConfigState } = await import(
+    "../js/core/state/actions/scenario_presentation_actions.js"
+  );
+  for (const invalidTarget of [null, undefined, [], "state"]) {
+    assert.throws(
+      () => setDayNightStyleConfigState(invalidTarget, {}),
+      /target must be an object/,
+    );
+  }
   const target = {};
   const config = { enabled: true, mode: "cycle" };
 

@@ -6,6 +6,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
 import {
+  findStateActionCrossFileMigrationContractEntry,
+} from "./state_action_delegation_contract.mjs";
+
+import {
   buildFrozenDerivedAliasTaintBaseline,
   buildHistoricalDerivedAliasProofCheckpoint,
   buildIncrementalDerivedAliasTaintBaseline,
@@ -180,6 +184,7 @@ function validateProgressCheckpointHistoryTransition({
 export function validateCallerToActionLedgerHistoryTransition({
   previousPolicy = null,
   currentPolicy = {},
+  crossFileMigrationContract = undefined,
 } = {}) {
   if (!previousPolicy) {
     return [];
@@ -225,6 +230,57 @@ export function validateCallerToActionLedgerHistoryTransition({
         retiredMembershipIdentity:
           previousEntry.retiredMembershipIdentity,
       });
+      continue;
+    }
+    const migrationContract =
+      findStateActionCrossFileMigrationContractEntry(
+        previousEntry.retiredMembershipIdentity,
+        crossFileMigrationContract,
+      );
+    const retiredMutationSites = migrationContract?.retiredMutationSites || [];
+    const canonicalCrossFileAdoption = Boolean(
+      migrationContract
+      && previousEntry.crossFileMigrationContractIdentity
+        !== migrationContract.contractIdentity
+      && currentEntry.crossFileMigrationContractIdentity
+        === migrationContract.contractIdentity
+      && currentEntry.retiredCallerPath
+        === migrationContract.retiredCallerPath
+      && currentEntry.retiredCallerBindingIdentity
+        === migrationContract.retiredCallerBindingIdentity
+      && currentEntry.callerPath
+        === migrationContract.replacementCallerPath
+      && currentEntry.callerBindingIdentity
+        === migrationContract.replacementCallerBindingIdentity
+      && currentEntry.enclosingFunctionIdentity
+        === migrationContract.replacementEnclosingFunctionIdentity
+      && currentEntry.actionModulePath
+        === migrationContract.actionModulePath
+      && currentEntry.actionExportName
+        === migrationContract.actionExportName
+      && currentEntry.targetArgumentIndex
+        === migrationContract.targetArgumentIndex
+      && currentEntry.sourceFingerprint
+        === migrationContract.replacementActionSourceFingerprint
+      && currentEntry.retiredMutationSiteCount
+        === retiredMutationSites.length
+      && currentEntry.retiredMutationSiteFingerprint
+        === createHash("sha256")
+          .update(JSON.stringify(retiredMutationSites))
+          .digest("hex")
+      && (
+        retiredMutationSites.length === 1
+          ? currentEntry.retiredEnclosingFunctionIdentity
+            === retiredMutationSites[0].enclosingFunctionIdentity
+          : isDeepStrictEqual(
+            currentEntry.retiredEnclosingFunctionIdentities,
+            retiredMutationSites
+              .map(({ enclosingFunctionIdentity }) => enclosingFunctionIdentity)
+              .sort(),
+          )
+      )
+    );
+    if (canonicalCrossFileAdoption) {
       continue;
     }
     const samePhaseObservationRefresh =

@@ -15,10 +15,25 @@ function normalizeLongitude(value) {
   return normalized;
 }
 
-function createHarness({ config = {}, renderPhase = "idle", bootReady = true } = {}) {
+function createHarness({
+  config = {},
+  renderPhase = "idle",
+  bootReady = true,
+  hasAnimationFrame = true,
+  invokeRenderFallback = false,
+} = {}) {
   const events = [];
   const frameCallbacks = new Map();
   const intervalCallbacks = new Map();
+  const timeoutCallbacks = new Map();
+  const calls = {
+    cancelAnimationFrame: 0,
+    clearInterval: 0,
+    clearTimeout: 0,
+    requestAnimationFrame: 0,
+    setInterval: 0,
+    setTimeout: 0,
+  };
   let nextHandle = 1;
   let currentDate = new Date("2026-06-21T12:00:00.000Z");
   const runtimeState = {
@@ -56,32 +71,47 @@ function createHarness({ config = {}, renderPhase = "idle", bootReady = true } =
       },
     },
     requestAnimationFrame(callback) {
+      calls.requestAnimationFrame += 1;
       const id = nextHandle++;
       frameCallbacks.set(id, callback);
       return id;
     },
-    cancelAnimationFrame(id) { frameCallbacks.delete(id); },
+    cancelAnimationFrame(id) {
+      calls.cancelAnimationFrame += 1;
+      frameCallbacks.delete(id);
+    },
     setInterval(callback) {
+      calls.setInterval += 1;
       const id = nextHandle++;
       intervalCallbacks.set(id, callback);
       return id;
     },
-    clearInterval(id) { intervalCallbacks.delete(id); },
+    clearInterval(id) {
+      calls.clearInterval += 1;
+      intervalCallbacks.delete(id);
+    },
     setTimeout(callback) {
+      calls.setTimeout += 1;
       const id = nextHandle++;
-      frameCallbacks.set(id, callback);
+      timeoutCallbacks.set(id, callback);
       return id;
     },
-    clearTimeout(id) { frameCallbacks.delete(id); },
+    clearTimeout(id) {
+      calls.clearTimeout += 1;
+      timeoutCallbacks.delete(id);
+    },
   };
+  if (!hasAnimationFrame) delete platform.requestAnimationFrame;
   const owner = createDayNightRuntimeOwner({
-    runtimeState,
     rendererSurfaceHost: {
       getContext: () => context,
       getPathCanvas: () => (feature) => events.push(["path", feature.radius]),
     },
-    constants: { renderPhaseIdle: "idle" },
-    getters: { isBootInteractionReady: () => bootReady },
+    getters: {
+      getDayNightStyleConfigState: () => runtimeState.styleConfig?.dayNight,
+      isBootInteractionReady: () => bootReady,
+      isRenderPhaseIdle: () => runtimeState.renderPhase === "idle",
+    },
     helpers: {
       clamp,
       createDate: () => new Date(currentDate),
@@ -94,18 +124,28 @@ function createHarness({ config = {}, renderPhase = "idle", bootReady = true } =
       drawNightLightsLayer: (...args) => events.push(["lights", ...args]),
       invalidateRenderPasses: (...args) => events.push(["invalidate", ...args]),
       renderFallback: () => events.push("render-fallback"),
-      requestRender: (...args) => events.push(["request", ...args]),
-      setPendingDayNightRefreshState: (state, pending) => {
-        Reflect.set(state, "pendingDayNightRefresh", Boolean(pending));
-        events.push(["pending", Boolean(pending)]);
+      requestRender: (reason, options) => {
+        events.push(["request", reason]);
+        if (invokeRenderFallback) options?.fallback?.();
       },
+      setDayNightStyleConfig: (nextConfig) => {
+        runtimeState.styleConfig.dayNight = nextConfig;
+        return nextConfig;
+      },
+      setPendingDayNightRefresh: (pending) => {
+        runtimeState.pendingDayNightRefresh = Boolean(pending);
+      },
+      updateToolbarInputs: () => runtimeState.updateToolbarInputsFn?.(),
     },
     platform,
   });
   return {
+    calls,
     events,
     frameCallbacks,
     intervalCallbacks,
+    platform,
+    timeoutCallbacks,
     owner,
     runtimeState,
     setDate(value) { currentDate = new Date(value); },
@@ -175,9 +215,93 @@ test("cycle scheduler uses the frame lane and preserves the busy-phase pending g
   )));
 });
 
+test("UTC timer ignores a stale clock token and orders toolbar through render fallback", () => {
+  const harness = createHarness({
+    config: { enabled: true, mode: "utc" },
+    invokeRenderFallback: true,
+  });
+  assert.equal(harness.owner.syncDayNightClockTimer(), true);
+  assert.equal(harness.calls.setInterval, 1);
+  assert.equal(harness.intervalCallbacks.size, 1);
+  const intervalCallback = [...harness.intervalCallbacks.values()][0];
+
+  intervalCallback();
+  assert.deepEqual(harness.events, []);
+
+  harness.setDate("2026-06-21T12:01:00.000Z");
+  intervalCallback();
+  assert.deepEqual(harness.events, [
+    "toolbar",
+    ["invalidate", "dayNight", "day-night-clock"],
+    ["request", "day-night-clock"],
+    "render-fallback",
+  ]);
+});
+
+test("UTC and cycle transitions cancel the prior platform lane", () => {
+  const harness = createHarness({ config: { enabled: true, mode: "utc" } });
+  assert.equal(harness.owner.syncDayNightClockTimer(), true);
+  harness.runtimeState.styleConfig.dayNight = { enabled: true, mode: "cycle", cycleSecondsPerDay: 120 };
+  assert.equal(harness.owner.syncDayNightClockTimer(), true);
+  assert.equal(harness.calls.clearInterval, 1);
+  assert.equal(harness.intervalCallbacks.size, 0);
+  assert.equal(harness.frameCallbacks.size, 1);
+  harness.runtimeState.styleConfig.dayNight = { enabled: true, mode: "utc" };
+  assert.equal(harness.owner.syncDayNightClockTimer(), true);
+  assert.equal(harness.calls.cancelAnimationFrame, 1);
+  assert.equal(harness.frameCallbacks.size, 0);
+  assert.equal(harness.intervalCallbacks.size, 1);
+
+  assert.deepEqual(harness.events, []);
+
+  harness.owner.clearDayNightClockTimer();
+  assert.equal(harness.calls.clearInterval, 2);
+  assert.equal(harness.intervalCallbacks.size, 0);
+});
+
+test("cycle frame suppresses hidden-document rendering while keeping the frame lane alive", () => {
+  const harness = createHarness({
+    config: { enabled: true, mode: "cycle", cycleSecondsPerDay: 120 },
+  });
+  assert.equal(harness.owner.syncDayNightClockTimer(), true);
+  const frame = [...harness.frameCallbacks.values()][0];
+  harness.frameCallbacks.clear();
+  harness.platform.document.visibilityState = "hidden";
+  harness.setDate("2026-06-21T12:00:01.000Z");
+  frame(Date.parse("2026-06-21T12:00:01.000Z"));
+  assert.deepEqual(harness.events, []);
+  assert.equal(harness.frameCallbacks.size, 1);
+  assert.equal(harness.calls.requestAnimationFrame, 2);
+});
+
+test("cycle scheduler falls back to timeout and cancels the active timeout", () => {
+  const harness = createHarness({
+    config: { enabled: true, mode: "cycle", cycleSecondsPerDay: 120 },
+    hasAnimationFrame: false,
+  });
+  assert.equal(harness.owner.syncDayNightClockTimer(), true);
+  assert.equal(harness.calls.setTimeout, 1);
+  assert.equal(harness.timeoutCallbacks.size, 1);
+
+  const timeoutCallback = [...harness.timeoutCallbacks.values()][0];
+  harness.timeoutCallbacks.clear();
+  harness.setDate("2026-06-21T12:00:01.000Z");
+  timeoutCallback();
+  assert.equal(harness.calls.setTimeout, 2);
+  assert.equal(harness.timeoutCallbacks.size, 1);
+  assert.deepEqual(harness.events.slice(0, 2), [
+    ["invalidate", "dayNight", "day-night-cycle-frame"],
+    ["request", "day-night-cycle-frame"],
+  ]);
+
+  harness.owner.clearDayNightClockTimer();
+  assert.equal(harness.calls.clearTimeout, 1);
+  assert.equal(harness.timeoutCallbacks.size, 0);
+});
+
 test("pass signature keeps topology, urban glow, normalized config, and live clock identity", () => {
   const harness = createHarness({ config: { enabled: true, mode: "manual", manualUtcMinutes: 600 } });
-  const signature = harness.owner.buildDayNightPassSignature("zoom:2", 9);
+  const signature = harness.owner.buildDayNightPassSignature("zoom:2", 9, 17);
   assert.match(signature, /^zoom:2::17::field:urbanGlow:9::/);
   assert.match(signature, /::2026-06-21\|manual:600$/);
 });

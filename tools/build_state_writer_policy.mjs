@@ -2382,6 +2382,66 @@ export function buildCallerToActionLedger({
       });
       continue;
     }
+    const crossFileMigration =
+      findStateActionCrossFileMigrationContractEntry(
+        entry.retiredMembershipIdentity,
+        crossFileMigrationContract,
+      ) || null;
+    if (
+      crossFileMigration
+      && entry.crossFileMigrationContractIdentity
+        !== crossFileMigration.contractIdentity
+    ) {
+      const candidateEdges = normalizedEdges.filter((edge) => (
+        edge.callerPath
+          === crossFileMigration.replacementCallerPath
+        && edge.callerBindingIdentity
+          === crossFileMigration.replacementCallerBindingIdentity
+        && edge.enclosingFunctionIdentity
+          === crossFileMigration.replacementEnclosingFunctionIdentity
+        && edge.actionModulePath
+          === crossFileMigration.actionModulePath
+        && edge.actionExportName
+          === crossFileMigration.actionExportName
+        && edge.targetArgumentIndex
+          === crossFileMigration.targetArgumentIndex
+        && edge.sourceFingerprint
+          === crossFileMigration.replacementActionSourceFingerprint
+      ));
+      const retiredMutationEvidence = buildRetiredMutationEvidence({
+        previousPolicy,
+        retiredMembership,
+        candidateEdges,
+        crossFileMigration,
+      });
+      if (retiredMutationEvidence.error || candidateEdges.length !== 1) {
+        missingProofs.push({
+          code: "legacy-membership-retirement-replacement-missing",
+          retiredMembershipIdentity: entry.retiredMembershipIdentity,
+          reason: retiredMutationEvidence.error
+            || (candidateEdges.length === 0
+              ? "explicit-cross-file-action-edge-missing"
+              : "explicit-cross-file-action-edge-ambiguous"),
+          successorActionCallEdgeIdentities: candidateEdges
+            .map(({ actionCallEdgeIdentity }) => actionCallEdgeIdentity)
+            .sort(),
+        });
+        continue;
+      }
+      entriesByRetiredIdentity.set(
+        entry.retiredMembershipIdentity,
+        buildCallerToActionLedgerEntry({
+          retiredMembership,
+          retiredMutationEvidence,
+          edge: candidateEdges[0],
+          crossFileMigration,
+          retiredInPhase: entry.retiredInPhase || previousPhase,
+          recordedInPhase: normalizedPhase,
+          backfilled: entry.backfilled,
+        }),
+      );
+      continue;
+    }
     for (const proof of callerToActionEntryProofs(entry)) {
       const observed = normalizedEdges.find(
         (edge) =>
@@ -5745,6 +5805,7 @@ function parseCliArgs(argv) {
     baseSha: "",
     generatedAt: "",
     phase: "P4.0",
+    previousPolicyRevision: "",
     refreshP4Baseline: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -5760,6 +5821,12 @@ function parseCliArgs(argv) {
     } else if (arg === "--phase") {
       args.phase = normalizeP4StateActionPhase(argv[index + 1]);
       index += 1;
+    } else if (arg === "--previous-policy-revision") {
+      args.previousPolicyRevision = String(argv[index + 1] || "").trim();
+      if (!args.previousPolicyRevision) {
+        throw new Error("--previous-policy-revision requires a Git revision");
+      }
+      index += 1;
     } else if (arg === "--refresh-p4-baseline") {
       args.refreshP4Baseline = true;
     } else {
@@ -5773,7 +5840,9 @@ async function main() {
   const args = parseCliArgs(process.argv.slice(2));
   const workingPolicy = args.refreshP4Baseline
     ? null
-    : await readStateWriterPolicy().catch(() => null);
+    : args.previousPolicyRevision
+      ? readStateWriterPolicyAtRevision(args.previousPolicyRevision)
+      : await readStateWriterPolicy().catch(() => null);
   let previousPolicy = workingPolicy;
   let callerToActionBootstrapSeed = [];
   if (

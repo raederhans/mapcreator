@@ -36,6 +36,7 @@ import {
   setPhaseEnteredAtState, setRendererIsInteractingState,
   setRenderPhaseTimerIdState, setRenderPhaseValueState,
 } from "./state/actions/renderer_phase_actions.js";
+import { setDayNightStyleConfigState } from "./state/actions/scenario_presentation_actions.js";
 import {
   beginInteractionRecoveryTaskState, endInteractionRecoveryTaskState,
   setInteractionInfrastructureStateFields, setPendingZoomTransformState,
@@ -2395,13 +2396,11 @@ function getDayNightRuntimeOwner() {
     return dayNightRuntimeOwner;
   }
   dayNightRuntimeOwner = createDayNightRuntimeOwner({
-    runtimeState,
     rendererSurfaceHost,
-    constants: {
-      renderPhaseIdle: RENDER_PHASE_IDLE,
-    },
     getters: {
+      getDayNightStyleConfigState: () => runtimeState.styleConfig?.dayNight,
       isBootInteractionReady,
+      isRenderPhaseIdle: () => runtimeState.renderPhase === RENDER_PHASE_IDLE,
     },
     helpers: {
       clamp,
@@ -2415,7 +2414,9 @@ function getDayNightRuntimeOwner() {
       invalidateRenderPasses,
       renderFallback: render,
       requestRender: requestRendererRender,
-      setPendingDayNightRefreshState,
+      setDayNightStyleConfig: (config) => setDayNightStyleConfigState(runtimeState, config),
+      setPendingDayNightRefresh: (nextPending) => setPendingDayNightRefreshState(runtimeState, nextPending),
+      updateToolbarInputs: refreshPhysicalIntensityUi,
     },
   });
   return dayNightRuntimeOwner;
@@ -3185,7 +3186,7 @@ function getVisualEffectsPassOwner() {
       drawGraticuleTextureLines,
       drawDraftGridTexture,
       drawGraticuleTextureLabels,
-      drawDayNightRuntimePass: (k, options) => getDayNightRuntimeOwner().drawDayNightPass(k, options),
+      drawDayNightRuntimePass: drawDayNightPass,
       recordRenderPerfMetric,
     },
   });
@@ -5146,8 +5147,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
   }
   if (passName === "dayNight") {
     return getDayNightRuntimeOwner().buildDayNightPassSignature(
-      transformSignature,
-      intensityFields.channels.urbanGlow?.revision,
+      transformSignature, intensityFields.channels.urbanGlow?.revision, Number(runtimeState.topologyRevision || 0),
     );
   }
   if (passName === "borders") {

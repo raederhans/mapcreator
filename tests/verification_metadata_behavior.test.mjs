@@ -352,7 +352,7 @@ test("P4.1 full boot root and exact gate stay in the nightly main-thread tier", 
   }
 });
 
-test("P4.3 routes include the render perf owner and its behavior contract", () => {
+test("P4.3 routes include renderer runtime owners and their contracts", () => {
   const routeIds = [
     "verify-core:p4:p4-3-renderer-actions",
     "verify-core:p4:p4-3-renderer-boundary",
@@ -363,6 +363,8 @@ test("P4.3 routes include the render perf owner and its behavior contract", () =
     assert.ok(entry, routeId);
     assert.ok(entry.sourceRefs.includes("js/core/renderer/render_perf_metrics_runtime_owner.js"));
     assert.ok(entry.sourceRefs.includes("tests/render_perf_metrics_runtime_owner_behavior.test.mjs"));
+    assert.ok(entry.sourceRefs.includes("js/core/renderer/day_night_runtime_owner.js"));
+    assert.ok(entry.sourceRefs.includes("tests/day_night_runtime_owner_behavior.test.mjs"));
   }
 
   const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");
@@ -377,6 +379,11 @@ test("P4.3 routes include the render perf owner and its behavior contract", () =
   assert.equal(boundaryEntry.cost, "heavy");
   assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
   assert.equal(boundaryEntry.ciProfile, "full");
+  assert.ok(
+    boundaryEntry.sourceRefs.includes(
+      "tests/test_day_night_runtime_owner_boundary_contract.py",
+    ),
+  );
   assert.ok(
     exactEntry.sourceRefs.includes(
       "tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs",

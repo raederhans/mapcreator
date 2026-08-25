@@ -86,6 +86,7 @@ import {
   validateDerivedAliasTaintTransitionCheckpointProof,
   validateDerivedAliasTaintBaselineTransition,
   validateFrozenCloseoutTargets,
+  validateCallerToActionLedgerHistoryTransition,
 } from "../tools/check_state_writer_policy.mjs";
 import {
   assertP4StateWriterPolicyManifestRunMode,
@@ -7157,6 +7158,94 @@ test("caller-to-action ledger accepts only an exact explicit cross-file migratio
     (error) =>
       error?.code === "caller-action-ledger-proof-missing",
   );
+});
+
+test("an existing caller-to-action proof adopts a newly explicit cross-file handoff", () => {
+  const fixture = createCrossFileMigrationFixture();
+  const legacyDelegation = {
+    ...fixture.actionDelegation,
+    callerPath: fixture.contract.retiredCallerPath,
+    callerBindingId: "module:runtimeState",
+    callerBindingIdentity:
+      fixture.contract.retiredCallerBindingIdentity,
+    enclosingFunctionIdentity:
+      fixture.contract.retiredMutationSites[0]
+        .enclosingFunctionIdentity,
+  };
+  const legacyLedger = buildCallerToActionLedger({
+    phase: "P4.2b",
+    previousPolicy: fixture.previousPolicy,
+    writers: [fixture.actionWriter],
+    retiredLegacySemanticAuthority:
+      fixture.retiredLegacySemanticAuthority,
+    actionDelegations: [legacyDelegation],
+    crossFileMigrationContract: [],
+  });
+  assert.equal(
+    legacyLedger.entries[0].crossFileMigrationContractIdentity,
+    undefined,
+  );
+
+  const previousTransitionPolicy = {
+    writers: [fixture.previousWriter],
+    progress: {
+      latestPhase: "P4.2b",
+      retiredLegacySemanticAuthority:
+        fixture.retiredLegacySemanticAuthority,
+      callerToActionLedger: legacyLedger,
+    },
+  };
+  const transitioned = buildCallerToActionLedger({
+    phase: "P4.2b",
+    previousPolicy: previousTransitionPolicy,
+    writers: [fixture.actionWriter],
+    retiredLegacySemanticAuthority:
+      fixture.retiredLegacySemanticAuthority,
+    actionDelegations: [fixture.actionDelegation],
+    crossFileMigrationContract: [fixture.contract],
+  });
+  assert.deepEqual(
+    {
+      callerPath: transitioned.entries[0].callerPath,
+      callerBindingIdentity:
+        transitioned.entries[0].callerBindingIdentity,
+      enclosingFunctionIdentity:
+        transitioned.entries[0].enclosingFunctionIdentity,
+      crossFileMigrationContractIdentity:
+        transitioned.entries[0]
+          .crossFileMigrationContractIdentity,
+    },
+    {
+      callerPath: fixture.contract.replacementCallerPath,
+      callerBindingIdentity:
+        fixture.contract.replacementCallerBindingIdentity,
+      enclosingFunctionIdentity:
+        fixture.contract.replacementEnclosingFunctionIdentity,
+      crossFileMigrationContractIdentity:
+        fixture.contract.contractIdentity,
+    },
+  );
+  const currentTransitionPolicy = {
+    progress: {
+      latestPhase: "P4.2b",
+      retiredLegacySemanticAuthority:
+        fixture.retiredLegacySemanticAuthority,
+      callerToActionLedger: transitioned,
+    },
+  };
+  assert.deepEqual(validateCallerToActionLedgerHistoryTransition({
+    previousPolicy: previousTransitionPolicy,
+    currentPolicy: currentTransitionPolicy,
+    crossFileMigrationContract: [fixture.contract],
+  }), []);
+  const driftedTransitionPolicy = structuredClone(currentTransitionPolicy);
+  driftedTransitionPolicy.progress.callerToActionLedger.entries[0]
+    .actionExportName = "unregisteredReplacement";
+  assert.ok(validateCallerToActionLedgerHistoryTransition({
+    previousPolicy: previousTransitionPolicy,
+    currentPolicy: driftedTransitionPolicy,
+    crossFileMigrationContract: [fixture.contract],
+  }).some(({ code }) => code === "caller-action-ledger-history-drift"));
 });
 
 test("P4.3 renderer cross-boundary contracts exactly match the frozen retired mutation sites", () => {

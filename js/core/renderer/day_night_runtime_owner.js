@@ -1,5 +1,3 @@
-import { setDayNightStyleConfigState } from "../state/actions/renderer_phase_actions.js";
-
 function requireFunction(value, label) {
   if (typeof value !== "function") {
     throw new TypeError(`createDayNightRuntimeOwner requires ${label}`);
@@ -8,7 +6,6 @@ function requireFunction(value, label) {
 }
 
 export function createDayNightRuntimeOwner({
-  runtimeState,
   rendererSurfaceHost,
   constants = {},
   getters = {},
@@ -16,15 +13,19 @@ export function createDayNightRuntimeOwner({
   effects = {},
   platform = globalThis,
 } = {}) {
-  if (!runtimeState || typeof runtimeState !== "object") {
-    throw new TypeError("createDayNightRuntimeOwner requires runtimeState");
-  }
   if (!rendererSurfaceHost || typeof rendererSurfaceHost !== "object") {
     throw new TypeError("createDayNightRuntimeOwner requires rendererSurfaceHost");
   }
   const clockIntervalMs = Number(constants.clockIntervalMs) || 15_000;
   const cycleFrameIntervalMs = Number(constants.cycleFrameIntervalMs) || (1000 / 30);
-  const renderPhaseIdle = constants.renderPhaseIdle;
+  const getDayNightStyleConfigState = requireFunction(
+    getters.getDayNightStyleConfigState,
+    "getters.getDayNightStyleConfigState",
+  );
+  const isRenderPhaseIdle = requireFunction(
+    getters.isRenderPhaseIdle,
+    "getters.isRenderPhaseIdle",
+  );
   const isBootInteractionReady = requireFunction(
     getters.isBootInteractionReady,
     "getters.isBootInteractionReady",
@@ -51,19 +52,26 @@ export function createDayNightRuntimeOwner({
   );
   const requestRender = requireFunction(effects.requestRender, "effects.requestRender");
   const renderFallback = requireFunction(effects.renderFallback, "effects.renderFallback");
-  const setPendingDayNightRefreshState = requireFunction(
-    effects.setPendingDayNightRefreshState,
-    "effects.setPendingDayNightRefreshState",
+  const setDayNightStyleConfig = requireFunction(
+    effects.setDayNightStyleConfig,
+    "effects.setDayNightStyleConfig",
   );
-
+  const setPendingDayNightRefresh = requireFunction(
+    effects.setPendingDayNightRefresh,
+    "effects.setPendingDayNightRefresh",
+  );
+  const updateToolbarInputs = requireFunction(
+    effects.updateToolbarInputs,
+    "effects.updateToolbarInputs",
+  );
   let clockTimerId = null;
   let clockFrameHandle = null;
   let lastClockToken = "";
   let lastCycleFrameAt = 0;
 
   function getDayNightStyleConfig() {
-    const config = normalizeDayNightStyleConfig(runtimeState.styleConfig?.dayNight);
-    return setDayNightStyleConfigState(runtimeState, config);
+    const config = normalizeDayNightStyleConfig(getDayNightStyleConfigState());
+    return setDayNightStyleConfig(config);
   }
 
   function getUtcDateKey(date = createDate()) {
@@ -159,7 +167,7 @@ export function createDayNightRuntimeOwner({
       .precision(2)();
   }
 
-  function drawDayNightShadowLayer(_k, config, solarState) {
+  function drawDayNightShadowLayer(k, config, solarState) {
     const twilightBand = buildNightHemisphereFeature(solarState, 90);
     if (!twilightBand) return;
     const coreRadius = clamp(90 - Number(config.twilightWidthDeg || 10), 56, 89);
@@ -186,7 +194,7 @@ export function createDayNightRuntimeOwner({
 
     context.strokeStyle = "#8aa1ba";
     context.globalAlpha = clamp(config.shadowOpacity * 0.28, 0, 0.24);
-    context.lineWidth = 1.1 / Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
+    context.lineWidth = 1.1 / Math.max(0.0001, Number(k || 1));
     context.beginPath();
     pathCanvas(twilightBand);
     context.stroke();
@@ -220,8 +228,8 @@ export function createDayNightRuntimeOwner({
   }
 
   function requestDayNightClockRender(reason) {
-    if (runtimeState.renderPhase !== renderPhaseIdle) {
-      setPendingDayNightRefreshState(runtimeState, true);
+    if (!isRenderPhaseIdle()) {
+      setPendingDayNightRefresh(true);
       return;
     }
     invalidateRenderPasses("dayNight", reason);
@@ -289,18 +297,18 @@ export function createDayNightRuntimeOwner({
       const nextToken = getDayNightLiveClockToken(config);
       if (nextToken === lastClockToken) return;
       lastClockToken = nextToken;
-      runtimeState.updateToolbarInputsFn?.();
+      updateToolbarInputs();
       if (!config.enabled) return;
       requestDayNightClockRender("day-night-clock");
     }, clockIntervalMs);
     return true;
   }
 
-  function buildDayNightPassSignature(transformSignature, urbanGlowRevision) {
+  function buildDayNightPassSignature(transformSignature, urbanGlowRevision, topologyRevision) {
     const config = getDayNightStyleConfig();
     return [
       transformSignature,
-      runtimeState.topologyRevision || 0,
+      topologyRevision || 0,
       `field:urbanGlow:${Number(urbanGlowRevision || 0)}`,
       stableJson(config),
       getDayNightSignatureClockToken(config),
@@ -315,7 +323,7 @@ export function createDayNightRuntimeOwner({
     drawNightLightsLayer(k, config, solarState);
   }
 
-  return {
+  return Object.freeze({
     buildNightHemisphereFeature,
     buildDayNightPassSignature,
     clearDayNightClockTimer,
@@ -331,5 +339,5 @@ export function createDayNightRuntimeOwner({
     getUtcDateKey,
     getUtcDayOfYear,
     syncDayNightClockTimer,
-  };
+  });
 }

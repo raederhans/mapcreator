@@ -1387,6 +1387,45 @@ test("plans full selector roots once with supersession, process argv, and route 
   );
 });
 
+test("City Lights layer keeps one canonical wrapper invocation beside the city aggregate", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+  const wrapper = "node tools/e2e_layering.mjs run-spec tests/e2e/city_lights_layer_regression.spec.js";
+  const plan = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["test:e2e:city-rendering", wrapper],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.deepEqual(
+    plan.rootRecords.map(({ commandRef, disposition, supersededBy }) => ({
+      commandRef,
+      disposition,
+      ...(supersededBy ? { supersededBy } : {}),
+    })),
+    [
+      { commandRef: "test:e2e:city-rendering", disposition: "planned" },
+      { commandRef: wrapper, disposition: "planned" },
+    ],
+  );
+  const cityLightsExecutions = plan.executions.filter((entry) => (
+    entry.logicalArgv.includes("tests/e2e/city_lights_layer_regression.spec.js")
+  ));
+  assert.equal(cityLightsExecutions.length, 1);
+  assert.deepEqual(cityLightsExecutions[0].logicalArgv, [
+    "tools/e2e_layering.mjs",
+    "run-spec",
+    "tests/e2e/city_lights_layer_regression.spec.js",
+  ]);
+  const aggregateExecution = plan.executions.find((entry) => (
+    entry.provenance.some(({ rootCommandRef }) => rootCommandRef === "test:e2e:city-rendering")
+  ));
+  assert.ok(aggregateExecution);
+  assert.equal(
+    aggregateExecution.logicalArgv.includes("tests/e2e/city_lights_layer_regression.spec.js"),
+    false,
+  );
+});
+
 test("plans distinct selector E2E roots by spec identity", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
   const selectorRoutes = buildRouteIndex();

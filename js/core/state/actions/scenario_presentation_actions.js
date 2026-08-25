@@ -67,6 +67,15 @@ export function setActiveScenarioPerformanceHintsState(target, value) {
   return value;
 }
 
+export function setDayNightStyleConfigState(target, config) {
+  assertStateTarget(target);
+  if (!target.styleConfig || typeof target.styleConfig !== "object") {
+    target.styleConfig = {};
+  }
+  target.styleConfig.dayNight = config;
+  return config;
+}
+
 function validateCompletePatch(patch) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new TypeError("[scenario_presentation_actions] patch must be an object");

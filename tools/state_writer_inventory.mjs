@@ -5,6 +5,7 @@ import { parse } from "acorn";
 import * as walk from "acorn-walk";
 
 import {
+  STATE_MUTATION_DELEGATING_OWNER_CONTRACT,
   findStateActionDelegationContractEntry,
   findStateImportedPureNormalizerContractEntry,
   findStateDetachedCaptureContractEntry,
@@ -528,6 +529,7 @@ function declarationScopeForVariable(scope, declarationKind) {
 function buildAstAnalysis(ast) {
   const rootScope = createScope("program", ast, null);
   const nodeScopes = new WeakMap();
+  const parentNodes = new WeakMap();
   const identifierRecords = new WeakMap();
   const functionRecords = [];
   const allBindingRecords = [];
@@ -548,6 +550,7 @@ function buildAstAnalysis(ast) {
     if (!isAstNode(node)) {
       return;
     }
+    if (parent) parentNodes.set(node, parent);
 
     if (node.type === "FunctionDeclaration" && node.id) {
       registerPattern(node.id, scope, {
@@ -776,6 +779,9 @@ function buildAstAnalysis(ast) {
     ast,
     rootScope,
     nodeScopes,
+    parentNodeForNode(node) {
+      return parentNodes.get(node) || null;
+    },
     identifierRecords,
     functionRecords: functionRecords.sort(
       (left, right) => left.node.start - right.node.start,
@@ -2264,6 +2270,12 @@ function analyzeBindingMutations(
     if (isSanctionedMutationDelegatingOwnerBindingRead(node)) {
       return { status: "none", reference: null };
     }
+    if (
+      isSanctionedMutationDelegatingOwnerCompositionClosureRead()
+      && !isImportedActionTargetNode(node)
+    ) {
+      return { status: "none", reference: null };
+    }
     if (node.type === "AwaitExpression") {
       return referenceClassification(node.argument, aliasRecords);
     }
@@ -2307,6 +2319,12 @@ function analyzeBindingMutations(
       }
       if (isSanctionedMutationDelegatingOwnerFactoryCall(node)) {
         return { status: "none", reference: null };
+      }
+      if (
+        mutationDelegatingOwnerGetterContracts(node).length > 0
+        && !isSanctionedMutationDelegatingOwnerGetterCall(node)
+      ) {
+        return { status: "maybe", reference: null };
       }
       if (isSanctionedMutationDelegatingOwnerGetterCall(node)) {
         return { status: "none", reference: null };
@@ -3503,20 +3521,24 @@ function analyzeBindingMutations(
     );
   }
 
-  function isSanctionedMutationDelegatingOwnerFactoryCall(callNode) {
-    if (!recognizeCurrentContracts) return false;
+  function mutationDelegatingOwnerFactoryContractForCall(callNode) {
     const callee = unwrapChain(callNode?.callee);
-    if (callee?.type !== "Identifier" || callNode.optional === true) return false;
+    if (callee?.type !== "Identifier" || callNode.optional === true) return null;
     const record = analysis.resolveIdentifier(callee);
     if (
       record?.kind !== "import"
       || record.importKind !== "ImportSpecifier"
       || isIdentityTransitionRecord(record)
-    ) return false;
-    const contract = findStateMutationDelegatingOwnerFactoryContractEntry(
+    ) return null;
+    return findStateMutationDelegatingOwnerFactoryContractEntry(
       resolveProjectLocalImportPath(record.importSource),
       record.importedName,
     );
+  }
+
+  function isSanctionedMutationDelegatingOwnerFactoryCall(callNode) {
+    if (!recognizeCurrentContracts) return false;
+    const contract = mutationDelegatingOwnerFactoryContractForCall(callNode);
     const ownerFunction = currentExecutionFunction();
     if (
       !contract
@@ -3531,11 +3553,12 @@ function analyzeBindingMutations(
       === contract.compositionSourceFingerprint;
   }
 
-  function mutationDelegatingOwnerContractForCurrentModule() {
-    if (!recognizeCurrentContracts) return null;
-    return findStateMutationDelegatingOwnerFactoryContractEntry(
-      "js/core/renderer/render_perf_metrics_runtime_owner.js",
-      "createRenderPerfMetricsRuntimeOwner",
+  function mutationDelegatingOwnerContractsForCurrentModule() {
+    const normalizedFilePath = String(filePath || "")
+      .replaceAll("\\", "/")
+      .replace(/^\.\//, "");
+    return STATE_MUTATION_DELEGATING_OWNER_CONTRACT.filter(
+      ({ compositionModulePath }) => compositionModulePath === normalizedFilePath,
     );
   }
 
@@ -3554,29 +3577,94 @@ function analyzeBindingMutations(
       .digest("hex") === contract.compositionSourceFingerprint;
   }
 
+  function hasSingleSanctionedMutationDelegatingOwnerFactoryCall(
+    contract,
+    compositionFunction,
+  ) {
+    let sanctionedFactoryCallCount = 0;
+    walk.full(compositionFunction.body, (node) => {
+      if (
+        node.type === "CallExpression"
+        && mutationDelegatingOwnerFactoryContractForCall(node) === contract
+      ) sanctionedFactoryCallCount += 1;
+    });
+    return sanctionedFactoryCallCount === 1;
+  }
+
   function isSanctionedMutationDelegatingOwnerBindingRead(node) {
     if (node?.type !== "Identifier") return false;
-    const contract = mutationDelegatingOwnerContractForCurrentModule();
-    return Boolean(
-      node.name === contract?.ownerBindingName
+    return mutationDelegatingOwnerContractsForCurrentModule().some((contract) => (
+      node.name === contract.ownerBindingName
       && hasExactMutationDelegatingOwnerCompositionFunction(
         contract,
         currentExecutionFunction(),
       )
-    );
+      && hasSingleSanctionedMutationDelegatingOwnerFactoryCall(
+        contract,
+        currentExecutionFunction(),
+      )
+    ));
+  }
+
+  function isSanctionedMutationDelegatingOwnerCompositionClosureRead() {
+    const activeFunctions = executionFunctionStack.filter(Boolean);
+    if (!activeFunctions.length) return false;
+    let compositionFunction = activeFunctions.at(-1);
+    let functionRecord = functionRecordForNode(compositionFunction);
+    let parentScope = functionRecord?.parentScope || null;
+    while (parentScope) {
+      if (isFunctionNode(parentScope.node)) {
+        compositionFunction = parentScope.node;
+      }
+      parentScope = parentScope.parent;
+    }
+    if (compositionFunction === activeFunctions.at(-1)) return false;
+    return mutationDelegatingOwnerContractsForCurrentModule().some((contract) => {
+      if (!hasExactMutationDelegatingOwnerCompositionFunction(
+        contract,
+        compositionFunction,
+      )) return false;
+      return hasSingleSanctionedMutationDelegatingOwnerFactoryCall(
+        contract,
+        compositionFunction,
+      );
+    });
+  }
+
+  function mutationDelegatingOwnerGetterContracts(node) {
+    if (node?.type !== "CallExpression" || node.callee?.type !== "Identifier") {
+      return [];
+    }
+    const ownerGetter = directImmutableLocalHelperNode(node);
+    return mutationDelegatingOwnerContractsForCurrentModule().filter((contract) => (
+      hasExactMutationDelegatingOwnerCompositionFunction(contract, ownerGetter)
+      && hasSingleSanctionedMutationDelegatingOwnerFactoryCall(
+        contract,
+        ownerGetter,
+      )
+    ));
+  }
+
+  function isImportedActionTargetNode(node) {
+    const parent = analysis.parentNodeForNode(node);
+    if (parent?.type !== "CallExpression") return false;
+    const delegation = importedTargetDelegation(parent);
+    const targetIndex = delegation?.actionContract?.targetArgumentIndex;
+    return Number.isInteger(targetIndex)
+      && unwrapChain(parent.arguments?.[targetIndex]) === node;
   }
 
   function isSanctionedMutationDelegatingOwnerGetterCall(node) {
-    if (node?.type !== "CallExpression" || node.callee?.type !== "Identifier") {
-      return false;
+    let member = analysis.parentNodeForNode(node);
+    if (member?.type === "ChainExpression") {
+      member = analysis.parentNodeForNode(member);
     }
-    const contract = mutationDelegatingOwnerContractForCurrentModule();
-    if (!contract?.methods.includes(currentExecutionFunction()?.id?.name)) {
-      return false;
-    }
-    return hasExactMutationDelegatingOwnerCompositionFunction(
-      contract,
-      directImmutableLocalHelperNode(node),
+    const delegatingMethodName = member?.type === "MemberExpression"
+      && unwrapChain(member.object) === node
+      ? staticPropertyName(member.property, member.computed)
+      : "";
+    return mutationDelegatingOwnerGetterContracts(node).some(
+      (contract) => contract.methods.includes(delegatingMethodName),
     );
   }
 

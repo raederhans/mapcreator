@@ -509,6 +509,7 @@ test("P4.3 renderer cross-boundary proofs lock retired evidence and exact replac
       ["js/core/map_renderer.js", "dprLastStageSwitchAt", "commitRendererDprStageState", 1],
       ["js/core/map_renderer.js", "dprStage", "commitRendererDprStageState", 1],
       ["js/core/map_renderer.js", "firstVisibleFramePainted", "setFirstVisibleFramePaintedState", 1],
+      ["js/core/map_renderer.js", "pendingDayNightRefresh", "setPendingDayNightRefreshState", 2],
       ["js/core/map_renderer.js", "pendingExactPoliticalFastFrame", "setPendingExactPoliticalFastFrameState", 2],
       ["js/core/map_renderer.js", "projectedBoundsById", "commitProjectedBoundsCacheState", 1],
       ["js/core/map_renderer.js", "projectedBoundsDiagnostics", "setProjectedBoundsDiagnosticsState", 2],
@@ -591,6 +592,120 @@ test("P4.3 renderer cross-boundary proofs lock retired evidence and exact replac
       proof.replacementActionSourceFingerprint,
     );
   }
+});
+
+test("Day/Night actions have one registry owner and one live canonical handoff", () => {
+  const entries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+    ({ exportName }) => exportName === "setDayNightStyleConfigState",
+  );
+  assert.deepEqual(entries.map(({ modulePath, targetArgumentIndex, introducedInPhase }) => ({
+    modulePath,
+    targetArgumentIndex,
+    introducedInPhase,
+  })), [{
+    modulePath: "js/core/state/actions/scenario_presentation_actions.js",
+    targetArgumentIndex: 0,
+    introducedInPhase: "P4.3",
+  }]);
+
+  const proof = STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT.find(
+    ({ key }) => key === "pendingDayNightRefresh",
+  );
+  assert.ok(proof);
+  assert.equal(proof.replacementCallerPath, "js/core/map_renderer.js");
+  const source = fs.readFileSync(proof.replacementCallerPath, "utf8");
+  const actionCall = "setPendingDayNightRefreshState(runtimeState, nextPending)";
+  assert.equal(source.split(actionCall).length - 1, 1);
+  assert.equal(
+    createHash("sha256").update(actionCall).digest("hex"),
+    proof.replacementActionSourceFingerprint,
+  );
+
+  const ownerProof = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createDayNightRuntimeOwner",
+  );
+  assert.ok(ownerProof);
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource: fs.readFileSync(ownerProof.compositionModulePath, "utf8"),
+    factorySource: fs.readFileSync(ownerProof.factoryModulePath, "utf8"),
+    entry: ownerProof,
+  }).violations, []);
+
+  const ownerSlice = source.match(
+    /function getDayNightRuntimeOwner\(\) \{[\s\S]*?\n\}/,
+  )[0];
+  const scannerFixture = [
+    'import { state as runtimeState } from "./state.js";',
+    'import { createDayNightRuntimeOwner } from "./renderer/day_night_runtime_owner.js";',
+    'import { setPendingDayNightRefreshState } from "./state/actions/renderer_phase_actions.js";',
+    'import { setDayNightStyleConfigState } from "./state/actions/scenario_presentation_actions.js";',
+    "let dayNightRuntimeOwner = null;",
+    ownerSlice,
+    "export function buildRenderPassSignature() { return getDayNightRuntimeOwner().buildDayNightPassSignature(\"transform\", 0, 0); }",
+    "export function getDayNightStyleConfig() { return getDayNightRuntimeOwner().getDayNightStyleConfig(); }",
+    "export function syncDayNightClockTimer() { return getDayNightRuntimeOwner().syncDayNightClockTimer(); }",
+    "",
+  ].join("\n");
+  const inventory = scanStateMutationInventory(scannerFixture, {
+    filePath: ownerProof.compositionModulePath,
+    bindings: [{
+      id: "module:runtimeState",
+      kind: "module",
+      name: "runtimeState",
+      importSource: "./state.js",
+      importedName: "state",
+    }],
+  });
+  assert.deepEqual(inventory.findings, []);
+  const rawInventory = scanStateMutationInventory(scannerFixture, {
+    filePath: ownerProof.compositionModulePath,
+    bindings: [{
+      id: "module:runtimeState",
+      kind: "module",
+      name: "runtimeState",
+      importSource: "./state.js",
+      importedName: "state",
+    }],
+    recognizeCurrentContracts: false,
+  });
+  assert.deepEqual(rawInventory.findings, []);
+  assert.deepEqual(
+    inventory.actionDelegations.map(({ actionExportName }) => actionExportName).sort(),
+    ["setDayNightStyleConfigState", "setPendingDayNightRefreshState"],
+  );
+  const unregisteredMethodInventory = scanStateMutationInventory(
+    `${scannerFixture}\ngetDayNightRuntimeOwner().unregisteredMethod();\n`,
+    {
+      filePath: ownerProof.compositionModulePath,
+      bindings: [{
+        id: "module:runtimeState",
+        kind: "module",
+        name: "runtimeState",
+        importSource: "./state.js",
+        importedName: "state",
+      }],
+      recognizeCurrentContracts: false,
+    },
+  );
+  assert.ok(unregisteredMethodInventory.findings.length > 0);
+  const unknownOwnerInventory = scanStateMutationInventory(
+    scannerFixture.replace(
+      "createDayNightRuntimeOwner } from",
+      "createUnknownRuntimeOwner as createDayNightRuntimeOwner } from",
+    ),
+    {
+      filePath: ownerProof.compositionModulePath,
+      bindings: [{
+        id: "module:runtimeState",
+        kind: "module",
+        name: "runtimeState",
+        importSource: "./state.js",
+        importedName: "state",
+      }],
+      recognizeCurrentContracts: false,
+    },
+  );
+  assert.ok(unknownOwnerInventory.findings.length > 0);
 });
 
 test("compatibility API returns findings plus canonical named action delegation edges", () => {
