@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 const REPO_ROOT = process.cwd();
 
@@ -206,6 +207,10 @@ function readProjectFile(relativePath) {
     throw new Error(`Missing required architecture file: ${relativePath}`);
   }
   return fs.readFileSync(absolutePath, "utf8");
+}
+
+export function includesExactLfFragment(source, lfFragment) {
+  return String(source).replace(/\r\n?/g, "\n").includes(lfFragment);
 }
 
 function lineCount(source) {
@@ -3500,7 +3505,7 @@ function collectFailures() {
     "  return getClickSelectionTransactionOwner().handleClick(event, interactionContext);",
     "}",
   ].join("\n");
-  if (!renderer.includes(clickFacade)) {
+  if (!includesExactLfFragment(renderer, clickFacade)) {
     failures.push(`${FILES.renderer} must keep the exact P3.3 click transaction facade.`);
   }
   for (const token of [
@@ -5907,4 +5912,6 @@ function main() {
   console.log("Architecture boundary check passed.");
 }
 
-main();
+if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+  main();
+}

@@ -5,6 +5,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { includesExactLfFragment } from "../tools/check_architecture_boundaries.mjs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -452,6 +454,23 @@ test("transaction owner keeps the global branch spine and branch-local order", (
     step.syncEffectful("special sidebar refresh", "refreshSpecialRegionSidebarRowsNow([previousSpecialRegionId]);"),
     step.syncEffectful("special invalidation", "requestInteractionRender(\"clear-special-selection-empty-click\");"),
   ], "empty click must preserve action, sidebar, and invalidation order");
+});
+
+test("click facade architecture matcher accepts LF and CRLF while token drift fails closed", () => {
+  const facade = [
+    "async function handleClick(event, interactionContext = null) {",
+    "  return getClickSelectionTransactionOwner().handleClick(event, interactionContext);",
+    "}",
+  ].join("\n");
+  assert.equal(includesExactLfFragment(facade, facade), true);
+  assert.equal(includesExactLfFragment(facade.replaceAll("\n", "\r\n"), facade), true);
+  assert.equal(
+    includesExactLfFragment(
+      facade.replace("getClickSelectionTransactionOwner", "getDriftedClickSelectionOwner"),
+      facade,
+    ),
+    false,
+  );
 });
 
 test("land water special and empty click branches remain in the transaction owner", () => {
