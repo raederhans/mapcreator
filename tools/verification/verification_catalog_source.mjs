@@ -373,9 +373,11 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:renderer-political-pass-orchestration-preflight": "node --test tests/renderer_political_pass_orchestration_preflight.test.mjs",
     "test:node:political-pass-orchestrator-owner": "node --test tests/political_pass_orchestrator_owner_behavior.test.mjs",
     "test:node:political-background-render-owner": "node --test tests/political_background_render_owner_behavior.test.mjs",
+    "test:node:political-partial-repaint-owner": "node --test tests/political_partial_repaint_owner_behavior.test.mjs",
     "test:node:political-pass-orchestrator-owner-suite": "npm run test:node:political-pass-orchestrator-owner && npm run test:node:renderer-political-pass-orchestration-preflight && npm run test:python:map-renderer-political-pass-orchestrator-boundary",
     "test:python:map-renderer-political-pass-orchestrator-boundary": "npm run python -- -m unittest tests.test_map_renderer_political_pass_orchestrator_boundary_contract -q",
     "test:python:map-renderer-political-background-render-owner-boundary": "npm run python -- -m unittest tests.test_map_renderer_political_background_render_owner_boundary_contract -q",
+    "test:python:map-renderer-political-partial-repaint-owner-boundary": "npm run python -- -m unittest tests.test_map_renderer_political_partial_repaint_owner_boundary_contract -q",
     "test:python:map-renderer-render-pipeline-passes-boundary": "npm run python -- -m unittest tests.test_map_renderer_render_pipeline_passes_boundary_contract tests.test_map_renderer_strategic_values_render_contract -q",
     "verify:core:list": "node tools/run_core_verification.mjs --list",
     "verify:core": "node tools/run_core_verification.mjs",
@@ -735,6 +737,86 @@ const AUTHORED_VERIFICATION_METADATA = {
     ]
   },
   "records": [
+    {
+      "id": "node:test:node:political-partial-repaint-owner",
+      "commandRef": "test:node:political-partial-repaint-owner",
+      "sourceRefs": [
+        "js/core/renderer/political_partial_repaint_owner.js",
+        "tests/political_partial_repaint_owner_behavior.test.mjs"
+      ],
+      "ownerHints": ["renderer-runtime"],
+      "domains": ["renderer-runtime"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": null,
+      "selectorOrder": null,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "verify-core:test:node:political-partial-repaint-owner",
+      "commandRef": "test:node:political-partial-repaint-owner",
+      "sourceRefs": [
+        "js/core/renderer/political_partial_repaint_owner.js",
+        "package.json",
+        "tests/political_partial_repaint_owner_behavior.test.mjs"
+      ],
+      "ownerHints": ["renderer-runtime"],
+      "domains": ["renderer-runtime"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": null,
+      "selectorOrder": null,
+      "verification": {
+        "commandType": "package-script",
+        "packageScriptRequired": true,
+        "verifyCoreDefaultGroup": "renderer-owner",
+        "supervisorDomain": "renderer-runtime",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "verify-core:test:python:map-renderer-political-partial-repaint-owner-boundary",
+      "commandRef": "test:python:map-renderer-political-partial-repaint-owner-boundary",
+      "sourceRefs": [
+        "js/core/map_renderer.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
+        "package.json",
+        "tests/test_map_renderer_political_partial_repaint_owner_boundary_contract.py",
+        "tools/check_architecture_boundaries.mjs",
+        "tools/renderer_pass_family_inventory.mjs"
+      ],
+      "ownerHints": ["renderer-runtime"],
+      "domains": ["renderer-runtime"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": null,
+      "selectorOrder": null,
+      "verification": {
+        "commandType": "package-script",
+        "packageScriptRequired": true,
+        "verifyCoreDefaultGroup": "renderer-owner",
+        "supervisorDomain": "renderer-runtime",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
     {
       "id": "node:test:node:political-background-render-owner",
       "commandRef": "test:node:political-background-render-owner",
@@ -3082,7 +3164,8 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/renderer/visual_effects_pass_owner.js",
         "js/core/renderer/context_pass_orchestrator_owner.js",
         "js/core/renderer/political_pass_orchestrator_owner.js",
-        "js/core/renderer/political_background_render_owner.js"
+        "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js"
       ],
       "ownerHints": [
         "perf-runtime"
@@ -11659,7 +11742,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:e2e:physical-layer-runtime-contract",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
-        "js/core/renderer/political_background_render_owner.js"
+        "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js"
       ],
       "ownerHints": [
         "map-layer"
@@ -11701,7 +11785,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:e2e:dev:political-progressive-recovery",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
-        "js/core/renderer/political_background_render_owner.js"
+        "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js"
       ],
       "ownerHints": [
         "renderer-runtime"
@@ -11744,6 +11829,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
         "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
         "tests/scenario_chunk_contracts.test.mjs"
       ],
       "ownerHints": [
@@ -11782,7 +11868,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:e2e:dev:scenario-chunk-runtime",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
-        "js/core/renderer/political_background_render_owner.js"
+        "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js"
       ],
       "ownerHints": [
         "scenario-runtime"
@@ -11824,7 +11911,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:e2e:scenario-resilience",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
-        "js/core/renderer/political_background_render_owner.js"
+        "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js"
       ],
       "ownerHints": [
         "scenario-runtime"
@@ -11866,7 +11954,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:e2e:tno-contracts",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
-        "js/core/renderer/political_background_render_owner.js"
+        "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js"
       ],
       "ownerHints": [
         "tno-startup"
@@ -11908,7 +11997,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:e2e:water-rendering",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
-        "js/core/renderer/political_background_render_owner.js"
+        "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js"
       ],
       "ownerHints": [
         "scenario-runtime"
@@ -11950,6 +12040,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:node:political-raster-worker-packet",
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
         "js/core/map_renderer/political_raster_worker_packet.js",
         "tests/political_raster_worker_packet_behavior.test.mjs"
       ],
@@ -12388,6 +12479,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/renderer/day_night_runtime_owner.js",
         "js/core/renderer/visual_effects_pass_owner.js",
         "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
         "js/core/map_renderer/click_selection_transaction_owner.js",
         "js/core/map_renderer/exact_after_settle_scheduler.js",
         "js/bootstrap/startup_bootstrap_support.js",
@@ -14337,6 +14429,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/renderer/day_night_runtime_owner.js",
         "js/core/renderer/visual_effects_pass_owner.js",
         "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
         "js/core/state_defaults.js",
         "js/core/map_renderer/exact_after_settle_scheduler.js",
         "js/bootstrap/startup_bootstrap_support.js",
@@ -14412,6 +14505,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/renderer/day_night_runtime_owner.js",
         "js/core/renderer/visual_effects_pass_owner.js",
         "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
         "js/core/map_renderer/click_selection_transaction_owner.js",
         "js/core/map_renderer/exact_after_settle_scheduler.js",
         "js/bootstrap/startup_bootstrap_support.js",
@@ -15249,6 +15343,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "sourceRefs": [
         "js/core/renderer/political_pass_orchestrator_owner.js",
         "js/core/renderer/political_background_render_owner.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
         "tests/political_pass_orchestrator_owner_behavior.test.mjs",
         "docs/active/renderer-political-pass-orchestrator-owner-p3-3b-20260714.md",
         "package.json"

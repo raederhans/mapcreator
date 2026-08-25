@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER = REPO_ROOT / "js" / "core" / "map_renderer.js"
 OWNER = REPO_ROOT / "js" / "core" / "renderer" / "political_background_render_owner.js"
+PARTIAL_OWNER = REPO_ROOT / "js" / "core" / "renderer" / "political_partial_repaint_owner.js"
 
 
 class PoliticalBackgroundRenderOwnerBoundaryContractTest(unittest.TestCase):
@@ -56,6 +57,7 @@ class PoliticalBackgroundRenderOwnerBoundaryContractTest(unittest.TestCase):
     def test_owner_uses_injected_ports_and_preserves_p3_5_seam(self):
         renderer = MAP_RENDERER.read_text(encoding="utf-8")
         owner = OWNER.read_text(encoding="utf-8")
+        partial_owner = PARTIAL_OWNER.read_text(encoding="utf-8")
         self.assertNotRegex(owner, re.compile(r"^\s*import\s", re.MULTILINE))
         for forbidden in ("runtimeState", "document.", "window.", "globalThis", "from \"../map_renderer"):
             self.assertNotIn(forbidden, owner)
@@ -66,6 +68,8 @@ class PoliticalBackgroundRenderOwnerBoundaryContractTest(unittest.TestCase):
         ):
             self.assertRegex(renderer, rf"function\s+{symbol}\s*\(")
             self.assertIsNone(re.search(rf"function\s+{symbol}\s*\(", owner), symbol)
+        for symbol in ("tryPartialPoliticalPassRepaint", "buildPoliticalRasterWorkerPacket"):
+            self.assertRegex(partial_owner, rf"function\s+{symbol}\s*\(")
         self.assertIn("requestPoliticalRasterWorkerPass,", renderer)
         self.assertNotIn("requestPoliticalRasterWorkerPass", owner)
 

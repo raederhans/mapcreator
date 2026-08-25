@@ -250,11 +250,13 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn('return "coarse-baseline";', renderer_content)
         self.assertIn('return "scene-snapshot-mismatch";', renderer_content)
         self.assertIn('return "scenario-data-generation-mismatch";', renderer_content)
-        partial_repaint_body = renderer_content.split("function tryPartialPoliticalPassRepaint(", 1)[1].split(
-            "\nfunction resolvePoliticalPassIdentity",
-            1,
-        )[0]
-        self.assertIn("const fineBaselineMismatch = getPoliticalPassFineBaselineMismatch(transform);", partial_repaint_body)
+        political_partial_owner_content = (
+            REPO_ROOT / "js" / "core" / "renderer" / "political_partial_repaint_owner.js"
+        ).read_text(encoding="utf-8")
+        partial_repaint_body = political_partial_owner_content.split(
+            "function tryPartialPoliticalPassRepaint(", 1
+        )[1].split("\n  function recordPoliticalRasterWorkerSnapshot", 1)[0]
+        self.assertIn("const fineBaselineMismatch = helper.getPoliticalPassFineBaselineMismatch(transform);", partial_repaint_body)
         self.assertIn("return fallback(fineBaselineMismatch);", partial_repaint_body)
         political_draw_body = political_pass_owner_content.split("function drawPoliticalPass(", 1)[1].split(
             "\n  return Object.freeze",

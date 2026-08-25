@@ -37,13 +37,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 337);
-  assert.equal(summary.contributorRecords, 424);
-  assert.equal(summary.verificationRecordProjectionCount, 133);
-  assert.equal(summary.routeProjectionCount, 383);
-  assert.equal(summary.commandCount, 340);
+  assert.equal(summary.packageScriptCount, 339);
+  assert.equal(summary.contributorRecords, 427);
+  assert.equal(summary.verificationRecordProjectionCount, 135);
+  assert.equal(summary.routeProjectionCount, 386);
+  assert.equal(summary.commandCount, 342);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 424);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 427);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -766,6 +766,24 @@ test("P3.1 through P3.3b pass-family contracts stay in the child-safe renderer l
       ],
     },
     {
+      id: "verify-core:test:node:political-partial-repaint-owner",
+      commandRef: "test:node:political-partial-repaint-owner",
+      requiredSourceRefs: [
+        "js/core/renderer/political_partial_repaint_owner.js",
+        "tests/political_partial_repaint_owner_behavior.test.mjs",
+        "package.json",
+      ],
+    },
+    {
+      id: "verify-core:test:python:map-renderer-political-partial-repaint-owner-boundary",
+      commandRef: "test:python:map-renderer-political-partial-repaint-owner-boundary",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/political_partial_repaint_owner.js",
+        "tests/test_map_renderer_political_partial_repaint_owner_boundary_contract.py",
+      ],
+    },
+    {
       id: "verify-core:test:node:political-background-render-owner",
       commandRef: "test:node:political-background-render-owner",
       requiredSourceRefs: [
@@ -941,6 +959,34 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
     );
   }
 
+  const politicalPartialReport = buildRecommendation([
+    "js/core/renderer/political_partial_repaint_owner.js",
+  ]);
+  const politicalPartialCommandRefs = new Set(
+    politicalPartialReport.recommendedCommands.map((command) => command.commandRef),
+  );
+  assert.deepEqual(politicalPartialReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:political-partial-repaint-owner",
+    "test:python:map-renderer-political-partial-repaint-owner-boundary",
+    "test:node:political-pass-orchestrator-owner",
+    "test:node:scenario-chunk-contracts",
+    "test:node:political-raster-worker-packet",
+    "perf:gate",
+    "test:e2e:dev:political-progressive-recovery",
+    "test:e2e:dev:scenario-chunk-runtime",
+    "test:e2e:scenario-resilience",
+    "test:e2e:physical-layer-runtime-contract",
+    "test:e2e:water-rendering",
+    "test:e2e:tno-contracts",
+  ]) {
+    assert.equal(
+      politicalPartialCommandRefs.has(commandRef),
+      true,
+      `political partial repaint owner should select ${commandRef}`,
+    );
+  }
+
   assert.match(
     packageJson.scripts["test:python:map-renderer-render-pipeline-passes-boundary"],
     /tests\.test_map_renderer_render_pipeline_passes_boundary_contract[\s\S]*tests\.test_map_renderer_strategic_values_render_contract/,
@@ -973,8 +1019,8 @@ test("verify-core default plan preserves metadata closure before command superse
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 93);
-  assert.equal(plan.commandsToRun.length, 87);
+  assert.equal(metadataDefaultRefs.length, 95);
+  assert.equal(plan.commandsToRun.length, 89);
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [

@@ -228,7 +228,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:perf-gate",
     commandRef: "perf:gate",
-    sourceRef: "tools/perf/run_baseline.mjs,ops/browser-mcp/editor-performance-benchmark.py,js/core/renderer/cached_pass_compositor_owner.js,js/core/map_renderer/transformed_frame_compositor_owner.js,js/core/renderer/visual_effects_pass_owner.js,js/core/renderer/context_pass_orchestrator_owner.js,js/core/renderer/political_pass_orchestrator_owner.js,js/core/renderer/political_background_render_owner.js",
+    sourceRef: "tools/perf/run_baseline.mjs,ops/browser-mcp/editor-performance-benchmark.py,js/core/renderer/cached_pass_compositor_owner.js,js/core/map_renderer/transformed_frame_compositor_owner.js,js/core/renderer/visual_effects_pass_owner.js,js/core/renderer/context_pass_orchestrator_owner.js,js/core/renderer/political_pass_orchestrator_owner.js,js/core/renderer/political_background_render_owner.js,js/core/renderer/political_partial_repaint_owner.js",
     domain: "perf",
     ownerHint: "perf-runtime",
     layer: "heavy",

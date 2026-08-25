@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER = REPO_ROOT / "js" / "core" / "map_renderer.js"
 OWNER = REPO_ROOT / "js" / "core" / "renderer" / "political_pass_orchestrator_owner.js"
+PARTIAL_OWNER = REPO_ROOT / "js" / "core" / "renderer" / "political_partial_repaint_owner.js"
 PUBLIC_FACADE = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
 RUNTIME_CONTEXT = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
@@ -88,24 +89,25 @@ class MapRendererPoliticalPassOrchestratorBoundaryContractTest(unittest.TestCase
         ):
             self.assertIn(required, source)
 
-    def test_worker_fine_loop_partial_repaint_and_state_effects_remain_in_composition_root(self):
+    def test_worker_fine_loop_and_partial_repaint_use_the_dedicated_owner_with_root_effects(self):
         renderer = MAP_RENDERER.read_text(encoding="utf-8")
-        identity = extract_top_level_function(renderer, "resolvePoliticalPassIdentity")
-        viewport = extract_top_level_function(renderer, "resolvePoliticalPassViewport")
-        diagnostics = extract_top_level_function(renderer, "publishPoliticalPassDiagnostics")
-        request = extract_top_level_function(renderer, "requestPoliticalPassWorker")
-        fine_loop = extract_top_level_function(renderer, "drawPoliticalFineFeatureLoop")
-        partial_repaint = extract_top_level_function(renderer, "tryPartialPoliticalPassRepaint")
+        partial_owner = PARTIAL_OWNER.read_text(encoding="utf-8")
+        identity = extract_top_level_function(partial_owner, "resolvePoliticalPassIdentity")
+        viewport = extract_top_level_function(partial_owner, "resolvePoliticalPassViewport")
+        diagnostics = extract_top_level_function(partial_owner, "publishPoliticalPassDiagnostics")
+        request = extract_top_level_function(partial_owner, "requestPoliticalPassWorker")
+        fine_loop = extract_top_level_function(partial_owner, "drawPoliticalFineFeatureLoop")
+        partial_repaint = extract_top_level_function(partial_owner, "tryPartialPoliticalPassRepaint")
         recovery_quality = extract_top_level_function(renderer, "getPoliticalRecoveryQuality")
 
         self.assertIn("createPoliticalRasterWorkerIdentity({", identity)
-        self.assertIn('passSignature: getRenderPassSignature("political", transform),', identity)
+        self.assertIn('passSignature: helper.getRenderPassSignature("political", transform),', identity)
         self.assertIn("collectVisibleLandSpatialItemsWithStats({ overscanPx: politicalOverscanPx })", viewport)
-        self.assertIn("renderDiag.politicalPass = {", diagnostics)
-        self.assertIn("publishRenderDiagnostics();", diagnostics)
+        self.assertIn("effect.commitPoliticalPassDiagnostics({", diagnostics)
         self.assertIn("runtimeState.politicalRecoveryQuality = resolved;", recovery_quality)
         self.assertIn("resolvePoliticalRecoveryQuality: getPoliticalRecoveryQuality,", renderer)
 
+        composition = extract_top_level_function(renderer, "getPoliticalPartialRepaintOwner")
         callback_tokens = (
             'invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");',
             'requestRendererRender("political-raster-worker-bitmap-ready", {',
@@ -113,13 +115,13 @@ class MapRendererPoliticalPassOrchestratorBoundaryContractTest(unittest.TestCase
         )
         cursor = -1
         for token in callback_tokens:
-            cursor = request.find(token, cursor + 1)
+            cursor = composition.find(token, cursor + 1)
             self.assertGreaterEqual(cursor, 0, token)
 
         for token in (
             "orderPoliticalShellUnderlayFirst(viewport.visibleItems).forEach",
             "drawPoliticalFeature(item.feature, item.drawOrder, {",
-            "const featureEntries = runtimeState.landData.features.map",
+            "const featureEntries = state.landData.features.map",
             "orderPoliticalShellUnderlayFirst(featureEntries).forEach",
             "return featureMetrics;",
         ):
@@ -158,8 +160,9 @@ class MapRendererPoliticalPassOrchestratorBoundaryContractTest(unittest.TestCase
         political = inventory[political_start:political_end]
         self.assertIn('implementationStatus: "owned-p3"', political)
         self.assertIn('entryHostPath: "js/core/map_renderer.js"', political)
-        self.assertIn('plannedPhase: "P3.3b"', political)
+        self.assertIn('plannedPhase: "P3.5"', political)
         self.assertIn(f'"{CANONICAL_OWNER_PATH}"', political)
+        self.assertIn('"js/core/renderer/political_partial_repaint_owner.js"', political)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const PREFLIGHT_DOC_PATH = "docs/active/renderer-political-pass-preflight-p3-3a-20260714.md";
 const CANONICAL_OWNER_PATH = "js/core/renderer/political_pass_orchestrator_owner.js";
+const PARTIAL_OWNER_PATH = "js/core/renderer/political_partial_repaint_owner.js";
 const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
 const RUNTIME_CONTEXT_PATH = "js/core/map_renderer/renderer_runtime_context.js";
 const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
@@ -226,20 +227,21 @@ test("implemented political owner keeps the frozen top-level orchestration order
   ], "political owner order");
 });
 
-test("worker identity, bitmap consumption, packet request, and repaint callback remain root-owned", () => {
+test("worker identity, packet, bitmap, and partial algorithms live in the partial owner with root effects", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
   const ownerSource = extractFunctionSource(readRepoFile(CANONICAL_OWNER_PATH), "drawPoliticalPass");
-  const identitySource = extractFunctionSource(rendererSource, "resolvePoliticalPassIdentity");
-  const viewportSource = extractFunctionSource(rendererSource, "resolvePoliticalPassViewport");
-  const packetSource = extractFunctionSource(rendererSource, "buildPoliticalPassWorkerPacket");
-  const requestSource = extractFunctionSource(rendererSource, "requestPoliticalPassWorker");
+  const partialOwnerSource = readRepoFile(PARTIAL_OWNER_PATH);
+  const identitySource = extractFunctionSource(partialOwnerSource, "resolvePoliticalPassIdentity");
+  const viewportSource = extractFunctionSource(partialOwnerSource, "resolvePoliticalPassViewport");
+  const packetSource = extractFunctionSource(partialOwnerSource, "buildPoliticalPassWorkerPacket");
+  const requestSource = extractFunctionSource(partialOwnerSource, "requestPoliticalPassWorker");
   assert.match(
     viewportSource,
-    /const politicalScreenRects = \[\{[\s\S]*?minX: -politicalOverscanPx,[\s\S]*?minY: -politicalOverscanPx,[\s\S]*?maxX: identity\.canvasWidth \+ politicalOverscanPx,[\s\S]*?maxY: identity\.canvasHeight \+ politicalOverscanPx,[\s\S]*?\}\];/,
+    /const screenRects = \[\{[\s\S]*?minX: -politicalOverscanPx,[\s\S]*?minY: -politicalOverscanPx,[\s\S]*?maxX: identity\.canvasWidth \+ politicalOverscanPx,[\s\S]*?maxY: identity\.canvasHeight \+ politicalOverscanPx,[\s\S]*?\}\];/,
   );
   assert.match(
     identitySource,
-    /createPoliticalRasterWorkerIdentity\(\{[\s\S]*?sceneGeneration: sceneIdentity\.sceneGeneration,[\s\S]*?scenarioDataGeneration: sceneIdentity\.scenarioDataGeneration,[\s\S]*?selectionVersion: sceneIdentity\.selectionVersion \|\| Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?passSignature: getRenderPassSignature\("political", transform\),/,
+    /helper\.createPoliticalRasterWorkerIdentity\(\{[\s\S]*?sceneGeneration: sceneIdentity\.sceneGeneration,[\s\S]*?scenarioDataGeneration: sceneIdentity\.scenarioDataGeneration,[\s\S]*?selectionVersion: sceneIdentity\.selectionVersion \|\| Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?passSignature: helper\.getRenderPassSignature\("political", transform\),/,
   );
   assert.match(
     packetSource,
@@ -247,13 +249,15 @@ test("worker identity, bitmap consumption, packet request, and repaint callback 
   );
   assert.match(
     requestSource,
-    /requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: identity\.workerIdentity,[\s\S]*?rasterPacket: packetState\.packet,[\s\S]*?packetBuildMs: packetState\.packetBuildMs/,
+    /effect\.requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: identity\.workerIdentity,[\s\S]*?rasterPacket: packetState\.packet,[\s\S]*?packetBuildMs: packetState\.packetBuildMs/,
   );
   assert.match(
     requestSource,
-    /canvasPxWidth: packetState\.packet\?\.canvasPxWidth[\s\S]*?Math\.round\(identity\.canvasWidth \* Number\(runtimeState\.dpr \|\| 1\)\)[\s\S]*?canvasPxHeight: packetState\.packet\?\.canvasPxHeight[\s\S]*?Math\.round\(identity\.canvasHeight \* Number\(runtimeState\.dpr \|\| 1\)\)/,
+    /canvasPxWidth: packetState\.packet\?\.canvasPxWidth[\s\S]*?Math\.round\(identity\.canvasWidth \* Number\(state\.dpr \|\| 1\)\)[\s\S]*?canvasPxHeight: packetState\.packet\?\.canvasPxHeight[\s\S]*?Math\.round\(identity\.canvasHeight \* Number\(state\.dpr \|\| 1\)\)/,
   );
-  assertOrderedTokens(requestSource, [
+  assert.ok(requestSource.includes("onAcceptedBitmapResult: effect.onAcceptedBitmapResult"));
+  const compositionSource = extractFunctionSource(rendererSource, "getPoliticalPartialRepaintOwner");
+  assertOrderedTokens(compositionSource, [
     "onAcceptedBitmapResult: () => {",
     'invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");',
     'requestRendererRender("political-raster-worker-bitmap-ready", {',
@@ -289,8 +293,8 @@ test("progressive recovery keeps pending edits and visible overrides ahead of co
   ], "coarse recovery result");
 });
 
-test("partial political repaint stays upstream and composition-root owned", () => {
-  const partialSource = extractFunctionSource(readRepoFile(MAP_RENDERER_PATH), "tryPartialPoliticalPassRepaint");
+test("partial political repaint stays upstream and partial-owner owned", () => {
+  const partialSource = extractFunctionSource(readRepoFile(PARTIAL_OWNER_PATH), "tryPartialPoliticalPassRepaint");
   assertOrderedTokens(partialSource, [
     'String(cache.reasons?.political || "") !== "refresh-colors"',
     "getPoliticalPassFineBaselineMismatch(transform)",
@@ -301,19 +305,23 @@ test("partial political repaint stays upstream and composition-root owned", () =
     "cache.partialPoliticalDirtyIds.clear();",
     "clearPendingPoliticalColorEdit({",
     'paintSource: "political-partial-repaint"',
-    'recordRenderPerfMetric("politicalPartialRepaint", nowMs() - startedAt, {',
+    'effect.recordRenderPerfMetric("politicalPartialRepaint", helper.nowMs() - startedAt, {',
     "return true;",
   ], "partial political repaint");
-  assert.equal(partialSource.includes("political_pass_orchestrator_owner"), false);
+  assert.match(
+    extractFunctionSource(readRepoFile(MAP_RENDERER_PATH), "tryPartialPoliticalPassRepaint"),
+    /^function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{\s*return getPoliticalPartialRepaintOwner\(\)\.tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\);\s*\}$/,
+  );
 });
 
-test("fine drawing, diagnostics, recovery resolution, and state writes remain root effects", () => {
+test("fine drawing and diagnostics live in the partial owner while state writes remain root effects", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
-  const diagnosticsSource = extractFunctionSource(rendererSource, "publishPoliticalPassDiagnostics");
+  const partialOwnerSource = readRepoFile(PARTIAL_OWNER_PATH);
+  const diagnosticsSource = extractFunctionSource(partialOwnerSource, "publishPoliticalPassDiagnostics");
   const recoverySource = extractFunctionSource(rendererSource, "getPoliticalRecoveryQuality");
-  const fineSource = extractFunctionSource(rendererSource, "drawPoliticalFineFeatureLoop");
+  const fineSource = extractFunctionSource(partialOwnerSource, "drawPoliticalFineFeatureLoop");
   const ownerSource = extractFunctionSource(readRepoFile(CANONICAL_OWNER_PATH), "drawPoliticalPass");
-  assert.ok(diagnosticsSource.includes("renderDiag.politicalPass = {"));
+  assert.ok(diagnosticsSource.includes("effect.commitPoliticalPassDiagnostics({"));
   const recoveryQualityWrite = [
     "runtimeState.politicalRecoveryQuality",
     " = resolved;",
@@ -321,11 +329,11 @@ test("fine drawing, diagnostics, recovery resolution, and state writes remain ro
   assert.ok(recoverySource.includes(recoveryQualityWrite));
   assert.equal(/runtimeState\.[A-Za-z0-9_$]+\s*=(?!=)/.test(ownerSource), false);
   assertOrderedTokens(fineSource, [
-    "const islandNeighbors = debugMode === \"ISLANDS\" ? getIslandNeighborGraph() : null;",
+    "const islandNeighbors = getDebugMode() === \"ISLANDS\" ? helper.getIslandNeighborGraph() : null;",
     "const featureMetrics = {",
     "if (Array.isArray(viewport.visibleItems))",
     "orderPoliticalShellUnderlayFirst(viewport.visibleItems).forEach",
-    "const featureEntries = runtimeState.landData.features.map",
+    "const featureEntries = state.landData.features.map",
     "orderPoliticalShellUnderlayFirst(featureEntries).forEach",
     "return featureMetrics;",
   ], "fine political root loop");
@@ -378,6 +386,7 @@ test("P3.3b installs one canonical owner and keeps protected architecture surfac
   assert.ok(politicalRecord);
   assert.equal(politicalRecord.implementationStatus, "owned-p3");
   assert.ok(politicalRecord.existingDependencyOwners.includes(CANONICAL_OWNER_PATH));
-  assert.equal(politicalRecord.plannedPhase, "P3.3b");
+  assert.equal(politicalRecord.plannedPhase, "P3.5");
+  assert.ok(politicalRecord.existingDependencyOwners.includes(PARTIAL_OWNER_PATH));
   assert.ok(politicalRecord.browserLanes.includes("test:e2e:dev:political-progressive-recovery"));
 });

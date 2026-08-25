@@ -22,6 +22,7 @@ export const RENDER_PASS_PLANNED_PHASE_IDS = Object.freeze([
   "P3.3a",
   "P3.3b",
   "P3.4",
+  "P3.5",
   "existing-delegated",
   "hold",
   "future-review",
@@ -103,7 +104,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     entryFunction: "drawPoliticalPass",
     implementationStatus: "owned-p3",
     entryHostPath: "js/core/map_renderer.js",
-    plannedPhase: "P3.3b",
+    plannedPhase: "P3.5",
     riskTier: "high",
     stateReadClass: ["viewport", "appearance", "scenario", "map-data", "interaction", "render-cache", "diagnostics"],
     stateWriteClass: ["pass-surface", "owner-cache", "runtime-state", "diagnostics"],
@@ -111,6 +112,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     existingDependencyOwners: [
       "js/core/renderer/political_background_render_owner.js",
       "js/core/renderer/political_pass_orchestrator_owner.js",
+      "js/core/renderer/political_partial_repaint_owner.js",
       "js/core/political_raster_worker_client.js",
       "js/core/map_renderer/political_raster_worker_packet.js",
       "js/core/map_renderer/render_request_boundary_owner.js",
@@ -128,7 +130,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
       "test:e2e:tno-contracts",
     ],
     perfSensitivity: "high",
-    notes: "P3.3b pass orchestration delegates P3.4 political background cache and recovery to its owner; worker client, packet builder, fine traversal, state effects, and accepted-result render request remain composition-root dependencies",
+    notes: "P3.3b orchestration delegates P3.4 background cache/recovery and P3.5 partial repaint, packet, bitmap, identity, diagnostics, and fine traversal to dedicated owners; the worker client singleton, state effects, and accepted-result render request remain composition-root dependencies",
   }),
   freezeRecord({
     passName: "hgoPreview",

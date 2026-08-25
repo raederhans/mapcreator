@@ -54,6 +54,7 @@ const FILES = Object.freeze({
   contextPassOrchestratorOwner: "js/core/renderer/context_pass_orchestrator_owner.js",
   politicalPassOrchestratorOwner: "js/core/renderer/political_pass_orchestrator_owner.js",
   politicalBackgroundRenderOwner: "js/core/renderer/political_background_render_owner.js",
+  politicalPartialRepaintOwner: "js/core/renderer/political_partial_repaint_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
   rendererSurfaceHostPreflightDoc: "docs/active/renderer-surface-host-preflight-20260626.md",
@@ -157,7 +158,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 21293,
+  [FILES.renderer]: 20513,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -172,6 +173,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.dayNightRuntimeOwner]: 360,
   [FILES.politicalPassOrchestratorOwner]: 280,
   [FILES.politicalBackgroundRenderOwner]: 1380,
+  [FILES.politicalPartialRepaintOwner]: 760,
   [FILES.rendererViewportUpdateOwner]: 220,
   [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.setMapDataTransactionOwner]: 260,
@@ -503,6 +505,7 @@ function collectFailures() {
   const contextPassOrchestratorOwner = readProjectFile(FILES.contextPassOrchestratorOwner);
   const politicalPassOrchestratorOwner = readProjectFile(FILES.politicalPassOrchestratorOwner);
   const politicalBackgroundRenderOwner = readProjectFile(FILES.politicalBackgroundRenderOwner);
+  const politicalPartialRepaintOwner = readProjectFile(FILES.politicalPartialRepaintOwner);
   const rendererFrameCompositorBoundaryTest = readProjectFile(FILES.rendererFrameCompositorBoundaryTest);
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
@@ -634,6 +637,7 @@ function collectFailures() {
     [FILES.contextPassOrchestratorOwner]: contextPassOrchestratorOwner,
     [FILES.politicalPassOrchestratorOwner]: politicalPassOrchestratorOwner,
     [FILES.politicalBackgroundRenderOwner]: politicalBackgroundRenderOwner,
+    [FILES.politicalPartialRepaintOwner]: politicalPartialRepaintOwner,
     [FILES.rendererFrameCompositorBoundaryTest]: rendererFrameCompositorBoundaryTest,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
     [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
@@ -5797,6 +5801,39 @@ function collectFailures() {
         "function drawScenarioPoliticalBackgroundFills(",
         "function buildAdmin0MergedShapes(",
         "function drawOceanDepthMaskLayer(",
+      ],
+    },
+    {
+      ownerPath: FILES.politicalPartialRepaintOwner,
+      ownerTokens: [
+        "export function createPoliticalPartialRepaintOwner({",
+        "function buildPoliticalRasterWorkerPacket(",
+        "function drawPoliticalWorkerBitmapResult(",
+        "function tryPartialPoliticalPassRepaint(",
+        "function resolvePoliticalPassIdentity(k)",
+        "function requestPoliticalPassWorker({ identity, packetState })",
+        "function drawPoliticalFineFeatureLoop({ k, identity, viewport })",
+      ],
+      ownerForbiddenTokens: [
+        "import ",
+        "runtimeState",
+        "RendererRuntimeContext",
+        "document.",
+        "window.",
+        "globalThis",
+        "new Worker(",
+        "setTimeout(",
+      ],
+      rendererRequiredTokens: [
+        "import { createPoliticalPartialRepaintOwner } from \"./renderer/political_partial_repaint_owner.js\";",
+        "let politicalPartialRepaintOwner = null;",
+        "function getPoliticalPartialRepaintOwner() {",
+        "return getPoliticalPartialRepaintOwner().tryPartialPoliticalPassRepaint(transform, nextSignature, timings);",
+        "return getPoliticalPartialRepaintOwner().resolvePoliticalPassIdentity(k);",
+        "return getPoliticalPartialRepaintOwner().drawPoliticalFineFeatureLoop({ k, identity, viewport });",
+      ],
+      rendererForbiddenTokens: [
+        "function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {\n  const cache = getRenderPassCacheState();",
       ],
     },
     {

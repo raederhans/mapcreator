@@ -52,13 +52,13 @@ test("canonical metadata source owns every projection and shadows the retained l
   assert.equal(report.authoredSurfacesBefore, 5);
   assert.equal(report.authoredSurfacesAfter, 1);
   assert.deepEqual(report.projections, {
-    verificationRecords: 133,
-    routes: 383,
-    commands: 340,
-    catalogEntries: 441,
-    leaves: 411,
+    verificationRecords: 135,
+    routes: 386,
+    commands: 342,
+    catalogEntries: 443,
+    leaves: 413,
     suites: 30,
-    portfolioScripts: 337,
+    portfolioScripts: 339,
     superseders: 14,
     supersessionEdges: 36,
   });

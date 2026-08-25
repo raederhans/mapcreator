@@ -3100,6 +3100,12 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
       "renderer",
       "political_pass_orchestrator_owner.js",
     );
+    const politicalPartialOwnerSource = readRepoFile(
+      "js",
+      "core",
+      "renderer",
+      "political_partial_repaint_owner.js",
+    );
     const urbanCityPolicySource = readRepoFile("js", "core", "renderer", "urban_city_policy.js");
     const drawCanvasOrchestrationOwnerSource = readRepoFile(
       "js",
@@ -3299,8 +3305,8 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         /function ensureResolvedColorsReadyForStableVisibleFrame\(reason = "visible-frame"\) \{[\s\S]*?const colorSourceName = getResolvedColorSourceName\(\);[\s\S]*?const colorSourceFeatureCount = getResolvedColorSourceFeatures\(\)\.length;[\s\S]*?Object\.keys\(runtimeState\.colors \|\| \{\}\)\.length > 0[\s\S]*?colorSourceName,[\s\S]*?colorSourceFeatureCount,[\s\S]*?rebuildResolvedColors\(\)[\s\S]*?recordRenderPerfMetric\("visibleFrameResolvedColorReadiness"[\s\S]*?sourceFeatureCount: colorSourceFeatureCount,[\s\S]*?sourceName: colorSourceName,/.test(rendererSource)
         && /function render\(\) \{[\s\S]*?ensureResolvedColorsReadyForStableVisibleFrame\("render"\);[\s\S]*?drawCanvas\(\);/.test(rendererSource),
       politicalFeatureFillUsesExplicitSafeFallback:
-        /function getPoliticalFeatureFillColor\(feature, id, index, canvasWidth = 0\) \{[\s\S]*?getSafeCanvasColor\(runtimeState\.colors\[id\], null\)[\s\S]*?getSafeCanvasColor\(getResolvedFeatureColor\(feature, id\), null\)[\s\S]*?\|\| LAND_FILL_COLOR/.test(rendererSource)
-        && /function drawPoliticalFeature\([\s\S]*?let fillColor = getPoliticalFeatureFillColor\(feature, id, index, canvasWidth\);[\s\S]*?rendererSurfaceHost\.getContext\(\)\.fillStyle = fillColor;/.test(rendererSource),
+        /function getPoliticalFeatureFillColor\(feature, id, index, canvasWidth = 0\) \{[\s\S]*?getSafeCanvasColor\(state\.colors\[id\], null\)[\s\S]*?getSafeCanvasColor\(helper\.getResolvedFeatureColor\(feature, id\), null\)[\s\S]*?\|\| landFillColor/.test(politicalPartialOwnerSource)
+        && /function drawPoliticalFeature\([\s\S]*?let fillColor = getPoliticalFeatureFillColor\(feature, id, index, canvasWidth\);[\s\S]*?surface\.getContext\(\)\.fillStyle = fillColor;/.test(politicalPartialOwnerSource),
       colorRefreshUsesPartialPoliticalInvalidation:
         /function refreshResolvedColorsForFeatures[\s\S]*?const pendingRenderIds = new Set\(\);[\s\S]*?normalizePoliticalColorEditIds\(cache\.pendingPoliticalColorEditIds\)[\s\S]*?pendingRenderIds\.add\(pendingId\);[\s\S]*?cache\.partialPoliticalDirtyIds\.add\(id\);[\s\S]*?pendingRenderIds\.add\(id\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?markPendingPoliticalColorEdit\(Array\.from\(pendingRenderIds\), \{[\s\S]*?startedAt: inputStartedAt,[\s\S]*?inputLabel,[\s\S]*?\}\)[\s\S]*?clearPendingPoliticalColorEdit\(\{ force: true \}\);[\s\S]*?invalidateRenderPasses\("political", "refresh-colors"\);/.test(rendererSource)
         && rendererSource.includes('invalidateRenderPasses(["contextMarkers", "labels"], "refresh-colors-collateral");')
@@ -3317,9 +3323,9 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         && /const sharedTail = \[[\s\S]*?`colors:\$\{Number\(state\?\.colorRevision \|\| 0\)\}`[\s\S]*?\];/.test(urbanCityPolicySource)
         && /if \(passName === "labels"\) \{[\s\S]*?return \[[\s\S]*?strategic, \.\.\.sharedTail\];/.test(urbanCityPolicySource),
       partialPoliticalRepaintOnlyAcceptsTargetedRefreshColors:
-        /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(rendererSource)
-        && !rendererSource.includes('["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))')
-        && !rendererSource.includes('!["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))'),
+        /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(politicalPartialOwnerSource)
+        && !politicalPartialOwnerSource.includes('["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))')
+        && !politicalPartialOwnerSource.includes('!["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))'),
       progressiveRecoveryKeepsFineLoopForVisibleColorOverrides:
         /function hasVisiblePoliticalForegroundColorOverride\(entries = \[\]\) \{[\s\S]*?hasPoliticalForegroundColorOverride\(featureId\);[\s\S]*?\}/.test(rendererSource)
         && /const progressiveRecoveryCoarseSkipCandidate = \([\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);[\s\S]*?const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate[\s\S]*?hasVisiblePoliticalForegroundColorOverride\(viewport\.visibleItems\)[\s\S]*?if \(progressiveRecoveryCoarseSkipCandidate && !visiblePoliticalForegroundColorOverride\)/.test(politicalPassOwnerSource),
@@ -3340,15 +3346,15 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
             && !/if \(normalizedPassName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(body);
         })(),
       politicalPartialRequiresFullReferenceBaseline:
-        /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?hasPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("missing-full-reference-transform"\)[\s\S]*?getPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("full-reference-transform-mismatch"\)/.test(rendererSource),
+        /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?hasPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("missing-full-reference-transform"\)[\s\S]*?getPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("full-reference-transform-mismatch"\)/.test(politicalPartialOwnerSource),
       politicalPartialNeverMutatesFullReferenceBaseline:
         [
           "function tryPartialPoliticalPassRepaint(transform, nextSignature, timings)",
           'setPassReferenceTransform("political", transform);',
           "setPassFullReferenceTransform(passName, transform);",
           'if (passName === "political")',
-        ].every((snippet) => rendererSource.includes(snippet))
-        && !rendererSource.includes('setPassFullReferenceTransform("political"'),
+        ].every((snippet) => rendererSource.includes(snippet) || politicalPartialOwnerSource.includes(snippet))
+        && !politicalPartialOwnerSource.includes('setPassFullReferenceTransform("political"'),
       canvasResizeClearsFullReferenceBaseline:
         [
           "targetPassesOnDprChange = null",
@@ -3708,6 +3714,12 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(35, "perf contracts keep coarse first frame and benchmark app-path fallback boundaries", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+    const politicalPartialOwnerSource = readRepoFile(
+      "js",
+      "core",
+      "renderer",
+      "political_partial_repaint_owner.js",
+    );
     const politicalPassOwnerSource = readRepoFile(
       "js",
       "core",
@@ -3729,7 +3741,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
     const playwrightAppPathsSource = readRepoFile("tests", "e2e", "support", "playwright-app-paths.js");
     const politicalOwnerDrawSource = extractRendererFunction(politicalPassOwnerSource, "drawPoliticalPass");
     const politicalBackgroundEffectSource = extractRendererFunction(rendererSource, "drawPoliticalPassBackground");
-    const politicalFineLoopSource = extractRendererFunction(rendererSource, "drawPoliticalFineFeatureLoop");
+    const politicalFineLoopSource = extractRendererFunction(politicalPartialOwnerSource, "drawPoliticalFineFeatureLoop");
     const transformedPassDiagnosticsOwnerSource = extractRendererFunction(
       cachedPassCompositorOwnerSource,
       "recordTransformedPassIfEnabled",
@@ -3798,10 +3810,10 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(politicalBackgroundOwnerSource)
         && /const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?const progressiveRecoveryCoarseSkipCandidate = \([\s\S]*?coarseUnderlay \|\| ""\) === "admin0"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);[\s\S]*?if \(progressiveRecoveryCoarseSkipCandidate && !visiblePoliticalForegroundColorOverride\)/.test(politicalOwnerDrawSource)
         && /function clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedCount = 0,[\s\S]*?renderedIds = null,[\s\S]*?force = false,[\s\S]*?paintSource = "political-pass"[\s\S]*?\} = \{\}\) \{[\s\S]*?cache\.pendingPoliticalColorEditIds\.clear\(\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = -1;/.test(rendererSource)
-        && /function drawPoliticalFeature\([\s\S]*?metricsCollector\.renderedIds instanceof Set[\s\S]*?metricsCollector\.renderedIds\.add\(id\);/.test(rendererSource)
-        && /const featureMetrics = \{[\s\S]*?renderedIds: new Set\(\),[\s\S]*?\};[\s\S]*?return featureMetrics;/.test(politicalFineLoopSource)
+        && /function drawPoliticalFeature\([\s\S]*?metricsCollector\.renderedIds instanceof Set[\s\S]*?metricsCollector\.renderedIds\.add\(id\);/.test(politicalPartialOwnerSource)
+        && /const featureMetrics = \{[\s\S]*?renderedIds: new Set\(\)[\s\S]*?\};[\s\S]*?return featureMetrics;/.test(politicalFineLoopSource)
         && /const featureMetrics = drawPoliticalFineFeatureLoop\([\s\S]*?recordRenderPerfMetric\("drawPoliticalFeatureFillLoop"[\s\S]*?recordRenderPerfMetric\("drawPoliticalFeatureStrokeLoop"[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: featureMetrics\.renderedIds,[\s\S]*?\}\);/.test(politicalOwnerDrawSource)
-        && /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?const partialFeatureMetrics = \{[\s\S]*?renderedIds: new Set\(\),[\s\S]*?\};[\s\S]*?metricsCollector: partialFeatureMetrics,[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: partialFeatureMetrics\.renderedIds,[\s\S]*?\}\);/.test(rendererSource)
+        && /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?const partialFeatureMetrics = \{[\s\S]*?renderedIds: new Set\(\)[\s\S]*?\};[\s\S]*?metricsCollector: partialFeatureMetrics,[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: partialFeatureMetrics\.renderedIds,[\s\S]*?\}\);/.test(politicalPartialOwnerSource)
         && politicalBackgroundOwnerSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery"')
         && politicalBackgroundOwnerSource.includes('metricName: "scenarioPoliticalBackgroundDeferredFullCacheBuild"')
         && politicalBackgroundOwnerSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice"')
@@ -4027,8 +4039,9 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(40, "Atlantropa field-driven interaction contracts preserve explicit render and hit layers", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+    const politicalPartialOwnerSource = readRepoFile("js", "core", "renderer", "political_partial_repaint_owner.js");
     const politicalBackgroundOwnerSource = readRepoFile("js", "core", "renderer", "political_background_render_owner.js");
-    const politicalFineLoopSource = extractRendererFunction(rendererSource, "drawPoliticalFineFeatureLoop");
+    const politicalFineLoopSource = extractRendererFunction(politicalPartialOwnerSource, "drawPoliticalFineFeatureLoop");
     const projectedGeometryBoundsOwnerSource = readRepoFile("js", "core", "renderer", "projected_geometry_bounds_owner.js");
     const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
     const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
@@ -4467,6 +4480,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
 
   register(67, "political raster renderer request identity includes viewport and pass signature", () => {
     const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+    const politicalPartialOwnerSource = readRepoFile("js", "core", "renderer", "political_partial_repaint_owner.js");
     const politicalPassOwnerSource = readRepoFile(
       "js",
       "core",
@@ -4475,28 +4489,29 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
     );
     const workerClientSource = readRepoFile("js", "core", "political_raster_worker_client.js");
     const workerSource = readRepoFile("js", "workers", "political_raster.worker.js");
-    const identitySource = extractRendererFunction(rendererSource, "resolvePoliticalPassIdentity");
-    const viewportSource = extractRendererFunction(rendererSource, "resolvePoliticalPassViewport");
+    const identitySource = extractRendererFunction(politicalPartialOwnerSource, "resolvePoliticalPassIdentity");
+    const viewportSource = extractRendererFunction(politicalPartialOwnerSource, "resolvePoliticalPassViewport");
     const packetSource = extractRendererFunction(rendererSource, "buildPoliticalPassWorkerPacket");
-    const requestSource = extractRendererFunction(rendererSource, "requestPoliticalPassWorker");
+    const requestSource = extractRendererFunction(politicalPartialOwnerSource, "requestPoliticalPassWorker");
     const ownerDrawSource = extractRendererFunction(politicalPassOwnerSource, "drawPoliticalPass");
 
     assert.ok(rendererSource.includes("function getTransformBucketSignature("));
-    assert.ok(identitySource.includes("const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();"));
+    assert.ok(identitySource.includes("const [canvasWidth, canvasHeight] = helper.getLogicalCanvasDimensions();"));
     assert.ok(/createPoliticalRasterWorkerIdentity\(\{[\s\S]*?sceneGeneration: sceneIdentity\.sceneGeneration,[\s\S]*?scenarioDataGeneration: sceneIdentity\.scenarioDataGeneration,[\s\S]*?selectionVersion: sceneIdentity\.selectionVersion \|\| Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?topologyRevision: sceneIdentity\.topologyRevision,[\s\S]*?colorRevision: sceneIdentity\.colorRevision,[\s\S]*?transformBucket: sceneIdentity\.transformBucket,[\s\S]*?dpr: sceneIdentity\.dpr,/.test(identitySource));
     assert.ok(/viewport: \{[\s\S]*?width: canvasWidth,[\s\S]*?height: canvasHeight,[\s\S]*?right: canvasWidth,[\s\S]*?bottom: canvasHeight,[\s\S]*?\}/.test(identitySource));
-    assert.ok(identitySource.includes('passSignature: getRenderPassSignature("political", transform),'));
-    assert.ok(/const politicalScreenRects = \[\{[\s\S]*?maxX: identity\.canvasWidth \+ politicalOverscanPx,[\s\S]*?maxY: identity\.canvasHeight \+ politicalOverscanPx/.test(viewportSource));
+    assert.ok(identitySource.includes('passSignature: helper.getRenderPassSignature("political", transform),'));
+    assert.ok(/const screenRects = \[\{[\s\S]*?maxX: identity\.canvasWidth \+ politicalOverscanPx,[\s\S]*?maxY: identity\.canvasHeight \+ politicalOverscanPx/.test(viewportSource));
     assert.ok(ownerDrawSource.includes("const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(identity.workerIdentity);"));
     assert.ok(
       ownerDrawSource.indexOf("const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(identity.workerIdentity);")
         < ownerDrawSource.indexOf("const backgroundStartedAt = nowMs();"),
     );
     assert.ok(packetSource.includes("buildPoliticalRasterWorkerPacket({"));
-    assert.ok(/requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: identity\.workerIdentity,[\s\S]*?rasterPacket: packetState\.packet,[\s\S]*?packetBuildMs: packetState\.packetBuildMs/.test(requestSource));
+    assert.ok(/effect\.requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: identity\.workerIdentity,[\s\S]*?rasterPacket: packetState\.packet,[\s\S]*?packetBuildMs: packetState\.packetBuildMs/.test(requestSource));
     assert.ok(requestSource.includes("canvasPxWidth: packetState.packet?.canvasPxWidth"));
     assert.ok(requestSource.includes("canvasPxHeight: packetState.packet?.canvasPxHeight"));
-    assert.ok(requestSource.includes('invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");'));
+    assert.ok(requestSource.includes("onAcceptedBitmapResult: effect.onAcceptedBitmapResult"));
+    assert.ok(rendererSource.includes('invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");'));
     assert.ok(/function normalizeViewportIdentity\(viewport = null\)[\s\S]*?\["x", "y", "width", "height", "left", "top", "right", "bottom"\]/.test(workerClientSource));
     assert.ok(/Number\(request\.sceneGeneration \|\| 0\) === Number\(current\.sceneGeneration \|\| 0\)/.test(workerClientSource));
     assert.ok(/Number\(request\.scenarioDataGeneration \|\| 0\) === Number\(current\.scenarioDataGeneration \|\| 0\)/.test(workerClientSource));

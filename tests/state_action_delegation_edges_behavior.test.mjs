@@ -385,6 +385,38 @@ test("source-bound political background owner proves exact facade methods withou
   }).violations, []);
 });
 
+test("source-bound political partial owner proves exact facade methods without state action edges", () => {
+  const entry = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createPoliticalPartialRepaintOwner",
+  );
+  assert.ok(entry);
+  assert.deepEqual(entry.actionExports, []);
+  assert.deepEqual(entry.methods, [
+    "buildPoliticalRasterWorkerPacket",
+    "drawPoliticalFeature",
+    "drawPoliticalFineFeatureLoop",
+    "drawPoliticalWorkerBitmapResult",
+    "publishPoliticalPassDiagnostics",
+    "recordPoliticalRasterWorkerSnapshot",
+    "requestPoliticalPassWorker",
+    "resolvePoliticalPassIdentity",
+    "resolvePoliticalPassViewport",
+    "tryPartialPoliticalPassRepaint",
+  ]);
+  const compositionSource = fs.readFileSync(entry.compositionModulePath, "utf8");
+  const factorySource = fs.readFileSync(entry.factoryModulePath, "utf8");
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource,
+    factorySource,
+    entry,
+  }).violations, []);
+  assert.ok(inspectStateMutationDelegatingOwnerSources({
+    compositionSource,
+    factorySource,
+    entry: { ...entry, methods: [...entry.methods, "unregisteredPoliticalPartialFacade"] },
+  }).violations.length > 0);
+});
+
 test("spherical diagnostics cache exposes immutable or detached entry reads and rejects raw Map access", () => {
   const modulePath = "js/core/state/actions/renderer_cache_actions.js";
   const source = fs.readFileSync(modulePath, "utf8");

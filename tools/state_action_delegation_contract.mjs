@@ -872,13 +872,37 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
     factoryModulePath: "js/core/renderer/political_background_render_owner.js",
     factoryExportName: "createPoliticalBackgroundRenderOwner",
     factorySourceFingerprint:
-      "d487dfb72663beff57f2f143ddb831d691ef816ff2d516a0701d3e1c82eeebbe",
+      "b397dfe85b421fcdba2db6de5e679d7895051bfbd54f2493ddbdb19c5c7f4926",
     ownerBindingName: "politicalBackgroundRenderOwner",
     methods: [
       "cancelScenarioPoliticalBackgroundDeferredFullCache",
       "drawBackgroundPass",
       "drawPoliticalBackgroundFills",
       "drawPoliticalBackgroundFillsForEntries",
+    ],
+    actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getPoliticalPartialRepaintOwner",
+    compositionSourceFingerprint:
+      "39bc292ae63462625b80ef63f5263cd16bef1436c855695a9f03d29e589c64ae",
+    factoryModulePath: "js/core/renderer/political_partial_repaint_owner.js",
+    factoryExportName: "createPoliticalPartialRepaintOwner",
+    factorySourceFingerprint:
+      "af7721ec7db769d5748d16fe41a6af03c9884443b00d91b309889c05eab24343",
+    ownerBindingName: "politicalPartialRepaintOwner",
+    methods: [
+      "buildPoliticalRasterWorkerPacket",
+      "drawPoliticalFeature",
+      "drawPoliticalFineFeatureLoop",
+      "drawPoliticalWorkerBitmapResult",
+      "publishPoliticalPassDiagnostics",
+      "recordPoliticalRasterWorkerSnapshot",
+      "requestPoliticalPassWorker",
+      "resolvePoliticalPassIdentity",
+      "resolvePoliticalPassViewport",
+      "tryPartialPoliticalPassRepaint",
     ],
     actionExports: [],
   }),
