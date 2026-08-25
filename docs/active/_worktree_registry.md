@@ -7,6 +7,7 @@
 - Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d` with its unrelated tracked modifications untouched.
 - Accepted evidence: map asset contracts `10/10`, Pages shell contracts `62/62`, Landing view contracts `20/20`, sample-project contracts `18/18`, verification-route checks `6/6`, selector `379` routes, and desktop/tablet/mobile localhost acceptance all pass.
 - Scope boundary: the static showcase, canonical map assets and Pages mirror are included. Remote CI completion, production-manual deployment and public-host verification are not part of this closeout.
+- Cleanup: the three completed landing implementation tasks are archived; their clean detached worktrees and the integration worktree are removed. Local and remote `codex/landing-home-revamp-integration-20260825` are deleted after ancestry verification; recovery remains available from `origin/main` and the integrated tip `28215c12`.
 
 ## SC P3 serial execution snapshot — 2026-08-24
 
@@ -23,6 +24,7 @@
 - P3.4 admission: implementation `56c40a91` plus contract/route follow-ups `208dc652` and `a9f63bd6` received reviewer `CLEAR` and verifier `PASS`; supervisor commits `c8deacb9`, `5dabccaf`, and `19c0ddf4` reproduce the same committed tree. Political background cache/deferred ownership, source/color provenance, stale-work fences, ocean/intensity effect delegation, source-bound contracts, canonical/legacy route parity, and the 18-command owner selector are closed. Blank-line trailing whitespace is a non-blocking cleanup carried into the single final P3.5 policy refresh.
 - P3.5 admission: implementation `5bc0782f` plus recovery/source-contract follow-ups `da539359`, `5c83cc29`, and `9c2dc32f` received final reviewer `CLEAR` and verifier `PASS`; supervisor commits `7cd7d254`, `da93be85`, `9ecb1793`, and `29bdcf40` reproduce the same committed code and tests. Partial/worker ownership, fail-closed recovery, normal/noop commit exception propagation, Scenario dual-source proofs, root facade/DI, worker protocol identity, zero-action policy, and historical P3.3b inventory semantics are closed. Post-integration focused checks pass through metadata 37/37 and portfolio 54/54.
 - Final merge: fresh `origin/main@28215c12` was merged without rebase or force as `2e41e4ae`. The combined authority has 340 scripts, 428 records, 387 routes, and 343 commands; unique selector order is landing 379 and Day/Night 380/381. Metadata 38/38, portfolio 54/54, landing assets 10/10, P3 focused suites, selector schema, portfolio consistency, and both-parent diff checks pass before the first exact SHA synchronization.
+- Cleanup: the P3 implementer, reviewer, verifier, P3.4/P3.5 preflight tasks and the earlier P0/P1-P2/P3-plan tasks are archived. Their eight clean auxiliary worktrees are removed; local P3.1/P3.4/P3.5 branches are deleted only after `git cherry` or exact-tree coverage checks. This registry commit is the supervisor worktree's terminal action; after its ordinary push and exact remote check, that final worktree and local integration branch are removed. Recovery anchors remain `7898dc7e`, `f5d21542`, `039acb7d`, `a9f63bd6`, `9c2dc32f`, merge `2e41e4ae`, and final synchronized main.
 
 ## SC P0-P3 integration snapshot — 2026-08-24
 
@@ -32,6 +34,7 @@
 - Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` stays on `codex/preserved-main-wip-20260823` with its 20 tracked modifications untouched.
 - Integration action: finish the bounded combined checks, fetch and require `origin/main` to remain at the recorded base, push normally to `origin/main`, verify exact SHA equality, and observe the workflows triggered by that SHA. No force-push, production-manual deployment, or remote-history rewrite is authorized.
 - P3 disposition: planning complete only. Start P3.1 serially after this integration closes; the five-slice plan and acceptance/deletion gates live in `docs/active/test-verification-reform-20260813/plan.md`.
+- Superseding cleanup: the three auxiliary tasks listed above are archived and worktrees `9cb3`, `9e29`, and `4760` are removed after their output was admitted or fully consumed by the completed P3 execution. The current P3 completion snapshot above supersedes the historical planning disposition.
 
 The older 2026-08-14 registry snapshot below is retained as historical evidence and is not the current topology authority.
 
