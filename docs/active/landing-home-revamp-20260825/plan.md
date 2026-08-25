@@ -29,11 +29,11 @@ Turn the independent `landing/` showcase into a concise, evidence-backed and vis
 ## Stages
 
 - [x] Stage 1: Freeze ownership, baseline screenshots and map/data correctness criteria.
-- [ ] Stage 2: Implement six-part information architecture and bilingual factual copy.
-- [ ] Stage 3: Repair map assets, controls, metadata failure states and scope labels.
-- [ ] Stage 4: Apply responsive, typography, spacing, touch-target and social-preview polish.
-- [ ] Stage 5: Integrate workstreams sequentially and update focused contracts.
-- [ ] Stage 6: Run single-owner desktop/mobile browser acceptance and final review.
+- [x] Stage 2: Implement six-part information architecture and bilingual factual copy.
+- [x] Stage 3: Repair map assets, controls, metadata failure states and scope labels.
+- [x] Stage 4: Apply responsive, typography, spacing, touch-target and social-preview polish.
+- [x] Stage 5: Integrate workstreams sequentially and update focused contracts.
+- [x] Stage 6: Run single-owner desktop/mobile browser acceptance and final review.
 
 ## Acceptance criteria
 

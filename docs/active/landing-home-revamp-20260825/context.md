@@ -17,28 +17,32 @@
 | 2026-08-25 | Parallelize content, map correctness and visual CSS by file ownership; integrate shared hotspots serially. | Prevents concurrent edits from being treated as merge-ready merely because they are in separate worktrees. |
 | 2026-08-25 | Keep the homepage static and use existing generators/assets. | No CMS, new framework or runtime data platform. |
 | 2026-08-25 | Preserve the dark cartographic/teal-gold identity and reduce card chrome around a map-first evidence narrative. | Visual work refines the existing language instead of replacing it. |
+| 2026-08-25 | Treat canonical generators as authoritative for every map correction. | Blank provenance, TNO capitals, Japan scope, work-map semantics and city-label layout are regenerated rather than hand-edited. |
+| 2026-08-25 | Describe TNO Hero as a political crop with Atlantropa omitted and Japan as a Japan-wide preview plus one selected motorway. | Public copy now matches the visible asset and metadata boundary. |
+| 2026-08-25 | Fail closed when no collision-free city-label candidate exists. | All 34 visible-density label boxes are disjoint; future impossible layouts stop generation instead of silently overlapping. |
+| 2026-08-25 | Route the heavy map asset contract through the `public-sample` verification domain. | Generator, SVG/JSON, rasterizer and parity regressions select the Python contract directly and Pages gates include it. |
 
 ## Workstream topology
 
 | Workstream | User-visible task | Worktree | Ownership | State |
 | --- | --- | --- | --- | --- |
-| Content and IA | `01a0379c-1e22-7d00-85ea-af0bf0e314ff` | `C:\Users\raede\.codex\worktrees\d189\mapcreator` | `landing/index.html`; copy/translation constants in `landing/app.js` | active |
-| Map correctness and assets | `01a0379c-1e6b-72d0-a218-a382bb90098c` | `C:\Users\raede\.codex\worktrees\0531\mapcreator` | canonical landing generators, generated map assets and focused asset contracts | active |
-| Responsive and visual quality | `01a0379c-1e65-7a70-9556-747550d575ff` | `C:\Users\raede\.codex\worktrees\b120\mapcreator` | `landing/styles.css` | active |
+| Content and IA | `01a0379c-1e22-7d00-85ea-af0bf0e314ff` | `C:\Users\raede\.codex\worktrees\d189\mapcreator` | `landing/index.html`; copy/translation constants in `landing/app.js` | integrated |
+| Map correctness and assets | `01a0379c-1e6b-72d0-a218-a382bb90098c` | `C:\Users\raede\.codex\worktrees\0531\mapcreator` | canonical landing generators, generated map assets and focused asset contracts | integrated |
+| Responsive and visual quality | `01a0379c-1e65-7a70-9556-747550d575ff` | `C:\Users\raede\.codex\worktrees\b120\mapcreator` | `landing/styles.css` | integrated |
 
 ## Live process ownership
 
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
-| Dev server / browser acceptance | Primary integration task | `.runtime/browser/landing-home-revamp/` | not started |
-| Landing asset generators | Primary integration task | `.runtime/reports/generated/landing-home-revamp/` | not started |
-| Pages dist builder | Primary integration task | project-standard output | deferred until accepted source candidate |
+| Dev server / browser acceptance | Primary integration task | `.runtime/browser/landing-home-revamp/` | completed; server and browser closed |
+| Landing asset generators | Primary integration task | checked-in `landing/assets/` outputs | completed |
+| Pages dist builder | Primary integration task | `dist/pages-dist-manifest.json` | completed |
 
 ## Handoff
 
 - Workstream tasks must return changed-file ownership, diff summary, verification evidence and unresolved visual/data risks.
 - They must not push, merge, clean worktrees, run a dev server/browser, or regenerate shared Pages output.
 
-## Next step
+## Handoff state
 
-Record the clean baseline, then integrate each ready-for-integration delivery in content → map → visual order.
+The integrated branch contains the accepted source, regenerated assets, Pages mirror and focused verification routes. No push or deployment was performed, and the dirty parent checkout remains untouched.
