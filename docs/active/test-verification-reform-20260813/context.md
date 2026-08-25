@@ -253,10 +253,10 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Lane | Exact ownership and current state |
 | --- | --- |
 | Supervisor / integration | Thread `01a028e9-78d6-7a31-ae01-d81532018212`; clean worktree `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator`; branch `codex/sc-p0-p3-integration-20260824`; frozen start `f118a101d30373c507075da32267969b22197338`. Owns slice admission, integration commits, shared/long checks, task records, push, two-end SHA verification, and cleanup decisions. |
-| Serial implementation | Thread `01a03372-ff2a-7281-af36-65e58e243f9c`; worktree `d871`; P3.1 head `fa015b53`. Sole production-code owner. It delivers one committed slice at a time and must stop before the next slice until supervisor release. No push, merge, shared long test, or cleanup authority. |
-| Independent review | Thread `01a03372-ff2a-7281-af36-65fed97d06ee`; detached clean worktree `42a1` at `fa015b53`. Read-only baseline and exact-candidate findings-first review; no writes, commits, integration, push, or shared long tests. |
-| Independent verification | Thread `01a03372-ff0c-72e3-addf-b25981aa9311`; detached clean worktree `5152` at `fa015b53`. Owns focused exact-candidate verification and selector-conflict diagnosis; shared or long gates require explicit supervisor release. No production edits, integration, push, or cleanup. |
-| Serial boundary | P3.1 is integrated; active slice is P3.2 only. P3.3-P3.5 remain unopened until the preceding exact commit is reviewed, verified, integrated, and recorded. No live/shared process is currently running. |
+| Serial implementation | Thread `01a03372-ff2a-7281-af36-65e58e243f9c`; worktree `d871`; P3.2 head `dcc83e8d`. Sole production-code owner. It delivers one committed slice at a time and must stop before the next slice until supervisor release. No push, merge, shared long test, or cleanup authority. |
+| Independent review | Thread `01a03372-ff2a-7281-af36-65fed97d06ee`; detached clean worktree `42a1` at `dcc83e8d`. Read-only baseline and exact-candidate findings-first review; no writes, commits, integration, push, or shared long tests. |
+| Independent verification | Thread `01a03372-ff0c-72e3-addf-b25981aa9311`; detached clean worktree `5152` at `dcc83e8d`. Owns focused exact-candidate verification and selector-conflict diagnosis; shared or long gates require explicit supervisor release. No production edits, integration, push, or cleanup. |
+| Serial boundary | P3.1 and P3.2 are integrated; active slice is P3.3 only. P3.4-P3.5 remain unopened until the preceding exact commit is reviewed, verified, integrated, and recorded. No live/shared process is currently running. |
 | Baseline identity | `a6833008:js/core/map_renderer.js` and `f118a101:js/core/map_renderer.js` resolve to the same blob `b5990105850cc7c79e5506c6f89dbee1ab111fae`; the planned 23,153 split-line baseline remains valid. |
 
 ### P3.1 admission checkpoint
@@ -268,3 +268,13 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Independent verification | `PASS`. Final delta hostile delegation 1/1, metadata 3/3, architecture, and exact `verify:p4:routes --phase P4.3 --history-base f118a101` all exit 0; the detached worktree is clean. |
 | Policy and selector evidence | Canonical producer records 207 writers and final validator passes 75 production plus 43 test legacy-direct files. The 25-file selector is exact with zero unmatched/blocked entries. Bound dry-run starts zero processes; its single raw Water argv conflict plus 38 propagated gaps reproduce unchanged at the base. |
 | Supervisor integration | The four implementation commits were replayed as `79746feb`, `5689d9f9`, `c9c1e050`, and `dc256b8f`; the integrated committed tree is byte-for-byte equivalent to `fa015b53`. Post-integration P4.3 route verification passes with zero unmatched files and zero route gaps. P3.2 is released. |
+
+### P3.2 admission checkpoint
+
+| Fact | Evidence and disposition |
+| --- | --- |
+| Final implementation candidate | `dcc83e8ddf4e8c2966f06e243870ec25dfed125c`, direct child of `fa015b53`, five committed files, implementation worktree clean. Visual Effects owns paper, graticule, draft-grid, texture labels, and asset/pattern/geometry/noise caches. |
+| Independent review | `CLEAR`. No duplicated implementation or second cache authority; pass and City Lights order, resize invalidation, cache identity, public facades, and canvas state restoration remain intact. |
+| Independent verification | `PASS`. Owner 6/6, Python pipeline 6/6, catalog 3/3, pass-family 6/6, cache-host 10/10, metadata, architecture, import graph, and P4.3 route all exit 0. |
+| Selector evidence | The five-file selector is exact with zero unmatched/blocked entries. Bound dry-run has zero route gaps, zero execution-owner conflicts, and zero process starts. |
+| Supervisor integration | Candidate was replayed as `41b3f538`; all five committed files are identical to `dcc83e8d`. Post-integration P4.3 route verification against `e00caa3c` reports five changed files, zero unmatched files, and zero route gaps. P3.3 is released. |
