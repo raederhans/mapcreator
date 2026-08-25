@@ -200,6 +200,7 @@ const translations = {
       "The overlay combines the Europe scenario map with animated night shade and capital lights, echoing the night-light context used elsewhere in the product.",
     showcaseMeta:
       "HOI4 1936 output · Europe extent · 7,177 political source features, 220 selected rail lines, and 22 capital anchors.",
+    showcaseMetadataFallback: "Layer metadata is unavailable; showing the generated map.",
     previewEyebrow: "Interactive preview",
     previewTitle: "Inspect the Japan transport selection before opening the editor.",
     previewBody:
@@ -218,6 +219,7 @@ const translations = {
     previewTabCities: "Cities",
     previewTabTerrain: "Terrain",
     previewTabNight: "Night context",
+    previewImageFallback: "This preview layer is unavailable right now.",
     previewPanelTransportBadge: "Japan preview · selected routes",
     previewPanelTransportTitle:
       "420 rendered routes (260 road + 160 rail) · Japan transport preview.",
@@ -519,6 +521,7 @@ const translations = {
     showcaseLayerDayNightTitle: "昼夜变化让上下文图层更有生命感。",
     showcaseLayerDayNightBody: "这一层把欧洲场景地图、移动夜色和首都光点组合起来，对应产品里的夜光上下文能力。",
     showcaseMeta: "HOI4 1936 输出 · 欧洲范围 · 7,177 个政治源要素、220 条已选铁路线和 22 个首都锚点。",
+    showcaseMetadataFallback: "图层元数据暂不可用，当前显示已生成地图。",
     previewEyebrow: "可交互预览",
     previewTitle: "进入编辑器前，先查看日本交通筛选结果。",
     previewBody: "四张预生成 WebP 通过图层切换形成交互预览，并分别说明源记录与成图所选线路。",
@@ -535,6 +538,7 @@ const translations = {
     previewTabCities: "城市",
     previewTabTerrain: "地形",
     previewTabNight: "夜光上下文",
+    previewImageFallback: "该预览图层暂时不可用。",
     previewPanelTransportBadge: "日本预览 · 已选线路",
     previewPanelTransportTitle: "420 条已渲染线路（260 条道路 + 160 条铁路）· 日本交通预览。",
     previewPanelTransportBody: "预览从 5,899 个道路与铁路源要素中筛选这些线路；日本中部局部交通图集使用独立的 165 条局部线路范围。",
@@ -1284,6 +1288,11 @@ function resolveShowcaseLayer(root, layer) {
   return null;
 }
 
+function setShowcaseStatus(root, visible) {
+  const status = root.querySelector("[data-showcase-status]");
+  if (status) status.hidden = !visible;
+}
+
 function isReducedMotionPreferred() {
   return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
 }
@@ -1537,6 +1546,7 @@ function initShowcaseLayers() {
   const selectLayer = (tab, shouldFocus = false) => {
     const layer = resolveShowcaseLayer(root, tab.getAttribute("data-showcase-layer-tab") || DEFAULT_SHOWCASE_LAYER);
     if (!layer) return;
+    setShowcaseStatus(root, false);
     root.dataset.showcaseLayer = layer;
 
     tabs.forEach((item) => {
@@ -1575,11 +1585,13 @@ function initShowcaseLayers() {
   motionQuery?.addListener?.(() => setShowcaseSvgLayer(root));
   loadShowcaseMetadata(root)
     .then(() => {
+      setShowcaseStatus(root, false);
       const selectedTab = tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || tabs[0];
       selectLayer(selectedTab);
     })
     .catch((error) => {
-      root.dataset.showcaseLayerError = error?.message || "metadata";
+      root.dataset.showcaseLayerError = "metadata";
+      setShowcaseStatus(root, true);
     });
   updateShowcaseLayerCopy();
   setShowcaseSvgLayer(root);
@@ -1635,6 +1647,44 @@ function zoomPreviewView(root, direction) {
 
 function resetPreviewView(root) {
   applyPreviewViewState(root, { scaleIndex: 0, x: 0, y: 0 });
+}
+
+function getPreviewImageForMode(root, mode) {
+  return Array.from(root.querySelectorAll("[data-preview-image]")).find(
+    (image) => image.getAttribute("data-preview-image") === mode,
+  );
+}
+
+function syncPreviewImageStatus(root) {
+  const status = root.querySelector("[data-preview-status]");
+  if (!status) return;
+  const mode = root.dataset.previewMode || "transport";
+  const image = getPreviewImageForMode(root, mode);
+  const failed = image?.dataset.previewLoadError === "true";
+  status.hidden = !failed;
+  if (failed) {
+    root.dataset.previewImageError = mode;
+  } else {
+    delete root.dataset.previewImageError;
+  }
+}
+
+function initPreviewImageStatus(root) {
+  const images = Array.from(root.querySelectorAll("[data-preview-image]"));
+  images.forEach((image) => {
+    if (image.complete === true && image.naturalWidth === 0 && image.getAttribute("src")) {
+      image.dataset.previewLoadError = "true";
+    }
+    image.addEventListener("error", () => {
+      image.dataset.previewLoadError = "true";
+      syncPreviewImageStatus(root);
+    });
+    image.addEventListener("load", () => {
+      delete image.dataset.previewLoadError;
+      syncPreviewImageStatus(root);
+    });
+  });
+  syncPreviewImageStatus(root);
 }
 
 function initPreviewView() {
@@ -1715,6 +1765,7 @@ function initPreviewView() {
       }
     });
   });
+  initPreviewImageStatus(root);
   resetPreviewView(root);
 }
 
@@ -1740,6 +1791,8 @@ function initPreviewTabs() {
     panels.forEach((panel) => {
       panel.hidden = panel.getAttribute("data-preview-panel") !== mode;
     });
+
+    syncPreviewImageStatus(root);
 
     if (shouldFocus) tab.focus();
   };
