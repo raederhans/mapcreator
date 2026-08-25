@@ -153,8 +153,9 @@ const PACKAGE_SCRIPTS = {
   "test:node:scenario-apply-transaction-ownership": "node --test tests/scenario_apply_transaction_ownership.test.mjs",
   "test:node:scenario-chunk-contracts": "node --test tests/scenario_chunk_contracts.test.mjs",
   "test:node:annotation-productization": "node --test tests/file_manager_project_roundtrip_behavior.test.mjs tests/export_workbench_state_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs",
-  "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts",
-  "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
+  "test:py:landing-map-asset-contracts": "npm run python -- -m unittest tests.test_landing_map_asset_contracts -q",
+  "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts",
+  "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
   "verify:dist-drift": "npm run python -- tools/build_pages_dist.py && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
   "test:e2e:smoke": "node tools/e2e_layering.mjs run smoke",
   "test:e2e:scenario-apply-concurrency": "node node_modules/@playwright/test/cli.js test tests/e2e/scenario_apply_concurrency.spec.js --workers=1 --retries=0",
@@ -534,7 +535,7 @@ test("default core plan applies strict command closure without changing test cov
 
   assert.equal(rawPlan.commandsToRun.length, 88);
   assert.equal(plan.commandsToRun.length, 82);
-  assert.equal(rawLeaves.length, 104);
+  assert.equal(rawLeaves.length, 105);
   assert.equal(retainedLeaves.length, 97);
   assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 70);
   assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 63);
@@ -1637,6 +1638,7 @@ test("Pages checked gate keeps generation compatibility and performs one build",
   assert.equal((checked.match(/tools\/build_pages_dist\.py/g) || []).length, 1);
   for (const contract of [
     "tests.test_pages_dist_startup_shell",
+    "test:py:landing-map-asset-contracts",
     "test:node:landing-showcase-view",
     "test:node:sample-project-contracts",
   ]) {

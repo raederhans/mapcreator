@@ -1097,6 +1097,11 @@
       "ownerHints": ["sample-guide", "public-demo", "project-io"],
       "typicalSourceGlobs": [
         "landing/**",
+        "tools/build_landing_europe_1936_showcase.py",
+        "tools/build_landing_japan_preview.py",
+        "tools/build_landing_work_maps.py",
+        "tools/rasterize_landing_assets.py",
+        "tests/test_landing_map_asset_contracts.py",
         "data/sample-projects/**",
         "js/core/sample_project_registry.js",
         "js/bootstrap/startup_sample_project_deeplink.js",
@@ -1108,9 +1113,13 @@
         "npm run test:node:sample-project-contracts",
         "npm run test:node:landing-showcase-view"
       ],
-      "preferredMainThreadChecks": ["npm run test:e2e:sample-guide"],
+      "preferredMainThreadChecks": [
+        "npm run test:py:landing-map-asset-contracts",
+        "npm run test:e2e:sample-guide"
+      ],
       "mainRiskSignals": [
         "sample Guide browser flow requires browser ownership",
+        "canonical landing map generator or checked-in SVG/JSON parity drift",
         "checked-in sample manifest drift",
         "Pages dist sample payload drift"
       ],
@@ -1119,7 +1128,7 @@
         ".runtime/tests/playwright/**/failure-context.json",
         "dist/pages-dist-manifest.json"
       ],
-      "regressionExpectation": "Public sample changes must keep sample contracts and landing showcase tests green, then reserve a browser lane for visible Guide deeplink behavior."
+      "regressionExpectation": "Public sample changes must keep sample contracts, landing showcase tests, and canonical landing map asset parity green, then reserve a browser lane for visible Guide deeplink behavior."
     }
   ]
 }

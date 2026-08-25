@@ -7,7 +7,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 92180,
+      "size_bytes": 85360,
       "source_kind": "dist"
     },
     {
@@ -47262,12 +47262,12 @@
     },
     {
       "path": "assets/europe-1936-showcase.json",
-      "size_bytes": 5593,
+      "size_bytes": 5696,
       "source_kind": "dist"
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 252510,
+      "size_bytes": 141604,
       "source_kind": "dist"
     },
     {
@@ -47282,17 +47282,17 @@
     },
     {
       "path": "assets/hero-blank.json",
-      "size_bytes": 2423,
+      "size_bytes": 2626,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-blank.svg",
-      "size_bytes": 1315142,
+      "size_bytes": 939292,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-blank.webp",
-      "size_bytes": 89880,
+      "size_bytes": 88256,
       "source_kind": "dist"
     },
     {
@@ -47302,92 +47302,92 @@
     },
     {
       "path": "assets/hero-hoi4-1936.json",
-      "size_bytes": 1764,
+      "size_bytes": 2694,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1936.svg",
-      "size_bytes": 102810,
+      "size_bytes": 103134,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1936.webp",
-      "size_bytes": 70598,
+      "size_bytes": 70466,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1939.json",
-      "size_bytes": 1742,
+      "size_bytes": 2674,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1939.svg",
-      "size_bytes": 104241,
+      "size_bytes": 104565,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1939.webp",
-      "size_bytes": 71380,
+      "size_bytes": 70804,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.json",
-      "size_bytes": 3986,
+      "size_bytes": 4783,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.svg",
-      "size_bytes": 296337,
+      "size_bytes": 296520,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.webp",
-      "size_bytes": 60362,
+      "size_bytes": 59638,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-cities.svg",
-      "size_bytes": 294700,
+      "size_bytes": 290316,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-cities.webp",
-      "size_bytes": 40114,
+      "size_bytes": 37204,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-night.svg",
-      "size_bytes": 294739,
+      "size_bytes": 290355,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-night.webp",
-      "size_bytes": 34654,
+      "size_bytes": 30498,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-terrain.svg",
-      "size_bytes": 294716,
+      "size_bytes": 290332,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-terrain.webp",
-      "size_bytes": 47404,
+      "size_bytes": 40964,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-transport.svg",
-      "size_bytes": 294718,
+      "size_bytes": 290334,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview-transport.webp",
-      "size_bytes": 43370,
+      "size_bytes": 40378,
       "source_kind": "dist"
     },
     {
       "path": "assets/japan-preview.json",
-      "size_bytes": 4192,
+      "size_bytes": 5125,
       "source_kind": "dist"
     },
     {
@@ -47442,12 +47442,12 @@
     },
     {
       "path": "assets/social-preview.png",
-      "size_bytes": 122058,
+      "size_bytes": 348160,
       "source_kind": "dist"
     },
     {
       "path": "assets/social-preview.svg",
-      "size_bytes": 1495,
+      "size_bytes": 6376,
       "source_kind": "dist"
     },
     {
@@ -47507,17 +47507,17 @@
     },
     {
       "path": "assets/work-atlas-japan-corridor.json",
-      "size_bytes": 1046,
+      "size_bytes": 1103,
       "source_kind": "dist"
     },
     {
       "path": "assets/work-atlas-japan-corridor.svg",
-      "size_bytes": 47830,
+      "size_bytes": 47692,
       "source_kind": "dist"
     },
     {
       "path": "assets/work-atlas-japan-corridor.webp",
-      "size_bytes": 50374,
+      "size_bytes": 45888,
       "source_kind": "dist"
     },
     {
@@ -47542,17 +47542,17 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 74538,
+      "size_bytes": 60501,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2061302,
+      "size_bytes": 2061133,
       "source_kind": "dist"
     },
     {
       "path": "styles.css",
-      "size_bytes": 52486,
+      "size_bytes": 55673,
       "source_kind": "dist"
     }
   ],
@@ -47666,13 +47666,13 @@
       "graph_scan_status": "complete",
       "publication_ownership_status": "complete",
       "status": "complete",
-      "untraversed_owned_file_count": 9145
+      "untraversed_owned_file_count": 9149
     },
     "categories": [
       {
-        "file_count": 205,
+        "file_count": 201,
         "id": "startup-critical",
-        "size_bytes": 6402954
+        "size_bytes": 6107686
       },
       {
         "file_count": 85,
@@ -47680,9 +47680,9 @@
         "size_bytes": 2557543
       },
       {
-        "file_count": 815,
+        "file_count": 819,
         "id": "on-demand-product",
-        "size_bytes": 252902025
+        "size_bytes": 252886753
       },
       {
         "file_count": 8390,
@@ -47832,10 +47832,6 @@
             "assets/japan-preview-terrain.webp",
             "assets/japan-preview-transport.webp",
             "assets/logo-mark.png",
-            "assets/template-blank.webp",
-            "assets/template-hoi4.webp",
-            "assets/template-modern.webp",
-            "assets/template-tno.webp",
             "assets/work-alt-history-med.webp",
             "assets/work-atlas-japan-corridor.webp",
             "assets/work-scenario-switch-europe.webp",
@@ -61711,8 +61707,8 @@
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 963658703,
-        "untraversed_dist_file_count": 9145,
+        "untraversed_dist_bytes": 963643431,
+        "untraversed_dist_file_count": 9149,
         "untraversed_module_count": 5
       },
       "unresolved_references": []
@@ -62495,56 +62491,40 @@
       {
         "basis": "entrypoint-reference",
         "category": "startup-critical",
-        "file_count": 16,
+        "file_count": 12,
         "owner": "landing",
         "path_exceptions": [
           {
             "path": "app.js",
-            "size_bytes": 92180
+            "size_bytes": 85360
           },
           {
             "path": "assets/europe-1936-showcase.svg",
-            "size_bytes": 252510
+            "size_bytes": 141604
           },
           {
             "path": "assets/hero-hoi4-1936.webp",
-            "size_bytes": 70598
+            "size_bytes": 70466
           },
           {
             "path": "assets/japan-preview-cities.webp",
-            "size_bytes": 40114
+            "size_bytes": 37204
           },
           {
             "path": "assets/japan-preview-night.webp",
-            "size_bytes": 34654
+            "size_bytes": 30498
           },
           {
             "path": "assets/japan-preview-terrain.webp",
-            "size_bytes": 47404
+            "size_bytes": 40964
           },
           {
             "path": "assets/japan-preview-transport.webp",
-            "size_bytes": 43370
+            "size_bytes": 40378
           },
           {
             "path": "assets/logo-mark.png",
             "size_bytes": 65759
-          },
-          {
-            "path": "assets/template-blank.webp",
-            "size_bytes": 34704
-          },
-          {
-            "path": "assets/template-hoi4.webp",
-            "size_bytes": 37926
-          },
-          {
-            "path": "assets/template-modern.webp",
-            "size_bytes": 39086
-          },
-          {
-            "path": "assets/template-tno.webp",
-            "size_bytes": 33860
           },
           {
             "path": "assets/work-alt-history-med.webp",
@@ -62552,7 +62532,7 @@
           },
           {
             "path": "assets/work-atlas-japan-corridor.webp",
-            "size_bytes": 50374
+            "size_bytes": 45888
           },
           {
             "path": "assets/work-scenario-switch-europe.webp",
@@ -62560,11 +62540,11 @@
           },
           {
             "path": "styles.css",
-            "size_bytes": 52486
+            "size_bytes": 55673
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 1001731
+        "size_bytes": 720500
       },
       {
         "basis": "html-entrypoint",
@@ -62574,11 +62554,11 @@
         "path_exceptions": [
           {
             "path": "index.html",
-            "size_bytes": 74538
+            "size_bytes": 60501
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 74538
+        "size_bytes": 60501
       },
       {
         "basis": "startup-resource-graph",
@@ -63109,7 +63089,7 @@
       {
         "basis": "product-registry:landing-product-assets",
         "category": "on-demand-product",
-        "file_count": 36,
+        "file_count": 40,
         "owner": "landing-assets",
         "path_exceptions": [
           {
@@ -63118,19 +63098,19 @@
           },
           {
             "path": "assets/europe-1936-showcase.json",
-            "size_bytes": 5593
+            "size_bytes": 5696
           },
           {
             "path": "assets/hero-blank.json",
-            "size_bytes": 2423
+            "size_bytes": 2626
           },
           {
             "path": "assets/hero-blank.svg",
-            "size_bytes": 1315142
+            "size_bytes": 939292
           },
           {
             "path": "assets/hero-blank.webp",
-            "size_bytes": 89880
+            "size_bytes": 88256
           },
           {
             "path": "assets/hero-cartography.svg",
@@ -63138,55 +63118,55 @@
           },
           {
             "path": "assets/hero-hoi4-1936.json",
-            "size_bytes": 1764
+            "size_bytes": 2694
           },
           {
             "path": "assets/hero-hoi4-1936.svg",
-            "size_bytes": 102810
+            "size_bytes": 103134
           },
           {
             "path": "assets/hero-hoi4-1939.json",
-            "size_bytes": 1742
+            "size_bytes": 2674
           },
           {
             "path": "assets/hero-hoi4-1939.svg",
-            "size_bytes": 104241
+            "size_bytes": 104565
           },
           {
             "path": "assets/hero-hoi4-1939.webp",
-            "size_bytes": 71380
+            "size_bytes": 70804
           },
           {
             "path": "assets/hero-tno-1962.json",
-            "size_bytes": 3986
+            "size_bytes": 4783
           },
           {
             "path": "assets/hero-tno-1962.svg",
-            "size_bytes": 296337
+            "size_bytes": 296520
           },
           {
             "path": "assets/hero-tno-1962.webp",
-            "size_bytes": 60362
+            "size_bytes": 59638
           },
           {
             "path": "assets/japan-preview-cities.svg",
-            "size_bytes": 294700
+            "size_bytes": 290316
           },
           {
             "path": "assets/japan-preview-night.svg",
-            "size_bytes": 294739
+            "size_bytes": 290355
           },
           {
             "path": "assets/japan-preview-terrain.svg",
-            "size_bytes": 294716
+            "size_bytes": 290332
           },
           {
             "path": "assets/japan-preview-transport.svg",
-            "size_bytes": 294718
+            "size_bytes": 290334
           },
           {
             "path": "assets/japan-preview.json",
-            "size_bytes": 4192
+            "size_bytes": 5125
           },
           {
             "path": "assets/night-lights-political.webp",
@@ -63206,27 +63186,43 @@
           },
           {
             "path": "assets/social-preview.png",
-            "size_bytes": 122058
+            "size_bytes": 348160
           },
           {
             "path": "assets/social-preview.svg",
-            "size_bytes": 1495
+            "size_bytes": 6376
           },
           {
             "path": "assets/template-blank.svg",
             "size_bytes": 31056
           },
           {
+            "path": "assets/template-blank.webp",
+            "size_bytes": 34704
+          },
+          {
             "path": "assets/template-hoi4.svg",
             "size_bytes": 31054
+          },
+          {
+            "path": "assets/template-hoi4.webp",
+            "size_bytes": 37926
           },
           {
             "path": "assets/template-modern.svg",
             "size_bytes": 31058
           },
           {
+            "path": "assets/template-modern.webp",
+            "size_bytes": 39086
+          },
+          {
             "path": "assets/template-tno.svg",
             "size_bytes": 31052
+          },
+          {
+            "path": "assets/template-tno.webp",
+            "size_bytes": 33860
           },
           {
             "path": "assets/work-alt-history-med.json",
@@ -63238,11 +63234,11 @@
           },
           {
             "path": "assets/work-atlas-japan-corridor.json",
-            "size_bytes": 1046
+            "size_bytes": 1103
           },
           {
             "path": "assets/work-atlas-japan-corridor.svg",
-            "size_bytes": 47830
+            "size_bytes": 47692
           },
           {
             "path": "assets/work-scenario-switch-europe.json",
@@ -63258,7 +63254,7 @@
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 4013458
+        "size_bytes": 3998355
       },
       {
         "basis": "product-registry:landing-sample-projects",
@@ -63287,11 +63283,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2061302
+            "size_bytes": 2061133
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2061302
+        "size_bytes": 2061133
       },
       {
         "basis": "product-registry:thematic-product-data",
@@ -63921,7 +63917,7 @@
         },
         {
           "category": "on-demand-product",
-          "file_count": 36,
+          "file_count": 40,
           "id": "landing-product-assets",
           "match": {
             "exact_paths": [
@@ -63947,7 +63943,7 @@
             ]
           },
           "owner": "landing-assets",
-          "size_bytes": 4013458
+          "size_bytes": 3998355
         },
         {
           "category": "startup-deferred-runtime",
@@ -64007,7 +64003,7 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2061302
+          "size_bytes": 2061133
         }
       ],
       "status": "complete",
@@ -64021,14 +64017,14 @@
       "registry_resolved_dynamic_expression_count": 2,
       "status": "complete",
       "total_file_count": 9511,
-      "traversed_file_count": 366,
+      "traversed_file_count": 362,
       "unresolved_dynamic_expression_count": 0,
       "unresolved_reference_count": 0,
-      "untraversed_file_count": 9145,
-      "untraversed_owned_file_count": 9145
+      "untraversed_file_count": 9149,
+      "untraversed_owned_file_count": 9149
     },
     "schema_version": 2,
-    "untraversed_owned_file_count": 9145
+    "untraversed_owned_file_count": 9149
   },
   "required_files": [
     "index.html",
@@ -64055,27 +64051,27 @@
     {
       "file_count": 57,
       "path": "assets",
-      "size_bytes": 4879157
+      "size_bytes": 4586456
     },
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2061302
+      "size_bytes": 2061133
     },
     {
       "file_count": 1,
       "path": "app.js",
-      "size_bytes": 92180
+      "size_bytes": 85360
     },
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 74538
+      "size_bytes": 60501
     },
     {
       "file_count": 1,
       "path": "styles.css",
-      "size_bytes": 52486
+      "size_bytes": 55673
     },
     {
       "file_count": 1,
@@ -64083,5 +64079,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 973025758
+  "total_bytes": 972715218
 }

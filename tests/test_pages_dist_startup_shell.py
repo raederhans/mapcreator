@@ -1657,6 +1657,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")
         styles_css = LANDING_STYLES_CSS.read_text(encoding="utf-8")
 
+        self.assertEqual(
+            re.findall(r'<section id="([^"]+)"', html),
+            ["hero", "sample-runs", "story", "features", "data", "faq"],
+        )
+
         for expected_fragment in (
             './styles.css',
             './app.js',
@@ -1666,7 +1671,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="productStageLabel"',
             'class="brandmark__logo"',
             './assets/favicon.svg',
-            '<a href="#sample-runs" data-i18n="navWorks">Runs</a>',
+            '<a href="#sample-runs" data-i18n="navWorks">Outputs</a>',
             './assets/hero-hoi4-1936.webp',
             'data-hero-map',
             'data-hero-chip="blank"',
@@ -1674,26 +1679,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-hero-chip="hoi4-1939"',
             'data-hero-chip="tno-1962"',
             'data-stat-value="21338"',
-            'data-i18n="sourcesEyebrow"',
-            'class="source-marquee"',
-            'class="source-marquee__track"',
-            'aria-hidden="true"',
-            'href="https://github.com/nvkelso/natural-earth-vector"',
-            'href="https://github.com/wmgeolab/geoBoundaries"',
-            'href="https://download.geonames.org/export/dump/"',
-            'href="https://www.ncei.noaa.gov/products/etopo-global-relief-model"',
-            'href="https://blackmarble.gsfc.nasa.gov/"',
-            'href="https://planet.openstreetmap.org/"',
-            'href="https://download.geofabrik.de/"',
-            'href="https://nlftp.mlit.go.jp/ksj/index.html"',
-            'href="https://www.usgs.gov/programs/mineral-resources-program/mineral-resources-data"',
-            'href="https://www.data.gouv.fr/"',
-            'href="https://docs.camino.beta.gouv.fr/qgis/"',
-            'href="https://www.data.gouv.fr/datasets/base-de-donnees-des-installations-terminales-embranchees-fret-en-france-ite-3000"',
-            'href="https://railroads.dot.gov/maps-and-data/maps-geographic-information-system/maps-geographic-information-system"',
-            'href="https://www.opendatani.gov.uk/"',
-            'href="https://data-portal.networkrail.co.uk/"',
-            'href="https://www.data.gov.uk/dataset/naptan"',
+            '<meta name="robots" content="index,follow" />',
+            '<link rel="canonical" href="https://raederhans.github.io/scenario-forge/" />',
+            '<meta property="og:image" content="https://raederhans.github.io/scenario-forge/assets/social-preview.png" />',
+            '<meta name="twitter:card" content="summary_large_image" />',
             'data-i18n="showcaseEyebrow"',
             './assets/europe-1936-showcase.svg',
             'data-showcase-root',
@@ -1721,13 +1710,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-aria-label="previewZoomOut"',
             'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
-            'data-i18n="templatesEyebrow"',
-            './assets/template-modern.webp',
+            'data-preview-status role="status" aria-live="polite" hidden',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
-            'data-i18n="casesEyebrow"',
             'data-i18n="faqEyebrow"',
-            'data-i18n="updatesEyebrow"',
             'class="footer__brand"',
             'class="footer__sources"',
             'class="footer__actions"',
@@ -1806,6 +1792,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-story-step-button="export"',
             'data-story-compare="hoi4-1939"',
             'data-story-evidence-source="data/scenarios/index.json:public_baseline_ids.length"',
+            'data-showcase-status role="status" aria-live="polite" hidden',
             'data-i18n="storyEyebrow"',
             'data-i18n-aria-label="storyStageLabel"',
             'data-i18n="chipBlank"',
@@ -1827,7 +1814,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroTitleAccent",
             "formatMetricNumbers",
             "statsLabel",
-            "sourcesEyebrow",
+            "worksEyebrow",
+            "featuresEyebrow",
+            "dataEyebrow",
+            "faqEyebrow",
             "showcaseEyebrow",
             "showcaseLayerPoliticalTitle",
             "showcaseLayerRailTitle",
@@ -1889,11 +1879,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "syncHeroMap",
             "initMetricCountUp",
             "previewPanelTransportTitle",
+            "previewImageFallback",
+            "showcaseMetadataFallback",
             "dataCardOneTitle",
             "editionOneTitle",
             "faqOneQuestion",
-            "templatesEyebrow",
-            "updatesEyebrow",
             "productPreviewLabel",
             "productStageLabel",
             "heroChipsLabel",
@@ -1905,6 +1895,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltTno1962",
             "data-i18n-alt",
             "data-i18n-aria-label",
+            "metaTitle",
+            "metaDescription",
+            "metaOgDescription",
             "zh:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
@@ -1913,8 +1906,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", styles_css)
         self.assertIn('html[data-reveal="enabled"]', styles_css)
         self.assertIn(".is-revealed", styles_css)
-        self.assertIn(".source-marquee__track", styles_css)
-        self.assertIn("@keyframes sourceMarquee", styles_css)
         self.assertIn("min-height: 126px", styles_css)
         self.assertIn("height: 48px", styles_css)
         self.assertIn("height: 46px", styles_css)
@@ -1923,7 +1914,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("line-height: 1.1", styles_css)
         self.assertIn("overflow-wrap: anywhere", styles_css)
         self.assertIn(".hero-cartography", styles_css)
-        self.assertIn("translateY(-18px) perspective(1200px)", styles_css)
+        self.assertIn("translateY(-8px) perspective(1200px)", styles_css)
         hero_chips_style = re.search(r"\.hero__chips\s*\{(?P<body>[^}]*)\}", styles_css, re.S)
         self.assertIsNotNone(hero_chips_style)
         self.assertNotIn("position: absolute", hero_chips_style.group("body"))
@@ -2041,6 +2032,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         zh_table = app_js[zh_start:]
 
         for expected_fragment in (
+            "navWorks:",
+            "worksTitle:",
+            "sampleProjectDownloadsTitle:",
             "featureGroupOneTitle:",
             "featureGroupTwoTitle:",
             "featureGroupThreeTitle:",
@@ -2049,9 +2043,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'previewPanelTransportTitle:',
             "dataTitle:",
             "faqOneQuestion:",
-            "roadmapOneTitle:",
-            "roadmapTwoTitle:",
-            "templatesTitle:",
+            "faqSixQuestion:",
+            "editionsTitle:",
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
@@ -2062,6 +2055,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "previewZoomIn:",
             "previewZoomOut:",
             "previewZoomReset:",
+            "previewImageFallback:",
+            "showcaseMetadataFallback:",
             "storyTitle:",
             "storyStepBaselineTitle:",
             "storyStepExportProof:",
@@ -2073,13 +2068,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltHoi41936:",
             "heroAltHoi41939:",
             "heroAltTno1962:",
-            "templateModernAlt:",
-            "updatesTitle:",
+            "ctaTitle:",
+            "metaTitle:",
+            "metaDescription:",
+            "metaOgDescription:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, en_table)
 
         for expected_fragment in (
+            "navWorks:",
+            "worksTitle:",
+            "sampleProjectDownloadsTitle:",
             "featureGroupOneTitle:",
             "featureGroupTwoTitle:",
             "featureGroupThreeTitle:",
@@ -2088,17 +2088,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "previewPanelTransportTitle:",
             "dataTitle:",
             "faqOneQuestion:",
-            "workflowTitle:",
-            "audienceTitle:",
-            "roadmapOneTitle:",
-            "roadmapTwoTitle:",
+            "faqSixQuestion:",
+            "editionsTitle:",
             "ctaBody:",
-            "templatesTitle:",
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerDayNightTitle:",
+            "previewImageFallback:",
+            "showcaseMetadataFallback:",
             "storyTitle:",
             "storyStepBaselineTitle:",
             "storyStepExportProof:",
@@ -2110,9 +2109,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltHoi41936:",
             "heroAltHoi41939:",
             "heroAltTno1962:",
-            "templateModernAlt:",
-            "updatesTitle:",
             'metaTitle: "Scenario Forge — 场景优先政治地图工作台"',
+            "metaDescription:",
+            "metaOgDescription:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
                 self.assertIn(expected_fragment, zh_table)
@@ -2166,6 +2165,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.skipTest("dist/index.html is only available after build_pages_dist runs")
         html = DIST_ROOT_INDEX.read_text(encoding="utf-8")
 
+        self.assertEqual(
+            re.findall(r'<section id="([^"]+)"', html),
+            ["hero", "sample-runs", "story", "features", "data", "faq"],
+        )
+
         for expected_fragment in (
             "./styles.css",
             "./app.js",
@@ -2182,7 +2186,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-hero-chip="hoi4-1939"',
             'data-hero-chip="tno-1962"',
             'data-stat-value="21338"',
-            'data-i18n="sourcesEyebrow"',
+            '<meta name="robots" content="index,follow" />',
+            '<link rel="canonical" href="https://raederhans.github.io/scenario-forge/" />',
+            '<meta property="og:image" content="https://raederhans.github.io/scenario-forge/assets/social-preview.png" />',
+            '<meta name="twitter:card" content="summary_large_image" />',
             'data-i18n="showcaseEyebrow"',
             './assets/europe-1936-showcase.svg',
             'data-showcase-root',
@@ -2204,13 +2211,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-aria-label="previewZoomOut"',
             'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
-            'data-i18n="templatesEyebrow"',
-            './assets/template-modern.webp',
+            'data-preview-status role="status" aria-live="polite" hidden',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
-            'data-i18n="casesEyebrow"',
             'data-i18n="faqEyebrow"',
-            'data-i18n="updatesEyebrow"',
+            'data-showcase-status role="status" aria-live="polite" hidden',
             'data-i18n-aria-label="productPreviewLabel"',
             'data-i18n-aria-label="brandHomeLabel"',
             'data-i18n-aria-label="primaryNavLabel"',
@@ -2218,7 +2223,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-alt="productPreviewAlt"',
             'data-i18n-alt="workOneAlt"',
             'data-i18n="workOneTitle"',
-            '<a href="#sample-runs" data-i18n="navWorks">Runs</a>',
+            '<a href="#sample-runs" data-i18n="navWorks">Outputs</a>',
             'id="sample-runs"',
             'data-sample-runs-root',
             'data-sample-runs-manifest="./assets/sample-runs.json"',
@@ -2272,7 +2277,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroTitleAccent",
             "formatMetricNumbers",
             "statsLabel",
-            "sourcesEyebrow",
+            "worksEyebrow",
+            "featuresEyebrow",
+            "dataEyebrow",
+            "faqEyebrow",
             "showcaseEyebrow",
             "showcaseLayerPoliticalTitle",
             "showcaseLayerRailTitle",
@@ -2316,12 +2324,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "storyStageTitleExport",
             "syncProductStoryFromDom",
             "previewPanelTransportTitle",
+            "previewImageFallback",
+            "showcaseMetadataFallback",
             "dataCardOneTitle",
             "faqOneQuestion",
             "editionsEyebrow",
-            "casesEyebrow",
-            "templatesEyebrow",
-            "updatesEyebrow",
             "productPreviewLabel",
             "productStageLabel",
             "heroChipsLabel",
@@ -2338,6 +2345,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "heroAltHoi41939",
             "heroAltTno1962",
             "data-i18n-alt",
+            "metaTitle",
+            "metaDescription",
+            "metaOgDescription",
             "zh:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
@@ -2352,7 +2362,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertRegex(styles_css, re.compile(r'\[data-reveal(?:=["\']enabled["\'])?\]'))
         self.assertIn(".is-revealed", styles_css)
         self.assertIn(".hero-cartography", styles_css)
-        self.assertIn("translateY(-18px) perspective(1200px)", styles_css)
+        self.assertIn("translateY(-8px) perspective(1200px)", styles_css)
         hero_chips_style = re.search(r"\.hero__chips\s*\{(?P<body>[^}]*)\}", styles_css, re.S)
         self.assertIsNotNone(hero_chips_style)
         self.assertNotIn("position: absolute", hero_chips_style.group("body"))

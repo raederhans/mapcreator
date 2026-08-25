@@ -1,10 +1,17 @@
 {
+  "carrier_binding": {
+    "cross_mask_policy": "caller-must-provide-frame-for-lines-and-polygons",
+    "fit_geometry_type": "MultiPolygon",
+    "frame_id": "main",
+    "frame_label": "Japan four islands",
+    "source_file": "data/transport_layers/japan_corridor/carrier.json"
+  },
   "counts": {
     "bathymetry_eligible_paths": 0,
     "bathymetry_lines_rendered": 0,
     "bathymetry_source_features": 6,
     "carrier_paths": 59,
-    "city_eligible_points": 758,
+    "city_eligible_points": 753,
     "city_points_rendered": 32,
     "city_source_features": 773,
     "focus_city_points_rendered": 3,
@@ -19,13 +26,13 @@
     ],
     "major_station_points_rendered": 20,
     "night_anchor_candidates": 54,
-    "night_grid_candidates": 297,
+    "night_grid_candidates": 154,
     "night_points_rendered": 88,
     "rail_eligible_paths": 226,
     "rail_lines_rendered": 160,
     "rail_source_features": 1105,
-    "river_eligible_paths": 9,
-    "river_lines_rendered": 9,
+    "river_eligible_paths": 3,
+    "river_lines_rendered": 3,
     "river_source_features": 1473,
     "road_eligible_paths": 3575,
     "road_lines_rendered": 260,
@@ -64,10 +71,10 @@
       "Nara-shi · Nara",
       "Iwaki · Fukushima"
     ],
-    "terrain_major_eligible_paths": 32,
-    "terrain_major_lines_rendered": 32,
+    "terrain_major_eligible_paths": 23,
+    "terrain_major_lines_rendered": 23,
     "terrain_major_source_features": 15257,
-    "terrain_minor_eligible_paths": 179,
+    "terrain_minor_eligible_paths": 131,
     "terrain_minor_lines_rendered": 120,
     "terrain_minor_source_features": 74861
   },
@@ -101,11 +108,15 @@
       136.5,
       35.0
     ],
+    "fit_scale": 1516.9941693795884,
     "name": "geoConicConformal",
+    "offset_x": 166.12978529966048,
+    "offset_y": 24.0,
     "parallels": [
       33.0,
       37.0
-    ]
+    ],
+    "scale_semantics": "projection fit from carrier coordinates to SVG pixels"
   },
   "scope": {
     "bbox": [
@@ -115,22 +126,25 @@
       45.520413
     ],
     "country": "Japan",
-    "note": "Matches the existing Japan transport workbench carrier scope.",
-    "profile": "japan main corridor"
+    "note": "Japan four-main-island preview from the carrier; Okinawa is outside this frame; one highlighted motorway path (C4).",
+    "profile": "Japan main-islands preview"
   },
   "selection_policy": {
-    "bathymetry_scope_note": "The checked-in global bathymetry topology has no lines intersecting the Japan main corridor bbox.",
+    "bathymetry_scope_note": "The checked-in global bathymetry topology has no lines intersecting the Japan four-island carrier frame.",
     "city_limit": 32,
     "city_ranking_key": "population_plus_focus_city_bonus",
+    "clip_frame": "carrier.frames.main.fitGeometry for lines, polygons, and points",
     "focus_city_names": [
       "Tokyo",
       "Osaka",
       "Nagoya"
     ],
+    "highlighted_motorway_ref": "C4",
     "main_corridor_limit": 1,
-    "main_corridor_ranking_key": "motorway_or_trunk_rank_plus_projected_length_px",
+    "main_corridor_ranking_key": "exact_ref_C4_then_projected_length_px",
+    "main_corridor_role": "highlighted motorway",
     "night_grid_limit": 78,
-    "night_source": "NASA Black Marble 2016 grid sampled over the Japan map bbox",
+    "night_source": "NASA Black Marble 2016 grid sampled inside the Japan four-island carrier frame",
     "rail_limit": 160,
     "rail_ranking_key": "line_class_weight_plus_projected_length_px",
     "rail_source": "preview",
@@ -151,5 +165,10 @@
     "js/core/city_lights_modern_asset.js",
     "data/city_lights/historical_1930_entries.json"
   ],
-  "title": "Japan landing preview"
+  "title": "Japan landing preview",
+  "ui_zoom": {
+    "binding": "consumer-owned; no numeric UI default embedded in this asset metadata",
+    "ownership": "landing/app.js consumer",
+    "semantics": "interactive viewport zoom applied after projection fit"
+  }
 }

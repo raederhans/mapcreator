@@ -37,13 +37,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 333);
-  assert.equal(summary.contributorRecords, 419);
-  assert.equal(summary.verificationRecordProjectionCount, 128);
-  assert.equal(summary.routeProjectionCount, 378);
-  assert.equal(summary.commandCount, 336);
+  assert.equal(summary.packageScriptCount, 334);
+  assert.equal(summary.contributorRecords, 420);
+  assert.equal(summary.verificationRecordProjectionCount, 129);
+  assert.equal(summary.routeProjectionCount, 379);
+  assert.equal(summary.commandCount, 337);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 419);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 420);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -197,6 +197,28 @@ test("verification metadata validates against package scripts and supervisor dom
       optionalMainThreadCount: getVerifyCoreOptionalMainThreadCommands().length,
     },
   );
+});
+
+test("landing map generators and checked-in assets route to the map asset contracts", () => {
+  const sourceRefs = [
+    "tools/build_landing_europe_1936_showcase.py",
+    "tools/build_landing_japan_preview.py",
+    "tools/build_landing_work_maps.py",
+    "landing/assets/hero-tno-1962.json",
+    "landing/assets/japan-preview-transport.svg",
+    "landing/assets/work-atlas-japan-corridor.svg",
+  ];
+  const report = buildRecommendation(sourceRefs);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const sourceRef of sourceRefs) {
+    assert.ok(
+      commandsForChangedFile(report, sourceRef).some((command) => (
+        command.commandRef === "test:py:landing-map-asset-contracts"
+      )),
+      `${sourceRef} should select the landing map asset contracts`,
+    );
+  }
 });
 
 test("scenario chunk split routes keep quick local and defer data-reading paths to full", () => {

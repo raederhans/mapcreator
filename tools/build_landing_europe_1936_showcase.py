@@ -1005,7 +1005,7 @@ def layout_label_boxes(
         anchor_y = float(item["y"])
         above_y = anchor_y - gap
         below_y = anchor_y + font_size + gap
-        candidates = (
+        candidates = [
             (anchor_x + gap, above_y),
             (anchor_x - gap - width, above_y),
             (anchor_x + gap, below_y),
@@ -1014,7 +1014,24 @@ def layout_label_boxes(
             (anchor_x - gap - width, above_y - font_size * 1.2),
             (anchor_x + gap, below_y + font_size * 1.2),
             (anchor_x - gap - width, below_y + font_size * 1.2),
-        )
+            (anchor_x - width / 2.0, above_y),
+            (anchor_x - width / 2.0, below_y),
+            (anchor_x - width / 2.0, above_y - font_size * 1.2),
+            (anchor_x - width / 2.0, below_y + font_size * 1.2),
+        ]
+        for offset_scale in (2.4, 3.6, 4.8):
+            high_y = above_y - font_size * offset_scale
+            low_y = below_y + font_size * offset_scale
+            candidates.extend(
+                (
+                    (anchor_x + gap, high_y),
+                    (anchor_x - gap - width, high_y),
+                    (anchor_x - width / 2.0, high_y),
+                    (anchor_x + gap, low_y),
+                    (anchor_x - gap - width, low_y),
+                    (anchor_x - width / 2.0, low_y),
+                )
+            )
         chosen: tuple[float, float, tuple[float, float, float, float]] | None = None
         for text_x, text_y in candidates:
             label_box = (
@@ -1033,16 +1050,8 @@ def layout_label_boxes(
                 chosen = (text_x, text_y, label_box)
                 break
         if chosen is None:
-            text_x, text_y = candidates[0]
-            chosen = (
-                text_x,
-                text_y,
-                (
-                    text_x - stroke_pad,
-                    text_y - font_size * 0.84 - stroke_pad,
-                    text_x + width + stroke_pad,
-                    text_y + font_size * 0.24 + stroke_pad,
-                ),
+            raise ValueError(
+                f"Could not place label {item.get('name')!r} without overlapping another label"
             )
         laid_out = dict(item)
         laid_out["label_x"] = chosen[0]

@@ -40,7 +40,7 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -56,7 +56,7 @@ body {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-tap-highlight-color: rgba(20, 127, 119, 0.16);
 }
 
@@ -133,6 +133,7 @@ a.button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
   font-weight: 800;
   letter-spacing: 0;
   text-decoration: none;
@@ -160,6 +161,11 @@ a.button {
 
 .topnav a {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   text-decoration: none;
   transition: color var(--transition-fast);
 }
@@ -678,6 +684,8 @@ a.button {
 .work-card {
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  width: 100%;
   min-height: 100%;
   border: 1px solid rgba(7, 17, 31, 0.08);
   border-radius: var(--radius-xl);
@@ -1125,6 +1133,8 @@ a.button {
   position: sticky;
   top: 118px;
   overflow: hidden;
+  min-width: 0;
+  width: 100%;
   margin: 0;
   border: 1px solid rgba(7, 17, 31, 0.1);
   border-radius: var(--radius-xl);
@@ -2260,8 +2270,24 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
     border-radius: 28px;
   }
 
+  .brandmark {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .topbar__language {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .topbar__cta {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
   .topnav {
     grid-column: 1 / -1;
+    grid-row: 2;
     justify-content: flex-start;
   }
 
@@ -2342,10 +2368,23 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
   }
 
   .topbar {
+    position: static;
+    grid-template-columns: minmax(0, 1fr) auto;
     top: 10px;
     gap: 14px;
     padding: 12px;
     border-radius: 22px;
+  }
+
+  .brandmark {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .topbar__cta {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .brandmark__text {
@@ -2362,9 +2401,12 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
 
   .topbar__language {
     grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .topnav {
+    grid-column: 1 / -1;
+    grid-row: 3;
     gap: 10px 14px;
     font-size: 0.88rem;
   }
@@ -2392,7 +2434,8 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
   }
 
   .story-stage__media {
-    min-height: 280px;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
   }
 
   .story-stage__bar strong {
@@ -2536,12 +2579,11 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .work-card--tall .work-card__media {
-    min-height: 380px;
-  }
-
+  .work-card__media,
+  .work-card--tall .work-card__media,
   .sample-run-card.work-card--tall .work-card__media {
-    min-height: 260px;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
   }
 
   .work-card--tall .work-card__copy {

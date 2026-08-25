@@ -253,13 +253,15 @@ class EuropePoliticalAndLabelContractTests(unittest.TestCase):
                 f"capital {tag} at {coordinates} lies outside its owners.by_feature geometry",
             )
 
-    def test_showcase_tier_zero_label_boxes_do_not_overlap(self) -> None:
-        boxes = svg_label_boxes(ASSETS / "europe-1936-showcase.svg", tier_zero_only=True)
+    def test_showcase_label_boxes_do_not_overlap_at_any_visible_density(self) -> None:
+        boxes = svg_label_boxes(ASSETS / "europe-1936-showcase.svg", tier_zero_only=False)
         assert_pairwise_disjoint(self, boxes)
 
-    def test_hero_1939_capital_label_boxes_do_not_overlap(self) -> None:
-        boxes = svg_label_boxes(ASSETS / "hero-hoi4-1939.svg", tier_zero_only=False)
-        assert_pairwise_disjoint(self, boxes)
+    def test_nonblank_hero_capital_label_boxes_do_not_overlap(self) -> None:
+        for filename in ("hero-hoi4-1936.svg", "hero-hoi4-1939.svg", "hero-tno-1962.svg"):
+            with self.subTest(filename=filename):
+                boxes = svg_label_boxes(ASSETS / filename, tier_zero_only=False)
+                assert_pairwise_disjoint(self, boxes)
 
     def test_blank_hero_runtime_topology_matches_manifest(self) -> None:
         manifest = read_json(REPO_ROOT / "data" / "scenarios" / "blank_base" / "manifest.json")
