@@ -233,6 +233,7 @@ import { createVisualEffectsPassOwner } from "./renderer/visual_effects_pass_own
 import { createDayNightRuntimeOwner } from "./renderer/day_night_runtime_owner.js";
 import { createContextPassOrchestratorOwner } from "./renderer/context_pass_orchestrator_owner.js";
 import { createPoliticalPassOrchestratorOwner } from "./renderer/political_pass_orchestrator_owner.js";
+import { createPoliticalBackgroundRenderOwner } from "./renderer/political_background_render_owner.js";
 import { createRenderPerfMetricsRuntimeOwner } from "./renderer/render_perf_metrics_runtime_owner.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";
@@ -581,12 +582,6 @@ const OCEAN_MASK_MODE_TOPOLOGY = "topology_ocean";
 const OCEAN_MASK_MODE_SPHERE_MINUS_LAND = "sphere_minus_land";
 const OCEAN_MASK_MODE_BATHYMETRY = "bathymetry_features";
 const OCEAN_MASK_MIN_QUALITY = 0.35;
-const OCEAN_DEPTH_MASK_BLEND_MODE = "soft-light";
-const OCEAN_DEPTH_MASK_GRAY_MAP = Object.freeze({
-  min: 28,
-  neutral: 128,
-  max: 232,
-});
 const GLOBAL_BATHYMETRY_TOPOLOGY_URL = resolveDataAssetUrl("bathymetry:global_topology");
 const BATHYMETRY_BANDS_OBJECT_NAME = "bathymetry_bands";
 const BATHYMETRY_CONTOURS_OBJECT_NAME = "bathymetry_contours";
@@ -879,9 +874,6 @@ const POLITICAL_PATH_WARMUP_QUEUE_MAX = 512;
 const POLITICAL_PATH_WARMUP_MAX_FEATURES_PER_SLICE = 24;
 const POLITICAL_PATH_WARMUP_CPU_BUDGET_MS = 4;
 const POLITICAL_PATH_WARMUP_TIMEOUT_MS = 24;
-const POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT = 2400;
-const POLITICAL_DEFERRED_FULL_CACHE_CPU_BUDGET_MS = 10;
-const POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS = 60;
 const TARGET_GEOMETRY_DIAG_COUNTRIES = new Set(["GY", "SO"]);
 const TARGET_GEOMETRY_DIAG_PREFIXES = ["RU_ARCTIC_FB_"];
 const HEAVY_SCENARIO_STAGED_APPLY_FEATURE_THRESHOLD = 12000;
@@ -908,11 +900,6 @@ const layerResolverCache = {
 };
 const objectIdentityTokenCache = new WeakMap();
 let nextObjectIdentityToken = 1;
-let admin0MergedCache = {
-  topologyRef: null,
-  featureCount: 0,
-  entries: [],
-};
 let staticMeshCache = {
   primaryRef: null,
   detailRef: null,
@@ -936,18 +923,13 @@ let staticMeshSourceCountries = {
   primary: new Set(),
   detail: new Set(),
 };
-let scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState();
-let scenarioPoliticalBackgroundDeferredFullCacheHandle = null;
-let scenarioPoliticalBackgroundDeferredFullCacheState = null;
 let physicalLandClipPathCache = {
   key: "",
   path: null,
 };
-const SCENARIO_BACKGROUND_MERGE_MAX_AREA = Math.PI * 2;
 const SCENARIO_COASTLINE_MAX_AREA_DELTA_RATIO = 0.02;
 const SCENARIO_COASTLINE_MAX_INTERIOR_RING_RATIO = 0.25;
 const SCENARIO_COASTLINE_MAX_INTERIOR_RING_COUNT = 500;
-const suspiciousScenarioBackgroundMergeWarnings = new Set();
 const scenarioOwnerOnlyCanonicalFallbackWarnings = new Set();
 const missingPhysicalContextWarnings = new Set();
 let scenarioWaterPartPathCache = new WeakMap();
@@ -1008,6 +990,7 @@ let renderPipelinePassesOwner = null;
 let visualEffectsPassOwner = null;
 let contextPassOrchestratorOwner = null;
 let politicalPassOrchestratorOwner = null;
+let politicalBackgroundRenderOwner = null;
 let renderCacheOwner = null;
 let cachedPassCompositorOwner = null;
 let transformedFrameCompositorOwner = null;
@@ -3452,6 +3435,93 @@ function getPoliticalPassOrchestratorOwner() {
   return politicalPassOrchestratorOwner;
 }
 
+function getPoliticalBackgroundRenderOwner() {
+  if (politicalBackgroundRenderOwner) {
+    return politicalBackgroundRenderOwner;
+  }
+  politicalBackgroundRenderOwner = createPoliticalBackgroundRenderOwner({
+    surface: rendererSurfaceHost,
+    getters: {
+      getRuntimeState: () => runtimeState,
+      getDebugMode: () => debugMode,
+    },
+    helpers: {
+      getAtlantropaSeaPoliticalFillColor,
+      getFeatureId,
+      getSafeCanvasColor,
+      isAtlantropaSeaFeature,
+      getResolvedFeatureColor,
+      getDisplayOwnerCode,
+      getFeatureCountryCodeNormalized,
+      isWorldBounds,
+      getPoliticalPathCacheHandle,
+      getPoliticalFeaturePathEntry,
+      getTransformSignature,
+      getPoliticalPathCacheSignature,
+      getVisibleFrameIdentity,
+      nowMs,
+      getRenderPassCacheState,
+      isInteractionRecoverySettled,
+      isExactAfterSettleControllerActive,
+      cloneZoomTransform,
+      getLogicalCanvasDimensions,
+      isAntarcticSectorFeature,
+      isBaseGeographyScenarioFeature,
+      shouldExcludePoliticalVisualFeature,
+      shouldSkipFeature,
+      getProjectedFeatureBounds,
+      collectVisibleLandSpatialItems,
+      screenRectToProjectedRect,
+      collectLandSpatialItemsForProjectedRects,
+      projectedBoundsIntersectScreenRects,
+      getPoliticalRecoveryQuality,
+      hasPendingPoliticalColorEdit,
+      getAdmin0BackgroundFillColor,
+      normalizeIntensityFieldsState,
+      getRenderPassLayout,
+      getProjectionRenderSignature,
+      getOceanBaseFillColor,
+    },
+    effects: {
+      recordRenderPerfMetric,
+      cancelDeferredWork,
+      scheduleDeferredWork,
+      invalidateRenderPasses,
+      recordProgressivePoliticalFullCacheReadyDiagnostics,
+      requestRendererRender,
+      renderFallback: () => {
+        if (rendererSurfaceHost.getContext()) render();
+      },
+      commitIntensityFieldsState: (intensityFields) => {
+        runtimeState.intensityFields = intensityFields;
+      },
+      getIntensityFieldMaskOwner,
+      applyOceanClipMask,
+      drawOceanStyle,
+      warn: (...args) => globalThis.console?.warn?.(...args),
+    },
+    platform: {
+      d3: globalThis.d3,
+      topojson: globalThis.topojson,
+      Path2D: globalThis.Path2D,
+      console: globalThis.console,
+    },
+    constants: {
+      landFillColor: LAND_FILL_COLOR,
+      renderPhaseIdle: RENDER_PHASE_IDLE,
+      politicalRecoveryQualityProgressive: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
+      progressiveBackgroundExactEntryLimit: 2400,
+      deferredFullCacheCpuBudgetMs: 10,
+      deferredFullCacheTimeoutMs: 60,
+      scenarioBackgroundMergeMaxArea: Math.PI * 2,
+      oceanDepthMaskBlendMode: "soft-light",
+      oceanDepthMaskGrayMap: { min: 28, neutral: 128, max: 232 },
+      oceanMaskModeTopology: OCEAN_MASK_MODE_TOPOLOGY,
+    },
+  });
+  return politicalBackgroundRenderOwner;
+}
+
 function getRenderPipelinePassesOwner() {
   if (renderPipelinePassesOwner) {
     return renderPipelinePassesOwner;
@@ -4715,21 +4785,8 @@ function invalidatePoliticalPathCache(reason = "unspecified") {
 }
 
 function cancelScenarioPoliticalBackgroundDeferredFullCache(reason = "unspecified") {
-  if (scenarioPoliticalBackgroundDeferredFullCacheHandle) {
-    cancelDeferredWork(scenarioPoliticalBackgroundDeferredFullCacheHandle);
-  }
-  const hadState = !!scenarioPoliticalBackgroundDeferredFullCacheState
-    || !!scenarioPoliticalBackgroundDeferredFullCacheHandle;
-  scenarioPoliticalBackgroundDeferredFullCacheHandle = null;
-  scenarioPoliticalBackgroundDeferredFullCacheState = null;
-  if (hadState) {
-    recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheCancel", 0, {
-      reason: String(reason || "unspecified"),
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    });
-  }
+  return getPoliticalBackgroundRenderOwner().cancelScenarioPoliticalBackgroundDeferredFullCache(reason);
 }
-
 function getPoliticalPathCacheHandle(
   transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
   { resetIfMismatch = false } = {},
@@ -6078,6 +6135,7 @@ function getFeatureRegionTag(feature) {
   );
 }
 
+
 function buildCountryDominantFillColorMap() {
   const cacheMatches =
     countryDominantFillColorCache.colorRevision === Number(runtimeState.colorRevision || 0)
@@ -6108,11 +6166,8 @@ function buildCountryDominantFillColorMap() {
       bestColor = color;
       bestCount = count;
     });
-    if (bestColor) {
-      result.set(countryCode, bestColor);
-    }
+    if (bestColor) result.set(countryCode, bestColor);
   });
-
   countryDominantFillColorCache = {
     colorRevision: Number(runtimeState.colorRevision || 0),
     scenarioOwnershipColorMode: "ownership",
@@ -6254,37 +6309,6 @@ function stringHash(input) {
     hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
   }
   return Math.abs(hash);
-}
-
-function createScenarioPoliticalBackgroundCacheState(overrides = {}) {
-  return {
-    runtimeRef: null,
-    scenarioId: "",
-    viewMode: "ownership",
-    oceanFillColor: "",
-    sovereigntyRevision: 0,
-    controllerRevision: 0,
-    shellRevision: 0,
-    colorRevision: 0,
-    topologyRevision: 0,
-    canvasWidth: 0,
-    canvasHeight: 0,
-    transformSignature: "",
-    colorSignature: "",
-    cacheKey: "",
-    fullPassCacheKey: "",
-    fullPassPathCacheSignature: "",
-    fullPassTransformSignature: "",
-    fullPassColorSignature: "",
-    fullPassGroupCount: 0,
-    fullPassEntryCount: 0,
-    fullPassReusedPathCount: 0,
-    fullPassBuiltPathCount: 0,
-    fullPassPathlessEntryCount: 0,
-    fullPassGroups: [],
-    entries: [],
-    ...overrides,
-  };
 }
 
 function hashToColor(token) {
@@ -14560,1071 +14584,9 @@ function syncDayNightClockTimer() {
 }
 
 
-function shouldUseScenarioPoliticalBackgroundMerge() {
-  const landCollection = getScenarioPoliticalBackgroundLandCollection();
-  return Boolean(
-    debugMode === "PROD" &&
-    runtimeState.activeScenarioId &&
-    Array.isArray(landCollection?.features) &&
-    landCollection.features.length
-  );
-}
-
-function getScenarioPoliticalBackgroundLandCollection() {
-  return runtimeState.landDataFull || runtimeState.landData;
-}
-
-function shouldFallbackScenarioPoliticalBackgroundMergeShape(
-  mergedShape,
-  { displayCode = "", fillColor = "", groupSize = 0 } = {}
-) {
-  const scenarioId = String(runtimeState.activeScenarioId || "").trim();
-  const geoAreaFn = globalThis.d3?.geoArea;
-  const geoBoundsFn = globalThis.d3?.geoBounds;
-  if (typeof geoAreaFn !== "function") {
-    return false;
-  }
-  let area = Number.NaN;
-  let bounds = null;
-  try {
-    area = geoAreaFn(mergedShape);
-    bounds = typeof geoBoundsFn === "function" ? geoBoundsFn(mergedShape) : null;
-  } catch (_error) {
-    area = Number.NaN;
-    bounds = null;
-  }
-  const suspicious =
-    !Number.isFinite(area) ||
-    area > SCENARIO_BACKGROUND_MERGE_MAX_AREA ||
-    isWorldBounds(bounds);
-  if (!suspicious) {
-    return false;
-  }
-  const viewMode = "ownership";
-  const logKey = `${scenarioId}::${viewMode}::${displayCode}::${fillColor}`;
-  if (!suspiciousScenarioBackgroundMergeWarnings.has(logKey)) {
-    suspiciousScenarioBackgroundMergeWarnings.add(logKey);
-    const areaText = Number.isFinite(area) ? area.toFixed(5) : "non-finite";
-    console.warn(
-      `[map_renderer] Scenario political background merge fallback engaged: scenario=${scenarioId || "(none)"} view=${viewMode} owner=${displayCode || "(unknown)"} fill=${fillColor || "(none)"} group=${groupSize} area=${areaText}`
-    );
-  }
-  return true;
-}
-
-function getScenarioPoliticalBackgroundCacheKey({
-  canvasWidth = 0,
-  canvasHeight = 0,
-} = {}) {
-  return [
-    String(runtimeState.activeScenarioId || ""),
-    "ownership",
-    getAtlantropaSeaPoliticalFillColor(),
-    Number(runtimeState.sovereigntyRevision || 0),
-    0,
-    Number(runtimeState.scenarioShellOverlayRevision || 0),
-    Number(runtimeState.colorRevision || 0),
-    Math.round(Number(canvasWidth || 0)),
-    Math.round(Number(canvasHeight || 0)),
-  ].join("::");
-}
-
-function resolvePoliticalBackgroundEntryMeta(
-  entry,
-  {
-    useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge(),
-  } = {},
-) {
-  const feature = entry?.feature || null;
-  const index = Number(entry?.index || 0);
-  const resolvedId = String(entry?.id || getFeatureId(feature) || `feature-${index}`);
-  const fillColor =
-    (isAtlantropaSeaFeature(feature)
-      ? getAtlantropaSeaPoliticalFillColor()
-      : null) ||
-    getSafeCanvasColor(runtimeState.colors?.[resolvedId], null) ||
-    getSafeCanvasColor(getResolvedFeatureColor(feature, resolvedId), null) ||
-    LAND_FILL_COLOR;
-  const displayCode = useScenarioBackgroundMerge
-    ? (
-      getDisplayOwnerCode(feature, resolvedId) ||
-      getFeatureCountryCodeNormalized(feature) ||
-      "__NONE__"
-    )
-    : (
-      getFeatureCountryCodeNormalized(feature) ||
-      "__NONE__"
-    );
-  return {
-    feature,
-    index,
-    id: resolvedId,
-    path: entry?.path || null,
-    fillColor,
-    displayCode,
-    groupKey: `${displayCode}::${fillColor}`,
-  };
-}
-
-function buildScenarioPoliticalBackgroundColorSignature(
-  entries = [],
-  {
-    useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge(),
-  } = {},
-) {
-  return (Array.isArray(entries) ? entries : [])
-    .map((entry) => {
-      const meta = resolvePoliticalBackgroundEntryMeta(entry, { useScenarioBackgroundMerge });
-      return `${meta.groupKey}::${meta.id}`;
-    })
-    .join("|");
-}
-
-function drawPoliticalBackgroundFillsFromGroups(groups = []) {
-  let groupCount = 0;
-  (Array.isArray(groups) ? groups : []).forEach((group) => {
-    const fillColor = String(group?.fillColor || "").trim() || LAND_FILL_COLOR;
-    const mergedPath = group?.mergedPath || null;
-    const groupEntries = Array.isArray(group?.entries) ? group.entries.filter(Boolean) : [];
-    if (!groupEntries.length && !mergedPath) {
-      return;
-    }
-    rendererSurfaceHost.getContext().fillStyle = fillColor;
-    if (mergedPath) {
-      rendererSurfaceHost.getContext().fill(mergedPath);
-      groupCount += 1;
-      return;
-    }
-    if (groupEntries.length && groupEntries.every((entry) => entry?.path)) {
-      groupEntries.forEach((entry) => {
-        rendererSurfaceHost.getContext().fill(entry.path);
-      });
-      groupCount += 1;
-      return;
-    }
-    rendererSurfaceHost.getContext().beginPath();
-    groupEntries.forEach((entry) => {
-      if (entry?.feature) {
-        rendererSurfaceHost.getPathCanvas()(entry.feature);
-      }
-    });
-    rendererSurfaceHost.getContext().fill();
-    groupCount += 1;
-  });
-  return groupCount;
-}
-
-function buildPoliticalBackgroundResolvedGroups(
-  entries = [],
-  {
-    transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-    useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge(),
-    allowBuildPaths = false,
-  } = {},
-) {
-  const groupedEntries = new Map();
-  let reusedPathCount = 0;
-  let builtPathCount = 0;
-  let pathlessEntryCount = 0;
-  const pathCacheHandle = allowBuildPaths
-    ? getPoliticalPathCacheHandle(transform, { resetIfMismatch: true })
-    : null;
-  const pathCacheSizeBefore = pathCacheHandle?.map instanceof Map
-    ? pathCacheHandle.map.size
-    : 0;
-
-  (Array.isArray(entries) ? entries : []).forEach((entry) => {
-    if (!entry?.feature?.geometry) return;
-    const meta = resolvePoliticalBackgroundEntryMeta(entry, { useScenarioBackgroundMerge });
-    let resolvedPath = meta.path || null;
-    if (resolvedPath) {
-      reusedPathCount += 1;
-    } else if (allowBuildPaths && pathCacheHandle?.valid && pathCacheHandle.map instanceof Map) {
-      const hadCachedPath = !!pathCacheHandle.map.get(meta.id)?.path;
-      const pathEntry = getPoliticalFeaturePathEntry(meta.feature, {
-        featureId: meta.id,
-        transform,
-        allowBuild: true,
-        countBuild: true,
-      });
-      resolvedPath = pathEntry?.path || null;
-      if (resolvedPath) {
-        if (hadCachedPath) {
-          reusedPathCount += 1;
-        } else {
-          builtPathCount += 1;
-        }
-      } else {
-        pathlessEntryCount += 1;
-      }
-    } else {
-      pathlessEntryCount += 1;
-    }
-    if (!groupedEntries.has(meta.groupKey)) {
-      groupedEntries.set(meta.groupKey, {
-        fillColor: meta.fillColor,
-        entries: [],
-      });
-    }
-    groupedEntries.get(meta.groupKey).entries.push({
-      feature: meta.feature,
-      path: resolvedPath,
-    });
-  });
-
-  const groups = [];
-  groupedEntries.forEach(({ fillColor, entries: groupEntries }, groupKey) => {
-    const resolvedEntries = Array.isArray(groupEntries) ? groupEntries.filter(Boolean) : [];
-    if (!resolvedEntries.length) return;
-    let mergedPath = null;
-    if (resolvedEntries.length === 1 && resolvedEntries[0]?.path) {
-      mergedPath = resolvedEntries[0].path;
-    } else if (
-      globalThis.Path2D
-      && typeof globalThis.Path2D.prototype?.addPath === "function"
-      && resolvedEntries.every((item) => item?.path)
-    ) {
-      mergedPath = new globalThis.Path2D();
-      resolvedEntries.forEach((item) => {
-        mergedPath.addPath(item.path);
-      });
-    }
-    groups.push({
-      groupKey,
-      fillColor,
-      mergedPath,
-      entries: resolvedEntries,
-    });
-  });
-
-  return {
-    groups,
-    groupCount: groups.length,
-    entryCount: Array.isArray(entries) ? entries.length : 0,
-    reusedPathCount,
-    builtPathCount,
-    pathlessEntryCount,
-    pathCacheSizeBefore,
-    pathCacheSizeAfter: pathCacheHandle?.map instanceof Map ? pathCacheHandle.map.size : 0,
-    pathCacheResetReason: String(pathCacheHandle?.resetSummary?.reason || ""),
-    pathCacheResetPreviousSize: Math.max(0, Number(pathCacheHandle?.resetSummary?.previousSize || 0)),
-    pathCacheResetPreviousReason: String(pathCacheHandle?.resetSummary?.previousReason || ""),
-    pathCacheResetPreviousTransformK: Math.max(0, Number(pathCacheHandle?.resetSummary?.previousTransformK || 0)),
-    pathCacheResetNextTransformK: Math.max(0, Number(pathCacheHandle?.resetSummary?.nextTransformK || 0)),
-  };
-}
-
-function getScenarioPoliticalBackgroundFullPassIdentity(
-  normalizedEntries = [],
-  {
-    transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-  } = {},
-) {
-  const transformSignature = getTransformSignature(transform);
-  const pathCacheSignature = getPoliticalPathCacheSignature(transform);
-  const colorSignature = buildScenarioPoliticalBackgroundColorSignature(normalizedEntries);
-  const sceneIdentity = getVisibleFrameIdentity(transform);
-  const fullPassCacheKey = [
-    sceneIdentity.scenarioId,
-    sceneIdentity.sceneGeneration,
-    sceneIdentity.scenarioDataGeneration,
-    scenarioPoliticalBackgroundCache.cacheKey,
-    transformSignature,
-    pathCacheSignature,
-    colorSignature,
-    normalizedEntries.length,
-  ].join("::");
-  return {
-    scenarioId: sceneIdentity.scenarioId,
-    sceneGeneration: sceneIdentity.sceneGeneration,
-    scenarioDataGeneration: sceneIdentity.scenarioDataGeneration,
-    transformSignature,
-    pathCacheSignature,
-    colorSignature,
-    fullPassCacheKey,
-  };
-}
-
-function getScenarioPoliticalBackgroundFullPassGroups(
-  entries = [],
-  {
-    transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-    allowBuild = true,
-    metricName = "scenarioPoliticalBackgroundCacheBuild",
-    phase = "render",
-    recoveryQuality = getPoliticalRecoveryQuality(),
-  } = {},
-) {
-  const startedAt = nowMs();
-  const normalizedEntries = Array.isArray(entries) ? entries.filter((entry) => entry?.feature?.geometry) : [];
-  if (!normalizedEntries.length) {
-    return {
-      cacheHit: false,
-      groupCount: 0,
-      entryCount: 0,
-      reusedPathCount: 0,
-      builtPathCount: 0,
-      pathlessEntryCount: 0,
-      groups: [],
-    };
-  }
-  const {
-    transformSignature,
-    pathCacheSignature,
-    colorSignature,
-    fullPassCacheKey,
-  } = getScenarioPoliticalBackgroundFullPassIdentity(normalizedEntries, { transform });
-  if (
-    scenarioPoliticalBackgroundCache.fullPassCacheKey === fullPassCacheKey
-    && Array.isArray(scenarioPoliticalBackgroundCache.fullPassGroups)
-    && scenarioPoliticalBackgroundCache.fullPassGroups.length
-  ) {
-    recordRenderPerfMetric("scenarioPoliticalBackgroundCacheReplay", nowMs() - startedAt, {
-      cacheHit: true,
-      groupCount: Number(scenarioPoliticalBackgroundCache.fullPassGroupCount || 0),
-      entryCount: Number(scenarioPoliticalBackgroundCache.fullPassEntryCount || 0),
-      reusedPathCount: Number(scenarioPoliticalBackgroundCache.fullPassReusedPathCount || 0),
-      builtPathCount: Number(scenarioPoliticalBackgroundCache.fullPassBuiltPathCount || 0),
-      pathlessEntryCount: Number(scenarioPoliticalBackgroundCache.fullPassPathlessEntryCount || 0),
-      phase,
-      recoveryQuality,
-    });
-    return {
-      cacheHit: true,
-      groupCount: Number(scenarioPoliticalBackgroundCache.fullPassGroupCount || 0),
-      entryCount: Number(scenarioPoliticalBackgroundCache.fullPassEntryCount || 0),
-      reusedPathCount: Number(scenarioPoliticalBackgroundCache.fullPassReusedPathCount || 0),
-      builtPathCount: Number(scenarioPoliticalBackgroundCache.fullPassBuiltPathCount || 0),
-      pathlessEntryCount: Number(scenarioPoliticalBackgroundCache.fullPassPathlessEntryCount || 0),
-      phase,
-      recoveryQuality,
-      groups: scenarioPoliticalBackgroundCache.fullPassGroups,
-    };
-  }
-  if (!allowBuild) {
-    return {
-      cacheHit: false,
-      cacheReady: false,
-      groupCount: 0,
-      entryCount: normalizedEntries.length,
-      reusedPathCount: 0,
-      builtPathCount: 0,
-      pathlessEntryCount: 0,
-      phase,
-      recoveryQuality,
-      groups: [],
-    };
-  }
-  const resolvedGroups = buildPoliticalBackgroundResolvedGroups(normalizedEntries, {
-    transform,
-    useScenarioBackgroundMerge: true,
-    allowBuildPaths: true,
-  });
-  scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
-    ...scenarioPoliticalBackgroundCache,
-    transformSignature,
-    colorSignature,
-    fullPassCacheKey,
-    fullPassPathCacheSignature: pathCacheSignature,
-    fullPassTransformSignature: transformSignature,
-    fullPassColorSignature: colorSignature,
-    fullPassGroupCount: resolvedGroups.groupCount,
-    fullPassEntryCount: resolvedGroups.entryCount,
-    fullPassReusedPathCount: resolvedGroups.reusedPathCount,
-    fullPassBuiltPathCount: resolvedGroups.builtPathCount,
-    fullPassPathlessEntryCount: resolvedGroups.pathlessEntryCount,
-    fullPassGroups: resolvedGroups.groups,
-  });
-  recordRenderPerfMetric(metricName, nowMs() - startedAt, {
-    cacheHit: false,
-    groupCount: resolvedGroups.groupCount,
-    entryCount: resolvedGroups.entryCount,
-    reusedPathCount: resolvedGroups.reusedPathCount,
-    builtPathCount: resolvedGroups.builtPathCount,
-    pathlessEntryCount: resolvedGroups.pathlessEntryCount,
-    pathCacheSizeBefore: resolvedGroups.pathCacheSizeBefore,
-    pathCacheSizeAfter: resolvedGroups.pathCacheSizeAfter,
-    pathCacheResetReason: resolvedGroups.pathCacheResetReason,
-    pathCacheResetPreviousSize: resolvedGroups.pathCacheResetPreviousSize,
-    pathCacheResetPreviousReason: resolvedGroups.pathCacheResetPreviousReason,
-    pathCacheResetPreviousTransformK: resolvedGroups.pathCacheResetPreviousTransformK,
-    pathCacheResetNextTransformK: resolvedGroups.pathCacheResetNextTransformK,
-    phase,
-    recoveryQuality,
-  });
-  return {
-    cacheHit: false,
-    phase,
-    recoveryQuality,
-    ...resolvedGroups,
-  };
-}
-
-function isScenarioPoliticalBackgroundFullPassCacheReady(entries = [], {
-  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-} = {}) {
-  const normalizedEntries = Array.isArray(entries) ? entries.filter((entry) => entry?.feature?.geometry) : [];
-  if (!normalizedEntries.length) return false;
-  const { fullPassCacheKey } = getScenarioPoliticalBackgroundFullPassIdentity(normalizedEntries, { transform });
-  return (
-    scenarioPoliticalBackgroundCache.fullPassCacheKey === fullPassCacheKey
-    && Array.isArray(scenarioPoliticalBackgroundCache.fullPassGroups)
-    && scenarioPoliticalBackgroundCache.fullPassGroups.length > 0
-  );
-}
-
-function isScenarioPoliticalBackgroundFullPassCacheKeyReady(fullPassCacheKey = "") {
-  return (
-    !!fullPassCacheKey
-    && scenarioPoliticalBackgroundCache.fullPassCacheKey === fullPassCacheKey
-    && Array.isArray(scenarioPoliticalBackgroundCache.fullPassGroups)
-    && scenarioPoliticalBackgroundCache.fullPassGroups.length > 0
-  );
-}
-
-function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state) {
-  if (!state || state.repaintDeferredRecorded) return;
-  state.repaintDeferredRecorded = true;
-  recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred", 0, {
-    phase: "idle",
-    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
-    reason: "interaction-recovery-active",
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    renderPhase: String(runtimeState.renderPhase || ""),
-    deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
-  });
-}
-
-function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
-  if (!state || typeof state !== "object") return false;
-  const identity = getVisibleFrameIdentity(transform);
-  const transformSignature = getTransformSignature(transform);
-  return String(state.scenarioId || "") === identity.scenarioId
-    && Number(state.sceneGeneration || 0) === Number(identity.sceneGeneration || 0)
-    && Number(state.scenarioDataGeneration || 0) === Number(identity.scenarioDataGeneration || 0)
-    && String(state.transformSignature || "") === transformSignature;
-}
-
-function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
-  const state = scenarioPoliticalBackgroundDeferredFullCacheState;
-  scenarioPoliticalBackgroundDeferredFullCacheHandle = null;
-  if (!state || !Array.isArray(state.entries) || !state.entries.length) {
-    scenarioPoliticalBackgroundDeferredFullCacheState = null;
-    return false;
-  }
-  if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state)) {
-    cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");
-    return false;
-  }
-  const normalizedEntries = state.entries;
-  if (isScenarioPoliticalBackgroundFullPassCacheKeyReady(state.fullPassCacheKey)) {
-    scenarioPoliticalBackgroundDeferredFullCacheState = null;
-    return false;
-  }
-  const cache = getRenderPassCacheState();
-  const recoverySettled = isInteractionRecoverySettled({ quietMs: 600 });
-  // 交互恢复期只预热 full cache，不立刻请求重绘；这样滚轮/拖拽后的稳定帧不会被后台精细缓存打断。
-  if (
-    runtimeState.renderPhase !== RENDER_PHASE_IDLE
-    || runtimeState.deferExactAfterSettle
-    || isExactAfterSettleControllerActive()
-    || !recoverySettled
-    || cache.dirty?.political
-  ) {
-    scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
-      runScenarioPoliticalBackgroundDeferredFullCacheSlice,
-      { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
-    );
-    if (!recoverySettled && state.index >= normalizedEntries.length) {
-      recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state);
-    }
-    return false;
-  }
-  const transform = state.transform || runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
-  if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state, transform)) {
-    cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");
-    return false;
-  }
-
-  const startedAt = nowMs();
-  let processedCount = 0;
-  let builtCount = 0;
-  let reusedCount = 0;
-  let pathlessCount = 0;
-  while (state.index < normalizedEntries.length) {
-    if (processedCount > 0 && (nowMs() - startedAt) >= POLITICAL_DEFERRED_FULL_CACHE_CPU_BUDGET_MS) break;
-    if (
-      processedCount > 0
-      && deadline
-      && typeof deadline.timeRemaining === "function"
-      && deadline.timeRemaining() <= 0
-    ) {
-      break;
-    }
-    const entry = normalizedEntries[state.index];
-    state.index += 1;
-    processedCount += 1;
-    const featureId = entry?.id || getFeatureId(entry?.feature);
-    if (!featureId || !entry?.feature?.geometry) {
-      pathlessCount += 1;
-      continue;
-    }
-    const handle = getPoliticalPathCacheHandle(transform, { resetIfMismatch: true });
-    const hadCachedPath = !!handle?.map?.get(featureId)?.path;
-    const pathEntry = getPoliticalFeaturePathEntry(entry.feature, {
-      featureId,
-      transform,
-      allowBuild: true,
-      countBuild: true,
-    });
-    if (pathEntry?.path) {
-      if (hadCachedPath) reusedCount += 1;
-      else builtCount += 1;
-    } else {
-      pathlessCount += 1;
-    }
-  }
-
-  state.sliceCount = Number(state.sliceCount || 0) + 1;
-  state.processedCount = Number(state.processedCount || 0) + processedCount;
-  state.builtPathCount = Number(state.builtPathCount || 0) + builtCount;
-  state.reusedPathCount = Number(state.reusedPathCount || 0) + reusedCount;
-  state.pathlessEntryCount = Number(state.pathlessEntryCount || 0) + pathlessCount;
-  recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice", nowMs() - startedAt, {
-    phase: "idle",
-    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
-    processedCount,
-    builtPathCount: builtCount,
-    reusedPathCount: reusedCount,
-    pathlessEntryCount: pathlessCount,
-    remainingCount: Math.max(0, normalizedEntries.length - state.index),
-    entryCount: normalizedEntries.length,
-    sliceCount: state.sliceCount,
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-  });
-
-  if (state.index < normalizedEntries.length) {
-    scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
-      runScenarioPoliticalBackgroundDeferredFullCacheSlice,
-      { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
-    );
-    return builtCount > 0;
-  }
-
-  if (!isInteractionRecoverySettled({ quietMs: 600 })) {
-    scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
-      runScenarioPoliticalBackgroundDeferredFullCacheSlice,
-      { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
-    );
-    recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state);
-    return false;
-  }
-
-  if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state, transform)) {
-    cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");
-    return false;
-  }
-
-  const finalized = getScenarioPoliticalBackgroundFullPassGroups(normalizedEntries, {
-    transform,
-    allowBuild: true,
-    metricName: "scenarioPoliticalBackgroundDeferredFullCacheBuild",
-    phase: "idle",
-    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
-  });
-  recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheComplete", nowMs() - Number(state.startedAt || startedAt), {
-    phase: "idle",
-    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
-    entryCount: normalizedEntries.length,
-    groupCount: Number(finalized?.groupCount || 0),
-    builtPathCount: Number(state.builtPathCount || 0),
-    reusedPathCount: Number(state.reusedPathCount || 0),
-    pathlessEntryCount: Number(state.pathlessEntryCount || 0),
-    sliceCount: Number(state.sliceCount || 0),
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-  });
-  scenarioPoliticalBackgroundDeferredFullCacheState = null;
-  invalidateRenderPasses("political", "progressive-political-full-cache-ready");
-  recordProgressivePoliticalFullCacheReadyDiagnostics(runtimeState, {
-    entryCount: normalizedEntries.length, groupCount: Number(finalized?.groupCount || 0), builtPathCount: Number(state.builtPathCount || 0), reusedPathCount: Number(state.reusedPathCount || 0), pathlessEntryCount: Number(state.pathlessEntryCount || 0), sliceCount: Number(state.sliceCount || 0),
-  });
-  const repaintRequested = requestRendererRender("progressive-political-full-cache-ready", {
-    flush: false,
-    fallback: () => {
-      if (rendererSurfaceHost.getContext()) render();
-    },
-  });
-  recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest", 0, {
-    phase: "idle",
-    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
-    reason: "progressive-political-full-cache-ready",
-    repaintRequested: !!repaintRequested,
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-  });
-  return repaintRequested;
-}
-
-function scheduleScenarioPoliticalBackgroundDeferredFullCache(entries = [], {
-  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-  reason = "progressive-recovery",
-} = {}) {
-  const normalizedEntries = Array.isArray(entries) ? entries.filter((entry) => entry?.feature?.geometry) : [];
-  if (!normalizedEntries.length) return false;
-  if (isScenarioPoliticalBackgroundFullPassCacheReady(normalizedEntries, { transform })) return false;
-  const identity = getScenarioPoliticalBackgroundFullPassIdentity(normalizedEntries, { transform });
-  if (
-    scenarioPoliticalBackgroundDeferredFullCacheState?.fullPassCacheKey === identity.fullPassCacheKey
-    && isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(scenarioPoliticalBackgroundDeferredFullCacheState, transform)
-    && scenarioPoliticalBackgroundDeferredFullCacheHandle
-  ) {
-    return true;
-  }
-  cancelScenarioPoliticalBackgroundDeferredFullCache("reschedule");
-  scenarioPoliticalBackgroundDeferredFullCacheState = {
-    fullPassCacheKey: identity.fullPassCacheKey,
-    scenarioId: identity.scenarioId,
-    sceneGeneration: identity.sceneGeneration,
-    scenarioDataGeneration: identity.scenarioDataGeneration,
-    transformSignature: identity.transformSignature,
-    transform: cloneZoomTransform(transform),
-    entries: normalizedEntries,
-    index: 0,
-    startedAt: nowMs(),
-    reason: String(reason || "progressive-recovery"),
-    sliceCount: 0,
-    processedCount: 0,
-    builtPathCount: 0,
-    reusedPathCount: 0,
-    pathlessEntryCount: 0,
-  };
-  scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
-    runScenarioPoliticalBackgroundDeferredFullCacheSlice,
-    { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
-  );
-  recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheScheduled", 0, {
-    phase: "deferred",
-    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
-    entryCount: normalizedEntries.length,
-    reason: String(reason || "progressive-recovery"),
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    sceneGeneration: Number(identity.sceneGeneration || 0),
-    scenarioDataGeneration: Number(identity.scenarioDataGeneration || 0),
-  });
-  return true;
-}
-
-function buildScenarioPoliticalBackgroundEntries() {
-  const startedAt = nowMs();
-  if (!shouldUseScenarioPoliticalBackgroundMerge()) {
-    recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
-      cacheHit: false,
-      entryCount: 0,
-      featureCount: 0,
-      skipped: true,
-    });
-    return [];
-  }
-
-  const landCollection = getScenarioPoliticalBackgroundLandCollection();
-  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
-  const featureCount = Array.isArray(landCollection?.features) ? landCollection.features.length : 0;
-  const cacheKey = getScenarioPoliticalBackgroundCacheKey({
-    canvasWidth,
-    canvasHeight,
-  });
-  if (
-    scenarioPoliticalBackgroundCache.runtimeRef === landCollection
-    && scenarioPoliticalBackgroundCache.cacheKey === cacheKey
-  ) {
-    recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
-      cacheHit: true,
-      entryCount: scenarioPoliticalBackgroundCache.entries.length,
-      featureCount,
-    });
-    return scenarioPoliticalBackgroundCache.entries;
-  }
-
-  const entries = [];
-  (landCollection?.features || []).forEach((feature, index) => {
-    const id = getFeatureId(feature) || `feature-${index}`;
-    if (!feature?.geometry) return;
-    if (isAntarcticSectorFeature(feature, id)) return;
-    if (isBaseGeographyScenarioFeature(feature)) return;
-    if (shouldExcludePoliticalVisualFeature(feature, id)) return;
-    if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) return;
-    const projectedBounds = getProjectedFeatureBounds(feature, {
-      featureId: id,
-      allowCompute: true,
-    });
-    // This cache is reused across zoom transforms, so viewport filtering stays in the draw path.
-    entries.push({
-      feature,
-      index,
-      id,
-      projectedBounds,
-    });
-  });
-  if (!entries.length) {
-    scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
-      runtimeRef: landCollection,
-      scenarioId: runtimeState.activeScenarioId || "",
-      viewMode: "ownership",
-      oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
-      sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
-      shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
-      colorRevision: Number(runtimeState.colorRevision || 0),
-      canvasWidth,
-      canvasHeight,
-      cacheKey,
-      entries: [],
-    });
-    recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
-      cacheHit: false,
-      entryCount: 0,
-      featureCount,
-    });
-    return scenarioPoliticalBackgroundCache.entries;
-  }
-
-  scenarioPoliticalBackgroundCache = createScenarioPoliticalBackgroundCacheState({
-    runtimeRef: landCollection,
-    scenarioId: runtimeState.activeScenarioId || "",
-    viewMode: "ownership",
-    oceanFillColor: getAtlantropaSeaPoliticalFillColor(),
-    sovereigntyRevision: Number(runtimeState.sovereigntyRevision || 0),
-    shellRevision: Number(runtimeState.scenarioShellOverlayRevision || 0),
-    colorRevision: Number(runtimeState.colorRevision || 0),
-    canvasWidth,
-    canvasHeight,
-    cacheKey,
-    entries,
-  });
-  recordRenderPerfMetric("drawScenarioPoliticalBackgroundEntries", nowMs() - startedAt, {
-    cacheHit: false,
-    entryCount: entries.length,
-    featureCount,
-  });
-  return entries;
-}
-
-function buildScenarioPoliticalBackgroundEntriesFromSpatialItems(items = []) {
-  return (Array.isArray(items) ? items : []).map((item) => ({
-    feature: item?.feature || null,
-    index: Number(item?.drawOrder || 0),
-    id: item?.id || "",
-    projectedBounds: item
-      ? {
-        minX: Number(item.minX),
-        minY: Number(item.minY),
-        maxX: Number(item.maxX),
-        maxY: Number(item.maxY),
-      }
-      : null,
-  })).filter((entry) => (
-    entry.feature?.geometry
-    && entry.id
-    && entry.projectedBounds
-    && !shouldExcludePoliticalVisualFeature(entry.feature, entry.id)
-  ));
-}
-
-function collectScenarioPoliticalBackgroundSpatialEntries({
-  screenRects = null,
-  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-  visibleItems = null,
-} = {}) {
-  const landCollection = getScenarioPoliticalBackgroundLandCollection();
-  if (landCollection !== runtimeState.landData) {
-    return null;
-  }
-  if (Array.isArray(visibleItems)) {
-    return buildScenarioPoliticalBackgroundEntriesFromSpatialItems(visibleItems);
-  }
-  if (!Array.isArray(runtimeState.spatialItems) || !runtimeState.spatialItems.length) {
-    return null;
-  }
-  if (!Array.isArray(screenRects) || !screenRects.length) {
-    const items = collectVisibleLandSpatialItems();
-    return Array.isArray(items)
-      ? buildScenarioPoliticalBackgroundEntriesFromSpatialItems(items)
-      : null;
-  }
-  const projectedRects = screenRects
-    .map((rect) => screenRectToProjectedRect(rect, transform))
-    .filter(Boolean);
-  if (!projectedRects.length) {
-    return [];
-  }
-  const candidateResult = collectLandSpatialItemsForProjectedRects(projectedRects);
-  if (!candidateResult || candidateResult.overflow) {
-    return null;
-  }
-  return buildScenarioPoliticalBackgroundEntriesFromSpatialItems(candidateResult.items);
-}
-
-function drawScenarioPoliticalBackgroundFills({
-  screenRects = null,
-  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-  visibleItems = null,
-  returnSummary = false,
-} = {}) {
-  const politicalRecoveryQuality = getPoliticalRecoveryQuality();
-  const entries =
-    collectScenarioPoliticalBackgroundSpatialEntries({
-      screenRects,
-      transform,
-      visibleItems,
-    })
-    || buildScenarioPoliticalBackgroundEntries();
-  if (!entries.length) {
-    return returnSummary
-      ? {
-        groupCount: 0,
-        entryCount: 0,
-        reusedPathCount: 0,
-        builtPathCount: 0,
-        pathlessEntryCount: 0,
-        cacheHit: false,
-        recoveryQuality: politicalRecoveryQuality,
-        progressive: false,
-      }
-      : 0;
-  }
-  const normalizedScreenRects = Array.isArray(screenRects) && screenRects.length
-    ? screenRects
-    : null;
-  const visibleEntries = normalizedScreenRects
-    ? entries.filter(({ projectedBounds }) =>
-      projectedBoundsIntersectScreenRects(projectedBounds, normalizedScreenRects, { transform })
-    )
-    : entries;
-  const canUseFullPassCache = Array.isArray(visibleItems);
-  const politicalDirtyReason = String(getRenderPassCacheState().reasons?.political || "");
-  const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit();
-  const useProgressiveRecovery = (
-    canUseFullPassCache
-    && politicalRecoveryQuality === POLITICAL_RECOVERY_QUALITY_PROGRESSIVE
-    && politicalDirtyReason !== "refresh-colors"
-    && !pendingPoliticalColorEdit
-    && visibleEntries.length > POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT
-  );
-  if (useProgressiveRecovery) {
-    // progressive 恢复先用 admin0 粗底图守住颜色可见性；refresh-colors 保持精确路径，避免编辑反馈被粗底图吞掉。
-    const cachedFullPass = getScenarioPoliticalBackgroundFullPassGroups(visibleEntries, {
-      transform,
-      allowBuild: false,
-      phase: "render",
-      recoveryQuality: politicalRecoveryQuality,
-    });
-    if (cachedFullPass.cacheHit) {
-      const groupCount = drawPoliticalBackgroundFillsFromGroups(cachedFullPass.groups);
-      return returnSummary
-        ? {
-          groupCount,
-          entryCount: Number(cachedFullPass.entryCount || 0),
-          reusedPathCount: Number(cachedFullPass.reusedPathCount || 0),
-          builtPathCount: Number(cachedFullPass.builtPathCount || 0),
-          pathlessEntryCount: Number(cachedFullPass.pathlessEntryCount || 0),
-          cacheHit: true,
-          recoveryQuality: politicalRecoveryQuality,
-          progressive: true,
-          deferredFullCacheReady: true,
-          deferredFullCacheScheduled: false,
-        }
-        : groupCount;
-    }
-    const underlayStartedAt = nowMs();
-    drawAdmin0BackgroundFills({
-      screenRects: normalizedScreenRects,
-      transform,
-    });
-    const deferredFullCacheScheduled = scheduleScenarioPoliticalBackgroundDeferredFullCache(visibleEntries, {
-      transform,
-      reason: "progressive-recovery-background",
-    });
-    const durationMs = nowMs() - underlayStartedAt;
-    recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery", durationMs, {
-      phase: "render",
-      recoveryQuality: politicalRecoveryQuality,
-      entryCount: visibleEntries.length,
-      exactEntryLimit: POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT,
-      deferredFullCacheScheduled: !!deferredFullCacheScheduled,
-      deferredFullCacheReady: false,
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    });
-    return returnSummary
-      ? {
-        groupCount: 0,
-        entryCount: visibleEntries.length,
-        reusedPathCount: 0,
-        builtPathCount: 0,
-        pathlessEntryCount: 0,
-        cacheHit: false,
-        recoveryQuality: politicalRecoveryQuality,
-        progressive: true,
-        deferredFullCacheReady: false,
-        deferredFullCacheScheduled: !!deferredFullCacheScheduled,
-        coarseUnderlay: "admin0",
-      }
-      : 0;
-  }
-  return drawPoliticalBackgroundFillsForEntries(visibleEntries, {
-    transform,
-    useFullPassCache: canUseFullPassCache,
-    returnSummary,
-    recoveryQuality: politicalRecoveryQuality,
-  });
-}
-
-function buildAdmin0MergedShapes() {
-  const topology = runtimeState.topologyPrimary || runtimeState.topology;
-  if (!topology?.objects?.political || !globalThis.topojson?.merge) return [];
-
-  const geometries = topology.objects.political.geometries || [];
-  const currentFeatureCount = runtimeState.landData?.features?.length || 0;
-
-  if (
-    admin0MergedCache.topologyRef === topology &&
-    admin0MergedCache.featureCount === currentFeatureCount
-  ) {
-    return admin0MergedCache.entries;
-  }
-
-  const byCountry = new Map();
-  geometries.forEach((geom) => {
-    const code = String(geom?.properties?.cntr_code || "").trim().toUpperCase();
-    if (!code) return;
-    if (!byCountry.has(code)) byCountry.set(code, []);
-    byCountry.get(code).push(geom);
-  });
-
-  const entries = [];
-  byCountry.forEach((geoms, code) => {
-    try {
-      const mergedShape = globalThis.topojson.merge(topology, geoms);
-      const mergedFeature = {
-        type: "Feature",
-        properties: {
-          id: `admin0-background-${code}`,
-          cntr_code: code,
-        },
-        geometry: mergedShape,
-      };
-      entries.push({
-        code,
-        mergedShape,
-        mergedFeature,
-        projectedBounds: getProjectedFeatureBounds(mergedFeature, { allowCompute: true }),
-      });
-    } catch (_e) {
-      // Skip countries that fail to merge
-    }
-  });
-
-  admin0MergedCache = {
-    topologyRef: topology,
-    featureCount: currentFeatureCount,
-    entries,
-  };
-  return entries;
-}
-
-function drawAdmin0BackgroundFills({
-  screenRects = null,
-  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-} = {}) {
-  const entries = buildAdmin0MergedShapes();
-  if (!entries.length) return;
-
-  entries.forEach(({ code, mergedShape, mergedFeature, projectedBounds }) => {
-    if (code === "ATL") return;
-    if (!projectedBoundsIntersectScreenRects(projectedBounds, screenRects, { transform })) {
-      return;
-    }
-    const fillColor = getAdmin0BackgroundFillColor(code);
-
-    rendererSurfaceHost.getContext().beginPath();
-    rendererSurfaceHost.getPathCanvas()(mergedFeature || {
-      type: "Feature",
-      properties: {
-        id: `admin0-background-${code}`,
-        cntr_code: code,
-      },
-      geometry: mergedShape,
-    });
-    rendererSurfaceHost.getContext().fillStyle = fillColor;
-    rendererSurfaceHost.getContext().fill();
-  });
-}
-
-function drawOceanDepthMaskLayer() {
-  if (!rendererSurfaceHost.getContext() || !rendererSurfaceHost.getProjection()) return null;
-  const intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
-  runtimeState.intensityFields = intensityFields;
-  const channel = intensityFields.channels.oceanDepth;
-  if (!channel?.enabled) return null;
-
-  const layout = getRenderPassLayout("background");
-  const widthPx = Number(layout?.pixelWidth || rendererSurfaceHost.getContext().canvas?.width || 0);
-  const heightPx = Number(layout?.pixelHeight || rendererSurfaceHost.getContext().canvas?.height || 0);
-  const startedAt = nowMs();
-  const maskResult = getIntensityFieldMaskOwner().getMaskCanvas("oceanDepth", {
-    transform: runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-    widthPx,
-    heightPx,
-    dpr: Number(layout?.dpr || runtimeState.dpr || 1),
-    offsetX: Number(layout?.offsetX || 0),
-    offsetY: Number(layout?.offsetY || 0),
-    grayMap: OCEAN_DEPTH_MASK_GRAY_MAP,
-    projectionKey: getProjectionRenderSignature(),
-  });
-
-  if (!maskResult?.canvas) {
-    recordRenderPerfMetric("drawOceanDepthMaskLayer", nowMs() - startedAt, {
-      drawn: false,
-      reason: maskResult?.reason || "empty",
-      cacheHit: !!maskResult?.cacheHit,
-      renderedRunCount: Number(maskResult?.renderedRunCount || 0),
-      renderedCellCount: Number(maskResult?.renderedCellCount || 0),
-    });
-    return maskResult || null;
-  }
-
-  rendererSurfaceHost.getContext().save();
-  applyOceanClipMask(runtimeState.oceanMaskMode || OCEAN_MASK_MODE_TOPOLOGY);
-  rendererSurfaceHost.getContext().globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE;
-  rendererSurfaceHost.getContext().globalAlpha = 1;
-  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
-  rendererSurfaceHost.getContext().drawImage(maskResult.canvas, 0, 0);
-  rendererSurfaceHost.getContext().restore();
-
-  recordRenderPerfMetric("drawOceanDepthMaskLayer", nowMs() - startedAt, {
-    drawn: true,
-    blendMode: OCEAN_DEPTH_MASK_BLEND_MODE,
-    cacheHit: !!maskResult.cacheHit,
-    renderedRunCount: Number(maskResult.renderedRunCount || 0),
-    renderedCellCount: Number(maskResult.renderedCellCount || 0),
-  });
-  return maskResult;
-}
-
 function drawBackgroundPass() {
-  const oceanFillColor = getOceanBaseFillColor();
-  rendererSurfaceHost.getContext().fillStyle = oceanFillColor;
-  rendererSurfaceHost.getContext().beginPath();
-  rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
-  rendererSurfaceHost.getContext().fill();
-
-  if (runtimeState.oceanData) {
-    rendererSurfaceHost.getContext().fillStyle = oceanFillColor;
-    rendererSurfaceHost.getContext().beginPath();
-    rendererSurfaceHost.getPathCanvas()(runtimeState.oceanData);
-    rendererSurfaceHost.getContext().fill();
-  }
-  drawOceanStyle();
-  drawOceanDepthMaskLayer();
+  return getPoliticalBackgroundRenderOwner().drawBackgroundPass();
 }
-
 function getCachedPoliticalPassStaticSignature(signature) {
   const parts = String(signature || "").split("::");
   return parts.length > 1 ? parts.slice(1).join("::") : "";
@@ -15800,85 +14762,12 @@ function collectLandSpatialItemsForProjectedRects(projectedRects = [], { maxCand
 }
 
 function drawPoliticalBackgroundFills(options = {}) {
-  if (debugMode !== "PROD") {
-    return options.returnSummary
-      ? {
-        groupCount: 0,
-        entryCount: 0,
-        reusedPathCount: 0,
-        builtPathCount: 0,
-        pathlessEntryCount: 0,
-        cacheHit: false,
-      }
-      : 0;
-  }
-  if (shouldUseScenarioPoliticalBackgroundMerge()) {
-    return drawScenarioPoliticalBackgroundFills(options);
-  }
-  drawAdmin0BackgroundFills(options);
-  return options.returnSummary
-    ? {
-      groupCount: 0,
-      entryCount: 0,
-      reusedPathCount: 0,
-      builtPathCount: 0,
-      pathlessEntryCount: 0,
-      cacheHit: false,
-    }
-    : 0;
+  return getPoliticalBackgroundRenderOwner().drawPoliticalBackgroundFills(options);
 }
 
-function drawPoliticalBackgroundFillsForEntries(entries = [], {
-  transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
-  useFullPassCache = false,
-  returnSummary = false,
-  recoveryQuality = getPoliticalRecoveryQuality(),
-} = {}) {
-  if (debugMode !== "PROD") {
-    return returnSummary
-      ? {
-        groupCount: 0,
-        entryCount: 0,
-        reusedPathCount: 0,
-        builtPathCount: 0,
-        pathlessEntryCount: 0,
-        cacheHit: false,
-        recoveryQuality,
-      }
-      : 0;
-  }
-  const useScenarioBackgroundMerge = shouldUseScenarioPoliticalBackgroundMerge();
-  const groupSummary = useFullPassCache && useScenarioBackgroundMerge
-    ? getScenarioPoliticalBackgroundFullPassGroups(entries, {
-      transform,
-      recoveryQuality,
-      phase: "render",
-    })
-    : {
-      cacheHit: false,
-      recoveryQuality,
-      ...buildPoliticalBackgroundResolvedGroups(entries, {
-        transform,
-        useScenarioBackgroundMerge,
-        allowBuildPaths: false,
-      }),
-    };
-  const groupCount = drawPoliticalBackgroundFillsFromGroups(groupSummary.groups);
-  if (returnSummary) {
-    return {
-      groupCount,
-      entryCount: Number(groupSummary.entryCount || 0),
-      reusedPathCount: Number(groupSummary.reusedPathCount || 0),
-      builtPathCount: Number(groupSummary.builtPathCount || 0),
-      pathlessEntryCount: Number(groupSummary.pathlessEntryCount || 0),
-      cacheHit: !!groupSummary.cacheHit,
-      recoveryQuality,
-      progressive: false,
-    };
-  }
-  return groupCount;
+function drawPoliticalBackgroundFillsForEntries(entries = [], options = {}) {
+  return getPoliticalBackgroundRenderOwner().drawPoliticalBackgroundFillsForEntries(entries, options);
 }
-
 function getPoliticalFeatureFillColor(feature, id, index, canvasWidth = 0) {
   if (debugMode === "PROD") {
     return isAtlantropaSeaFeature(feature)

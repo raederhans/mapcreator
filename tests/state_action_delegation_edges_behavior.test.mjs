@@ -366,6 +366,25 @@ test("source-bound visual effects owner proves exact facade methods without stat
   }
 });
 
+test("source-bound political background owner proves exact facade methods without state action edges", () => {
+  const entry = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createPoliticalBackgroundRenderOwner",
+  );
+  assert.ok(entry);
+  assert.deepEqual(entry.actionExports, []);
+  assert.deepEqual(entry.methods, [
+    "cancelScenarioPoliticalBackgroundDeferredFullCache",
+    "drawBackgroundPass",
+    "drawPoliticalBackgroundFills",
+    "drawPoliticalBackgroundFillsForEntries",
+  ]);
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource: fs.readFileSync(entry.compositionModulePath, "utf8"),
+    factorySource: fs.readFileSync(entry.factoryModulePath, "utf8"),
+    entry,
+  }).violations, []);
+});
+
 test("spherical diagnostics cache exposes immutable or detached entry reads and rejects raw Map access", () => {
   const modulePath = "js/core/state/actions/renderer_cache_actions.js";
   const source = fs.readFileSync(modulePath, "utf8");

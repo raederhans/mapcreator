@@ -53,6 +53,7 @@ const FILES = Object.freeze({
   dayNightRuntimeOwner: "js/core/renderer/day_night_runtime_owner.js",
   contextPassOrchestratorOwner: "js/core/renderer/context_pass_orchestrator_owner.js",
   politicalPassOrchestratorOwner: "js/core/renderer/political_pass_orchestrator_owner.js",
+  politicalBackgroundRenderOwner: "js/core/renderer/political_background_render_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
   rendererSurfaceHostPreflightDoc: "docs/active/renderer-surface-host-preflight-20260626.md",
@@ -156,7 +157,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 22143,
+  [FILES.renderer]: 21293,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -170,6 +171,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.contextPassOrchestratorOwner]: 280,
   [FILES.dayNightRuntimeOwner]: 360,
   [FILES.politicalPassOrchestratorOwner]: 280,
+  [FILES.politicalBackgroundRenderOwner]: 1380,
   [FILES.rendererViewportUpdateOwner]: 220,
   [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.setMapDataTransactionOwner]: 260,
@@ -500,6 +502,7 @@ function collectFailures() {
   const dayNightRuntimeOwner = readProjectFile(FILES.dayNightRuntimeOwner);
   const contextPassOrchestratorOwner = readProjectFile(FILES.contextPassOrchestratorOwner);
   const politicalPassOrchestratorOwner = readProjectFile(FILES.politicalPassOrchestratorOwner);
+  const politicalBackgroundRenderOwner = readProjectFile(FILES.politicalBackgroundRenderOwner);
   const rendererFrameCompositorBoundaryTest = readProjectFile(FILES.rendererFrameCompositorBoundaryTest);
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
@@ -630,6 +633,7 @@ function collectFailures() {
     [FILES.dayNightRuntimeOwner]: dayNightRuntimeOwner,
     [FILES.contextPassOrchestratorOwner]: contextPassOrchestratorOwner,
     [FILES.politicalPassOrchestratorOwner]: politicalPassOrchestratorOwner,
+    [FILES.politicalBackgroundRenderOwner]: politicalBackgroundRenderOwner,
     [FILES.rendererFrameCompositorBoundaryTest]: rendererFrameCompositorBoundaryTest,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
     [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
@@ -5749,6 +5753,50 @@ function collectFailures() {
       ],
       rendererForbiddenTokens: [
         "function drawPoliticalPass(k) {\n  if (isHgoRuntimePreviewReady())",
+      ],
+    },
+    {
+      ownerPath: FILES.politicalBackgroundRenderOwner,
+      ownerTokens: [
+        "export function createPoliticalBackgroundRenderOwner({",
+        "function createScenarioPoliticalBackgroundCacheState(",
+        "function runScenarioPoliticalBackgroundDeferredFullCacheSlice(",
+        "function drawScenarioPoliticalBackgroundFills(",
+        "function buildAdmin0MergedShapes(",
+        "function drawOceanDepthMaskLayer(",
+        "function drawBackgroundPass()",
+        "function drawPoliticalBackgroundFills(options = {})",
+        "function drawPoliticalBackgroundFillsForEntries(entries = [],",
+        "cancelScenarioPoliticalBackgroundDeferredFullCache,",
+      ],
+      ownerForbiddenTokens: [
+        "import ",
+        "runtimeState",
+        "RendererRuntimeContext",
+        "document.",
+        "window.",
+        "globalThis",
+        "requestPoliticalRasterWorkerPass",
+        "buildPoliticalRasterWorkerPacket(",
+        "tryPartialPoliticalPassRepaint(",
+      ],
+      rendererRequiredTokens: [
+        "import { createPoliticalBackgroundRenderOwner } from \"./renderer/political_background_render_owner.js\";",
+        "let politicalBackgroundRenderOwner = null;",
+        "function getPoliticalBackgroundRenderOwner() {",
+        "return getPoliticalBackgroundRenderOwner().drawBackgroundPass();",
+        "return getPoliticalBackgroundRenderOwner().drawPoliticalBackgroundFills(options);",
+        "return getPoliticalBackgroundRenderOwner().drawPoliticalBackgroundFillsForEntries(entries, options);",
+        "return getPoliticalBackgroundRenderOwner().cancelScenarioPoliticalBackgroundDeferredFullCache(reason);",
+        "function drawPoliticalPassBackground({ identity, viewport }) {",
+        "function buildCountryDominantFillColorMap() {",
+      ],
+      rendererForbiddenTokens: [
+        "function createScenarioPoliticalBackgroundCacheState(",
+        "function runScenarioPoliticalBackgroundDeferredFullCacheSlice(",
+        "function drawScenarioPoliticalBackgroundFills(",
+        "function buildAdmin0MergedShapes(",
+        "function drawOceanDepthMaskLayer(",
       ],
     },
     {

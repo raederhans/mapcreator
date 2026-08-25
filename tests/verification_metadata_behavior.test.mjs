@@ -37,13 +37,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 335);
-  assert.equal(summary.contributorRecords, 421);
-  assert.equal(summary.verificationRecordProjectionCount, 131);
-  assert.equal(summary.routeProjectionCount, 380);
-  assert.equal(summary.commandCount, 338);
+  assert.equal(summary.packageScriptCount, 337);
+  assert.equal(summary.contributorRecords, 424);
+  assert.equal(summary.verificationRecordProjectionCount, 133);
+  assert.equal(summary.routeProjectionCount, 383);
+  assert.equal(summary.commandCount, 340);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 421);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 424);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -371,6 +371,11 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
 
   const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");
   assert.ok(exactEntry.sourceRefs.includes("js/core/map_renderer/click_selection_transaction_owner.js"));
+  assert.ok(exactEntry.sourceRefs.includes("js/core/renderer/political_background_render_owner.js"));
+  assert.ok(exactEntry.sourceRefs.includes("tests/political_background_render_owner_behavior.test.mjs"));
+  assert.ok(exactEntry.sourceRefs.includes(
+    "tests/test_map_renderer_political_background_render_owner_boundary_contract.py",
+  ));
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-3-renderer-actions"
   ));
@@ -761,6 +766,24 @@ test("P3.1 through P3.3b pass-family contracts stay in the child-safe renderer l
       ],
     },
     {
+      id: "verify-core:test:node:political-background-render-owner",
+      commandRef: "test:node:political-background-render-owner",
+      requiredSourceRefs: [
+        "js/core/renderer/political_background_render_owner.js",
+        "tests/political_background_render_owner_behavior.test.mjs",
+        "package.json",
+      ],
+    },
+    {
+      id: "verify-core:test:python:map-renderer-political-background-render-owner-boundary",
+      commandRef: "test:python:map-renderer-political-background-render-owner-boundary",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/political_background_render_owner.js",
+        "tests/test_map_renderer_political_background_render_owner_boundary_contract.py",
+      ],
+    },
+    {
       id: "verify-core:test:python:map-renderer-render-pipeline-passes-boundary",
       commandRef: "test:python:map-renderer-render-pipeline-passes-boundary",
       requiredSourceRefs: [
@@ -920,8 +943,8 @@ test("verify-core default plan preserves metadata closure before command superse
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 91);
-  assert.equal(plan.commandsToRun.length, 85);
+  assert.equal(metadataDefaultRefs.length, 93);
+  assert.equal(plan.commandsToRun.length, 87);
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [
@@ -936,6 +959,10 @@ test("verify-core default plan preserves metadata closure before command superse
   assert.equal(plan.omittedCommands.length, 0);
   assert.equal(plan.duplicateCommands.length, 0);
   assert.ok(metadataDefaultRefs.includes("test:node:verification-metadata"));
+  assert.ok(metadataDefaultRefs.includes("test:node:political-background-render-owner"));
+  assert.ok(metadataDefaultRefs.includes(
+    "test:python:map-renderer-political-background-render-owner-boundary",
+  ));
 });
 
 test("verify-core main-thread and optional E2E commands are generated from verification metadata", () => {

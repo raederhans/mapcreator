@@ -866,6 +866,24 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
   }),
   freezeMutationDelegatingOwnerEntry({
     compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getPoliticalBackgroundRenderOwner",
+    compositionSourceFingerprint:
+      "6c7ca3a50636e5189175b8077f5c0c712a19f3eab817bafdff8a899784305b54",
+    factoryModulePath: "js/core/renderer/political_background_render_owner.js",
+    factoryExportName: "createPoliticalBackgroundRenderOwner",
+    factorySourceFingerprint:
+      "d487dfb72663beff57f2f143ddb831d691ef816ff2d516a0701d3e1c82eeebbe",
+    ownerBindingName: "politicalBackgroundRenderOwner",
+    methods: [
+      "cancelScenarioPoliticalBackgroundDeferredFullCache",
+      "drawBackgroundPass",
+      "drawPoliticalBackgroundFills",
+      "drawPoliticalBackgroundFillsForEntries",
+    ],
+    actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
     compositionExportName: "getDayNightRuntimeOwner",
     compositionSourceFingerprint:
       "3ce0f2dde1cf99c3836747e3369daf71c0476bd8f8da60d1f136e0f7e2dd9596",

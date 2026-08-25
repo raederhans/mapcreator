@@ -12,6 +12,7 @@ VISUAL_EFFECTS_PASS_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "visual_
 DAY_NIGHT_RUNTIME_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "day_night_runtime_owner.js"
 CONTEXT_PASS_ORCHESTRATOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "context_pass_orchestrator_owner.js"
 POLITICAL_PASS_ORCHESTRATOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "political_pass_orchestrator_owner.js"
+POLITICAL_BACKGROUND_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "political_background_render_owner.js"
 EXACT_AFTER_SETTLE_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "exact_after_settle_pass_catalog.js"
 EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_refresh_plans.js"
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
@@ -33,6 +34,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         day_night_owner_content = DAY_NIGHT_RUNTIME_OWNER_JS.read_text(encoding="utf-8")
         context_pass_owner_content = CONTEXT_PASS_ORCHESTRATOR_OWNER_JS.read_text(encoding="utf-8")
         political_pass_owner_content = POLITICAL_PASS_ORCHESTRATOR_OWNER_JS.read_text(encoding="utf-8")
+        political_background_owner_content = POLITICAL_BACKGROUND_RENDER_OWNER_JS.read_text(encoding="utf-8")
         pipeline_catalog_content = RENDER_PIPELINE_CATALOG_JS.read_text(encoding="utf-8")
         exact_pass_catalog_content = EXACT_AFTER_SETTLE_PASS_CATALOG_JS.read_text(encoding="utf-8")
         exact_plan_content = EXACT_AFTER_SETTLE_PLANS_JS.read_text(encoding="utf-8")
@@ -261,10 +263,20 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn('politicalDataStage: "coarse"', political_draw_body)
         self.assertIn('politicalDataStage: "fine"', political_draw_body)
         self.assertIn('finePoliticalCacheReady: true', political_draw_body)
-        self.assertIn("function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(", renderer_content)
-        self.assertIn('cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");', renderer_content)
-        self.assertIn("sceneGeneration: identity.sceneGeneration,", renderer_content)
-        self.assertIn("scenarioDataGeneration: identity.scenarioDataGeneration,", renderer_content)
+        self.assertIn(
+            "function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(",
+            political_background_owner_content,
+        )
+        self.assertIn(
+            'cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");',
+            political_background_owner_content,
+        )
+        self.assertIn("sceneGeneration: identity.sceneGeneration,", political_background_owner_content)
+        self.assertIn("scenarioDataGeneration: identity.scenarioDataGeneration,", political_background_owner_content)
+        self.assertIn(
+            "function drawBackgroundPass() {\n  return getPoliticalBackgroundRenderOwner().drawBackgroundPass();\n}",
+            renderer_content,
+        )
         self.assertIn("function ensureIdleRenderPasses(timings, passNames = null) {", owner_content)
         self.assertIn("const requestedPassNames = Array.isArray(passNames) ? new Set(passNames.filter(Boolean)) : null;", owner_content)
         self.assertIn("detectContextScenarioReasonMismatch({ cache, renderPerf: state.renderPerfMetrics || {} });", owner_content)

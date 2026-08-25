@@ -26,7 +26,7 @@ const ARRAY_FIELDS = ["stateReadClass", "stateWriteClass", "existingDependencyOw
 const SCALAR_ENUM_FIELDS = [
   ["familyId", RENDER_PASS_FAMILY_IDS, ["foundation", "political", "hgo-preview", "context", "visual-effects", "borders", "labels"]],
   ["implementationStatus", RENDER_PASS_IMPLEMENTATION_STATUS_IDS, ["inline", "thin-wrapper", "delegated-existing", "owned-p3", "hold"]],
-  ["plannedPhase", RENDER_PASS_PLANNED_PHASE_IDS, ["P3.1", "P3.2", "P3.3a", "P3.3b", "existing-delegated", "hold", "future-review"]],
+  ["plannedPhase", RENDER_PASS_PLANNED_PHASE_IDS, ["P3.1", "P3.2", "P3.3a", "P3.3b", "P3.4", "existing-delegated", "hold", "future-review"]],
   ["riskTier", RENDER_PASS_RISK_TIER_IDS, ["low", "medium", "high"]],
   ["canvasOrSvg", RENDER_PASS_SURFACE_IDS, ["canvas", "svg", "hybrid"]],
   ["perfSensitivity", RENDER_PASS_PERF_SENSITIVITY_IDS, ["low", "medium", "high"]],
@@ -138,11 +138,13 @@ test("family and planned-phase membership stays binding", () => {
   assert.deepEqual(namesFor("plannedPhase", "P3.2"), ["contextBase", "contextScenario", "contextMarkers"]);
   assert.deepEqual(namesFor("plannedPhase", "P3.3a"), []);
   assert.deepEqual(namesFor("plannedPhase", "P3.3b"), ["political"]);
-  assert.deepEqual(namesFor("plannedPhase", "hold"), ["background", "borders"]);
+  assert.deepEqual(namesFor("plannedPhase", "P3.4"), ["background"]);
+  assert.deepEqual(namesFor("plannedPhase", "hold"), ["borders"]);
   assert.deepEqual(namesFor("plannedPhase", "existing-delegated"), ["physicalBase", "hgoPreview"]);
   assert.deepEqual(namesFor("plannedPhase", "future-review"), ["labels"]);
   assert.deepEqual(namesFor("implementationStatus", "thin-wrapper"), ["borders", "labels"]);
   assert.deepEqual(namesFor("implementationStatus", "owned-p3"), [
+    "background",
     "political",
     "contextBase",
     "contextScenario",
