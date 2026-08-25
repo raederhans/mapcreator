@@ -28,17 +28,17 @@
   },
   "source_files": [
     "data/scenarios/blank_base/manifest.json",
-    "data/europe_topology.runtime_political_v1.json",
+    "data/scenarios/blank_base/runtime_topology.topo.json",
     "data/europe_land_bg.geojson"
   ],
   "feature_counts": {
-    "land_features_inspected": 23426,
-    "land_features_candidates": 7263,
-    "land_features_clipped": 7261,
-    "land_paths_available": 9015,
+    "land_features_inspected": 11294,
+    "land_features_candidates": 4079,
+    "land_features_clipped": 4078,
+    "land_paths_available": 5350,
     "land_path_limit": 8600,
-    "land_paths": 8600,
-    "land_paths_dropped": 415,
+    "land_paths": 5350,
+    "land_paths_dropped": 0,
     "land_simplify_tolerance": 0.08,
     "coastline_features_inspected": 9,
     "coastline_features_candidates": 9,
@@ -49,13 +49,13 @@
     "coastline_paths_dropped": 88
   },
   "counts": {
-    "land_features_inspected": 23426,
-    "land_features_candidates": 7263,
-    "land_features_clipped": 7261,
-    "land_paths_available": 9015,
+    "land_features_inspected": 11294,
+    "land_features_candidates": 4079,
+    "land_features_clipped": 4078,
+    "land_paths_available": 5350,
     "land_path_limit": 8600,
-    "land_paths": 8600,
-    "land_paths_dropped": 415,
+    "land_paths": 5350,
+    "land_paths_dropped": 0,
     "land_simplify_tolerance": 0.08,
     "coastline_features_inspected": 9,
     "coastline_features_candidates": 9,
@@ -67,18 +67,21 @@
   },
   "territory_tags": [],
   "capital_tags": [],
+  "capital_points": [],
   "selection_policy": {
     "viewport": "Europe hero crop shared by all scenario chips",
     "blank_canvas": true,
     "ownership_fill": false,
     "capital_limit": 0,
     "territory_path_limit_per_tag": 0,
+    "capital_label_layout": "deterministic bounding-box avoidance including text stroke",
     "land_simplify_tolerance": 0.08,
     "land_path_limit": 8600,
     "land_path_ranking": "clipped geometry area descending",
     "blank_internal_stroke_width": 0.25,
     "coastline_stroke_width": 0.5,
     "coastline_path_limit": 1000,
-    "coastline_source": "data/europe_land_bg.geojson exterior rings"
+    "coastline_source": "data/europe_land_bg.geojson exterior rings",
+    "runtime_topology_source": "data/scenarios/blank_base/runtime_topology.topo.json"
   }
 }

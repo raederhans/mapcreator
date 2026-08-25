@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 from xml.sax.saxutils import escape as xml_escape
 
-from shapely.geometry import box, shape
+from shapely.geometry import Point, shape
 from shapely.geometry.base import BaseGeometry
 from shapely.validation import make_valid
 from topojson.utils import serialize_as_geojson
@@ -44,6 +44,7 @@ RAIL_LIMIT = 160
 CITY_LIMIT = 32
 FOCUS_CITY_LIMIT = 3
 MAIN_CORRIDOR_LIMIT = 1
+HIGHLIGHTED_MOTORWAY_REF = "C4"
 MAJOR_CONTOUR_LIMIT = 80
 MINOR_CONTOUR_LIMIT = 120
 RIVER_LIMIT = 42
@@ -82,7 +83,7 @@ class Canvas:
         projection = carrier["projection"]
         center = tuple(float(value) for value in projection["center"])
         parallels = tuple(float(value) for value in projection["parallels"])
-        geometry = make_valid(shape(carrier["frames"]["main"]["fitGeometry"]))
+        geometry = carrier_frame_geometry(carrier)
         bbox = tuple(float(value) for value in geometry.bounds)
         projected_bounds = projection_bounds_for_geometry(geometry, center, parallels)
         min_x, min_y, max_x, max_y = projected_bounds
@@ -119,6 +120,7 @@ class PathEntry:
     rank: float
     source: str
     label: str = ""
+    source_geometry: BaseGeometry | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -129,6 +131,8 @@ class PointEntry:
     source: str
     name: str
     radius: float
+    lon: float
+    lat: float
 
 
 def read_json(path: Path) -> dict:
@@ -137,6 +141,13 @@ def read_json(path: Path) -> dict:
     if not isinstance(payload, dict):
         raise ValueError(f"Expected JSON object in {path}")
     return payload
+
+
+def carrier_frame_geometry(carrier: dict) -> BaseGeometry:
+    geometry = make_valid(shape(carrier["frames"]["main"]["fitGeometry"]))
+    if geometry.is_empty:
+        raise ValueError("Japan carrier main fitGeometry is empty")
+    return geometry
 
 
 def write_text_lf(path: Path, text: str) -> None:
@@ -409,7 +420,7 @@ def feature_geometry(feature: dict, clip: BaseGeometry) -> BaseGeometry | None:
 
 
 def build_base_paths(carrier: dict, canvas: Canvas) -> list[str]:
-    geometry = make_valid(shape(carrier["frames"]["main"]["fitGeometry"]))
+    geometry = carrier_frame_geometry(carrier)
     return geometry_polygon_paths(geometry, canvas, stride=2)
 
 
@@ -472,7 +483,7 @@ def select_line_layer(
             continue
         rank = rank_fn(feature.get("properties", {}), length_px)
         for d in geometry_line_paths(geometry, canvas, stride):
-            entries.append(PathEntry(d=d, rank=rank, source=source))
+            entries.append(PathEntry(d=d, rank=rank, source=source, source_geometry=geometry))
     entries.sort(key=lambda entry: entry.rank, reverse=True)
     return entries[:limit], source_feature_count, len(entries)
 
@@ -484,6 +495,12 @@ def select_main_corridor_path(canvas: Canvas, clip: BaseGeometry) -> list[PathEn
         road_class = str(properties.get("road_class") or "").lower()
         if road_class not in {"motorway", "trunk"}:
             continue
+        refs = {
+            str(properties.get("ref") or "").strip(),
+            str(properties.get("official_ref") or "").strip(),
+        }
+        if HIGHLIGHTED_MOTORWAY_REF not in refs:
+            continue
         geometry = feature_geometry(feature, clip)
         if geometry is None or geometry.is_empty:
             continue
@@ -493,7 +510,15 @@ def select_main_corridor_path(canvas: Canvas, clip: BaseGeometry) -> list[PathEn
         rank = road_rank(properties, length_px)
         label = corridor_label(properties)
         for d in geometry_line_paths(geometry, canvas, stride=2):
-            entries.append(PathEntry(d=d, rank=rank, source="japan-main-corridor", label=label))
+            entries.append(
+                PathEntry(
+                    d=d,
+                    rank=rank,
+                    source="japan-main-corridor",
+                    label=label,
+                    source_geometry=geometry,
+                )
+            )
     entries.sort(key=lambda entry: entry.rank, reverse=True)
     return entries[:MAIN_CORRIDOR_LIMIT]
 
@@ -517,7 +542,7 @@ def select_topology_lines(
         if length_px < 1.5:
             continue
         for d in geometry_line_paths(geometry, canvas, stride):
-            entries.append(PathEntry(d=d, rank=length_px, source=source))
+            entries.append(PathEntry(d=d, rank=length_px, source=source, source_geometry=geometry))
     entries.sort(key=lambda entry: entry.rank, reverse=True)
     return entries[:limit], source_feature_count, len(entries)
 
@@ -541,15 +566,14 @@ def select_geojson_lines(
             continue
         rank = (10 - float(feature.get("properties", {}).get("scalerank") or 10)) * 1000 + length_px
         for d in geometry_line_paths(geometry, canvas, stride):
-            entries.append(PathEntry(d=d, rank=rank, source=source))
+            entries.append(PathEntry(d=d, rank=rank, source=source, source_geometry=geometry))
     entries.sort(key=lambda entry: entry.rank, reverse=True)
     return entries[:limit], len(features), len(entries)
 
 
-def select_cities(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
+def select_cities(canvas: Canvas, frame: BaseGeometry) -> tuple[list[PointEntry], int, int]:
     points: list[PointEntry] = []
     source_features = 0
-    min_lon, min_lat, max_lon, max_lat = canvas.bbox
     for feature in geojson_features(WORLD_CITIES):
         properties = feature.get("properties", {})
         if properties.get("country_code") != "JP":
@@ -559,7 +583,7 @@ def select_cities(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
         if not isinstance(coords, list) or len(coords) < 2:
             continue
         lon, lat = float(coords[0]), float(coords[1])
-        if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
+        if not frame.covers(Point(lon, lat)):
             continue
         base_name = str(properties.get("name_ascii") or properties.get("name") or "city")
         name = city_display_name(base_name, properties)
@@ -568,15 +592,25 @@ def select_cities(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
         capital_bonus = 1_500_000 if properties.get("capital_kind") else 0
         x, y = canvas.project(lon, lat)
         radius = 5.8 if base_name in FOCUS_CITY_NAMES else 4.4
-        points.append(PointEntry(x=x, y=y, rank=population + focus_bonus + capital_bonus, source="world-cities-japan", name=name, radius=radius))
+        points.append(
+            PointEntry(
+                x=x,
+                y=y,
+                rank=population + focus_bonus + capital_bonus,
+                source="world-cities-japan",
+                name=name,
+                radius=radius,
+                lon=lon,
+                lat=lat,
+            )
+        )
     points.sort(key=lambda point: point.rank, reverse=True)
     selected = dedupe_points(points, grid_px=18.0, limit=CITY_LIMIT)
     return selected, source_features, len(points)
 
 
-def select_focus_cities(canvas: Canvas) -> list[PointEntry]:
+def select_focus_cities(canvas: Canvas, frame: BaseGeometry) -> list[PointEntry]:
     points_by_name: dict[str, PointEntry] = {}
-    min_lon, min_lat, max_lon, max_lat = canvas.bbox
     for feature in geojson_features(WORLD_CITIES):
         properties = feature.get("properties", {})
         if properties.get("country_code") != "JP":
@@ -588,7 +622,7 @@ def select_focus_cities(canvas: Canvas) -> list[PointEntry]:
         if not isinstance(coords, list) or len(coords) < 2:
             continue
         lon, lat = float(coords[0]), float(coords[1])
-        if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
+        if not frame.covers(Point(lon, lat)):
             continue
         x, y = canvas.project(lon, lat)
         population = float(properties.get("population") or 0)
@@ -599,20 +633,36 @@ def select_focus_cities(canvas: Canvas) -> list[PointEntry]:
             source="world-cities-japan-focus",
             name=city_display_name(base_name, properties),
             radius=7.6,
+            lon=lon,
+            lat=lat,
         )
     return [points_by_name[name] for name in LANDING_FOCUS_CITY_NAMES if name in points_by_name][:FOCUS_CITY_LIMIT]
 
 
-def select_station_points(canvas: Canvas, limit: int) -> list[PointEntry]:
+def select_station_points(canvas: Canvas, frame: BaseGeometry, limit: int) -> list[PointEntry]:
     points: list[PointEntry] = []
     for feature in geojson_features(JAPAN_STATIONS):
         coords = feature.get("geometry", {}).get("coordinates")
         if not isinstance(coords, list) or len(coords) < 2:
             continue
-        x, y = canvas.project(float(coords[0]), float(coords[1]))
+        lon, lat = float(coords[0]), float(coords[1])
+        if not frame.covers(Point(lon, lat)):
+            continue
+        x, y = canvas.project(lon, lat)
         importance = str(feature.get("properties", {}).get("importance") or "")
         rank = 2.0 if importance == "capital_core" else 1.0
-        points.append(PointEntry(x=x, y=y, rank=rank, source="japan-major-stations", name="station", radius=3.4))
+        points.append(
+            PointEntry(
+                x=x,
+                y=y,
+                rank=rank,
+                source="japan-major-stations",
+                name="station",
+                radius=3.4,
+                lon=lon,
+                lat=lat,
+            )
+        )
     points.sort(key=lambda point: point.rank, reverse=True)
     return dedupe_points(points, grid_px=14.0, limit=limit)
 
@@ -647,7 +697,7 @@ def parse_modern_city_lights() -> tuple[list[int], int, int, float, float, int]:
     return values, width, height, step_lon, step_lat, threshold
 
 
-def select_night_points(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
+def select_night_points(canvas: Canvas, frame: BaseGeometry) -> tuple[list[PointEntry], int, int]:
     values, width, height, step_lon, step_lat, threshold = parse_modern_city_lights()
     min_lon, min_lat, max_lon, max_lat = canvas.bbox
     raw: list[PointEntry] = []
@@ -659,11 +709,24 @@ def select_night_points(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
             lon = -180.0 + (col + 0.5) * step_lon
             if lon < min_lon or lon > max_lon:
                 continue
+            if not frame.covers(Point(lon, lat)):
+                continue
             value = values[row * width + col]
             if value < threshold:
                 continue
             x, y = canvas.project(lon, lat)
-            raw.append(PointEntry(x=x, y=y, rank=float(value), source="nasa-black-marble-2016", name="light", radius=2.8 + min(value, 220) / 75))
+            raw.append(
+                PointEntry(
+                    x=x,
+                    y=y,
+                    rank=float(value),
+                    source="nasa-black-marble-2016",
+                    name="light",
+                    radius=2.8 + min(value, 220) / 75,
+                    lon=lon,
+                    lat=lat,
+                )
+            )
     raw.sort(key=lambda point: point.rank, reverse=True)
     grid_points = dedupe_points(raw, grid_px=16.0, limit=NIGHT_GRID_LIMIT)
 
@@ -673,10 +736,21 @@ def select_night_points(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
         if entry.get("countryCode") != "JP":
             continue
         lon, lat = float(entry["lon"]), float(entry["lat"])
-        if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat:
+        if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat and frame.covers(Point(lon, lat)):
             x, y = canvas.project(lon, lat)
             weight = float(entry.get("weight") or 0.5)
-            anchors.append(PointEntry(x=x, y=y, rank=weight, source="historical-1930-city-light-entries", name=str(entry.get("nameAscii") or "anchor"), radius=5.0 + weight * 3))
+            anchors.append(
+                PointEntry(
+                    x=x,
+                    y=y,
+                    rank=weight,
+                    source="historical-1930-city-light-entries",
+                    name=str(entry.get("nameAscii") or "anchor"),
+                    radius=5.0 + weight * 3,
+                    lon=lon,
+                    lat=lat,
+                )
+            )
     anchors.sort(key=lambda point: point.rank, reverse=True)
     selected = grid_points + dedupe_points(anchors, grid_px=20.0, limit=NIGHT_ANCHOR_LIMIT)
     return selected, len(raw), len(anchors)
@@ -766,24 +840,30 @@ def build_svg(mode: str, canvas: Canvas, layers: dict, metadata: dict) -> str:
 """
 
 
-def build_preview() -> None:
-    LANDING_ASSETS.mkdir(parents=True, exist_ok=True)
+def build_preview(output_dir: Path | None = None) -> None:
+    if output_dir is None:
+        metadata_output = JAPAN_PREVIEW_METADATA
+        svg_outputs = JAPAN_PREVIEW_SVGS
+    else:
+        metadata_output = output_dir / JAPAN_PREVIEW_METADATA.name
+        svg_outputs = {mode: output_dir / path.name for mode, path in JAPAN_PREVIEW_SVGS.items()}
+    metadata_output.parent.mkdir(parents=True, exist_ok=True)
     carrier = read_json(JAPAN_CARRIER)
     canvas = Canvas.from_carrier(carrier)
-    clip = box(*canvas.bbox)
+    clip = carrier_frame_geometry(carrier)
 
     base = build_base_paths(carrier, canvas)
     roads, road_source_features, road_eligible_paths = select_line_layer(JAPAN_ROADS, "roads", canvas, clip, ROAD_LIMIT, "japan-road-preview", road_rank, stride=5)
     rails, rail_source_features, rail_eligible_paths = select_line_layer(JAPAN_RAIL, "railways", canvas, clip, RAIL_LIMIT, "japan-rail-preview", rail_rank, stride=4)
     main_corridor = select_main_corridor_path(canvas, clip)
-    cities, city_source_features, city_eligible_points = select_cities(canvas)
-    focus_cities = select_focus_cities(canvas)
-    stations = select_station_points(canvas, limit=20)
+    cities, city_source_features, city_eligible_points = select_cities(canvas, clip)
+    focus_cities = select_focus_cities(canvas, clip)
+    stations = select_station_points(canvas, clip, limit=20)
     terrain_major, major_source_features, major_eligible_paths = select_topology_lines(CONTOURS_MAJOR, "contours", canvas, clip, MAJOR_CONTOUR_LIMIT, "global-contours-major", stride=8)
     terrain_minor, minor_source_features, minor_eligible_paths = select_topology_lines(CONTOURS_MINOR, "contours", canvas, clip, MINOR_CONTOUR_LIMIT, "global-contours-minor", stride=12)
     rivers, river_source_features, river_eligible_paths = select_geojson_lines(GLOBAL_RIVERS, canvas, clip, RIVER_LIMIT, "global-rivers", stride=4)
     bathymetry_contours, bathymetry_source_features, bathymetry_eligible_paths = select_topology_lines(GLOBAL_BATHYMETRY, "bathymetry_contours", canvas, clip, BATHYMETRY_LIMIT, "global-bathymetry-contours", stride=4)
-    night_points, night_grid_candidates, night_anchor_candidates = select_night_points(canvas)
+    night_points, night_grid_candidates, night_anchor_candidates = select_night_points(canvas, clip)
 
     layers = {
         "base": base,
@@ -803,9 +883,16 @@ def build_preview() -> None:
         "title": "Japan landing preview",
         "scope": {
             "country": "Japan",
-            "profile": "japan main corridor",
-            "note": "Matches the existing Japan transport workbench carrier scope.",
+            "profile": "Japan main-islands preview",
+            "note": "Japan four-main-island preview from the carrier; Okinawa is outside this frame; one highlighted motorway path (C4).",
             "bbox": [round(value, 6) for value in canvas.bbox],
+        },
+        "carrier_binding": {
+            "source_file": repo_path(JAPAN_CARRIER),
+            "frame_id": "main",
+            "frame_label": str(carrier["frames"]["main"].get("label") or "Japan four islands"),
+            "fit_geometry_type": clip.geom_type,
+            "cross_mask_policy": str((carrier.get("clipPolicy") or {}).get("crossMask") or ""),
         },
         "projection": {
             "name": "geoConicConformal",
@@ -814,6 +901,15 @@ def build_preview() -> None:
             "canvas_width": canvas.width,
             "canvas_height": canvas.height,
             "canvas_padding": CANVAS_PADDING,
+            "fit_scale": canvas.scale,
+            "offset_x": canvas.offset_x,
+            "offset_y": canvas.offset_y,
+            "scale_semantics": "projection fit from carrier coordinates to SVG pixels",
+        },
+        "ui_zoom": {
+            "ownership": "landing/app.js consumer",
+            "semantics": "interactive viewport zoom applied after projection fit",
+            "binding": "consumer-owned; no numeric UI default embedded in this asset metadata",
         },
         "sources": [
             repo_path(JAPAN_CARRIER),
@@ -842,14 +938,17 @@ def build_preview() -> None:
             "rail_source": "preview",
             "rail_limit": RAIL_LIMIT,
             "rail_ranking_key": "line_class_weight_plus_projected_length_px",
+            "clip_frame": "carrier.frames.main.fitGeometry for lines, polygons, and points",
             "main_corridor_limit": MAIN_CORRIDOR_LIMIT,
-            "main_corridor_ranking_key": "motorway_or_trunk_rank_plus_projected_length_px",
+            "main_corridor_role": "highlighted motorway",
+            "highlighted_motorway_ref": HIGHLIGHTED_MOTORWAY_REF,
+            "main_corridor_ranking_key": "exact_ref_C4_then_projected_length_px",
             "city_limit": CITY_LIMIT,
             "city_ranking_key": "population_plus_focus_city_bonus",
             "focus_city_names": list(LANDING_FOCUS_CITY_NAMES),
             "night_grid_limit": NIGHT_GRID_LIMIT,
-            "night_source": "NASA Black Marble 2016 grid sampled over the Japan map bbox",
-            "bathymetry_scope_note": "The checked-in global bathymetry topology has no lines intersecting the Japan main corridor bbox.",
+            "night_source": "NASA Black Marble 2016 grid sampled inside the Japan four-island carrier frame",
+            "bathymetry_scope_note": "The checked-in global bathymetry topology has no lines intersecting the Japan four-island carrier frame.",
         },
         "counts": {
             "carrier_paths": len(base),
@@ -885,8 +984,8 @@ def build_preview() -> None:
             "night_points_rendered": len(night_points),
         },
     }
-    write_text_lf(JAPAN_PREVIEW_METADATA, json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
-    for mode, path in JAPAN_PREVIEW_SVGS.items():
+    write_text_lf(metadata_output, json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+    for mode, path in svg_outputs.items():
         write_text_lf(path, build_svg(mode, canvas, layers, metadata))
 
 

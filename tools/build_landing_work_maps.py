@@ -546,7 +546,7 @@ def build_japan_corridor() -> None:
         for path in line_paths(geometry, canvas, stride=3):
             nodes.append(f'    <path d="{path}" />')
     nodes.append("  </g>")
-    nodes.append('  <g class="night-lights" filter="url(#softGlow)" fill="#fff0a6" opacity=".86">')
+    nodes.append('  <g class="urban-anchors" filter="url(#softGlow)" fill="#fff0a6" opacity=".86">')
     for feature, geometry in cities[:18]:
         point = geometry.representative_point()
         x, y = canvas.project(point.x, point.y)
@@ -562,17 +562,16 @@ def build_japan_corridor() -> None:
     nodes.append("  </g>")
     nodes.extend(
         [
-            '  <path d="M80 346 C184 284 292 260 392 200 C484 146 562 104 628 58" fill="none" stroke="#f7ead0" stroke-width="3.2" stroke-linecap="round" opacity=".76" />',
-            '  <text x="34" y="398" fill="#f7ead0" font-family="Manrope, Arial, sans-serif" font-size="25" font-weight="900" letter-spacing="1.8">TOKAIDO CORRIDOR ATLAS OUTPUT</text>',
-            '  <text x="34" y="53" fill="#cbe3e6" font-family="Manrope, Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.4" opacity=".78">roads · rail · stations · lights · terrain</text>',
+            '  <text x="34" y="398" fill="#f7ead0" font-family="Manrope, Arial, sans-serif" font-size="25" font-weight="900" letter-spacing="1.8">CENTRAL JAPAN LOCAL TRANSPORT ATLAS</text>',
+            '  <text x="34" y="53" fill="#cbe3e6" font-family="Manrope, Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.4" opacity=".78">roads · rail · stations · cities · terrain</text>',
         ]
     )
-    svg = svg_shell(output["width"], output["height"], "Japan corridor atlas work map with roads rail cities lights and terrain", "\n".join(nodes))
+    svg = svg_shell(output["width"], output["height"], "Central Japan local transport atlas with roads rail stations cities and terrain", "\n".join(nodes))
     write_text_lf(output["svg"], svg)
     write_metadata(
         output["metadata"],
         "work_atlas_japan_corridor",
-        "Japan Tokaido Corridor Atlas Output",
+        "Central Japan Local Transport Atlas",
         bbox_value,
         [
             JAPAN_TRANSPORT_DIR / "japan_road" / "roads.preview.topo.json",
@@ -586,12 +585,12 @@ def build_japan_corridor() -> None:
             "road_lines": len(roads),
             "rail_lines": len(rail),
             "major_stations": len(stations),
-            "city_light_points": len(cities[:18]),
+            "urban_anchor_points": len(cities[:18]),
             "city_points": len(cities),
             "terrain_lines": len(contours),
             "river_lines": len(rivers),
         },
-        "Tokaido corridor bbox combining transport workbench resources with terrain and city light context.",
+        "Central Japan local bbox combining real roads, railways, stations, terrain, rivers, and population-ranked city anchors; no singled-out corridor geometry.",
     )
 
 
