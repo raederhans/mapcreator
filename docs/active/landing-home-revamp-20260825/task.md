@@ -2,7 +2,7 @@
 
 ## Current status
 
-Implementation, canonical regeneration, responsive browser acceptance and focused review are complete on the isolated integration branch. The parent checkout remains untouched; no push or deployment was performed.
+Implementation, canonical regeneration, responsive browser acceptance and focused review are complete on the isolated integration branch. Push and merge to `origin/main` were authorized on 2026-08-25 as a normal fast-forward; the parent checkout remains untouched. Public deployment remains outside this task.
 
 ## Checklist
 
@@ -18,6 +18,7 @@ Implementation, canonical regeneration, responsive browser acceptance and focuse
 - [x] Update focused tests and canonical generated assets.
 - [x] Run target contracts and browser acceptance.
 - [x] Complete final review and delivery package.
+- [x] Authorize the exact accepted branch for normal fast-forward integration to `origin/main`.
 
 ## Validation evidence
 
@@ -38,5 +39,6 @@ Implementation, canonical regeneration, responsive browser acceptance and focuse
 
 ## Remaining boundary
 
-- Remote CI, push, deployment and public-host verification were intentionally not performed.
+- Git integration is complete only after the branch and `origin/main` are pushed without force and the remote main SHA equals the final closeout SHA.
+- Remote CI completion, production-manual deployment and public-host verification remain outside this closeout.
 - The full editor/runtime product was not redesigned; this task only changes the independent static showcase and its evidence/asset contracts.

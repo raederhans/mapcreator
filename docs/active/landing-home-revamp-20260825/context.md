@@ -21,6 +21,7 @@
 | 2026-08-25 | Describe TNO Hero as a political crop with Atlantropa omitted and Japan as a Japan-wide preview plus one selected motorway. | Public copy now matches the visible asset and metadata boundary. |
 | 2026-08-25 | Fail closed when no collision-free city-label candidate exists. | All 34 visible-density label boxes are disjoint; future impossible layouts stop generation instead of silently overlapping. |
 | 2026-08-25 | Route the heavy map asset contract through the `public-sample` verification domain. | Generator, SVG/JSON, rasterizer and parity regressions select the Python contract directly and Pages gates include it. |
+| 2026-08-25 | Publish the accepted integration branch by a normal fast-forward to `origin/main`. | Preserves the reviewed commit lineage, avoids touching the dirty parent checkout and forbids force-push or history rewriting. |
 
 ## Workstream topology
 
@@ -34,7 +35,7 @@
 
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
-| Dev server / browser acceptance | Primary integration task | `.runtime/browser/landing-home-revamp/` | completed; server and browser closed |
+| Dev server / browser acceptance | Primary integration task | `.runtime/browser/landing-home-revamp/` | acceptance completed; any later localhost preview is transient and independent of Git integration |
 | Landing asset generators | Primary integration task | checked-in `landing/assets/` outputs | completed |
 | Pages dist builder | Primary integration task | `dist/pages-dist-manifest.json` | completed |
 
@@ -45,4 +46,4 @@
 
 ## Handoff state
 
-The integrated branch contains the accepted source, regenerated assets, Pages mirror and focused verification routes. No push or deployment was performed, and the dirty parent checkout remains untouched.
+The integrated branch contains the accepted source, regenerated assets, Pages mirror and focused verification routes. It is the authorized fast-forward candidate for `origin/main`; the Git closeout requires exact local/remote SHA equality after push. No production-manual deployment is included, and the dirty parent checkout remains untouched.

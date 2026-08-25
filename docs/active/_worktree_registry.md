@@ -1,5 +1,13 @@
 # Worktree Registry
 
+## Landing home revamp integration snapshot — 2026-08-25
+
+- Integration candidate: `C:\Users\raede\.codex\worktrees\landing-home-revamp-integration-20260825\mapcreator` on `codex/landing-home-revamp-integration-20260825`, based on `origin/main@f118a101d30373c507075da32267969b22197338`.
+- Integration action: publish the accepted branch and fast-forward `origin/main` normally, then require exact local/remote SHA equality. Force-push and remote-history rewriting are not authorized.
+- Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d` with its unrelated tracked modifications untouched.
+- Accepted evidence: map asset contracts `10/10`, Pages shell contracts `62/62`, Landing view contracts `20/20`, sample-project contracts `18/18`, verification-route checks `6/6`, selector `379` routes, and desktop/tablet/mobile localhost acceptance all pass.
+- Scope boundary: the static showcase, canonical map assets and Pages mirror are included. Remote CI completion, production-manual deployment and public-host verification are not part of this closeout.
+
 ## SC P0-P3 integration snapshot — 2026-08-24
 
 - Primary integration worktree: `C:\Users\raede\.codex\worktrees\sc-p0-p3-integration-20260824\mapcreator` on `codex/sc-p0-p3-integration-20260824`, based on `origin/main@a6833008`.
