@@ -160,9 +160,10 @@ class MapRendererPoliticalPassOrchestratorBoundaryContractTest(unittest.TestCase
         political = inventory[political_start:political_end]
         self.assertIn('implementationStatus: "owned-p3"', political)
         self.assertIn('entryHostPath: "js/core/map_renderer.js"', political)
-        self.assertIn('plannedPhase: "P3.5"', political)
+        self.assertIn('plannedPhase: "P3.3b"', political)
         self.assertIn(f'"{CANONICAL_OWNER_PATH}"', political)
         self.assertIn('"js/core/renderer/political_partial_repaint_owner.js"', political)
+        self.assertIn("P3.5 partial repaint, packet, bitmap, identity, diagnostics, and fine traversal", political)
 
 
 if __name__ == "__main__":
