@@ -132,9 +132,22 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "drawGraticuleTextureLines",
             "drawGraticuleTextureLabels",
             "drawDraftGridTexture",
-            "drawNightLightsLayer",
         ):
-            self.assertIn(f"function {function_name}(", renderer_content)
+            self.assertIn(f"function {function_name}(", visual_effects_owner_content)
+            self.assertNotIn(f"function {function_name}(", renderer_content)
+        self.assertIn("function drawNightLightsLayer(", renderer_content)
+        for token in (
+            "const textureAssetCache = new Map();",
+            "const texturePatternCache = new Map();",
+            "const textureGeometryCache = new Map();",
+            "const textureNoiseTileCache = new Map();",
+        ):
+            self.assertIn(token, visual_effects_owner_content)
+            self.assertNotIn(token, renderer_content)
+        self.assertIn(
+            "getVisualEffectsPassOwner().invalidateTextureRasterCaches();",
+            renderer_content,
+        )
         self.assertIn("function drawDayNightShadowLayer(", day_night_owner_content)
         for function_name in (
             "drawPhysicalContourLayer",

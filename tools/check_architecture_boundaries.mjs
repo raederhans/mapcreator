@@ -155,7 +155,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 22933,
+  [FILES.renderer]: 22503,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -180,7 +180,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.drawCanvasOrchestrationOwner]: 320,
   [FILES.cachedPassCompositorOwner]: 320,
   [FILES.transformedFrameCompositorOwner]: 420,
-  [FILES.visualEffectsPassOwner]: 180,
+  [FILES.visualEffectsPassOwner]: 650,
   [FILES.clickSelectionTransactionOwner]: 120,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
@@ -5667,6 +5667,11 @@ function collectFailures() {
         "function drawLineEffectsPass(",
         "function drawTextureLabelEffectsPass(",
         "function drawDayNightPass(",
+        "function drawOldPaperTexture(",
+        "function drawGraticuleTextureLines(",
+        "function drawGraticuleTextureLabels(",
+        "function drawDraftGridTexture(",
+        "function invalidateTextureRasterCaches(",
         "return Object.freeze({",
       ],
       ownerForbiddenTokens: [
@@ -5691,6 +5696,14 @@ function collectFailures() {
         "function drawEffectsPass(k, { interactive = false } = {}) {",
         "function drawLineEffectsPass(k, { interactive = false } = {}) {",
         "function drawDayNightPass(k, { interactive = false } = {}) {",
+        "function drawOldPaperTexture(",
+        "function drawGraticuleTextureLines(",
+        "function drawGraticuleTextureLabels(",
+        "function drawDraftGridTexture(",
+        "const textureAssetCache = new Map();",
+        "const texturePatternCache = new Map();",
+        "const textureGeometryCache = new Map();",
+        "const textureNoiseTileCache = new Map();",
       ],
     },
     {
