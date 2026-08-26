@@ -49,7 +49,6 @@ jobs:
           cache: 'npm'
 
       - name: Download Python wheel cache
-        if: inputs.profile != 'pr-smoke' && inputs.profile != 'demo'
         run: |
           mkdir -p "$WHEELHOUSE_DIR"
           if [ "${{ inputs.profile }}" = "deploy-minimal" ]; then
@@ -59,7 +58,6 @@ jobs:
           fi
 
       - name: Install Python test dependencies
-        if: inputs.profile != 'pr-smoke' && inputs.profile != 'demo'
         run: |
           if [ "${{ inputs.profile }}" = "deploy-minimal" ]; then
             python -m pip install --no-index --find-links "$WHEELHOUSE_DIR" -r requirements-ci-min.lock.txt

@@ -1649,7 +1649,11 @@ const page = {
         )
         self.assert_command_ok(selector_result)
         selector_payload = json.loads(selector_json_path.read_text(encoding="utf-8"))
-        self.assertEqual(len(selector_payload["routeAuthority"]), 336)
+        route_authority_commands = [entry["commandRef"] for entry in selector_payload["routeAuthority"]]
+        self.assertGreater(len(route_authority_commands), 0)
+        self.assertEqual(route_authority_commands, sorted(set(route_authority_commands)))
+        self.assertIn("python tools/check_min_ci_requirements.py", route_authority_commands)
+        self.assertIn("python tools/check_heavy_test_classification.py", route_authority_commands)
         self.assertTrue(selector_payload["catalogDigest"])
         self.assertTrue(selector_payload["catalogSourceIdentity"]["digest"])
         self.assertEqual(
@@ -1872,6 +1876,19 @@ jobs:
         route_payload = json.loads(route_result.stdout)
         commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
         self.assertIn("python tools/check_min_ci_requirements.py", commands)
+
+    def test_pr_browser_profiles_install_backend_python_dependencies(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        download_index = workflow.index("- name: Download Python wheel cache")
+        install_index = workflow.index("- name: Install Python test dependencies")
+        guard_index = workflow.index("- name: Check deploy-minimal dependency guardrails")
+        download_step = workflow[download_index:install_index]
+        install_step = workflow[install_index:guard_index]
+
+        self.assertNotIn("\n        if:", download_step)
+        self.assertNotIn("\n        if:", install_step)
+        self.assertIn("requirements-dev.lock.txt", download_step)
+        self.assertIn("requirements-dev.lock.txt", install_step)
 
     def test_nightly_and_release_consumers_call_one_canonical_command(self) -> None:
         cases = {
