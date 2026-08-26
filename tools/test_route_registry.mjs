@@ -73,7 +73,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:heavy-test-classification",
     commandRef: "python tools/check_heavy_test_classification.py",
-    sourceRef: "tools/check_heavy_test_classification.py,tests,.github/workflows/nightly-verification.yml,.github/workflows/verify-shared.yml",
+    sourceRef: "tools/check_heavy_test_classification.py,tests/heavy_dependency_groups.json,.github/workflows/nightly-verification.yml,.github/workflows/verify-shared.yml",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
