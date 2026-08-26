@@ -418,8 +418,10 @@ function assertEverySelectorRootHasCanonicalOutcome(artifact) {
       "requested-superseded",
       "deferred-main-thread",
       "deferred-main-thread-superseded",
+      "deferred-main-thread-platform",
       "deferred-ci-only",
       "deferred-ci-only-superseded",
+      "deferred-ci-only-platform",
       "deferred-by-tier",
       "superseded-by-projection",
       "blocked",
@@ -2950,6 +2952,62 @@ test("adaptive execution keeps canonical overlap unique within mutually exclusiv
   assert.equal(plan.executionCommands[0].leafIds.length, 1);
   assert.equal(plan.deferredMainThreadGroups.length, 1);
   assert.equal(plan.deferredMainThreadGroups[0].leafIds.length, 1);
+});
+
+test("adaptive execution defers platform-incompatible main-thread roots without opening Linux PR gaps", () => {
+  const otherPlatform = process.platform === "win32" ? "linux" : "win32";
+  const commandRef = "catalog:platform-owned-main";
+  const leafCommandRef = "catalog:platform-owned-leaf";
+  const mainThread = [adaptiveContributor(commandRef, {
+    disposition: "main-thread",
+    executionOwners: ["main-thread"],
+    platforms: ["all"],
+    resourceLocks: [".runtime-output"],
+    ciProfiles: ["full"],
+  })];
+  const platformLeaf = adaptiveContributor(leafCommandRef, {
+    disposition: "main-thread",
+    executionOwners: ["main-thread"],
+    platforms: [otherPlatform],
+    resourceLocks: [".runtime-output"],
+    ciProfiles: ["full"],
+  });
+  const report = adaptiveReport({ mainThread });
+  const packageScripts = {
+    [commandRef]: `npm run ${leafCommandRef}`,
+    [leafCommandRef]: "node --test tests/platform_owned_main.test.mjs",
+  };
+  const preparedCatalog = prepareVerificationCatalog({
+    packageScripts,
+    selectorRoutes: [mainThread[0], platformLeaf].map((entry) => ({
+      ...entry,
+      id: entry.routeIds[0],
+    })),
+    selectorCommandRefs: [commandRef, leafCommandRef],
+  });
+
+  const deferredPlan = buildExecutionPlan(report, { packageScripts, preparedCatalog });
+  assert.deepEqual(deferredPlan.routeGaps, []);
+  assert.deepEqual(deferredPlan.executionCommands, []);
+  assert.deepEqual(deferredPlan.platformDeferredMainThreadCommands, [commandRef]);
+  assert.deepEqual(deferredPlan.deferredMainThreadLeaves, []);
+  assert.equal(deferredPlan.closure.deferredMainThreadRootCount, 1);
+  assert.deepEqual(deferredPlan.selectorRootOutcomes, [{
+    commandRef,
+    disposition: "deferred-main-thread-platform",
+    currentPlatform: process.platform,
+    requiredPlatforms: [otherPlatform],
+  }]);
+
+  const includedPlan = buildExecutionPlan(report, {
+    includeMainThread: true,
+    packageScripts,
+    preparedCatalog,
+  });
+  assert.ok(includedPlan.routeGaps.some((gap) => (
+    gap.code === "verification-plan-platform-mismatch"
+  )));
+  assert.deepEqual(includedPlan.executionCommands, []);
 });
 
 test("adaptive execution fails closed before commands on cyclic or unresolved aliases", () => {

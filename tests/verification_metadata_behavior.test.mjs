@@ -42,7 +42,7 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 341);
+  assert.equal(summary.packageScriptCount, 340);
   assert.equal(summary.contributorRecords, 432);
   assert.equal(summary.verificationRecordProjectionCount, 137);
   assert.equal(summary.routeProjectionCount, 391);

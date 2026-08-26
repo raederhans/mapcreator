@@ -55,10 +55,10 @@ test("canonical metadata source owns every projection and shadows the retained l
     verificationRecords: 137,
     routes: 391,
     commands: 347,
-    catalogEntries: 449,
-    leaves: 419,
+    catalogEntries: 448,
+    leaves: 418,
     suites: 30,
-    portfolioScripts: 341,
+    portfolioScripts: 340,
     superseders: 14,
     supersessionEdges: 36,
   });

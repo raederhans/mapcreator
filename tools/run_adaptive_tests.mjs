@@ -1384,14 +1384,6 @@ function validateAuthorityContributor(entry, expectedDisposition, platform, rout
     ));
     return null;
   }
-  if (!platforms.includes("all") && !platforms.includes(platform)) {
-    routeGaps.push(planGap(
-      "adaptive-selection-platform-mismatch",
-      commandRef,
-      `current=${platform};artifact=${platforms.join("+")}`,
-    ));
-    return null;
-  }
   if (JSON.stringify(routeIds) !== JSON.stringify(provenanceRouteIds)
     || JSON.stringify(safetyContributorRouteIds) !== JSON.stringify(provenanceSafetyIds)
     || routeIds.some((routeId) => !safetyContributorRouteIds.includes(routeId))) {
@@ -1599,26 +1591,87 @@ function projectCanonicalLane({
 }) {
   const rootCommandRefs = rootContributors.map((entry) => entry.commandRef);
   plannerInvocations.push({ disposition, rootCommandRefs: [...rootCommandRefs] });
-  let plan;
-  try {
-    const maxLeaves = Math.min(HARD_MAX_GROUP_LEAVES, ...rootContributors.map((entry) => entry.maxLeaves));
+  let effectiveRootContributors = rootContributors;
+  let platformDeferredContributors = [];
+  const invokePlanner = (contributors, plannerPlatform) => {
+    const maxLeaves = Math.min(HARD_MAX_GROUP_LEAVES, ...contributors.map((entry) => entry.maxLeaves));
     const platformArgvLimit = platform === "win32" ? WINDOWS_MAX_ARGV_BYTES : POSIX_MAX_ARGV_BYTES;
-    const maxArgvBytes = Math.min(platformArgvLimit, ...rootContributors.map((entry) => entry.maxArgvBytes));
-    plan = executionPlanner(
+    const maxArgvBytes = Math.min(platformArgvLimit, ...contributors.map((entry) => entry.maxArgvBytes));
+    return executionPlanner(
       preparedCatalog.catalog,
-      rootContributors.map((entry) => structuredClone(entry)),
+      contributors.map((entry) => structuredClone(entry)),
       {
         preparedCatalog,
         disposition,
-        platform,
+        platform: plannerPlatform,
         maxLeaves: Number.isFinite(maxLeaves) ? maxLeaves : HARD_MAX_GROUP_LEAVES,
         maxArgvBytes: Number.isFinite(maxArgvBytes) ? maxArgvBytes : platformArgvLimit,
       },
     );
+  };
+  let plan;
+  try {
+    plan = invokePlanner(effectiveRootContributors, platform);
   } catch (error) {
     const code = error.code || String(error.message || "adaptive-execution-planner-error").split(":")[0];
-    routeGaps.push(planGap(code, disposition, error.message));
-    return { plan: null, leaves: [], groups: [] };
+    if (!disposition.startsWith("deferred-") || code !== "verification-plan-platform-mismatch") {
+      routeGaps.push(planGap(code, disposition, error.message));
+      return { plan: null, leaves: [], groups: [], platformDeferredContributors: [] };
+    }
+    let crossPlatformPlan;
+    try {
+      plannerInvocations.push({
+        disposition: `${disposition}-platform-classification`,
+        rootCommandRefs: [...rootCommandRefs],
+      });
+      crossPlatformPlan = invokePlanner(rootContributors, null);
+    } catch (classificationError) {
+      const classificationCode = classificationError.code
+        || String(classificationError.message || "adaptive-execution-planner-error").split(":")[0];
+      routeGaps.push(planGap(classificationCode, disposition, classificationError.message));
+      return { plan: null, leaves: [], groups: [], platformDeferredContributors: [] };
+    }
+    if (!crossPlatformPlan || !Array.isArray(crossPlatformPlan.executions)) {
+      routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, "invalid-platform-classification"));
+      return { plan: null, leaves: [], groups: [], platformDeferredContributors: [] };
+    }
+    const incompatiblePlatformsByRoot = new Map();
+    for (const execution of crossPlatformPlan.executions) {
+      if ((execution.platforms || []).includes("all") || (execution.platforms || []).includes(platform)) continue;
+      for (const provenance of execution.provenance || []) {
+        if (!provenance.rootCommandRef) continue;
+        const requiredPlatforms = incompatiblePlatformsByRoot.get(provenance.rootCommandRef) || new Set();
+        for (const requiredPlatform of execution.platforms || []) requiredPlatforms.add(requiredPlatform);
+        incompatiblePlatformsByRoot.set(provenance.rootCommandRef, requiredPlatforms);
+      }
+    }
+    if (incompatiblePlatformsByRoot.size === 0) {
+      routeGaps.push(planGap(code, disposition, error.message));
+      return { plan: null, leaves: [], groups: [], platformDeferredContributors: [] };
+    }
+    platformDeferredContributors = rootContributors
+      .filter((entry) => incompatiblePlatformsByRoot.has(entry.commandRef))
+      .map((entry) => ({
+        ...entry,
+        platformDeferredPlatforms: uniqueSorted([
+          ...(incompatiblePlatformsByRoot.get(entry.commandRef) || []),
+        ]),
+      }));
+    effectiveRootContributors = rootContributors.filter((entry) => (
+      !incompatiblePlatformsByRoot.has(entry.commandRef)
+    ));
+    plannerInvocations.push({
+      disposition: `${disposition}-platform-compatible`,
+      rootCommandRefs: effectiveRootContributors.map((entry) => entry.commandRef),
+    });
+    try {
+      plan = invokePlanner(effectiveRootContributors, platform);
+    } catch (retryError) {
+      const retryCode = retryError.code
+        || String(retryError.message || "adaptive-execution-planner-error").split(":")[0];
+      routeGaps.push(planGap(retryCode, disposition, retryError.message));
+      return { plan: null, leaves: [], groups: [], platformDeferredContributors };
+    }
   }
   if (!plan
     || plan.schemaVersion !== 1
@@ -1633,13 +1686,14 @@ function projectCanonicalLane({
     || !Array.isArray(plan.dependencyEdges)
     || !Array.isArray(plan.resourceLockGroups)) {
     routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, "invalid-final-plan"));
-    return { plan: null, leaves: [], groups: [] };
+    return { plan: null, leaves: [], groups: [], platformDeferredContributors };
   }
-  if (JSON.stringify(plan.requestedCommandRefs) !== JSON.stringify(rootCommandRefs)) {
+  const effectiveRootCommandRefs = effectiveRootContributors.map((entry) => entry.commandRef);
+  if (JSON.stringify(plan.requestedCommandRefs) !== JSON.stringify(effectiveRootCommandRefs)) {
     routeGaps.push(planGap("adaptive-execution-planner-contract", disposition, "requested-root-drift"));
-    return { plan: null, leaves: [], groups: [] };
+    return { plan: null, leaves: [], groups: [], platformDeferredContributors };
   }
-  const contributorsByCommand = new Map(rootContributors.map((entry) => [entry.commandRef, entry]));
+  const contributorsByCommand = new Map(effectiveRootContributors.map((entry) => [entry.commandRef, entry]));
   const groups = plan.executions.map((execution) => {
     const sourceRootRefs = uniqueSorted(execution.provenance.map((entry) => entry.rootCommandRef));
     const contributors = sourceRootRefs.map((commandRef) => contributorsByCommand.get(commandRef)).filter(Boolean);
@@ -1732,7 +1786,7 @@ function projectCanonicalLane({
       sequence,
     };
   }).filter(Boolean);
-  return { plan, leaves, groups };
+  return { plan, leaves, groups, platformDeferredContributors };
 }
 
 function prepareAdaptiveCatalog(report, packageScripts, platform) {
@@ -1844,23 +1898,39 @@ export function buildExecutionPlan(report, {
   const childSafeCommands = childSafeContributors.map((entry) => entry.commandRef);
   const mainThreadCommands = mainThreadContributors.map((entry) => entry.commandRef);
   const ciOnlyCommands = ciOnlyContributors.map((entry) => entry.commandRef);
+  const supportsCurrentPlatform = (entry) => (
+    entry.platforms.includes("all") || entry.platforms.includes(platform)
+  );
+  const selectedAuthorityContributors = includeMainThread
+    ? [...childSafeContributors, ...mainThreadContributors]
+    : childSafeContributors;
+  for (const entry of selectedAuthorityContributors.filter((candidate) => !supportsCurrentPlatform(candidate))) {
+    routeGaps.push(planGap(
+      "adaptive-selection-platform-mismatch",
+      entry.commandRef,
+      `current=${platform};artifact=${entry.platforms.join("+")}`,
+    ));
+  }
   const contributorsFor = (entries, executionDisposition) => entries.map((entry) => ({
     ...entry,
     executionDisposition,
   }));
   const selectedContributors = contributorsFor(
-    includeMainThread ? [...childSafeContributors, ...mainThreadContributors] : childSafeContributors,
+    selectedAuthorityContributors.filter(supportsCurrentPlatform),
     "selected",
   );
   const deferredMainContributors = contributorsFor(
     includeMainThread ? [] : mainThreadContributors,
     "deferred-main-thread",
   );
-  const deferredCiContributors = contributorsFor(ciOnlyContributors, "deferred-ci-only");
+  const deferredCiContributors = contributorsFor(
+    ciOnlyContributors,
+    "deferred-ci-only",
+  );
   const plannerInvocations = [];
-  let selectedProjection = { plan: null, leaves: [], groups: [] };
-  let deferredMainProjection = { plan: null, leaves: [], groups: [] };
-  let deferredCiProjection = { plan: null, leaves: [], groups: [] };
+  let selectedProjection = { plan: null, leaves: [], groups: [], platformDeferredContributors: [] };
+  let deferredMainProjection = { plan: null, leaves: [], groups: [], platformDeferredContributors: [] };
+  let deferredCiProjection = { plan: null, leaves: [], groups: [], platformDeferredContributors: [] };
   if (routeGaps.length === 0 && currentPreparedCatalog) {
     selectedProjection = projectCanonicalLane({
       disposition: "selected",
@@ -1890,6 +1960,8 @@ export function buildExecutionPlan(report, {
       plannerInvocations,
     });
   }
+  const platformDeferredMainContributors = deferredMainProjection.platformDeferredContributors || [];
+  const platformDeferredCiContributors = deferredCiProjection.platformDeferredContributors || [];
   const selectedLeaves = selectedProjection.leaves;
   const deferredMainThreadLeaves = deferredMainProjection.leaves;
   const deferredCiOnlyLeaves = deferredCiProjection.leaves;
@@ -1927,6 +1999,19 @@ export function buildExecutionPlan(report, {
         commandRef: rootRecord.commandRef,
         disposition: rootRecord.disposition === "superseded" ? `${disposition}-superseded` : disposition,
         ...(rootRecord.supersededBy ? { supersededBy: rootRecord.supersededBy } : {}),
+      });
+    }
+  }
+  for (const [disposition, contributors] of [
+    ["deferred-main-thread-platform", platformDeferredMainContributors],
+    ["deferred-ci-only-platform", platformDeferredCiContributors],
+  ]) {
+    for (const contributor of contributors) {
+      plannedOutcomeByCommand.set(contributor.commandRef, {
+        commandRef: contributor.commandRef,
+        disposition,
+        currentPlatform: platform,
+        requiredPlatforms: [...(contributor.platformDeferredPlatforms || contributor.platforms)],
       });
     }
   }
@@ -2002,8 +2087,10 @@ export function buildExecutionPlan(report, {
     commandsToRun: selectedProjection.plan?.selectedCommandRefs || [],
     supersededCommands: superseded(selectedProjection),
     blockedMainThreadCommands: includeMainThread ? [] : mainThreadCommands,
+    platformDeferredMainThreadCommands: platformDeferredMainContributors.map((entry) => entry.commandRef),
     deferredMainThreadSupersededCommands: superseded(deferredMainProjection),
     deferredCiOnlyCommands: ciOnlyCommands,
+    platformDeferredCiOnlyCommands: platformDeferredCiContributors.map((entry) => entry.commandRef),
     deferredCiOnlySupersededCommands: superseded(deferredCiProjection),
     selectedLeaves,
     deferredMainThreadLeaves,
@@ -2027,10 +2114,14 @@ export function buildExecutionPlan(report, {
       selectedRootCount: selectedProjection.plan?.selectedCommandRefs.length || 0,
       selectedLeafCount: selectedLeaves.length,
       executionGroupCount: executionGroups.length,
-      deferredMainThreadRootCount: deferredMainProjection.plan?.selectedCommandRefs.length || 0,
+      deferredMainThreadRootCount: (deferredMainProjection.plan?.selectedCommandRefs.length || 0)
+        + platformDeferredMainContributors.length,
       deferredMainThreadLeafCount: deferredMainThreadLeaves.length,
-      deferredCiOnlyRootCount: deferredCiProjection.plan?.selectedCommandRefs.length || 0,
+      deferredCiOnlyRootCount: (deferredCiProjection.plan?.selectedCommandRefs.length || 0)
+        + platformDeferredCiContributors.length,
       deferredCiOnlyLeafCount: deferredCiOnlyLeaves.length,
+      platformDeferredRootCount: platformDeferredMainContributors.length
+        + platformDeferredCiContributors.length,
       plannerInvocationCount: plannerInvocations.length,
     },
   };
@@ -2185,7 +2276,13 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
     lines.push("", "## Execution plan");
     lines.push(...(executionPlan.commandsToRun.length ? executionPlan.commandsToRun.map((commandRef) => `- run: ${commandRef}`) : ["- run: none"]));
     lines.push(...(executionPlan.blockedMainThreadCommands.length ? executionPlan.blockedMainThreadCommands.map((commandRef) => `- blocked-main-thread: ${commandRef}`) : ["- blocked-main-thread: none"]));
+    lines.push(...((executionPlan.platformDeferredMainThreadCommands || []).length
+      ? executionPlan.platformDeferredMainThreadCommands.map((commandRef) => `- platform-deferred-main-thread: ${commandRef}`)
+      : ["- platform-deferred-main-thread: none"]));
     lines.push(...((executionPlan.deferredCiOnlyCommands || []).length ? executionPlan.deferredCiOnlyCommands.map((commandRef) => `- deferred-ci-only: ${commandRef}`) : ["- deferred-ci-only: none"]));
+    lines.push(...((executionPlan.platformDeferredCiOnlyCommands || []).length
+      ? executionPlan.platformDeferredCiOnlyCommands.map((commandRef) => `- platform-deferred-ci-only: ${commandRef}`)
+      : ["- platform-deferred-ci-only: none"]));
     lines.push(...(executionPlan.supersededCommands.length
       ? executionPlan.supersededCommands.map(({ commandRef, supersededBy }) => `- superseded: ${commandRef} by ${supersededBy}`)
       : ["- superseded: none"]));
@@ -2204,6 +2301,7 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
     lines.push(`- main-thread leaves: ${executionPlan.closure?.deferredMainThreadLeafCount || 0}`);
     lines.push(`- ci-only roots: ${executionPlan.closure?.deferredCiOnlyRootCount || 0}`);
     lines.push(`- ci-only leaves: ${executionPlan.closure?.deferredCiOnlyLeafCount || 0}`);
+    lines.push(`- platform-deferred roots: ${executionPlan.closure?.platformDeferredRootCount || 0}`);
     if (executionPlan.localEntrypointBudget) {
       const { actual, limits, status } = executionPlan.localEntrypointBudget;
       lines.push("", "## Local entrypoint budget");

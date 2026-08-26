@@ -630,7 +630,6 @@ const AUTHORED_VERIFICATION_METADATA = {
     "verify:core:list": "node tools/run_core_verification.mjs --list",
     "verify:core": "node tools/run_core_verification.mjs",
     "verify:core:main-thread": "node tools/run_core_verification.mjs --include-main-thread",
-    "verify:nightly:linux-core": "node tools/run_core_verification.mjs --nightly-linux-core",
     "verify:script-portfolio": "node tools/verification/script_portfolio.mjs check",
     "verify:local-infra": "node --test tests/verification_script_portfolio_behavior.test.mjs tests/verification_metadata_behavior.test.mjs tests/verify_core_runner_behavior.test.mjs tests/verification_profile_behavior.test.mjs && npm run python -- -m unittest tests.test_e2e_structural_tooling -q && node tools/select_verification_targets.mjs --check",
     "verify:edit": "npm run verify:script-portfolio && node tools/select_verification_targets.mjs --check && node tools/run_adaptive_tests.mjs --entrypoint edit --execute --defer-main-thread",

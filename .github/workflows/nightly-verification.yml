@@ -164,7 +164,7 @@ jobs:
       - name: Validate exact P4 producer evidence
         run: node tools/verification/state_writer_policy_evidence.mjs validate --evidence "$STATE_WRITER_POLICY_EVIDENCE_PATH" --expected-id "$STATE_WRITER_POLICY_EVIDENCE_ID" --phase P4.3
       - name: Run balanced Linux core shard
-        run: npm run verify:nightly:linux-core -- --shard-index ${{ matrix.shard }} --shard-count 3 --json-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}.json --md-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}.md --profile-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}-profile.json
+        run: node tools/run_core_verification.mjs --nightly-linux-core --shard-index ${{ matrix.shard }} --shard-count 3 --json-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}.json --md-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}.md --profile-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}-profile.json
       - name: Upload Linux core shard evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
