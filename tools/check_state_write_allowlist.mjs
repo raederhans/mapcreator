@@ -23,6 +23,8 @@ const LEGACY_SCANNER_FIXTURE_PATHS = new Set([
   "tests/state_writer_policy_manifest_behavior.test.mjs",
   "tests/state_writer_scanner_soundness_behavior.test.mjs",
   "tests/state_writer_policy_soundness_behavior.test.mjs",
+  "tests/day_night_runtime_owner_behavior.test.mjs",
+  "tests/political_background_render_owner_behavior.test.mjs",
 ]);
 
 function walkFiles(rootDir) {

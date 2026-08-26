@@ -16,6 +16,8 @@ import { buildP4PhaseVerificationPlan } from "../tools/run_p4_phase_verification
 import { buildNodeRoutes } from "../tools/test_route_registry.mjs";
 
 const EXPECTED_DEFAULT_SUITES = Object.freeze([
+  "tests/day_night_runtime_owner_behavior.test.mjs",
+  "tests/political_background_render_owner_behavior.test.mjs",
   "tests/state_action_delegation_edges_behavior.test.mjs",
   "tests/state_writer_policy_behavior.test.mjs",
   "tests/state_writer_policy_batch_scan_behavior.test.mjs",

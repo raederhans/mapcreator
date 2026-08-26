@@ -872,7 +872,7 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
     factoryModulePath: "js/core/renderer/political_background_render_owner.js",
     factoryExportName: "createPoliticalBackgroundRenderOwner",
     factorySourceFingerprint:
-      "b397dfe85b421fcdba2db6de5e679d7895051bfbd54f2493ddbdb19c5c7f4926",
+      "8ae470d4bde7a210a0aead9ca4937e90a2e6163935b41bd42270e7cc3f7356b8",
     ownerBindingName: "politicalBackgroundRenderOwner",
     methods: [
       "cancelScenarioPoliticalBackgroundDeferredFullCache",

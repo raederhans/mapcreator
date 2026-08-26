@@ -50,6 +50,8 @@ const P4_STATE_WRITER_POLICY_RUN_MODES = Object.freeze([
   "quick",
 ]);
 export const P4_STATE_WRITER_POLICY_TEST_FILES = Object.freeze([
+  "tests/day_night_runtime_owner_behavior.test.mjs",
+  "tests/political_background_render_owner_behavior.test.mjs",
   "tests/state_action_delegation_edges_behavior.test.mjs",
   "tests/state_writer_policy_behavior.test.mjs",
   "tests/state_writer_policy_batch_scan_behavior.test.mjs",
