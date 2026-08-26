@@ -8,6 +8,7 @@ const {
   EXPECTED_PUBLIC_SAMPLE_PROJECT_IDS,
   tagReleaseSmokeError,
   isRetryableSameOriginModulePropagationFailure,
+  isRetryablePublicPagesShellPropagationStall,
   shouldRetryReleaseSmokeAttempt,
   getReleaseSmokeRetryDecision,
   validateReleaseSmokeSampleManifest,
@@ -117,6 +118,39 @@ test("release smoke keeps cross-origin and non-JavaScript module failures final"
       publicBaseUrl: "https://example.test/scenario-forge/",
     }), false);
   }
+});
+
+test("release smoke retries the observed GitHub Pages shell propagation stall", () => {
+  const shellStall = tagReleaseSmokeError(
+    new Error(
+      '[playwright-app] waitForShellReady timed out after 120000ms. Snapshot: '
+      + '{"boot":{"bootPhase":"shell","bootBlocking":true,"bodyAppBooting":true,'
+      + '"overlayHidden":false,"bootError":""}}',
+    ),
+    RELEASE_SMOKE_PHASES.SHELL_READY,
+  );
+
+  assert.equal(isRetryablePublicPagesShellPropagationStall(shellStall, {
+    publicBaseUrl: "https://raederhans.github.io/scenario-forge/",
+  }), true);
+  assert.equal(isRetryablePublicPagesShellPropagationStall(shellStall, {
+    publicBaseUrl: "https://example.test/scenario-forge/",
+  }), false);
+});
+
+test("release smoke does not classify shell stalls with a boot error as propagation stalls", () => {
+  const bootFailure = tagReleaseSmokeError(
+    new Error(
+      '[playwright-app] waitForShellReady timed out after 120000ms. Snapshot: '
+      + '{"boot":{"bootPhase":"shell","bootBlocking":true,"bodyAppBooting":true,'
+      + '"overlayHidden":false,"bootError":"initialization failed"}}',
+    ),
+    RELEASE_SMOKE_PHASES.SHELL_READY,
+  );
+
+  assert.equal(isRetryablePublicPagesShellPropagationStall(bootFailure, {
+    publicBaseUrl: "https://raederhans.github.io/scenario-forge/",
+  }), false);
 });
 
 test("release smoke preflight treats entrypoint fetch and status failures as retryable", async () => {
