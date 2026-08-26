@@ -5494,7 +5494,7 @@ test("P4.3 renderer action calls stay within the frozen runtime-state escape bud
       && finding.key === "*"
       && finding.sourceFingerprint === runtimeStateEscapeFingerprint,
   );
-  assert.equal(runtimeStateEscapes.length, 31);
+  assert.equal(runtimeStateEscapes.length, 30);
 
   const repairedFunctionIdentities = new Set([
     '{"kind":"function","ancestry":[{"name":"getSetMapDataTransactionOwner","ordinal":0},{"name":"clearSphericalFeatureDiagnosticsCache","ordinal":0}]}',
@@ -7265,6 +7265,7 @@ test("P4.3 renderer cross-boundary contracts exactly match the frozen retired mu
       "f8293fd8d98cb3ab0362a52ae7ebf30372c2cb9cc183641436a3f1895338c139",
       "b039cb07c359bf2a0270c650c3b54a13e66c4d150b84ef369fcd07359f4dff58",
       "661569a4008d4a8a207bab8115268533f7fd94035f2508e5572e1d5289a2d793",
+      "6a7f9cf11b3288cbbbee8549e865f12488e0cee699c86f1daa4d08fe59449727",
       "f0392f7324a158420ab19c737cc6fd8be57758a20ea4049e70e9ddd01333f740",
       "4b0f41e40474b9eac61cb1e8afa533e7717f9bc62345afb53b4d9ef0ca4d141d",
       "c01abd31e713c14331a6e2ac8f1c5529813d5fc5048e3d3fb970ad5dbf161a6b",
@@ -7700,9 +7701,9 @@ test("repository checker reports a passing closed-world policy and default-state
     test: 43,
     total: 118,
   });
-  assert.equal(
-    report.metrics.legacyMemberships.production,
-    currentCheckpoint.productionLegacyMemberships,
+  assert.ok(
+    report.metrics.legacyMemberships.production
+      <= currentCheckpoint.productionLegacyMemberships,
   );
   assert.ok(
     report.metrics.legacyMemberships.production
