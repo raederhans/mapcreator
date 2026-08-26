@@ -4580,6 +4580,46 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
+      "id": "infra:repository-footprint-report",
+      "commandRef": "node --test tests/repository_footprint_behavior.test.mjs",
+      "sourceRefs": [
+        ".github/workflows/repository-footprint-report.yml",
+        "tests/repository_footprint_behavior.test.mjs",
+        "tools/repository_footprint",
+        "tools/repository_footprint.mjs"
+      ],
+      "ownerHints": [
+        "test-infra"
+      ],
+      "domains": [
+        "test-routing"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 131,
+      "selectorOrder": 382,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
       "id": "infra:williams-crossover-job-runner",
       "commandRef": "test:node:williams-crossover-job-runner",
       "sourceRefs": [

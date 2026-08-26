@@ -3203,6 +3203,33 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     supervisorDomain: "renderer-runtime",
     routeRegistry: true,
   }),
+  Object.freeze({
+    id: "infra:repository-footprint-report",
+    commandRef: "node --test tests/repository_footprint_behavior.test.mjs",
+    commandType: "direct",
+    packageScriptRequired: false,
+    sourceRefs: [
+      ".github/workflows/repository-footprint-report.yml",
+      "tests/repository_footprint_behavior.test.mjs",
+      "tools/repository_footprint",
+      "tools/repository_footprint.mjs",
+    ],
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    entrypointPolicy: deriveVerificationEntrypointPolicy({
+      commandRef: "node --test tests/repository_footprint_behavior.test.mjs",
+      cost: "fast",
+      executionOwner: "child-safe",
+      ciProfiles: ["pr-fast"],
+    }),
+    supervisorDomain: "test-routing",
+    routeRegistry: true,
+  }),
 ].map(applyMeasuredRuntimeMetadata));
 
 export const VERIFICATION_DOMAINS = Object.freeze(
