@@ -849,7 +849,7 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
     compositionModulePath: "js/core/map_renderer.js",
     compositionExportName: "getVisualEffectsPassOwner",
     compositionSourceFingerprint:
-      "49bdaccfdc014c80ba5f6eba13ce8cbd8709d820be8b4ad6bf8e9669d9198db8",
+      "52f6684ecb7529de485a0f7cfaf4e8f55da48518ed053d71cb69fc402d55c826",
     factoryModulePath: "js/core/renderer/visual_effects_pass_owner.js",
     factoryExportName: "createVisualEffectsPassOwner",
     factorySourceFingerprint:

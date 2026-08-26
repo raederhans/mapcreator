@@ -2029,6 +2029,7 @@ jobs:
             ("nightly-verification.yml", "metadata", "Run Nightly metadata contracts"),
             ("nightly-verification.yml", "p4-full", "Run P4.3 exact full policy producer"),
             ("nightly-verification.yml", "linux-core", "Run balanced Linux core shard"),
+            ("nightly-verification.yml", "browser", "Run Nightly browser shard"),
             ("nightly-verification.yml", "scenario-heavy", "Run strict scenario contracts"),
             ("release-verification.yml", "verify-release", "Run canonical Release verification"),
         )

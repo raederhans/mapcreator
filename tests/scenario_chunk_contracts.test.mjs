@@ -3159,6 +3159,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
     const renderRequestBoundaryOwnerSource = readRepoFile("js", "core", "map_renderer", "render_request_boundary_owner.js");
     const renderPhaseLifecycleOwnerSource = readRepoFile("js", "core", "map_renderer", "render_phase_lifecycle_owner.js");
     const renderPassCommitAccountingOwnerSource = readRepoFile("js", "core", "map_renderer", "render_pass_commit_accounting_owner.js");
+    const clickSelectionTransactionOwnerSource = readRepoFile("js", "core", "map_renderer", "click_selection_transaction_owner.js");
     const zoomInteractionLifecycleOwnerSource = readRepoFile("js", "core", "renderer", "zoom_interaction_lifecycle_owner.js");
     const cityPointsRenderOwnerSource = readRepoFile("js", "core", "renderer", "city_points_render_owner.js");
     const interactionRecoveryBlockedBody =
@@ -3196,8 +3197,8 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         && /function scheduleHoverOverlayRender\(\) \{[\s\S]*?hoverOverlayRenderRafHandle !== null && hoverOverlayRenderRafHandle !== undefined[\s\S]*?requestAnimationFrame\(callback\)/.test(rendererSource),
       hoverOverlayDirectPathsCarryExplicitEventTypes:
         rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-visibility" });')
-        && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-open" });')
-        && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-clear" });')
+        && clickSelectionTransactionOwnerSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-open" });')
+        && clickSelectionTransactionOwnerSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-clear" });')
         && zoomInteractionLifecycleOwnerSource.includes('renderHoverOverlayIfNeeded?.({ force: true, eventType: "zoom-start" });')
         && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "mouseleave" });')
         && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-close" });'),
@@ -3306,7 +3307,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         && /function render\(\) \{[\s\S]*?ensureResolvedColorsReadyForStableVisibleFrame\("render"\);[\s\S]*?drawCanvas\(\);/.test(rendererSource),
       politicalFeatureFillUsesExplicitSafeFallback:
         /function getPoliticalFeatureFillColor\(feature, id, index, canvasWidth = 0\) \{[\s\S]*?getSafeCanvasColor\(state\.colors\[id\], null\)[\s\S]*?getSafeCanvasColor\(helper\.getResolvedFeatureColor\(feature, id\), null\)[\s\S]*?\|\| landFillColor/.test(politicalPartialOwnerSource)
-        && /function drawPoliticalFeature\([\s\S]*?let fillColor = getPoliticalFeatureFillColor\(feature, id, index, canvasWidth\);[\s\S]*?surface\.getContext\(\)\.fillStyle = fillColor;/.test(politicalPartialOwnerSource),
+        && /function drawPoliticalFeature\([\s\S]*?let fillColor = getPoliticalFeatureFillColor\(feature, id, index, canvasWidth\);[\s\S]*?const context = surface\.getContext\(\);[\s\S]*?context\.fillStyle = fillColor;/.test(politicalPartialOwnerSource),
       colorRefreshUsesPartialPoliticalInvalidation:
         /function refreshResolvedColorsForFeatures[\s\S]*?const pendingRenderIds = new Set\(\);[\s\S]*?normalizePoliticalColorEditIds\(cache\.pendingPoliticalColorEditIds\)[\s\S]*?pendingRenderIds\.add\(pendingId\);[\s\S]*?cache\.partialPoliticalDirtyIds\.add\(id\);[\s\S]*?pendingRenderIds\.add\(id\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?markPendingPoliticalColorEdit\(Array\.from\(pendingRenderIds\), \{[\s\S]*?startedAt: inputStartedAt,[\s\S]*?inputLabel,[\s\S]*?\}\)[\s\S]*?clearPendingPoliticalColorEdit\(\{ force: true \}\);[\s\S]*?invalidateRenderPasses\("political", "refresh-colors"\);/.test(rendererSource)
         && rendererSource.includes('invalidateRenderPasses(["contextMarkers", "labels"], "refresh-colors-collateral");')
@@ -3386,7 +3387,7 @@ export function registerScenarioChunkContractHeavyTests(register = defaultRegist
         && /function toggleFeatureInDevSelection[\s\S]*?requestInteractionRender\("dev-selection-toggle"\);/.test(rendererSource)
         && /function setDevSelectionDirty\(\)[\s\S]*?runtimeState\.refreshCountryListRowsFn\(\{[\s\S]*?refreshInspector: true,[\s\S]*?refreshPresetTree: true,[\s\S]*?\}\);/.test(rendererSource)
         && /function syncInspectorCountryToLandSelection[\s\S]*?runtimeState\.selectedInspectorCountryCode = nextCode;[\s\S]*?refreshPresetTree: true/.test(rendererSource)
-        && /if \(decision\.devSelectionRequested\) \{[\s\S]*?toggleFeatureInDevSelection\(landId\);[\s\S]*?syncInspectorCountryToLandSelection\(feature, landId, landHit\);/.test(rendererSource)
+        && /if \(decision\.devSelectionRequested\) \{[\s\S]*?toggleFeatureInDevSelection\(landId\);[\s\S]*?syncInspectorCountryToLandSelection\(feature, landId, landHit\);/.test(clickSelectionTransactionOwnerSource)
         && !rendererSource.includes("runtimeState.devSelectionModeEnabled && (event?.ctrlKey || event?.metaKey)")
         && /function removeLastDevSelection[\s\S]*?requestInteractionRender\("dev-selection-remove-last"\);/.test(rendererSource)
         && /function clearDevSelection[\s\S]*?requestInteractionRender\("dev-selection-clear"\);/.test(rendererSource)
