@@ -1863,6 +1863,7 @@ test("selector and catalog authority share contributor owner, lock, and CI recon
   assert.deepEqual(telemetry.executionOwners, ["child-safe", "main-thread"]);
   assert.deepEqual(telemetry.resourceLocks, ["perf-dev-server"]);
   assert.deepEqual(telemetry.ciProfiles, ["perf-pr-gate", "pr-fast"]);
+  assert.deepEqual(telemetry.platforms, ["win32"]);
   assert.ok(telemetry.safetyContributorRouteIds.includes("perf:williams-crossover-telemetry-live"));
   assert.ok(telemetry.safetyContributorRouteIds.includes("node:test:node:williams-crossover-telemetry-live"));
 
@@ -1872,7 +1873,11 @@ test("selector and catalog authority share contributor owner, lock, and CI recon
   assert.deepEqual(directPython.resourceLocks, []);
   assert.deepEqual(directPython.ciProfiles, ["pr-fast"]);
 
-  const report = buildRecommendation(["tests/williams_crossover_windows_job_runner_integration.test.mjs"]);
+  const report = buildRecommendation(
+    ["tests/williams_crossover_windows_job_runner_integration.test.mjs"],
+    undefined,
+    { platform: "win32" },
+  );
   assert.deepEqual(report.routeAuthority, authority);
   const selectedTelemetry = report.recommendedCommands
     .find((entry) => entry.commandRef === telemetry.commandRef);
