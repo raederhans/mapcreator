@@ -476,6 +476,21 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
   assert.ok(exactEntry.sourceRefs.includes(
     "tests/test_map_renderer_political_background_render_owner_boundary_contract.py",
   ));
+  const evidenceSources = [
+    "tools/verification/state_writer_policy_evidence.mjs",
+    "tests/state_writer_policy_evidence_behavior.test.mjs",
+  ];
+  for (const sourceRef of evidenceSources) {
+    assert.ok(exactEntry.sourceRefs.includes(sourceRef));
+  }
+  const evidenceReport = buildRecommendation(evidenceSources);
+  assert.deepEqual(evidenceReport.unmatchedChangedFiles, []);
+  for (const sourceRef of evidenceSources) {
+    assert.ok(commandsForChangedFile(evidenceReport, sourceRef).some((entry) => (
+      entry.commandRef === "verify:p4:p4-3"
+      && entry.domains.includes("state-ownership")
+    )));
+  }
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-3-renderer-actions"
   ));
