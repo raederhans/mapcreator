@@ -613,18 +613,18 @@ export function createPoliticalBackgroundRenderOwner({
   }
 
   function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
-    const state = scenarioPoliticalBackgroundDeferredFullCacheState;
+    const deferredState = scenarioPoliticalBackgroundDeferredFullCacheState;
     scenarioPoliticalBackgroundDeferredFullCacheHandle = null;
-    if (!state || !Array.isArray(state.entries) || !state.entries.length) {
+    if (!deferredState || !Array.isArray(deferredState.entries) || !deferredState.entries.length) {
       scenarioPoliticalBackgroundDeferredFullCacheState = null;
       return false;
     }
-    if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state)) {
+    if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(deferredState)) {
       cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");
       return false;
     }
-    const normalizedEntries = state.entries;
-    if (isScenarioPoliticalBackgroundFullPassCacheKeyReady(state.fullPassCacheKey)) {
+    const normalizedEntries = deferredState.entries;
+    if (isScenarioPoliticalBackgroundFullPassCacheKeyReady(deferredState.fullPassCacheKey)) {
       scenarioPoliticalBackgroundDeferredFullCacheState = null;
       return false;
     }
@@ -642,13 +642,13 @@ export function createPoliticalBackgroundRenderOwner({
         runScenarioPoliticalBackgroundDeferredFullCacheSlice,
         { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
       );
-      if (!recoverySettled && state.index >= normalizedEntries.length) {
-        recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state);
+      if (!recoverySettled && deferredState.index >= normalizedEntries.length) {
+        recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(deferredState);
       }
       return false;
     }
-    const transform = state.transform || getRuntimeState().zoomTransform || platform.d3?.zoomIdentity;
-    if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state, transform)) {
+    const transform = deferredState.transform || getRuntimeState().zoomTransform || platform.d3?.zoomIdentity;
+    if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(deferredState, transform)) {
       cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");
       return false;
     }
@@ -658,7 +658,7 @@ export function createPoliticalBackgroundRenderOwner({
     let builtCount = 0;
     let reusedCount = 0;
     let pathlessCount = 0;
-    while (state.index < normalizedEntries.length) {
+    while (deferredState.index < normalizedEntries.length) {
       if (processedCount > 0 && (nowMs() - startedAt) >= POLITICAL_DEFERRED_FULL_CACHE_CPU_BUDGET_MS) break;
       if (
         processedCount > 0
@@ -668,8 +668,8 @@ export function createPoliticalBackgroundRenderOwner({
       ) {
         break;
       }
-      const entry = normalizedEntries[state.index];
-      state.index += 1;
+      const entry = normalizedEntries[deferredState.index];
+      deferredState.index += 1;
       processedCount += 1;
       const featureId = entry?.id || getFeatureId(entry?.feature);
       if (!featureId || !entry?.feature?.geometry) {
@@ -692,11 +692,11 @@ export function createPoliticalBackgroundRenderOwner({
       }
     }
 
-    state.sliceCount = Number(state.sliceCount || 0) + 1;
-    state.processedCount = Number(state.processedCount || 0) + processedCount;
-    state.builtPathCount = Number(state.builtPathCount || 0) + builtCount;
-    state.reusedPathCount = Number(state.reusedPathCount || 0) + reusedCount;
-    state.pathlessEntryCount = Number(state.pathlessEntryCount || 0) + pathlessCount;
+    deferredState.sliceCount = Number(deferredState.sliceCount || 0) + 1;
+    deferredState.processedCount = Number(deferredState.processedCount || 0) + processedCount;
+    deferredState.builtPathCount = Number(deferredState.builtPathCount || 0) + builtCount;
+    deferredState.reusedPathCount = Number(deferredState.reusedPathCount || 0) + reusedCount;
+    deferredState.pathlessEntryCount = Number(deferredState.pathlessEntryCount || 0) + pathlessCount;
     recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice", nowMs() - startedAt, {
       phase: "idle",
       recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
@@ -704,13 +704,13 @@ export function createPoliticalBackgroundRenderOwner({
       builtPathCount: builtCount,
       reusedPathCount: reusedCount,
       pathlessEntryCount: pathlessCount,
-      remainingCount: Math.max(0, normalizedEntries.length - state.index),
+      remainingCount: Math.max(0, normalizedEntries.length - deferredState.index),
       entryCount: normalizedEntries.length,
-      sliceCount: state.sliceCount,
+      sliceCount: deferredState.sliceCount,
       activeScenarioId: String(getRuntimeState().activeScenarioId || ""),
     });
 
-    if (state.index < normalizedEntries.length) {
+    if (deferredState.index < normalizedEntries.length) {
       scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
         runScenarioPoliticalBackgroundDeferredFullCacheSlice,
         { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
@@ -723,11 +723,11 @@ export function createPoliticalBackgroundRenderOwner({
         runScenarioPoliticalBackgroundDeferredFullCacheSlice,
         { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
       );
-      recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state);
+      recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(deferredState);
       return false;
     }
 
-    if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state, transform)) {
+    if (!isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(deferredState, transform)) {
       cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");
       return false;
     }
@@ -739,21 +739,21 @@ export function createPoliticalBackgroundRenderOwner({
       phase: "idle",
       recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
     });
-    recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheComplete", nowMs() - Number(state.startedAt || startedAt), {
+    recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheComplete", nowMs() - Number(deferredState.startedAt || startedAt), {
       phase: "idle",
       recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
       entryCount: normalizedEntries.length,
       groupCount: Number(finalized?.groupCount || 0),
-      builtPathCount: Number(state.builtPathCount || 0),
-      reusedPathCount: Number(state.reusedPathCount || 0),
-      pathlessEntryCount: Number(state.pathlessEntryCount || 0),
-      sliceCount: Number(state.sliceCount || 0),
+      builtPathCount: Number(deferredState.builtPathCount || 0),
+      reusedPathCount: Number(deferredState.reusedPathCount || 0),
+      pathlessEntryCount: Number(deferredState.pathlessEntryCount || 0),
+      sliceCount: Number(deferredState.sliceCount || 0),
       activeScenarioId: String(getRuntimeState().activeScenarioId || ""),
     });
     scenarioPoliticalBackgroundDeferredFullCacheState = null;
     invalidateRenderPasses("political", "progressive-political-full-cache-ready");
     recordProgressivePoliticalFullCacheReadyDiagnostics(getRuntimeState(), {
-      entryCount: normalizedEntries.length, groupCount: Number(finalized?.groupCount || 0), builtPathCount: Number(state.builtPathCount || 0), reusedPathCount: Number(state.reusedPathCount || 0), pathlessEntryCount: Number(state.pathlessEntryCount || 0), sliceCount: Number(state.sliceCount || 0),
+      entryCount: normalizedEntries.length, groupCount: Number(finalized?.groupCount || 0), builtPathCount: Number(deferredState.builtPathCount || 0), reusedPathCount: Number(deferredState.reusedPathCount || 0), pathlessEntryCount: Number(deferredState.pathlessEntryCount || 0), sliceCount: Number(deferredState.sliceCount || 0),
     });
     const repaintRequested = requestRendererRender("progressive-political-full-cache-ready", {
       flush: false,
