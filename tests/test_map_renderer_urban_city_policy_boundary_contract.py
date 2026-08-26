@@ -8,6 +8,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 URBAN_CITY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "urban_city_policy.js"
 CITY_POINTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_points_render_owner.js"
 CITY_LIGHTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_lights_render_owner.js"
+DAY_NIGHT_RUNTIME_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "day_night_runtime_owner.js"
 
 
 class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
@@ -99,6 +100,7 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
     def test_urban_glow_intensity_field_invalidates_and_modulates_urban_light_passes(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         city_lights_content = CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        day_night_owner_content = DAY_NIGHT_RUNTIME_OWNER_JS.read_text(encoding="utf-8")
         intensity_content = (REPO_ROOT / "js" / "core" / "intensity_field.js").read_text(encoding="utf-8")
         context_base_body = renderer_content.split('if (passName === "contextBase") {', 1)[1].split(
             '\n  }',
@@ -116,12 +118,17 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
             "\n}",
             1,
         )[0]
+        day_night_signature_body = day_night_owner_content.split(
+            "function buildDayNightPassSignature(transformSignature, urbanGlowRevision, topologyRevision) {",
+            1,
+        )[1].split("\n  }", 1)[0]
 
         self.assertIn('id: "urbanGlow"', intensity_content)
         self.assertIn('targetPasses: Object.freeze(["contextBase", "dayNight"])', intensity_content)
         self.assertIn("function getIntensityFieldTargetPasses(channelId)", intensity_content)
         self.assertIn('`field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`', context_base_body)
-        self.assertIn('`field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`', day_night_body)
+        self.assertIn("intensityFields.channels.urbanGlow?.revision", day_night_body)
+        self.assertIn('`field:urbanGlow:${Number(urbanGlowRevision || 0)}`', day_night_signature_body)
         self.assertIn('getFieldFeatureMultiplier("urbanGlow", feature)', renderer_content)
         self.assertIn("const glowMultiplier = getUrbanGlowFeatureMultiplier(feature);", urban_layer_body)
         self.assertIn("Math.min(fillOpacity, 0.15) : fillOpacity) * glowMultiplier", urban_layer_body)
