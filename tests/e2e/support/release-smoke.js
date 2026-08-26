@@ -69,6 +69,48 @@ function isReleaseSmokeRetryableError(error) {
   return RETRYABLE_PHASES.has(getReleaseSmokeErrorPhase(error));
 }
 
+function collectReleaseSmokeErrorMessages(error) {
+  const messages = [];
+  const seen = new Set();
+  let current = error;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    messages.push(String(current.message || ""));
+    current = current.cause;
+  }
+  return messages;
+}
+
+function isRetryableSameOriginModulePropagationFailure(error, { publicBaseUrl } = {}) {
+  if (!RETRYABLE_PHASES.has(getReleaseSmokeErrorPhase(error))) {
+    return false;
+  }
+
+  let baseUrl;
+  try {
+    baseUrl = new URL(String(publicBaseUrl || ""));
+  } catch {
+    return false;
+  }
+
+  const moduleUrlMatch = collectReleaseSmokeErrorMessages(error)
+    .join("\n")
+    .match(/Failed to fetch dynamically imported module:\s*(https?:\/\/[^\s"'`]+)/i);
+  if (!moduleUrlMatch) {
+    return false;
+  }
+
+  try {
+    const moduleUrl = new URL(moduleUrlMatch[1]);
+    const basePath = baseUrl.pathname.endsWith("/") ? baseUrl.pathname : `${baseUrl.pathname}/`;
+    return moduleUrl.origin === baseUrl.origin
+      && moduleUrl.pathname.startsWith(basePath)
+      && moduleUrl.pathname.endsWith(".js");
+  } catch {
+    return false;
+  }
+}
+
 function shouldRetryReleaseSmokeAttempt({
   error,
   attempt,
@@ -306,6 +348,7 @@ module.exports = {
   tagReleaseSmokeError,
   getReleaseSmokeErrorPhase,
   isReleaseSmokeRetryableError,
+  isRetryableSameOriginModulePropagationFailure,
   shouldRetryReleaseSmokeAttempt,
   getReleaseSmokeRetryDecision,
   validateReleaseSmokeSampleManifest,
