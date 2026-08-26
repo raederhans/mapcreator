@@ -111,6 +111,30 @@ function isRetryableSameOriginModulePropagationFailure(error, { publicBaseUrl } 
   }
 }
 
+function isRetryablePublicPagesShellPropagationStall(error, { publicBaseUrl } = {}) {
+  if (getReleaseSmokeErrorPhase(error) !== RELEASE_SMOKE_PHASES.SHELL_READY) {
+    return false;
+  }
+
+  let baseUrl;
+  try {
+    baseUrl = new URL(String(publicBaseUrl || ""));
+  } catch {
+    return false;
+  }
+  if (baseUrl.protocol !== "https:" || !baseUrl.hostname.endsWith(".github.io")) {
+    return false;
+  }
+
+  const message = collectReleaseSmokeErrorMessages(error).join("\n");
+  return message.includes("[playwright-app] waitForShellReady timed out")
+    && message.includes('"bootPhase":"shell"')
+    && message.includes('"bootBlocking":true')
+    && message.includes('"bodyAppBooting":true')
+    && message.includes('"overlayHidden":false')
+    && message.includes('"bootError":""');
+}
+
 function shouldRetryReleaseSmokeAttempt({
   error,
   attempt,
@@ -349,6 +373,7 @@ module.exports = {
   getReleaseSmokeErrorPhase,
   isReleaseSmokeRetryableError,
   isRetryableSameOriginModulePropagationFailure,
+  isRetryablePublicPagesShellPropagationStall,
   shouldRetryReleaseSmokeAttempt,
   getReleaseSmokeRetryDecision,
   validateReleaseSmokeSampleManifest,

@@ -13,6 +13,7 @@ const {
   tagReleaseSmokeError,
   getReleaseSmokeRetryDecision,
   isRetryableSameOriginModulePropagationFailure,
+  isRetryablePublicPagesShellPropagationStall,
   sleep,
 } = require("../support/release-smoke");
 
@@ -433,9 +434,10 @@ test("public Pages release gate", async ({ browser, request }, testInfo) => {
         ? preflightResults
         : (Array.isArray(error?.releaseSmokeDetails?.probes) ? error.releaseSmokeDetails.probes : []);
       const issueSummary = summarizeReleaseSmokeIssues(diagnostics.consoleIssues, diagnostics.networkFailures);
-      const isPropagationRetry = isRetryableSameOriginModulePropagationFailure(error, {
-        publicBaseUrl: PUBLIC_BASE_URL,
-      });
+      const isPropagationRetry = (
+        isRetryableSameOriginModulePropagationFailure(error, { publicBaseUrl: PUBLIC_BASE_URL })
+        || isRetryablePublicPagesShellPropagationStall(error, { publicBaseUrl: PUBLIC_BASE_URL })
+      );
       if (
         !isPropagationRetry
         && (issueSummary.unexpectedNetworkFailures.length > 0 || issueSummary.unexpectedConsoleIssues.length > 0)
