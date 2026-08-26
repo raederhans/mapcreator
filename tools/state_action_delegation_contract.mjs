@@ -849,7 +849,7 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
     compositionModulePath: "js/core/map_renderer.js",
     compositionExportName: "getVisualEffectsPassOwner",
     compositionSourceFingerprint:
-      "49bdaccfdc014c80ba5f6eba13ce8cbd8709d820be8b4ad6bf8e9669d9198db8",
+      "52f6684ecb7529de485a0f7cfaf4e8f55da48518ed053d71cb69fc402d55c826",
     factoryModulePath: "js/core/renderer/visual_effects_pass_owner.js",
     factoryExportName: "createVisualEffectsPassOwner",
     factorySourceFingerprint:
@@ -872,7 +872,7 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
     factoryModulePath: "js/core/renderer/political_background_render_owner.js",
     factoryExportName: "createPoliticalBackgroundRenderOwner",
     factorySourceFingerprint:
-      "b397dfe85b421fcdba2db6de5e679d7895051bfbd54f2493ddbdb19c5c7f4926",
+      "8ae470d4bde7a210a0aead9ca4937e90a2e6163935b41bd42270e7cc3f7356b8",
     ownerBindingName: "politicalBackgroundRenderOwner",
     methods: [
       "cancelScenarioPoliticalBackgroundDeferredFullCache",

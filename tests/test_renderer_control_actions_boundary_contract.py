@@ -36,6 +36,13 @@ INTERACTION_KEYS = {
     "interactionInfrastructureBuildInFlight",
 }
 
+CLICK_INTERACTION_KEYS = {
+    "hoveredId",
+    "hoverOverlayDirty",
+    "selectedColor",
+    "waterRegionOverrides",
+}
+
 
 def assigned_keys(source):
     return set(re.findall(r"target\.([A-Za-z_$][\w$]*)\s*=", source))
@@ -50,7 +57,10 @@ class RendererControlActionsBoundaryContractTest(unittest.TestCase):
 
     def test_action_modules_own_exact_approved_keys(self):
         self.assertEqual(assigned_keys(self.phase_actions), PHASE_KEYS)
-        self.assertEqual(assigned_keys(self.interaction_actions), INTERACTION_KEYS)
+        self.assertEqual(
+            assigned_keys(self.interaction_actions),
+            INTERACTION_KEYS | CLICK_INTERACTION_KEYS,
+        )
 
     def test_action_modules_remain_import_free_state_only_surfaces(self):
         for source in [self.phase_actions, self.interaction_actions]:

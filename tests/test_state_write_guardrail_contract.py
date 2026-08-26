@@ -324,6 +324,8 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             "tests/state_writer_policy_manifest_behavior.test.mjs",
             "tests/state_writer_scanner_soundness_behavior.test.mjs",
             "tests/state_writer_policy_soundness_behavior.test.mjs",
+            "tests/day_night_runtime_owner_behavior.test.mjs",
+            "tests/political_background_render_owner_behavior.test.mjs",
         }
         fixture_match = re.search(
             r"const\s+LEGACY_SCANNER_FIXTURE_PATHS\s*=\s*new\s+Set\(\s*\[(?P<body>.*?)\]\s*\);",
