@@ -2624,7 +2624,11 @@ test("local entrypoint budgets fail closed on expanded roots leaves process grou
 });
 
 test("adaptive execution reconciles duplicate route safety metadata before PR execution", () => {
-  const report = buildRecommendation(["tools/verification/verification_domains.mjs"]);
+  const report = buildRecommendation(
+    ["tools/verification/verification_domains.mjs"],
+    buildRouteIndex(),
+    { platform: "win32" },
+  );
   const telemetryCommand = "test:node:williams-crossover-telemetry-live";
   const telemetryEntry = report.recommendedCommands.find((entry) => entry.commandRef === telemetryCommand);
   assert.ok(telemetryEntry);
@@ -2635,7 +2639,7 @@ test("adaptive execution reconciles duplicate route safety metadata before PR ex
   assert.ok(telemetryEntry.safetyContributorRouteIds.includes("node:test:node:williams-crossover-telemetry-live"));
   assert.ok(telemetryEntry.safetyContributorRouteIds.includes("perf:williams-crossover-telemetry-live"));
 
-  const executionPlan = buildExecutionPlan(report);
+  const executionPlan = buildExecutionPlan(report, { platform: "win32" });
   assert.equal(executionPlan.commandsToRun.includes(telemetryCommand), false);
   assert.ok(executionPlan.blockedMainThreadCommands.includes(telemetryCommand));
 });
