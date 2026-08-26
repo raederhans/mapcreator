@@ -3093,7 +3093,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "python tools/check_heavy_test_classification.py",
       "sourceRefs": [
         "tools/check_heavy_test_classification.py",
-        "tests",
+        "tests/heavy_dependency_groups.json",
         ".github/workflows/nightly-verification.yml",
         ".github/workflows/verify-shared.yml"
       ],

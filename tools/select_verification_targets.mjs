@@ -156,6 +156,10 @@ function isDirectRouteMatch(route, changedFile) {
   });
 }
 
+function isPythonUnitTestFile(changedFile) {
+  return /^tests\/(?:.*\/)?test_[^/]+\.py$/.test(changedFile);
+}
+
 function changedFileMatchesSourceRef(changedFile, sourceRef) {
   if (sourceRef === changedFile) return true;
   const looksLikeFile = /\.[^/]+$/.test(sourceRef);
@@ -202,6 +206,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   }
   if (PERF_STATIC_SUPPORT_FILES.has(changedFile)) {
     return route.domain === "perf";
+  }
+
+  if (route.id === "infra:heavy-test-classification" && isPythonUnitTestFile(changedFile)) {
+    return true;
   }
 
   if (isCheckedInPagesDistFile(changedFile)) {

@@ -38,12 +38,12 @@ test("authored catalog source covers command authority, policies, and every proj
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
   assert.equal(summary.packageScriptCount, 340);
-  assert.equal(summary.contributorRecords, 428);
+  assert.equal(summary.contributorRecords, 431);
   assert.equal(summary.verificationRecordProjectionCount, 136);
-  assert.equal(summary.routeProjectionCount, 387);
-  assert.equal(summary.commandCount, 343);
+  assert.equal(summary.routeProjectionCount, 390);
+  assert.equal(summary.commandCount, 346);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 428);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 431);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -1135,6 +1135,30 @@ test("adaptive production CLI JSON fixtures use exact core-runner route scope", 
   assert.deepEqual(adjacentReport.unmatchedChangedFiles, adjacentPaths.sort());
   assert.equal(adjacentReport.matchedByFile.some((entry) => (
     entry.matchedRouteIds.includes("infra:core-verification-runner")
+  )), false);
+});
+
+test("heavy dependency classification selects Python unit tests without consuming adjacent fixtures", () => {
+  const pythonTestPaths = [
+    "tests/test_future_heavy_dependency.py",
+    "tests/nested/test_future_heavy_dependency.py",
+    "tests/heavy_dependency_groups.json",
+  ];
+  const report = buildRecommendation(pythonTestPaths);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const entry of report.matchedByFile) {
+    assert.ok(entry.matchedRouteIds.includes("infra:heavy-test-classification"));
+  }
+
+  const adjacentPaths = [
+    "tests/fixtures/adaptive_local_cli_source_mismatch_renamed.json",
+    "tests/fixtures/adaptive_local_cli_budget_gap.json",
+  ];
+  const adjacentReport = buildRecommendation(adjacentPaths);
+  assert.deepEqual(adjacentReport.unmatchedChangedFiles, adjacentPaths.sort());
+  assert.equal(adjacentReport.matchedByFile.some((entry) => (
+    entry.matchedRouteIds.includes("infra:heavy-test-classification")
   )), false);
 });
 

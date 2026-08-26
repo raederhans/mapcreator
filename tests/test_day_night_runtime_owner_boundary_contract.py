@@ -33,6 +33,11 @@ class DayNightRuntimeOwnerBoundaryContractTest(unittest.TestCase):
         )
         self.assertIn("export function createDayNightRuntimeOwner({", owner)
         self.assertIn("drawDayNightRuntimePass", visual_owner)
+        self.assertIn(
+            "drawDayNightRuntimePass: (k, options) => getDayNightRuntimeOwner().drawDayNightPass(k, options)",
+            renderer,
+        )
+        self.assertNotIn("drawDayNightRuntimePass: drawDayNightPass", renderer)
 
         moved_symbols = (
             "getUtcDateKey",
