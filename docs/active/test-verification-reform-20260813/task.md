@@ -235,8 +235,8 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [x] Preserve the dirty desktop checkout and create isolated integration branch `codex/sc-v2-integration-20260826` from `origin/main@1439dee6`.
 - [x] Confirm Build and Deploy run `32857711186` and Nightly run `32886723760` fail on the same missing heavy classification.
 - [x] Confirm GitHub reports `main` as unprotected with zero required status checks.
-- [ ] Wave A: integrate the landing heavy-group repair, split dependency guards, self-tests, and PR/Nightly routing.
-- [ ] Wave A local acceptance: run the two guard entrypoints, classification negative/positive/stale tests, metadata/route checks, and exact impacted selection with zero unmatched or route gaps.
+- [x] Wave A: integrate the landing heavy-group repair, split dependency guards, self-tests, and PR/Nightly routing as `b8363e4d` after an independent `APPROVE` review.
+- [x] Wave A local acceptance: both guard entrypoints pass; classification negative/positive/stale tests pass 3/3; workflow structure passes 3/3; portfolio passes 54/54; selector schema covers 390 routes; the ready handoff reports exact SF-ATS selection with zero unmatched and route gaps.
 - [ ] Wave A remote acceptance: push through the normal integration owner, observe Build and Deploy plus required PR/Nightly metadata lanes, and begin the three-consecutive-main green counter.
 - [ ] External gate: enable minimal `main` branch protection only after exact successful required check names are observed.
 - [ ] Wave B: integrate platform-aware Nightly shards and the final Nightly aggregator.
