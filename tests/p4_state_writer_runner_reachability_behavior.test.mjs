@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   assertP4StateWriterPolicyManifestRunMode,
   buildP4StateWriterPolicyChildEnv,
+  P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS,
   P4_STATE_WRITER_POLICY_TEST_FILES,
   P4_STATE_WRITER_POLICY_QUICK_TEST_FILES,
   P4_STATE_WRITER_POLICY_RUN_MODE_ENV,
@@ -44,6 +45,10 @@ test("named P4 policy gate delegates to the complete runner default suite", () =
   assert.deepEqual(
     resolveP4StateWriterPolicyTestFiles([]),
     EXPECTED_DEFAULT_SUITES,
+  );
+  assert.equal(
+    P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS,
+    45 * 60 * 1000,
   );
 });
 
