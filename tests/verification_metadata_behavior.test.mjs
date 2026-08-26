@@ -7,6 +7,7 @@ import {
 } from "../tools/run_core_verification.mjs";
 import {
   buildRecommendation,
+  buildRepositoryRecommendation,
 } from "../tools/select_verification_targets.mjs";
 import {
   buildNodeRoutes,
@@ -19,8 +20,12 @@ import {
 } from "../tools/verification/verification_domains.mjs";
 import {
   normalizeVerificationMetadataSource,
+  projectVerificationGatePolicySignals,
+  VERIFICATION_GATE_POLICY_AUTHORITY,
+  VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY,
   VERIFICATION_METADATA_SOURCE,
   VERIFICATION_METADATA_SOURCE_IDENTITY,
+  verificationGatePolicySignalsDigest,
   verificationMetadataSourceDigest,
   verificationMetadataSourceSummary,
 } from "../tools/verification/verification_catalog_projection.mjs";
@@ -105,6 +110,77 @@ test("authored catalog normalization rejects duplicate arrays and stabilizes sem
   assert.throws(
     () => normalizeVerificationMetadataSource(duplicateSupersession),
     /verification-metadata-source-duplicate-array-value:supersession\./,
+  );
+});
+
+test("canonical gate policy projects true false and unknown with allowed reason sources", () => {
+  assert.equal(VERIFICATION_GATE_POLICY_AUTHORITY.mode, "observation-only");
+  assert.equal(VERIFICATION_GATE_POLICY_AUTHORITY.requiredExecutionSetEffect, "unchanged");
+  assert.match(VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY.digest, /^[0-9a-f]{64}$/u);
+  const cases = [
+    ["data/scenarios/tno_1962/water_regions.geojson", "requiresStrictTno"],
+    ["tests/e2e/sample_guide_deeplink.spec.js", "requiresDemo"],
+    ["tools/verification/verification_profile.mjs", "requiresTestInfra"],
+    ["tests/e2e/release/pages_public_release_gate.spec.js", "requiresDeployPreflight"],
+  ];
+  const allowedSourceTypes = new Set(["domain", "sourceRef", "entrypoint", "sharedRisk"]);
+  for (const [changedFile, expectedTrueSignal] of cases) {
+    const report = buildRepositoryRecommendation([changedFile]);
+    assert.equal(report.gatePolicySignals.signals[expectedTrueSignal].state, "true", changedFile);
+    assert.equal(
+      report.gatePolicySignalsDigest,
+      verificationGatePolicySignalsDigest(report.gatePolicySignals),
+    );
+    assert.deepEqual(report.gatePolicySignals.authorityIdentity, VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY);
+    for (const signal of Object.values(report.gatePolicySignals.signals)) {
+      assert.ok(["true", "false", "unknown"].includes(signal.state));
+      assert.ok(signal.reasons.length > 0);
+      assert.ok(signal.reasons.every((reason) => allowedSourceTypes.has(reason.source.type)));
+    }
+  }
+
+  const falseReport = buildRepositoryRecommendation(["tests/ocean_render_owner_behavior.test.mjs"]);
+  assert.equal(falseReport.gatePolicySignals.signals.requiresStrictTno.state, "false");
+  assert.equal(falseReport.gatePolicySignals.signals.requiresDemo.state, "false");
+  assert.equal(falseReport.gatePolicySignals.signals.requiresDeployPreflight.state, "false");
+
+  const unknownSignals = projectVerificationGatePolicySignals({
+    changedFiles: ["unmatched.phase1a"],
+    matchedByFile: [{
+      changedFile: "unmatched.phase1a",
+      matchedRouteIds: [],
+      recommendedCommands: [],
+    }],
+    unmatchedChangedFiles: ["unmatched.phase1a"],
+    routeAuthority: [],
+  });
+  assert.ok(Object.values(unknownSignals.signals).every((signal) => signal.state === "unknown"));
+  assert.ok(Object.values(unknownSignals.signals).every((signal) => (
+    signal.reasons[0].source.type === "sharedRisk"
+      && signal.reasons[0].source.value === "selection-authority-gap"
+  )));
+});
+
+test("gate policy authored arrays normalize stably and reject duplicate policy values", () => {
+  const reordered = structuredClone(VERIFICATION_METADATA_SOURCE);
+  reordered.gatePolicy.signals.requiresStrictTno.matchAny.domains.reverse();
+  assert.equal(
+    verificationMetadataSourceDigest(reordered),
+    VERIFICATION_METADATA_SOURCE_IDENTITY.digest,
+  );
+  const duplicate = structuredClone(VERIFICATION_METADATA_SOURCE);
+  duplicate.gatePolicy.signals.requiresStrictTno.matchAny.domains.push(
+    duplicate.gatePolicy.signals.requiresStrictTno.matchAny.domains[0],
+  );
+  assert.throws(
+    () => normalizeVerificationMetadataSource(duplicate),
+    /verification-metadata-source-duplicate-array-value:gatePolicy\.signals\.requiresStrictTno/,
+  );
+  const forgedSource = structuredClone(VERIFICATION_METADATA_SOURCE);
+  forgedSource.gatePolicy.signals.requiresDemo.matchAny.domains = ["forged-domain"];
+  assert.throws(
+    () => normalizeVerificationMetadataSource(forgedSource),
+    /verification-gate-policy-authority-source-gap:requiresDemo:domains:forged-domain/,
   );
 });
 const P4_POLICY_SOURCE_REFS = Object.freeze([

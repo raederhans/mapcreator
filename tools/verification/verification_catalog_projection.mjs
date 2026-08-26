@@ -1,7 +1,11 @@
 import {
   normalizeVerificationMetadataSource,
+  projectVerificationGatePolicySignals,
+  VERIFICATION_GATE_POLICY_AUTHORITY,
+  VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY,
   VERIFICATION_METADATA_SOURCE,
   VERIFICATION_METADATA_SOURCE_IDENTITY,
+  verificationGatePolicySignalsDigest,
   verificationMetadataSourceDigest,
 } from "./verification_catalog_source.mjs";
 
@@ -116,7 +120,11 @@ export function verificationMetadataSourceSummary() {
 
 export {
   normalizeVerificationMetadataSource,
+  projectVerificationGatePolicySignals,
+  VERIFICATION_GATE_POLICY_AUTHORITY,
+  VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY,
   VERIFICATION_METADATA_SOURCE,
   VERIFICATION_METADATA_SOURCE_IDENTITY,
+  verificationGatePolicySignalsDigest,
   verificationMetadataSourceDigest,
 };

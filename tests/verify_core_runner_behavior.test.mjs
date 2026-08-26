@@ -49,8 +49,11 @@ import {
   collapseSupersededCommands,
 } from "../tools/verification/command_supersession.mjs";
 import {
+  assertPrCostObservation,
+  buildPrCostObservation,
   buildVerificationProfile,
   prepareVerificationProfilePlan,
+  PR_COST_SCHEMA_IDENTITY,
 } from "../tools/verification/verification_profile.mjs";
 import {
   buildVerificationCatalog,
@@ -370,6 +373,7 @@ function runAdaptivePositiveCliFixture(t) {
   const tempRoot = fs.mkdtempSync(path.join(runtimeTmp, "adaptive-local-cli-valid-"));
   t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
   const artifactPath = path.join(tempRoot, "evidence.json");
+  const profilePath = path.join(tempRoot, "evidence-profile.json");
   const result = spawnSync(process.execPath, [
     "tools/run_adaptive_tests.mjs",
     "--verification-catalog-fixture",
@@ -387,7 +391,7 @@ function runAdaptivePositiveCliFixture(t) {
     "--md-out",
     path.join(tempRoot, "evidence.md"),
     "--profile-out",
-    path.join(tempRoot, "evidence-profile.json"),
+    profilePath,
   ], {
     cwd: process.cwd(),
     encoding: "utf8",
@@ -396,6 +400,7 @@ function runAdaptivePositiveCliFixture(t) {
   return {
     artifact: JSON.parse(fs.readFileSync(artifactPath, "utf8")),
     fixtureDigest,
+    profile: JSON.parse(fs.readFileSync(profilePath, "utf8")),
   };
 }
 
@@ -418,6 +423,16 @@ function assertEverySelectorRootHasCanonicalOutcome(artifact) {
       "gap",
     ].includes(entry.disposition)
   )));
+}
+
+function bindSelectorPrCost(report) {
+  return {
+    ...report,
+    prCost: buildPrCostObservation({
+      selectorReport: report,
+      observationStage: "selector",
+    }),
+  };
 }
 
 test("verify-core runner node route stays in test-routing domain", () => {
@@ -1934,9 +1949,11 @@ test("local projection preserves the verification profile leaf within the impact
     selectorRoutes,
     { entrypoint: "impact", routeAuthority: binding.preparedCatalog.authority },
   );
-  const projected = binding.bindSelectionReport(constrainAdaptiveEntrypointSelection(report, "impact", {
-    preparedCatalog: binding.preparedCatalog,
-  }));
+  const projected = bindSelectorPrCost(binding.bindSelectionReport(
+    constrainAdaptiveEntrypointSelection(report, "impact", {
+      preparedCatalog: binding.preparedCatalog,
+    }),
+  ));
   assert.ok(projected.rawLocalEligibleRoots.some((entry) => (
     entry.commandRef === "test:node:verification-profile"
   )));
@@ -1984,11 +2001,11 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
     entrypoint: "impact",
     routeAuthority: binding.preparedCatalog.authority,
   });
-  const projected = binding.bindSelectionReport(
+  const projected = bindSelectorPrCost(binding.bindSelectionReport(
     constrainAdaptiveEntrypointSelection(recommendation, "impact", {
       preparedCatalog: binding.preparedCatalog,
     }),
-  );
+  ));
   assert.deepEqual(
     projected.recommendedCommands.map((entry) => entry.commandRef),
     ["test:node:scenario-chunk-contracts:quick", "verify:local-infra"],
@@ -2271,7 +2288,7 @@ test("production adaptive CLI blocks missing and renamed selector sanity", (t) =
 });
 
 test("production adaptive CLI dry-run reaches a valid local execution boundary", (t) => {
-  const { artifact, fixtureDigest } = runAdaptivePositiveCliFixture(t);
+  const { artifact, fixtureDigest, profile } = runAdaptivePositiveCliFixture(t);
 
   assert.equal(artifact.verificationCatalogFixture.identity.digest, fixtureDigest);
   assert.deepEqual(artifact.unmatchedChangedFiles, []);
@@ -2280,6 +2297,28 @@ test("production adaptive CLI dry-run reaches a valid local execution boundary",
   assert.ok(artifact.executionPlan.executionCommands.every((entry) => entry.cost !== "heavy"));
   assert.equal(artifact.executionResults, null);
   assert.equal(artifact.executionStatus, "planned");
+  assert.deepEqual(artifact.executionPlan.gatePolicySignals, artifact.gatePolicySignals);
+  assert.equal(artifact.executionPlan.gatePolicySignalsDigest, artifact.gatePolicySignalsDigest);
+  assert.equal(profile.gatePolicy.signalsDigest, artifact.gatePolicySignalsDigest);
+  assert.deepEqual(profile.gatePolicy.signals, artifact.gatePolicySignals);
+  assert.equal(artifact.prCost.schemaVersion, 1);
+  assert.deepEqual(artifact.prCost.schemaIdentity, PR_COST_SCHEMA_IDENTITY);
+  assert.equal(artifact.prCost.observationStage, "adaptive");
+  assert.deepEqual(assertPrCostObservation(artifact.prCost), artifact.prCost);
+  assert.equal(artifact.selectorPrCost.observationStage, "selector");
+  assert.deepEqual(assertPrCostObservation(artifact.selectorPrCost), artifact.selectorPrCost);
+  assert.deepEqual(artifact.executionPlan.selectorPrCost, artifact.selectorPrCost);
+  assert.equal(
+    artifact.executionPlan.selectorPrCostDigest,
+    artifact.selectorPrCost.observationDigest,
+  );
+  assert.equal(
+    artifact.prCost.sourceBinding.selectorObservationDigest,
+    artifact.selectorPrCost.observationDigest,
+  );
+  assert.equal(artifact.prCost.requiredExecutionSetEffect, "unchanged");
+  assert.equal(artifact.prCost.selectedCommands, artifact.executionPlan.commandsToRun.length);
+  assert.deepEqual(profile.prCost, artifact.prCost);
   assertEverySelectorRootHasCanonicalOutcome(artifact);
 });
 
@@ -3041,6 +3080,12 @@ test("real selector CLI artifact binds to the repository catalog and drives stru
     VERIFICATION_METADATA_SOURCE_IDENTITY,
   );
   assert.deepEqual(artifact.selectorRootSet, currentSelection.selectorRootSet);
+  assert.deepEqual(artifact.gatePolicySignals, currentSelection.gatePolicySignals);
+  assert.equal(artifact.gatePolicySignalsDigest, currentSelection.gatePolicySignalsDigest);
+  assert.deepEqual(artifact.prCost.schemaIdentity, PR_COST_SCHEMA_IDENTITY);
+  assert.equal(artifact.prCost.observationStage, "selector");
+  assert.deepEqual(assertPrCostObservation(artifact.prCost), artifact.prCost);
+  assert.equal(artifact.prCost.requiredExecutionSetEffect, "unchanged");
 
   const loaded = readSelectionArtifact(artifactPath, changedFiles, {
     preparedCatalog: binding.preparedCatalog,
@@ -3051,6 +3096,10 @@ test("real selector CLI artifact binds to the repository catalog and drives stru
     preparedCatalog: binding.preparedCatalog,
   });
   assert.deepEqual(plan.routeGaps, []);
+  assert.deepEqual(plan.gatePolicySignals, artifact.gatePolicySignals);
+  assert.equal(plan.gatePolicySignalsDigest, artifact.gatePolicySignalsDigest);
+  assert.deepEqual(plan.selectorPrCost, artifact.prCost);
+  assert.equal(plan.selectorPrCostDigest, artifact.prCost.observationDigest);
   assert.ok(plan.executionGroups.length > 0);
   const runnerCalls = [];
   const results = executeAdaptivePlan(plan, {
@@ -3063,8 +3112,8 @@ test("real selector CLI artifact binds to the repository catalog and drives stru
   assert.equal(results.length, plan.executionGroups.length);
   assert.ok(results.every((entry) => entry.status === "passed"));
 
-  const assertDriftZeroSpawn = (field, mutate) => {
-    const forgedPath = path.join(tempRoot, `selector-forged-${field}.json`);
+  const assertDriftZeroSpawn = (label, mutate, expectedField = label) => {
+    const forgedPath = path.join(tempRoot, `selector-forged-${label}.json`);
     const forged = structuredClone(artifact);
     mutate(forged);
     fs.writeFileSync(forgedPath, JSON.stringify(forged), "utf8");
@@ -3084,7 +3133,7 @@ test("real selector CLI artifact binds to the repository catalog and drives stru
           return { status: 0 };
         },
       });
-    }, new RegExp(`adaptive-selection-catalog-drift:${field}`));
+    }, new RegExp(`adaptive-selection-catalog-drift:${expectedField}`));
     assert.equal(forgedRunnerCalls, 0);
   };
 
@@ -3100,6 +3149,27 @@ test("real selector CLI artifact binds to the repository catalog and drives stru
   assertDriftZeroSpawn("selectorRootSet", (forged) => {
     forged.selectorRootSet = [...forged.selectorRootSet, "forged:root"];
   });
+  assertDriftZeroSpawn("gatePolicySignals", (forged) => {
+    delete forged.gatePolicySignals;
+  });
+  assertDriftZeroSpawn("gatePolicySignalsDigest", (forged) => {
+    forged.gatePolicySignalsDigest = `${forged.gatePolicySignalsDigest}-forged`;
+  });
+  assertDriftZeroSpawn("prCost-missing", (forged) => {
+    delete forged.prCost;
+  }, "prCost.missing");
+  assertDriftZeroSpawn("prCost-numeric", (forged) => {
+    forged.prCost.selectorMs += 1;
+  }, "prCost.observationDigest");
+  assertDriftZeroSpawn("prCost-identity", (forged) => {
+    forged.prCost.schemaIdentity.digest = "0".repeat(64);
+  }, "prCost.schemaIdentity");
+  assertDriftZeroSpawn("prCost-digest", (forged) => {
+    forged.prCost.observationDigest = "0".repeat(64);
+  }, "prCost.observationDigest");
+  assertDriftZeroSpawn("prCost-source", (forged) => {
+    forged.prCost.sourceBinding.gatePolicySignalsDigest = "forged";
+  }, "prCost.sourceBinding");
 });
 
 test("adaptive execution owner precedence classifies every mixed owner set", () => {

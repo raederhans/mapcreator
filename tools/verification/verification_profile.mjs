@@ -1,7 +1,86 @@
+import { createHash } from "node:crypto";
 import path from "node:path";
+import {
+  VERIFICATION_GATE_POLICY_AUTHORITY,
+  VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY,
+  verificationGatePolicySignalsDigest,
+} from "./verification_catalog_projection.mjs";
 
 export const VERIFICATION_PROFILE_SCHEMA_VERSION = 1;
 export const VERIFICATION_PROFILE_KIND = "verification-profile";
+export const PR_COST_SCHEMA_VERSION = 1;
+export const PR_COST_KIND = "pr-verification-cost-observation";
+export const PR_COST_SCHEMA_KIND = "pr-verification-cost-schema";
+const PR_COST_PHASE = "stabilization-cost-collapse-v2-pr-phase-1a";
+const PR_COST_MODE = "observation-only";
+const PR_COST_REQUIRED_EXECUTION_SET_EFFECT = "unchanged";
+const PR_COST_METRIC_FIELDS = Object.freeze([
+  "checkoutMs",
+  "setupMs",
+  "fixedGuardrailMs",
+  "selectorMs",
+  "selectedExecutionMs",
+  "selectedCommands",
+  "uniqueLeafTests",
+  "duplicateLeafExecutions",
+  "deferredMainThreadCommands",
+]);
+const PR_COST_TIMING_FIELDS = new Set([
+  "checkoutMs",
+  "setupMs",
+  "fixedGuardrailMs",
+  "selectorMs",
+]);
+const PR_COST_COUNT_FIELDS = new Set([
+  "selectedCommands",
+  "uniqueLeafTests",
+  "duplicateLeafExecutions",
+  "deferredMainThreadCommands",
+]);
+const PR_COST_TIMING_SOURCES = new Set(["unknown", "local-monotonic-clock", "workflow-observer"]);
+
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sha256(value) {
+  return createHash("sha256").update(canonicalJson(value)).digest("hex");
+}
+
+export const PR_COST_SCHEMA = deepFreeze({
+  schemaVersion: PR_COST_SCHEMA_VERSION,
+  kind: PR_COST_SCHEMA_KIND,
+  observationKind: PR_COST_KIND,
+  phase: PR_COST_PHASE,
+  mode: PR_COST_MODE,
+  requiredExecutionSetEffect: PR_COST_REQUIRED_EXECUTION_SET_EFFECT,
+  observationStages: ["selector", "adaptive"],
+  sourceBindingFields: [
+    "catalogDigest",
+    "catalogSourceIdentity",
+    "gatePolicySignalsDigest",
+    "selectorRootSet",
+    "changedFiles",
+    "selectorObservationDigest",
+  ],
+  metricFields: [...PR_COST_METRIC_FIELDS],
+});
+export const PR_COST_SCHEMA_IDENTITY = deepFreeze({
+  schemaVersion: 1,
+  kind: "pr-verification-cost-schema-identity",
+  algorithm: "sha256",
+  digest: sha256(PR_COST_SCHEMA),
+});
 export const DEFAULT_CORE_VERIFICATION_PROFILE_OUT = path.join(
   process.cwd(),
   ".runtime",
@@ -64,6 +143,326 @@ function executionIdentityOf(value) {
 function nonNegativeDuration(value) {
   const duration = Number(value);
   return Number.isFinite(duration) && duration >= 0 ? duration : 0;
+}
+
+function nullableNonNegativeDuration(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const duration = Number(value);
+  return Number.isFinite(duration) && duration >= 0 ? duration : null;
+}
+
+function leafIdOf(value) {
+  return String(typeof value === "string" ? value : value?.leafId || value?.canonicalLeafRef || "").trim();
+}
+
+function prCostError(code, detail = "") {
+  const error = new Error(`${code}${detail ? `:${detail}` : ""}`);
+  error.code = code;
+  error.detail = detail;
+  return error;
+}
+
+function normalizeTimingObservation(input, field) {
+  if (input === null || input === undefined) return { value: null, source: "unknown" };
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw prCostError("pr-cost-observation-untrusted-timing-source", field);
+  }
+  const source = String(input.source || "");
+  const value = nullableNonNegativeDuration(input.value);
+  if (!PR_COST_TIMING_SOURCES.has(source)
+    || (value === null && source !== "unknown")
+    || (value !== null && source === "unknown")) {
+    throw prCostError("pr-cost-observation-untrusted-timing-source", field);
+  }
+  return { value, source };
+}
+
+export function selectorPrCostObservation(report) {
+  if (report?.selectorPrCost) return report.selectorPrCost;
+  return report?.prCost?.observationStage === "selector" ? report.prCost : null;
+}
+
+export function buildPrCostSourceBinding({
+  selectorReport = null,
+  executionPlan = null,
+  observationStage = "selector",
+  selectorObservationDigest = null,
+} = {}) {
+  const catalogDigest = executionPlan?.catalogDigest ?? selectorReport?.catalogDigest ?? null;
+  const catalogSourceIdentity = executionPlan?.catalogSourceIdentity
+    ?? selectorReport?.catalogSourceIdentity
+    ?? null;
+  const gatePolicySignalsDigest = executionPlan?.gatePolicySignalsDigest
+    ?? selectorReport?.gatePolicySignalsDigest
+    ?? null;
+  return {
+    schemaVersion: 1,
+    kind: "pr-verification-cost-source-binding",
+    observationStage,
+    catalogDigest: typeof catalogDigest === "string" ? catalogDigest : null,
+    catalogSourceIdentity: catalogSourceIdentity ? structuredClone(catalogSourceIdentity) : null,
+    gatePolicySignalsDigest: typeof gatePolicySignalsDigest === "string" ? gatePolicySignalsDigest : null,
+    selectorRootSet: stableUnique(executionPlan?.selectorRootSet || selectorReport?.selectorRootSet || []),
+    changedFiles: stableUnique(executionPlan?.changedFiles || selectorReport?.changedFiles || []),
+    selectorObservationDigest: observationStage === "adaptive"
+      && typeof selectorObservationDigest === "string"
+      ? selectorObservationDigest
+      : null,
+  };
+}
+
+export function prCostObservationDigest(observation) {
+  const payload = structuredClone(observation || {});
+  delete payload.observationDigest;
+  return sha256(payload);
+}
+
+export function assertPrCostObservation(observation, {
+  expectedObservationStage = null,
+  expectedSourceBinding = null,
+} = {}) {
+  const expectedKeys = [
+    "schemaVersion",
+    "kind",
+    "schemaIdentity",
+    "observationStage",
+    "phase",
+    "mode",
+    "requiredExecutionSetEffect",
+    "sourceBinding",
+    "measurementSources",
+    ...PR_COST_METRIC_FIELDS,
+    "observationDigest",
+  ];
+  if (!observation || typeof observation !== "object" || Array.isArray(observation)
+    || JSON.stringify(Object.keys(observation)) !== JSON.stringify(expectedKeys)) {
+    throw prCostError("pr-cost-observation-schema-drift", "fields");
+  }
+  if (observation.schemaVersion !== PR_COST_SCHEMA_VERSION
+    || observation.kind !== PR_COST_KIND
+    || observation.phase !== PR_COST_PHASE
+    || observation.mode !== PR_COST_MODE
+    || observation.requiredExecutionSetEffect !== PR_COST_REQUIRED_EXECUTION_SET_EFFECT
+    || !PR_COST_SCHEMA.observationStages.includes(observation.observationStage)) {
+    throw prCostError("pr-cost-observation-schema-drift", "envelope");
+  }
+  if (JSON.stringify(observation.schemaIdentity) !== JSON.stringify(PR_COST_SCHEMA_IDENTITY)) {
+    throw prCostError("pr-cost-observation-schema-identity-drift");
+  }
+  if (expectedObservationStage && observation.observationStage !== expectedObservationStage) {
+    throw prCostError("pr-cost-observation-source-binding-drift", "observationStage");
+  }
+  const sourceBindingKeys = [
+    "schemaVersion",
+    "kind",
+    "observationStage",
+    ...PR_COST_SCHEMA.sourceBindingFields,
+  ];
+  const sourceBinding = observation.sourceBinding;
+  if (!sourceBinding
+    || JSON.stringify(Object.keys(sourceBinding)) !== JSON.stringify(sourceBindingKeys)
+    || sourceBinding.schemaVersion !== 1
+    || sourceBinding.kind !== "pr-verification-cost-source-binding"
+    || sourceBinding.observationStage !== observation.observationStage
+    || !Array.isArray(sourceBinding.selectorRootSet)
+    || !Array.isArray(sourceBinding.changedFiles)
+    || JSON.stringify(sourceBinding.selectorRootSet) !== JSON.stringify(stableUnique(sourceBinding.selectorRootSet))
+    || JSON.stringify(sourceBinding.changedFiles) !== JSON.stringify(stableUnique(sourceBinding.changedFiles))) {
+    throw prCostError("pr-cost-observation-source-binding-drift", "schema");
+  }
+  if (expectedSourceBinding
+    && JSON.stringify(sourceBinding) !== JSON.stringify(expectedSourceBinding)) {
+    throw prCostError("pr-cost-observation-source-binding-drift", "expected");
+  }
+  if (!observation.measurementSources
+    || JSON.stringify(Object.keys(observation.measurementSources)) !== JSON.stringify(PR_COST_METRIC_FIELDS)) {
+    throw prCostError("pr-cost-observation-schema-drift", "measurementSources");
+  }
+  for (const field of PR_COST_METRIC_FIELDS) {
+    const value = observation[field];
+    const source = observation.measurementSources[field];
+    if (PR_COST_TIMING_FIELDS.has(field)) {
+      if ((value !== null && (!Number.isFinite(value) || value < 0))
+        || !PR_COST_TIMING_SOURCES.has(source)
+        || (value === null && source !== "unknown")
+        || (value !== null && source === "unknown")) {
+        throw prCostError("pr-cost-observation-metric-drift", field);
+      }
+      continue;
+    }
+    if (field === "selectedExecutionMs") {
+      if ((value !== null && (!Number.isFinite(value) || value < 0))
+        || source !== (value === null ? "unknown" : "execution-results")) {
+        throw prCostError("pr-cost-observation-metric-drift", field);
+      }
+      continue;
+    }
+    if (PR_COST_COUNT_FIELDS.has(field)
+      && ((value !== null && (!Number.isInteger(value) || value < 0))
+        || source !== (value === null ? "unknown" : "execution-plan"))) {
+      throw prCostError("pr-cost-observation-metric-drift", field);
+    }
+  }
+  if (typeof observation.observationDigest !== "string"
+    || observation.observationDigest !== prCostObservationDigest(observation)) {
+    throw prCostError("pr-cost-observation-digest-drift");
+  }
+  return observation;
+}
+
+function validatedSelectorPrCost(selectorReport, executionPlan) {
+  const reportObservation = selectorPrCostObservation(selectorReport);
+  const planObservation = executionPlan?.selectorPrCost || null;
+  for (const [carrier, observation] of [
+    [selectorReport, reportObservation],
+    [executionPlan, planObservation],
+  ]) {
+    if (!observation) continue;
+    assertPrCostObservation(observation, {
+      expectedObservationStage: "selector",
+      expectedSourceBinding: buildPrCostSourceBinding({
+        selectorReport: carrier === selectorReport ? selectorReport : null,
+        executionPlan: carrier === executionPlan ? executionPlan : null,
+        observationStage: "selector",
+      }),
+    });
+  }
+  if (reportObservation && planObservation
+    && JSON.stringify(reportObservation) !== JSON.stringify(planObservation)) {
+    throw prCostError("pr-cost-observation-source-binding-drift", "selector-handoff");
+  }
+  const observation = planObservation || reportObservation;
+  if (executionPlan?.selectorPrCostDigest !== undefined
+    && executionPlan.selectorPrCostDigest !== observation?.observationDigest) {
+    throw prCostError("pr-cost-observation-digest-drift", "selector-handoff");
+  }
+  return observation;
+}
+
+export function buildPrCostObservation({
+  selectorReport = null,
+  executionPlan = null,
+  executionResults = null,
+  timingInputs = {},
+  observationStage = executionPlan ? "adaptive" : "selector",
+} = {}) {
+  if (!PR_COST_SCHEMA.observationStages.includes(observationStage)) {
+    throw prCostError("pr-cost-observation-schema-drift", "observationStage");
+  }
+  const selectorObservation = observationStage === "adaptive"
+    ? validatedSelectorPrCost(selectorReport, executionPlan)
+    : null;
+  const selectedLeaves = Array.isArray(executionPlan?.selectedLeaves)
+    ? executionPlan.selectedLeaves.map(leafIdOf).filter(Boolean)
+    : null;
+  const uniqueLeafTests = selectedLeaves === null ? null : new Set(selectedLeaves).size;
+  const selectedExecutionResults = timingInputs.executionObserved === false
+    ? null
+    : Array.isArray(executionResults)
+    ? executionResults.filter((entry) => entry?.processStarted === true)
+    : null;
+  const selectedExecutionMs = selectedExecutionResults === null
+    ? null
+    : selectedExecutionResults.reduce((sum, entry) => sum + nonNegativeDuration(entry.durationMs), 0);
+  const timing = Object.fromEntries([...PR_COST_TIMING_FIELDS]
+    .map((field) => [field, normalizeTimingObservation(timingInputs[field], field)]));
+  const metrics = {
+    checkoutMs: timing.checkoutMs.value,
+    setupMs: timing.setupMs.value,
+    fixedGuardrailMs: timing.fixedGuardrailMs.value,
+    selectorMs: timing.selectorMs.value,
+    selectedExecutionMs,
+    selectedCommands: Array.isArray(executionPlan?.commandsToRun)
+      ? executionPlan.commandsToRun.length
+      : null,
+    uniqueLeafTests,
+    duplicateLeafExecutions: selectedLeaves === null ? null : selectedLeaves.length - uniqueLeafTests,
+    deferredMainThreadCommands: Array.isArray(executionPlan?.blockedMainThreadCommands)
+      ? executionPlan.blockedMainThreadCommands.length
+      : null,
+  };
+  const measurementSources = {
+    checkoutMs: timing.checkoutMs.source,
+    setupMs: timing.setupMs.source,
+    fixedGuardrailMs: timing.fixedGuardrailMs.source,
+    selectorMs: timing.selectorMs.source,
+    selectedExecutionMs: selectedExecutionMs === null ? "unknown" : "execution-results",
+    selectedCommands: metrics.selectedCommands === null ? "unknown" : "execution-plan",
+    uniqueLeafTests: uniqueLeafTests === null ? "unknown" : "execution-plan",
+    duplicateLeafExecutions: metrics.duplicateLeafExecutions === null ? "unknown" : "execution-plan",
+    deferredMainThreadCommands: metrics.deferredMainThreadCommands === null ? "unknown" : "execution-plan",
+  };
+  const observation = {
+    schemaVersion: PR_COST_SCHEMA_VERSION,
+    kind: PR_COST_KIND,
+    schemaIdentity: structuredClone(PR_COST_SCHEMA_IDENTITY),
+    observationStage,
+    phase: PR_COST_PHASE,
+    mode: PR_COST_MODE,
+    requiredExecutionSetEffect: PR_COST_REQUIRED_EXECUTION_SET_EFFECT,
+    sourceBinding: buildPrCostSourceBinding({
+      selectorReport,
+      executionPlan,
+      observationStage,
+      selectorObservationDigest: selectorObservation?.observationDigest || null,
+    }),
+    measurementSources,
+    ...metrics,
+  };
+  observation.observationDigest = prCostObservationDigest(observation);
+  return assertPrCostObservation(observation);
+}
+
+function profileGatePolicyBinding(selectorReport, executionPlan) {
+  const selectorSignals = selectorReport?.gatePolicySignals;
+  const planSignals = executionPlan?.gatePolicySignals;
+  const selectorDigest = selectorReport?.gatePolicySignalsDigest;
+  const planDigest = executionPlan?.gatePolicySignalsDigest;
+  const selectorBindingPresent = selectorSignals !== undefined || selectorDigest !== undefined;
+  const planBindingPresent = planSignals !== undefined || planDigest !== undefined;
+  if (!selectorBindingPresent && !planBindingPresent) return null;
+
+  function validBinding(signals, digest) {
+    const expectedSignalNames = Object.keys(VERIFICATION_GATE_POLICY_AUTHORITY.signals).sort();
+    const observedSignalNames = Object.keys(signals?.signals || {}).sort();
+    return signals?.schemaVersion === 1
+      && signals?.kind === "verification-gate-policy-signals"
+      && signals?.phase === VERIFICATION_GATE_POLICY_AUTHORITY.phase
+      && signals?.mode === VERIFICATION_GATE_POLICY_AUTHORITY.mode
+      && signals?.requiredExecutionSetEffect === VERIFICATION_GATE_POLICY_AUTHORITY.requiredExecutionSetEffect
+      && JSON.stringify(observedSignalNames) === JSON.stringify(expectedSignalNames)
+      && Object.values(signals.signals).every((signal) => (
+        ["true", "false", "unknown"].includes(signal?.state)
+        && Array.isArray(signal?.reasons)
+        && signal.reasons.length > 0
+        && signal.reasons.every((reason) => (
+          ["domain", "sourceRef", "entrypoint", "sharedRisk"].includes(reason?.source?.type)
+          && typeof reason?.source?.value === "string"
+          && reason.source.value.length > 0
+        ))
+      ))
+      && JSON.stringify(signals.authorityIdentity) === JSON.stringify(VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY)
+      && typeof digest === "string"
+      && digest.length > 0
+      && digest === verificationGatePolicySignalsDigest(signals);
+  }
+
+  if ((selectorBindingPresent && !validBinding(selectorSignals, selectorDigest))
+    || (planBindingPresent && !validBinding(planSignals, planDigest))
+    || (selectorBindingPresent && planBindingPresent
+      && (JSON.stringify(selectorSignals) !== JSON.stringify(planSignals) || selectorDigest !== planDigest))) {
+    throw new Error("verification-profile-gate-policy-drift");
+  }
+  const signals = planSignals || selectorSignals;
+  const signalsDigest = planDigest || selectorDigest;
+  return {
+    signalsDigest,
+    catalogDigest: executionPlan?.catalogDigest || selectorReport?.catalogDigest || null,
+    catalogSourceIdentity: structuredClone(
+      executionPlan?.catalogSourceIdentity || selectorReport?.catalogSourceIdentity || null,
+    ),
+    signals: structuredClone(signals),
+  };
 }
 
 export function normalizeVerificationTestFile(value) {
@@ -507,6 +906,7 @@ export function buildVerificationProfile({
   runnerState = "",
   terminalState = "",
   interruptionSignal = null,
+  prCostTiming = {},
 } = {}) {
   const prepared = preparedPlan || prepareVerificationProfilePlan({
     selectorReport,
@@ -705,11 +1105,20 @@ export function buildVerificationProfile({
           : stableUnique(projectionForExecution(entry.executionGroupRef).flatMap(projectionTestFiles)),
       };
     });
+  const gatePolicy = profileGatePolicyBinding(selectorReport, executionPlan);
+  const prCost = buildPrCostObservation({
+    selectorReport,
+    executionPlan,
+    executionResults,
+    timingInputs: prCostTiming,
+  });
 
   return {
     schemaVersion: VERIFICATION_PROFILE_SCHEMA_VERSION,
     kind: VERIFICATION_PROFILE_KIND,
     runnerId: String(runnerId || "unknown"),
+    gatePolicy,
+    prCost,
     lifecycle: {
       state,
       terminal: TERMINAL_PROFILE_STATES.has(state),
