@@ -46087,7 +46087,7 @@
     },
     {
       "path": "app/js/core/renderer/political_background_render_owner.js",
-      "size_bytes": 50209,
+      "size_bytes": 50513,
       "source_kind": "dist"
     },
     {
@@ -47687,7 +47687,7 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 6141045
+        "size_bytes": 6141349
       },
       {
         "file_count": 85,
@@ -61802,11 +61802,11 @@
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 6112333,
+        "initial_graph_bytes": 6112637,
         "initial_graph_file_count": 237,
         "initial_module_count": 223,
         "initial_resource_count": 14,
-        "initial_script_bytes": 4754007,
+        "initial_script_bytes": 4754311,
         "initial_script_count": 225,
         "module_count": 342,
         "registry_resolved_dynamic_expression_count": 2,
@@ -62215,7 +62215,7 @@
           },
           {
             "path": "app/js/core/renderer/political_background_render_owner.js",
-            "size_bytes": 50209
+            "size_bytes": 50513
           },
           {
             "path": "app/js/core/renderer/political_collection_owner.js",
@@ -62559,7 +62559,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 3715910
+        "size_bytes": 3716214
       },
       {
         "basis": "startup-resource-graph",
@@ -64163,7 +64163,7 @@
     {
       "file_count": 9452,
       "path": "app",
-      "size_bytes": 965901891
+      "size_bytes": 965902195
     },
     {
       "file_count": 57,
@@ -64196,5 +64196,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972755412
+  "total_bytes": 972755716
 }
