@@ -69,6 +69,7 @@ export function buildVerificationMetadataRoutes(metadata = VERIFICATION_DOMAINS)
       };
       if (Array.isArray(entry.platforms)) route.platforms = [...entry.platforms];
       if (entry.guidance) route.guidance = entry.guidance;
+      if (entry.entrypointPolicy) route.entrypointPolicy = structuredClone(entry.entrypointPolicy);
       return route;
     });
 }

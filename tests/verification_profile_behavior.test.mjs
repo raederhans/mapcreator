@@ -3,12 +3,23 @@ import test from "node:test";
 
 import {
   analyzeVerificationCommand,
+  assertPrCostObservation,
+  buildPrCostObservation,
   buildVerificationProfile,
   formatVerificationProfile,
   normalizeVerificationTestFile,
   prepareVerificationProfilePlan,
   publishVerificationProfileSafely,
+  PR_COST_KIND,
+  PR_COST_SCHEMA,
+  PR_COST_SCHEMA_IDENTITY,
+  PR_COST_SCHEMA_VERSION,
+  prCostObservationDigest,
 } from "../tools/verification/verification_profile.mjs";
+import {
+  VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY,
+  verificationGatePolicySignalsDigest,
+} from "../tools/verification/verification_catalog_projection.mjs";
 
 const PACKAGE_SCRIPTS = Object.freeze({
   python: "node tools/run_python.mjs",
@@ -55,6 +66,211 @@ test("same profile input has stable bytes and leaves the execution plan unchange
   assert.deepEqual(
     buildVerificationProfile(input).selection.executionSetComparison,
     { status: "equivalent", missingCommands: [], unexpectedCommands: [] },
+  );
+});
+
+test("PR cost schema is stable and counts duplicate selected leaves without changing execution", () => {
+  const executionPlan = {
+    commandsToRun: ["group-a", "group-b"],
+    blockedMainThreadCommands: ["demo", "strict"],
+    selectedLeaves: [
+      { leafId: "node-test:tests/a.test.mjs" },
+      { leafId: "node-test:tests/a.test.mjs" },
+      { leafId: "python-test:tests.test_b" },
+    ],
+  };
+  const before = structuredClone(executionPlan);
+  const cost = buildPrCostObservation({
+    executionPlan,
+    executionResults: [
+      { commandRef: "group-a", durationMs: 20, processStarted: true },
+      { commandRef: "group-b", durationMs: 30, processStarted: true },
+      { commandRef: "pre-spawn", durationMs: 99, processStarted: false },
+    ],
+    timingInputs: {
+      checkoutMs: { value: 10, source: "workflow-observer" },
+      setupMs: { value: 11, source: "local-monotonic-clock" },
+      fixedGuardrailMs: { value: 12, source: "workflow-observer" },
+      selectorMs: { value: 13, source: "local-monotonic-clock" },
+    },
+  });
+  assert.deepEqual(Object.keys(cost), [
+    "schemaVersion",
+    "kind",
+    "schemaIdentity",
+    "observationStage",
+    "phase",
+    "mode",
+    "requiredExecutionSetEffect",
+    "sourceBinding",
+    "measurementSources",
+    "checkoutMs",
+    "setupMs",
+    "fixedGuardrailMs",
+    "selectorMs",
+    "selectedExecutionMs",
+    "selectedCommands",
+    "uniqueLeafTests",
+    "duplicateLeafExecutions",
+    "deferredMainThreadCommands",
+    "observationDigest",
+  ]);
+  assert.equal(cost.schemaVersion, PR_COST_SCHEMA_VERSION);
+  assert.equal(cost.kind, PR_COST_KIND);
+  assert.deepEqual(cost.schemaIdentity, PR_COST_SCHEMA_IDENTITY);
+  assert.match(PR_COST_SCHEMA_IDENTITY.digest, /^[0-9a-f]{64}$/u);
+  assert.deepEqual(PR_COST_SCHEMA.metricFields, [
+    "checkoutMs",
+    "setupMs",
+    "fixedGuardrailMs",
+    "selectorMs",
+    "selectedExecutionMs",
+    "selectedCommands",
+    "uniqueLeafTests",
+    "duplicateLeafExecutions",
+    "deferredMainThreadCommands",
+  ]);
+  assert.deepEqual({
+    checkoutMs: cost.checkoutMs,
+    setupMs: cost.setupMs,
+    fixedGuardrailMs: cost.fixedGuardrailMs,
+    selectorMs: cost.selectorMs,
+    selectedExecutionMs: cost.selectedExecutionMs,
+    selectedCommands: cost.selectedCommands,
+    uniqueLeafTests: cost.uniqueLeafTests,
+    duplicateLeafExecutions: cost.duplicateLeafExecutions,
+    deferredMainThreadCommands: cost.deferredMainThreadCommands,
+  }, {
+    checkoutMs: 10,
+    setupMs: 11,
+    fixedGuardrailMs: 12,
+    selectorMs: 13,
+    selectedExecutionMs: 50,
+    selectedCommands: 2,
+    uniqueLeafTests: 2,
+    duplicateLeafExecutions: 1,
+    deferredMainThreadCommands: 2,
+  });
+  assert.equal(cost.observationDigest, prCostObservationDigest(cost));
+  assert.deepEqual(assertPrCostObservation(cost), cost);
+  assert.deepEqual(executionPlan, before);
+
+  const selectorStage = buildPrCostObservation({
+    selectorReport: { prCost: { checkoutMs: 7, selectorMs: 8 } },
+  });
+  assert.equal(selectorStage.checkoutMs, null);
+  assert.equal(selectorStage.selectorMs, null);
+  assert.equal(selectorStage.measurementSources.checkoutMs, "unknown");
+  assert.equal(selectorStage.measurementSources.selectorMs, "unknown");
+  assert.equal(selectorStage.selectedCommands, null);
+  assert.equal(selectorStage.uniqueLeafTests, null);
+  assert.equal(selectorStage.duplicateLeafExecutions, null);
+
+  assert.throws(
+    () => buildPrCostObservation({ timingInputs: { selectorMs: 8 } }),
+    /pr-cost-observation-untrusted-timing-source:selectorMs/,
+  );
+  for (const [label, mutate, pattern] of [
+    ["numeric", (forged) => { forged.selectorMs += 1; }, /pr-cost-observation-digest-drift/],
+    ["identity", (forged) => { forged.schemaIdentity.digest = "0".repeat(64); }, /pr-cost-observation-schema-identity-drift/],
+    ["digest", (forged) => { forged.observationDigest = "0".repeat(64); }, /pr-cost-observation-digest-drift/],
+    ["source", (forged) => { forged.sourceBinding.catalogDigest = "forged"; }, /pr-cost-observation-source-binding-drift/],
+  ]) {
+    const forged = structuredClone(cost);
+    mutate(forged);
+    assert.throws(
+      () => assertPrCostObservation(forged, { expectedSourceBinding: cost.sourceBinding }),
+      pattern,
+      label,
+    );
+  }
+});
+
+test("profile binds gate policy identity and rejects selector-plan drift", () => {
+  const gatePolicySignals = {
+    schemaVersion: 1,
+    kind: "verification-gate-policy-signals",
+    phase: "stabilization-cost-collapse-v2-pr-phase-1a",
+    mode: "observation-only",
+    requiredExecutionSetEffect: "unchanged",
+    authorityIdentity: VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY,
+    signals: Object.fromEntries([
+      "requiresStrictTno",
+      "requiresDemo",
+      "requiresTestInfra",
+      "requiresDeployPreflight",
+    ].map((signalName) => [signalName, {
+      state: signalName === "requiresDemo" ? "true" : "false",
+      reasons: [{
+        code: signalName === "requiresDemo" ? "canonical-domain-match" : "no-canonical-policy-match",
+        source: {
+          type: signalName === "requiresDemo" ? "domain" : "sharedRisk",
+          value: signalName === "requiresDemo" ? "public-sample" : "canonical-selection-closure",
+        },
+      }],
+    }])),
+  };
+  const gatePolicySignalsDigest = verificationGatePolicySignalsDigest(gatePolicySignals);
+  const selector = {
+    adaptiveMode: "dry-run",
+    recommendedCommands: [],
+    changedFiles: ["tools/verification/verification_profile.mjs"],
+    selectorRootSet: [],
+    catalogDigest: "catalog-digest",
+    catalogSourceIdentity: { digest: "source-digest" },
+    gatePolicySignals,
+    gatePolicySignalsDigest,
+  };
+  selector.prCost = buildPrCostObservation({
+    selectorReport: selector,
+    observationStage: "selector",
+    timingInputs: {
+      selectorMs: { value: 5, source: "local-monotonic-clock" },
+    },
+  });
+  const executionPlan = {
+    commandsToRun: [],
+    blockedMainThreadCommands: [],
+    selectedLeaves: [],
+    gatePolicySignals: structuredClone(gatePolicySignals),
+    gatePolicySignalsDigest,
+    catalogDigest: "catalog-digest",
+    catalogSourceIdentity: { digest: "source-digest" },
+    changedFiles: [...selector.changedFiles],
+    selectorRootSet: [],
+    selectorPrCost: structuredClone(selector.prCost),
+    selectorPrCostDigest: selector.prCost.observationDigest,
+  };
+  const profile = buildVerificationProfile({
+    runnerId: "gate-profile",
+    selectorReport: selector,
+    executionPlan,
+    terminalState: "planned",
+  });
+  assert.equal(profile.gatePolicy.signalsDigest, gatePolicySignalsDigest);
+  assert.deepEqual(profile.gatePolicy.signals, gatePolicySignals);
+  assert.equal(profile.prCost.requiredExecutionSetEffect, "unchanged");
+  assert.equal(profile.prCost.sourceBinding.selectorObservationDigest, selector.prCost.observationDigest);
+  const driftedPlan = structuredClone(executionPlan);
+  driftedPlan.gatePolicySignals.signals.requiresDemo.state = "false";
+  assert.throws(
+    () => buildVerificationProfile({ selectorReport: selector, executionPlan: driftedPlan }),
+    /verification-profile-gate-policy-drift/,
+  );
+  const missingSignalPlan = structuredClone(executionPlan);
+  delete missingSignalPlan.gatePolicySignals.signals.requiresStrictTno;
+  missingSignalPlan.gatePolicySignalsDigest = verificationGatePolicySignalsDigest(
+    missingSignalPlan.gatePolicySignals,
+  );
+  assert.throws(
+    () => buildVerificationProfile({ executionPlan: missingSignalPlan }),
+    /verification-profile-gate-policy-drift/,
+  );
+  const forgedCostPlan = structuredClone(executionPlan);
+  forgedCostPlan.selectorPrCost.selectorMs += 1;
+  assert.throws(
+    () => buildVerificationProfile({ selectorReport: selector, executionPlan: forgedCostPlan }),
+    /pr-cost-observation-digest-drift/,
   );
 });
 

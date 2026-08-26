@@ -19,8 +19,10 @@ import {
   reconcileVerificationRouteAuthority,
 } from "../test_route_registry.mjs";
 import {
+  projectVerificationGatePolicySignals,
   VERIFICATION_METADATA_SOURCE,
   VERIFICATION_METADATA_SOURCE_IDENTITY,
+  verificationGatePolicySignalsDigest,
   verificationMetadataSourceSummary,
 } from "./verification_catalog_projection.mjs";
 import { LEGACY_VERIFICATION_COMMAND_SUPERSESSION } from "./command_supersession.mjs";
@@ -943,12 +945,20 @@ export function verificationSelectionRootSet(report) {
 
 export function bindSelectionReportToPreparedCatalog(report, preparedCatalog) {
   assertPreparedVerificationCatalog(preparedCatalog);
+  const gatePolicySignals = projectVerificationGatePolicySignals({
+    changedFiles: report?.changedFiles,
+    matchedByFile: report?.matchedByFile,
+    unmatchedChangedFiles: report?.unmatchedChangedFiles,
+    routeAuthority: preparedCatalog.authority,
+  });
   return {
     ...report,
     catalogDigest: preparedCatalog.catalogDigest,
     catalogSourceIdentity: structuredClone(preparedCatalog.sourceIdentity),
     selectorRootSet: verificationSelectionRootSet(report),
     routeAuthority: structuredClone(preparedCatalog.authority),
+    gatePolicySignals,
+    gatePolicySignalsDigest: verificationGatePolicySignalsDigest(gatePolicySignals),
   };
 }
 

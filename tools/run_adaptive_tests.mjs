@@ -22,10 +22,14 @@ import {
   prepareVerificationCatalog,
 } from "./verification/script_portfolio.mjs";
 import {
+  assertPrCostObservation,
+  buildPrCostObservation,
+  buildPrCostSourceBinding,
   buildVerificationProfile,
   DEFAULT_ADAPTIVE_VERIFICATION_PROFILE_OUT,
   prepareVerificationProfilePlan,
   publishVerificationProfileSafely,
+  selectorPrCostObservation,
 } from "./verification/verification_profile.mjs";
 
 const REPO_ROOT = process.cwd();
@@ -677,6 +681,7 @@ function validateSelectionCatalogBinding(report, preparedCatalog, {
   expectedSelectorRootSet = selectionRootSet(report),
 } = {}) {
   const gaps = [];
+  const rebound = bindSelectionReportToPreparedCatalog(report, preparedCatalog);
   const compare = (field, actual, expected) => {
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
       gaps.push(planGap("adaptive-selection-catalog-drift", "selection-artifact", field));
@@ -686,6 +691,31 @@ function validateSelectionCatalogBinding(report, preparedCatalog, {
   compare("catalogSourceIdentity", report?.catalogSourceIdentity, preparedCatalog.sourceIdentity);
   compare("selectorRootSet", report?.selectorRootSet, expectedSelectorRootSet);
   compare("routeAuthority", report?.routeAuthority, preparedCatalog.authority);
+  compare("gatePolicySignals", report?.gatePolicySignals, rebound.gatePolicySignals);
+  compare("gatePolicySignalsDigest", report?.gatePolicySignalsDigest, rebound.gatePolicySignalsDigest);
+  const selectionCost = selectorPrCostObservation(report);
+  if (!selectionCost) {
+    gaps.push(planGap("adaptive-selection-catalog-drift", "selection-artifact", "prCost.missing"));
+  } else {
+    try {
+      assertPrCostObservation(selectionCost, {
+        expectedObservationStage: "selector",
+        expectedSourceBinding: buildPrCostSourceBinding({
+          selectorReport: report,
+          observationStage: "selector",
+        }),
+      });
+    } catch (error) {
+      const field = error.code === "pr-cost-observation-schema-identity-drift"
+        ? "prCost.schemaIdentity"
+        : error.code === "pr-cost-observation-source-binding-drift"
+          ? "prCost.sourceBinding"
+          : error.code === "pr-cost-observation-digest-drift"
+            ? "prCost.observationDigest"
+            : "prCost.schema";
+      gaps.push(planGap("adaptive-selection-catalog-drift", "selection-artifact", field));
+    }
+  }
   return gaps;
 }
 
@@ -1952,6 +1982,7 @@ export function buildExecutionPlan(report, {
     `${gap.code}\u0000${gap.commandRef}\u0000${gap.detail}`,
     gap,
   ])).values()];
+  const selectionCost = selectorPrCostObservation(report);
   const verificationProfileProjection = buildCanonicalProfileProjection(executionGroups);
   return {
     schemaVersion: EXECUTION_PLAN_SCHEMA_VERSION,
@@ -1962,6 +1993,12 @@ export function buildExecutionPlan(report, {
     ciOnlyCommands,
     catalogDigest: currentPreparedCatalog?.catalogDigest || null,
     catalogSourceIdentity: currentPreparedCatalog?.sourceIdentity || null,
+    gatePolicySignals: report?.gatePolicySignals ? structuredClone(report.gatePolicySignals) : null,
+    gatePolicySignalsDigest: report?.gatePolicySignalsDigest || null,
+    selectorRootSet: uniqueSorted(report?.selectorRootSet || []),
+    changedFiles: uniqueSorted(report?.changedFiles || []),
+    selectorPrCost: selectionCost ? structuredClone(selectionCost) : null,
+    selectorPrCostDigest: selectionCost?.observationDigest || null,
     commandsToRun: selectedProjection.plan?.selectedCommandRefs || [],
     supersededCommands: superseded(selectedProjection),
     blockedMainThreadCommands: includeMainThread ? [] : mainThreadCommands,
@@ -2137,6 +2174,13 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
     "## Advisory notes",
     ...((report.advisoryNotes || []).length ? report.advisoryNotes.map((note) => `- ${note}`) : ["- none"]),
   );
+  lines.push("", "## Gate policy signals");
+  for (const [signalName, signal] of Object.entries(report.gatePolicySignals?.signals || {})) {
+    lines.push(`- ${signalName}: ${signal.state}`);
+    for (const reason of signal.reasons || []) {
+      lines.push(`  - ${reason.code}: ${reason.source?.type || "unknown"}=${reason.source?.value || "unknown"}`);
+    }
+  }
   if (executionPlan) {
     lines.push("", "## Execution plan");
     lines.push(...(executionPlan.commandsToRun.length ? executionPlan.commandsToRun.map((commandRef) => `- run: ${commandRef}`) : ["- run: none"]));
@@ -2179,6 +2223,25 @@ function renderMarkdown(report, executionResults, executionPlan = null) {
     lines.push("", "## Execution results");
     lines.push(...executionResults.map((entry) => `- ${entry.commandRef}: exit=${entry.exitCode}`));
   }
+  if (report.prCost) {
+    lines.push("", "## PR cost observation");
+    lines.push(`- schemaIdentity: ${report.prCost.schemaIdentity?.digest || "missing"}`);
+    lines.push(`- observationDigest: ${report.prCost.observationDigest || "missing"}`);
+    lines.push(`- observationStage: ${report.prCost.observationStage || "missing"}`);
+    for (const field of [
+      "checkoutMs",
+      "setupMs",
+      "fixedGuardrailMs",
+      "selectorMs",
+      "selectedExecutionMs",
+      "selectedCommands",
+      "uniqueLeafTests",
+      "duplicateLeafExecutions",
+      "deferredMainThreadCommands",
+    ]) {
+      lines.push(`- ${field}: ${report.prCost[field] ?? "unobserved"}`);
+    }
+  }
   return `${lines.join("\n")}\n`;
 }
 
@@ -2189,6 +2252,7 @@ export function writeAdaptiveOutputs(report, args, executionResults = null, exec
   profileBuilder = buildVerificationProfile,
   profileWriter = atomicWriteJsonSync,
   packageScripts = null,
+  prCostTiming = {},
 } = {}) {
   let currentPreparedPlan = preparedProfilePlan;
   let currentPreparationError = profilePreparationError;
@@ -2223,6 +2287,10 @@ export function writeAdaptiveOutputs(report, args, executionResults = null, exec
         executionResults: executionResults || [],
         preparedPlan: currentPreparedPlan,
         terminalState,
+        prCostTiming: {
+          ...prCostTiming,
+          executionObserved: executionResults !== null,
+        },
       });
     },
     writeProfile: profileWriter,
@@ -2248,6 +2316,16 @@ export function writeAdaptiveOutputs(report, args, executionResults = null, exec
             : executionResults.some((entry) => entry.status !== "passed")
               ? "failed"
               : "passed");
+  const selectionCost = selectorPrCostObservation(report);
+  const prCost = buildPrCostObservation({
+    selectorReport: report,
+    executionPlan,
+    executionResults,
+    timingInputs: prCostTiming,
+    observationStage: "adaptive",
+  });
+  report.selectorPrCost = selectionCost ? structuredClone(selectionCost) : null;
+  report.prCost = prCost;
   atomicWriteJsonSync(args.jsonOut, {
     ...report,
     executionStatus,
@@ -2468,10 +2546,13 @@ function main() {
   let packageScripts = null;
   let preparedCatalog = null;
   let verificationCatalogFixture = null;
+  let setupMs = null;
+  let selectorMs = null;
   let selectionArtifactValidation = args.selectionJson
     ? { status: "not-reached", path: path.resolve(args.selectionJson).replaceAll("\\", "/") }
     : { status: "not-requested", path: null };
   try {
+    const setupStartedAt = performance.now();
     let selectorRoutes;
     let bindSelectionReport;
     if (args.verificationCatalogFixture) {
@@ -2510,13 +2591,29 @@ function main() {
       preparedCatalog = catalogBinding.preparedCatalog;
       bindSelectionReport = catalogBinding.bindSelectionReport;
     }
+    setupMs = performance.now() - setupStartedAt;
+    const selectorStartedAt = performance.now();
     const recommendation = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
       entrypoint: args.entrypoint,
       routeAuthority: preparedCatalog.authority,
     });
-    const currentSelection = bindSelectionReport(
+    const boundCurrentSelection = bindSelectionReport(
       constrainAdaptiveEntrypointSelection(recommendation, args.entrypoint, { preparedCatalog }),
     );
+    selectorMs = performance.now() - selectorStartedAt;
+    const currentSelection = {
+      ...boundCurrentSelection,
+      prCost: buildPrCostObservation({
+        selectorReport: boundCurrentSelection,
+        observationStage: "selector",
+        timingInputs: {
+          selectorMs: {
+            value: selectorMs,
+            source: "local-monotonic-clock",
+          },
+        },
+      }),
+    };
     if (args.selectionJson) {
       selectedReport = readSelectionArtifact(args.selectionJson, changedFiles, {
         preparedCatalog,
@@ -2600,6 +2697,16 @@ function main() {
     preparedProfilePlan,
     profilePreparationError,
     packageScripts,
+    prCostTiming: {
+      checkoutMs: { value: null, source: "unknown" },
+      setupMs: setupMs === null
+        ? { value: null, source: "unknown" }
+        : { value: setupMs, source: "local-monotonic-clock" },
+      fixedGuardrailMs: { value: null, source: "unknown" },
+      selectorMs: selectorMs === null
+        ? { value: null, source: "unknown" }
+        : { value: selectorMs, source: "local-monotonic-clock" },
+    },
   };
   if (args.dryRun) {
     writeAdaptiveOutputs(report, args, null, executionPlan, {

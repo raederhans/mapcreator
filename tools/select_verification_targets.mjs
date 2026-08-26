@@ -15,6 +15,7 @@ import { VERIFICATION_DOMAINS } from "./verification/verification_domains.mjs";
 import {
   prepareRepositoryVerificationCatalogBinding,
 } from "./verification/script_portfolio.mjs";
+import { buildPrCostObservation } from "./verification/verification_profile.mjs";
 
 const REPO_ROOT = process.cwd();
 const IMPORT_GRAPH_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-import-graph.json");
@@ -715,6 +716,32 @@ function renderMarkdown(report) {
   lines.push(...(report.childAgentStaticTasks.length ? report.childAgentStaticTasks.map((route) => `- ${route.commandRef}`) : ["- none"]));
   lines.push("", "## Skipped heavy tests");
   lines.push(...(report.skippedHeavyTests.length ? report.skippedHeavyTests.slice(0, 25).map((route) => `- ${route.commandRef}: ${route.reason}`) : ["- none"]));
+  lines.push("", "## Gate policy signals");
+  for (const [signalName, signal] of Object.entries(report.gatePolicySignals?.signals || {})) {
+    lines.push(`- ${signalName}: ${signal.state}`);
+    for (const reason of signal.reasons || []) {
+      lines.push(`  - ${reason.code}: ${reason.source?.type || "unknown"}=${reason.source?.value || "unknown"}`);
+    }
+  }
+  if (report.prCost) {
+    lines.push("", "## PR cost observation");
+    lines.push(`- schemaIdentity: ${report.prCost.schemaIdentity?.digest || "missing"}`);
+    lines.push(`- observationDigest: ${report.prCost.observationDigest || "missing"}`);
+    lines.push(`- observationStage: ${report.prCost.observationStage || "missing"}`);
+    for (const field of [
+      "checkoutMs",
+      "setupMs",
+      "fixedGuardrailMs",
+      "selectorMs",
+      "selectedExecutionMs",
+      "selectedCommands",
+      "uniqueLeafTests",
+      "duplicateLeafExecutions",
+      "deferredMainThreadCommands",
+    ]) {
+      lines.push(`- ${field}: ${report.prCost[field] ?? "unobserved"}`);
+    }
+  }
   return `${lines.join("\n")}\n`;
 }
 
@@ -740,6 +767,7 @@ export function buildRepositoryRecommendation(changedFiles, {
   repoRoot = REPO_ROOT,
   platform = process.platform,
 } = {}) {
+  const selectorStartedAt = performance.now();
   const binding = prepareRepositoryVerificationCatalogBinding({
     packageScripts,
     verificationRecords,
@@ -747,10 +775,23 @@ export function buildRepositoryRecommendation(changedFiles, {
     repoRoot,
     platform,
   });
-  return binding.bindSelectionReport(buildRecommendation(changedFiles, selectorRoutes, {
+  const report = binding.bindSelectionReport(buildRecommendation(changedFiles, selectorRoutes, {
     routeAuthority: binding.preparedCatalog.authority,
     platform,
   }));
+  return {
+    ...report,
+    prCost: buildPrCostObservation({
+      selectorReport: report,
+      observationStage: "selector",
+      timingInputs: {
+        selectorMs: {
+          value: performance.now() - selectorStartedAt,
+          source: "local-monotonic-clock",
+        },
+      },
+    }),
+  };
 }
 
 function listRoutes() {
