@@ -125,17 +125,19 @@ test("canonical gate policy projects true false and unknown with allowed reason 
   ];
   const allowedSourceTypes = new Set(["domain", "sourceRef", "entrypoint", "sharedRisk"]);
   for (const [changedFile, expectedTrueSignal] of cases) {
-    const report = buildRepositoryRecommendation([changedFile]);
-    assert.equal(report.gatePolicySignals.signals[expectedTrueSignal].state, "true", changedFile);
-    assert.equal(
-      report.gatePolicySignalsDigest,
-      verificationGatePolicySignalsDigest(report.gatePolicySignals),
-    );
-    assert.deepEqual(report.gatePolicySignals.authorityIdentity, VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY);
-    for (const signal of Object.values(report.gatePolicySignals.signals)) {
-      assert.ok(["true", "false", "unknown"].includes(signal.state));
-      assert.ok(signal.reasons.length > 0);
-      assert.ok(signal.reasons.every((reason) => allowedSourceTypes.has(reason.source.type)));
+    for (const platform of ["win32", "linux"]) {
+      const report = buildRepositoryRecommendation([changedFile], { platform });
+      assert.equal(report.gatePolicySignals.signals[expectedTrueSignal].state, "true", `${platform}:${changedFile}`);
+      assert.equal(
+        report.gatePolicySignalsDigest,
+        verificationGatePolicySignalsDigest(report.gatePolicySignals),
+      );
+      assert.deepEqual(report.gatePolicySignals.authorityIdentity, VERIFICATION_GATE_POLICY_AUTHORITY_IDENTITY);
+      for (const signal of Object.values(report.gatePolicySignals.signals)) {
+        assert.ok(["true", "false", "unknown"].includes(signal.state));
+        assert.ok(signal.reasons.length > 0);
+        assert.ok(signal.reasons.every((reason) => allowedSourceTypes.has(reason.source.type)));
+      }
     }
   }
 

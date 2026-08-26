@@ -157,6 +157,18 @@ function gatePolicyCommandRefsForMatchedFile(entry) {
     .filter(Boolean))].sort(compareText);
 }
 
+function gatePolicyRouteIdsForMatchedFile(entry) {
+  const commands = Array.isArray(entry?.rawCanonicalCommands)
+    ? entry.rawCanonicalCommands
+    : entry?.recommendedCommands;
+  return [...new Set((commands || []).flatMap((command) => {
+    const routeIds = Array.isArray(command?.safetyContributorRouteIds)
+      ? command.safetyContributorRouteIds
+      : command?.routeIds;
+    return (routeIds || []).map((routeId) => String(routeId || "").trim()).filter(Boolean);
+  }))].sort(compareText);
+}
+
 function gatePolicySourceReasons(signalName, authorityEntries, authority) {
   const matchAny = authority.signals[signalName].matchAny;
   const reasons = [];
@@ -226,14 +238,18 @@ export function projectVerificationGatePolicySignals({
       continue;
     }
     const commandRefs = gatePolicyCommandRefsForMatchedFile(matched);
+    const routeIds = gatePolicyRouteIdsForMatchedFile(matched);
     if ((matched.matchedRouteIds || []).length > 0 && commandRefs.length === 0) {
       authorityGaps.push(`missing-command-closure:${changedFile}`);
+    }
+    if (commandRefs.length > 0 && routeIds.length === 0) {
+      authorityGaps.push(`missing-route-closure:${changedFile}`);
     }
     for (const commandRef of commandRefs) {
       const entry = authorityByCommand.get(commandRef);
       if (!entry || entry.metadataComplete !== true) authorityGaps.push(`missing-command-authority:${commandRef}`);
     }
-    for (const routeId of matched.matchedRouteIds || []) {
+    for (const routeId of routeIds) {
       const bound = contributorByRouteId.get(routeId);
       if (!bound || bound.entry.metadataComplete !== true || !commandRefs.includes(bound.entry.commandRef)) {
         authorityGaps.push(`missing-route-authority:${routeId}`);
