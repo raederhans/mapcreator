@@ -1024,8 +1024,14 @@ export function buildE2eRoutes() {
   }));
 }
 
-export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
+export function buildNodeRoutes(
+  packageJson = readJson(PACKAGE_JSON_PATH),
+  verificationMetadata = LEGACY_VERIFICATION_DOMAINS,
+) {
   const scripts = packageJson.scripts || {};
+  const platformsByCommand = new Map(verificationMetadata
+    .filter((entry) => Array.isArray(entry.platforms))
+    .map((entry) => [entry.commandRef, entry.platforms]));
   return Object.entries(scripts)
     .filter(([name]) => name.startsWith("test:node:"))
     .map(([name, command]) => {
@@ -1042,7 +1048,7 @@ export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
       ]);
       const domain = resolveNodeRouteDomain(name, sourceRefs);
       const isFullP4StateWriterPolicy = name === "test:node:p4:state-writer-policy";
-      return {
+      const route = {
         id: `node:${name}`,
         commandRef: name,
         sourceRef: sourceRefs.join(","),
@@ -1054,6 +1060,9 @@ export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
         executionOwner: isFullP4StateWriterPolicy ? "main-thread" : "child-safe",
         ciProfile: isFullP4StateWriterPolicy ? "full" : "pr-fast",
       };
+      const platforms = platformsByCommand.get(name);
+      if (platforms) route.platforms = [...platforms];
+      return route;
     });
 }
 

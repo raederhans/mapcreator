@@ -4282,7 +4282,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 87,
@@ -4333,7 +4333,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 88,
@@ -4376,7 +4376,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 85,
@@ -4420,7 +4420,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "full"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 0,
       "verificationOrder": 86,
@@ -11300,7 +11300,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
@@ -11337,7 +11337,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
@@ -11370,7 +11370,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 2,
       "verificationOrder": null,
@@ -11404,7 +11404,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
@@ -11437,7 +11437,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 0,
       "verificationOrder": null,
@@ -12749,7 +12749,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "perf-pr-gate"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 2,
       "verificationOrder": 89,
@@ -12791,7 +12791,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "perf-pr-gate"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 2,
       "verificationOrder": 91,
