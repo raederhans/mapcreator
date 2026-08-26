@@ -7,6 +7,7 @@ const {
   RELEASE_SMOKE_PHASES,
   EXPECTED_PUBLIC_SAMPLE_PROJECT_IDS,
   tagReleaseSmokeError,
+  isRetryableSameOriginModulePropagationFailure,
   shouldRetryReleaseSmokeAttempt,
   getReleaseSmokeRetryDecision,
   validateReleaseSmokeSampleManifest,
@@ -84,6 +85,38 @@ test("release smoke retry budget stops after one retryable failure", () => {
 
   assert.equal(shouldRetryReleaseSmokeAttempt({ error: shellError, attempt: 2 }), false);
   assert.equal(getReleaseSmokeRetryDecision({ error: shellError, attempt: 2 }).shouldRetry, false);
+});
+
+test("release smoke retries one same-origin dynamic module propagation failure", () => {
+  const moduleFailure = tagReleaseSmokeError(
+    new Error("[playwright-app] waitForShellReady timed out", {
+      cause: new Error(
+        "bootError=Failed to fetch dynamically imported module: "
+        + "https://example.test/scenario-forge/app/js/ui/toolbar.js",
+      ),
+    }),
+    RELEASE_SMOKE_PHASES.SHELL_READY,
+  );
+
+  assert.equal(isRetryableSameOriginModulePropagationFailure(moduleFailure, {
+    publicBaseUrl: "https://example.test/scenario-forge/",
+  }), true);
+  assert.equal(getReleaseSmokeRetryDecision({ error: moduleFailure, attempt: 1 }).shouldRetry, true);
+});
+
+test("release smoke keeps cross-origin and non-JavaScript module failures final", () => {
+  for (const moduleUrl of [
+    "https://cdn.example.test/scenario-forge/app/js/ui/toolbar.js",
+    "https://example.test/scenario-forge/app/js/ui/toolbar.css",
+  ]) {
+    const moduleFailure = tagReleaseSmokeError(
+      new Error(`Failed to fetch dynamically imported module: ${moduleUrl}`),
+      RELEASE_SMOKE_PHASES.SHELL_READY,
+    );
+    assert.equal(isRetryableSameOriginModulePropagationFailure(moduleFailure, {
+      publicBaseUrl: "https://example.test/scenario-forge/",
+    }), false);
+  }
 });
 
 test("release smoke preflight treats entrypoint fetch and status failures as retryable", async () => {
