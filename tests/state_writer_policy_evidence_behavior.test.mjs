@@ -181,6 +181,16 @@ function validateEvidence(fixture, overrides = {}) {
   });
 }
 
+test("default checker plan has a cross-platform Node command identity", () => {
+  const plan = buildStateWriterCheckerPlan({ phase: PHASE });
+
+  assert.equal(plan.resolvedCommand.executable, "node");
+  assert.equal(
+    plan.commandRef,
+    `node ${plan.resolvedCommand.args.join(" ")}`,
+  );
+});
+
 test("exact clean-tree checker evidence binds plan, policy, checkpoint, and report artifact", () => {
   const fixture = createFixture();
   const created = writeEvidence(fixture);
