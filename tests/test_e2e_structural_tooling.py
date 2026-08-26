@@ -1649,7 +1649,11 @@ const page = {
         )
         self.assert_command_ok(selector_result)
         selector_payload = json.loads(selector_json_path.read_text(encoding="utf-8"))
-        self.assertEqual(len(selector_payload["routeAuthority"]), 336)
+        route_authority_commands = [entry["commandRef"] for entry in selector_payload["routeAuthority"]]
+        self.assertGreater(len(route_authority_commands), 0)
+        self.assertEqual(route_authority_commands, sorted(set(route_authority_commands)))
+        self.assertIn("python tools/check_min_ci_requirements.py", route_authority_commands)
+        self.assertIn("python tools/check_heavy_test_classification.py", route_authority_commands)
         self.assertTrue(selector_payload["catalogDigest"])
         self.assertTrue(selector_payload["catalogSourceIdentity"]["digest"])
         self.assertEqual(
@@ -1847,16 +1851,44 @@ jobs:
     def test_deploy_minimal_installs_locked_node_dependencies_before_pages_build(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
         setup_node_index = workflow.index("- name: Setup Node")
+        dependency_guard_index = workflow.index("- name: Check deploy-minimal dependency guardrails")
         install_node_index = workflow.index("- name: Install Node dependencies")
         build_pages_index = workflow.index("- name: Build Pages dist")
         setup_node_step = workflow[setup_node_index:install_node_index]
         install_node_step = workflow[install_node_index:build_pages_index]
+        dependency_guard_step = workflow[dependency_guard_index:install_node_index]
 
         self.assertIn("inputs.profile == 'deploy-minimal'", setup_node_step)
+        self.assertIn("inputs.profile == 'deploy-minimal'", dependency_guard_step)
+        self.assertIn("run: python tools/check_min_ci_requirements.py", dependency_guard_step)
         self.assertIn("inputs.profile == 'deploy-minimal'", install_node_step)
         self.assertIn("run: npm ci", install_node_step)
         self.assertLess(setup_node_index, install_node_index)
         self.assertLess(install_node_index, build_pages_index)
+
+        route_result = run_command(
+            "node",
+            "tools/select_verification_targets.mjs",
+            "tools/check_min_ci_requirements.py",
+            "--json",
+        )
+        self.assert_command_ok(route_result)
+        route_payload = json.loads(route_result.stdout)
+        commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+        self.assertIn("python tools/check_min_ci_requirements.py", commands)
+
+    def test_pr_browser_profiles_install_backend_python_dependencies(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        download_index = workflow.index("- name: Download Python wheel cache")
+        install_index = workflow.index("- name: Install Python test dependencies")
+        guard_index = workflow.index("- name: Check deploy-minimal dependency guardrails")
+        download_step = workflow[download_index:install_index]
+        install_step = workflow[install_index:guard_index]
+
+        self.assertNotIn("\n        if:", download_step)
+        self.assertNotIn("\n        if:", install_step)
+        self.assertIn("requirements-dev.lock.txt", download_step)
+        self.assertIn("requirements-dev.lock.txt", install_step)
 
     def test_nightly_and_release_consumers_call_one_canonical_command(self) -> None:
         cases = {
@@ -1916,19 +1948,48 @@ jobs:
                 names = [str(step["name"]) for step in steps]
                 download_index = names.index("Download Python wheel cache")
                 install_index = names.index("Install Python test dependencies")
-                guard_index = names.index("Check minimal CI dependency guardrails")
                 canonical_index = names.index(canonical_step)
                 self.assertLess(download_index, install_index)
-                self.assertLess(install_index, guard_index)
-                self.assertLess(guard_index, canonical_index)
+                self.assertLess(install_index, canonical_index)
                 by_name = {str(step["name"]): step for step in steps}
                 download_run = parse_step_run(by_name["Download Python wheel cache"])
                 install_run = parse_step_run(by_name["Install Python test dependencies"])
-                guard_run = parse_step_run(by_name["Check minimal CI dependency guardrails"])
                 self.assertRegex(download_run, r"(?m)^python -m pip download -r requirements-dev\.lock\.txt ")
                 self.assertRegex(install_run, r"^python -m pip install --no-index --find-links ")
                 self.assertIn("-r requirements-dev.lock.txt", install_run)
-                self.assertEqual(guard_run, "python tools/check_min_ci_requirements.py")
+
+    def test_heavy_classification_runs_in_nightly_and_routes_through_pr_test_infra(self) -> None:
+        command = "python tools/check_heavy_test_classification.py"
+        nightly = (REPO_ROOT / ".github" / "workflows" / "nightly-verification.yml").read_text(encoding="utf-8")
+        release = (REPO_ROOT / ".github" / "workflows" / "release-verification.yml").read_text(encoding="utf-8")
+        shared = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        nightly_steps = parse_job_steps(parse_workflow_job_blocks(nightly)["verify-nightly"])
+        nightly_names = [str(step["name"]) for step in nightly_steps]
+        classification_index = nightly_names.index("Check full-tree heavy test classification")
+        canonical_index = nightly_names.index("Run canonical Nightly verification")
+
+        self.assertLess(classification_index, canonical_index)
+        self.assertEqual(parse_step_run(nightly_steps[classification_index]), command)
+        self.assertNotIn(command, release)
+        self.assertNotIn(command, shared)
+
+        for changed_file in (
+            "tools/check_heavy_test_classification.py",
+            "tests/heavy_dependency_groups.json",
+            "tests/test_landing_map_asset_contracts.py",
+        ):
+            with self.subTest(changed_file=changed_file):
+                route_result = run_command(
+                    "node",
+                    "tools/select_verification_targets.mjs",
+                    changed_file,
+                    "--json",
+                )
+                self.assert_command_ok(route_result)
+                route_payload = json.loads(route_result.stdout)
+                self.assertEqual(route_payload["unmatchedChangedFiles"], [])
+                commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+                self.assertIn(command, commands)
 
     def test_release_dispatch_binds_required_pages_url_authority_at_job_scope(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "release-verification.yml").read_text(encoding="utf-8")

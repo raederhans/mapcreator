@@ -38,12 +38,12 @@ test("authored catalog source covers command authority, policies, and every proj
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
   assert.equal(summary.packageScriptCount, 340);
-  assert.equal(summary.contributorRecords, 428);
+  assert.equal(summary.contributorRecords, 431);
   assert.equal(summary.verificationRecordProjectionCount, 136);
-  assert.equal(summary.routeProjectionCount, 387);
-  assert.equal(summary.commandCount, 343);
+  assert.equal(summary.routeProjectionCount, 390);
+  assert.equal(summary.commandCount, 346);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 428);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 431);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -1138,6 +1138,30 @@ test("adaptive production CLI JSON fixtures use exact core-runner route scope", 
   )), false);
 });
 
+test("heavy dependency classification selects Python unit tests without consuming adjacent fixtures", () => {
+  const pythonTestPaths = [
+    "tests/test_future_heavy_dependency.py",
+    "tests/nested/test_future_heavy_dependency.py",
+    "tests/heavy_dependency_groups.json",
+  ];
+  const report = buildRecommendation(pythonTestPaths);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const entry of report.matchedByFile) {
+    assert.ok(entry.matchedRouteIds.includes("infra:heavy-test-classification"));
+  }
+
+  const adjacentPaths = [
+    "tests/fixtures/adaptive_local_cli_source_mismatch_renamed.json",
+    "tests/fixtures/adaptive_local_cli_budget_gap.json",
+  ];
+  const adjacentReport = buildRecommendation(adjacentPaths);
+  assert.deepEqual(adjacentReport.unmatchedChangedFiles, adjacentPaths.sort());
+  assert.equal(adjacentReport.matchedByFile.some((entry) => (
+    entry.matchedRouteIds.includes("infra:heavy-test-classification")
+  )), false);
+});
+
 test("adaptive and selector direct route commands require exact parameter contracts", () => {
   const route = {
     id: "fixture:exact-direct-command",
@@ -1647,10 +1671,12 @@ test("Windows Job V2 routes child-safe contracts separately from bounded live in
   assert.ok(integrationEntry);
   assert.equal(contractEntry.commandRef, "test:node:windows-job-runtime");
   assert.equal(contractEntry.executionOwner, "child-safe");
+  assert.deepEqual(contractEntry.platforms, ["win32"]);
   assert.equal(contractEntry.verifyCoreDefaultGroup, "infra");
   assert.deepEqual(contractEntry.resourceLocks, []);
   assert.equal(integrationEntry.commandRef, "test:node:windows-job-runtime:integration");
   assert.equal(integrationEntry.executionOwner, "main-thread");
+  assert.deepEqual(integrationEntry.platforms, ["win32"]);
   assert.equal(integrationEntry.optionalMainThread, true);
   assert.deepEqual(integrationEntry.resourceLocks, [".runtime-output"]);
 
@@ -1659,7 +1685,7 @@ test("Windows Job V2 routes child-safe contracts separately from bounded live in
     "tools/process_containment/windows_job_runner_v2.cs",
     "tools/process_containment/windows_job_runner_core.cs",
   ]) {
-    const report = buildRecommendation([sourceRef]);
+    const report = buildRecommendation([sourceRef], undefined, { platform: "win32" });
     assert.deepEqual(report.unmatchedChangedFiles, []);
     const commands = commandsForChangedFile(report, sourceRef);
     assert.ok(commands.some((command) => command.commandRef === contractEntry.commandRef));
@@ -1676,7 +1702,7 @@ test("Windows Job V2 routes child-safe contracts separately from bounded live in
     "tests/windows_job_runner_v2_native_contract.test.mjs",
     "tests/windows_job_runtime_behavior.test.mjs",
     "tests/windows_job_runtime_integration.test.mjs",
-  ]);
+  ], undefined, { platform: "win32" });
   assert.deepEqual(testReport.unmatchedChangedFiles, []);
 });
 
@@ -1691,9 +1717,11 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   assert.ok(liveTelemetryEntry);
   assert.equal(policyEntry.commandRef, "test:node:williams-crossover-governance");
   assert.equal(policyEntry.executionOwner, "child-safe");
+  assert.deepEqual(policyEntry.platforms, ["win32"]);
   assert.equal(policyEntry.verifyCoreDefaultGroup, "infra");
   assert.equal(jobRunnerEntry.commandRef, "test:node:williams-crossover-job-runner");
   assert.equal(jobRunnerEntry.executionOwner, "child-safe");
+  assert.deepEqual(jobRunnerEntry.platforms, ["win32"]);
   assert.equal(jobRunnerEntry.verifyCoreDefaultGroup, "infra");
   assert.ok(policyEntry.sourceRefs.includes("tools/process_containment/windows_job_runner_core.cs"));
   assert.ok(jobRunnerEntry.sourceRefs.includes("tools/process_containment/windows_job_runner_core.cs"));
@@ -1713,6 +1741,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     routeRegistry: true,
   });
   assert.equal(liveEntry.verifyCoreDefaultGroup, undefined);
+  assert.deepEqual(liveEntry.platforms, ["win32"]);
   assert.deepEqual(liveEntry.sourceRefs, [
     "tools/perf/williams_crossover_policy.mjs",
     "tools/perf/run_williams_crossover.mjs",
@@ -1740,12 +1769,13 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     routeRegistry: true,
   });
   assert.equal(liveTelemetryEntry.verifyCoreDefaultGroup, undefined);
+  assert.deepEqual(liveTelemetryEntry.platforms, ["win32"]);
 
   const runtimeReport = buildRecommendation([
     "tools/perf/williams_crossover_policy.mjs",
     "tools/perf/run_williams_crossover.mjs",
     "tools/perf/williams_crossover_windows_runtime.mjs",
-  ]);
+  ], undefined, { platform: "win32" });
   assert.deepEqual(runtimeReport.unmatchedChangedFiles, []);
   assert.ok(runtimeReport.coveredDomains.includes("perf"));
   assert.ok(runtimeReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
@@ -1753,13 +1783,21 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   assert.ok(runtimeReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"));
   assert.ok(runtimeReport.mainThreadSerialVerification.some((command) => command.commandRef === "test:node:williams-crossover-telemetry-live"));
 
-  const sharedCoreReport = buildRecommendation(["tools/process_containment/windows_job_runner_core.cs"]);
+  const sharedCoreReport = buildRecommendation(
+    ["tools/process_containment/windows_job_runner_core.cs"],
+    undefined,
+    { platform: "win32" },
+  );
   assert.deepEqual(sharedCoreReport.unmatchedChangedFiles, []);
   assert.ok(sharedCoreReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
   assert.ok(sharedCoreReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
   assert.ok(sharedCoreReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"));
 
-  const sourceIdentityReport = buildRecommendation(["tools/process_containment/ordered_source_set_identity.mjs"]);
+  const sourceIdentityReport = buildRecommendation(
+    ["tools/process_containment/ordered_source_set_identity.mjs"],
+    undefined,
+    { platform: "win32" },
+  );
   assert.deepEqual(sourceIdentityReport.unmatchedChangedFiles, []);
   assert.ok(sourceIdentityReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
   assert.ok(sourceIdentityReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
@@ -1770,7 +1808,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     "docs/archive/renderer-frame-orchestration-p2-20260710/plan.md",
     "docs/archive/renderer-frame-orchestration-p2-20260710/rerun07-final-repeat-governance.md",
     "docs/active/_worktree_registry.md",
-  ]);
+  ], undefined, { platform: "win32" });
   assert.deepEqual(staticReport.unmatchedChangedFiles, []);
   assert.ok(staticReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
   assert.equal(staticReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), false);
@@ -1778,7 +1816,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   const jobTestReport = buildRecommendation([
     "tests/williams_crossover_windows_job_runner_behavior.test.mjs",
     "tests/williams_crossover_windows_job_runner_integration.test.mjs",
-  ]);
+  ], undefined, { platform: "win32" });
   assert.deepEqual(jobTestReport.unmatchedChangedFiles, []);
   assert.ok(jobTestReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
   assert.equal(jobTestReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), false);
@@ -1789,9 +1827,30 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   assert.equal(defaultCoreCommands.includes("test:node:williams-crossover-telemetry-live"), false);
 
   const identityInputs = ["tools/perf/run_baseline.mjs", "tools/perf/render_sample_role_policy.mjs", "package-lock.json"];
-  const identityInputReport = buildRecommendation(identityInputs);
+  const identityInputReport = buildRecommendation(identityInputs, undefined, { platform: "win32" });
   for (const sourceRef of identityInputs) {
     assert.ok(commandsForChangedFile(identityInputReport, sourceRef).some((command) => command.commandRef === "perf:williams-crossover:run"), sourceRef);
+  }
+
+  const linuxReport = buildRecommendation(
+    ["tools/verification/verification_catalog_source.mjs"],
+    undefined,
+    { platform: "linux" },
+  );
+  assert.equal(linuxReport.selectionPlatform, "linux");
+  for (const commandRef of [
+    "test:node:williams-crossover-governance",
+    "test:node:williams-crossover-job-runner",
+    "test:node:williams-crossover-telemetry-live",
+    "test:node:windows-job-runtime",
+    "test:node:windows-job-runtime:integration",
+    "perf:williams-crossover:run",
+  ]) {
+    assert.equal(
+      linuxReport.recommendedCommands.some((command) => command.commandRef === commandRef),
+      false,
+      commandRef,
+    );
   }
 });
 
@@ -1804,6 +1863,7 @@ test("selector and catalog authority share contributor owner, lock, and CI recon
   assert.deepEqual(telemetry.executionOwners, ["child-safe", "main-thread"]);
   assert.deepEqual(telemetry.resourceLocks, ["perf-dev-server"]);
   assert.deepEqual(telemetry.ciProfiles, ["perf-pr-gate", "pr-fast"]);
+  assert.deepEqual(telemetry.platforms, ["win32"]);
   assert.ok(telemetry.safetyContributorRouteIds.includes("perf:williams-crossover-telemetry-live"));
   assert.ok(telemetry.safetyContributorRouteIds.includes("node:test:node:williams-crossover-telemetry-live"));
 
@@ -1813,7 +1873,11 @@ test("selector and catalog authority share contributor owner, lock, and CI recon
   assert.deepEqual(directPython.resourceLocks, []);
   assert.deepEqual(directPython.ciProfiles, ["pr-fast"]);
 
-  const report = buildRecommendation(["tests/williams_crossover_windows_job_runner_integration.test.mjs"]);
+  const report = buildRecommendation(
+    ["tests/williams_crossover_windows_job_runner_integration.test.mjs"],
+    undefined,
+    { platform: "win32" },
+  );
   assert.deepEqual(report.routeAuthority, authority);
   const selectedTelemetry = report.recommendedCommands
     .find((entry) => entry.commandRef === telemetry.commandRef);

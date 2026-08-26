@@ -207,3 +207,38 @@ An old test or alias may be removed only when all five conditions are true:
 - [ ] Freeze the third task-record-sealed SHA, obtain two fresh explicit `CLEAR` verdicts in the existing review task, and request a new live lifecycle for the cleared SHA.
 
 The repair starts from `a97d4574fc2e964876a9dc17ea792d93ec24ad9d`. Code commits `102dfd4522efa198ce577c029037771c4dd0726b` and `60c3352b026d495e30709694d6e092cc222da119` implement the nested admission alignment and close the subsequent pre-Job ordering, fixed-oracle, and strict `not-started` evidence gaps. The first coordinated review at `841801cd45e7bf5c9869e780bb4e338da346890c` found two P2 evidence gaps; `c61ecb86190374c98be1863e06e8e180182fff04` closes both with direct regressions. Post-P2 verification passed Williams governance 71/71, Job runner 16 pass plus one explicit live skip, role policy 82/82, perf contracts 26/26, and all seven SF-ATS child-safe groups covering nine canonical leaves. The second coordinated review at `494922841e80a3438041d63ccc40ef678a9e36aa` found one P2 output-oracle gap; `6efaf29013feac22f8ffdb6628cd88634fbc7219` closes it across every evaluator rejection plus a block-level quiet-window rejection. Focused 2/2, Williams 72/72, and exact one-file SF-ATS 3/3 groups covering four leaves pass with zero unmatched files, blocked verification entries, route gaps, or CI-only roots. The previous two full Williams lifecycles remain immutable evidence: live1 stopped at block 02 on standard CPU admission, and live2 stopped at block 01 on standard CPU plus top-process admission. A third execution against `a97d4574` is prohibited. Any future live run requires the third task-record-sealed candidate, two fresh explicit `CLEAR` verdicts, clean measurement worktrees, and a newly recorded lifecycle authority.
+
+## Stabilization and Cost Collapse v2 authorization — 2026-08-26
+
+The user authorized a second coordinated execution round after the post-P3 inspection in the `SC项目推进` conversation. The integration baseline is frozen at `origin/main@1439dee6e14b26e628820ee0e9c9322e22dad407`. Work proceeds from isolated worktrees because the desktop checkout retains unrelated WIP.
+
+### Goal and ordered waves
+
+Restore trustworthy main and deployment feedback first, then collapse Nightly and PR fixed cost without reopening broad renderer extraction or proof-cache expansion.
+
+1. **Wave A — green main and dependency-guard separation.** Register the landing asset test in the canonical heavy group; separate deploy-minimal dependency/import invariants from whole-test-tree heavy classification; add missing/registered/stale self-tests; route classification to test-infra PR selection and Nightly, not Pages deployment.
+2. **External gate — protect `main`.** After the required check names are stable and green, enable branch protection with the smallest required aggregator set and a documented emergency bypass. This is a repository-setting mutation owned only by the integration owner.
+3. **Wave B — platform-aware Nightly and one P4 producer.** Split metadata, Linux core, browser, scenario-heavy, P4, and Windows governance into independently rerunnable jobs with `fail-fast: false` and one final aggregator. Windows admission stays on Windows. A full P4 proof has one producer per SHA; consumers validate exact evidence and may not silently fall back to live production.
+4. **Wave C — conditional PR cost.** Derive strict-TNO, demo, test-infra, and deploy-preflight requirements from canonical catalog/domain metadata; run smoke and demo without unnecessary serial dependency; publish comparable setup/fixed/selected cost and duplicate-leaf metrics.
+5. **Wave D — catalog convergence.** Extend one canonical test record to own dependency, platform, cost, entrypoint, resource-lock, and execution-owner facts; generate or mechanically validate the heavy groups, selector routes, Core/Nightly projections, PR profile, and human aliases from that source.
+6. **Wave E — repository footprint phase 1.** Add checkout/blob/file-count profiling and a fail-closed policy against newly introduced unmanaged large assets. Run artifact-only dist shadow deployment before any tracked-dist removal.
+
+Wave A is the only immediate implementation lane. Later waves may be explored in parallel but are integrated serially after overlap and benefit evidence are reviewed.
+
+### Acceptance and stop conditions
+
+- The current Build and Deploy and Nightly classification failure is reproduced by authoritative remote logs and closed by the narrow guard plus its self-tests.
+- Three consecutive `main` commits complete Build and Deploy successfully before the main-stability gate is called complete.
+- Deploy-minimal no longer scans the whole Python test tree; heavy classification remains fail closed for missing, stale, and unknown entries and is exercised before merge.
+- Nightly exposes an actionable first failure within ten minutes, completes by its slowest shard with a target below 30 minutes, and keeps platform-specific execution on the matching runner.
+- Full P4 evidence has exactly one producer per SHA and consumer fallback is a reported failure.
+- PR cost reports normalize leaf identity and report zero duplicate leaf executions; ordinary local and frontend changes do not inherit strict TNO or demo unless canonical metadata requires them.
+- Post-freeze verification-platform optimization still requires exact before/after execution-set evidence and at least 20% improvement in its declared required-lane metric. Regression repair, missing-route closure, and fail-closed contract repair are not misreported as performance improvements.
+- Catalog convergence does not introduce a second maintained truth source or a flag-day deletion. Superseded projections are removed only after mechanical equivalence and negative-case coverage.
+- Footprint work stops before Git history rewrite, tracked-dist removal, or external asset migration unless shadow deployments and reproducible bootstrap evidence are complete.
+
+### Non-goals for this round
+
+- Broad renderer extraction, renderer rewrite, TypeScript/framework migration, or new state-management architecture.
+- New proof-cache layers, cross-revision proof reuse, relaxed timeouts/allowlists, or silent test deferral.
+- Git history rewrite, irreversible asset deletion, force-push, production release, or unreviewed branch-protection policy expansion.

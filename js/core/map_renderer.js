@@ -3309,7 +3309,7 @@ function getVisualEffectsPassOwner() {
     },
     effects: {
       requestTextureRerender,
-      drawDayNightRuntimePass: drawDayNightPass,
+      drawDayNightRuntimePass: (k, options) => getDayNightRuntimeOwner().drawDayNightPass(k, options),
       recordRenderPerfMetric,
     },
     platform: {

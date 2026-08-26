@@ -156,6 +156,10 @@ function isDirectRouteMatch(route, changedFile) {
   });
 }
 
+function isPythonUnitTestFile(changedFile) {
+  return /^tests\/(?:.*\/)?test_[^/]+\.py$/.test(changedFile);
+}
+
 function changedFileMatchesSourceRef(changedFile, sourceRef) {
   if (sourceRef === changedFile) return true;
   const looksLikeFile = /\.[^/]+$/.test(sourceRef);
@@ -202,6 +206,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   }
   if (PERF_STATIC_SUPPORT_FILES.has(changedFile)) {
     return route.domain === "perf";
+  }
+
+  if (route.id === "infra:heavy-test-classification" && isPythonUnitTestFile(changedFile)) {
+    return true;
   }
 
   if (isCheckedInPagesDistFile(changedFile)) {
@@ -563,6 +571,7 @@ function skippedHeavyRoutes(allRoutes, selectedRoutes) {
 function buildRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
   routeAuthority = null,
   matchedRouteProjector = null,
+  platform = process.platform,
 } = {}) {
   validateRouteIndex(allRoutes);
   const reconciledRouteAuthority = routeAuthority || reconcileVerificationRouteAuthority(allRoutes);
@@ -580,9 +589,14 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
     return { changedFile: file, routes: projectedRoutes };
   });
   const matchedRoutes = matchedRoutesByFile.flatMap((entry) => entry.routes);
-  const commandEntries = buildCommandEntries(matchedRoutes, allRoutes, reconciledRouteAuthority);
+  const supportsCurrentPlatform = (entry) => (
+    entry.platforms.includes("all") || entry.platforms.includes(platform)
+  );
+  const commandEntries = buildCommandEntries(matchedRoutes, allRoutes, reconciledRouteAuthority)
+    .filter(supportsCurrentPlatform);
   for (const entry of matchedRoutesByFile) {
-    const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes, reconciledRouteAuthority);
+    const perFileCommandEntries = buildCommandEntries(entry.routes, allRoutes, reconciledRouteAuthority)
+      .filter(supportsCurrentPlatform);
     entry.commandEntries = perFileCommandEntries;
   }
   const childSafeRoutes = commandEntries.filter((entry) => classifyExecutionOwners(entry.executionOwners) === "child-safe");
@@ -595,7 +609,7 @@ function buildRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
 
   return {
     schemaVersion: 1,
-    selectionPlatform: process.platform,
+    selectionPlatform: platform,
     routeAuthority: reconciledRouteAuthority,
     changedFiles: normalizedChangedFiles,
     importGraphLoaded: !!importGraph,
@@ -735,6 +749,7 @@ export function buildRepositoryRecommendation(changedFiles, {
   });
   return binding.bindSelectionReport(buildRecommendation(changedFiles, selectorRoutes, {
     routeAuthority: binding.preparedCatalog.authority,
+    platform,
   }));
 }
 

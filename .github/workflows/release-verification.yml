@@ -57,9 +57,6 @@ jobs:
       - name: Install Python test dependencies
         run: python -m pip install --no-index --find-links "$WHEELHOUSE_DIR" -r requirements-dev.lock.txt
 
-      - name: Check minimal CI dependency guardrails
-        run: python tools/check_min_ci_requirements.py
-
       - name: Install Node dependencies
         run: npm ci
 

@@ -1,6 +1,5 @@
 from pathlib import Path
 import re
-import subprocess
 import unittest
 
 
@@ -8,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 DAY_NIGHT_RUNTIME_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "day_night_runtime_owner.js"
 VISUAL_EFFECTS_PASS_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "visual_effects_pass_owner.js"
+P3_1_BASELINE_RENDERER_LINE_COUNT = 23_153
 
 
 class DayNightRuntimeOwnerBoundaryContractTest(unittest.TestCase):
@@ -33,6 +33,11 @@ class DayNightRuntimeOwnerBoundaryContractTest(unittest.TestCase):
         )
         self.assertIn("export function createDayNightRuntimeOwner({", owner)
         self.assertIn("drawDayNightRuntimePass", visual_owner)
+        self.assertIn(
+            "drawDayNightRuntimePass: (k, options) => getDayNightRuntimeOwner().drawDayNightPass(k, options)",
+            renderer,
+        )
+        self.assertNotIn("drawDayNightRuntimePass: drawDayNightPass", renderer)
 
         moved_symbols = (
             "getUtcDateKey",
@@ -74,16 +79,7 @@ class DayNightRuntimeOwnerBoundaryContractTest(unittest.TestCase):
     def test_renderer_split_line_budget_is_at_or_below_p3_1_ceiling(self):
         renderer_line_count = len(MAP_RENDERER_JS.read_text(encoding="utf-8").split("\n"))
         self.assertLessEqual(renderer_line_count, 22_933)
-
-        base_source = subprocess.run(
-            ["git", "show", "f118a101d30373c507075da32267969b22197338:js/core/map_renderer.js"],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        ).stdout
-        self.assertGreaterEqual(len(base_source.split("\n")) - renderer_line_count, 220)
+        self.assertGreaterEqual(P3_1_BASELINE_RENDERER_LINE_COUNT - renderer_line_count, 220)
 
 
 if __name__ == "__main__":

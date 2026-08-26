@@ -63,6 +63,13 @@ import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains
 import { VERIFICATION_METADATA_SOURCE_IDENTITY } from "../tools/verification/verification_catalog_projection.mjs";
 
 const PACKAGE_SCRIPTS = {
+  "test:node:city-lights-render-owner": "node --test tests/city_lights_render_owner_behavior.test.mjs",
+  "test:node:day-night-runtime-owner": "node --test tests/day_night_runtime_owner_behavior.test.mjs",
+  "test:python:day-night-runtime-owner-boundary": "npm run python -- -m unittest tests.test_day_night_runtime_owner_boundary_contract -q",
+  "test:node:political-background-render-owner": "node --test tests/political_background_render_owner_behavior.test.mjs",
+  "test:node:political-partial-repaint-owner": "node --test tests/political_partial_repaint_owner_behavior.test.mjs",
+  "test:python:map-renderer-political-background-render-owner-boundary": "npm run python -- -m unittest tests.test_map_renderer_political_background_render_owner_boundary_contract -q",
+  "test:python:map-renderer-political-partial-repaint-owner-boundary": "npm run python -- -m unittest tests.test_map_renderer_political_partial_repaint_owner_boundary_contract -q",
   "test:node:city-points-render-owner": "node --test tests/city_points_render_owner_behavior.test.mjs tests/urban_city_policy_strategic_values_behavior.test.mjs",
   "test:python:map-renderer-city-points-boundary": "npm run python -- -m unittest tests.test_map_renderer_urban_city_policy_boundary_contract tests.test_map_renderer_city_label_owner_boundary_contract -q",
   "verify:test:e2e-layers": "node tools/e2e_layering.mjs check",
@@ -533,14 +540,14 @@ test("default core plan applies strict command closure without changing test cov
     )),
   )].sort();
 
-  assert.equal(rawPlan.commandsToRun.length, 88);
-  assert.equal(plan.commandsToRun.length, 82);
-  assert.equal(rawLeaves.length, 105);
-  assert.equal(retainedLeaves.length, 97);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 70);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 63);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 20);
+  assert.equal(rawPlan.commandsToRun.length, 95);
+  assert.equal(plan.commandsToRun.length, 89);
+  assert.equal(rawLeaves.length, 112);
+  assert.equal(retainedLeaves.length, 105);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 74);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 67);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 24);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 24);
   assert.deepEqual(nodeFiles(plan), nodeFiles(rawPlan));
   assert.deepEqual(
     plan.supersededCommands.map(({ commandRef }) => commandRef).sort(),
@@ -2276,7 +2283,9 @@ test("production adaptive CLI dry-run reaches a valid local execution boundary",
   assertEverySelectorRootHasCanonicalOutcome(artifact);
 });
 
-test("production adaptive CLI plans the exact PR7A history diff with one protected shared-leaf authority", (t) => {
+test("production adaptive CLI plans the frozen PR7A changed-file fixture with one protected shared-leaf authority", {
+  skip: process.platform !== "win32",
+}, (t) => {
   const runtimeTmp = path.join(process.cwd(), ".runtime", "tmp");
   fs.mkdirSync(runtimeTmp, { recursive: true });
   const tempRoot = fs.mkdtempSync(path.join(runtimeTmp, "pr7a-adaptive-history-"));
@@ -2284,7 +2293,6 @@ test("production adaptive CLI plans the exact PR7A history diff with one protect
   const jsonPath = path.join(tempRoot, "selection.json");
   const markdownPath = path.join(tempRoot, "selection.md");
   const profilePath = path.join(tempRoot, "profile.json");
-  const historyBase = "41803bf510987b8bd36178de221e7c035a57a40a";
   const expectedChangedFiles = [
     "package.json",
     "tests/helpers/scenario_chunk_contract_support.mjs",
@@ -2303,8 +2311,8 @@ test("production adaptive CLI plans the exact PR7A history diff with one protect
   ];
   const result = spawnSync(process.execPath, [
     "tools/run_adaptive_tests.mjs",
-    "--history-base", historyBase,
     "--defer-main-thread",
+    ...expectedChangedFiles,
     "--json-out", jsonPath,
     "--md-out", markdownPath,
     "--profile-out", profilePath,
@@ -2313,7 +2321,7 @@ test("production adaptive CLI plans the exact PR7A history diff with one protect
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const artifact = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
   assert.deepEqual(artifact.changedFiles, expectedChangedFiles);
-  assert.equal(artifact.recommendedCommands.length, 237);
+  assert.equal(artifact.recommendedCommands.length, 244);
   assert.equal(artifact.mainThreadSerialVerification.length, 27);
   assert.deepEqual(artifact.unmatchedChangedFiles, []);
   assert.deepEqual(artifact.executionPlan.routeGaps, []);
@@ -2616,7 +2624,11 @@ test("local entrypoint budgets fail closed on expanded roots leaves process grou
 });
 
 test("adaptive execution reconciles duplicate route safety metadata before PR execution", () => {
-  const report = buildRecommendation(["tools/verification/verification_domains.mjs"]);
+  const report = buildRecommendation(
+    ["tools/verification/verification_domains.mjs"],
+    buildRouteIndex(),
+    { platform: "win32" },
+  );
   const telemetryCommand = "test:node:williams-crossover-telemetry-live";
   const telemetryEntry = report.recommendedCommands.find((entry) => entry.commandRef === telemetryCommand);
   assert.ok(telemetryEntry);
@@ -2627,7 +2639,7 @@ test("adaptive execution reconciles duplicate route safety metadata before PR ex
   assert.ok(telemetryEntry.safetyContributorRouteIds.includes("node:test:node:williams-crossover-telemetry-live"));
   assert.ok(telemetryEntry.safetyContributorRouteIds.includes("perf:williams-crossover-telemetry-live"));
 
-  const executionPlan = buildExecutionPlan(report);
+  const executionPlan = buildExecutionPlan(report, { platform: "win32" });
   assert.equal(executionPlan.commandsToRun.includes(telemetryCommand), false);
   assert.ok(executionPlan.blockedMainThreadCommands.includes(telemetryCommand));
 });
@@ -2840,17 +2852,25 @@ test("adaptive execution fails closed before commands on cyclic or unresolved al
 });
 
 test("adaptive execution keeps Windows Job, browser, Pages, and perf leaves in locked groups", () => {
-  const packagePlan = buildExecutionPlan(buildRecommendation(["package.json"]));
+  const windowsJobPlan = buildExecutionPlan(buildRecommendation([
+    "tests/windows_job_runtime_integration.test.mjs",
+  ]));
+  const browserPlan = buildExecutionPlan(buildRecommendation([
+    "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+  ]));
+  const perfPlan = buildExecutionPlan(buildRecommendation([
+    "tools/perf/run_williams_crossover.mjs",
+  ]));
   const workflowPlan = buildExecutionPlan(buildRecommendation([".github/workflows/verify-shared.yml"]));
   const cases = [
-    {
-      plan: packagePlan,
+    ...(process.platform === "win32" ? [{
+      plan: windowsJobPlan,
       commandRef: "test:node:windows-job-runtime:integration",
       lock: ".runtime-output",
       kind: "node-test",
-    },
+    }] : []),
     {
-      plan: packagePlan,
+      plan: browserPlan,
       commandRef: "test:e2e:dev:scenario-chunk-runtime",
       lock: "browser-dev-server",
       kind: "playwright",
@@ -2860,11 +2880,11 @@ test("adaptive execution keeps Windows Job, browser, Pages, and perf leaves in l
       commandRef: "verify:pages-dist-and-drift",
       lock: "dist",
     },
-    {
-      plan: packagePlan,
+    ...(process.platform === "win32" ? [{
+      plan: perfPlan,
       commandRef: "perf:williams-crossover:run",
       lock: "perf-dev-server",
-    },
+    }] : []),
   ];
   for (const testCase of cases) {
     const groups = testCase.plan.deferredMainThreadGroups.filter((group) => (

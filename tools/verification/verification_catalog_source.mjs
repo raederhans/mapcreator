@@ -3014,6 +3014,40 @@ const AUTHORED_VERIFICATION_METADATA = {
       }
     },
     {
+      "id": "infra:deploy-minimal-dependency-guard",
+      "commandRef": "python tools/check_min_ci_requirements.py",
+      "sourceRefs": [
+        "requirements-ci-min.lock.txt",
+        "tools/check_min_ci_requirements.py",
+        ".github/workflows/verify-shared.yml"
+      ],
+      "ownerHints": [
+        "deploy-runtime"
+      ],
+      "domains": [
+        "test-routing"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "deploy-minimal"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 1,
+      "verificationOrder": null,
+      "selectorOrder": 384,
+      "verification": null,
+      "selector": {}
+    },
+    {
       "id": "infra:e2e-layer-manifest",
       "commandRef": "verify:test:e2e-layers",
       "sourceRefs": [
@@ -3052,6 +3086,41 @@ const AUTHORED_VERIFICATION_METADATA = {
         "supervisorDomain": "test-routing",
         "routeRegistry": true
       },
+      "selector": {}
+    },
+    {
+      "id": "infra:heavy-test-classification",
+      "commandRef": "python tools/check_heavy_test_classification.py",
+      "sourceRefs": [
+        "tools/check_heavy_test_classification.py",
+        "tests/heavy_dependency_groups.json",
+        ".github/workflows/nightly-verification.yml",
+        ".github/workflows/verify-shared.yml"
+      ],
+      "ownerHints": [
+        "test-infra"
+      ],
+      "domains": [
+        "test-routing"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": null,
+      "selectorOrder": 382,
+      "verification": null,
       "selector": {}
     },
     {
@@ -4213,7 +4282,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 87,
@@ -4264,7 +4333,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 88,
@@ -4307,7 +4376,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": 85,
@@ -4351,7 +4420,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "full"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 0,
       "verificationOrder": 86,
@@ -11231,7 +11300,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
@@ -11268,7 +11337,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
@@ -11301,7 +11370,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 2,
       "verificationOrder": null,
@@ -11335,7 +11404,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
@@ -11368,7 +11437,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "pr-fast"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 0,
       "verificationOrder": null,
@@ -12680,7 +12749,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "perf-pr-gate"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 2,
       "verificationOrder": 89,
@@ -12722,7 +12791,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "perf-pr-gate"
       ],
       "platforms": [
-        "all"
+        "win32"
       ],
       "entrypointPolicyIndex": 2,
       "verificationOrder": 91,
@@ -12846,6 +12915,41 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 0,
       "verificationOrder": null,
       "selectorOrder": 369,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "python-heavy:geo_stack:tests/test_landing_map_asset_contracts.py",
+      "commandRef": "python -m unittest tests.test_landing_map_asset_contracts -q",
+      "sourceRefs": [
+        "tests/test_landing_map_asset_contracts.py"
+      ],
+      "ownerHints": [
+        "geo-contract"
+      ],
+      "domains": [
+        "geo-contract"
+      ],
+      "tiers": [
+        "heavy"
+      ],
+      "cost": "heavy",
+      "resourceLocks": [
+        "heavy-geo",
+        ".runtime-output"
+      ],
+      "executionOwners": [
+        "main-thread"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": null,
+      "selectorOrder": 383,
       "verification": null,
       "selector": {}
     },

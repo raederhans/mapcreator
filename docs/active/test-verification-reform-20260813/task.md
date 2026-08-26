@@ -228,3 +228,21 @@ P3.4 is admitted and integrated. Implementation candidate `a9f63bd6a16a828f80c14
 P3.5 is admitted and integrated. Final implementation candidate `9c2dc32f2963144f2de22a6db7c2490335f6a68d` comprises owner extraction `5bc0782f`, fail-closed recovery follow-ups `da539359` and `5c83cc29`, plus the test-only historical-phase contract repair `9c2dc32f`; the supervisor replayed them as `7cd7d254`, `da93be85`, `9ecb1793`, and `29bdcf40`. Review rounds closed recoverable Canvas restoration, commit-effect exception propagation, Scenario dual-source ownership, worker-ring facade/DI proofs, and the stale P3.3b inventory assertion; final review returned `CLEAR` and independent verification returned `PASS`. Worker client, worker, packet helper, and political orchestrator blobs remain unchanged. Post-integration partial owner 15/15, partial Python 3/3, orchestrator suite 22/22, architecture, inventory 6/6, metadata 37/37, and portfolio 54/54 pass. P3.1 through P3.5 are now complete; only final task-record closeout, remote-main merge, bounded merge verification, normal push, and local/remote SHA equality remain.
 
 Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as supervisor commit `2e41e4ae77705c85bc57cdabe0cff24dc64595a4`; no rebase, force, or history rewrite was used. The combined authority contains 340 scripts, 428 records, 387 routes, and 343 commands with unique selector order (landing 379, Day/Night 380/381). Post-merge metadata 38/38, portfolio 54/54, landing map assets 10/10, partial owner 15/15, political orchestrator suite 22/22, selector schema, portfolio consistency, and both-parent diff checks pass. The merge SHA was pushed normally and matched local HEAD, `origin/main`, and `ls-remote`; this final task-record commit is the only subsequent documentation-only delta.
+
+## Stabilization and Cost Collapse v2 execution — 2026-08-26
+
+- [x] Re-read the post-first-round `SC项目推进` inspection and freeze current remote/main evidence.
+- [x] Preserve the dirty desktop checkout and create isolated integration branch `codex/sc-v2-integration-20260826` from `origin/main@1439dee6`.
+- [x] Confirm Build and Deploy run `32857711186` and Nightly run `32886723760` fail on the same missing heavy classification.
+- [x] Confirm GitHub reports `main` as unprotected with zero required status checks.
+- [x] Wave A: integrate the landing heavy-group repair, split dependency guards, self-tests, and PR/Nightly routing as `b8363e4d` after an independent `APPROVE` review.
+- [x] Wave A local acceptance: both guard entrypoints pass; classification negative/positive/stale tests pass 3/3; workflow structure passes 3/3; portfolio passes 54/54; selector schema covers 390 routes; the ready handoff reports exact SF-ATS selection with zero unmatched and route gaps.
+- [ ] Wave A remote acceptance: push through the normal integration owner, observe Build and Deploy plus required PR/Nightly metadata lanes, and begin the three-consecutive-main green counter.
+- [ ] External gate: enable minimal `main` branch protection only after exact successful required check names are observed.
+- [ ] Wave B: integrate platform-aware Nightly shards and the final Nightly aggregator.
+- [ ] Wave B: preserve the current P4.3 boundary-evidence authority while proving one full-policy producer per SHA and fail-closed consumer fallback reporting; do not misclassify currently unsupported P4.4/P4.5 plans as regressions.
+- [ ] Wave C: integrate catalog-derived PR requirement signals, smoke/demo scheduling, and comparable PR cost reporting.
+- [ ] Wave D: integrate canonical test-record dependency/platform/cost/entrypoint projections and retire only mechanically superseded metadata.
+- [ ] Wave E: integrate repository checkout/blob profiling and managed-large-asset growth policy; complete two artifact-only dist shadow deployments before any tracked-dist decision.
+- [ ] Run integration-overlap audit before every wave, preserve recovery refs, and keep user-owned execution worktrees uncleaned until their delivery is integrated or explicitly retained.
+- [ ] Complete remote timing/stability acceptance, synchronize task records and worktree registry with Git facts, and archive only when every remaining gap is closed or explicitly cancelled by the user.

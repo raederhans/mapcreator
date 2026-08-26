@@ -53,10 +53,10 @@ test("canonical metadata source owns every projection and shadows the retained l
   assert.equal(report.authoredSurfacesAfter, 1);
   assert.deepEqual(report.projections, {
     verificationRecords: 136,
-    routes: 387,
-    commands: 343,
-    catalogEntries: 444,
-    leaves: 414,
+    routes: 390,
+    commands: 346,
+    catalogEntries: 447,
+    leaves: 417,
     suites: 30,
     portfolioScripts: 340,
     superseders: 14,
@@ -1321,9 +1321,11 @@ test("plans full selector roots once with supersession, process argv, and route 
     "test:node:verification-metadata",
     "test:node:verification-script-portfolio",
     "test:node:verify-core-runner",
-    "test:node:williams-crossover-governance",
-    "test:node:williams-crossover-job-runner",
-    "test:node:windows-job-runtime",
+    ...(process.platform === "win32" ? [
+      "test:node:williams-crossover-governance",
+      "test:node:williams-crossover-job-runner",
+      "test:node:windows-job-runtime",
+    ] : []),
     "verify:script-portfolio",
     "verify:supervisor-contracts",
     "verify:test-import-graph",
@@ -1335,7 +1337,7 @@ test("plans full selector roots once with supersession, process argv, and route 
     repoRoot: REPO_ROOT,
     platform: process.platform,
   });
-  assert.equal(plan.rootRecords.length, 14);
+  assert.equal(plan.rootRecords.length, roots.length);
   assert.ok(plan.rootRecords.every((entry) => entry.routeIds.length > 0));
   assert.deepEqual(
     plan.rootRecords.filter((entry) => entry.disposition === "superseded")
@@ -1345,7 +1347,7 @@ test("plans full selector roots once with supersession, process argv, and route 
       ["test:node:supervisor-routing", "verify:supervisor-contracts"],
     ],
   );
-  assert.equal(plan.executions.length, 14);
+  assert.equal(plan.executions.length, roots.length);
   assert.ok(plan.executions.every((entry) => entry.executable && Array.isArray(entry.effectiveArgv)));
   assert.ok(plan.executions.every((entry) => entry.provenance[0].routeIds.length > 0));
 

@@ -59,6 +59,9 @@ export function buildCanonicalVerificationRecords() {
         executionOwner: common.executionOwner,
         ciProfile: common.ciProfile,
       };
+      if (!(common.platforms.length === 1 && common.platforms[0] === "all")) {
+        projected.platforms = common.platforms;
+      }
       if (record.selector?.guidance) projected.guidance = clone(record.selector.guidance);
       return projected;
     });
@@ -84,6 +87,9 @@ export function buildCanonicalRouteIndex() {
         entrypointPolicy: common.entrypointPolicy,
         authoritySource: "canonical-metadata-source",
       };
+      if (!(common.platforms.length === 1 && common.platforms[0] === "all")) {
+        projected.platforms = common.platforms;
+      }
       if (record.selector.guidance) projected.guidance = clone(record.selector.guidance);
       return projected;
     });
