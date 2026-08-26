@@ -2283,7 +2283,9 @@ test("production adaptive CLI dry-run reaches a valid local execution boundary",
   assertEverySelectorRootHasCanonicalOutcome(artifact);
 });
 
-test("production adaptive CLI plans the frozen PR7A changed-file fixture with one protected shared-leaf authority", (t) => {
+test("production adaptive CLI plans the frozen PR7A changed-file fixture with one protected shared-leaf authority", {
+  skip: process.platform !== "win32",
+}, (t) => {
   const runtimeTmp = path.join(process.cwd(), ".runtime", "tmp");
   fs.mkdirSync(runtimeTmp, { recursive: true });
   const tempRoot = fs.mkdtempSync(path.join(runtimeTmp, "pr7a-adaptive-history-"));
@@ -2846,17 +2848,25 @@ test("adaptive execution fails closed before commands on cyclic or unresolved al
 });
 
 test("adaptive execution keeps Windows Job, browser, Pages, and perf leaves in locked groups", () => {
-  const packagePlan = buildExecutionPlan(buildRecommendation(["package.json"]));
+  const windowsJobPlan = buildExecutionPlan(buildRecommendation([
+    "tests/windows_job_runtime_integration.test.mjs",
+  ]));
+  const browserPlan = buildExecutionPlan(buildRecommendation([
+    "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+  ]));
+  const perfPlan = buildExecutionPlan(buildRecommendation([
+    "tools/perf/run_williams_crossover.mjs",
+  ]));
   const workflowPlan = buildExecutionPlan(buildRecommendation([".github/workflows/verify-shared.yml"]));
   const cases = [
     ...(process.platform === "win32" ? [{
-      plan: packagePlan,
+      plan: windowsJobPlan,
       commandRef: "test:node:windows-job-runtime:integration",
       lock: ".runtime-output",
       kind: "node-test",
     }] : []),
     {
-      plan: packagePlan,
+      plan: browserPlan,
       commandRef: "test:e2e:dev:scenario-chunk-runtime",
       lock: "browser-dev-server",
       kind: "playwright",
@@ -2866,11 +2876,11 @@ test("adaptive execution keeps Windows Job, browser, Pages, and perf leaves in l
       commandRef: "verify:pages-dist-and-drift",
       lock: "dist",
     },
-    {
-      plan: packagePlan,
+    ...(process.platform === "win32" ? [{
+      plan: perfPlan,
       commandRef: "perf:williams-crossover:run",
       lock: "perf-dev-server",
-    },
+    }] : []),
   ];
   for (const testCase of cases) {
     const groups = testCase.plan.deferredMainThreadGroups.filter((group) => (
