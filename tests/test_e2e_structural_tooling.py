@@ -1921,6 +1921,21 @@ jobs:
         self.assertEqual(parse_job_scalar(jobs["linux-core"], "needs"), ["p4-full"])
         self.assertEqual(parse_job_scalar(jobs["scenario-heavy"], "needs"), ["p4-full"])
 
+        p4_artifact_name = "nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}"
+        p4_artifact_steps = (
+            ("p4-full", "Upload exact P4 producer evidence"),
+            ("linux-core", "Download exact P4 producer evidence"),
+            ("scenario-heavy", "Download exact P4 producer evidence"),
+        )
+        self.assertEqual(workflow.count(f"name: {p4_artifact_name}"), len(p4_artifact_steps))
+        for job_id, step_name in p4_artifact_steps:
+            step = next(
+                entry for entry in parse_job_steps(jobs[job_id])
+                if entry.get("name") == step_name
+            )
+            step_body = "\n".join(str(line) for line in step["lines"])
+            self.assertIn(f"          name: {p4_artifact_name}", step_body)
+
         for job_id in ("linux-core", "scenario-heavy"):
             env = parse_job_env(jobs[job_id])
             self.assertEqual(env["STATE_WRITER_POLICY_EVIDENCE_MODE"], "strict")
