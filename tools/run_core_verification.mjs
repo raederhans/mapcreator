@@ -37,10 +37,24 @@ import {
   prepareVerificationProfilePlan,
   publishVerificationProfileSafely,
 } from "./verification/verification_profile.mjs";
+import {
+  buildVerificationSelectionPlan,
+  prepareRepositoryVerificationCatalog,
+} from "./verification/script_portfolio.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.md");
+
+export const NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS = Object.freeze([
+  "verify:p4:state-writer-policy",
+  "test:node:p4:p4-3",
+  "test:python:p4:p4-3-boundary",
+  "verify:scenario-contracts:strict",
+  "test:node:windows-job-runtime",
+  "test:node:williams-crossover-governance",
+  "test:node:williams-crossover-job-runner",
+]);
 
 const DEFAULT_GROUPS = buildVerifyCoreDefaultGroups();
 const MAIN_THREAD_GROUP = buildVerifyCoreMainThreadGroup();
@@ -52,6 +66,9 @@ export function parseArgs(argv) {
     includeMainThread: false,
     resume: false,
     resumeFrom: null,
+    nightlyLinuxCore: false,
+    shardIndex: 1,
+    shardCount: 3,
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
     profileOut: DEFAULT_CORE_VERIFICATION_PROFILE_OUT,
@@ -61,13 +78,29 @@ export function parseArgs(argv) {
     if (token === "--list") args.list = true;
     else if (token === "--include-main-thread") args.includeMainThread = true;
     else if (token === "--resume") args.resume = true;
+    else if (token === "--nightly-linux-core") args.nightlyLinuxCore = true;
+    else if (token === "--shard-index") args.shardIndex = Number(argv[++index]);
+    else if (token === "--shard-count") args.shardCount = Number(argv[++index]);
     else if (token === "--resume-from") {
       args.resume = true;
       args.resumeFrom = argv[++index];
     }
     else if (token === "--json-out") args.jsonOut = argv[++index];
     else if (token === "--md-out") args.mdOut = argv[++index];
+    else if (token === "--profile-out") args.profileOut = argv[++index];
     else throw new Error(`Unknown verify:core argument: ${token}`);
+  }
+  if (!Number.isInteger(args.shardCount) || args.shardCount < 2 || args.shardCount > 3) {
+    throw new Error("Nightly Linux core shard count must be 2 or 3.");
+  }
+  if (!Number.isInteger(args.shardIndex)
+    || args.shardIndex < 1
+    || args.shardIndex > args.shardCount) {
+    throw new Error("Nightly Linux core shard index must be within the shard count.");
+  }
+  if (!args.nightlyLinuxCore
+    && (args.shardIndex !== 1 || args.shardCount !== 3)) {
+    throw new Error("Nightly shard arguments require --nightly-linux-core.");
   }
   return args;
 }
@@ -201,6 +234,117 @@ export function buildCoreVerificationPlan({
       json: DEFAULT_JSON_OUT,
       markdown: DEFAULT_MD_OUT,
       profile: DEFAULT_CORE_VERIFICATION_PROFILE_OUT,
+    },
+  };
+}
+
+export function partitionNightlyLinuxCoreCommands(commands, {
+  shardCount = 3,
+  leafCounter,
+} = {}) {
+  if (!Number.isInteger(shardCount) || shardCount < 2 || shardCount > 3) {
+    throw new Error("Nightly Linux core shard count must be 2 or 3.");
+  }
+  if (typeof leafCounter !== "function") {
+    throw new Error("Nightly Linux core sharding requires a leaf counter.");
+  }
+  const weighted = commands.map((entry, order) => {
+    const leafCount = Number(leafCounter(entry.commandRef));
+    if (!Number.isInteger(leafCount) || leafCount < 1) {
+      throw new Error(`Nightly Linux core command has an invalid leaf count: ${entry.commandRef}`);
+    }
+    return { entry, order, leafCount };
+  }).sort((left, right) => (
+    right.leafCount - left.leafCount
+    || left.entry.commandRef.localeCompare(right.entry.commandRef)
+    || left.order - right.order
+  ));
+  const shards = Array.from({ length: shardCount }, (_, index) => ({
+    shardIndex: index + 1,
+    leafCount: 0,
+    commands: [],
+  }));
+  for (const candidate of weighted) {
+    const shard = shards.reduce((selected, current) => (
+      current.leafCount < selected.leafCount
+        || (current.leafCount === selected.leafCount
+          && current.shardIndex < selected.shardIndex)
+        ? current
+        : selected
+    ));
+    shard.commands.push(candidate);
+    shard.leafCount += candidate.leafCount;
+  }
+  for (const shard of shards) {
+    shard.commands.sort((left, right) => left.order - right.order);
+  }
+  return shards;
+}
+
+export function buildNightlyLinuxCoreShardPlan({
+  basePlan = buildCoreVerificationPlan(),
+  shardIndex = 1,
+  shardCount = 3,
+  repoRoot = REPO_ROOT,
+  platform = "linux",
+  preparedCatalog = null,
+  leafCounter = null,
+} = {}) {
+  const excluded = new Set(NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS);
+  const eligibleCommands = basePlan.commandsToRun.filter(
+    (entry) => !excluded.has(entry.commandRef),
+  );
+  const prepared = leafCounter
+    ? null
+    : (preparedCatalog || prepareRepositoryVerificationCatalog({ repoRoot, platform }));
+  const countLeaves = leafCounter || ((commandRef) => (
+    buildVerificationSelectionPlan(prepared.catalog, [commandRef], {
+      preparedCatalog: prepared,
+      platform,
+      repoRoot,
+    }).normalizedLeaves.length
+  ));
+  const shards = partitionNightlyLinuxCoreCommands(eligibleCommands, {
+    shardCount,
+    leafCounter: countLeaves,
+  });
+  const selected = shards[shardIndex - 1];
+  if (!selected) {
+    throw new Error("Nightly Linux core shard index must be within the shard count.");
+  }
+  const selectedCommandRefs = new Set(
+    selected.commands.map(({ entry }) => entry.commandRef),
+  );
+  const groups = basePlan.groups.map((group) => ({
+    ...group,
+    commands: group.commands.filter((entry) => selectedCommandRefs.has(entry.commandRef)),
+  }));
+  const shardAssignments = shards.map((shard) => ({
+    shardIndex: shard.shardIndex,
+    leafCount: shard.leafCount,
+    commandRefs: shard.commands.map(({ entry }) => entry.commandRef),
+    commands: shard.commands.map(({ entry, leafCount: commandLeafCount }) => ({
+      commandRef: entry.commandRef,
+      leafCount: commandLeafCount,
+    })),
+  }));
+  return {
+    ...basePlan,
+    lane: `nightly Linux deterministic core shard ${shardIndex}/${shardCount}`,
+    requiresDistLaneOwner: groups.some(
+      (group) => group.id === "pages" && group.commands.length > 0,
+    ),
+    groups,
+    commandsToRun: groups.flatMap((group) => group.commands),
+    nightlyShard: {
+      schemaVersion: 1,
+      kind: "nightly-linux-core-shard",
+      shardIndex,
+      shardCount,
+      leafCount: selected.leafCount,
+      totalLeafCount: shards.reduce((total, shard) => total + shard.leafCount, 0),
+      excludedCommandRefs: [...NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS],
+      assignments: shardAssignments,
     },
   };
 }
@@ -453,8 +597,22 @@ export function runCoreVerification({
 } = {}) {
   const args = Array.isArray(argv) ? parseArgs(argv) : argv;
   const liveFallbackSession = createStateWriterPolicyEvidenceSession();
-  const plan = buildCoreVerificationPlan({ includeMainThread: args.includeMainThread, packageScripts });
-  const runnerId = args.includeMainThread ? "verify-core-main-thread" : "verify-core";
+  const basePlan = buildCoreVerificationPlan({
+    includeMainThread: args.includeMainThread,
+    packageScripts,
+  });
+  const plan = args.nightlyLinuxCore
+    ? buildNightlyLinuxCoreShardPlan({
+      basePlan,
+      shardIndex: args.shardIndex,
+      shardCount: args.shardCount,
+      repoRoot: cwd,
+      platform: "linux",
+    })
+    : basePlan;
+  const runnerId = args.nightlyLinuxCore
+    ? `verify-nightly-linux-core-${args.shardIndex}-of-${args.shardCount}`
+    : args.includeMainThread ? "verify-core-main-thread" : "verify-core";
   const planIdentity = buildPlanIdentity({ runnerId, entries: plan.commandsToRun });
   let preparedProfilePlan = null;
   let profilePreparationError = null;

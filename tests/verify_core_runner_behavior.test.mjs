@@ -15,9 +15,12 @@ import {
   normalizeChangedFiles,
 } from "../tools/select_verification_targets.mjs";
 import {
+  NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS,
+  buildNightlyLinuxCoreShardPlan,
   buildCoreVerificationPlan,
   commandToProcess,
   parseArgs,
+  partitionNightlyLinuxCoreCommands,
   runCoreVerification,
   runVerificationPlan,
 } from "../tools/run_core_verification.mjs";
@@ -534,6 +537,72 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
   );
 });
 
+test("Nightly Linux core sharding balances canonical leaves and excludes platform-owned producers", () => {
+  const packageScripts = JSON.parse(fs.readFileSync("package.json", "utf8")).scripts;
+  const basePlan = buildCoreVerificationPlan({ packageScripts });
+  const plan = buildNightlyLinuxCoreShardPlan({
+    basePlan,
+    shardIndex: 1,
+    shardCount: 3,
+  });
+  const assignments = plan.nightlyShard.assignments;
+  const assignedCommandRefs = assignments.flatMap((entry) => entry.commandRefs);
+  const expectedCommandRefs = basePlan.commandsToRun
+    .map((entry) => entry.commandRef)
+    .filter((commandRef) => !NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS.includes(commandRef));
+
+  assert.equal(assignments.length, 3);
+  assert.deepEqual([...assignedCommandRefs].sort(), [...expectedCommandRefs].sort());
+  assert.equal(new Set(assignedCommandRefs).size, assignedCommandRefs.length);
+  assert.equal(plan.nightlyShard.totalLeafCount, assignments.reduce(
+    (total, entry) => total + entry.leafCount,
+    0,
+  ));
+  assert.ok(Math.max(...assignments.map((entry) => entry.leafCount))
+    - Math.min(...assignments.map((entry) => entry.leafCount)) <= 1);
+  for (const commandRef of NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS) {
+    assert.equal(assignedCommandRefs.includes(commandRef), false, commandRef);
+  }
+  assert.equal(plan.commandsToRun.length, assignments[0].commandRefs.length);
+  assert.deepEqual(
+    plan.commandsToRun.map((entry) => entry.commandRef),
+    assignments[0].commandRefs,
+  );
+});
+
+test("Nightly Linux core sharding is deterministic and rejects invalid leaf authority", () => {
+  const commands = [
+    { commandRef: "alpha" },
+    { commandRef: "beta" },
+    { commandRef: "gamma" },
+    { commandRef: "delta" },
+  ];
+  const leaves = new Map([
+    ["alpha", 7],
+    ["beta", 5],
+    ["gamma", 3],
+    ["delta", 1],
+  ]);
+  const first = partitionNightlyLinuxCoreCommands(commands, {
+    shardCount: 2,
+    leafCounter: (commandRef) => leaves.get(commandRef),
+  });
+  const second = partitionNightlyLinuxCoreCommands(commands, {
+    shardCount: 2,
+    leafCounter: (commandRef) => leaves.get(commandRef),
+  });
+
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.map((entry) => entry.leafCount), [8, 8]);
+  assert.throws(
+    () => partitionNightlyLinuxCoreCommands(commands, {
+      shardCount: 2,
+      leafCounter: () => 0,
+    }),
+    /invalid leaf count/,
+  );
+});
+
 test("default core plan applies strict command closure without changing test coverage", () => {
   const packageScripts = JSON.parse(
     fs.readFileSync("package.json", "utf8"),
@@ -1002,11 +1071,30 @@ test("resume parsing is explicit and does not expose an arbitrary skip flag", ()
     includeMainThread: false,
     resume: true,
     resumeFrom: "previous.json",
+    nightlyLinuxCore: false,
+    shardIndex: 1,
+    shardCount: 3,
     jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
     mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.md"),
     profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core-profile.json"),
   });
+  assert.deepEqual(
+    parseArgs(["--nightly-linux-core", "--shard-index", "2", "--shard-count", "3"]),
+    {
+      list: false,
+      includeMainThread: false,
+      resume: false,
+      resumeFrom: null,
+      nightlyLinuxCore: true,
+      shardIndex: 2,
+      shardCount: 3,
+      jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
+      mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.md"),
+      profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core-profile.json"),
+    },
+  );
   assert.throws(() => parseArgs(["--skip", "verify:p4:state-writer-policy"]), /Unknown verify:core argument/);
+  assert.throws(() => parseArgs(["--shard-index", "2"]), /require --nightly-linux-core/);
 });
 
 test("verification checkpoints atomically replace complete parseable JSON", () => {

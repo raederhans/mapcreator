@@ -22,6 +22,9 @@ export const STATE_WRITER_POLICY_EVIDENCE_PATH_ENV =
 export const STATE_WRITER_POLICY_EVIDENCE_ID_ENV =
   "STATE_WRITER_POLICY_EVIDENCE_ID";
 export const STATE_WRITER_POLICY_EVIDENCE_STRICT_MODE = "strict";
+export const STATE_WRITER_POLICY_LIVE_FALLBACK_ENV =
+  "STATE_WRITER_POLICY_LIVE_FALLBACK";
+export const STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID = "forbid";
 export const STATE_WRITER_POLICY_EVIDENCE_SESSION_KIND =
   "state-writer-policy-evidence-session";
 
@@ -734,7 +737,9 @@ export function ensureStateWriterPolicyEvidence({
   cwd = process.cwd(),
   phase = readCurrentStateWriterPolicyPhase({ cwd }),
   reportPath = defaultStateWriterPolicyReportPath(phase),
-  evidencePath = defaultStateWriterPolicyEvidencePath(phase),
+  evidencePath = process.env[STATE_WRITER_POLICY_EVIDENCE_PATH_ENV]
+    || defaultStateWriterPolicyEvidencePath(phase),
+  expectedEvidenceId = process.env[STATE_WRITER_POLICY_EVIDENCE_ID_ENV] || null,
   checkerPlan = buildStateWriterCheckerPlan({ phase, reportPath }),
   producer = {
     entrypoint: "tools/verification/state_writer_policy_evidence.mjs",
@@ -747,6 +752,7 @@ export function ensureStateWriterPolicyEvidence({
   blobShaReader = (relativePath) => defaultBlobShaReader(relativePath, { cwd }),
   now = () => new Date(),
   liveFallbackSession = null,
+  liveFallbackPolicy = process.env[STATE_WRITER_POLICY_LIVE_FALLBACK_ENV] || "allow",
 } = {}) {
   const shared = {
     cwd,
@@ -757,12 +763,23 @@ export function ensureStateWriterPolicyEvidence({
     verificationIdentityReader,
     policyReader,
     blobShaReader,
+    expectedEvidenceId,
   };
   try {
     return validateStateWriterPolicyEvidence(shared);
   } catch (error) {
     if (error?.disposition !== "reuse-miss") throw error;
     const fallbackReason = error.code || "state-writer-evidence-reuse-miss";
+    if (liveFallbackPolicy === STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID) {
+      throw blocked(
+        "state-writer-evidence-live-fallback-forbidden",
+        "State-writer evidence reuse missed while live fallback is forbidden.",
+        {
+          fallbackReason,
+          cause: error,
+        },
+      );
+    }
     consumeLiveFallbackBudget(liveFallbackSession, fallbackReason);
     const result = runner(
       checkerPlan.resolvedCommand.executable,
