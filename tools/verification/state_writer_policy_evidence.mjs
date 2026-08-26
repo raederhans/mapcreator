@@ -444,7 +444,7 @@ export function readCurrentStateWriterPolicyPhase({
 export function buildStateWriterCheckerPlan({
   phase,
   reportPath = defaultStateWriterPolicyReportPath(phase),
-  nodeExecutable = process.execPath,
+  nodeExecutable = "node",
 } = {}) {
   const normalizedPhase = normalizeP4StateActionPhase(phase);
   const normalizedReportPath = normalizeRepoPath(reportPath);
