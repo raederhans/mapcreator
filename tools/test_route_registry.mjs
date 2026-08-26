@@ -59,6 +59,30 @@ export const ROUTE_REGISTRY_SOURCE_IDENTITY = VERIFICATION_METADATA_SOURCE_IDENT
 
 const INFRASTRUCTURE_ROUTES = [
   {
+    id: "infra:deploy-minimal-dependency-guard",
+    commandRef: "python tools/check_min_ci_requirements.py",
+    sourceRef: "requirements-ci-min.lock.txt,tools/check_min_ci_requirements.py,.github/workflows/verify-shared.yml",
+    domain: "test-routing",
+    ownerHint: "deploy-runtime",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "deploy-minimal",
+  },
+  {
+    id: "infra:heavy-test-classification",
+    commandRef: "python tools/check_heavy_test_classification.py",
+    sourceRef: "tools/check_heavy_test_classification.py,tests,.github/workflows/nightly-verification.yml,.github/workflows/verify-shared.yml",
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "infra:e2e-layer-manifest",
     commandRef: "verify:test:e2e-layers",
     sourceRef: "tools/e2e_layering.mjs,tests/e2e/test-layer-manifest.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",

@@ -67,8 +67,8 @@ jobs:
             python -m pip install --no-index --find-links "$WHEELHOUSE_DIR" -r requirements-dev.lock.txt
           fi
 
-      - name: Check minimal CI dependency guardrails
-        if: inputs.profile != 'pr-smoke' && inputs.profile != 'demo'
+      - name: Check deploy-minimal dependency guardrails
+        if: inputs.profile == 'deploy-minimal'
         run: python tools/check_min_ci_requirements.py
 
       - name: Install Node dependencies
