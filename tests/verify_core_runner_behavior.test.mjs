@@ -15,9 +15,12 @@ import {
   normalizeChangedFiles,
 } from "../tools/select_verification_targets.mjs";
 import {
+  NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS,
+  buildNightlyLinuxCoreShardPlan,
   buildCoreVerificationPlan,
   commandToProcess,
   parseArgs,
+  partitionNightlyLinuxCoreCommands,
   runCoreVerification,
   runVerificationPlan,
 } from "../tools/run_core_verification.mjs";
@@ -415,8 +418,10 @@ function assertEverySelectorRootHasCanonicalOutcome(artifact) {
       "requested-superseded",
       "deferred-main-thread",
       "deferred-main-thread-superseded",
+      "deferred-main-thread-platform",
       "deferred-ci-only",
       "deferred-ci-only-superseded",
+      "deferred-ci-only-platform",
       "deferred-by-tier",
       "superseded-by-projection",
       "blocked",
@@ -531,6 +536,72 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
       "test:e2e:water-rendering",
       "test:e2e:city-rendering",
     ],
+  );
+});
+
+test("Nightly Linux core sharding balances canonical leaves and excludes platform-owned producers", () => {
+  const packageScripts = JSON.parse(fs.readFileSync("package.json", "utf8")).scripts;
+  const basePlan = buildCoreVerificationPlan({ packageScripts });
+  const plan = buildNightlyLinuxCoreShardPlan({
+    basePlan,
+    shardIndex: 1,
+    shardCount: 3,
+  });
+  const assignments = plan.nightlyShard.assignments;
+  const assignedCommandRefs = assignments.flatMap((entry) => entry.commandRefs);
+  const expectedCommandRefs = basePlan.commandsToRun
+    .map((entry) => entry.commandRef)
+    .filter((commandRef) => !NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS.includes(commandRef));
+
+  assert.equal(assignments.length, 3);
+  assert.deepEqual([...assignedCommandRefs].sort(), [...expectedCommandRefs].sort());
+  assert.equal(new Set(assignedCommandRefs).size, assignedCommandRefs.length);
+  assert.equal(plan.nightlyShard.totalLeafCount, assignments.reduce(
+    (total, entry) => total + entry.leafCount,
+    0,
+  ));
+  assert.ok(Math.max(...assignments.map((entry) => entry.leafCount))
+    - Math.min(...assignments.map((entry) => entry.leafCount)) <= 1);
+  for (const commandRef of NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS) {
+    assert.equal(assignedCommandRefs.includes(commandRef), false, commandRef);
+  }
+  assert.equal(plan.commandsToRun.length, assignments[0].commandRefs.length);
+  assert.deepEqual(
+    plan.commandsToRun.map((entry) => entry.commandRef),
+    assignments[0].commandRefs,
+  );
+});
+
+test("Nightly Linux core sharding is deterministic and rejects invalid leaf authority", () => {
+  const commands = [
+    { commandRef: "alpha" },
+    { commandRef: "beta" },
+    { commandRef: "gamma" },
+    { commandRef: "delta" },
+  ];
+  const leaves = new Map([
+    ["alpha", 7],
+    ["beta", 5],
+    ["gamma", 3],
+    ["delta", 1],
+  ]);
+  const first = partitionNightlyLinuxCoreCommands(commands, {
+    shardCount: 2,
+    leafCounter: (commandRef) => leaves.get(commandRef),
+  });
+  const second = partitionNightlyLinuxCoreCommands(commands, {
+    shardCount: 2,
+    leafCounter: (commandRef) => leaves.get(commandRef),
+  });
+
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.map((entry) => entry.leafCount), [8, 8]);
+  assert.throws(
+    () => partitionNightlyLinuxCoreCommands(commands, {
+      shardCount: 2,
+      leafCounter: () => 0,
+    }),
+    /invalid leaf count/,
   );
 });
 
@@ -1002,11 +1073,30 @@ test("resume parsing is explicit and does not expose an arbitrary skip flag", ()
     includeMainThread: false,
     resume: true,
     resumeFrom: "previous.json",
+    nightlyLinuxCore: false,
+    shardIndex: 1,
+    shardCount: 3,
     jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
     mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.md"),
     profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core-profile.json"),
   });
+  assert.deepEqual(
+    parseArgs(["--nightly-linux-core", "--shard-index", "2", "--shard-count", "3"]),
+    {
+      list: false,
+      includeMainThread: false,
+      resume: false,
+      resumeFrom: null,
+      nightlyLinuxCore: true,
+      shardIndex: 2,
+      shardCount: 3,
+      jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
+      mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.md"),
+      profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core-profile.json"),
+    },
+  );
   assert.throws(() => parseArgs(["--skip", "verify:p4:state-writer-policy"]), /Unknown verify:core argument/);
+  assert.throws(() => parseArgs(["--shard-index", "2"]), /require --nightly-linux-core/);
 });
 
 test("verification checkpoints atomically replace complete parseable JSON", () => {
@@ -2862,6 +2952,62 @@ test("adaptive execution keeps canonical overlap unique within mutually exclusiv
   assert.equal(plan.executionCommands[0].leafIds.length, 1);
   assert.equal(plan.deferredMainThreadGroups.length, 1);
   assert.equal(plan.deferredMainThreadGroups[0].leafIds.length, 1);
+});
+
+test("adaptive execution defers platform-incompatible main-thread roots without opening Linux PR gaps", () => {
+  const otherPlatform = process.platform === "win32" ? "linux" : "win32";
+  const commandRef = "catalog:platform-owned-main";
+  const leafCommandRef = "catalog:platform-owned-leaf";
+  const mainThread = [adaptiveContributor(commandRef, {
+    disposition: "main-thread",
+    executionOwners: ["main-thread"],
+    platforms: ["all"],
+    resourceLocks: [".runtime-output"],
+    ciProfiles: ["full"],
+  })];
+  const platformLeaf = adaptiveContributor(leafCommandRef, {
+    disposition: "main-thread",
+    executionOwners: ["main-thread"],
+    platforms: [otherPlatform],
+    resourceLocks: [".runtime-output"],
+    ciProfiles: ["full"],
+  });
+  const report = adaptiveReport({ mainThread });
+  const packageScripts = {
+    [commandRef]: `npm run ${leafCommandRef}`,
+    [leafCommandRef]: "node --test tests/platform_owned_main.test.mjs",
+  };
+  const preparedCatalog = prepareVerificationCatalog({
+    packageScripts,
+    selectorRoutes: [mainThread[0], platformLeaf].map((entry) => ({
+      ...entry,
+      id: entry.routeIds[0],
+    })),
+    selectorCommandRefs: [commandRef, leafCommandRef],
+  });
+
+  const deferredPlan = buildExecutionPlan(report, { packageScripts, preparedCatalog });
+  assert.deepEqual(deferredPlan.routeGaps, []);
+  assert.deepEqual(deferredPlan.executionCommands, []);
+  assert.deepEqual(deferredPlan.platformDeferredMainThreadCommands, [commandRef]);
+  assert.deepEqual(deferredPlan.deferredMainThreadLeaves, []);
+  assert.equal(deferredPlan.closure.deferredMainThreadRootCount, 1);
+  assert.deepEqual(deferredPlan.selectorRootOutcomes, [{
+    commandRef,
+    disposition: "deferred-main-thread-platform",
+    currentPlatform: process.platform,
+    requiredPlatforms: [otherPlatform],
+  }]);
+
+  const includedPlan = buildExecutionPlan(report, {
+    includeMainThread: true,
+    packageScripts,
+    preparedCatalog,
+  });
+  assert.ok(includedPlan.routeGaps.some((gap) => (
+    gap.code === "verification-plan-platform-mismatch"
+  )));
+  assert.deepEqual(includedPlan.executionCommands, []);
 });
 
 test("adaptive execution fails closed before commands on cyclic or unresolved aliases", () => {

@@ -8,6 +8,7 @@ import test from "node:test";
 import {
   STATE_WRITER_POLICY_EVIDENCE_KIND,
   STATE_WRITER_POLICY_EVIDENCE_SCHEMA_VERSION,
+  STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID,
   buildStateWriterCheckerPlan,
   createStateWriterPolicyEvidence,
   createStateWriterPolicyEvidenceSession,
@@ -508,6 +509,38 @@ test("blocked ensure never invokes the live fallback", () => {
       && error?.disposition === "blocked",
   );
   assert.equal(liveRuns, 0);
+});
+
+test("Nightly strict consumers fail red before any live producer fallback", () => {
+  const fixture = createFixture();
+  let liveRuns = 0;
+  const liveFallbackSession = createStateWriterPolicyEvidenceSession();
+
+  assert.throws(
+    () => ensureStateWriterPolicyEvidence({
+      cwd: fixture.cwd,
+      phase: PHASE,
+      reportPath: fixture.reportPath,
+      evidencePath: fixture.evidencePath,
+      expectedEvidenceId: "9".repeat(64),
+      checkerPlan: fixture.checkerPlan,
+      routeApplicability: { unmatchedChangedFiles: [] },
+      runner: () => {
+        liveRuns += 1;
+        return { status: 0 };
+      },
+      liveFallbackSession,
+      liveFallbackPolicy: STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID,
+      ...fixture.dependencies,
+    }),
+    (error) => (
+      error?.code === "state-writer-evidence-live-fallback-forbidden"
+      && error?.disposition === "blocked"
+      && error?.fallbackReason === "state-writer-evidence-missing"
+    ),
+  );
+  assert.equal(liveRuns, 0);
+  assert.equal(liveFallbackSession.liveFallbackAttempts, 0);
 });
 
 test("missing includesUntracked blocks before consuming producer budget", () => {

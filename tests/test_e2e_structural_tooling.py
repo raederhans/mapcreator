@@ -1892,57 +1892,147 @@ jobs:
         self.assertIn("requirements-dev.lock.txt", download_step)
         self.assertIn("requirements-dev.lock.txt", install_step)
 
-    def test_nightly_and_release_consumers_call_one_canonical_command(self) -> None:
-        cases = {
-            "nightly-verification.yml": {
-                "command": "npm run verify:nightly",
-                "trigger": "schedule:",
-                "timeout": "timeout-minutes: 90",
-            },
-            "release-verification.yml": {
-                "command": "npm run verify:release",
-                "trigger": "workflow_dispatch:",
-                "timeout": "timeout-minutes: 120",
-            },
+    def test_nightly_uses_platform_shards_exact_p4_evidence_and_final_aggregator(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "nightly-verification.yml").read_text(encoding="utf-8")
+        jobs = parse_workflow_job_blocks(workflow)
+        expected_jobs = {
+            "metadata",
+            "p4-full",
+            "linux-core",
+            "browser",
+            "scenario-heavy",
+            "windows-governance",
+            "final",
         }
-        for filename, expected in cases.items():
-            with self.subTest(filename=filename):
-                workflow = (REPO_ROOT / ".github" / "workflows" / filename).read_text(encoding="utf-8")
-                self.assertIn(expected["trigger"], workflow)
-                self.assertIn("workflow_dispatch:", workflow)
-                self.assertIn("concurrency:", workflow)
-                self.assertIn(expected["timeout"], workflow)
-                checkout_step = next(step for step in parse_job_steps(
-                    parse_workflow_job_blocks(workflow)[
-                        "verify-nightly" if filename == "nightly-verification.yml" else "verify-release"
-                    ]
-                ) if step.get("name") == "Checkout")
-                checkout_body = "\n".join(str(line) for line in checkout_step["lines"])
-                self.assertIn("          fetch-depth: 0", checkout_body)
-                self.assertEqual(workflow.count(expected["command"]), 1)
-                self.assertEqual(len(re.findall(r"npm run verify:[A-Za-z0-9:_-]+", workflow)), 1)
-                self.assertIn("if: always()", workflow)
-                self.assertIn("actions/upload-artifact@", workflow)
-                self.assertIn(".runtime/reports/generated/**", workflow)
-                self.assertNotIn("actions/deploy-", workflow)
-                route_result = run_command(
-                    "node",
-                    "tools/select_verification_targets.mjs",
-                    f".github/workflows/{filename}",
-                    "--json",
-                )
-                self.assert_command_ok(route_result)
-                route_payload = json.loads(route_result.stdout)
-                self.assertEqual(route_payload["unmatchedChangedFiles"], [])
-                commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
-                self.assertIn("verify:script-portfolio", commands)
-                self.assertIn("node tools/select_verification_targets.mjs --check", commands)
+        self.assertEqual(set(jobs), expected_jobs)
+        self.assertIn("schedule:", workflow)
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("concurrency:", workflow)
+        self.assertNotRegex(workflow, r"npm run verify:nightly(?:\s|$)")
+        self.assertEqual(workflow.count("npm run verify:p4:p4-3"), 1)
+        self.assertNotIn("npm run verify:p4:state-writer-policy", workflow)
+        self.assertNotIn("npm run perf:williams-crossover:run", workflow)
+        self.assertNotRegex(workflow, r"--retries(?:=|\s)[1-9]")
+        self.assertIn("fail-fast: false", jobs["linux-core"])
+        self.assertIn("shard: [1, 2, 3]", jobs["linux-core"])
+        self.assertEqual(parse_job_scalar(jobs["linux-core"], "runs-on"), "ubuntu-latest")
+        self.assertEqual(parse_job_scalar(jobs["p4-full"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["windows-governance"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["linux-core"], "needs"), ["p4-full"])
+        self.assertEqual(parse_job_scalar(jobs["scenario-heavy"], "needs"), ["p4-full"])
 
-    def test_nightly_and_release_install_locked_python_dependencies_before_canonical_command(self) -> None:
-        for filename, job_id, canonical_step in (
-            ("nightly-verification.yml", "verify-nightly", "Run canonical Nightly verification"),
+        p4_artifact_name = "nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}"
+        p4_artifact_steps = (
+            ("p4-full", "Upload exact P4 producer evidence"),
+            ("linux-core", "Download exact P4 producer evidence"),
+            ("scenario-heavy", "Download exact P4 producer evidence"),
+        )
+        self.assertEqual(workflow.count(f"name: {p4_artifact_name}"), len(p4_artifact_steps))
+        for job_id, step_name in p4_artifact_steps:
+            step = next(
+                entry for entry in parse_job_steps(jobs[job_id])
+                if entry.get("name") == step_name
+            )
+            step_body = "\n".join(str(line) for line in step["lines"])
+            self.assertIn(f"          name: {p4_artifact_name}", step_body)
+
+        for job_id in ("linux-core", "scenario-heavy"):
+            env = parse_job_env(jobs[job_id])
+            self.assertEqual(env["STATE_WRITER_POLICY_EVIDENCE_MODE"], "strict")
+            self.assertEqual(env["STATE_WRITER_POLICY_LIVE_FALLBACK"], "forbid")
+            self.assertIn("needs['p4-full'].outputs.evidence_id", env["STATE_WRITER_POLICY_EVIDENCE_ID"])
+            names = [str(step["name"]) for step in parse_job_steps(jobs[job_id])]
+            self.assertLess(
+                names.index("Download exact P4 producer evidence"),
+                names.index("Validate exact P4 producer evidence"),
+            )
+
+        windows_commands = {
+            parse_step_run(step)
+            for step in parse_job_steps(jobs["windows-governance"])
+            if str(step["name"]).startswith("Run ")
+        }
+        self.assertEqual(windows_commands, {
+            "npm run test:node:williams-crossover-governance",
+            "npm run test:node:williams-crossover-job-runner",
+            "npm run test:node:windows-job-runtime",
+            "npm run test:node:windows-job-runtime:integration",
+            "npm run perf:williams-power-scheme:live-preflight",
+            "npm run test:node:williams-crossover-telemetry-live",
+        })
+        self.assertIn("group: scenario-forge-system-power-scheme", jobs["windows-governance"])
+        self.assertIn("cancel-in-progress: false", jobs["windows-governance"])
+
+        final_steps = parse_job_steps(jobs["final"])
+        self.assertEqual([str(step["name"]) for step in final_steps], ["Summarize Nightly shard results"])
+        self.assertEqual(parse_job_scalar(jobs["final"], "needs"), [
+            "metadata",
+            "linux-core",
+            "browser",
+            "scenario-heavy",
+            "p4-full",
+            "windows-governance",
+        ])
+        aggregator = extract_required_aggregator_script(jobs["final"])
+        required_results = {
+            job: {"result": "success", "outputs": {}}
+            for job in expected_jobs - {"final"}
+        }
+        completed = run_command(
+            "node",
+            "-e",
+            aggregator,
+            env={"REQUIRED_RESULTS": json.dumps(required_results)},
+        )
+        self.assert_command_ok(completed)
+        required_results["p4-full"]["result"] = "failure"
+        rejected = run_command(
+            "node",
+            "-e",
+            aggregator,
+            env={"REQUIRED_RESULTS": json.dumps(required_results)},
+        )
+        self.assertNotEqual(rejected.returncode, 0)
+
+        route_result = run_command(
+            "node",
+            "tools/select_verification_targets.mjs",
+            ".github/workflows/nightly-verification.yml",
+            "--json",
+        )
+        self.assert_command_ok(route_result)
+        route_payload = json.loads(route_result.stdout)
+        self.assertEqual(route_payload["unmatchedChangedFiles"], [])
+        commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+        self.assertIn("verify:script-portfolio", commands)
+        self.assertIn("node tools/select_verification_targets.mjs --check", commands)
+
+    def test_release_consumer_calls_one_canonical_command(self) -> None:
+        filename = "release-verification.yml"
+        workflow = (REPO_ROOT / ".github" / "workflows" / filename).read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("concurrency:", workflow)
+        self.assertIn("timeout-minutes: 120", workflow)
+        job = parse_workflow_job_blocks(workflow)["verify-release"]
+        checkout_step = next(step for step in parse_job_steps(job) if step.get("name") == "Checkout")
+        checkout_body = "\n".join(str(line) for line in checkout_step["lines"])
+        self.assertIn("          fetch-depth: 0", checkout_body)
+        self.assertEqual(workflow.count("npm run verify:release"), 1)
+        self.assertEqual(len(re.findall(r"npm run verify:[A-Za-z0-9:_-]+", workflow)), 1)
+        self.assertIn("if: always()", workflow)
+        self.assertIn("actions/upload-artifact@", workflow)
+        self.assertIn(".runtime/reports/generated/**", workflow)
+        self.assertNotIn("actions/deploy-", workflow)
+
+    def test_nightly_and_release_install_locked_python_dependencies_before_lane_command(self) -> None:
+        cases = (
+            ("nightly-verification.yml", "metadata", "Run Nightly metadata contracts"),
+            ("nightly-verification.yml", "p4-full", "Run P4.3 exact full policy producer"),
+            ("nightly-verification.yml", "linux-core", "Run balanced Linux core shard"),
+            ("nightly-verification.yml", "scenario-heavy", "Run strict scenario contracts"),
             ("release-verification.yml", "verify-release", "Run canonical Release verification"),
-        ):
+        )
+        for filename, job_id, canonical_step in cases:
             with self.subTest(filename=filename):
                 workflow = (REPO_ROOT / ".github" / "workflows" / filename).read_text(encoding="utf-8")
                 job = parse_workflow_job_blocks(workflow)[job_id]
@@ -1956,19 +2046,25 @@ jobs:
                 by_name = {str(step["name"]): step for step in steps}
                 download_run = parse_step_run(by_name["Download Python wheel cache"])
                 install_run = parse_step_run(by_name["Install Python test dependencies"])
-                self.assertRegex(download_run, r"(?m)^python -m pip download -r requirements-dev\.lock\.txt ")
+                self.assertRegex(download_run, r"(?m)^\s*python -m pip download -r requirements-dev\.lock\.txt ")
                 self.assertRegex(install_run, r"^python -m pip install --no-index --find-links ")
                 self.assertIn("-r requirements-dev.lock.txt", install_run)
+                if filename == "nightly-verification.yml":
+                    guard_index = names.index("Check minimal CI dependency guardrails")
+                    self.assertLess(install_index, guard_index)
+                    self.assertLess(guard_index, canonical_index)
+                    guard_run = parse_step_run(by_name["Check minimal CI dependency guardrails"])
+                    self.assertEqual(guard_run, "python tools/check_min_ci_requirements.py")
 
     def test_heavy_classification_runs_in_nightly_and_routes_through_pr_test_infra(self) -> None:
         command = "python tools/check_heavy_test_classification.py"
         nightly = (REPO_ROOT / ".github" / "workflows" / "nightly-verification.yml").read_text(encoding="utf-8")
         release = (REPO_ROOT / ".github" / "workflows" / "release-verification.yml").read_text(encoding="utf-8")
         shared = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
-        nightly_steps = parse_job_steps(parse_workflow_job_blocks(nightly)["verify-nightly"])
+        nightly_steps = parse_job_steps(parse_workflow_job_blocks(nightly)["metadata"])
         nightly_names = [str(step["name"]) for step in nightly_steps]
         classification_index = nightly_names.index("Check full-tree heavy test classification")
-        canonical_index = nightly_names.index("Run canonical Nightly verification")
+        canonical_index = nightly_names.index("Run Nightly metadata contracts")
 
         self.assertLess(classification_index, canonical_index)
         self.assertEqual(parse_step_run(nightly_steps[classification_index]), command)
