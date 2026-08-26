@@ -67,6 +67,42 @@ export function setActiveScenarioPerformanceHintsState(target, value) {
   return value;
 }
 
+export function clearClickScenarioHoverIdsState(target) {
+  assertStateTarget(target);
+  target.hoveredWaterRegionId = null;
+  target.hoveredSpecialRegionId = null;
+}
+
+export function setClickSelectedWaterRegionIdState(target, regionId = "") {
+  assertStateTarget(target);
+  const normalizedId = String(regionId || "").trim();
+  target.selectedWaterRegionId = normalizedId;
+  return normalizedId;
+}
+
+export function setClickSelectedSpecialRegionIdState(target, regionId = "") {
+  assertStateTarget(target);
+  const normalizedId = String(regionId || "").trim();
+  target.selectedSpecialRegionId = normalizedId;
+  return normalizedId;
+}
+
+export function setClickActiveSovereignCodeState(target, ownerCode = "") {
+  assertStateTarget(target);
+  const normalizedCode = String(ownerCode || "").trim();
+  target.activeSovereignCode = normalizedCode;
+  return normalizedCode;
+}
+
+export function setDayNightStyleConfigState(target, config) {
+  assertStateTarget(target);
+  if (!target.styleConfig || typeof target.styleConfig !== "object") {
+    target.styleConfig = {};
+  }
+  target.styleConfig.dayNight = config;
+  return config;
+}
+
 function validateCompletePatch(patch) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new TypeError("[scenario_presentation_actions] patch must be an object");

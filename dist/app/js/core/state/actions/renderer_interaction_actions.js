@@ -94,3 +94,32 @@ export function setInteractionInfrastructureStateFields(
   }
   return normalizedStage;
 }
+
+export function clearClickHoveredIdState(target) {
+  assertStateTarget(target);
+  target.hoveredId = null;
+}
+
+export function setClickHoverOverlayDirtyState(target, dirty) {
+  assertStateTarget(target);
+  const nextDirty = Boolean(dirty);
+  target.hoverOverlayDirty = nextDirty;
+  return nextDirty;
+}
+
+export function setClickSelectedColorState(target, color) {
+  assertStateTarget(target);
+  target.selectedColor = color;
+  return color;
+}
+
+export function removeClickWaterRegionOverrideState(target, regionId) {
+  assertStateTarget(target);
+  const normalizedId = String(regionId || "").trim();
+  if (!normalizedId || !target.waterRegionOverrides || typeof target.waterRegionOverrides !== "object") return false;
+  const nextOverrides = structuredClone(target.waterRegionOverrides);
+  const removed = Object.hasOwn(nextOverrides, normalizedId);
+  delete nextOverrides[normalizedId];
+  target.waterRegionOverrides = nextOverrides;
+  return removed;
+}
