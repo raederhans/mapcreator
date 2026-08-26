@@ -2360,7 +2360,7 @@ test("production adaptive CLI plans the frozen PR7A changed-file fixture with on
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const artifact = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
   assert.deepEqual(artifact.changedFiles, expectedChangedFiles);
-  assert.equal(artifact.recommendedCommands.length, 244);
+  assert.equal(artifact.recommendedCommands.length, 245);
   assert.equal(artifact.mainThreadSerialVerification.length, 27);
   assert.deepEqual(artifact.unmatchedChangedFiles, []);
   assert.deepEqual(artifact.executionPlan.routeGaps, []);
@@ -2775,7 +2775,7 @@ test("adaptive execution invokes one whole-lane planner per disposition and prop
       return reconcileVerificationRouteAuthority(inputs);
     },
   });
-  const boundReport = bindSelectionToPreparedCatalog(selectorReport, preparedCatalog);
+  const boundReport = bindSelectorPrCost(bindSelectionToPreparedCatalog(selectorReport, preparedCatalog));
   const plan = buildExecutionPlan(boundReport, {
     packageScripts: plannerScripts,
     preparedCatalog,

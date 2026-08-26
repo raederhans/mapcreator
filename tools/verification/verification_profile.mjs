@@ -333,7 +333,7 @@ function validatedSelectorPrCost(selectorReport, executionPlan) {
   }
   const observation = planObservation || reportObservation;
   if (executionPlan?.selectorPrCostDigest !== undefined
-    && executionPlan.selectorPrCostDigest !== observation?.observationDigest) {
+    && executionPlan.selectorPrCostDigest !== (observation?.observationDigest ?? null)) {
     throw prCostError("pr-cost-observation-digest-drift", "selector-handoff");
   }
   return observation;
