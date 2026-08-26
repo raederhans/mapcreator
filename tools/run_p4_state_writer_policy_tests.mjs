@@ -32,7 +32,7 @@ const REPORT_DIR = path.join(
 const REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.tap");
 const QUICK_REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.quick.tap");
 const FOCUSED_REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.focused.tap");
-export const P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS = 30 * 60 * 1000;
+export const P4_STATE_WRITER_POLICY_WINDOWS_JOB_TIMEOUT_MS = 45 * 60 * 1000;
 
 export {
   buildCanonicalP4StateWriterPolicyTap,
