@@ -299,6 +299,26 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Policy and selector evidence | Canonical policy remains 207 writers and its validator evidence remains valid because both follow-ups have zero production/policy diff. The owner selector returns 18 commands and 19 route IDs with zero unmatched files. Canonical/legacy shadow is equal and zero-spawn. |
 | Supervisor integration | Candidate commits were replayed as `c8deacb9`, `5dabccaf`, and `19c0ddf4`; the integrated tree matches `a9f63bd6`. Post-integration metadata/portfolio 91/91, owner/ocean/orchestrator/inventory 27/27, Python boundary 4/4, architecture, and P4.3 route all pass; route reports 19 changed files, zero unmatched files, and zero route gaps. P3.5 is released. Blank-line trailing whitespace is carried to the final P3.5 policy refresh. |
 
+## 2026-08-26 Stabilization and Cost Collapse v2 handoff
+
+| Fact | Current authority and evidence |
+| --- | --- |
+| User authority | Re-examine the follow-up inspection after the first total conversation, start the second execution round, dispatch user-visible tasks and subagents, and continue optimization through completion. |
+| Frozen remote baseline | `origin/main@1439dee6e14b26e628820ee0e9c9322e22dad407`; local `main` points to the same SHA after fetch. |
+| Preserved desktop WIP | `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d` with 20 tracked modifications. It is 99 commits behind `origin/main` and is not an implementation or integration lane. |
+| Integration owner | This root task owns `C:\Users\raede\.codex\worktrees\sc-v2-integration-20260826\mapcreator` on `codex/sc-v2-integration-20260826`, task records, integration commits, push, branch settings, long/shared verification, remote observation, registry truth, and cleanup decisions. |
+| Current remote blocker | Build and Deploy `32857711186` and Nightly `32886723760` both fail with `Heavy dependency test missing from grouping manifest: tests/test_landing_map_asset_contracts.py`. Deploy checkout fetched 15,822 files and spent about 102 seconds in fetch. |
+| Branch protection | `gh api repos/raederhans/scenario-forge/branches/main` reports `protected=false`, protection disabled, and no required status checks. Do not enable it until the exact successful check names and bypass behavior are reviewed. |
+| Wave A execution task | User-visible task `01a03bf6-2f1f-7912-81f7-e9bdfd8362f0` in worktree `3191`. Scope is heavy registration, guard split, self-tests, and PR/Nightly routing only; no commit, push, merge, cleanup, branch protection, Nightly sharding, P4, TNO, footprint, dist, or product changes. |
+| Wave A ready handoff | Worktree `3191` is detached at the frozen baseline with 11 uncommitted files and no integration actions. Classification tests pass 3/3; minimal lock reports zero packages/zero allowlist; full classification finds 15 heavy tests; portfolio passes 54/54; selector schema covers 390 routes; SF-ATS matches all 11 files with zero route gaps; `git diff --check` passes. Full, Nightly, browser, performance, remote Actions, deployment, and branch protection remain intentionally unrun. |
+| Wave B execution task | User-visible task `01a03bfa-0335-7a80-9403-233f9d2d3961` in worktree `3d08`. Scope is Nightly platform shards, final aggregator, Windows live governance ownership, and one full-policy producer; current P4.3 authority remains intact and P4.4/P4.5 plans stay out of scope. |
+| Wave C observation task | User-visible task `01a03bfa-3a76-75f3-ab39-d18f503a5049` in worktree `e2ec`. Scope is canonical high-level gate signals plus comparable cost schema only; the required execution set and demo/smoke dependency must remain unchanged in this baseline wave. |
+| Wave E observation task | User-visible task `01a03bfa-6d7a-76c3-bf8d-c8153cee0fdb` in worktree `da06`. Scope is report-only tree/blob/checkout profiling and versioned waiver schema; no asset migration, tracked-dist removal, history rewrite, or current required gate. |
+| Read-only subagents | `audit_p0_p1`, `audit_nightly_p4`, and `audit_pr_catalog_footprint` independently audited `origin/main@1439dee6` with no edits or long tests. They confirm Wave A is open, Nightly is Ubuntu-only, P4.3 boundary evidence is already strict, P4.4/P4.5 are intentionally unsupported, PR high-level requirement signals are absent, and footprint profiling is absent. |
+| Footprint snapshot | The read-only audit measured 15,822 tracked files, a 2,448.76 MiB checkout tree, and a 4.00 GiB Git pack. Existing Pages payload is about 927.65 MiB with the current 950 MiB warning and 1 GiB hard cap; Phase E must gate new unmanaged growth without retroactively blocking existing assets. |
+| Live resources | No root-owned browser, server, performance, power-scheme, or long verification process is running. Only bounded Git/GitHub inspection and asynchronous task setup are active. |
+| Next integration checkpoint | Receive the Wave A delivery, inspect exact changed-file overlap against the integration branch and later-wave audits, apply or replay only that bounded diff, run the two guards plus focused metadata/route tests, then create the integration commit before remote observation. |
+
 ### P3.5 admission checkpoint
 
 | Fact | Evidence and disposition |
