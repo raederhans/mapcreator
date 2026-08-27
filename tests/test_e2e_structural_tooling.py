@@ -623,7 +623,7 @@ for (const testCase of cases) {
     def test_adaptive_execute_plan_blocks_main_thread_by_default(self) -> None:
         script = """
 const { buildExecutionPlan } = await import('./tools/run_adaptive_tests.mjs');
-const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json';
+const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json';
 const authority = (commandRef, disposition, resourceLocks, ciProfiles) => ({
   commandRef,
   executionOwner: disposition,
@@ -1240,7 +1240,7 @@ const cases = [
     name: 'tno water data routes to serial validator with locks',
     changedFiles: ['data/scenarios/tno_1962/water_regions.geojson'],
     expectedCommands: [
-      'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json',
+      'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json',
     ],
     expectedExecutionOwners: ['main-thread'],
     expectedResourceLocks: ['heavy-geo', 'scenario-data', '.runtime-output'],
@@ -1338,7 +1338,7 @@ for (const testCase of cases) {
     def test_verification_selector_routes_tno_water_health_gate(self) -> None:
         script = """
 const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
-const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json';
+const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json';
 const report = buildRecommendation(['data/scenarios/tno_1962/water_regions.geojson']);
 const commands = report.recommendedCommands.map((entry) => entry.commandRef);
 if (!commands.includes(tnoWaterCommand)) {

@@ -17,6 +17,8 @@ const manifestUrl = new URL("../data/manifest.json", import.meta.url);
 const catalogUrl = new URL("../data/CATALOG.json", import.meta.url);
 const generatorUrl = new URL("../tools/build_city_lights_modern_asset.py", import.meta.url);
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
+const MODERN_RUNTIME_SHA256 = "d2438a7372c12411e048ea95fc55758fd4c95a1089547f54dd36258d60555dae";
+const HISTORICAL_RUNTIME_SHA256 = "c06b718dc02ea23e01d3c9ed1aa595667515fbe8b23b009bfd6aef1303c0fe65";
 const assetSource = await readFile(assetUrl, "utf8");
 const entriesPayload = JSON.parse(await readFile(entriesUrl, "utf8"));
 const modernDescriptor = JSON.parse(await readFile(modernDescriptorUrl, "utf8"));
@@ -111,29 +113,16 @@ test("city lights ownership separates source descriptor, generated data, runtime
   assert.equal(JSON.stringify(dataCatalog).includes("tests/fixtures/city_lights"), false);
 
   const runtimeBytes = readGitBlob("HEAD", "js/core/city_lights_modern_asset.js");
-  const baseRuntimeBytes = readGitBlob(
-    "2d42b83bdcf25b837d125a71d98fcbb0349f6570",
-    "js/core/city_lights_modern_asset.js",
-  );
   const historicalRuntimeBytes = readGitBlob("HEAD", "js/core/city_lights_historical_1930_asset.js");
-  const baseHistoricalRuntimeBytes = readGitBlob(
-    "2d42b83bdcf25b837d125a71d98fcbb0349f6570",
-    "js/core/city_lights_historical_1930_asset.js",
-  );
-  assert.deepEqual(runtimeBytes, baseRuntimeBytes);
-  assert.deepEqual(historicalRuntimeBytes, baseHistoricalRuntimeBytes);
-  assert.equal(
-    createHash("sha256").update(runtimeBytes).digest("hex"),
-    "d2438a7372c12411e048ea95fc55758fd4c95a1089547f54dd36258d60555dae",
-  );
+  const runtimeSha256 = createHash("sha256").update(runtimeBytes).digest("hex");
+  const historicalRuntimeSha256 = createHash("sha256").update(historicalRuntimeBytes).digest("hex");
+  assert.equal(runtimeSha256, MODERN_RUNTIME_SHA256);
+  assert.equal(historicalRuntimeSha256, HISTORICAL_RUNTIME_SHA256);
   assert.equal(runtimeOutput.size_bytes, runtimeBytes.length);
-  assert.equal(runtimeOutput.sha256, createHash("sha256").update(runtimeBytes).digest("hex"));
+  assert.equal(runtimeOutput.sha256, runtimeSha256);
   const historicalOutput = dataManifest.outputs["js/core/city_lights_historical_1930_asset.js"];
   assert.equal(historicalOutput.size_bytes, historicalRuntimeBytes.length);
-  assert.equal(
-    historicalOutput.sha256,
-    createHash("sha256").update(historicalRuntimeBytes).digest("hex"),
-  );
+  assert.equal(historicalOutput.sha256, historicalRuntimeSha256);
 });
 
 test("modern city lights fixture rebuild is LF-stable across descriptor checkouts", async (t) => {

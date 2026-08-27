@@ -3247,6 +3247,11 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 ) as chunks_mock,
                 patch.object(
                     tno_bundle,
+                    "write_tno_coverage_ledgers",
+                    side_effect=lambda *_args, **_kwargs: events.append("coverage_ledgers"),
+                ) as coverage_ledgers_mock,
+                patch.object(
+                    tno_bundle,
                     "sync_checkpoint_audit_summary_from_manifest",
                     side_effect=lambda path: events.append("sync_audit"),
                 ) as sync_audit_mock,
@@ -3273,10 +3278,11 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 checkpoint_manifest["summary"]["tno_named_marginal_water_count"],
                 len(tno_bundle.TNO_NAMED_MARGINAL_WATER_SPECS),
             )
-            self.assertEqual(events, ["rebuild_maps", "chunks", "sync_audit"])
+            self.assertEqual(events, ["rebuild_maps", "chunks", "coverage_ledgers", "sync_audit"])
             validate_mock.assert_called_once()
             rebuild_maps_mock.assert_called_once_with(scenario_dir, checkpoint_dir)
             chunks_mock.assert_called_once_with(checkpoint_dir)
+            coverage_ledgers_mock.assert_called_once_with(checkpoint_dir, checkpoint_manifest)
             sync_audit_mock.assert_called_once_with(checkpoint_dir)
             validate_publish_mock.assert_called_once_with(checkpoint_dir)
 

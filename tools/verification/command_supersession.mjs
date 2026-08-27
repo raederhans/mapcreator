@@ -56,6 +56,12 @@ export const LEGACY_VERIFICATION_COMMAND_SUPERSESSION = Object.freeze({
     "test:node:renderer-render-phase-lifecycle",
     "test:node:zoom-interaction-lifecycle-owner",
   ]),
+  "test:e2e:water-rendering": Object.freeze([
+    "node tools/e2e_layering.mjs run-spec tests/e2e/river_layer_regression.spec.js",
+    "node tools/e2e_layering.mjs run-spec tests/e2e/tno_named_water_rendering.spec.js",
+    "node tools/e2e_layering.mjs run-spec tests/e2e/tno_open_ocean_rendering.spec.js",
+    "node tools/e2e_layering.mjs run-spec tests/e2e/water_cache_strategy_regression.spec.js",
+  ]),
   "verify:tno-coverage-chain": Object.freeze([
     "verify:scenario-contracts:strict",
     "verify:tno-coverage-ledger",

@@ -1,50 +1,71 @@
 {
   "schemaVersion": 1,
   "policyId": "standard-perf-baseline-ratification-v1",
-  "decision": "accepted-common-mode-drift",
-  "commonModeDriftAccepted": true,
+  "decision": "accepted-scenario-workload-update",
+  "commonModeDriftAccepted": false,
   "basis": [
-    "The exact 6fae0fe9 candidate and 9869698d control were measured on the same machine with the same standard five-run workload contract.",
-    "All ten candidate-to-control ratios are at or below 0.9804222648730948 and the enforcing candidate gate has no contract, render-role, or regression failures.",
-    "The historical canonical delta is accepted as common-mode drift and is replaced by an admitted, stable, hash-bound raw evidence window from exact source 9879a828."
+    "The standard five-run workload was rerun on the same admitted Windows machine at exact source 3eb5b07f, with both environment admission and generation fence passing.",
+    "The TNO 1962 scenario manifest changed from 64a12a58 to 63a2ee11 while its remaining workload identity fields stayed fixed; the HOI4 1939 workload identity is unchanged.",
+    "All ten new-to-previous canonical metric ratios are recorded as workload-update observations and the ratified baseline is bound to its generated reports and twelve embedded raw evidence identities."
   ],
   "ratifiedBaseline": {
     "path": "docs/perf/baseline_2026-07-30.json",
     "markdownPath": "docs/perf/baseline_2026-07-30.md",
-    "sourceGitHead": "9879a828841d892823f576680d55a28697d77bcd",
-    "generatedAt": "2026-08-21T21:12:41.868Z",
-    "jsonSha256": "8c8586404e6fce38773330411e88c79174df37651adc4848fca718f9a61a5e4a",
-    "jsonBytes": 821175,
-    "markdownSha256": "58d4ee161882ce903690b9bb792aa1337f4e16400a051c08ac29d10836b97bb6",
-    "markdownBytes": 3996,
+    "sourceGitHead": "3eb5b07fd4e6338be17c018434b45e3c9a87d4bd",
+    "generatedAt": "2026-08-27T08:07:06.572Z",
+    "jsonSha256": "029272cb36ee521c87671ad58da091ea490add1f1620141c6e9836fb1cbda150",
+    "jsonBytes": 813108,
+    "markdownSha256": "5728f5d829f70a513a2e8cd87413da8bf2580aa80acdfa20e4cc64840157dba3",
+    "markdownBytes": 3978,
     "rawInventoryCount": 12,
-    "rawInventorySha256": "04dfc63b2e04ecf790c9d29d001b7831f2997df3f8a542ed1fcd4a973199d83e",
+    "rawInventorySha256": "71caf18932702171450ca744b467ee8decf6d4477ef8dca36d7b8fc1cbf76bb0",
     "rawEvidence": {
       "schemaVersion": 1,
       "policyId": "standard-perf-raw-window-v1",
       "mode": "baseline",
-      "windowId": "baseline-9879a828841d892823f576680d55a28697d77bcd-2026-08-21T21-03-49-547Z",
-      "root": ".runtime/admission/sc-phases-0-3-standard-ratification/baseline-9879a828-window-02",
+      "windowId": "baseline-3eb5b07fd4e6338be17c018434b45e3c9a87d4bd-2026-08-27T08-03-30-149Z",
+      "root": ".runtime/output/perf/baseline_2026-07-30/baseline",
       "environmentAdmission": {
-        "rawPath": ".runtime/admission/sc-phases-0-3-standard-ratification/baseline-9879a828-window-02/perf-admission.json",
-        "rawSha256": "87c5ec93eb0152c8b95074301e2073e65e014dfd33fa4a21d2334eca1d254f49"
+        "rawPath": ".runtime/output/perf/baseline_2026-07-30/baseline/perf-admission.json",
+        "rawSha256": "bf02c0d1f17b02cfdb487d4846a8977b024ccd3fc4e9b656d213af5503354637"
       },
       "generationFence": {
-        "rawPath": ".runtime/admission/sc-phases-0-3-standard-ratification/baseline-9879a828-window-02/perf-generation-fence.json",
-        "rawSha256": "d910e0bac61702ed1675783ea70ffb084c88a9527ac765906057efd9128db89f"
+        "rawPath": ".runtime/output/perf/baseline_2026-07-30/baseline/perf-generation-fence.json",
+        "rawSha256": "d1eae83899d80def0ba559d0737befecc9d2dbf2718c500b904d443a38783587"
       },
       "measuredRunCount": 10
     }
   },
   "previousCanonical": {
-    "sourceGitHead": "204d4d462ea0eeaacee1070efbd6e33edb436f9c",
-    "jsonSha256": "42a61a402ce2e52022e7c004dfba8922c1c9f841ae8f388a21166c333533b2b1",
-    "jsonBytes": 823435
+    "sourceGitHead": "9879a828841d892823f576680d55a28697d77bcd",
+    "jsonSha256": "8c8586404e6fce38773330411e88c79174df37651adc4848fca718f9a61a5e4a",
+    "jsonBytes": 821175,
+    "markdownSha256": "58d4ee161882ce903690b9bb792aa1337f4e16400a051c08ac29d10836b97bb6",
+    "markdownBytes": 3996
   },
-  "sameMachineControlComparison": {
-    "repositoryRelativeArtifactRoot": ".runtime/admission/sc-phases-0-3-6fae0fe9-live3/standard-control-comparison",
-    "inventoryCount": 26,
-    "inventorySha256": "f60c7767b157e955aae462bda81cd028059fee7ace1734f9079ad8ecec1f90c3",
+  "workloadIdentityChanges": {
+    "tno_1962": {
+      "changedFields": ["manifestSha256"],
+      "previousManifestSha256": "64a12a587f39dc1e38a632c68d8d46eb6eb40068598b129dc5578332b61f10e4",
+      "ratifiedManifestSha256": "63a2ee11be2c75c7fd419de6887376adc79b1acff52ef017c6d6f54b823869fd",
+      "previousIdentitySha256": "cc76f5310231f2ba1cf00f9372e606493eeb8064ab0afea85e9a5421bca52117",
+      "ratifiedIdentitySha256": "68c1ecbf4fb7a6d39a56fb31dbd141fea592f3f0f9554507cb1630859e657df0",
+      "stableFieldsSha256": "8fdfed9b162909ef7ce63d2bc87345693444ee3228674f94259763cb86d175e5",
+      "identityUnchanged": false
+    },
+    "hoi4_1939": {
+      "changedFields": [],
+      "previousManifestSha256": "a38b78b184e410dc836ccb7ab62002739115ce9cd913f4dea26b0bb51c385260",
+      "ratifiedManifestSha256": "a38b78b184e410dc836ccb7ab62002739115ce9cd913f4dea26b0bb51c385260",
+      "previousIdentitySha256": "63ae8569f2aeb94357028c5b8a9084c66644ed7b11699d693219432152b07045",
+      "ratifiedIdentitySha256": "63ae8569f2aeb94357028c5b8a9084c66644ed7b11699d693219432152b07045",
+      "identityUnchanged": true
+    }
+  },
+  "sameMachinePreviousCanonicalComparison": {
+    "decision": "accepted-scenario-workload-update",
+    "previousSourceGitHead": "9879a828841d892823f576680d55a28697d77bcd",
+    "ratifiedSourceGitHead": "3eb5b07fd4e6338be17c018434b45e3c9a87d4bd",
     "metricOrder": [
       "totalStartupMs",
       "scenarioAppliedMs",
@@ -52,59 +73,20 @@
       "refreshScenarioApplyMs",
       "renderSampleMedianMs"
     ],
-    "control": {
-      "reportPath": "control-baseline.json",
-      "sourceGitHead": "9869698da5331e9afcc961f42b4666469abe6c46",
-      "generatedAt": "2026-08-21T19:17:47.578Z",
-      "reportSha256": "29468f3c130410c6c06dcaebe942439cae6318327734fdcb48230b4117719d23",
-      "environmentAdmission": "admitted",
-      "generationFence": "stable"
-    },
-    "candidate": {
-      "reportPath": "candidate-raw/perf-gate-current.json",
-      "sourceGitHead": "6fae0fe94f5db98d18810f1c0bf97033427d1d23",
-      "generatedAt": "2026-08-21T19:29:55.380Z",
-      "reportSha256": "1c81fb3f44e3ef9f5612ff0fd0bc8fb6cfd46db5195b63768c90210ee8965bcf",
-      "environmentAdmission": "admitted",
-      "generationFence": "stable",
-      "regressionMode": "enforce",
-      "contractMismatches": [],
-      "renderSampleRoleMismatches": [],
-      "failures": []
-    },
     "scenarios": {
       "tno_1962": {
-        "totalStartupMs": { "control": 22727, "candidate": 19347.70000000298, "ratio": 0.8513090157083196 },
-        "scenarioAppliedMs": { "control": 10344.29999999702, "candidate": 8174.800000000745, "ratio": 0.7902709704864612 },
-        "applyScenarioBundleMs": { "control": 1842.8999999985099, "candidate": 1543.5, "ratio": 0.8375386618922611 },
-        "refreshScenarioApplyMs": { "control": 948.3999999985099, "candidate": 846.6000000014901, "ratio": 0.892661324338697 },
-        "renderSampleMedianMs": { "control": 2114.5, "candidate": 1973.6500000022352, "ratio": 0.9333885079225515 }
+        "totalStartupMs": { "previous": 22807.099999997765, "ratified": 8738.89999999851, "ratio": 0.3831657685545013 },
+        "scenarioAppliedMs": { "previous": 8874.10000000149, "ratified": 3556.199999999255, "ratio": 0.40073922989358446 },
+        "applyScenarioBundleMs": { "previous": 1920, "ratified": 666.3999999985099, "ratio": 0.34708333333255725 },
+        "refreshScenarioApplyMs": { "previous": 962.8000000007451, "ratified": 315.6000000014901, "ratio": 0.3277939343594162 },
+        "renderSampleMedianMs": { "previous": 2228.6500000003725, "ratified": 936, "ratio": 0.4199851928296698 }
       },
       "hoi4_1939": {
-        "totalStartupMs": { "control": 21256, "candidate": 17880.800000000745, "ratio": 0.8412118931125679 },
-        "scenarioAppliedMs": { "control": 10253.10000000149, "candidate": 8508.300000000745, "ratio": 0.8298270766889534 },
-        "applyScenarioBundleMs": { "control": 1792.800000000745, "candidate": 1757.5, "ratio": 0.9803101294061075 },
-        "refreshScenarioApplyMs": { "control": 1042, "candidate": 1021.5999999977648, "ratio": 0.9804222648730948 },
-        "renderSampleMedianMs": { "control": 2169.89999999851, "candidate": 1914.6500000003725, "ratio": 0.8823678510538215 }
-      }
-    }
-  },
-  "historicalCanonicalDrift": {
-    "decision": "accepted-common-mode-drift",
-    "scenarios": {
-      "tno_1962": {
-        "totalStartupMs": { "previous": 7058.5, "ratified": 22807.099999997765, "ratio": 3.231153927888045 },
-        "scenarioAppliedMs": { "previous": 2768, "ratified": 8874.10000000149, "ratio": 3.205960982659498 },
-        "applyScenarioBundleMs": { "previous": 459.3000000715256, "ratified": 1920, "ratio": 4.180274329851956 },
-        "refreshScenarioApplyMs": { "previous": 273.1999999284744, "ratified": 962.8000000007451, "ratio": 3.524158126840456 },
-        "renderSampleMedianMs": { "previous": 894.4500000476837, "ratified": 2228.6500000003725, "ratio": 2.49164290891784 }
-      },
-      "hoi4_1939": {
-        "totalStartupMs": { "previous": 6649.5, "ratified": 20303.5, "ratio": 3.0533874727423114 },
-        "scenarioAppliedMs": { "previous": 3139.6999999284744, "ratified": 8924.699999999255, "ratio": 2.842532726121148 },
-        "applyScenarioBundleMs": { "previous": 679.9000000953674, "ratified": 1961.6000000014901, "ratio": 2.8851301657984156 },
-        "refreshScenarioApplyMs": { "previous": 410.2999999523163, "ratified": 1118.300000000745, "ratio": 2.7255666588611023 },
-        "renderSampleMedianMs": { "previous": 677.6999999284744, "ratified": 1999.25, "ratio": 2.950051645582122 }
+        "totalStartupMs": { "previous": 20303.5, "ratified": 8070.199999999255, "ratio": 0.39747826729377966 },
+        "scenarioAppliedMs": { "previous": 8924.699999999255, "ratified": 3864.199999999255, "ratio": 0.43297813932116236 },
+        "applyScenarioBundleMs": { "previous": 1961.6000000014901, "ratified": 793.4000000022352, "ratio": 0.4044657422520557 },
+        "refreshScenarioApplyMs": { "previous": 1118.300000000745, "ratified": 470.5, "ratio": 0.42072789054787313 },
+        "renderSampleMedianMs": { "previous": 1999.25, "ratified": 877.4499999992549, "ratio": 0.438889583593475 }
       }
     }
   }

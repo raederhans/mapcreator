@@ -94,7 +94,7 @@ from tools.build_tno_1962_geo_locale_patch import build_patch as build_tno_geo_l
 from tools.build_startup_bootstrap_assets import build_bootstrap_runtime_topology, build_startup_bootstrap_assets
 from tools.build_startup_bundle import build_startup_bundles
 from tools import check_scenario_contracts as scenario_contracts
-from tools.check_scenario_contracts import apply_safe_scenario_contract_repairs
+from tools.check_scenario_contracts import apply_safe_scenario_contract_repairs, write_tno_coverage_ledgers
 from tools.check_scenario_contracts import validate_publish_bundle_dir
 from tools.scenario_chunk_assets import build_and_write_scenario_chunk_assets
 from tools.validate_tno_water_geometries import (
@@ -567,6 +567,7 @@ TNO_OPEN_OCEAN_SPLIT_SPECS = (
                 "id": TNO_PACIFIC_OPEN_OCEAN_IDS[2],
                 "name": "West Central Pacific Ocean",
                 "bboxes": ((110.0, -20.0, 180.0, 20.0), (-180.0, -20.0, -150.0, 20.0)),
+                "component_min_area": 0.05,
             },
             {
                 "id": TNO_PACIFIC_OPEN_OCEAN_IDS[3],
@@ -6207,6 +6208,10 @@ def build_water_runtime_from_scenario_stage(scenario_dir: Path, checkpoint_dir: 
             record_runtime_topology_stage_signature(scenario_dir, checkpoint_dir)
             sync_tno_water_summary_from_scenario(checkpoint_dir)
             build_checkpoint_chunk_assets(checkpoint_dir)
+            write_tno_coverage_ledgers(
+                checkpoint_dir,
+                load_checkpoint_json(checkpoint_dir, "manifest.json"),
+            )
             sync_checkpoint_audit_summary_from_manifest(checkpoint_dir)
             errors = validate_tno_prechunk_publish_checkpoint_dir(checkpoint_dir)
             if errors:
