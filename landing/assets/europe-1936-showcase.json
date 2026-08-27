@@ -22,12 +22,12 @@
     "canvas_height": 620,
     "canvas_padding": 36,
     "projected_bounds": [
-      -0.36750932182024026,
-      -0.39871699441076125,
-      0.5115107279746364,
-      0.40034009040215973
+      -0.36750932182,
+      -0.398716994411,
+      0.511510727975,
+      0.400340090402
     ],
-    "scale": 685.808323854985
+    "scale": 685.808323854917
   },
   "selection_policy": {
     "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused detail viewport",

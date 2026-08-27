@@ -47277,12 +47277,12 @@
     },
     {
       "path": "assets/europe-1936-showcase.json",
-      "size_bytes": 5696,
+      "size_bytes": 5676,
       "source_kind": "dist"
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 141604,
+      "size_bytes": 141428,
       "source_kind": "dist"
     },
     {
@@ -47297,7 +47297,7 @@
     },
     {
       "path": "assets/hero-blank.json",
-      "size_bytes": 2626,
+      "size_bytes": 2609,
       "source_kind": "dist"
     },
     {
@@ -47307,7 +47307,7 @@
     },
     {
       "path": "assets/hero-blank.webp",
-      "size_bytes": 88256,
+      "size_bytes": 88254,
       "source_kind": "dist"
     },
     {
@@ -47317,47 +47317,47 @@
     },
     {
       "path": "assets/hero-hoi4-1936.json",
-      "size_bytes": 2694,
+      "size_bytes": 2677,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1936.svg",
-      "size_bytes": 103134,
+      "size_bytes": 103642,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1936.webp",
-      "size_bytes": 70466,
+      "size_bytes": 71046,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1939.json",
-      "size_bytes": 2674,
+      "size_bytes": 2657,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1939.svg",
-      "size_bytes": 104565,
+      "size_bytes": 105479,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-hoi4-1939.webp",
-      "size_bytes": 70804,
+      "size_bytes": 70962,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.json",
-      "size_bytes": 4783,
+      "size_bytes": 4766,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.svg",
-      "size_bytes": 296520,
+      "size_bytes": 296987,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.webp",
-      "size_bytes": 59638,
+      "size_bytes": 59900,
       "source_kind": "dist"
     },
     {
@@ -47687,7 +47687,7 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 6141349
+        "size_bytes": 6141753
       },
       {
         "file_count": 85,
@@ -47697,7 +47697,7 @@
       {
         "file_count": 819,
         "id": "on-demand-product",
-        "size_bytes": 252891151
+        "size_bytes": 252893370
       },
       {
         "file_count": 8390,
@@ -61812,7 +61812,7 @@
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 963647829,
+        "untraversed_dist_bytes": 963650048,
         "untraversed_dist_file_count": 9149,
         "untraversed_module_count": 5
       },
@@ -62617,11 +62617,11 @@
           },
           {
             "path": "assets/europe-1936-showcase.svg",
-            "size_bytes": 141604
+            "size_bytes": 141428
           },
           {
             "path": "assets/hero-hoi4-1936.webp",
-            "size_bytes": 70466
+            "size_bytes": 71046
           },
           {
             "path": "assets/japan-preview-cities.webp",
@@ -62661,7 +62661,7 @@
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 720500
+        "size_bytes": 720904
       },
       {
         "basis": "html-entrypoint",
@@ -63215,11 +63215,11 @@
           },
           {
             "path": "assets/europe-1936-showcase.json",
-            "size_bytes": 5696
+            "size_bytes": 5676
           },
           {
             "path": "assets/hero-blank.json",
-            "size_bytes": 2626
+            "size_bytes": 2609
           },
           {
             "path": "assets/hero-blank.svg",
@@ -63227,7 +63227,7 @@
           },
           {
             "path": "assets/hero-blank.webp",
-            "size_bytes": 88256
+            "size_bytes": 88254
           },
           {
             "path": "assets/hero-cartography.svg",
@@ -63235,35 +63235,35 @@
           },
           {
             "path": "assets/hero-hoi4-1936.json",
-            "size_bytes": 2694
+            "size_bytes": 2677
           },
           {
             "path": "assets/hero-hoi4-1936.svg",
-            "size_bytes": 103134
+            "size_bytes": 103642
           },
           {
             "path": "assets/hero-hoi4-1939.json",
-            "size_bytes": 2674
+            "size_bytes": 2657
           },
           {
             "path": "assets/hero-hoi4-1939.svg",
-            "size_bytes": 104565
+            "size_bytes": 105479
           },
           {
             "path": "assets/hero-hoi4-1939.webp",
-            "size_bytes": 70804
+            "size_bytes": 70962
           },
           {
             "path": "assets/hero-tno-1962.json",
-            "size_bytes": 4783
+            "size_bytes": 4766
           },
           {
             "path": "assets/hero-tno-1962.svg",
-            "size_bytes": 296520
+            "size_bytes": 296987
           },
           {
             "path": "assets/hero-tno-1962.webp",
-            "size_bytes": 59638
+            "size_bytes": 59900
           },
           {
             "path": "assets/japan-preview-cities.svg",
@@ -63371,7 +63371,7 @@
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 3998355
+        "size_bytes": 4000574
       },
       {
         "basis": "product-registry:landing-sample-projects",
@@ -64060,7 +64060,7 @@
             ]
           },
           "owner": "landing-assets",
-          "size_bytes": 3998355
+          "size_bytes": 4000574
         },
         {
           "category": "startup-deferred-runtime",
@@ -64168,7 +64168,7 @@
     {
       "file_count": 57,
       "path": "assets",
-      "size_bytes": 4586456
+      "size_bytes": 4589079
     },
     {
       "file_count": 1,
@@ -64196,5 +64196,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972755716
+  "total_bytes": 972758339
 }

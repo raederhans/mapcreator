@@ -1032,6 +1032,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "test:node:scenario-chunk-contracts"
     ],
     "verify:pages-dist-and-drift": [
+      "test:py:landing-map-asset-contracts",
       "verify:pages-dist",
       "verify:dist-drift"
     ]
@@ -6219,12 +6220,16 @@ const AUTHORED_VERIFICATION_METADATA = {
         "landing/assets/europe-1936-showcase.svg",
         "landing/assets/hero-blank.json",
         "landing/assets/hero-blank.svg",
+        "landing/assets/hero-blank.webp",
         "landing/assets/hero-hoi4-1936.json",
         "landing/assets/hero-hoi4-1936.svg",
+        "landing/assets/hero-hoi4-1936.webp",
         "landing/assets/hero-hoi4-1939.json",
         "landing/assets/hero-hoi4-1939.svg",
+        "landing/assets/hero-hoi4-1939.webp",
         "landing/assets/hero-tno-1962.json",
         "landing/assets/hero-tno-1962.svg",
+        "landing/assets/hero-tno-1962.webp",
         "landing/assets/japan-preview.json",
         "landing/assets/japan-preview-cities.svg",
         "landing/assets/japan-preview-night.svg",

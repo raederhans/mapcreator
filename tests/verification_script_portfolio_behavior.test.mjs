@@ -60,7 +60,7 @@ test("canonical metadata source owns every projection and shadows the retained l
     suites: 30,
     portfolioScripts: 340,
     superseders: 14,
-    supersessionEdges: 36,
+    supersessionEdges: 37,
   });
   assert.deepEqual(ROUTE_REGISTRY_SOURCE_IDENTITY, VERIFICATION_METADATA_SOURCE_IDENTITY);
   assert.deepEqual(COMMAND_SUPERSESSION_SOURCE_IDENTITY, VERIFICATION_METADATA_SOURCE_IDENTITY);
@@ -1293,6 +1293,24 @@ test("preserves real build-test-drift and build-check chains as topological exec
     assert.deepEqual(pages.executions[0].effectiveArgv.slice(0, 4), ["/d", "/s", "/c", "npm"]);
   }
   assert.equal(pages.executions.at(-1).effectiveArgv[0], "diff");
+
+  const combined = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["test:py:landing-map-asset-contracts", "verify:pages-dist-and-drift"],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.deepEqual(
+    combined.rootRecords.map((entry) => [entry.commandRef, entry.disposition, entry.supersededBy ?? null]),
+    [
+      ["test:py:landing-map-asset-contracts", "superseded", "verify:pages-dist-and-drift"],
+      ["verify:pages-dist-and-drift", "planned", null],
+    ],
+  );
+  assert.equal(
+    combined.normalizedLeaves.filter((leaf) => leaf === "python-unittest:tests.test_landing_map_asset_contracts").length,
+    1,
+  );
 
   const drift = buildVerificationSelectionPlan(catalog, ["verify:dist-drift"], {
     platform: process.platform,
