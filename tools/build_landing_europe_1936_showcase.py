@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Iterable
 from xml.sax.saxutils import escape as xml_escape
 
+from shapely import normalize, set_precision
 from shapely.errors import GEOSException
 from shapely.geometry import GeometryCollection, box, shape
 from shapely.geometry.base import BaseGeometry
@@ -74,6 +75,9 @@ HERO_BASE_UNDERLAY_COASTLINE_LIMIT = 360
 SHOWCASE_CANVAS_PADDING = 36
 PROJECTION_CENTER_LON = 10.0
 PROJECTION_CENTER_LAT = 52.0
+HERO_PROJECTION_DECIMAL_PLACES = 12
+HERO_PROJECTED_PIXEL_DECIMAL_PLACES = 9
+HERO_GEOMETRY_PRECISION_GRID = 1e-9
 RAIL_LINE_LIMIT = 220
 RAIL_MIN_LINES_PER_SHARD = 55
 RAIL_MIN_PROJECTED_PX = 8.0
@@ -187,12 +191,14 @@ class Canvas:
 
     @classmethod
     def create(cls, width: int, height: int, bbox: tuple[float, float, float, float]) -> "Canvas":
-        min_x, min_y, max_x, max_y = projection_bounds_for_bbox(bbox)
+        min_x, min_y, max_x, max_y = (
+            canonical_projection_value(value) for value in projection_bounds_for_bbox(bbox)
+        )
         projected_width = max_x - min_x
         projected_height = max_y - min_y
         usable_width = width - SHOWCASE_CANVAS_PADDING * 2
         usable_height = height - SHOWCASE_CANVAS_PADDING * 2
-        scale = min(usable_width / projected_width, usable_height / projected_height)
+        scale = canonical_projection_value(min(usable_width / projected_width, usable_height / projected_height))
         fitted_width = projected_width * scale
         fitted_height = projected_height * scale
         return cls(
@@ -201,8 +207,8 @@ class Canvas:
             bbox=bbox,
             projected_bounds=(min_x, min_y, max_x, max_y),
             scale=scale,
-            offset_x=(width - fitted_width) / 2.0,
-            offset_y=(height - fitted_height) / 2.0,
+            offset_x=canonical_projection_value((width - fitted_width) / 2.0),
+            offset_y=canonical_projection_value((height - fitted_height) / 2.0),
         )
 
     def project(self, lon: float, lat: float) -> tuple[float, float]:
@@ -210,7 +216,15 @@ class Canvas:
         raw_x, raw_y = project_laea(lon, lat)
         x = self.offset_x + (raw_x - min_x) * self.scale
         y = self.offset_y + (max_y - raw_y) * self.scale
-        return x, y
+        return canonical_projected_pixel_value(x), canonical_projected_pixel_value(y)
+
+
+def canonical_projection_value(value: float) -> float:
+    return round(float(value), HERO_PROJECTION_DECIMAL_PLACES)
+
+
+def canonical_projected_pixel_value(value: float) -> float:
+    return round(float(value), HERO_PROJECTED_PIXEL_DECIMAL_PLACES)
 
 
 def project_laea(lon: float, lat: float) -> tuple[float, float]:
@@ -346,6 +360,14 @@ def valid_geometry(geometry: BaseGeometry) -> BaseGeometry:
         except GEOSException:
             return GeometryCollection()
         return repaired if repaired.is_valid else GeometryCollection()
+
+
+def canonicalize_hero_geometry(geometry: BaseGeometry) -> BaseGeometry:
+    repaired = valid_geometry(geometry)
+    if repaired.is_empty:
+        return repaired
+    snapped = set_precision(repaired, grid_size=HERO_GEOMETRY_PRECISION_GRID)
+    return normalize(valid_geometry(snapped))
 
 
 def renderable_geometry(geometry: BaseGeometry) -> BaseGeometry:
@@ -495,7 +517,7 @@ def load_scenario_territories(
     owners = read_json(paths["owners"])["owners"]
     showcase_tags = tag_filter or europe_country_tags(countries)
     # detail bbox 和 context bbox 都走同一入口，避免展示页背景国和细节国使用两套裁剪语义。
-    clip = box(*(clip_bbox or canvas.bbox))
+    clip = canonicalize_hero_geometry(box(*(clip_bbox or canvas.bbox)))
     by_tag: dict[str, list[BaseGeometry]] = defaultdict(list)
     source_feature_count = 0
 
@@ -509,10 +531,10 @@ def load_scenario_territories(
         geometry_payload = feature.get("geometry")
         if not geometry_payload:
             continue
-        geometry = valid_geometry(shape(geometry_payload))
+        geometry = canonicalize_hero_geometry(shape(geometry_payload))
         if not geometry.intersects(clip):
             continue
-        clipped = valid_geometry(geometry.intersection(clip))
+        clipped = canonicalize_hero_geometry(geometry.intersection(clip))
         if clipped.is_empty:
             continue
         by_tag[tag].append(clipped)
@@ -521,7 +543,8 @@ def load_scenario_territories(
     territories: list[dict] = []
     for tag, geometries in sorted(by_tag.items()):
         country = countries[tag]
-        merged = unary_union(geometries).simplify(0.055, preserve_topology=True)
+        merged = canonicalize_hero_geometry(unary_union(geometries))
+        merged = canonicalize_hero_geometry(merged.simplify(0.055, preserve_topology=True))
         path_commands = polygon_path(merged, canvas)
         if not path_commands:
             continue
