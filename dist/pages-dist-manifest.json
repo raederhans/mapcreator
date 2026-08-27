@@ -41687,47 +41687,47 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
-      "size_bytes": 18641674,
+      "size_bytes": 18136472,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c0.json",
-      "size_bytes": 2219330,
+      "size_bytes": 510022,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c1.json",
-      "size_bytes": 2820836,
+      "size_bytes": 1111528,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c2.json",
-      "size_bytes": 7065449,
+      "size_bytes": 5356141,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c3.json",
-      "size_bytes": 10229641,
+      "size_bytes": 8520333,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c0.json",
-      "size_bytes": 11040958,
+      "size_bytes": 9331650,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c1.json",
-      "size_bytes": 22689481,
+      "size_bytes": 20980173,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
-      "size_bytes": 30443516,
+      "size_bytes": 28734208,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c3.json",
-      "size_bytes": 15943961,
+      "size_bytes": 14234653,
       "source_kind": "generated_ignored"
     },
     {
@@ -41767,7 +41767,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/detail_chunks.manifest.json",
-      "size_bytes": 3082521,
+      "size_bytes": 3082512,
       "source_kind": "generated_ignored"
     },
     {
@@ -41882,7 +41882,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1375724,
+      "size_bytes": 1375721,
       "source_kind": "generated_ignored"
     },
     {
@@ -41892,7 +41892,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1375725,
+      "size_bytes": 1375721,
       "source_kind": "generated_ignored"
     },
     {
@@ -41902,7 +41902,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 18641674,
+      "size_bytes": 18136471,
       "source_kind": "generated_ignored"
     },
     {
@@ -47562,7 +47562,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2065531,
+      "size_bytes": 2065514,
       "source_kind": "dist"
     },
     {
@@ -47573,11 +47573,6 @@
   ],
   "largest_files": [
     {
-      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
-      "size_bytes": 30443516,
-      "source_kind": "generated_ignored"
-    },
-    {
       "path": "app/data/scenarios/hoi4_1936/chunks/political.detail.country.sov.json",
       "size_bytes": 29157059,
       "source_kind": "generated_ignored"
@@ -47585,6 +47580,11 @@
     {
       "path": "app/data/scenarios/hoi4_1939/chunks/political.detail.country.sov.json",
       "size_bytes": 29157059,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
+      "size_bytes": 28734208,
       "source_kind": "generated_ignored"
     },
     {
@@ -47599,7 +47599,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c1.json",
-      "size_bytes": 22689481,
+      "size_bytes": 20980173,
       "source_kind": "generated_ignored"
     },
     {
@@ -47614,17 +47614,12 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
-      "size_bytes": 18641674,
+      "size_bytes": 18136472,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 18641674,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c3.json",
-      "size_bytes": 15943961,
+      "size_bytes": 18136471,
       "source_kind": "generated_ignored"
     },
     {
@@ -47635,6 +47630,11 @@
     {
       "path": "app/data/scenarios/hoi4_1939/chunks/political.coarse.r0c0.json",
       "size_bytes": 15123722,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c3.json",
+      "size_bytes": 14234653,
       "source_kind": "generated_ignored"
     },
     {
@@ -47653,16 +47653,6 @@
       "source_kind": "generated_ignored"
     },
     {
-      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c0.json",
-      "size_bytes": 11040958,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c3.json",
-      "size_bytes": 10229641,
-      "source_kind": "generated_ignored"
-    },
-    {
       "path": "app/data/geo_aliases.json",
       "size_bytes": 9827487,
       "source_kind": "generated_ignored"
@@ -47670,6 +47660,16 @@
     {
       "path": "app/data/transport_layers/uk_road/roads.preview.topo.json",
       "size_bytes": 9653698,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json",
+      "size_bytes": 9589818,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json",
+      "size_bytes": 9589818,
       "source_kind": "generated_ignored"
     }
   ],
@@ -47697,12 +47697,12 @@
       {
         "file_count": 819,
         "id": "on-demand-product",
-        "size_bytes": 252893370
+        "size_bytes": 252893353
       },
       {
         "file_count": 8390,
         "id": "scenario-specific",
-        "size_bytes": 710860352
+        "size_bytes": 696175467
       },
       {
         "file_count": 4,
@@ -61812,7 +61812,7 @@
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 963650048,
+        "untraversed_dist_bytes": 948965146,
         "untraversed_dist_file_count": 9149,
         "untraversed_module_count": 5
       },
@@ -63400,11 +63400,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2065531
+            "size_bytes": 2065514
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2065531
+        "size_bytes": 2065514
       },
       {
         "basis": "product-registry:thematic-product-data",
@@ -63691,7 +63691,7 @@
           {
             "file_count": 927,
             "prefix": "app/data/scenarios/",
-            "size_bytes": 697412969
+            "size_bytes": 682728084
           },
           {
             "file_count": 9,
@@ -63699,7 +63699,7 @@
             "size_bytes": 118248
           }
         ],
-        "size_bytes": 697531217
+        "size_bytes": 682846332
       },
       {
         "basis": "product-registry:export-modules",
@@ -63895,7 +63895,7 @@
             ]
           },
           "owner": "scenario-runtime",
-          "size_bytes": 697531217
+          "size_bytes": 682846332
         },
         {
           "category": "scenario-specific",
@@ -64120,7 +64120,7 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2065531
+          "size_bytes": 2065514
         }
       ],
       "status": "complete",
@@ -64163,7 +64163,7 @@
     {
       "file_count": 9452,
       "path": "app",
-      "size_bytes": 965902195
+      "size_bytes": 951217310
     },
     {
       "file_count": 57,
@@ -64173,7 +64173,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2065531
+      "size_bytes": 2065514
     },
     {
       "file_count": 1,
@@ -64196,5 +64196,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972758339
+  "total_bytes": 958073437
 }
