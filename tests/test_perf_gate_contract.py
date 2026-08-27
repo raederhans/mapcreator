@@ -150,10 +150,18 @@ class PerfGateContractTest(unittest.TestCase):
             "data/scenarios/index.json",
             "data/scenarios/tno_1962",
             "data/scenarios/hoi4_1939",
-            "tools/perf",
             "tools/dev_server.py",
         ):
             self.assertIn(f"'{governed_input}'", same_runner_step)
+        self.assertNotIn("'tools/perf'", same_runner_step)
+        self.assertIn(
+            "$candidateHarness = Join-Path $env:GITHUB_WORKSPACE 'tools/perf/run_baseline.mjs'",
+            same_runner_step,
+        )
+        self.assertIn(
+            "node $candidateHarness --measured-repo-root $baseWorktree --mode baseline",
+            same_runner_step,
+        )
         self.assertIn(
             "git -C $baseWorktree restore --source=$candidateSha --staged --worktree -- $governedHeadInputs",
             same_runner_step,
