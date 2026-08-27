@@ -16,6 +16,7 @@ import {
 } from "../tools/select_verification_targets.mjs";
 import {
   NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS,
+  buildNightlyScenarioHeavyPlan,
   buildNightlyLinuxCoreShardPlan,
   buildCoreVerificationPlan,
   commandToProcess,
@@ -605,6 +606,57 @@ test("Nightly Linux core sharding is deterministic and rejects invalid leaf auth
   );
 });
 
+test("Nightly scenario heavy plan selects the exact canonical geo stack routes", () => {
+  const routes = buildRouteIndex();
+  const expected = routes.filter((route) => route.id.startsWith("python-heavy:geo_stack:"));
+  const plan = buildNightlyScenarioHeavyPlan({ routes });
+
+  assert.equal(expected.length, 15);
+  assert.equal(plan.commandsToRun.length, 15);
+  assert.deepEqual(
+    plan.commandsToRun.map((entry) => entry.commandRef),
+    expected.map((route) => route.commandRef),
+  );
+  assert.deepEqual(plan.nightlyScenarioHeavy.routeIds, expected.map((route) => route.id));
+  assert.equal(new Set(plan.nightlyScenarioHeavy.routeIds).size, 15);
+});
+
+test("Nightly scenario heavy plan fails closed on route metadata drift", () => {
+  const validRoutes = buildRouteIndex();
+  const heavyRoutes = validRoutes.filter((route) => route.id.startsWith("python-heavy:geo_stack:"));
+  const replaceRoute = (routeId, patch) => validRoutes.map((route) => (
+    route.id === routeId ? { ...route, ...patch } : route
+  ));
+  const first = heavyRoutes[0];
+
+  assert.throws(
+    () => buildNightlyScenarioHeavyPlan({ routes: validRoutes.filter((route) => route.id !== first.id) }),
+    /exactly 15/,
+  );
+  assert.throws(
+    () => buildNightlyScenarioHeavyPlan({
+      routes: [...validRoutes.filter((route) => route.id !== heavyRoutes[1].id), { ...first }],
+    }),
+    /unique route id/,
+  );
+  assert.throws(
+    () => buildNightlyScenarioHeavyPlan({ routes: replaceRoute(first.id, { commandRef: heavyRoutes[1].commandRef }) }),
+    /unique commandRef/,
+  );
+  for (const [field, value] of [
+    ["cost", "medium"],
+    ["executionOwner", "child-safe"],
+    ["ciProfile", "pr-fast"],
+    ["platforms", ["windows"]],
+    ["resourceLocks", ["heavy-geo"]],
+  ]) {
+    assert.throws(
+      () => buildNightlyScenarioHeavyPlan({ routes: replaceRoute(first.id, { [field]: value }) }),
+      new RegExp(field === "resourceLocks" ? "required resource locks" : field),
+    );
+  }
+});
+
 test("default core plan applies strict command closure without changing test coverage", () => {
   const packageScripts = JSON.parse(
     fs.readFileSync("package.json", "utf8"),
@@ -751,6 +803,33 @@ test("--list writes reports and does not execute", () => {
     JSON.parse(fs.readFileSync(path.join(tempDir, "verify-core-profile.json"), "utf8")).lifecycle.state,
     "listed",
   );
+});
+
+test("--nightly-scenario-heavy wires the canonical plan into checkpointed reporting", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "verify-scenario-heavy-"));
+  const result = runCoreVerification({
+    argv: parseArgs([
+      "--list",
+      "--nightly-scenario-heavy",
+      "--json-out",
+      path.join(tempDir, "scenario-heavy.json"),
+      "--md-out",
+      path.join(tempDir, "scenario-heavy.md"),
+      "--profile-out",
+      path.join(tempDir, "scenario-heavy-profile.json"),
+    ]),
+    packageScripts: PACKAGE_SCRIPTS,
+    runner() {
+      throw new Error("list mode must not spawn scenario heavy commands");
+    },
+    stdio: "pipe",
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.report.runnerId, "verify-nightly-scenario-heavy");
+  assert.equal(result.report.commands.length, 15);
+  assert.equal(result.report.nightlyScenarioHeavy.routeCount, 15);
+  assert.equal(result.report.verdict, "listed");
 });
 
 test("core observer publication failures preserve command order and original exit", () => {
@@ -1074,6 +1153,7 @@ test("resume parsing is explicit and does not expose an arbitrary skip flag", ()
     resume: true,
     resumeFrom: "previous.json",
     nightlyLinuxCore: false,
+    nightlyScenarioHeavy: false,
     shardIndex: 1,
     shardCount: 3,
     jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
@@ -1088,12 +1168,18 @@ test("resume parsing is explicit and does not expose an arbitrary skip flag", ()
       resume: false,
       resumeFrom: null,
       nightlyLinuxCore: true,
+      nightlyScenarioHeavy: false,
       shardIndex: 2,
       shardCount: 3,
       jsonOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.json"),
       mdOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core.md"),
       profileOut: path.join(process.cwd(), ".runtime", "reports", "generated", "verify-core-profile.json"),
     },
+  );
+  assert.equal(parseArgs(["--nightly-scenario-heavy"]).nightlyScenarioHeavy, true);
+  assert.throws(
+    () => parseArgs(["--nightly-linux-core", "--nightly-scenario-heavy"]),
+    /mutually exclusive/,
   );
   assert.throws(() => parseArgs(["--skip", "verify:p4:state-writer-policy"]), /Unknown verify:core argument/);
   assert.throws(() => parseArgs(["--shard-index", "2"]), /require --nightly-linux-core/);

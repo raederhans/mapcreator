@@ -1920,6 +1920,16 @@ jobs:
         self.assertEqual(parse_job_scalar(jobs["windows-governance"], "runs-on"), "windows-latest")
         self.assertEqual(parse_job_scalar(jobs["linux-core"], "needs"), ["p4-full"])
         self.assertEqual(parse_job_scalar(jobs["scenario-heavy"], "needs"), ["p4-full"])
+        scenario_heavy_steps = parse_job_steps(jobs["scenario-heavy"])
+        scenario_heavy_by_name = {str(step["name"]): step for step in scenario_heavy_steps}
+        self.assertEqual(
+            parse_step_run(scenario_heavy_by_name["Run canonical Nightly scenario heavy routes"]),
+            "node tools/run_core_verification.mjs --nightly-scenario-heavy "
+            "--json-out .runtime/reports/generated/nightly/scenario-heavy.json "
+            "--md-out .runtime/reports/generated/nightly/scenario-heavy.md "
+            "--profile-out .runtime/reports/generated/nightly/scenario-heavy-profile.json",
+        )
+        self.assertNotIn("unittest discover", jobs["scenario-heavy"])
 
         p4_artifact_name = "nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}"
         p4_artifact_steps = (
