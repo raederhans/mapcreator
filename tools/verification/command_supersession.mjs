@@ -64,6 +64,7 @@ export const LEGACY_VERIFICATION_COMMAND_SUPERSESSION = Object.freeze({
     "test:node:scenario-chunk-contracts",
   ]),
   "verify:pages-dist-and-drift": Object.freeze([
+    "test:py:landing-map-asset-contracts",
     "verify:pages-dist",
     "verify:dist-drift",
   ]),

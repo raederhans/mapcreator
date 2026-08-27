@@ -1032,6 +1032,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "test:node:scenario-chunk-contracts"
     ],
     "verify:pages-dist-and-drift": [
+      "test:py:landing-map-asset-contracts",
       "verify:pages-dist",
       "verify:dist-drift"
     ]
