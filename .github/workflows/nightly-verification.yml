@@ -270,8 +270,8 @@ jobs:
         run: node tools/verification/state_writer_policy_evidence.mjs validate --evidence "$STATE_WRITER_POLICY_EVIDENCE_PATH" --expected-id "$STATE_WRITER_POLICY_EVIDENCE_ID" --phase P4.3
       - name: Run strict scenario contracts
         run: npm run verify:scenario-contracts:strict
-      - name: Run full Python regression discovery
-        run: npm run python -- -m unittest discover -s tests -p "test_*.py"
+      - name: Run canonical Nightly scenario heavy routes
+        run: node tools/run_core_verification.mjs --nightly-scenario-heavy --json-out .runtime/reports/generated/nightly/scenario-heavy.json --md-out .runtime/reports/generated/nightly/scenario-heavy.md --profile-out .runtime/reports/generated/nightly/scenario-heavy-profile.json
       - name: Upload scenario-heavy evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

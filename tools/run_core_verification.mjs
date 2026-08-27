@@ -41,10 +41,13 @@ import {
   buildVerificationSelectionPlan,
   prepareRepositoryVerificationCatalog,
 } from "./verification/script_portfolio.mjs";
+import { buildRouteIndex } from "./test_route_registry.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.md");
+const NIGHTLY_SCENARIO_HEAVY_ROUTE_PREFIX = "python-heavy:geo_stack:";
+const NIGHTLY_SCENARIO_HEAVY_ROUTE_COUNT = 15;
 
 export const NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS = Object.freeze([
   "verify:p4:state-writer-policy",
@@ -67,6 +70,7 @@ export function parseArgs(argv) {
     resume: false,
     resumeFrom: null,
     nightlyLinuxCore: false,
+    nightlyScenarioHeavy: false,
     shardIndex: 1,
     shardCount: 3,
     jsonOut: DEFAULT_JSON_OUT,
@@ -79,6 +83,7 @@ export function parseArgs(argv) {
     else if (token === "--include-main-thread") args.includeMainThread = true;
     else if (token === "--resume") args.resume = true;
     else if (token === "--nightly-linux-core") args.nightlyLinuxCore = true;
+    else if (token === "--nightly-scenario-heavy") args.nightlyScenarioHeavy = true;
     else if (token === "--shard-index") args.shardIndex = Number(argv[++index]);
     else if (token === "--shard-count") args.shardCount = Number(argv[++index]);
     else if (token === "--resume-from") {
@@ -101,6 +106,12 @@ export function parseArgs(argv) {
   if (!args.nightlyLinuxCore
     && (args.shardIndex !== 1 || args.shardCount !== 3)) {
     throw new Error("Nightly shard arguments require --nightly-linux-core.");
+  }
+  if (args.nightlyLinuxCore && args.nightlyScenarioHeavy) {
+    throw new Error("Nightly Linux core and scenario heavy modes are mutually exclusive.");
+  }
+  if (args.nightlyScenarioHeavy && args.includeMainThread) {
+    throw new Error("Nightly scenario heavy mode is mutually exclusive with --include-main-thread.");
   }
   return args;
 }
@@ -345,6 +356,94 @@ export function buildNightlyLinuxCoreShardPlan({
       totalLeafCount: shards.reduce((total, shard) => total + shard.leafCount, 0),
       excludedCommandRefs: [...NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS],
       assignments: shardAssignments,
+    },
+  };
+}
+
+function routePlatforms(route) {
+  const values = [
+    ...(Array.isArray(route?.platforms) ? route.platforms : []),
+    ...(route?.platform === undefined ? [] : [route.platform]),
+  ].map((value) => String(value).trim()).filter(Boolean);
+  return values.length > 0 ? [...new Set(values)] : ["all"];
+}
+
+export function buildNightlyScenarioHeavyPlan({ routes = buildRouteIndex() } = {}) {
+  if (!Array.isArray(routes)) {
+    throw new Error("Nightly scenario heavy routes must be an array.");
+  }
+  const selected = routes.filter((route) => (
+    String(route?.id || "").startsWith(NIGHTLY_SCENARIO_HEAVY_ROUTE_PREFIX)
+  ));
+  if (selected.length !== NIGHTLY_SCENARIO_HEAVY_ROUTE_COUNT) {
+    throw new Error(
+      `Nightly scenario heavy requires exactly ${NIGHTLY_SCENARIO_HEAVY_ROUTE_COUNT} canonical routes; found ${selected.length}.`,
+    );
+  }
+  const routeIds = new Set();
+  const commandRefs = new Set();
+  for (const route of selected) {
+    if (routeIds.has(route.id)) {
+      throw new Error(`Nightly scenario heavy requires a unique route id: ${route.id}`);
+    }
+    routeIds.add(route.id);
+    if (commandRefs.has(route.commandRef)) {
+      throw new Error(`Nightly scenario heavy requires a unique commandRef: ${route.commandRef}`);
+    }
+    commandRefs.add(route.commandRef);
+    if (route.cost !== "heavy") {
+      throw new Error(`Nightly scenario heavy route has invalid cost: ${route.id}`);
+    }
+    if (route.executionOwner !== "main-thread") {
+      throw new Error(`Nightly scenario heavy route has invalid executionOwner: ${route.id}`);
+    }
+    if (route.ciProfile !== "full") {
+      throw new Error(`Nightly scenario heavy route has invalid ciProfile: ${route.id}`);
+    }
+    const platforms = routePlatforms(route);
+    if (platforms.some((platform) => platform !== "all" && platform !== "linux")) {
+      throw new Error(`Nightly scenario heavy route has invalid platforms: ${route.id}`);
+    }
+    const locks = new Set(Array.isArray(route.resourceLocks) ? route.resourceLocks : []);
+    if (!locks.has(".runtime-output") || !locks.has("heavy-geo")) {
+      throw new Error(`Nightly scenario heavy route is missing required resource locks: ${route.id}`);
+    }
+  }
+  const commands = selected.map((route) => ({
+    group: "scenario-heavy",
+    groupTitle: "Canonical Nightly scenario heavy routes",
+    commandRef: route.commandRef,
+    command: route.commandRef,
+    commandType: "direct",
+    routeId: route.id,
+  }));
+  return {
+    schemaVersion: 1,
+    lane: "nightly canonical scenario heavy routes",
+    includeMainThread: true,
+    startsBrowserDevServerOrPlaywright: false,
+    requiresDistLaneOwner: false,
+    groups: [{
+      id: "scenario-heavy",
+      title: "Canonical Nightly scenario heavy routes",
+      commands,
+    }],
+    commandsToRun: commands,
+    omittedCommands: [],
+    duplicateCommands: [],
+    supersededCommands: [],
+    skippedMainThreadCommands: [],
+    nightlyScenarioHeavy: {
+      schemaVersion: 1,
+      kind: "nightly-scenario-heavy",
+      routePrefix: NIGHTLY_SCENARIO_HEAVY_ROUTE_PREFIX,
+      routeCount: selected.length,
+      routeIds: selected.map((route) => route.id),
+    },
+    reportPaths: {
+      json: DEFAULT_JSON_OUT,
+      markdown: DEFAULT_MD_OUT,
+      profile: DEFAULT_CORE_VERIFICATION_PROFILE_OUT,
     },
   };
 }
@@ -601,18 +700,22 @@ export function runCoreVerification({
     includeMainThread: args.includeMainThread,
     packageScripts,
   });
-  const plan = args.nightlyLinuxCore
-    ? buildNightlyLinuxCoreShardPlan({
+  const plan = args.nightlyScenarioHeavy
+    ? buildNightlyScenarioHeavyPlan()
+    : args.nightlyLinuxCore
+      ? buildNightlyLinuxCoreShardPlan({
       basePlan,
       shardIndex: args.shardIndex,
       shardCount: args.shardCount,
       repoRoot: cwd,
       platform: "linux",
-    })
-    : basePlan;
-  const runnerId = args.nightlyLinuxCore
-    ? `verify-nightly-linux-core-${args.shardIndex}-of-${args.shardCount}`
-    : args.includeMainThread ? "verify-core-main-thread" : "verify-core";
+      })
+      : basePlan;
+  const runnerId = args.nightlyScenarioHeavy
+    ? "verify-nightly-scenario-heavy"
+    : args.nightlyLinuxCore
+      ? `verify-nightly-linux-core-${args.shardIndex}-of-${args.shardCount}`
+      : args.includeMainThread ? "verify-core-main-thread" : "verify-core";
   const planIdentity = buildPlanIdentity({ runnerId, entries: plan.commandsToRun });
   let preparedProfilePlan = null;
   let profilePreparationError = null;
