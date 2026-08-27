@@ -1,5 +1,14 @@
 # Worktree Registry
 
+## Worktree convergence snapshot — 2026-08-27
+
+- Main identity: local `main@efd76074` exactly matched `origin/main@efd76074` before this registry closeout. The clean audit checkout passed `tests.test_global_transport_builder_contracts` 63/63, `test:node:verification-metadata` 41/41, and `git diff --check HEAD^1..HEAD`.
+- Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d`, 166 commits behind the pre-closeout main, with its 20 tracked modifications untouched.
+- Cleanup: all 22 clean auxiliary worktrees were removed after exact-path, dirty-state, ancestry, patch-equivalence, supersession, and revert checks. Their three associated merged local branches were deleted after proving `origin/main` containment.
+- Coverage decisions: `7ecfac08` is patch-equivalent to `b8363e4d`; `28e0328c` and `7606db91` landed as current-catalog adaptations `e1d12a7d` and `0a0ef303`; `af3a57c7` was superseded by `94acc4df` plus `ab30b9e4`; `de7c9815` was intentionally reverted by `7dce59d2` and was not reintroduced.
+- Recovery refs: `refs/archive/worktrees/20260827/{sc-v2-p0-p1-covered,sc-v2-nightly-superseded,repository-footprint-covered,pr-cost-covered,export-pipeline-reverted}` preserve the five detached or reverted tips that were not literal ancestors of current main.
+- Current topology: after this closeout's temporary clean-main checkout is removed, the preserved desktop checkout is the only registered worktree. Future task worktrees should be bounded to active work and retired after integration or explicit supersession.
+
 ## Landing home revamp integration snapshot — 2026-08-25
 
 - Integration candidate: `C:\Users\raede\.codex\worktrees\landing-home-revamp-integration-20260825\mapcreator` on `codex/landing-home-revamp-integration-20260825`, based on `origin/main@f118a101d30373c507075da32267969b22197338`.
