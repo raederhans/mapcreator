@@ -282,7 +282,11 @@ test("landing map generators and checked-in assets route to the map asset contra
     "tools/build_landing_europe_1936_showcase.py",
     "tools/build_landing_japan_preview.py",
     "tools/build_landing_work_maps.py",
+    "landing/assets/hero-blank.webp",
+    "landing/assets/hero-hoi4-1936.webp",
+    "landing/assets/hero-hoi4-1939.webp",
     "landing/assets/hero-tno-1962.json",
+    "landing/assets/hero-tno-1962.webp",
     "landing/assets/japan-preview-transport.svg",
     "landing/assets/work-atlas-japan-corridor.svg",
   ];
