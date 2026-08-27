@@ -585,7 +585,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:e2e:interaction-funnel": "node node_modules/@playwright/test/cli.js test tests/e2e/interaction_funnel_contract.spec.js --workers=1 --retries=0",
     "test:e2e:scenario-resilience": "node tools/e2e_layering.mjs run-spec tests/e2e/scenario_apply_resilience.spec.js",
     "test:e2e:city-rendering": "node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js && node tools/e2e_layering.mjs run-spec tests/e2e/city_marker_visibility_regression.spec.js && node tools/e2e_layering.mjs run-spec tests/e2e/city_points_urban_runtime.spec.js && node tools/e2e_layering.mjs run-spec tests/e2e/city_reveal_plan_regression.spec.js && node tools/e2e_layering.mjs run-spec tests/e2e/city_urban_rendering_regression.spec.js",
-    "test:e2e:water-rendering": "node node_modules/@playwright/test/cli.js test tests/e2e/river_layer_regression.spec.js tests/e2e/tno_named_water_rendering.spec.js tests/e2e/tno_open_ocean_rendering.spec.js tests/e2e/water_cache_strategy_regression.spec.js --workers=1 --retries=0",
+    "test:e2e:water-rendering": "node tools/e2e_layering.mjs run-spec tests/e2e/river_layer_regression.spec.js && node tools/e2e_layering.mjs run-spec tests/e2e/tno_named_water_rendering.spec.js && node tools/e2e_layering.mjs run-spec tests/e2e/tno_open_ocean_rendering.spec.js && node tools/e2e_layering.mjs run-spec tests/e2e/water_cache_strategy_regression.spec.js",
     "test:e2e:tno-contracts": "node node_modules/@playwright/test/cli.js test tests/e2e/tno_startup_visible_context_layers_contract.spec.js tests/e2e/tno_1962_ui_smoke.spec.js --workers=1 --retries=0",
     "test:e2e:sample-guide": "node node_modules/@playwright/test/cli.js test tests/e2e/sample_guide_deeplink.spec.js --workers=1 --retries=0",
     "test:e2e:pages-public-release-gate": "node node_modules/@playwright/test/cli.js test tests/e2e/release/pages_public_release_gate.spec.js --workers=1 --retries=0",
@@ -1023,6 +1023,12 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:p4:p4-3": [
       "test:node:renderer-render-phase-lifecycle",
       "test:node:zoom-interaction-lifecycle-owner"
+    ],
+    "test:e2e:water-rendering": [
+      "node tools/e2e_layering.mjs run-spec tests/e2e/river_layer_regression.spec.js",
+      "node tools/e2e_layering.mjs run-spec tests/e2e/tno_named_water_rendering.spec.js",
+      "node tools/e2e_layering.mjs run-spec tests/e2e/tno_open_ocean_rendering.spec.js",
+      "node tools/e2e_layering.mjs run-spec tests/e2e/water_cache_strategy_regression.spec.js"
     ],
     "verify:tno-coverage-chain": [
       "verify:scenario-contracts:strict",
@@ -4230,7 +4236,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     },
     {
       "id": "infra:tno-water-validator",
-      "commandRef": "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json",
+      "commandRef": "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json",
       "sourceRefs": [
         "tools/validate_tno_water_geometries.py",
         "data/scenarios/tno_1962/water_regions.geojson",
@@ -4278,7 +4284,7 @@ const AUTHORED_VERIFICATION_METADATA = {
             "data/scenarios/tno_1962/detail_chunks.manifest.json"
           ],
           "commonChecks": [
-            "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json"
+            "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json"
           ],
           "riskSignals": [
             "water geometry source/runtime drift",
@@ -4286,7 +4292,7 @@ const AUTHORED_VERIFICATION_METADATA = {
             "D3 spherical safety regression"
           ],
           "diagnostics": [
-            ".runtime/reports/generated/tno_water_geometry_report.json"
+            ".runtime/reports/generated/tno_1962.polar_coverage_report.json"
           ],
           "status": "active"
         }
@@ -10536,6 +10542,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "test:node:supervisor-routing",
       "sourceRefs": [
         "tests/supervisor_adaptive_route_behavior.test.mjs",
+        "tools/run_adaptive_tests.mjs",
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs"
       ],

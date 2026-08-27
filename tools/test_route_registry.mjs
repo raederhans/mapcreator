@@ -348,7 +348,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:tno-coverage-chain",
     commandRef: "verify:tno-coverage-chain",
-    sourceRef: "tools/check_scenario_contracts.py,tools/validate_tno_water_geometries.py,tests/scenario_chunk_contracts.test.mjs,data/scenarios/tno_1962",
+    sourceRef: "tools/check_scenario_contracts.py,tools/validate_tno_water_geometries.py,tools/patch_tno_1962_bundle.py,tests/scenario_chunk_contracts.test.mjs,data/scenarios/tno_1962",
     domain: "tno-coverage-chain",
     ownerHint: "scenario-runtime",
     layer: "heavy",
@@ -371,7 +371,7 @@ const INFRASTRUCTURE_ROUTES = [
   },
   {
     id: "infra:tno-water-validator",
-    commandRef: "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json",
+    commandRef: "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json",
     sourceRef: "tools/validate_tno_water_geometries.py,data/scenarios/tno_1962/water_regions.geojson,data/scenarios/tno_1962/runtime_topology.topo.json,data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json,data/scenarios/tno_1962/detail_chunks.manifest.json,data/scenarios/tno_1962/chunks/water",
     domain: "tno-water",
     ownerHint: "tno-water",
@@ -387,9 +387,9 @@ const INFRASTRUCTURE_ROUTES = [
         "data/scenarios/tno_1962/water_regions.geojson",
         "data/scenarios/tno_1962/detail_chunks.manifest.json",
       ],
-      commonChecks: ["python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json"],
+      commonChecks: ["python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json"],
       riskSignals: ["water geometry source/runtime drift", "chunk manifest coverage drift", "D3 spherical safety regression"],
-      diagnostics: [".runtime/reports/generated/tno_water_geometry_report.json"],
+      diagnostics: [".runtime/reports/generated/tno_1962.polar_coverage_report.json"],
       status: "active",
     },
   },
@@ -1102,10 +1102,14 @@ export function buildPythonRoutes() {
             : sourceRef.includes("city") || sourceRef.includes("urban")
               ? "city-runtime"
               : "geo-contract";
+        const sourceRefs = [sourceRef];
+        if (sourceRef === "tests/test_tno_bundle_builder.py" || sourceRef === "tests/test_tno_water_geometries.py") {
+          sourceRefs.push("tools/patch_tno_1962_bundle.py");
+        }
         routes.push({
           id: `python-heavy:${groupName}:${sourceRef}`,
           commandRef: pythonCommandForTestPath(sourceRef),
-          sourceRef,
+          sourceRef: sourceRefs.join(","),
           domain,
           ownerHint: domain,
           layer: "heavy",

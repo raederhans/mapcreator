@@ -68,7 +68,7 @@ test("authored catalog source covers command authority, policies, and every proj
     assert.ok(VERIFICATION_METADATA_SOURCE.entrypointPolicies[entry.entrypointPolicyIndex]);
   }
   assert.equal(VERIFICATION_METADATA_SOURCE.estimatePolicy.kind, "verification-estimate-policy");
-  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 14);
+  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 15);
 });
 
 test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
