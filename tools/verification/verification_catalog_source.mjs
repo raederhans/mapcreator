@@ -4119,6 +4119,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "sourceRefs": [
         "tools/check_scenario_contracts.py",
         "tools/validate_tno_water_geometries.py",
+        "tools/patch_tno_1962_bundle.py",
         "tests/scenario_chunk_contracts.test.mjs",
         "data/scenarios/tno_1962"
       ],
@@ -13514,7 +13515,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "python-heavy:geo_stack:tests/test_tno_bundle_builder.py",
       "commandRef": "python -m unittest tests.test_tno_bundle_builder -q",
       "sourceRefs": [
-        "tests/test_tno_bundle_builder.py"
+        "tests/test_tno_bundle_builder.py",
+        "tools/patch_tno_1962_bundle.py"
       ],
       "ownerHints": [
         "geo-contract"
@@ -13584,7 +13586,8 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "python-heavy:geo_stack:tests/test_tno_water_geometries.py",
       "commandRef": "python -m pytest tests/test_tno_water_geometries.py -q",
       "sourceRefs": [
-        "tests/test_tno_water_geometries.py"
+        "tests/test_tno_water_geometries.py",
+        "tools/patch_tno_1962_bundle.py"
       ],
       "ownerHints": [
         "tno-water"

@@ -117,6 +117,21 @@ test("primary polar water outputs stay on the heavy spherical safety route", () 
   assert.deepEqual(route.resourceLocks, [".runtime-output", "heavy-geo"]);
 });
 
+test("TNO bundle patch tool routes to builder, water, and coverage contracts", () => {
+  const report = recommendationFor("tools/patch_tno_1962_bundle.py");
+  const commands = commandRefs(report);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "python -m unittest tests.test_tno_bundle_builder -q",
+    "python -m pytest tests/test_tno_water_geometries.py -q",
+    "verify:tno-coverage-chain",
+  ]) {
+    assert.ok(commands.includes(commandRef), `${commandRef} must cover the TNO bundle patch tool.`);
+  }
+  assert.ok(!commands.includes("python tools/build_hoi4_scenario.py"));
+});
+
 test("SF-ATS docs route stays scoped to registry and work package docs", () => {
   const registryReport = recommendationFor("docs/active/_worktree_registry.md");
   const unrelatedActiveDocReport = recommendationFor("docs/active/unrelated-task/context.md");
