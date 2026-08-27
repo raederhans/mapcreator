@@ -473,7 +473,7 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertRegex(str(environment.get("browserVersion", "")), r"\d+")
         self.assertEqual(
             environment.get("packageLockSha256"),
-            hashlib.sha256(PACKAGE_LOCK.read_bytes()).hexdigest(),
+            canonical_text_sha256(PACKAGE_LOCK),
         )
         role_policy = baseline_payload.get("renderSampleRolePolicy", {})
         self.assertEqual(role_policy.get("policyId"), "render-sample-role-v2")
@@ -519,7 +519,7 @@ class PerfGateContractTest(unittest.TestCase):
             self.assertEqual(identity.get("manifestPath"), manifest_path.relative_to(REPO_ROOT).as_posix())
             self.assertEqual(
                 identity.get("manifestSha256"),
-                hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+                canonical_text_sha256(manifest_path),
             )
             self.assertRegex(str(identity.get("manifestSha256", "")), r"^[0-9a-f]{64}$")
             self.assertGreater(int(identity.get("featureCount", 0)), 0)

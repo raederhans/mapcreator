@@ -25,6 +25,7 @@ import {
   runStandardPerfGenerationFence,
   runWithTransientPerfNetworkRetry,
   resolveMeasuredRepoRoot,
+  sha256CanonicalTextFile,
   shouldBlockOnPerfRegressions,
   summarizeSnapshot,
   validateGateBaselineReport,
@@ -760,6 +761,21 @@ test("gate baseline JSON and oracle hash come from one byte read", async () => {
   assert.equal(readCount, 1);
   assert.equal(result.payload.marker, "original");
   assert.equal(result.sha256, crypto.createHash("sha256").update(originalBytes).digest("hex"));
+});
+
+test("package-lock identity is stable across LF and CRLF checkouts", async () => {
+  const lfText = '{"lockfileVersion":3}\n';
+  const crlfText = lfText.replaceAll("\n", "\r\n");
+  const expected = crypto.createHash("sha256").update(lfText, "utf8").digest("hex");
+
+  assert.equal(
+    await sha256CanonicalTextFile("package-lock.json", { readFile: async () => lfText }),
+    expected,
+  );
+  assert.equal(
+    await sha256CanonicalTextFile("package-lock.json", { readFile: async () => crlfText }),
+    expected,
+  );
 });
 
 function buildRawRun({ scenarioId, side, sideScenarioIndex, firstSampleHasScenario }) {

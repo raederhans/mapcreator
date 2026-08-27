@@ -840,7 +840,7 @@ async function readScenarioManifestIdentity(scenarioId) {
   let manifestSha256 = "";
   try {
     const content = await fs.readFile(manifestPath, "utf8");
-    manifestSha256 = crypto.createHash("sha256").update(content).digest("hex");
+    manifestSha256 = sha256CanonicalText(content);
     manifest = JSON.parse(content);
   } catch (_error) {
     manifest = {};
@@ -1344,6 +1344,19 @@ function readGenerationFenceIdentity(report) {
 async function sha256File(filePath) {
   const bytes = await fs.readFile(filePath);
   return crypto.createHash("sha256").update(bytes).digest("hex");
+}
+
+function sha256CanonicalText(text) {
+  const canonicalText = String(text).replace(/\r\n?/g, "\n");
+  return crypto.createHash("sha256").update(canonicalText, "utf8").digest("hex");
+}
+
+export async function sha256CanonicalTextFile(
+  filePath,
+  { readFile = fs.readFile } = {},
+) {
+  const text = await readFile(filePath, "utf8");
+  return sha256CanonicalText(text);
 }
 
 async function runMeasurements(options) {
@@ -2108,7 +2121,7 @@ async function main() {
     environmentAdmission,
     { baselineOracleBeforeSha256 },
   );
-  const packageLockSha256 = await sha256File(path.join(REPO_ROOT, "package-lock.json"));
+  const packageLockSha256 = await sha256CanonicalTextFile(path.join(REPO_ROOT, "package-lock.json"));
   const rawEvidence = await buildStandardPerfRawEvidence(
     options,
     environmentAdmission,
