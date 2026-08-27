@@ -150,10 +150,18 @@ class PerfGateContractTest(unittest.TestCase):
             "data/scenarios/index.json",
             "data/scenarios/tno_1962",
             "data/scenarios/hoi4_1939",
-            "tools/perf",
             "tools/dev_server.py",
         ):
             self.assertIn(f"'{governed_input}'", same_runner_step)
+        self.assertNotIn("'tools/perf'", same_runner_step)
+        self.assertIn(
+            "$candidateHarness = Join-Path $env:GITHUB_WORKSPACE 'tools/perf/run_baseline.mjs'",
+            same_runner_step,
+        )
+        self.assertIn(
+            "node $candidateHarness --measured-repo-root $baseWorktree --mode baseline",
+            same_runner_step,
+        )
         self.assertIn(
             "git -C $baseWorktree restore --source=$candidateSha --staged --worktree -- $governedHeadInputs",
             same_runner_step,
@@ -186,6 +194,26 @@ class PerfGateContractTest(unittest.TestCase):
             workflow_content.index("Generate same-runner base baseline"),
             workflow_content.index("      - name: Run perf gate"),
         )
+
+    def test_workflow_retries_only_typed_environment_admission_rejections(self):
+        workflow_content = WORKFLOW_FILE.read_text(encoding="utf-8")
+        base_step = workflow_content[
+            workflow_content.index("      - name: Generate same-runner base baseline"):
+            workflow_content.index("      - name: Run perf gate")
+        ]
+        gate_step = workflow_content[
+            workflow_content.index("      - name: Run perf gate"):
+            workflow_content.index("      - name: Upload perf evidence")
+        ]
+
+        for step in (base_step, gate_step):
+            self.assertIn("$maxAdmissionAttempts = 3", step)
+            self.assertIn("$perfExitCode -ne 3", step)
+            self.assertIn("Start-Sleep -Seconds 20", step)
+            self.assertIn("$attempt -eq $maxAdmissionAttempts", step)
+
+        self.assertNotIn("cpuPeakMaxPercent", workflow_content)
+        self.assertNotIn("topProcessSingleCoreMaxPercent", workflow_content)
 
     def test_baseline_markdown_declares_gate_vs_observation_roles(self):
         markdown = BASELINE_MD.read_text(encoding="utf-8")
@@ -473,7 +501,7 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertRegex(str(environment.get("browserVersion", "")), r"\d+")
         self.assertEqual(
             environment.get("packageLockSha256"),
-            hashlib.sha256(PACKAGE_LOCK.read_bytes()).hexdigest(),
+            canonical_text_sha256(PACKAGE_LOCK),
         )
         role_policy = baseline_payload.get("renderSampleRolePolicy", {})
         self.assertEqual(role_policy.get("policyId"), "render-sample-role-v2")
@@ -519,7 +547,7 @@ class PerfGateContractTest(unittest.TestCase):
             self.assertEqual(identity.get("manifestPath"), manifest_path.relative_to(REPO_ROOT).as_posix())
             self.assertEqual(
                 identity.get("manifestSha256"),
-                hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+                canonical_text_sha256(manifest_path),
             )
             self.assertRegex(str(identity.get("manifestSha256", "")), r"^[0-9a-f]{64}$")
             self.assertGreater(int(identity.get("featureCount", 0)), 0)

@@ -288,6 +288,7 @@ jobs:
           $baselineJson = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base.json'
           $baselineRawDir = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-raw'
           $baseEvidenceDir = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-evidence'
+          $candidateHarness = Join-Path $env:GITHUB_WORKSPACE 'tools/perf/run_baseline.mjs'
           New-Item -ItemType Directory -Force -Path (Split-Path $baselineJson), $baselineRawDir, $baseEvidenceDir | Out-Null
 
           git worktree add --detach $baseWorktree $baseSha
@@ -303,7 +304,6 @@ jobs:
               'data/scenarios/index.json'
               'data/scenarios/tno_1962'
               'data/scenarios/hoi4_1939'
-              'tools/perf'
               'tools/dev_server.py'
             )
             git -C $baseWorktree restore --source=$candidateSha --staged --worktree -- $governedHeadInputs
@@ -321,8 +321,21 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                 throw 'Failed to install base worktree Chromium'
               }
-              node tools/perf/run_baseline.mjs --mode baseline --scenarios tno_1962,hoi4_1939 --runs 5 --warmups 3 --write-markdown false --baseline-json $baselineJson --raw-dir $baselineRawDir
-              if ($LASTEXITCODE -ne 0) {
+              $maxAdmissionAttempts = 3
+              $perfExitCode = 1
+              for ($attempt = 1; $attempt -le $maxAdmissionAttempts; $attempt += 1) {
+                node $candidateHarness --measured-repo-root $baseWorktree --mode baseline --scenarios tno_1962,hoi4_1939 --runs 5 --warmups 3 --write-markdown false --baseline-json $baselineJson --raw-dir $baselineRawDir
+                $perfExitCode = $LASTEXITCODE
+                if ($perfExitCode -eq 0) {
+                  break
+                }
+                if ($perfExitCode -ne 3 -or $attempt -eq $maxAdmissionAttempts) {
+                  break
+                }
+                Write-Warning "Base performance admission rejected on attempt $attempt; retrying after a quiet window."
+                Start-Sleep -Seconds 20
+              }
+              if ($perfExitCode -ne 0) {
                 throw 'Failed to generate same-runner base baseline'
               }
             } finally {
@@ -352,7 +365,23 @@ jobs:
           } else {
             'diagnostic'
           }
-          npm run perf:gate -- --regression-mode $regressionMode --baseline-json .runtime/output/perf/perf-pr-gate-base.json --raw-dir .runtime/output/perf/perf-pr-gate-current
+          $maxAdmissionAttempts = 3
+          $perfExitCode = 1
+          for ($attempt = 1; $attempt -le $maxAdmissionAttempts; $attempt += 1) {
+            npm run perf:gate -- --regression-mode $regressionMode --baseline-json .runtime/output/perf/perf-pr-gate-base.json --raw-dir .runtime/output/perf/perf-pr-gate-current
+            $perfExitCode = $LASTEXITCODE
+            if ($perfExitCode -eq 0) {
+              break
+            }
+            if ($perfExitCode -ne 3 -or $attempt -eq $maxAdmissionAttempts) {
+              break
+            }
+            Write-Warning "Candidate performance admission rejected on attempt $attempt; retrying after a quiet window."
+            Start-Sleep -Seconds 20
+          }
+          if ($perfExitCode -ne 0) {
+            exit $perfExitCode
+          }
 
       - name: Upload perf evidence
         if: always() && steps.classify.outputs.should_run_perf == 'true'
