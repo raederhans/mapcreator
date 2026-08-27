@@ -20,7 +20,7 @@ def write_json(path: Path, payload: Any, *, compact: bool = False) -> None:
         if compact
         else json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False)
     )
-    path.write_text(text + ("" if compact else "\n"), encoding="utf-8")
+    path.write_bytes((text + ("" if compact else "\n")).encode("utf-8"))
 
 
 def feature_collection(gdf: gpd.GeoDataFrame) -> dict[str, Any]:
