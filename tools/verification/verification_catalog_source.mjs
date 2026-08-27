@@ -13242,6 +13242,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "python-heavy:geo_stack:tests/test_global_transport_builder_contracts.py",
       "commandRef": "python -m unittest tests.test_global_transport_builder_contracts -q",
       "sourceRefs": [
+        "map_builder/transport_country_pack_writer.py",
         "tests/test_global_transport_builder_contracts.py"
       ],
       "ownerHints": [

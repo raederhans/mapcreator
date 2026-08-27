@@ -39,28 +39,28 @@ TRANSPORT_CAPABILITY_REGISTRY = REPO_ROOT / 'js' / 'core' / 'transport_capabilit
 
 CHINA_OSM_GPKG_GOLDEN_SHA256 = {
     "china_industrial_zones": {
-        "build_audit.json": "10ca32d28581e4286bcbad1f609a0e3547876c24994c0312f677ece7c3cf3230",
+        "build_audit.json": "0ee3c26190c49a9a243958f989b19cfb26049ce67fd93a2f58dd4ae5921a0d3b",
         "industrial_zones.geojson": "56d798cb2c3ebaa5dea1e0a666e8b354523fb1c77effe6aefc04f6efd0d614ba",
         "industrial_zones.preview.geojson": "56d798cb2c3ebaa5dea1e0a666e8b354523fb1c77effe6aefc04f6efd0d614ba",
-        "manifest.json": "f6472b42b9c1b04276f387e3b0742f0c5eef0ba0e469933de91c21196c92c4e9",
+        "manifest.json": "d14758fd8d9f3958dc8a4bdad4add836d5d070d6a5da6d84f31fb755fa80fe04",
     },
     "china_logistics_hubs": {
-        "build_audit.json": "2625c64ddc4f3b2e4d3f662f4d80c9a580289d994d783148709ecfdda881778b",
+        "build_audit.json": "f6432a2707a2d8990722380fa6e92a2fb4a3c82ed51d38000df0722bbe113aa9",
         "logistics_hubs.geojson": "4ff47b1230d18dabec617eecf345ee099f6781c31388bfdb59166679185c987e",
         "logistics_hubs.preview.geojson": "4ff47b1230d18dabec617eecf345ee099f6781c31388bfdb59166679185c987e",
-        "manifest.json": "6ea42fe8f229a0c65b3ee60adb9a47acfb07db4dba12aa86549d7de30f494391",
+        "manifest.json": "c6997df25eb09476fa8c4413b795bd240804da7589b35187bdf2ce1faaa9568c",
     },
     "china_rail": {
-        "build_audit.json": "e45463526dde96911d915c3c8ac0e60035bbf942d193c7e4aeacbb082caf1d31",
-        "manifest.json": "465cd2180111b8fe3f5f9b38b620fb6de352584d132db060fe60ad4cb8091263",
+        "build_audit.json": "220e18b3a63b2f51d8162ca7229d8127718d4d44f6a9ec6414841d67dd4fafab",
+        "manifest.json": "3b93bea0375ff33636a5a404fbcb2a5990281efd427939b20d05a2683ea470c7",
         "rail_stations_major.geojson": "771815dbf268c0b0ed0cbefdcc2170f88c1dd5657390e2776c483a736bae7181",
         "rail_stations_major.preview.geojson": "771815dbf268c0b0ed0cbefdcc2170f88c1dd5657390e2776c483a736bae7181",
         "railways.preview.topo.json": "930fc801ce48d72c6f6df335e75f08d85a75515849e02fba0902f4df698986c5",
         "railways.topo.json": "b2a73e65f0911f824d6fc506b8abc1cae8dc6e8d1dffac283fc9753dc9df08cc",
     },
     "china_road": {
-        "build_audit.json": "507791f7719bf0161d76312a16718cae7801ca7fd0fffa159fa92468cca8da13",
-        "manifest.json": "e34ce33fd9242d74850fe339c3ce477dad217007592214d401731f8e5ef26a5b",
+        "build_audit.json": "a3ff1181d8e44e0a348b5d63348a2af359084878d228aead2fe5269a953a5918",
+        "manifest.json": "8d88ce0747245950c657fb3b17430d32e24c6253be4c11b20c4f1040fe7c98e0",
         "road_labels.geojson": "005f1af730534e227432f336d3eea949a5ed95280070c5ae32247b79e1dbe022",
         "road_labels.preview.geojson": "4d622444e2b7b38a6bc00fc9e526e8e9cdc4c5b0877ccee43603c61a3d193f70",
         "roads.preview.topo.json": "0ed7eb872c9a244f0272c96cae044643900e31f6a6fe3c632ad298c0c8f0fe3a",
@@ -1266,6 +1266,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
     def test_road_renderer_consumes_roads_with_inline_ref_name_labels(self) -> None:
         renderer_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_overview_render_owner.js').read_text(encoding='utf-8')
         line_label_policy_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'transport_line_label_policy.js').read_text(encoding='utf-8')
+        context_pass_orchestrator_content = (REPO_ROOT / 'js' / 'core' / 'renderer' / 'context_pass_orchestrator_owner.js').read_text(encoding='utf-8')
         main_renderer_content = (REPO_ROOT / 'js' / 'core' / 'map_renderer.js').read_text(encoding='utf-8')
         self.assertIn('function drawRoadsLayer(k, { interactive = false } = {})', renderer_content)
         self.assertIn('runtimeState.roadsData', renderer_content)
@@ -1284,11 +1285,14 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('export function getRoadLabelClassPriority(roadClass)', line_label_policy_content)
         self.assertIn('export function resolveTransportRoadLabelClassAndPriority(properties = {})', line_label_policy_content)
         self.assertIn('labelCount', renderer_content)
-        self.assertIn('const transportOverviewOwner = getTransportOverviewRenderOwner();', main_renderer_content)
-        self.assertIn('transportOverviewOwner.drawRoadsLayer(k, { interactive });', main_renderer_content)
-        self.assertIn('transportOverviewOwner.drawRailwaysLayer(k, { interactive });', main_renderer_content)
-        self.assertIn('transportOverviewOwner.drawAirportsLayer(k, { interactive });', main_renderer_content)
-        self.assertIn('transportOverviewOwner.drawPortsLayer(k, { interactive });', main_renderer_content)
+        self.assertIn('getTransportOverviewRenderOwner().drawRoadsLayer(k, options)', main_renderer_content)
+        self.assertIn('getTransportOverviewRenderOwner().drawRailwaysLayer(k, options)', main_renderer_content)
+        self.assertIn('getTransportOverviewRenderOwner().drawAirportsLayer(k, options)', main_renderer_content)
+        self.assertIn('getTransportOverviewRenderOwner().drawPortsLayer(k, options)', main_renderer_content)
+        self.assertIn('drawRoadsLayer(k, { interactive });', context_pass_orchestrator_content)
+        self.assertIn('drawRailwaysLayer(k, { interactive });', context_pass_orchestrator_content)
+        self.assertIn('drawAirportsLayer(k, { interactive });', context_pass_orchestrator_content)
+        self.assertIn('drawPortsLayer(k, { interactive });', context_pass_orchestrator_content)
         self.assertNotIn('function drawAirportsLayer(k, { interactive = false } = {})', main_renderer_content)
         self.assertNotIn('function drawPortsLayer(k, { interactive = false } = {})', main_renderer_content)
         self.assertNotIn('function drawRailwaysLayer(k, { interactive = false } = {})', main_renderer_content)

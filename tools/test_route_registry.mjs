@@ -1106,6 +1106,9 @@ export function buildPythonRoutes() {
         if (sourceRef === "tests/test_tno_bundle_builder.py" || sourceRef === "tests/test_tno_water_geometries.py") {
           sourceRefs.push("tools/patch_tno_1962_bundle.py");
         }
+        if (sourceRef === "tests/test_global_transport_builder_contracts.py") {
+          sourceRefs.push("map_builder/transport_country_pack_writer.py");
+        }
         routes.push({
           id: `python-heavy:${groupName}:${sourceRef}`,
           commandRef: pythonCommandForTestPath(sourceRef),
