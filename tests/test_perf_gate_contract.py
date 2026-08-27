@@ -195,6 +195,26 @@ class PerfGateContractTest(unittest.TestCase):
             workflow_content.index("      - name: Run perf gate"),
         )
 
+    def test_workflow_retries_only_typed_environment_admission_rejections(self):
+        workflow_content = WORKFLOW_FILE.read_text(encoding="utf-8")
+        base_step = workflow_content[
+            workflow_content.index("      - name: Generate same-runner base baseline"):
+            workflow_content.index("      - name: Run perf gate")
+        ]
+        gate_step = workflow_content[
+            workflow_content.index("      - name: Run perf gate"):
+            workflow_content.index("      - name: Upload perf evidence")
+        ]
+
+        for step in (base_step, gate_step):
+            self.assertIn("$maxAdmissionAttempts = 3", step)
+            self.assertIn("$perfExitCode -ne 3", step)
+            self.assertIn("Start-Sleep -Seconds 20", step)
+            self.assertIn("$attempt -eq $maxAdmissionAttempts", step)
+
+        self.assertNotIn("cpuPeakMaxPercent", workflow_content)
+        self.assertNotIn("topProcessSingleCoreMaxPercent", workflow_content)
+
     def test_baseline_markdown_declares_gate_vs_observation_roles(self):
         markdown = BASELINE_MD.read_text(encoding="utf-8")
         self.assertIn("- Architecture: x64", markdown)
