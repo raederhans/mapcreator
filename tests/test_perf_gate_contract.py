@@ -166,6 +166,16 @@ class PerfGateContractTest(unittest.TestCase):
             "git -C $baseWorktree restore --source=$candidateSha --staged --worktree -- $governedHeadInputs",
             same_runner_step,
         )
+        self.assertIn("$projectedChangedFiles = @(", same_runner_step)
+        self.assertIn("$unexpectedProjectedFiles = @(", same_runner_step)
+        self.assertIn("commit --no-verify --no-gpg-sign", same_runner_step)
+        self.assertIn("projected_base_sha = $projectedBaseSha", same_runner_step)
+        self.assertIn("perf-pr-gate-base-projection.json", same_runner_step)
+        self.assertIn(
+            "git -C $baseWorktree diff --quiet $candidateSha -- $governedHeadInputs",
+            same_runner_step,
+        )
+        self.assertIn("git -C $baseWorktree status --porcelain", same_runner_step)
         self.assertNotIn("restore --source=$diffHeadSha", same_runner_step)
         self.assertIn("$baseEvidenceDir", same_runner_step)
         self.assertIn("perf-baseline-dev-server.out.log", same_runner_step)
@@ -177,6 +187,14 @@ class PerfGateContractTest(unittest.TestCase):
         )
         self.assertLess(
             same_runner_step.index("git -C $baseWorktree restore"),
+            same_runner_step.index("npm ci"),
+        )
+        self.assertLess(
+            same_runner_step.index("commit --no-verify --no-gpg-sign"),
+            same_runner_step.index("npm ci"),
+        )
+        self.assertLess(
+            same_runner_step.index("git -C $baseWorktree status --porcelain"),
             same_runner_step.index("npm ci"),
         )
 

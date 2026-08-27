@@ -288,6 +288,7 @@ jobs:
           $baselineJson = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base.json'
           $baselineRawDir = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-raw'
           $baseEvidenceDir = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-evidence'
+          $projectionReceipt = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-projection.json'
           $candidateHarness = Join-Path $env:GITHUB_WORKSPACE 'tools/perf/run_baseline.mjs'
           New-Item -ItemType Directory -Force -Path (Split-Path $baselineJson), $baselineRawDir, $baseEvidenceDir | Out-Null
 
@@ -310,6 +311,54 @@ jobs:
             if ($LASTEXITCODE -ne 0) {
               throw 'Failed to project governed head inputs into the base worktree'
             }
+
+            $projectedChangedFiles = @(
+              git -C $baseWorktree diff --cached --name-only |
+                ForEach-Object { $_.Trim().Replace('\', '/') } |
+                Where-Object { $_ }
+            )
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Failed to enumerate projected base inputs'
+            }
+            $unexpectedProjectedFiles = @(
+              $projectedChangedFiles |
+                Where-Object {
+                  $changedPath = $_
+                  -not ($governedHeadInputs | Where-Object {
+                    $governedPath = $_
+                    $changedPath -eq $governedPath -or $changedPath.StartsWith("$governedPath/")
+                  } | Select-Object -First 1)
+                }
+            )
+            if ($unexpectedProjectedFiles.Count -gt 0) {
+              throw "Projected base contains non-governed paths: $($unexpectedProjectedFiles -join ', ')"
+            }
+
+            $projectedBaseSha = $baseSha
+            if ($projectedChangedFiles.Count -gt 0) {
+              $projectionMessage = "perf: synthesize governed base measurement tree`n`nbase=$baseSha`ncandidate=$candidateSha"
+              git -C $baseWorktree -c user.name=scenario-forge-perf-gate -c user.email=scenario-forge-perf-gate@users.noreply.github.com commit --no-verify --no-gpg-sign -m $projectionMessage
+              if ($LASTEXITCODE -ne 0) {
+                throw 'Failed to commit the governed base projection'
+              }
+              $projectedBaseSha = (git -C $baseWorktree rev-parse HEAD).Trim()
+            }
+
+            git -C $baseWorktree diff --quiet $candidateSha -- $governedHeadInputs
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Projected base inputs do not exactly match the candidate tree'
+            }
+            $projectedStatus = @(git -C $baseWorktree status --porcelain)
+            if ($LASTEXITCODE -ne 0 -or $projectedStatus.Count -gt 0) {
+              throw 'Projected base measurement tree is not clean'
+            }
+            [ordered]@{
+              base_sha = $baseSha
+              candidate_sha = $candidateSha
+              projected_base_sha = $projectedBaseSha
+              governed_head_inputs = $governedHeadInputs
+              projected_changed_files = $projectedChangedFiles
+            } | ConvertTo-Json -Depth 5 | Set-Content -Path $projectionReceipt
 
             Push-Location $baseWorktree
             try {
