@@ -526,6 +526,16 @@ def test_problematic_pacific_open_oceans_are_pruned_to_large_components():
         assert min(part.area for part in parts) >= MIN_COMPONENT_AREA - 1e-9, feature_id
 
 
+def test_problematic_pacific_open_ocean_split_specs_preserve_pruning_contract():
+    child_specs = {
+        str(child_spec.get("id") or ""): child_spec
+        for split_spec in tno_bundle.TNO_OPEN_OCEAN_SPLIT_SPECS
+        for child_spec in split_spec.get("children", ())
+    }
+    for feature_id in TARGET_OPEN_OCEAN_IDS:
+        assert float(child_specs[feature_id].get("component_min_area") or 0.0) == MIN_COMPONENT_AREA
+
+
 def test_tno_scenario_water_parts_do_not_have_world_sized_bboxes():
     offending = []
     for feature in _load_scenario_water_features():
