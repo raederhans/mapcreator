@@ -242,3 +242,23 @@ Wave A is the only immediate implementation lane. Later waves may be explored in
 - Broad renderer extraction, renderer rewrite, TypeScript/framework migration, or new state-management architecture.
 - New proof-cache layers, cross-revision proof reuse, relaxed timeouts/allowlists, or silent test deferral.
 - Git history rewrite, irreversible asset deletion, force-push, production release, or unreviewed branch-protection policy expansion.
+
+## 2026-08-28 P4 authority and Nightly topology continuation
+
+The user-supplied performance diagnosis is the frozen sequencing authority for this continuation. Renderer slicing remains paused. Static mapping may run in parallel, but implementation follows these gates in order:
+
+- [ ] M1 / P4 Single Checker Authority: add one explicit checker evidence producer, require all P4 boundary consumers to run with live fallback forbidden, remove the second direct checker, and prove one producer / zero fallback / one shared evidence identity.
+- [ ] M2 / P4 Parallel Authorities: split checker-plus-boundaries, canonical Windows full policy TAP, and fast contracts/routes into independent jobs; add a closeout consumer that reruns no repository-scale analysis and rejects SHA/tree/evidence-role disagreement.
+- [ ] M3 / Nightly DAG Decoupling: start Scenario Heavy at time zero, remove P4 boundaries from Linux Core, and move Pages build/drift into its own job.
+- [ ] M4 / Stable Measurement: run five report-only Nightly executions on one frozen SHA and record medians, worst-of-five, runner-minutes, producer/fallback counts, and identity mismatches. Local focused tests do not satisfy this gate.
+- [ ] M5 / Catalog Projection Closure: generate heavy groups, package aliases, PR profiles, Nightly roles/shards, and documentation projections from canonical records; retain legacy shadow until ten green projection-equivalence runs.
+- [ ] M6 / Pages Artifact and Footprint: exclude browser binaries from artifacts, use job-specific checkout depth and dependency profiles, then shadow artifact-only Pages before any tracked-dist retirement. Git history rewriting is out of scope.
+
+### Continuation acceptance
+
+- M1 records exactly one full checker invocation, zero live fallback, producer role `checker-producer`, and one evidence ID consumed by every boundary.
+- M2 closeout accepts only one clean source SHA/tree across all authorities, one admitted canonical full TAP, passing boundaries/routes, and no repository-scale rerun.
+- M3 starts non-P4 lanes without P4 artifacts or environment variables and keeps all P4 boundary commands inside the P4 authority lane.
+- M4 initial targets are P4 median at most 23 minutes, P4 worst-of-five at most 26 minutes, Nightly median at most 25 minutes, Nightly worst-of-five at most 30 minutes, at most 35 heavy P4 runner-minutes, and zero SHA/tree mismatch.
+- M5 does not begin until M4 stabilizes P4 plan identity; legacy metadata remains fail closed during the shadow window.
+- M6 does not stop tracking `dist` until at least three artifact-only Pages shadows prove manifest/hash/public-smoke equivalence and rollback availability.

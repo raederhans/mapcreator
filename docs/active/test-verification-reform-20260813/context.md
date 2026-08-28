@@ -338,3 +338,23 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Policy and protocol evidence | Canonical producer records 207 writers; final policy hash remains `8076ea6a354682243bf3705ab1beb3ff0ce26c88`, so the prior validator result of 75 production plus 43 test legacy-direct files and zero violations remains byte-applicable. Worker client, worker, packet helper, and orchestrator blobs are unchanged from the P3.4 base. |
 | Supervisor integration | Candidate commits were replayed as `7cd7d254`, `da93be85`, `9ecb1793`, and `29bdcf40`. Post-integration partial owner 15/15, partial Python 3/3, orchestrator suite 22/22, architecture, inventory 6/6, metadata 37/37, and portfolio 54/54 pass. P3 implementation is complete; remote-main reconciliation and final synchronization remain. |
 | Remote reconciliation | Fresh `origin/main@28215c12` was merged normally as `2e41e4ae`. Conflict resolution preserved both registry snapshots, unioned landing and P3 verification authority, and assigned unique selector order landing 379 plus Day/Night 380/381. Metadata 38/38, portfolio 54/54, landing assets 10/10, partial owner 15/15, orchestrator suite 22/22, selector schema, portfolio consistency, and both-parent diff checks pass. The merge SHA was pushed and matched local, `origin/main`, and `ls-remote`. |
+
+## 2026-08-28 P4 authority and Nightly topology handoff
+
+| Fact or decision | Current evidence |
+| --- | --- |
+| User authority | Dispatch multiple parallel conversations to execute the supplied M1-M6 sequence, then integrate and create a merge commit after completion. |
+| Frozen base | `origin/main@aa57f7ab8a5c2fd8329c23dadc4b97575992d679`, refreshed from `origin` on 2026-08-28. |
+| Parent WIP | `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d` with 20 tracked modifications; it is not an implementation or integration lane. |
+| Integration owner | Root owns `C:\Users\raede\.codex\worktrees\p4-nightly-topology-20260828\mapcreator`, branch `codex/p4-nightly-topology-20260828`, integration order, commits, shared/long tests, remote actions, registry truth, and cleanup decisions. |
+| Parallel read-only lanes | `m1_authority_map_retry` maps checker/evidence ownership; `nightly_topology_map_retry` maps M2/M3/M6 workflows; `m5_catalog_map_retry` maps canonical projections. They must not edit, commit, merge, push, clean, or run shared long processes. |
+| Required order | M1 -> M2 -> M3 -> M4 -> M5 -> M6. Static mapping may overlap, but implementation must not cross a prior milestone's acceptance gate. |
+| Measurement boundary | M4 requires five report-only Nightly runs on one frozen SHA. Local structural or focused tests are not wall-clock evidence. M5 remains held until this gate stabilizes plan/catalog identity. |
+| Live process owner | None at initialization. Root must register command, workdir, shared outputs, log path, stop conditions, and final status here before any full P4, browser, Pages, performance, or remote Nightly run. |
+| Push/deployment boundary | No push, workflow dispatch, deployment, branch-protection change, history rewrite, or tracked-dist removal has occurred in this continuation. |
+
+### Live process ledger
+
+| Process | Owner | Command / resources | Log path | State |
+| --- | --- | --- | --- | --- |
+| None | root | Long/shared validation held until a candidate milestone is frozen. | N/A | idle |

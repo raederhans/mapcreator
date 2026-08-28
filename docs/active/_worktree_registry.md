@@ -1,5 +1,13 @@
 # Worktree Registry
 
+## P4 authority and Nightly topology execution — 2026-08-28
+
+- Integration worktree: `C:\Users\raede\.codex\worktrees\p4-nightly-topology-20260828\mapcreator`, branch `codex/p4-nightly-topology-20260828`, frozen base `origin/main@aa57f7ab8a5c2fd8329c23dadc4b97575992d679`.
+- Integration owner: the root agent owns all commits, merges, shared/long verification, remote workflow actions, registry updates, and cleanup. Parallel agents begin read-only and may receive later file-bounded implementation worktrees only after overlap analysis.
+- Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d` with its 20 tracked modifications untouched.
+- Planned sequence: M1 single checker authority -> M2 parallel P4 authorities -> M3 Nightly decoupling -> M4 five-run same-SHA measurement -> M5 catalog projection closure -> M6 artifact/checkout/dependency/Pages footprint closeout.
+- Current status: topology frozen and read-only mapping dispatched; no implementation commit, merge, push, remote workflow, deployment, branch-protection change, worktree cleanup, or tracked-dist removal has occurred.
+
 ## Worktree convergence snapshot — 2026-08-27
 
 - Main identity: local `main@efd76074` exactly matched `origin/main@efd76074` before this registry closeout. The clean audit checkout passed `tests.test_global_transport_builder_contracts` 63/63, `test:node:verification-metadata` 41/41, and `git diff --check HEAD^1..HEAD`.

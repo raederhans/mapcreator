@@ -246,3 +246,19 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [ ] Wave E: integrate repository checkout/blob profiling and managed-large-asset growth policy; complete two artifact-only dist shadow deployments before any tracked-dist decision.
 - [ ] Run integration-overlap audit before every wave, preserve recovery refs, and keep user-owned execution worktrees uncleaned until their delivery is integrated or explicitly retained.
 - [ ] Complete remote timing/stability acceptance, synchronize task records and worktree registry with Git facts, and archive only when every remaining gap is closed or explicitly cancelled by the user.
+
+## 2026-08-28 P4/Nightly topology execution
+
+- [x] Refresh `origin/main` and freeze the implementation base at `aa57f7ab8a5c2fd8329c23dadc4b97575992d679`.
+- [x] Preserve the desktop checkout on `codex/preserved-main-wip-20260823@9869698d` with all 20 tracked modifications untouched.
+- [x] Create isolated integration worktree `C:\Users\raede\.codex\worktrees\p4-nightly-topology-20260828\mapcreator` on `codex/p4-nightly-topology-20260828`.
+- [x] Dispatch parallel read-only maps for M1, M2/M3/M6, and M5; integration, commits, shared outputs, long tests, push, and cleanup remain root-owned.
+- [ ] Implement and verify M1.
+- [ ] Implement and verify M2.
+- [ ] Implement and verify M3.
+- [ ] Run and record M4 same-SHA report-only Nightly evidence.
+- [ ] Implement and verify M5 after M4 stabilizes the catalog identity.
+- [ ] Implement and verify M6, including three Pages artifact-only shadow runs before any tracked-dist decision.
+- [ ] Create Lore commits at stable phase boundaries, integrate them in order, produce the final merge commit, and reconcile worktree/registry truth.
+
+Current limitation: remote CI/workflow execution and any push are not claimed as completed by local evidence. Until five same-SHA Nightly runs and three Pages shadows exist, M4 and the tracked-dist portion of M6 remain open gates.
