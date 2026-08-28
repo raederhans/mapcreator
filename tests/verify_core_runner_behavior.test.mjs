@@ -566,6 +566,12 @@ test("Nightly Linux core sharding balances canonical leaves and excludes platfor
   for (const commandRef of NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS) {
     assert.equal(assignedCommandRefs.includes(commandRef), false, commandRef);
   }
+  assert.equal(
+    assignedCommandRefs.some((commandRef) => /^(?:verify|test:node|test:python):p4:/.test(commandRef)),
+    false,
+  );
+  assert.equal(assignedCommandRefs.includes("verify:pages-dist-and-drift"), false);
+  assert.equal(plan.requiresDistLaneOwner, false);
   assert.equal(plan.commandsToRun.length, assignments[0].commandRefs.length);
   assert.deepEqual(
     plan.commandsToRun.map((entry) => entry.commandRef),
@@ -2536,7 +2542,7 @@ test("production adaptive CLI plans the frozen PR7A changed-file fixture with on
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const artifact = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
   assert.deepEqual(artifact.changedFiles, expectedChangedFiles);
-  assert.equal(artifact.recommendedCommands.length, 245);
+  assert.equal(artifact.recommendedCommands.length, 246);
   assert.equal(artifact.mainThreadSerialVerification.length, 27);
   assert.deepEqual(artifact.unmatchedChangedFiles, []);
   assert.deepEqual(artifact.executionPlan.routeGaps, []);

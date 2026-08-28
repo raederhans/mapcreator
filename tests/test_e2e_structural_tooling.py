@@ -1902,6 +1902,7 @@ jobs:
             "p4-fast",
             "p4-closeout",
             "linux-core",
+            "pages",
             "browser",
             "scenario-heavy",
             "windows-governance",
@@ -1926,8 +1927,9 @@ jobs:
         self.assertEqual(parse_job_scalar(jobs["p4-closeout"], "needs"), [
             "p4-checker-boundaries", "p4-full-policy", "p4-fast",
         ])
-        self.assertEqual(parse_job_scalar(jobs["linux-core"], "needs"), ["p4-closeout"])
-        self.assertEqual(parse_job_scalar(jobs["scenario-heavy"], "needs"), ["p4-closeout"])
+        self.assertIsNone(parse_job_scalar(jobs["linux-core"], "needs"))
+        self.assertIsNone(parse_job_scalar(jobs["pages"], "needs"))
+        self.assertIsNone(parse_job_scalar(jobs["scenario-heavy"], "needs"))
         scenario_heavy_steps = parse_job_steps(jobs["scenario-heavy"])
         scenario_heavy_by_name = {str(step["name"]): step for step in scenario_heavy_steps}
         self.assertEqual(
@@ -1940,10 +1942,10 @@ jobs:
         self.assertNotIn("unittest discover", jobs["scenario-heavy"])
 
         artifact_counts = {
-            "nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}": 4,
+            "nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}": 2,
             "nightly-p4-full-policy-${{ github.sha }}-${{ github.run_attempt }}": 2,
             "nightly-p4-fast-${{ github.sha }}-${{ github.run_attempt }}": 2,
-            "nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}": 3,
+            "nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}": 1,
         }
         for artifact_name, expected_count in artifact_counts.items():
             self.assertEqual(workflow.count(f"name: {artifact_name}"), expected_count)
@@ -1960,18 +1962,24 @@ jobs:
 
         for job_id in ("linux-core", "scenario-heavy"):
             env = parse_job_env(jobs[job_id])
-            self.assertEqual(env["STATE_WRITER_POLICY_EVIDENCE_MODE"], "strict")
-            self.assertEqual(env["STATE_WRITER_POLICY_LIVE_FALLBACK"], "forbid")
-            self.assertIn("needs['p4-closeout'].outputs.evidence_id", env["STATE_WRITER_POLICY_EVIDENCE_ID"])
+            self.assertEqual(set(env), {"WHEELHOUSE_DIR"})
             names = [str(step["name"]) for step in parse_job_steps(jobs[job_id])]
-            self.assertLess(
-                names.index("Download P4 closeout"),
-                names.index("Validate exact P4 producer evidence"),
-            )
-            self.assertLess(
-                names.index("Download exact P4 producer evidence"),
-                names.index("Validate exact P4 producer evidence"),
-            )
+            self.assertNotIn("Download P4 closeout", names)
+            self.assertNotIn("Download exact P4 producer evidence", names)
+            self.assertNotIn("Validate exact P4 producer evidence", names)
+
+        pages_steps = parse_job_steps(jobs["pages"])
+        pages_by_name = {str(step["name"]): step for step in pages_steps}
+        self.assertEqual(
+            parse_step_run(pages_by_name["Run Pages dist and drift verification"]),
+            "npm run verify:pages-dist-and-drift",
+        )
+        linux_core_run = parse_step_run(next(
+            step for step in parse_job_steps(jobs["linux-core"])
+            if step.get("name") == "Run balanced Linux core shard"
+        ))
+        self.assertNotIn("pages-dist", linux_core_run)
+        self.assertNotIn("p4-", linux_core_run)
 
         windows_commands = {
             parse_step_run(step)
@@ -1994,6 +2002,7 @@ jobs:
         self.assertEqual(parse_job_scalar(jobs["final"], "needs"), [
             "metadata",
             "linux-core",
+            "pages",
             "browser",
             "scenario-heavy",
             "p4-closeout",
@@ -2056,6 +2065,7 @@ jobs:
             ("nightly-verification.yml", "metadata", "Run Nightly metadata contracts"),
             ("nightly-verification.yml", "p4-checker-boundaries", "Run checker producer and all Python P4 boundaries"),
             ("nightly-verification.yml", "linux-core", "Run balanced Linux core shard"),
+            ("nightly-verification.yml", "pages", "Run Pages dist and drift verification"),
             ("nightly-verification.yml", "browser", "Run Nightly browser shard"),
             ("nightly-verification.yml", "scenario-heavy", "Run strict scenario contracts"),
             ("release-verification.yml", "verify-release", "Run canonical Release verification"),

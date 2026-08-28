@@ -212,7 +212,6 @@ jobs:
 
   linux-core:
     name: Nightly Linux Core ${{ matrix.shard }}/3
-    needs: ["p4-closeout"]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -221,10 +220,6 @@ jobs:
         shard: [1, 2, 3]
     env:
       WHEELHOUSE_DIR: .runtime/python/wheels
-      STATE_WRITER_POLICY_EVIDENCE_MODE: strict
-      STATE_WRITER_POLICY_EVIDENCE_PATH: .runtime/p4-checker/p4-state-actions/P4.3/state-writer-policy-evidence.json
-      STATE_WRITER_POLICY_EVIDENCE_ID: ${{ needs['p4-closeout'].outputs.evidence_id }}
-      STATE_WRITER_POLICY_LIVE_FALLBACK: forbid
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -250,18 +245,6 @@ jobs:
         run: python tools/check_min_ci_requirements.py
       - name: Install Node dependencies
         run: npm ci
-      - name: Download exact P4 producer evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}
-          path: .runtime/p4-checker
-      - name: Download P4 closeout
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}
-          path: .runtime/p4-closeout
-      - name: Validate exact P4 producer evidence
-        run: node tools/verification/state_writer_policy_evidence.mjs validate --evidence "$STATE_WRITER_POLICY_EVIDENCE_PATH" --expected-id "$STATE_WRITER_POLICY_EVIDENCE_ID" --phase P4.3
       - name: Run balanced Linux core shard
         run: node tools/run_core_verification.mjs --nightly-linux-core --shard-index ${{ matrix.shard }} --shard-count 3 --json-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}.json --md-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}.md --profile-out .runtime/reports/generated/nightly/linux-core-${{ matrix.shard }}-profile.json
       - name: Upload Linux core shard evidence
@@ -275,6 +258,40 @@ jobs:
             .runtime/tests/**
           if-no-files-found: ignore
           retention-days: 14
+
+  pages:
+    name: Nightly Pages Dist and Drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      WHEELHOUSE_DIR: .runtime/python/wheels
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Download Python wheel cache
+        run: |
+          mkdir -p "$WHEELHOUSE_DIR"
+          python -m pip download -r requirements-dev.lock.txt --dest "$WHEELHOUSE_DIR"
+      - name: Install Python test dependencies
+        run: python -m pip install --no-index --find-links "$WHEELHOUSE_DIR" -r requirements-dev.lock.txt
+      - name: Check minimal CI dependency guardrails
+        run: python tools/check_min_ci_requirements.py
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Run Pages dist and drift verification
+        run: npm run verify:pages-dist-and-drift
 
   browser:
     name: Nightly Browser
@@ -326,15 +343,10 @@ jobs:
 
   scenario-heavy:
     name: Nightly Scenario Heavy
-    needs: ["p4-closeout"]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       WHEELHOUSE_DIR: .runtime/python/wheels
-      STATE_WRITER_POLICY_EVIDENCE_MODE: strict
-      STATE_WRITER_POLICY_EVIDENCE_PATH: .runtime/p4-checker/p4-state-actions/P4.3/state-writer-policy-evidence.json
-      STATE_WRITER_POLICY_EVIDENCE_ID: ${{ needs['p4-closeout'].outputs.evidence_id }}
-      STATE_WRITER_POLICY_LIVE_FALLBACK: forbid
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -360,18 +372,6 @@ jobs:
         run: python tools/check_min_ci_requirements.py
       - name: Install Node dependencies
         run: npm ci
-      - name: Download exact P4 producer evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}
-          path: .runtime/p4-checker
-      - name: Download P4 closeout
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}
-          path: .runtime/p4-closeout
-      - name: Validate exact P4 producer evidence
-        run: node tools/verification/state_writer_policy_evidence.mjs validate --evidence "$STATE_WRITER_POLICY_EVIDENCE_PATH" --expected-id "$STATE_WRITER_POLICY_EVIDENCE_ID" --phase P4.3
       - name: Run strict scenario contracts
         run: npm run verify:scenario-contracts:strict
       - name: Run canonical Nightly scenario heavy routes
@@ -434,7 +434,7 @@ jobs:
   final:
     name: Nightly Final Aggregator
     if: always()
-    needs: ["metadata", "linux-core", "browser", "scenario-heavy", "p4-closeout", "windows-governance"]
+    needs: ["metadata", "linux-core", "pages", "browser", "scenario-heavy", "p4-closeout", "windows-governance"]
     runs-on: ubuntu-latest
     steps:
       - name: Summarize Nightly shard results
@@ -443,7 +443,7 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require("node:fs");
-          const expectedJobs = ["metadata", "linux-core", "browser", "scenario-heavy", "p4-closeout", "windows-governance"];
+          const expectedJobs = ["metadata", "linux-core", "pages", "browser", "scenario-heavy", "p4-closeout", "windows-governance"];
           const needs = JSON.parse(process.env.REQUIRED_RESULTS);
           const actualJobs = Object.keys(needs).sort();
           const expectedJobsSorted = [...expectedJobs].sort();
