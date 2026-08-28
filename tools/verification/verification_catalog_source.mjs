@@ -18,6 +18,14 @@ function sortedUnique(values, field) {
   return [...values].sort(compareText);
 }
 
+function sortedUniqueProjectionStrings(values, field) {
+  if (!Array.isArray(values)
+    || values.some((value) => typeof value !== "string" || value.length === 0)) {
+    throw new Error(`verification-metadata-source-projection-invalid-array:${field}`);
+  }
+  return sortedUnique(values, field);
+}
+
 const RECORD_SET_FIELDS = Object.freeze([
   "sourceRefs",
   "ownerHints",
@@ -40,6 +48,103 @@ const GATE_POLICY_SOURCE_FIELDS = Object.freeze([
   "entrypoints",
   "sharedRisks",
 ]);
+const PROJECTION_AUTHORITY_FIELDS = Object.freeze([
+  "schemaVersion",
+  "kind",
+  "heavyDependencyGroups",
+  "prProfiles",
+  "nightlyRoles",
+  "nightlyFinalDependencies",
+  "documentation",
+]);
+
+function requireExactObjectFields(value, fields, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`verification-metadata-source-projection-invalid:${label}`);
+  }
+  const actual = Object.keys(value).sort(compareText);
+  const expected = [...fields].sort(compareText);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`verification-metadata-source-projection-fields:${label}`);
+  }
+}
+
+function normalizeProjectionAuthority(authority, source) {
+  requireExactObjectFields(authority, PROJECTION_AUTHORITY_FIELDS, "authority");
+  if (authority.schemaVersion !== 1 || authority.kind !== "verification-catalog-projection-authority") {
+    throw new Error("verification-metadata-source-projection-invalid:authority-identity");
+  }
+  const normalized = structuredClone(authority);
+  if (!Array.isArray(normalized.heavyDependencyGroups)
+    || !Array.isArray(normalized.prProfiles)
+    || !Array.isArray(normalized.nightlyRoles)
+    || !Array.isArray(normalized.nightlyFinalDependencies)) {
+    throw new Error("verification-metadata-source-projection-invalid:authority-arrays");
+  }
+  const sourceRefs = new Set(source.records.flatMap((record) => record.sourceRefs));
+  const profiles = new Set(source.enums?.ciProfiles || []);
+  const groupIds = new Set();
+  for (const [index, group] of normalized.heavyDependencyGroups.entries()) {
+    requireExactObjectFields(group, ["id", "description", "patterns"], `heavyDependencyGroups.${index}`);
+    if (typeof group.id !== "string" || !group.id || groupIds.has(group.id)) {
+      throw new Error(`verification-metadata-source-projection-heavy-group:${group.id || "missing"}`);
+    }
+    if (typeof group.description !== "string" || !group.description.trim()) {
+      throw new Error(`verification-metadata-source-projection-heavy-description:${group.id}`);
+    }
+    groupIds.add(group.id);
+    group.patterns = sortedUniqueProjectionStrings(
+      group.patterns,
+      `projectionAuthority.heavyDependencyGroups.${group.id}.patterns`,
+    );
+    for (const pattern of group.patterns) {
+      if (!sourceRefs.has(pattern)) {
+        throw new Error(`verification-metadata-source-projection-source-gap:heavyDependencyGroups.${group.id}:${pattern}`);
+      }
+    }
+  }
+  normalized.heavyDependencyGroups.sort((left, right) => compareText(left.id, right.id));
+  normalized.prProfiles = sortedUniqueProjectionStrings(normalized.prProfiles, "projectionAuthority.prProfiles");
+  for (const profile of normalized.prProfiles) {
+    if (!profiles.has(profile)) {
+      throw new Error(`verification-metadata-source-projection-profile-gap:prProfiles:${profile}`);
+    }
+  }
+  const roleIds = new Set();
+  for (const [index, role] of normalized.nightlyRoles.entries()) {
+    requireExactObjectFields(role, ["id", "shards"], `nightlyRoles.${index}`);
+    if (typeof role.id !== "string" || !role.id || roleIds.has(role.id)) {
+      throw new Error(`verification-metadata-source-projection-nightly-role:${role.id || "missing"}`);
+    }
+    roleIds.add(role.id);
+    role.shards = sortedUniqueProjectionStrings(
+      role.shards,
+      `projectionAuthority.nightlyRoles.${role.id}.shards`,
+    );
+    if (role.shards.length === 0) {
+      throw new Error(`verification-metadata-source-projection-nightly-shards:${role.id}`);
+    }
+  }
+  normalized.nightlyRoles.sort((left, right) => compareText(left.id, right.id));
+  normalized.nightlyFinalDependencies = sortedUniqueProjectionStrings(
+    normalized.nightlyFinalDependencies,
+    "projectionAuthority.nightlyFinalDependencies",
+  );
+  if (normalized.nightlyFinalDependencies.length === 0
+    || normalized.nightlyFinalDependencies.some((roleId) => !roleIds.has(roleId) || roleId === "final")) {
+    throw new Error("verification-metadata-source-projection-nightly-final-dependencies");
+  }
+  requireExactObjectFields(normalized.documentation, ["sourceRefPrefixes"], "documentation");
+  normalized.documentation.sourceRefPrefixes = sortedUniqueProjectionStrings(
+    normalized.documentation.sourceRefPrefixes,
+    "projectionAuthority.documentation.sourceRefPrefixes",
+  );
+  if (normalized.documentation.sourceRefPrefixes.length === 0
+    || normalized.documentation.sourceRefPrefixes.some((prefix) => typeof prefix !== "string" || !prefix.endsWith("/"))) {
+    throw new Error("verification-metadata-source-projection-documentation-prefix");
+  }
+  return normalized;
+}
 
 function normalizeGatePolicyAuthority(policy) {
   if (!policy
@@ -86,7 +191,6 @@ function normalizeGatePolicyAuthority(policy) {
 
 export function normalizeVerificationMetadataSource(source) {
   const normalized = structuredClone(source);
-  normalized.gatePolicy = normalizeGatePolicyAuthority(normalized.gatePolicy);
   const recordIds = new Set();
   for (const record of normalized.records || []) {
     if (recordIds.has(record.id)) {
@@ -101,6 +205,8 @@ export function normalizeVerificationMetadataSource(source) {
     }
   }
   normalized.records.sort((left, right) => compareText(left.id, right.id));
+  normalized.projectionAuthority = normalizeProjectionAuthority(normalized.projectionAuthority, normalized);
+  normalized.gatePolicy = normalizeGatePolicyAuthority(normalized.gatePolicy);
   for (const [superseder, superseded] of Object.entries(normalized.supersession || {})) {
     normalized.supersession[superseder] = sortedUnique(superseded, `supersession.${superseder}`);
   }
@@ -613,7 +719,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
     "test:node:verify-core-runner": "node --test tests/verify_core_runner_behavior.test.mjs",
     "test:node:verification-profile": "node --test tests/verification_profile_behavior.test.mjs",
-    "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
+    "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs tests/catalog_projection_shadow_behavior.test.mjs",
     "test:node:verification-script-portfolio": "node --test tests/verification_script_portfolio_behavior.test.mjs",
     "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
     "test:node:visual-effects-pass-owner": "node --test tests/visual_effects_pass_owner_behavior.test.mjs",
@@ -719,6 +825,56 @@ const AUTHORED_VERIFICATION_METADATA = {
       "nightly",
       "release"
     ]
+  },
+  "projectionAuthority": {
+    "schemaVersion": 1,
+    "kind": "verification-catalog-projection-authority",
+    "heavyDependencyGroups": [
+      {
+        "id": "geo_stack",
+        "description": "Tests that import geospatial/scientific packages (geopandas/shapely/rasterio/numpy family).",
+        "patterns": [
+          "tests/test_urban_topology_contract.py",
+          "tests/test_tno_bundle_builder.py",
+          "tests/test_scenario_chunk_assets.py",
+          "tests/test_tno_water_geometries.py",
+          "tests/test_tno_named_marginal_water_contract.py",
+          "tests/test_physical_context_contours.py",
+          "tests/test_patch_checked_in_urban_artifacts.py",
+          "tests/test_city_assets.py",
+          "tests/test_global_transport_builder_contracts.py",
+          "tests/test_landing_map_asset_contracts.py",
+          "tests/test_local_canonicalization.py",
+          "tests/test_pages_dist_startup_shell_heavy.py",
+          "tests/test_political_topology_gap_contract.py",
+          "tests/test_polar_water_spherical_safety.py",
+          "tests/test_transport_country_source_contracts.py"
+        ]
+      }
+    ],
+    "prProfiles": [
+      "demo",
+      "perf-pr-gate",
+      "pr-fast",
+      "pr-smoke"
+    ],
+    "nightlyRoles": [
+      { "id": "browser", "shards": ["browser"] },
+      { "id": "final", "shards": ["final"] },
+      { "id": "linux-core", "shards": ["1", "2", "3"] },
+      { "id": "metadata", "shards": ["metadata"] },
+      { "id": "p4-checker-boundaries", "shards": ["p4-checker-boundaries"] },
+      { "id": "p4-closeout", "shards": ["p4-closeout"] },
+      { "id": "p4-fast", "shards": ["p4-fast"] },
+      { "id": "p4-full-policy", "shards": ["p4-full-policy"] },
+      { "id": "pages", "shards": ["pages"] },
+      { "id": "scenario-heavy", "shards": ["scenario-heavy"] },
+      { "id": "windows-governance", "shards": ["windows-governance"] }
+    ],
+    "nightlyFinalDependencies": ["metadata", "linux-core", "pages", "browser", "scenario-heavy", "p4-closeout", "windows-governance"],
+    "documentation": {
+      "sourceRefPrefixes": ["docs/"]
+    }
   },
   "commandRefs": {
     "selectorSanity": "node tools/select_verification_targets.mjs --check",
@@ -4359,8 +4515,12 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "infra:verification-metadata",
       "commandRef": "test:node:verification-metadata",
       "sourceRefs": [
+        "tools/verification/catalog_projection_shadow.mjs",
+        "tools/verification/catalog_projection_legacy.mjs",
+        "tools/verification/catalog_projection_shadow_cli.mjs",
         "tools/verification/verification_domains.mjs",
         "tools/verification/verification_metadata_helpers.mjs",
+        "tests/catalog_projection_shadow_behavior.test.mjs",
         "tests/verification_metadata_behavior.test.mjs",
         "docs/testing/verification-metadata.md",
         "package.json"
@@ -11244,11 +11404,15 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "node:test:node:verification-metadata",
       "commandRef": "test:node:verification-metadata",
       "sourceRefs": [
+        "tests/catalog_projection_shadow_behavior.test.mjs",
         "tests/verification_metadata_behavior.test.mjs",
         "tools/run_core_verification.mjs",
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
+        "tools/verification/catalog_projection_shadow.mjs",
+        "tools/verification/catalog_projection_legacy.mjs",
         "tools/verification/verification_catalog_projection.mjs",
+        "tools/verification/verification_catalog_source.mjs",
         "tools/verification/verification_domains.mjs",
         "tools/verification/verification_metadata_helpers.mjs"
       ],

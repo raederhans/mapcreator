@@ -501,6 +501,10 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     sourceRefs: [
       "tools/verification/verification_domains.mjs",
       "tools/verification/verification_metadata_helpers.mjs",
+      "tools/verification/catalog_projection_legacy.mjs",
+      "tools/verification/catalog_projection_shadow.mjs",
+      "tools/verification/catalog_projection_shadow_cli.mjs",
+      "tests/catalog_projection_shadow_behavior.test.mjs",
       "tests/verification_metadata_behavior.test.mjs",
       "docs/testing/verification-metadata.md",
       "package.json",

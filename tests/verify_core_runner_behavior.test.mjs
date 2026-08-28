@@ -101,7 +101,7 @@ const PACKAGE_SCRIPTS = {
   "verify:script-portfolio": "node tools/verification/script_portfolio.mjs check",
   "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
   "verify:supervisor-plan": "npm run test:node:supervisor-plan && node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tests/supervisor_plan_behavior.test.mjs",
-  "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
+  "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs tests/catalog_projection_shadow_behavior.test.mjs",
   "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
   "test:node:visual-effects-pass-owner": "node --test tests/visual_effects_pass_owner_behavior.test.mjs",
   "test:node:context-pass-orchestrator-owner": "node --test tests/context_pass_orchestrator_owner_behavior.test.mjs",

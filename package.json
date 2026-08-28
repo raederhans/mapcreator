@@ -299,7 +299,7 @@
     "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
     "test:node:verify-core-runner": "node --test tests/verify_core_runner_behavior.test.mjs",
     "test:node:verification-profile": "node --test tests/verification_profile_behavior.test.mjs",
-    "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
+    "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs tests/catalog_projection_shadow_behavior.test.mjs",
     "test:node:verification-script-portfolio": "node --test tests/verification_script_portfolio_behavior.test.mjs",
     "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
     "test:node:visual-effects-pass-owner": "node --test tests/visual_effects_pass_owner_behavior.test.mjs",
