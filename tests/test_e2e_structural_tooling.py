@@ -1927,6 +1927,14 @@ jobs:
         self.assertEqual(parse_job_scalar(jobs["p4-closeout"], "needs"), [
             "p4-checker-boundaries", "p4-full-policy", "p4-fast",
         ])
+        closeout_steps = parse_job_steps(jobs["p4-closeout"])
+        closeout_run = parse_step_run(next(
+            step for step in closeout_steps
+            if step.get("name") == "Validate exact three-authority P4 closeout"
+        ))
+        self.assertIn('EVIDENCE_ID=$(node -p "require(', closeout_run)
+        self.assertIn('echo "evidence_id=$EVIDENCE_ID" >> "$GITHUB_OUTPUT"', closeout_run)
+        self.assertNotIn('echo "evidence_id=$(node -p', closeout_run)
         self.assertIsNone(parse_job_scalar(jobs["linux-core"], "needs"))
         self.assertIsNone(parse_job_scalar(jobs["pages"], "needs"))
         self.assertIsNone(parse_job_scalar(jobs["scenario-heavy"], "needs"))

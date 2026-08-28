@@ -201,7 +201,8 @@ jobs:
             --tap .runtime/p4-authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.tap \
             --completed .runtime/p4-authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.completed.json \
             --out .runtime/reports/generated/nightly/p4-closeout.json
-          echo "evidence_id=$(node -p \"require('./.runtime/reports/generated/nightly/p4-closeout.json').evidenceId\")" >> "$GITHUB_OUTPUT"
+          EVIDENCE_ID=$(node -p "require('./.runtime/reports/generated/nightly/p4-closeout.json').evidenceId")
+          echo "evidence_id=$EVIDENCE_ID" >> "$GITHUB_OUTPUT"
       - name: Upload P4 closeout authority
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
