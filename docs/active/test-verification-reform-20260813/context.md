@@ -352,6 +352,7 @@ The docs-only SF-ATS pass selected `node --test tests/verify_core_runner_behavio
 | Measurement boundary | M4 requires five report-only Nightly runs on one frozen SHA. Local structural or focused tests are not wall-clock evidence. M5 remains held until this gate stabilizes plan/catalog identity. |
 | Live process owner | None at initialization. Root must register command, workdir, shared outputs, log path, stop conditions, and final status here before any full P4, browser, Pages, performance, or remote Nightly run. |
 | Push/deployment boundary | No push, workflow dispatch, deployment, branch-protection change, history rewrite, or tracked-dist removal has occurred in this continuation. |
+| M1 integrated | Isolated implementation `d872edb5` was reviewed and cherry-picked as `d56ba108`. P4.3 now runs an explicit `checker-producer`, validates its evidence before the Python boundary, forbids fallback, removes the duplicate direct checker, and preserves the independent full TAP. Focused evidence is 33/33 plus SF-ATS `unmatched=[]` / `routeGaps=[]`; full P4/TAP, Windows live, performance, and remote CI remain unrun. |
 
 ### Live process ledger
 
