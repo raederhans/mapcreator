@@ -259,12 +259,12 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [x] Run and record M4 same-SHA report-only Nightly evidence for successful runs `33148914260`, `33150859988`, `33153844703`, `33155918484`, and `33159020815` on `1c78104c`; correctness and identity pass 5/5, while every declared performance budget fails.
 - [x] Repair the M4 performance blocker without weakening one-checker/zero-fallback/full-TAP/identity semantics: checker current-scan and exact historical proof now overlap, and the renderer escape-budget assertion reuses the canonical read-only inventory. Local canonical checker passes with policy semantics equal to the prior sample; canonical full TAP passes 428/428 in 588,390 ms, with the renderer assertion reduced from 77,046 ms to 3.396 ms.
 - [x] Freeze repaired SHA `775500e1` and complete five serial exact-SHA Nightly successes: `33166500132`, `33168546652`, `33170661034`, `33172856702`, and `33175208988`. P4 and Nightly wall-clock gates pass, but heavy P4 runner-work median/worst remains `36m50s/39m02s` against the `35m` budget, so M4 remains blocked.
-- [ ] Repair the remaining heavy runner-work budget without regressing the now-passing P4/Nightly wall-clock or authority/identity gates, then repeat M4 on one new frozen SHA.
+- [x] Repair the remaining heavy runner-work budget without regressing the now-passing P4/Nightly wall-clock or authority/identity gates, then repeat M4 on one new frozen SHA.
   - [x] Implement the bounded scanner candidate: ordered Set declaration membership plus one ephemeral source-owner proof preparation per scan. Focused tests pass 69/69, paired 20/100-binding outputs are deep/JSON/hash equal with 20.6%/29.7% improvement, and independent review is clear.
   - [x] Run clean-SHA canonical full/checker admission: full TAP passes 430/430 in 426,366 ms; checker passes in about 451 seconds with zero violations and semantic report fields unchanged; both leave zero residual Node processes.
-  - [ ] Freeze a new measurement ref and restart the serial five-run count from zero.
+  - [x] Freeze SHA `367b4cc7` / tree `af26564e` and complete five valid serial runs: `33185725321`, `33188350585`, `33191004983`, `33193587245`, `33196055397`. P4 median/worst is `17m59s/19m22s`, Nightly is `18m09s/19m32s`, and heavy work is `27m38s/28m14s`; all authority, identity, and performance gates pass.
 - [ ] Implement and verify M5 after M4 stabilizes the catalog identity.
 - [ ] Implement and verify M6, including three Pages artifact-only shadow runs before any tracked-dist decision.
 - [ ] Create Lore commits at stable phase boundaries, integrate them in order, produce the final merge commit, and reconcile worktree/registry truth.
 
-Current limitation: remote CI/workflow execution and any push are not claimed as completed by local evidence. Until five same-SHA Nightly runs and three Pages shadows exist, M4 and the tracked-dist portion of M6 remain open gates.
+Current limitation: M4's five same-SHA remote Nightly gate is complete and passing. Three Pages artifact-only shadows and the tracked-dist portion of M6 remain open; no main push or deployment is claimed.
