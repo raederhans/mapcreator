@@ -250,7 +250,7 @@ The user-supplied performance diagnosis is the frozen sequencing authority for t
 - [x] M1 / P4 Single Checker Authority: add one explicit checker evidence producer, require all P4 boundary consumers to run with live fallback forbidden, remove the second direct checker, and prove one producer / zero fallback / one shared evidence identity.
 - [x] M2 / P4 Parallel Authorities: split checker-plus-boundaries, canonical Windows full policy TAP, and fast contracts/routes into independent jobs; add a closeout consumer that reruns no repository-scale analysis and rejects SHA/tree/evidence-role disagreement. Integrated as `c0027f26`.
 - [x] M3 / Nightly DAG Decoupling: start Scenario Heavy at time zero, remove P4 boundaries from Linux Core, and move Pages build/drift into its own job. Integrated as `0da10cd2`.
-- [ ] M4 / Stable Measurement: run five report-only Nightly executions on one frozen SHA and record medians, worst-of-five, runner-minutes, producer/fallback counts, and identity mismatches. Local focused tests do not satisfy this gate.
+- [x] M4 / Stable Measurement: five report-only Nightly executions on frozen SHA `1c78104c` all completed successfully and preserved one checker, zero fallback, one canonical full TAP, and zero SHA/tree mismatch. Performance admission is `FAIL`: P4 median/worst `31m15s/31m37s`, Nightly median/worst `31m26s/31m53s`, and heavy runner work median/worst `45m56s/47m08s`.
 - [ ] M5 / Catalog Projection Closure: generate heavy groups, package aliases, PR profiles, Nightly roles/shards, and documentation projections from canonical records; retain legacy shadow until ten green projection-equivalence runs.
 - [ ] M6 / Pages Artifact and Footprint: exclude browser binaries from artifacts, use job-specific checkout depth and dependency profiles, then shadow artifact-only Pages before any tracked-dist retirement. Git history rewriting is out of scope.
 
@@ -260,5 +260,5 @@ The user-supplied performance diagnosis is the frozen sequencing authority for t
 - M2 closeout accepts only one clean source SHA/tree across all authorities, one admitted canonical full TAP, passing boundaries/routes, and no repository-scale rerun.
 - M3 starts non-P4 lanes without P4 artifacts or environment variables and keeps all P4 boundary commands inside the P4 authority lane.
 - M4 initial targets are P4 median at most 23 minutes, P4 worst-of-five at most 26 minutes, Nightly median at most 25 minutes, Nightly worst-of-five at most 30 minutes, at most 35 heavy P4 runner-minutes, and zero SHA/tree mismatch.
-- M5 does not begin until M4 stabilizes P4 plan identity; legacy metadata remains fail closed during the shadow window.
+- M5 does not begin until M4 stabilizes P4 plan identity and the declared performance budget is repaired or explicitly re-scoped; legacy metadata remains fail closed during the shadow window.
 - M6 does not stop tracking `dist` until at least three artifact-only Pages shadows prove manifest/hash/public-smoke equivalence and rollback availability.

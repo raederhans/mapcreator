@@ -256,7 +256,8 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [x] Implement and verify M1 as `d56ba108`: one explicit P4.3 checker producer, zero boundary fallback, exact producer-role/evidence-ID binding, duplicate direct checker removed, full TAP retained; focused tests pass 33/33 and SF-ATS dry-run has zero unmatched files and route gaps.
 - [x] Implement and verify M2 as `c0027f26`: three disjoint P4 authorities, exact SHA/tree-bound artifacts, fail-closed closeout, canonical supersession preserved without a second checker, focused behavior/structure/projection checks green, and all 10 changed files mapped with zero adaptive route gaps.
 - [x] Implement and verify M3 as `0da10cd2`: Linux Core and Scenario Heavy start without P4 dependencies or evidence plumbing, all P4 command namespaces stay out of Core, Pages is an independent final dependency, and the focused runner/workflow/P4 plus four-file adaptive checks are green.
-- [ ] Run and record M4 same-SHA report-only Nightly evidence.
+- [x] Run and record M4 same-SHA report-only Nightly evidence for successful runs `33148914260`, `33150859988`, `33153844703`, `33155918484`, and `33159020815` on `1c78104c`; correctness and identity pass 5/5, while every declared performance budget fails.
+- [ ] Repair the M4 performance blocker without weakening one-checker/zero-fallback/full-TAP/identity semantics, then repeat the five-run gate on one new frozen SHA.
 - [ ] Implement and verify M5 after M4 stabilizes the catalog identity.
 - [ ] Implement and verify M6, including three Pages artifact-only shadow runs before any tracked-dist decision.
 - [ ] Create Lore commits at stable phase boundaries, integrate them in order, produce the final merge commit, and reconcile worktree/registry truth.
