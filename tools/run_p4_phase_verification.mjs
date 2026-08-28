@@ -18,6 +18,8 @@ import {
   summarizeCommandStates,
 } from "./verification/resumable_verification.mjs";
 import {
+  STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
+  STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID,
   buildStateWriterPolicyEvidenceTrace,
   buildStrictStateWriterEvidenceEnvironment,
   createStateWriterPolicyEvidenceSession,
@@ -26,6 +28,8 @@ import {
 } from "./verification/state_writer_policy_evidence.mjs";
 
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND =
+  "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.3";
 
 const P4_PHASE_COMMANDS = Object.freeze({
   "P4.1": Object.freeze([
@@ -56,9 +60,9 @@ const P4_PHASE_COMMANDS = Object.freeze({
   ]),
   "P4.3": Object.freeze([
     "npm run test:node:p4:p4-3",
+    P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND,
     "npm run test:python:p4:p4-3-boundary",
     "npm run test:node:p4:state-writer-policy",
-    "node tools/check_state_writer_policy.mjs --phase P4.3 --require-clean",
     "node tools/check_p4_state_action_routes.mjs --phase P4.3 --history-base HEAD^",
   ]),
 });
@@ -249,6 +253,9 @@ export function runVerificationPlan(plan, {
     summary: null,
     verdict: execute ? resumeDecision.mode === "blocked" ? "blocked" : "running" : "listed",
   };
+  let p4StateWriterProducerEvidenceId = report.commands.find(
+    (entry) => entry.commandRef === P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND,
+  )?.externalEvidence?.evidenceId || null;
   const checkpoint = () => {
     report.updatedAt = now().toISOString();
     report.summary = summarizeCommandStates(report.commands);
@@ -280,6 +287,19 @@ export function runVerificationPlan(plan, {
       const resolved = commandToProcess(commandResult.commandRef, platform);
       let env = baseEnv;
       if (isStateWriterPythonBoundaryCommandRef(commandResult.commandRef)) {
+        if (plan.phase === "P4.3" && !p4StateWriterProducerEvidenceId) {
+          commandResult.externalEvidence = {
+            kind: "state-writer-policy-checker-evidence",
+            status: "blocked",
+            code: "state-writer-evidence-producer-identity-missing",
+            disposition: "blocked",
+            message: "P4.3 boundary requires the explicit checker producer identity.",
+          };
+          return {
+            status: 2,
+            error: "State writer policy evidence setup failed code=state-writer-evidence-producer-identity-missing disposition=blocked",
+          };
+        }
         try {
           const evidenceResult = stateWriterEvidenceEnsurer({
             cwd,
@@ -291,6 +311,13 @@ export function runVerificationPlan(plan, {
               unmatchedChangedFiles: resumeDecision.unmatchedChangedFiles,
             },
             liveFallbackSession,
+            ...(plan.phase === "P4.3"
+              ? {
+                expectedEvidenceId: p4StateWriterProducerEvidenceId,
+                expectedProducerRole: STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
+                liveFallbackPolicy: STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID,
+              }
+              : {}),
           });
           commandResult.externalEvidence = buildStateWriterPolicyEvidenceTrace(
             evidenceResult,
@@ -317,13 +344,56 @@ export function runVerificationPlan(plan, {
           };
         }
       }
-      return runner(resolved.command, resolved.args, {
+      const result = runner(resolved.command, resolved.args, {
         cwd,
         encoding: "utf8",
         shell: false,
         stdio: "inherit",
         env,
       });
+      if (
+        plan.phase !== "P4.3"
+        || commandResult.commandRef !== P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND
+        || result?.error
+        || result?.signal
+        || result?.status !== 0
+      ) {
+        return result;
+      }
+      try {
+        const evidenceResult = stateWriterEvidenceEnsurer({
+          cwd,
+          routeApplicability: {
+            unmatchedChangedFiles: resumeDecision.unmatchedChangedFiles,
+          },
+          liveFallbackSession,
+          expectedProducerRole: STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
+          liveFallbackPolicy: STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID,
+        });
+        p4StateWriterProducerEvidenceId = evidenceResult.evidenceId;
+        commandResult.externalEvidence = buildStateWriterPolicyEvidenceTrace({
+          ...evidenceResult,
+          status: "produced-live",
+          disposition: "produced-live",
+        });
+      } catch (error) {
+        commandResult.externalEvidence = {
+          kind: "state-writer-policy-checker-evidence",
+          status: "blocked",
+          code: error?.code || "state-writer-evidence-setup-failed",
+          disposition: error?.disposition || "blocked",
+          message: error?.message || String(error),
+        };
+        return {
+          status: 2,
+          error: [
+            "State writer policy evidence producer validation failed",
+            `code=${commandResult.externalEvidence.code}`,
+            `disposition=${commandResult.externalEvidence.disposition}`,
+          ].join(" "),
+        };
+      }
+      return result;
     },
   });
   const failed = report.commands.find((entry) => entry.status === "failed");

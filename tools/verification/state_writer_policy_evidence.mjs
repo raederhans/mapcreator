@@ -27,6 +27,7 @@ export const STATE_WRITER_POLICY_LIVE_FALLBACK_ENV =
 export const STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID = "forbid";
 export const STATE_WRITER_POLICY_EVIDENCE_SESSION_KIND =
   "state-writer-policy-evidence-session";
+export const STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE = "checker-producer";
 
 const DEFAULT_POLICY_PATH = "tools/state_writer_policy.json";
 const CHECKER_PATH = "tools/check_state_writer_policy.mjs";
@@ -512,6 +513,7 @@ export function createStateWriterPolicyEvidence({
   });
   const entrypoint = normalizeRepoPath(producer?.entrypoint);
   const commandRef = String(producer?.commandRef || "").trim();
+  const role = String(producer?.role || "").trim();
   if (!entrypoint || !commandRef) {
     throw blocked(
       "state-writer-evidence-source-identity-incomplete",
@@ -545,6 +547,7 @@ export function createStateWriterPolicyEvidence({
     producer: {
       entrypoint,
       commandRef,
+      ...(role ? { role } : {}),
       planDigest: checkerPlan.digest,
       producedAt: now().toISOString(),
       disposition: "produced-live",
@@ -568,6 +571,100 @@ export function createStateWriterPolicyEvidence({
   return evidence;
 }
 
+export function produceStateWriterPolicyEvidence({
+  cwd = process.cwd(),
+  phase = readCurrentStateWriterPolicyPhase({ cwd }),
+  reportPath = defaultStateWriterPolicyReportPath(phase),
+  evidencePath = defaultStateWriterPolicyEvidencePath(phase),
+  checkerPlan = buildStateWriterCheckerPlan({ phase, reportPath }),
+  producer = {
+    entrypoint: "tools/verification/state_writer_policy_evidence.mjs",
+    commandRef: `node tools/verification/state_writer_policy_evidence.mjs produce --phase ${phase}`,
+    role: STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
+  },
+  runner = spawnSync,
+  verificationIdentityReader = () => captureVerificationIdentity({ cwd }),
+  policyReader = () => defaultPolicyReader({ cwd }),
+  blobShaReader = (relativePath) => defaultBlobShaReader(relativePath, { cwd }),
+  now = () => new Date(),
+} = {}) {
+  if (producer?.role !== STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE) {
+    throw blocked(
+      "state-writer-evidence-producer-role-invalid",
+      "Explicit state-writer evidence production requires checker-producer authority.",
+    );
+  }
+  const result = runner(
+    checkerPlan.resolvedCommand.executable,
+    checkerPlan.resolvedCommand.args,
+    {
+      cwd,
+      encoding: "utf8",
+      shell: false,
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+  if (result?.error || result?.signal || result?.status !== 0) {
+    throw blocked(
+      "state-writer-evidence-producer-failed",
+      "State-writer checker evidence producer failed.",
+      {
+        status: result?.status,
+        signal: result?.signal,
+        stdout: String(result?.stdout || "").trim(),
+        stderr: String(result?.stderr || "").trim(),
+        cause: result?.error,
+      },
+    );
+  }
+  let evidence;
+  let validated;
+  try {
+    evidence = createStateWriterPolicyEvidence({
+      cwd,
+      phase,
+      reportPath,
+      evidencePath,
+      checkerPlan,
+      producer,
+      verificationIdentityReader,
+      policyReader,
+      blobShaReader,
+      now,
+    });
+    validated = validateStateWriterPolicyEvidence({
+      cwd,
+      phase,
+      evidencePath,
+      checkerPlan,
+      routeApplicability: { unmatchedChangedFiles: [] },
+      verificationIdentityReader,
+      policyReader,
+      blobShaReader,
+      expectedEvidenceId: evidence.evidenceId,
+      expectedProducerRole: STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
+    });
+  } catch (artifactError) {
+    throw blocked(
+      "state-writer-evidence-producer-invalid-artifact",
+      "State-writer checker producer did not publish reusable exact evidence.",
+      {
+        validationCode: artifactError?.code,
+        validationDisposition: artifactError?.disposition,
+        cause: artifactError,
+      },
+    );
+  }
+  return {
+    ...validated,
+    status: "produced-live",
+    disposition: "produced-live",
+    evidence,
+    evidenceId: evidence.evidenceId,
+    producer: cloneJson(evidence.producer),
+  };
+}
+
 export function validateStateWriterPolicyEvidence({
   cwd = process.cwd(),
   phase,
@@ -578,6 +675,7 @@ export function validateStateWriterPolicyEvidence({
   policyReader = () => defaultPolicyReader({ cwd }),
   blobShaReader = (relativePath) => defaultBlobShaReader(relativePath, { cwd }),
   expectedEvidenceId = null,
+  expectedProducerRole = null,
 } = {}) {
   const normalizedPhase = normalizeP4StateActionPhase(phase);
   const currentIdentity = requireCleanIdentity(
@@ -669,6 +767,19 @@ export function validateStateWriterPolicyEvidence({
       "State-writer evidence producer provenance is incomplete.",
     );
   }
+  if (
+    expectedProducerRole !== null
+    && evidence.producer.role !== String(expectedProducerRole).trim()
+  ) {
+    throw blocked(
+      "state-writer-evidence-producer-role-invalid",
+      "State-writer evidence producer does not hold the required authority role.",
+      {
+        expectedProducerRole: String(expectedProducerRole).trim(),
+        actualProducerRole: String(evidence.producer.role || ""),
+      },
+    );
+  }
   const expectedReportPath = normalizeRepoPath(checkerPlan.reportPath);
   if (evidence?.reportArtifact?.path !== expectedReportPath) {
     throw reuseMiss(
@@ -740,6 +851,7 @@ export function ensureStateWriterPolicyEvidence({
   evidencePath = process.env[STATE_WRITER_POLICY_EVIDENCE_PATH_ENV]
     || defaultStateWriterPolicyEvidencePath(phase),
   expectedEvidenceId = process.env[STATE_WRITER_POLICY_EVIDENCE_ID_ENV] || null,
+  expectedProducerRole = null,
   checkerPlan = buildStateWriterCheckerPlan({ phase, reportPath }),
   producer = {
     entrypoint: "tools/verification/state_writer_policy_evidence.mjs",
@@ -764,6 +876,7 @@ export function ensureStateWriterPolicyEvidence({
     policyReader,
     blobShaReader,
     expectedEvidenceId,
+    expectedProducerRole,
   };
   try {
     return validateStateWriterPolicyEvidence(shared);
@@ -871,6 +984,8 @@ export function buildStrictStateWriterEvidenceEnvironment(
       STATE_WRITER_POLICY_EVIDENCE_STRICT_MODE,
     [STATE_WRITER_POLICY_EVIDENCE_PATH_ENV]: evidencePath,
     [STATE_WRITER_POLICY_EVIDENCE_ID_ENV]: evidenceId,
+    [STATE_WRITER_POLICY_LIVE_FALLBACK_ENV]:
+      STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID,
   };
 }
 
@@ -933,6 +1048,23 @@ function parseCliArgs(argv) {
 
 function runCli() {
   const args = parseCliArgs(process.argv.slice(2));
+  if (args.command === "produce" && args.phase) {
+    const result = produceStateWriterPolicyEvidence({
+      phase: args.phase,
+      evidencePath: args.evidencePath
+        || defaultStateWriterPolicyEvidencePath(args.phase),
+    });
+    console.log([
+      "State writer policy evidence produced",
+      `role=${result.producer.role}`,
+      `id=${result.evidenceId}`,
+      `source=${result.sourceVerificationSha}`,
+      `tree=${result.sourceVerificationTreeSha}`,
+      `policy=${result.evidence.policyIdentity.policyBlobSha}`,
+      `report=${result.evidence.reportArtifact.sha256}`,
+    ].join(" "));
+    return;
+  }
   if (
     args.command !== "validate"
     || !args.evidencePath
@@ -940,7 +1072,7 @@ function runCli() {
     || !args.phase
   ) {
     throw new Error(
-      "Usage: state_writer_policy_evidence.mjs validate --evidence <path> --expected-id <sha256> --phase <phase>",
+      "Usage: state_writer_policy_evidence.mjs produce --phase <phase> [--evidence <path>] | validate --evidence <path> --expected-id <sha256> --phase <phase>",
     );
   }
   const reportPath = defaultStateWriterPolicyReportPath(args.phase);
@@ -968,7 +1100,7 @@ if (isMainModule) {
     runCli();
   } catch (error) {
     console.error([
-      "State writer policy evidence validation failed",
+      "State writer policy evidence command failed",
       `code=${error?.code || "state-writer-evidence-cli-error"}`,
       `disposition=${error?.disposition || "blocked"}`,
       `message=${error?.message || String(error)}`,

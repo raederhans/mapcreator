@@ -24,6 +24,7 @@ function fakeStateWriterEvidenceResult(commandRef) {
     producer: {
       entrypoint: "tools/run_p4_phase_verification.mjs",
       commandRef,
+      role: "checker-producer",
       planDigest: "d".repeat(64),
       producedAt: "2026-08-13T00:00:00.000Z",
       disposition: "produced-live",
@@ -103,9 +104,9 @@ test("P4.3 plan keeps renderer actions, complete policy suite, and route command
   const plan = buildP4PhaseVerificationPlan({ phase: "P4.3" });
   assert.deepEqual(plan.commands, [
     "npm run test:node:p4:p4-3",
+    "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.3",
     "npm run test:python:p4:p4-3-boundary",
     "npm run test:node:p4:state-writer-policy",
-    "node tools/check_state_writer_policy.mjs --phase P4.3 --require-clean",
     "node tools/check_p4_state_action_routes.mjs --phase P4.3 --history-base HEAD^",
   ]);
   assert.equal(
@@ -357,6 +358,80 @@ test("P4 runner injects strict exact-tree evidence and persists its trace", () =
     durable.commands.find((entry) => entry.commandRef === commandRef)
       .externalEvidence.evidencePath,
     fakeStateWriterEvidenceResult(commandRef).evidencePath,
+  );
+});
+
+test("P4.3 runs one explicit checker producer and binds every boundary to its evidence id", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "p4-phase-producer-"));
+  const producerCommand =
+    "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.3";
+  const boundaryCommand = "npm run test:python:p4:p4-3-boundary";
+  const evidenceId = "e".repeat(64);
+  const ensured = [];
+  const executions = [];
+  const identity = {
+    verificationSha: "b".repeat(40),
+    verificationTreeSha: "c".repeat(40),
+    trackedClean: true,
+    trackedStatus: "",
+  };
+  const evidenceResult = {
+    ...fakeStateWriterEvidenceResult(producerCommand),
+    evidenceId,
+    producer: {
+      ...fakeStateWriterEvidenceResult(producerCommand).producer,
+      role: "checker-producer",
+    },
+  };
+  const result = runP4VerificationPlan(
+    buildP4PhaseVerificationPlan({ phase: "P4.3" }),
+    {
+      cwd: root,
+      jsonOut: "report.json",
+      platform: "linux",
+      identity,
+      identityReader: () => identity,
+      baseEnv: { FIXTURE_ENV: "kept" },
+      stateWriterEvidenceEnsurer(options) {
+        ensured.push(options);
+        return evidenceResult;
+      },
+      runner(command, args, options) {
+        executions.push({ command, args, options });
+        return { status: 0 };
+      },
+    },
+  );
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(executions.length, 5);
+  assert.equal(ensured.length, 2);
+  assert.equal(ensured[0].liveFallbackPolicy, "forbid");
+  assert.equal(ensured[0].expectedProducerRole, "checker-producer");
+  assert.equal(ensured[1].expectedEvidenceId, evidenceId);
+  assert.equal(ensured[1].expectedProducerRole, "checker-producer");
+  assert.equal(ensured[1].liveFallbackPolicy, "forbid");
+
+  const producer = result.report.commands.find(
+    (entry) => entry.commandRef === producerCommand,
+  );
+  const boundary = result.report.commands.find(
+    (entry) => entry.commandRef === boundaryCommand,
+  );
+  assert.equal(producer.externalEvidence.evidenceId, evidenceId);
+  assert.equal(producer.externalEvidence.status, "produced-live");
+  assert.equal(producer.externalEvidence.producer.role, "checker-producer");
+  assert.equal(boundary.externalEvidence.evidenceId, evidenceId);
+  const boundaryExecution = executions.find(
+    ({ args }) => args.includes("test:python:p4:p4-3-boundary"),
+  );
+  assert.equal(
+    boundaryExecution.options.env.STATE_WRITER_POLICY_LIVE_FALLBACK,
+    "forbid",
+  );
+  assert.equal(
+    boundaryExecution.options.env.STATE_WRITER_POLICY_EVIDENCE_ID,
+    evidenceId,
   );
 });
 
