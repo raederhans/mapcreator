@@ -248,7 +248,7 @@ Wave A is the only immediate implementation lane. Later waves may be explored in
 The user-supplied performance diagnosis is the frozen sequencing authority for this continuation. Renderer slicing remains paused. Static mapping may run in parallel, but implementation follows these gates in order:
 
 - [x] M1 / P4 Single Checker Authority: add one explicit checker evidence producer, require all P4 boundary consumers to run with live fallback forbidden, remove the second direct checker, and prove one producer / zero fallback / one shared evidence identity.
-- [ ] M2 / P4 Parallel Authorities: split checker-plus-boundaries, canonical Windows full policy TAP, and fast contracts/routes into independent jobs; add a closeout consumer that reruns no repository-scale analysis and rejects SHA/tree/evidence-role disagreement.
+- [x] M2 / P4 Parallel Authorities: split checker-plus-boundaries, canonical Windows full policy TAP, and fast contracts/routes into independent jobs; add a closeout consumer that reruns no repository-scale analysis and rejects SHA/tree/evidence-role disagreement. Integrated as `c0027f26`.
 - [ ] M3 / Nightly DAG Decoupling: start Scenario Heavy at time zero, remove P4 boundaries from Linux Core, and move Pages build/drift into its own job.
 - [ ] M4 / Stable Measurement: run five report-only Nightly executions on one frozen SHA and record medians, worst-of-five, runner-minutes, producer/fallback counts, and identity mismatches. Local focused tests do not satisfy this gate.
 - [ ] M5 / Catalog Projection Closure: generate heavy groups, package aliases, PR profiles, Nightly roles/shards, and documentation projections from canonical records; retain legacy shadow until ten green projection-equivalence runs.
