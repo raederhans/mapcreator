@@ -83,6 +83,40 @@ function parameterBindingFor(
   };
 }
 
+test("var redeclarations preserve the original parameter binding identity and order", () => {
+  const source = [
+    "export function updateState(target, sibling) {",
+    "  var target;",
+    "  var target;",
+    "  target.bootPhase = sibling.bootPhase;",
+    "  sibling.bootReady = true;",
+    "}",
+  ].join("\n");
+  const bindings = discoverFunctionParameterBindings(
+    source,
+    { parameterNames: null },
+  ).bindings;
+
+  assert.deepEqual(
+    bindings.map(({ parameterName, parameterIndex, parameterPath }) => ({
+      parameterName,
+      parameterIndex,
+      parameterPath,
+    })),
+    [
+      { parameterName: "target", parameterIndex: 0, parameterPath: "$" },
+      { parameterName: "sibling", parameterIndex: 1, parameterPath: "$" },
+    ],
+  );
+  assert.deepEqual(
+    scanStateMutations(source, {
+      filePath: "js/var_redeclaration_fixture.js",
+      bindings: [parameterBindingFor(source, "updateState", "target")],
+    }).map(({ operation, key }) => ({ operation, key })),
+    [{ operation: "assign", key: "bootPhase" }],
+  );
+});
+
 test("unique function-parameter analysis matches full-program semantics while skipping unrelated function bodies", () => {
   const unrelatedFunctions = Array.from(
     { length: 80 },

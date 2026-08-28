@@ -533,15 +533,21 @@ function buildAstAnalysis(ast) {
   const identifierRecords = new WeakMap();
   const functionRecords = [];
   const allBindingRecords = [];
+  const allBindingRecordSet = new Set();
+
+  function registerBindingRecord(record) {
+    if (record && !allBindingRecordSet.has(record)) {
+      allBindingRecordSet.add(record);
+      allBindingRecords.push(record);
+    }
+  }
 
   function registerPattern(pattern, scope, details) {
     for (const identifier of collectPatternIdentifiers(pattern)) {
       const record = addDeclaration(scope, identifier, details);
       if (record) {
         identifierRecords.set(identifier, record);
-        if (!allBindingRecords.includes(record)) {
-          allBindingRecords.push(record);
-        }
+        registerBindingRecord(record);
       }
     }
   }
@@ -582,9 +588,7 @@ function buildAstAnalysis(ast) {
         });
         if (record) {
           identifierRecords.set(specifier.local, record);
-          if (!allBindingRecords.includes(record)) {
-            allBindingRecords.push(record);
-          }
+          registerBindingRecord(record);
         }
       }
       return;
@@ -609,9 +613,7 @@ function buildAstAnalysis(ast) {
         });
         if (selfRecord) {
           identifierRecords.set(node.id, selfRecord);
-          if (!allBindingRecords.includes(selfRecord)) {
-            allBindingRecords.push(selfRecord);
-          }
+          registerBindingRecord(selfRecord);
         }
       }
       for (
@@ -630,9 +632,7 @@ function buildAstAnalysis(ast) {
           });
           if (record) {
             identifierRecords.set(identifier, record);
-            if (!allBindingRecords.includes(record)) {
-              allBindingRecords.push(record);
-            }
+            registerBindingRecord(record);
             functionRecord.parameterRecords.push(record);
           }
         }
@@ -653,9 +653,7 @@ function buildAstAnalysis(ast) {
         });
         if (selfRecord) {
           identifierRecords.set(node.id, selfRecord);
-          if (!allBindingRecords.includes(selfRecord)) {
-            allBindingRecords.push(selfRecord);
-          }
+          registerBindingRecord(selfRecord);
         }
       }
       visit(node.superClass, scope, node, "superClass");
@@ -2066,6 +2064,7 @@ function analyzeBindingMutations(
     analysisInstrumentation = null,
     recognizeCurrentContracts = true,
     getBindingMutationAnalysisContextForScan = null,
+    getSourceBoundOwnerProofPreparationForScan = null,
   } = {},
 ) {
   const normalizedDerivedAliasTaintMode =
@@ -5439,10 +5438,14 @@ function analyzeBindingMutations(
     processStatement(analysis.ast, new Map());
   }
 
-  function collectSourceBoundMutationDelegatingOwnerActionEdges() {
-    const edges = [];
-    const suppressedRanges = new Set();
-    const targetRecords = resolution.targetRecords || new Set();
+  function prepareSourceBoundMutationDelegatingOwnerActionEdges() {
+    if (
+      typeof analysisInstrumentation
+        ?.onPrepareSourceBoundMutationDelegatingOwnerProof === "function"
+    ) {
+      analysisInstrumentation.onPrepareSourceBoundMutationDelegatingOwnerProof();
+    }
+    const candidates = [];
     for (const contract of mutationDelegatingOwnerContractsForCurrentModule()) {
       let compositionFunction = null;
       walk.full(analysis.ast, (node) => {
@@ -5453,31 +5456,6 @@ function analyzeBindingMutations(
         ) compositionFunction = node;
       });
       if (!compositionFunction) continue;
-
-      const candidates = [];
-      walk.full(compositionFunction.body, (node) => {
-        if (node?.type !== "CallExpression") return;
-        const actionContract = importedTargetDelegation(node)?.actionContract;
-        if (!actionContract) return;
-        const actionModulePath =
-          contract.actionModulePathsByExport?.[actionContract.exportName]
-          || contract.actionModulePath;
-        if (
-          !contract.actionExports.includes(actionContract.exportName)
-          || actionModulePath !== actionContract.modulePath
-        ) return;
-        const target = unwrapChain(
-          node.arguments?.[actionContract.targetArgumentIndex],
-        );
-        if (target?.type !== "Identifier") return;
-        const targetRecord = analysis.resolveIdentifier(target);
-        if (
-          !targetRecords.has(targetRecord)
-          && target.name !== resolution.virtualModuleName
-        ) return;
-        suppressedRanges.add(`${node.start}:${node.end}`);
-        candidates.push({ actionContract, node });
-      });
 
       const factoryCalls = [];
       walk.full(compositionFunction.body, (node) => {
@@ -5497,27 +5475,92 @@ function analyzeBindingMutations(
         const methodName = staticPropertyName(member.property, member.computed);
         if (
           contract.methods.includes(methodName)
-          && mutationDelegatingOwnerGetterContracts(ownerGetterCall).includes(contract)
+          && directImmutableLocalHelperNode(ownerGetterCall)
+            === compositionFunction
         ) hasRegisteredFacadeMethod = true;
       });
       if (!hasRegisteredFacadeMethod) continue;
 
       const [factoryCall] = factoryCalls;
-      for (const { actionContract, node } of candidates) {
-        if (node.start < factoryCall.start || node.end > factoryCall.end) continue;
+      walk.full(compositionFunction.body, (node) => {
+        if (node?.type !== "CallExpression") return;
+        const actionContract = importedTargetDelegation(node)?.actionContract;
+        if (!actionContract) return;
+        const actionModulePath =
+          contract.actionModulePathsByExport?.[actionContract.exportName]
+          || contract.actionModulePath;
+        if (
+          !contract.actionExports.includes(actionContract.exportName)
+          || actionModulePath !== actionContract.modulePath
+          || node.start < factoryCall.start
+          || node.end > factoryCall.end
+        ) return;
+        const target = unwrapChain(
+          node.arguments?.[actionContract.targetArgumentIndex],
+        );
+        if (target?.type !== "Identifier") return;
         let enclosingFunction = analysis.parentNodeForNode(node);
         while (enclosingFunction && !isFunctionNode(enclosingFunction)) {
           enclosingFunction = analysis.parentNodeForNode(enclosingFunction);
         }
-        edges.push(createActionDelegationEdge(
-          source,
-          filePath,
-          binding,
+        candidates.push({
           actionContract,
           node,
-          functionIdentityContext.identityForFunctionNode(enclosingFunction),
-        ));
-      }
+          targetName: target.name,
+          targetRecord: analysis.resolveIdentifier(target),
+          enclosingFunctionIdentity:
+            functionIdentityContext.identityForFunctionNode(enclosingFunction),
+        });
+      });
+    }
+    if (
+      typeof analysisInstrumentation
+        ?.onCompleteSourceBoundMutationDelegatingOwnerProofPreparation
+        === "function"
+    ) {
+      analysisInstrumentation
+        .onCompleteSourceBoundMutationDelegatingOwnerProofPreparation({
+          candidateCount: candidates.length,
+        });
+    }
+    return candidates;
+  }
+
+  function collectSourceBoundMutationDelegatingOwnerActionEdges() {
+    const edges = [];
+    const suppressedRanges = new Set();
+    const targetRecords = resolution.targetRecords || new Set();
+    if (
+      typeof analysisInstrumentation
+        ?.onApplySourceBoundMutationDelegatingOwnerProof === "function"
+    ) {
+      analysisInstrumentation.onApplySourceBoundMutationDelegatingOwnerProof({
+        bindingId: binding.id,
+      });
+    }
+    const candidates = getSourceBoundOwnerProofPreparationForScan(
+      prepareSourceBoundMutationDelegatingOwnerActionEdges,
+    );
+    for (const {
+      actionContract,
+      node,
+      targetName,
+      targetRecord,
+      enclosingFunctionIdentity,
+    } of candidates) {
+      if (
+        !targetRecords.has(targetRecord)
+        && targetName !== resolution.virtualModuleName
+      ) continue;
+      suppressedRanges.add(`${node.start}:${node.end}`);
+      edges.push(createActionDelegationEdge(
+        source,
+        filePath,
+        binding,
+        actionContract,
+        node,
+        enclosingFunctionIdentity,
+      ));
     }
     return { edges, suppressedRanges };
   }
@@ -5631,6 +5674,7 @@ export function scanStateMutationInventory(
     };
   }
   let bindingMutationAnalysisContext = null;
+  let sourceBoundOwnerProofPreparation = null;
   const getBindingMutationAnalysisContextForScan = () => {
     if (
       analysisInstrumentation?.bindingMutationAnalysisContextMode
@@ -5649,6 +5693,18 @@ export function scanStateMutationInventory(
     }
     return bindingMutationAnalysisContext;
   };
+  const getSourceBoundOwnerProofPreparationForScan = (prepare) => {
+    if (
+      analysisInstrumentation?.sourceBoundOwnerProofPreparationMode
+        === "fresh"
+    ) {
+      return prepare();
+    }
+    if (!sourceBoundOwnerProofPreparation) {
+      sourceBoundOwnerProofPreparation = prepare();
+    }
+    return sourceBoundOwnerProofPreparation;
+  };
   const inventories = normalizedBindings.map((binding) => {
       const resolution = resolveConfiguredBinding(analysis, binding);
       return analyzeBindingMutations(
@@ -5664,6 +5720,7 @@ export function scanStateMutationInventory(
           analysisInstrumentation,
           recognizeCurrentContracts,
           getBindingMutationAnalysisContextForScan,
+          getSourceBoundOwnerProofPreparationForScan,
         },
       );
     });

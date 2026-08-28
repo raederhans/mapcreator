@@ -260,6 +260,9 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [x] Repair the M4 performance blocker without weakening one-checker/zero-fallback/full-TAP/identity semantics: checker current-scan and exact historical proof now overlap, and the renderer escape-budget assertion reuses the canonical read-only inventory. Local canonical checker passes with policy semantics equal to the prior sample; canonical full TAP passes 428/428 in 588,390 ms, with the renderer assertion reduced from 77,046 ms to 3.396 ms.
 - [x] Freeze repaired SHA `775500e1` and complete five serial exact-SHA Nightly successes: `33166500132`, `33168546652`, `33170661034`, `33172856702`, and `33175208988`. P4 and Nightly wall-clock gates pass, but heavy P4 runner-work median/worst remains `36m50s/39m02s` against the `35m` budget, so M4 remains blocked.
 - [ ] Repair the remaining heavy runner-work budget without regressing the now-passing P4/Nightly wall-clock or authority/identity gates, then repeat M4 on one new frozen SHA.
+  - [x] Implement the bounded scanner candidate: ordered Set declaration membership plus one ephemeral source-owner proof preparation per scan. Focused tests pass 69/69, paired 20/100-binding outputs are deep/JSON/hash equal with 20.6%/29.7% improvement, and independent review is clear.
+  - [x] Run clean-SHA canonical full/checker admission: full TAP passes 430/430 in 426,366 ms; checker passes in about 451 seconds with zero violations and semantic report fields unchanged; both leave zero residual Node processes.
+  - [ ] Freeze a new measurement ref and restart the serial five-run count from zero.
 - [ ] Implement and verify M5 after M4 stabilizes the catalog identity.
 - [ ] Implement and verify M6, including three Pages artifact-only shadow runs before any tracked-dist decision.
 - [ ] Create Lore commits at stable phase boundaries, integrate them in order, produce the final merge commit, and reconcile worktree/registry truth.
