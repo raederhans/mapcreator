@@ -255,7 +255,7 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [x] Dispatch parallel read-only maps for M1, M2/M3/M6, and M5; integration, commits, shared outputs, long tests, push, and cleanup remain root-owned.
 - [x] Implement and verify M1 as `d56ba108`: one explicit P4.3 checker producer, zero boundary fallback, exact producer-role/evidence-ID binding, duplicate direct checker removed, full TAP retained; focused tests pass 33/33 and SF-ATS dry-run has zero unmatched files and route gaps.
 - [x] Implement and verify M2 as `c0027f26`: three disjoint P4 authorities, exact SHA/tree-bound artifacts, fail-closed closeout, canonical supersession preserved without a second checker, focused behavior/structure/projection checks green, and all 10 changed files mapped with zero adaptive route gaps.
-- [ ] Implement and verify M3.
+- [x] Implement and verify M3 as `0da10cd2`: Linux Core and Scenario Heavy start without P4 dependencies or evidence plumbing, all P4 command namespaces stay out of Core, Pages is an independent final dependency, and the focused runner/workflow/P4 plus four-file adaptive checks are green.
 - [ ] Run and record M4 same-SHA report-only Nightly evidence.
 - [ ] Implement and verify M5 after M4 stabilizes the catalog identity.
 - [ ] Implement and verify M6, including three Pages artifact-only shadow runs before any tracked-dist decision.

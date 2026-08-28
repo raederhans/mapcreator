@@ -6,7 +6,7 @@
 - Integration owner: the root agent owns all commits, merges, shared/long verification, remote workflow actions, registry updates, and cleanup. Parallel agents begin read-only and may receive later file-bounded implementation worktrees only after overlap analysis.
 - Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d` with its 20 tracked modifications untouched.
 - Planned sequence: M1 single checker authority -> M2 parallel P4 authorities -> M3 Nightly decoupling -> M4 five-run same-SHA measurement -> M5 catalog projection closure -> M6 artifact/checkout/dependency/Pages footprint closeout.
-- Current status: M1 isolated commit `d872edb5` was cherry-picked as integration commit `d56ba108`; focused tests pass 33/33 with zero unmatched files and route gaps. M2-M6, final merge, push, remote workflow, deployment, branch-protection change, worktree cleanup, and tracked-dist removal have not occurred.
+- Current status: M1 is integrated as `d56ba108`, M2 as `c0027f26`, and M3 as `0da10cd2`; focused tests and each milestone's all-file adaptive dry-run pass with zero unmatched files and route gaps. M4-M6, final merge, push, remote workflow, deployment, branch-protection change, worktree cleanup, and tracked-dist removal have not occurred.
 
 ## Worktree convergence snapshot — 2026-08-27
 
