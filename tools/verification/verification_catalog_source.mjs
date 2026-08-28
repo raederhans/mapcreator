@@ -868,10 +868,11 @@ const AUTHORED_VERIFICATION_METADATA = {
       { "id": "p4-fast", "shards": ["p4-fast"] },
       { "id": "p4-full-policy", "shards": ["p4-full-policy"] },
       { "id": "pages", "shards": ["pages"] },
+      { "id": "pages-artifact-shadow", "shards": ["pages-artifact-shadow"] },
       { "id": "scenario-heavy", "shards": ["scenario-heavy"] },
       { "id": "windows-governance", "shards": ["windows-governance"] }
     ],
-    "nightlyFinalDependencies": ["metadata", "linux-core", "pages", "browser", "scenario-heavy", "p4-closeout", "windows-governance"],
+    "nightlyFinalDependencies": ["metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy", "p4-closeout", "windows-governance"],
     "documentation": {
       "sourceRefPrefixes": ["docs/"]
     }
@@ -3641,14 +3642,17 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "verify:pages-dist-and-drift",
       "sourceRefs": [
         "tools/build_pages_dist.py",
+        "tools/pages_artifact_shadow.py",
         "tests/test_pages_dist_startup_shell.py",
+        "tests/test_pages_artifact_shadow.py",
         "dist/pages-dist-manifest.json",
         "dist/app",
         "js/core/map_renderer.js",
         "js/core/map_renderer",
         "js/core/renderer",
         "js/core/renderer/cached_pass_compositor_owner.js",
-        ".github/workflows/verify-shared.yml"
+        ".github/workflows/verify-shared.yml",
+        ".github/workflows/nightly-verification.yml"
       ],
       "ownerHints": [
         "deploy-runtime"

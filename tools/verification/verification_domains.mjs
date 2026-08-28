@@ -2957,7 +2957,9 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     packageScriptRequired: true,
     sourceRefs: [
       "tools/build_pages_dist.py",
+      "tools/pages_artifact_shadow.py",
       "tests/test_pages_dist_startup_shell.py",
+      "tests/test_pages_artifact_shadow.py",
       "dist/pages-dist-manifest.json",
       "dist/app",
       "js/core/map_renderer.js",
@@ -2965,6 +2967,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       "js/core/renderer",
       "js/core/renderer/cached_pass_compositor_owner.js",
       ".github/workflows/verify-shared.yml",
+      ".github/workflows/nightly-verification.yml",
     ],
     domain: "pages-dist",
     ownerHint: "deploy-runtime",
