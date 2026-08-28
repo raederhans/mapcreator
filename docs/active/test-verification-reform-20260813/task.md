@@ -242,7 +242,7 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [ ] Wave B: integrate platform-aware Nightly shards and the final Nightly aggregator.
 - [ ] Wave B: preserve the current P4.3 boundary-evidence authority while proving one full-policy producer per SHA and fail-closed consumer fallback reporting; do not misclassify currently unsupported P4.4/P4.5 plans as regressions.
 - [ ] Wave C: integrate catalog-derived PR requirement signals, smoke/demo scheduling, and comparable PR cost reporting.
-- [ ] Wave D: integrate canonical test-record dependency/platform/cost/entrypoint projections and retire only mechanically superseded metadata.
+- [x] Wave D: integrate the canonical catalog projections and fail-closed legacy shadow protocol; no legacy surface is retired before ten same-identity green receipts and an explicit later decision.
 - [ ] Wave E: integrate repository checkout/blob profiling and managed-large-asset growth policy; complete two artifact-only dist shadow deployments before any tracked-dist decision.
 - [ ] Run integration-overlap audit before every wave, preserve recovery refs, and keep user-owned execution worktrees uncleaned until their delivery is integrated or explicitly retained.
 - [ ] Complete remote timing/stability acceptance, synchronize task records and worktree registry with Git facts, and archive only when every remaining gap is closed or explicitly cancelled by the user.
@@ -263,8 +263,8 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
   - [x] Implement the bounded scanner candidate: ordered Set declaration membership plus one ephemeral source-owner proof preparation per scan. Focused tests pass 69/69, paired 20/100-binding outputs are deep/JSON/hash equal with 20.6%/29.7% improvement, and independent review is clear.
   - [x] Run clean-SHA canonical full/checker admission: full TAP passes 430/430 in 426,366 ms; checker passes in about 451 seconds with zero violations and semantic report fields unchanged; both leave zero residual Node processes.
   - [x] Freeze SHA `367b4cc7` / tree `af26564e` and complete five valid serial runs: `33185725321`, `33188350585`, `33191004983`, `33193587245`, `33196055397`. P4 median/worst is `17m59s/19m22s`, Nightly is `18m09s/19m32s`, and heavy work is `27m38s/28m14s`; all authority, identity, and performance gates pass.
-- [ ] Implement and verify M5 after M4 stabilizes the catalog identity.
+- [x] Implement and verify M5 after M4 stabilizes the catalog identity: commit `d57d1647`; metadata 53/53, Core runner 80/80, portfolio/profile 70/70, Python structure/heavy 63/63, 392-route schema, independent review PASS, and clean-commit shadow receipt #1/10 green.
 - [ ] Implement and verify M6, including three Pages artifact-only shadow runs before any tracked-dist decision.
 - [ ] Create Lore commits at stable phase boundaries, integrate them in order, produce the final merge commit, and reconcile worktree/registry truth.
 
-Current limitation: M4's five same-SHA remote Nightly gate is complete and passing. Three Pages artifact-only shadows and the tracked-dist portion of M6 remain open; no main push or deployment is claimed.
+Current limitation: M4 and M5 are complete, but M5 legacy retirement remains deliberately ineligible at 1/10 green receipts. Three Pages artifact-only shadows and the tracked-dist portion of M6 remain open; no main push or deployment is claimed.
