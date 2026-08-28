@@ -5474,14 +5474,13 @@ test("P4.3 exact refresh and cache actions admit without binding diagnostics", a
 test("P4.3 renderer action calls stay within the frozen runtime-state escape budget", async () => {
   const modulePath = "js/core/map_renderer.js";
   const source = fs.readFileSync(modulePath, "utf8");
-  const { bindingInventories } = await discoverStateWriterBindingsForSource(
-    modulePath,
-    source,
-    "production",
-    { includeInventories: true },
-  );
-  const runtimeStateInventory = bindingInventories.find(
-    ({ binding }) => binding.id === "module:runtimeState",
+  const { inventory } = await prepareSharedCurrentPhasePolicyInputs();
+  assert.deepEqual(inventory.unknownCandidateBindings, []);
+  assert.deepEqual(inventory.stalePolicyBindings, []);
+  const runtimeStateInventory = inventory.scans.find(
+    ({ path: scannedPath, bindingId }) =>
+      scannedPath === modulePath
+      && bindingId === "module:runtimeState",
   );
   assert.ok(runtimeStateInventory, "map renderer runtimeState binding is scanned");
 
