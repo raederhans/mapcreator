@@ -320,6 +320,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Build artifact-only Pages shadow dist
         run: python tools/build_pages_dist.py --output-root .runtime/pages-artifact-shadow/dist
+      - name: Build legacy tracked Pages reference
+        run: python tools/build_pages_dist.py
       - name: Verify artifact-only Pages shadow
         run: python tools/pages_artifact_shadow.py verify --artifact-root .runtime/pages-artifact-shadow/dist --run-id github-${{ github.run_id }}-${{ github.run_attempt }} --comparison-out .runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json
       - name: Start artifact-only Pages shadow server

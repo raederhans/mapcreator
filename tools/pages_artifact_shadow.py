@@ -170,9 +170,13 @@ def run_git(args: list[str], *, repo_root: Path = ROOT) -> str:
 
 
 def read_git_identity(*, repo_root: Path = ROOT) -> dict[str, str]:
-    status = run_git(["status", "--porcelain", "--untracked-files=no"], repo_root=repo_root)
-    if status:
-        raise ShadowVerificationError("artifact shadow requires a clean tracked working tree")
+    status = run_git(["status", "--porcelain", "--untracked-files=all"], repo_root=repo_root)
+    for line in status.splitlines():
+        changed_path = line[3:].replace("\\", "/") if len(line) >= 4 else ""
+        if changed_path != "dist" and not changed_path.startswith("dist/"):
+            raise ShadowVerificationError(
+                f"artifact shadow permits reference-build changes only under tracked dist: {changed_path or line}"
+            )
     sha = run_git(["rev-parse", "HEAD"], repo_root=repo_root)
     tree = run_git(["rev-parse", "HEAD^{tree}"], repo_root=repo_root)
     dist_tree = run_git(["rev-parse", "HEAD:dist"], repo_root=repo_root)
@@ -210,6 +214,7 @@ def build_comparison(
         "evidenceRunId": evidence_run_id,
         "git": dict(identity),
         "rollback": {"trackedDistGitTree": identity["rollbackDistTree"]},
+        "referenceBuild": {"mode": "legacy-tracked-dist", "changesConfinedToDist": True},
         "artifact": {**artifact_snapshot, **artifact_manifest},
         "tracked": {**tracked_snapshot, **tracked_manifest},
         "equivalence": {
@@ -261,6 +266,9 @@ def validate_comparison(comparison: dict[str, Any]) -> None:
         raise ShadowVerificationError("comparison git identity is incomplete")
     if not isinstance(rollback, dict) or rollback.get("trackedDistGitTree") != git["rollbackDistTree"]:
         raise ShadowVerificationError("comparison rollback identity is inconsistent")
+    reference_build = comparison.get("referenceBuild")
+    if reference_build != {"mode": "legacy-tracked-dist", "changesConfinedToDist": True}:
+        raise ShadowVerificationError("comparison reference build identity is invalid")
 
 
 def receipt_identity(comparison: dict[str, Any]) -> dict[str, str]:

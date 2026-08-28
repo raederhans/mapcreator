@@ -2004,6 +2004,7 @@ jobs:
                 "Install Node dependencies",
                 "Install Chromium",
                 "Build artifact-only Pages shadow dist",
+                "Build legacy tracked Pages reference",
                 "Verify artifact-only Pages shadow",
                 "Start artifact-only Pages shadow server",
                 "Smoke artifact-only Pages shadow",
@@ -2026,6 +2027,10 @@ jobs:
         self.assertEqual(
             parse_step_run(pages_shadow_by_name["Build artifact-only Pages shadow dist"]),
             "python tools/build_pages_dist.py --output-root .runtime/pages-artifact-shadow/dist",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Build legacy tracked Pages reference"]),
+            "python tools/build_pages_dist.py",
         )
         self.assertEqual(
             parse_step_run(pages_shadow_by_name["Verify artifact-only Pages shadow"]),
