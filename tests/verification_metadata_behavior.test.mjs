@@ -78,7 +78,7 @@ test("authored catalog source covers command authority, policies, and every proj
   assert.equal(summary.heavyDependencyGroupCount, 1);
   assert.equal(summary.packageAliasCount, 16);
   assert.equal(summary.prProfileCount, 4);
-  assert.equal(summary.nightlyRoleCount, 11);
+  assert.equal(summary.nightlyRoleCount, 12);
   assert.equal(summary.documentationProjectionCount, 48);
 });
 

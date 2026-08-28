@@ -2078,11 +2078,11 @@ jobs:
         self.assertIn(".runtime/reports/**", browser_upload)
         self.assertIn(".runtime/tests/**", browser_upload)
 
-        for job_id in ("metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy", "windows-governance"):
+        for job_id in ("metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy"):
             checkout = next(step for step in parse_job_steps(jobs[job_id]) if step.get("name") == "Checkout")
             checkout_body = "\n".join(str(line) for line in checkout["lines"])
             self.assertIn("fetch-depth: 1", checkout_body, job_id)
-        for job_id in ("p4-checker-boundaries", "p4-full-policy", "p4-fast", "p4-closeout"):
+        for job_id in ("p4-checker-boundaries", "p4-full-policy", "p4-fast", "p4-closeout", "windows-governance"):
             checkout = next(step for step in parse_job_steps(jobs[job_id]) if step.get("name") == "Checkout")
             checkout_body = "\n".join(str(line) for line in checkout["lines"])
             self.assertIn("fetch-depth: 0", checkout_body, job_id)
