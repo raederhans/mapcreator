@@ -28,6 +28,7 @@ import {
 import { LEGACY_VERIFICATION_COMMAND_SUPERSESSION } from "./command_supersession.mjs";
 import { buildP4PhaseVerificationPlan } from "../run_p4_phase_verification.mjs";
 import { resolveP4StateWriterPolicyRun } from "../run_p4_state_writer_policy_tests.mjs";
+import { buildStateWriterCheckerPlan } from "./state_writer_policy_evidence.mjs";
 
 export { VERIFICATION_METADATA_SOURCE_IDENTITY };
 
@@ -456,13 +457,34 @@ function nodeOrchestrationCoverage(nodeEntrypoint, runnerArgs, pathOptions) {
     if (!phase) return {};
     const commands = buildP4PhaseVerificationPlan({ phase }).commands;
     const coverageRefs = commands.map((command) => parseNpmRunReference(command)?.id).filter(Boolean);
-    const coverageCommands = commands.filter((command) => !parseNpmRunReference(command));
+    const coverageCommands = commands
+      .filter((command) => !parseNpmRunReference(command))
+      .flatMap((command) => {
+        const argv = tokenizeCommand(command);
+        const nestedEntrypoint = /^(?:node|node\.exe)$/iu.test(argv[0] || "")
+          ? normalizeVerificationPath(argv[1] || "", pathOptions)
+          : "";
+        const nested = nodeOrchestrationCoverage(
+          nestedEntrypoint,
+          argv.slice(2),
+          pathOptions,
+        );
+        return [command, ...(nested.coverageCommands || [])];
+      });
     return { coverageRefs, coverageCommands };
   }
   if (nodeEntrypoint.endsWith("tools/run_p4_state_writer_policy_tests.mjs")) {
     return {
       coverageFiles: resolveP4StateWriterPolicyRun(runnerArgs).testArguments
         .map((value) => normalizeVerificationPath(value, pathOptions)),
+    };
+  }
+  if (nodeEntrypoint.endsWith("tools/verification/state_writer_policy_evidence.mjs")) {
+    const phaseIndex = runnerArgs.indexOf("--phase");
+    const phase = phaseIndex === -1 ? null : runnerArgs[phaseIndex + 1];
+    if (runnerArgs[0] !== "produce" || !phase) return {};
+    return {
+      coverageCommands: [buildStateWriterCheckerPlan({ phase }).commandRef],
     };
   }
   return {};

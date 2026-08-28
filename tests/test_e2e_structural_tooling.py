@@ -1897,7 +1897,10 @@ jobs:
         jobs = parse_workflow_job_blocks(workflow)
         expected_jobs = {
             "metadata",
-            "p4-full",
+            "p4-checker-boundaries",
+            "p4-full-policy",
+            "p4-fast",
+            "p4-closeout",
             "linux-core",
             "browser",
             "scenario-heavy",
@@ -1909,17 +1912,22 @@ jobs:
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("concurrency:", workflow)
         self.assertNotRegex(workflow, r"npm run verify:nightly(?:\s|$)")
-        self.assertEqual(workflow.count("npm run verify:p4:p4-3"), 1)
+        self.assertNotIn("npm run verify:p4:p4-3", workflow)
         self.assertNotIn("npm run verify:p4:state-writer-policy", workflow)
         self.assertNotIn("npm run perf:williams-crossover:run", workflow)
         self.assertNotRegex(workflow, r"--retries(?:=|\s)[1-9]")
         self.assertIn("fail-fast: false", jobs["linux-core"])
         self.assertIn("shard: [1, 2, 3]", jobs["linux-core"])
         self.assertEqual(parse_job_scalar(jobs["linux-core"], "runs-on"), "ubuntu-latest")
-        self.assertEqual(parse_job_scalar(jobs["p4-full"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["p4-checker-boundaries"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["p4-full-policy"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["p4-fast"], "runs-on"), "ubuntu-latest")
         self.assertEqual(parse_job_scalar(jobs["windows-governance"], "runs-on"), "windows-latest")
-        self.assertEqual(parse_job_scalar(jobs["linux-core"], "needs"), ["p4-full"])
-        self.assertEqual(parse_job_scalar(jobs["scenario-heavy"], "needs"), ["p4-full"])
+        self.assertEqual(parse_job_scalar(jobs["p4-closeout"], "needs"), [
+            "p4-checker-boundaries", "p4-full-policy", "p4-fast",
+        ])
+        self.assertEqual(parse_job_scalar(jobs["linux-core"], "needs"), ["p4-closeout"])
+        self.assertEqual(parse_job_scalar(jobs["scenario-heavy"], "needs"), ["p4-closeout"])
         scenario_heavy_steps = parse_job_steps(jobs["scenario-heavy"])
         scenario_heavy_by_name = {str(step["name"]): step for step in scenario_heavy_steps}
         self.assertEqual(
@@ -1931,27 +1939,35 @@ jobs:
         )
         self.assertNotIn("unittest discover", jobs["scenario-heavy"])
 
-        p4_artifact_name = "nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}"
-        p4_artifact_steps = (
-            ("p4-full", "Upload exact P4 producer evidence"),
-            ("linux-core", "Download exact P4 producer evidence"),
-            ("scenario-heavy", "Download exact P4 producer evidence"),
-        )
-        self.assertEqual(workflow.count(f"name: {p4_artifact_name}"), len(p4_artifact_steps))
-        for job_id, step_name in p4_artifact_steps:
-            step = next(
-                entry for entry in parse_job_steps(jobs[job_id])
-                if entry.get("name") == step_name
-            )
-            step_body = "\n".join(str(line) for line in step["lines"])
-            self.assertIn(f"          name: {p4_artifact_name}", step_body)
+        artifact_counts = {
+            "nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}": 4,
+            "nightly-p4-full-policy-${{ github.sha }}-${{ github.run_attempt }}": 2,
+            "nightly-p4-fast-${{ github.sha }}-${{ github.run_attempt }}": 2,
+            "nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}": 3,
+        }
+        for artifact_name, expected_count in artifact_counts.items():
+            self.assertEqual(workflow.count(f"name: {artifact_name}"), expected_count)
+
+        closeout_run = parse_step_run(next(
+            step for step in parse_job_steps(jobs["p4-closeout"])
+            if step.get("name") == "Validate exact three-authority P4 closeout"
+        ))
+        self.assertEqual(closeout_run.count("--authority "), 3)
+        self.assertIn("--expected-sha \"${{ github.sha }}\"", closeout_run)
+        self.assertIn("git rev-parse 'HEAD^{tree}'", closeout_run)
+        self.assertNotIn("select_verification_targets", closeout_run)
+        self.assertNotIn("run_core_verification", closeout_run)
 
         for job_id in ("linux-core", "scenario-heavy"):
             env = parse_job_env(jobs[job_id])
             self.assertEqual(env["STATE_WRITER_POLICY_EVIDENCE_MODE"], "strict")
             self.assertEqual(env["STATE_WRITER_POLICY_LIVE_FALLBACK"], "forbid")
-            self.assertIn("needs['p4-full'].outputs.evidence_id", env["STATE_WRITER_POLICY_EVIDENCE_ID"])
+            self.assertIn("needs['p4-closeout'].outputs.evidence_id", env["STATE_WRITER_POLICY_EVIDENCE_ID"])
             names = [str(step["name"]) for step in parse_job_steps(jobs[job_id])]
+            self.assertLess(
+                names.index("Download P4 closeout"),
+                names.index("Validate exact P4 producer evidence"),
+            )
             self.assertLess(
                 names.index("Download exact P4 producer evidence"),
                 names.index("Validate exact P4 producer evidence"),
@@ -1980,13 +1996,13 @@ jobs:
             "linux-core",
             "browser",
             "scenario-heavy",
-            "p4-full",
+            "p4-closeout",
             "windows-governance",
         ])
         aggregator = extract_required_aggregator_script(jobs["final"])
         required_results = {
             job: {"result": "success", "outputs": {}}
-            for job in expected_jobs - {"final"}
+            for job in parse_job_scalar(jobs["final"], "needs")
         }
         completed = run_command(
             "node",
@@ -1995,7 +2011,7 @@ jobs:
             env={"REQUIRED_RESULTS": json.dumps(required_results)},
         )
         self.assert_command_ok(completed)
-        required_results["p4-full"]["result"] = "failure"
+        required_results["p4-closeout"]["result"] = "failure"
         rejected = run_command(
             "node",
             "-e",
@@ -2014,6 +2030,7 @@ jobs:
         route_payload = json.loads(route_result.stdout)
         self.assertEqual(route_payload["unmatchedChangedFiles"], [])
         commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+        self.assertIn("node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs", commands)
         self.assertIn("verify:script-portfolio", commands)
         self.assertIn("node tools/select_verification_targets.mjs --check", commands)
 
@@ -2037,7 +2054,7 @@ jobs:
     def test_nightly_and_release_install_locked_python_dependencies_before_lane_command(self) -> None:
         cases = (
             ("nightly-verification.yml", "metadata", "Run Nightly metadata contracts"),
-            ("nightly-verification.yml", "p4-full", "Run P4.3 exact full policy producer"),
+            ("nightly-verification.yml", "p4-checker-boundaries", "Run checker producer and all Python P4 boundaries"),
             ("nightly-verification.yml", "linux-core", "Run balanced Linux core shard"),
             ("nightly-verification.yml", "browser", "Run Nightly browser shard"),
             ("nightly-verification.yml", "scenario-heavy", "Run strict scenario contracts"),

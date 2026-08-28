@@ -52,11 +52,11 @@ test("canonical metadata source owns every projection and shadows the retained l
   assert.equal(report.authoredSurfacesBefore, 5);
   assert.equal(report.authoredSurfacesAfter, 1);
   assert.deepEqual(report.projections, {
-    verificationRecords: 137,
-    routes: 391,
-    commands: 347,
-    catalogEntries: 452,
-    leaves: 421,
+    verificationRecords: 138,
+    routes: 392,
+    commands: 348,
+    catalogEntries: 453,
+    leaves: 422,
     suites: 31,
     portfolioScripts: 340,
     superseders: 15,
@@ -1674,6 +1674,27 @@ test("real package scripts and verification domains form one mechanically consis
   });
   assert.deepEqual(consistency.unclassifiedCatalogEntries, []);
   assert.deepEqual(consistency.targetlessDiscoveryEntries, []);
+  const p4Plan = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["verify:p4:p4-3", "verify:p4:state-writer-policy"],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.deepEqual(
+    p4Plan.rootRecords.map(({ commandRef, disposition, supersededBy }) => ({
+      commandRef,
+      disposition,
+      ...(supersededBy ? { supersededBy } : {}),
+    })),
+    [
+      { commandRef: "verify:p4:p4-3", disposition: "planned" },
+      {
+        commandRef: "verify:p4:state-writer-policy",
+        disposition: "superseded",
+        supersededBy: "verify:p4:p4-3",
+      },
+    ],
+  );
   assert.deepEqual(consistency.selectorPlanFailures, []);
   assert.deepEqual(consistency.supersessionMismatches, []);
   assert.deepEqual(consistency.catalogIdentityMismatches, []);

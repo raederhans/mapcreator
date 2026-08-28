@@ -3236,6 +3236,37 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     supervisorDomain: "test-routing",
     routeRegistry: true,
   }),
+  Object.freeze({
+    id: "infra:p4-nightly-parallel-authorities",
+    commandRef: "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+    commandType: "direct",
+    packageScriptRequired: false,
+    sourceRefs: [
+      ".github/workflows/nightly-verification.yml",
+      "tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+      "tests/test_e2e_structural_tooling.py",
+      "tools/verification/p4_nightly_authority.mjs",
+      "tools/verification/p4_nightly_closeout.mjs",
+      "tools/verification/state_writer_policy_evidence.mjs",
+      "tools/verification/p4_state_writer_policy_test_lifecycle.mjs",
+      "tools/run_p4_state_writer_policy_tests.mjs",
+    ],
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    entrypointPolicy: deriveVerificationEntrypointPolicy({
+      commandRef: "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+      cost: "fast",
+      executionOwner: "child-safe",
+      ciProfiles: ["pr-fast"],
+    }),
+    supervisorDomain: "test-routing",
+    routeRegistry: true,
+  }),
 ].map(applyMeasuredRuntimeMetadata));
 
 export const VERIFICATION_DOMAINS = Object.freeze(

@@ -18001,6 +18001,38 @@ const AUTHORED_VERIFICATION_METADATA = {
         "routeRegistry": true
       },
       "selector": {}
+    },
+    {
+      "id": "infra:p4-nightly-parallel-authorities",
+      "commandRef": "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+      "sourceRefs": [
+        ".github/workflows/nightly-verification.yml",
+        "tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+        "tests/test_e2e_structural_tooling.py",
+        "tools/verification/p4_nightly_authority.mjs",
+        "tools/verification/p4_nightly_closeout.mjs",
+        "tools/verification/state_writer_policy_evidence.mjs",
+        "tools/verification/p4_state_writer_policy_test_lifecycle.mjs",
+        "tools/run_p4_state_writer_policy_tests.mjs"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 132,
+      "selectorOrder": 383,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
     }
   ]
 };

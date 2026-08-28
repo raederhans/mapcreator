@@ -61,12 +61,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  p4-full:
-    name: Nightly P4.3 Full Producer
+  p4-checker-boundaries:
+    name: Nightly P4 Checker and Python Boundaries
     runs-on: windows-latest
-    timeout-minutes: 120
-    outputs:
-      evidence_id: ${{ steps.evidence.outputs.evidence_id }}
+    timeout-minutes: 60
     env:
       WHEELHOUSE_DIR: .runtime/python/wheels
     steps:
@@ -94,31 +92,127 @@ jobs:
         run: python tools/check_min_ci_requirements.py
       - name: Install Node dependencies
         run: npm ci
-      - name: Run P4.3 exact full policy producer
-        run: npm run verify:p4:p4-3
-      - name: Capture exact P4 evidence identity
-        id: evidence
-        run: |
-          $evidencePath = ".runtime/reports/generated/p4-state-actions/P4.3/state-writer-policy-evidence.json"
-          $evidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
-          if ($evidence.verificationIdentity.verificationSha -ne "${{ github.sha }}") {
-            throw "P4 evidence SHA does not match github.sha"
-          }
-          "evidence_id=$($evidence.evidenceId)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-      - name: Upload exact P4 producer evidence
+      - name: Run checker producer and all Python P4 boundaries
+        run: node tools/verification/p4_nightly_authority.mjs --role checker-boundaries --out .runtime/reports/generated/nightly/p4-checker-boundaries.json
+      - name: Upload checker and boundary authority
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}
-          path: |
-            .runtime/reports/generated/p4-state-actions/P4.0/**
-            .runtime/reports/generated/p4-state-actions/P4.3/**
+          name: nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/reports/generated/**
+          if-no-files-found: error
+          retention-days: 14
+
+  p4-full-policy:
+    name: Nightly P4 Canonical Full Policy TAP
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Run Windows Job V2 canonical full policy TAP
+        run: node tools/verification/p4_nightly_authority.mjs --role full-policy-tap --out .runtime/reports/generated/nightly/p4-full-policy-tap.json
+      - name: Upload canonical full policy authority
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-p4-full-policy-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/reports/generated/**
+          if-no-files-found: error
+          retention-days: 14
+
+  p4-fast:
+    name: Nightly P4.3 Fast Contracts and Routes
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Run fast P4.3 contracts and routes
+        run: node tools/verification/p4_nightly_authority.mjs --role fast-contracts-routes --out .runtime/reports/generated/nightly/p4-fast-contracts-routes.json
+      - name: Upload fast contracts and routes authority
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-p4-fast-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/reports/generated/**
+          if-no-files-found: error
+          retention-days: 14
+
+  p4-closeout:
+    name: Nightly P4 Closeout
+    needs: ["p4-checker-boundaries", "p4-full-policy", "p4-fast"]
+    runs-on: ubuntu-latest
+    outputs:
+      evidence_id: ${{ steps.closeout.outputs.evidence_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+      - name: Download checker and boundary authority
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/p4-authorities/checker
+      - name: Download canonical full policy authority
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: nightly-p4-full-policy-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/p4-authorities/full
+      - name: Download fast contracts and routes authority
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: nightly-p4-fast-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/p4-authorities/fast
+      - name: Validate exact three-authority P4 closeout
+        id: closeout
+        run: |
+          TREE_SHA=$(git rev-parse 'HEAD^{tree}')
+          node tools/verification/p4_nightly_closeout.mjs \
+            --authority .runtime/p4-authorities/checker/nightly/p4-checker-boundaries.json \
+            --authority .runtime/p4-authorities/full/nightly/p4-full-policy-tap.json \
+            --authority .runtime/p4-authorities/fast/nightly/p4-fast-contracts-routes.json \
+            --expected-sha "${{ github.sha }}" \
+            --expected-tree "$TREE_SHA" \
+            --evidence .runtime/p4-authorities/checker/p4-state-actions/P4.3/state-writer-policy-evidence.json \
+            --tap .runtime/p4-authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.tap \
+            --completed .runtime/p4-authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.completed.json \
+            --out .runtime/reports/generated/nightly/p4-closeout.json
+          echo "evidence_id=$(node -p \"require('./.runtime/reports/generated/nightly/p4-closeout.json').evidenceId\")" >> "$GITHUB_OUTPUT"
+      - name: Upload P4 closeout authority
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/reports/generated/nightly/p4-closeout.json
           if-no-files-found: error
           retention-days: 14
 
   linux-core:
     name: Nightly Linux Core ${{ matrix.shard }}/3
-    needs: ["p4-full"]
+    needs: ["p4-closeout"]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -128,8 +222,8 @@ jobs:
     env:
       WHEELHOUSE_DIR: .runtime/python/wheels
       STATE_WRITER_POLICY_EVIDENCE_MODE: strict
-      STATE_WRITER_POLICY_EVIDENCE_PATH: .runtime/reports/generated/p4-state-actions/P4.3/state-writer-policy-evidence.json
-      STATE_WRITER_POLICY_EVIDENCE_ID: ${{ needs['p4-full'].outputs.evidence_id }}
+      STATE_WRITER_POLICY_EVIDENCE_PATH: .runtime/p4-checker/p4-state-actions/P4.3/state-writer-policy-evidence.json
+      STATE_WRITER_POLICY_EVIDENCE_ID: ${{ needs['p4-closeout'].outputs.evidence_id }}
       STATE_WRITER_POLICY_LIVE_FALLBACK: forbid
     steps:
       - name: Checkout
@@ -159,8 +253,13 @@ jobs:
       - name: Download exact P4 producer evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}
-          path: .runtime/reports/generated/p4-state-actions
+          name: nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/p4-checker
+      - name: Download P4 closeout
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/p4-closeout
       - name: Validate exact P4 producer evidence
         run: node tools/verification/state_writer_policy_evidence.mjs validate --evidence "$STATE_WRITER_POLICY_EVIDENCE_PATH" --expected-id "$STATE_WRITER_POLICY_EVIDENCE_ID" --phase P4.3
       - name: Run balanced Linux core shard
@@ -227,14 +326,14 @@ jobs:
 
   scenario-heavy:
     name: Nightly Scenario Heavy
-    needs: ["p4-full"]
+    needs: ["p4-closeout"]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       WHEELHOUSE_DIR: .runtime/python/wheels
       STATE_WRITER_POLICY_EVIDENCE_MODE: strict
-      STATE_WRITER_POLICY_EVIDENCE_PATH: .runtime/reports/generated/p4-state-actions/P4.3/state-writer-policy-evidence.json
-      STATE_WRITER_POLICY_EVIDENCE_ID: ${{ needs['p4-full'].outputs.evidence_id }}
+      STATE_WRITER_POLICY_EVIDENCE_PATH: .runtime/p4-checker/p4-state-actions/P4.3/state-writer-policy-evidence.json
+      STATE_WRITER_POLICY_EVIDENCE_ID: ${{ needs['p4-closeout'].outputs.evidence_id }}
       STATE_WRITER_POLICY_LIVE_FALLBACK: forbid
     steps:
       - name: Checkout
@@ -264,8 +363,13 @@ jobs:
       - name: Download exact P4 producer evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}
-          path: .runtime/reports/generated/p4-state-actions
+          name: nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/p4-checker
+      - name: Download P4 closeout
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}
+          path: .runtime/p4-closeout
       - name: Validate exact P4 producer evidence
         run: node tools/verification/state_writer_policy_evidence.mjs validate --evidence "$STATE_WRITER_POLICY_EVIDENCE_PATH" --expected-id "$STATE_WRITER_POLICY_EVIDENCE_ID" --phase P4.3
       - name: Run strict scenario contracts
@@ -330,7 +434,7 @@ jobs:
   final:
     name: Nightly Final Aggregator
     if: always()
-    needs: ["metadata", "linux-core", "browser", "scenario-heavy", "p4-full", "windows-governance"]
+    needs: ["metadata", "linux-core", "browser", "scenario-heavy", "p4-closeout", "windows-governance"]
     runs-on: ubuntu-latest
     steps:
       - name: Summarize Nightly shard results
@@ -339,7 +443,7 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require("node:fs");
-          const expectedJobs = ["metadata", "linux-core", "browser", "scenario-heavy", "p4-full", "windows-governance"];
+          const expectedJobs = ["metadata", "linux-core", "browser", "scenario-heavy", "p4-closeout", "windows-governance"];
           const needs = JSON.parse(process.env.REQUIRED_RESULTS);
           const actualJobs = Object.keys(needs).sort();
           const expectedJobsSorted = [...expectedJobs].sort();
