@@ -23,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -225,7 +225,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -270,7 +270,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -294,6 +294,65 @@ jobs:
       - name: Run Pages dist and drift verification
         run: npm run verify:pages-dist-and-drift
 
+  pages-artifact-shadow:
+    name: Nightly Pages Artifact Shadow
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: .runtime/browser/ms-playwright
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build artifact-only Pages shadow dist
+        run: python tools/build_pages_dist.py --output-root .runtime/pages-artifact-shadow/dist
+      - name: Verify artifact-only Pages shadow
+        run: python tools/pages_artifact_shadow.py verify --artifact-root .runtime/pages-artifact-shadow/dist --run-id github-${{ github.run_id }}-${{ github.run_attempt }} --comparison-out .runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json
+      - name: Start artifact-only Pages shadow server
+        run: |
+          python -m http.server 4173 --bind 127.0.0.1 --directory .runtime/pages-artifact-shadow/dist > /tmp/pages-artifact-shadow-server.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::artifact-only Pages shadow server did not become ready"
+          exit 1
+      - name: Smoke artifact-only Pages shadow
+        env:
+          SCENARIO_FORGE_PAGES_URL: http://127.0.0.1:4173/
+          PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:4173/
+        run: npm run test:e2e:pages-public-release-gate
+      - name: Record artifact-only Pages shadow receipt
+        run: python tools/pages_artifact_shadow.py receipt --comparison .runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json --public-smoke passed --out .runtime/reports/generated/nightly/pages-artifact-shadow.json
+      - name: Upload artifact-only Pages shadow
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-pages-artifact-shadow-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            .runtime/pages-artifact-shadow/dist
+            .runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json
+            .runtime/reports/generated/nightly/pages-artifact-shadow.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
   browser:
     name: Nightly Browser
     runs-on: ubuntu-latest
@@ -305,7 +364,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -336,7 +395,6 @@ jobs:
         with:
           name: nightly-browser-${{ github.run_id }}
           path: |
-            .runtime/browser/**
             .runtime/reports/**
             .runtime/tests/**
           if-no-files-found: ignore
@@ -352,7 +410,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -400,7 +458,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -435,7 +493,7 @@ jobs:
   final:
     name: Nightly Final Aggregator
     if: always()
-    needs: ["metadata", "linux-core", "pages", "browser", "scenario-heavy", "p4-closeout", "windows-governance"]
+    needs: ["metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy", "p4-closeout", "windows-governance"]
     runs-on: ubuntu-latest
     steps:
       - name: Summarize Nightly shard results
@@ -444,7 +502,7 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require("node:fs");
-          const expectedJobs = ["metadata", "linux-core", "pages", "browser", "scenario-heavy", "p4-closeout", "windows-governance"];
+          const expectedJobs = ["metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy", "p4-closeout", "windows-governance"];
           const needs = JSON.parse(process.env.REQUIRED_RESULTS);
           const actualJobs = Object.keys(needs).sort();
           const expectedJobsSorted = [...expectedJobs].sort();

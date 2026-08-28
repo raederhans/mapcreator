@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import gzip
 import hashlib
 import json
@@ -22,7 +23,8 @@ from tools.app_entry_resolver import (
     resolve_editor_entry_path,
     resolve_landing_entry_path,
 )
-DIST_ROOT = ROOT / "dist"
+DEFAULT_DIST_ROOT = ROOT / "dist"
+DIST_ROOT = DEFAULT_DIST_ROOT
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
 GITHUB_PAGES_HARD_MAX_BYTES = 1024 * 1024 * 1024
@@ -45,6 +47,54 @@ PAGES_HTML_ENTRYPOINTS = (
     ("landing", "index.html"),
     ("editor", "app/index.html"),
 )
+
+
+def configure_dist_root(output_root: Path | None = None) -> Path:
+    """Select the Pages output root.
+
+    The default remains the checked-in ``dist`` tree.  A non-default root is
+    deliberately restricted to this checkout's ignored ``.runtime`` tree so
+    artifact-only verification cannot erase or rewrite tracked delivery files.
+    """
+    global DIST_ROOT, APP_DIST_ROOT, DIST_MANIFEST_PATH
+
+    raw_selected = (output_root or DEFAULT_DIST_ROOT).expanduser()
+    if has_reparse_point_component(raw_selected):
+        raise ValueError("Pages output root must not traverse a symbolic link or junction")
+    selected = raw_selected.resolve()
+    default_root = DEFAULT_DIST_ROOT.resolve()
+    if selected != default_root:
+        runtime_root = (ROOT / ".runtime").resolve()
+        try:
+            selected.relative_to(runtime_root)
+        except ValueError as exc:
+            raise ValueError(
+                "Non-default Pages output root must be inside repository .runtime"
+            ) from exc
+        if selected.exists() and any(selected.iterdir()):
+            raise ValueError(
+                "Artifact-only Pages output root must be absent or empty; refusing to replace existing output"
+            )
+
+    DIST_ROOT = selected
+    APP_DIST_ROOT = DIST_ROOT / "app"
+    DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
+    return DIST_ROOT
+
+
+def has_reparse_point_component(path: Path) -> bool:
+    """Return true for any existing symlink/junction in a path's ancestry."""
+    candidate = path.absolute()
+    while True:
+        try:
+            is_junction = getattr(os.path, "isjunction", lambda _value: False)(candidate)
+            if candidate.exists() and (candidate.is_symlink() or is_junction):
+                return True
+        except OSError:
+            return True
+        if candidate.parent == candidate:
+            return False
+        candidate = candidate.parent
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",
@@ -2841,7 +2891,21 @@ def enforce_dist_size(total_bytes: int) -> None:
         )
 
 
-def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build the static Pages distribution")
+    parser.add_argument(
+        "--output-root",
+        type=Path,
+        help="Artifact-only output directory (must be empty and below .runtime); default is tracked dist",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    if args.output_root is not None and args.output_root.expanduser().resolve() == DEFAULT_DIST_ROOT.resolve():
+        raise ValueError("--output-root must not name tracked dist; omit it for the normal tracked build")
+    configure_dist_root(args.output_root)
     landing_entry = resolve_landing_entry_path(root=ROOT)
     editor_entry = resolve_editor_entry_path(root=ROOT)
 

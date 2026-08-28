@@ -1850,6 +1850,15 @@ jobs:
         self.assertIn("unknown verification profile", workflow)
         self.assertIn("exit 2", workflow[validation_index:setup_python_index])
 
+    def test_verify_shared_keeps_two_checkout_commits_for_non_pr_fast_history(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        verify_job = parse_workflow_job_blocks(workflow)["verify"]
+        checkout = next(step for step in parse_job_steps(verify_job) if step.get("name") == "Checkout")
+        checkout_body = "\n".join(str(line) for line in checkout["lines"])
+
+        self.assertIn("fetch-depth: 2", checkout_body)
+        self.assertIn("git diff --name-only HEAD^ HEAD", verify_job)
+
     def test_deploy_minimal_installs_locked_node_dependencies_before_pages_build(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
         setup_node_index = workflow.index("- name: Setup Node")
@@ -1903,6 +1912,7 @@ jobs:
             "p4-closeout",
             "linux-core",
             "pages",
+            "pages-artifact-shadow",
             "browser",
             "scenario-heavy",
             "windows-governance",
@@ -1937,6 +1947,7 @@ jobs:
         self.assertNotIn('echo "evidence_id=$(node -p', closeout_run)
         self.assertIsNone(parse_job_scalar(jobs["linux-core"], "needs"))
         self.assertIsNone(parse_job_scalar(jobs["pages"], "needs"))
+        self.assertIsNone(parse_job_scalar(jobs["pages-artifact-shadow"], "needs"))
         self.assertIsNone(parse_job_scalar(jobs["scenario-heavy"], "needs"))
         scenario_heavy_steps = parse_job_steps(jobs["scenario-heavy"])
         scenario_heavy_by_name = {str(step["name"]): step for step in scenario_heavy_steps}
@@ -1982,6 +1993,95 @@ jobs:
             parse_step_run(pages_by_name["Run Pages dist and drift verification"]),
             "npm run verify:pages-dist-and-drift",
         )
+        pages_shadow_steps = parse_job_steps(jobs["pages-artifact-shadow"])
+        pages_shadow_by_name = {str(step["name"]): step for step in pages_shadow_steps}
+        self.assertEqual(
+            [str(step["name"]) for step in pages_shadow_steps],
+            [
+                "Checkout",
+                "Setup Python",
+                "Setup Node",
+                "Install Node dependencies",
+                "Install Chromium",
+                "Build artifact-only Pages shadow dist",
+                "Verify artifact-only Pages shadow",
+                "Start artifact-only Pages shadow server",
+                "Smoke artifact-only Pages shadow",
+                "Record artifact-only Pages shadow receipt",
+                "Upload artifact-only Pages shadow",
+            ],
+        )
+        self.assertEqual(parse_job_env(jobs["pages-artifact-shadow"]), {
+            "PLAYWRIGHT_BROWSERS_PATH": ".runtime/browser/ms-playwright",
+        })
+        self.assertNotIn("Install Python test dependencies", pages_shadow_by_name)
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Install Node dependencies"]),
+            "npm ci",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Install Chromium"]),
+            "npx playwright install --with-deps chromium",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Build artifact-only Pages shadow dist"]),
+            "python tools/build_pages_dist.py --output-root .runtime/pages-artifact-shadow/dist",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Verify artifact-only Pages shadow"]),
+            "python tools/pages_artifact_shadow.py verify --artifact-root .runtime/pages-artifact-shadow/dist "
+            "--run-id github-${{ github.run_id }}-${{ github.run_attempt }} "
+            "--comparison-out .runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json",
+        )
+        shadow_server_run = parse_step_run(pages_shadow_by_name["Start artifact-only Pages shadow server"])
+        self.assertIn("python -m http.server 4173 --bind 127.0.0.1 --directory .runtime/pages-artifact-shadow/dist", shadow_server_run)
+        self.assertIn("curl --fail --silent --show-error http://127.0.0.1:4173/", shadow_server_run)
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Smoke artifact-only Pages shadow"]),
+            "npm run test:e2e:pages-public-release-gate",
+        )
+        pages_shadow_smoke = "\n".join(str(line) for line in pages_shadow_by_name["Smoke artifact-only Pages shadow"]["lines"])
+        self.assertIn("SCENARIO_FORGE_PAGES_URL: http://127.0.0.1:4173/", pages_shadow_smoke)
+        self.assertIn("PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:4173/", pages_shadow_smoke)
+        self.assertNotIn("continue-on-error: true", pages_shadow_smoke)
+        pages_shadow_names = [str(step["name"]) for step in pages_shadow_steps]
+        receipt_index = pages_shadow_names.index("Record artifact-only Pages shadow receipt")
+        smoke_index = pages_shadow_names.index("Smoke artifact-only Pages shadow")
+        self.assertLess(smoke_index, receipt_index)
+        receipt_prefix = "\n".join(pages_shadow_names[:receipt_index])
+        self.assertNotIn("--public-smoke passed", receipt_prefix)
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Record artifact-only Pages shadow receipt"]),
+            "python tools/pages_artifact_shadow.py receipt --comparison "
+            ".runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json "
+            "--public-smoke passed --out .runtime/reports/generated/nightly/pages-artifact-shadow.json",
+        )
+        pages_shadow_upload = "\n".join(str(line) for line in pages_shadow_by_name["Upload artifact-only Pages shadow"]["lines"])
+        self.assertIn("name: nightly-pages-artifact-shadow-${{ github.sha }}-${{ github.run_attempt }}", pages_shadow_upload)
+        self.assertIn(".runtime/pages-artifact-shadow/dist", pages_shadow_upload)
+        self.assertIn("pages-artifact-shadow-comparison.json", pages_shadow_upload)
+        self.assertIn("pages-artifact-shadow.json", pages_shadow_upload)
+        self.assertIn("if-no-files-found: error", pages_shadow_upload)
+        self.assertIn("include-hidden-files: true", pages_shadow_upload)
+        self.assertNotIn("dist/**", pages_shadow_upload)
+
+        browser_steps = parse_job_steps(jobs["browser"])
+        browser_by_name = {str(step["name"]): step for step in browser_steps}
+        browser_upload = "\n".join(str(line) for line in browser_by_name["Upload Nightly browser evidence"]["lines"])
+        self.assertNotIn(".runtime/browser/**", browser_upload)
+        self.assertNotIn("ms-playwright", browser_upload)
+        self.assertIn(".runtime/reports/**", browser_upload)
+        self.assertIn(".runtime/tests/**", browser_upload)
+
+        for job_id in ("metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy", "windows-governance"):
+            checkout = next(step for step in parse_job_steps(jobs[job_id]) if step.get("name") == "Checkout")
+            checkout_body = "\n".join(str(line) for line in checkout["lines"])
+            self.assertIn("fetch-depth: 1", checkout_body, job_id)
+        for job_id in ("p4-checker-boundaries", "p4-full-policy", "p4-fast", "p4-closeout"):
+            checkout = next(step for step in parse_job_steps(jobs[job_id]) if step.get("name") == "Checkout")
+            checkout_body = "\n".join(str(line) for line in checkout["lines"])
+            self.assertIn("fetch-depth: 0", checkout_body, job_id)
+
         linux_core_run = parse_step_run(next(
             step for step in parse_job_steps(jobs["linux-core"])
             if step.get("name") == "Run balanced Linux core shard"
@@ -2011,6 +2111,7 @@ jobs:
             "metadata",
             "linux-core",
             "pages",
+            "pages-artifact-shadow",
             "browser",
             "scenario-heavy",
             "p4-closeout",

@@ -179,6 +179,7 @@ test("M5 canonical projections are deterministic, detached, and source-identity 
     "metadata",
     "p4-closeout",
     "pages",
+    "pages-artifact-shadow",
     "scenario-heavy",
     "windows-governance",
   ]);
