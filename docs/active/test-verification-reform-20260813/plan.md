@@ -271,13 +271,13 @@ The user-supplied performance diagnosis is the frozen sequencing authority for t
 The user authorized the primary agent to continue the existing M7-M12 user-visible tasks as total supervisor. The frozen implementation base is the completed local M1-M6 merge `7cb8d49d90c24bd8bc8775f2ebe14af972294dd9`; the desktop parent checkout remains a protected WIP lane and is never an integration target.
 
 - [x] M7 / Integration readiness and ownership audit: confirm `origin/main@aa57f7ab`, candidate `7cb8d49d`, zero open PRs, clean textual merge, worker ownership, and a serial integration order.
-- [x] M8 / Exact selective repair: bind mixed-origin receipts and artifacts to exact run/SHA/tree/plan/policy/tool identities; fail closed on incomplete REST snapshots and cross-job plan ordering. Candidate `2d12c6f7` is ready for local serial integration.
-- [ ] M9 / Repository analysis bundle: complete the Git-backed immutable producer, trusted receipt, checker/manifest shadow adapters, and one real same-identity equivalence run before committing.
-- [x] M10 / Pages artifact-root contract: add one explicit runtime artifact root plus compact admission receipt/summary while retaining tracked `dist`, legacy references, and all workflows. Candidate `86ad3542` is ready for local serial integration.
-- [ ] M11 / Dependency and checkout profiles: repair recursive Python classification, derive the minimal pinned Python Core profile, and bind a no-checkout validator closure to exact Git blobs before committing.
-- [ ] M12 / Migration debt ledger: add explicit, auditable, fail-closed receipt ingestion without granting deletion authority or changing Catalog/Pages producers.
-- [ ] Integrate one candidate at a time on `codex/sc-m7-m12-integration-20260829`, re-check overlap before each cherry-pick, and run the narrow gate selected by that candidate before admitting the next.
-- [ ] After all five candidates are integrated, close canonical catalog/route/shared receipt wiring in one root-owned seam, run the bounded combined verification matrix, and record all deferred main-thread/CI/Nightly gates.
+- [x] M8 / Exact selective repair: bind mixed-origin receipts and artifacts to exact run/SHA/tree/plan/policy/tool identities; fail closed on incomplete REST snapshots and cross-job plan ordering. Source `2d12c6f7` is integrated as `c691c782`.
+- [x] M9 / Repository analysis bundle: complete the Git-backed immutable producer, trusted receipt, checker/manifest shadow adapters, and one real same-identity semantic equivalence run. Source `1c4de71e` is integrated as `63167944`; the obsolete auxiliary assertion was fixed without rerunning the repository-scale scan.
+- [x] M10 / Pages artifact-root contract: add one explicit runtime artifact root plus compact admission receipt/summary while retaining tracked `dist`, legacy references, and all workflows. Source `86ad3542` is integrated as `1964f054`.
+- [x] M11 / Dependency and checkout profiles: repair recursive Python classification, derive the minimal pinned Python Core profile, and bind a no-checkout validator closure to exact Git blobs. Source `09a5464c` is integrated as `8fe6e34d`.
+- [x] M12 / Migration debt ledger: add explicit, auditable, fail-closed receipt ingestion without granting deletion authority or changing Catalog/Pages producers. Source `d01220ea` is integrated as `b4b0e5a1`.
+- [x] Integrate one candidate at a time on `codex/sc-m7-m12-integration-20260829`, re-check overlap before each cherry-pick, and run the narrow gate selected by that candidate before admitting the next.
+- [x] Close canonical catalog/route/shared receipt wiring in root-owned commit `ea00cd34`, run the bounded combined verification matrix, and record all deferred main-thread/CI/Nightly gates plus the inherited adaptive resource-lock gap.
 
 ### M7-M12 safety and acceptance boundaries
 
@@ -286,3 +286,4 @@ The user authorized the primary agent to continue the existing M7-M12 user-visib
 - Shared files are integration-owner surfaces: M8 owns selective-repair/catalog projection changes; M9 owns checker/manifest adapter changes; M10 owns Pages builder/consumer changes; M11 owns dependency/checkout profiles; M12 owns the ledger. Cross-line route or Nightly wiring is deferred to the serial integration seam.
 - Local focused checks prove only the committed candidate. GitHub-hosted mixed-origin repair, full Nightly, full Pages artifact generation, browser/deployed smoke, performance, heavy geo/scenario data, and remote CI remain separate gates unless actually run on the final exact SHA.
 - Catalog remains at `1/10` and ineligible for retirement. Pages is evidence-eligible at `3/3`, but `removalAuthorized=false`; tracked `dist` and every legacy surface remain retained.
+- The combined selector matches all 51 continuation paths. Adaptive execution planning is not green: one pre-existing `tests/sample_project_contracts.test.mjs` resource-lock conflict between Pages and P4.1 cascades to 12 blocked main-thread roots and remains a separate repair decision.
