@@ -3642,7 +3642,10 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "verify:pages-dist-and-drift",
       "sourceRefs": [
         "tools/build_pages_dist.py",
+        "tools/pages_artifact_admission.py",
+        "tools/pages_artifact_root.py",
         "tools/pages_artifact_shadow.py",
+        "tests/test_pages_artifact_admission.py",
         "tests/test_pages_dist_startup_shell.py",
         "tests/test_pages_artifact_shadow.py",
         "dist/pages-dist-manifest.json",
@@ -18198,6 +18201,156 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 4,
       "verificationOrder": 132,
       "selectorOrder": 383,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:p4-repository-analysis-bundle",
+      "commandRef": "node --test tests/p4_repository_analysis_bundle_behavior.test.mjs",
+      "sourceRefs": [
+        "tests/fixtures/p4_repository_analysis_bundle_source.json",
+        "tests/p4_repository_analysis_bundle_behavior.test.mjs",
+        "tools/build_state_writer_policy.mjs",
+        "tools/verification/p4_repository_analysis_bundle.mjs",
+        "tools/verification/p4_repository_analysis_bundle.schema.json",
+        "tools/verification/p4_repository_analysis_bundle_adapters.mjs",
+        "tools/verification/p4_repository_analysis_bundle_git.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.schema.json"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 133,
+      "selectorOrder": 384,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:p4-repository-analysis-bundle-live-shadow",
+      "commandRef": "node --input-type=module -e \"process.env.M9_LIVE_REPOSITORY_SHADOW='1'; await import('./tests/p4_repository_analysis_bundle_live_shadow.test.mjs')\"",
+      "sourceRefs": [
+        "tests/p4_repository_analysis_bundle_live_shadow.test.mjs",
+        "tools/build_state_writer_policy.mjs",
+        "tools/check_state_writer_policy.mjs",
+        "tools/verification/p4_repository_analysis_bundle.mjs",
+        "tools/verification/p4_repository_analysis_bundle.schema.json",
+        "tools/verification/p4_repository_analysis_bundle_adapters.mjs",
+        "tools/verification/p4_repository_analysis_bundle_git.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.schema.json"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["heavy"],
+      "cost": "heavy",
+      "resourceLocks": [".runtime-output"],
+      "executionOwners": ["main-thread"],
+      "profiles": ["full"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": 134,
+      "selectorOrder": 385,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true,
+        "optionalMainThread": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:dependency-checkout-artifacts",
+      "commandRef": "node --test tests/dependency_checkout_artifacts_behavior.test.mjs tests/dependency_checkout_profiles_behavior.test.mjs",
+      "sourceRefs": [
+        "tests/dependency_checkout_artifacts_behavior.test.mjs",
+        "tests/dependency_checkout_profiles_behavior.test.mjs",
+        "tools/verification/dependency_checkout_artifacts.mjs",
+        "tools/verification/dependency_checkout_profile.schema.json",
+        "tools/verification/dependency_checkout_profiles.mjs"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 135,
+      "selectorOrder": 386,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:python-import-closure",
+      "commandRef": "python -m unittest tests.test_python_import_closure -q",
+      "sourceRefs": [
+        "tests/test_python_import_closure.py",
+        "tools/verification/python_import_closure.py"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 136,
+      "selectorOrder": 387,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:migration-ledger",
+      "commandRef": "node --test tests/migration_ledger_behavior.test.mjs",
+      "sourceRefs": [
+        "tests/migration_ledger_behavior.test.mjs",
+        "tools/verification/migration_ledger.json",
+        "tools/verification/migration_ledger.schema.json",
+        "tools/verification/migration_ledger_validator.mjs"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 137,
+      "selectorOrder": 388,
       "verification": {
         "commandType": "direct",
         "packageScriptRequired": false,

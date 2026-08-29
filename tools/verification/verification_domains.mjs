@@ -292,6 +292,17 @@ function createP3PassFamilyRoute({
 }
 
 export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
+  // New post-shadow records are projected from the authored source so the
+  // retained legacy comparison stays exact without duplicating definitions.
+  ...buildCanonicalVerificationRecords()
+    .filter((entry) => [
+      "infra:p4-repository-analysis-bundle",
+      "infra:p4-repository-analysis-bundle-live-shadow",
+      "infra:dependency-checkout-artifacts",
+      "infra:python-import-closure",
+      "infra:migration-ledger",
+    ].includes(entry.id))
+    .map((entry) => Object.freeze(entry)),
   // Post-PR6 routes and authority expansions have no pre-canonical side table.
   // Project them from the authored source so the retained PR6 shadow stays
   // exact without creating another metadata authority.
@@ -2957,7 +2968,10 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     packageScriptRequired: true,
     sourceRefs: [
       "tools/build_pages_dist.py",
+      "tools/pages_artifact_admission.py",
+      "tools/pages_artifact_root.py",
       "tools/pages_artifact_shadow.py",
+      "tests/test_pages_artifact_admission.py",
       "tests/test_pages_dist_startup_shell.py",
       "tests/test_pages_artifact_shadow.py",
       "dist/pages-dist-manifest.json",
