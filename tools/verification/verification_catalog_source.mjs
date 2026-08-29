@@ -18172,13 +18172,17 @@ const AUTHORED_VERIFICATION_METADATA = {
     },
     {
       "id": "infra:p4-nightly-parallel-authorities",
-      "commandRef": "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+      "commandRef": "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs tests/p4_nightly_exact_repair_behavior.test.mjs",
       "sourceRefs": [
         ".github/workflows/nightly-verification.yml",
+        ".github/workflows/p4-nightly-selective-repair.yml",
+        "tests/p4_nightly_exact_repair_behavior.test.mjs",
         "tests/p4_nightly_parallel_authorities_behavior.test.mjs",
         "tests/test_e2e_structural_tooling.py",
         "tools/verification/p4_nightly_authority.mjs",
         "tools/verification/p4_nightly_closeout.mjs",
+        "tools/verification/p4_nightly_receipt_resolver.mjs",
+        "tools/verification/p4_nightly_repair.mjs",
         "tools/verification/state_writer_policy_evidence.mjs",
         "tools/verification/p4_state_writer_policy_test_lifecycle.mjs",
         "tools/run_p4_state_writer_policy_tests.mjs"

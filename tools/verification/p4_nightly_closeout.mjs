@@ -12,6 +12,14 @@ import {
   P4_NIGHTLY_FULL_POLICY_COMMAND,
   P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS,
 } from "./p4_nightly_authority.mjs";
+import {
+  validateP4NightlyAuthorityReceipt,
+  validateP4NightlyResolvedAuthority,
+} from "./p4_nightly_receipt_resolver.mjs";
+import {
+  captureP4NightlyRepairToolDigests,
+  validateP4NightlyRepairPlan,
+} from "./p4_nightly_repair.mjs";
 import { P4_STATE_WRITER_POLICY_TEST_FILES } from "../run_p4_state_writer_policy_tests.mjs";
 import {
   STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
@@ -53,26 +61,6 @@ function evidenceDigest(evidence) {
   return sha256(stableJson(body));
 }
 
-function validateDigest(receipt) {
-  const body = { ...receipt };
-  delete body.receiptDigest;
-  if (!/^[0-9a-f]{64}$/u.test(receipt.receiptDigest || "")
-    || sha256(JSON.stringify(body)) !== receipt.receiptDigest) {
-    fail("p4-nightly-authority-receipt-drift", `Authority receipt drifted for ${receipt.role || "unknown"}.`);
-  }
-}
-
-function validateIdentity(identity, expectedSha, expectedTree, label) {
-  if (
-    identity?.verificationSha !== expectedSha
-    || identity?.verificationTreeSha !== expectedTree
-    || identity?.workspaceClean !== true
-    || identity?.trackedClean !== true
-    || identity?.includesUntracked !== true
-    || identity?.workspaceStatus !== ""
-  ) fail("p4-nightly-source-identity-mismatch", `${label} does not match the exact source SHA/tree.`);
-}
-
 export function validateP4NightlyCloseout({
   authorities,
   expectedSha,
@@ -80,6 +68,9 @@ export function validateP4NightlyCloseout({
   evidence,
   canonicalTap,
   completedArtifact,
+  repairPlan,
+  resolvedAuthorities,
+  currentRunId,
 } = {}) {
   if (!/^[0-9a-f]{40}$/u.test(expectedSha || "") || !/^[0-9a-f]{40}$/u.test(expectedTree || "")) {
     fail("p4-nightly-expected-identity-invalid", "Closeout requires an exact expected SHA/tree.");
@@ -96,13 +87,42 @@ export function validateP4NightlyCloseout({
       || !P4_NIGHTLY_AUTHORITY_ROLES.includes(receipt?.role)
       || byRole.has(receipt.role)
     ) fail("p4-nightly-authority-role-set", "Each P4 Nightly authority role must appear exactly once and pass.");
-    validateDigest(receipt);
-    validateIdentity(receipt.sourceIdentity, expectedSha, expectedTree, `${receipt.role} source`);
-    validateIdentity(receipt.finalSourceIdentity, expectedSha, expectedTree, `${receipt.role} final source`);
-    if (!Array.isArray(receipt.commands) || receipt.commands.some((entry) => entry.status !== "pass" || entry.exitCode !== 0)) {
-      fail("p4-nightly-authority-command-failed", `${receipt.role} did not pass every owned command.`);
-    }
+    validateP4NightlyAuthorityReceipt({ receipt, role: receipt.role, expectedSha, expectedTree });
     byRole.set(receipt.role, receipt);
+  }
+
+  const validatedRepairPlan = repairPlan === undefined
+    ? null
+    : validateP4NightlyRepairPlan(repairPlan, {
+      expectedSha,
+      expectedTree,
+      currentRunId,
+      expectedToolDigests: captureP4NightlyRepairToolDigests(),
+    });
+  const resolvedByRole = new Map();
+  if (validatedRepairPlan) {
+    if (!Array.isArray(resolvedAuthorities)
+      || resolvedAuthorities.length !== P4_NIGHTLY_AUTHORITY_ROLES.length) {
+      fail("p4-nightly-resolved-authority-count", "Repair closeout requires exactly three resolved authority envelopes.");
+    }
+    for (const resolvedAuthority of resolvedAuthorities) {
+      const role = resolvedAuthority?.role;
+      if (!P4_NIGHTLY_AUTHORITY_ROLES.includes(role) || resolvedByRole.has(role)) {
+        fail("p4-nightly-resolved-authority-role-set", "Each resolved authority role must appear exactly once.");
+      }
+      validateP4NightlyResolvedAuthority({
+        resolvedAuthority,
+        receipt: byRole.get(role),
+        role,
+        expectedSha,
+        expectedTree,
+        repairPlan: validatedRepairPlan,
+        currentRunId,
+      });
+      resolvedByRole.set(role, resolvedAuthority);
+    }
+  } else if (resolvedAuthorities !== undefined) {
+    fail("p4-nightly-resolved-authority-unexpected", "Resolved authority envelopes require a repair plan.");
   }
 
   const checker = byRole.get("checker-boundaries");
@@ -164,7 +184,7 @@ export function validateP4NightlyCloseout({
     || fast.fast?.routes !== "pass"
   ) fail("p4-nightly-fast-authority-invalid", "Fast P4.3 contracts/routes authority did not pass exactly once.");
 
-  return {
+  const result = {
     schemaVersion: P4_NIGHTLY_CLOSEOUT_SCHEMA_VERSION,
     kind: P4_NIGHTLY_CLOSEOUT_KIND,
     status: "pass",
@@ -177,6 +197,22 @@ export function validateP4NightlyCloseout({
     fastContracts: "pass",
     fastRoutes: "pass",
   };
+  if (validatedRepairPlan) {
+    result.authorityOrigins = validatedRepairPlan.lanes.map((lane) => ({
+      role: lane.role,
+      originRunId: resolvedByRole.get(lane.role).originRunId,
+      disposition: resolvedByRole.get(lane.role).disposition,
+      receiptDigest: resolvedByRole.get(lane.role).receiptDigest,
+      resolvedAuthorityDigest: resolvedByRole.get(lane.role).resolvedAuthorityDigest,
+      ...(resolvedByRole.get(lane.role).sourceArtifact
+        ? { sourceArtifact: resolvedByRole.get(lane.role).sourceArtifact }
+        : {}),
+    }));
+    result.repairPlanDigest = validatedRepairPlan.planDigest;
+    result.repairPolicyDigest = validatedRepairPlan.policyDigest;
+    result.repairToolDigests = validatedRepairPlan.toolDigests;
+  }
+  return result;
 }
 
 function readJson(filePath) {
@@ -184,15 +220,29 @@ function readJson(filePath) {
 }
 
 function parseArgs(argv) {
-  const args = { authorities: [], expectedSha: "", expectedTree: "", evidence: "", tap: "", completed: "", out: "" };
+  const args = {
+    authorities: [],
+    resolvedAuthorities: [],
+    expectedSha: "",
+    expectedTree: "",
+    evidence: "",
+    tap: "",
+    completed: "",
+    repairPlan: "",
+    currentRunId: "",
+    out: "",
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--authority") args.authorities.push(argv[++index] || "");
+    else if (token === "--resolved-authority") args.resolvedAuthorities.push(argv[++index] || "");
     else if (token === "--expected-sha") args.expectedSha = argv[++index] || "";
     else if (token === "--expected-tree") args.expectedTree = argv[++index] || "";
     else if (token === "--evidence") args.evidence = argv[++index] || "";
     else if (token === "--tap") args.tap = argv[++index] || "";
     else if (token === "--completed") args.completed = argv[++index] || "";
+    else if (token === "--repair-plan") args.repairPlan = argv[++index] || "";
+    else if (token === "--current-run-id") args.currentRunId = argv[++index] || "";
     else if (token === "--out") args.out = argv[++index] || "";
     else throw new Error(`Unknown P4 Nightly closeout argument: ${token}`);
   }
@@ -211,6 +261,11 @@ if (isMainModule) {
       evidence: readJson(args.evidence),
       canonicalTap: fs.readFileSync(args.tap, "utf8"),
       completedArtifact: readJson(args.completed),
+      ...(args.repairPlan ? {
+        repairPlan: readJson(args.repairPlan),
+        resolvedAuthorities: args.resolvedAuthorities.map(readJson),
+        currentRunId: args.currentRunId,
+      } : {}),
     });
     if (!args.out) fail("p4-nightly-closeout-output-missing", "Closeout requires --out.");
     atomicWriteJsonSync(path.resolve(args.out), result);

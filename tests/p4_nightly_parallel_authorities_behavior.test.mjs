@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   P4_NIGHTLY_AUTHORITY_KIND,
@@ -11,12 +15,18 @@ import {
   buildP4NightlyAuthorityPlan,
 } from "../tools/verification/p4_nightly_authority.mjs";
 import { validateP4NightlyCloseout } from "../tools/verification/p4_nightly_closeout.mjs";
+import { resolveP4NightlyAuthorityReceipt } from "../tools/verification/p4_nightly_receipt_resolver.mjs";
+import {
+  buildP4NightlyRepairPlan,
+  captureP4NightlyRepairToolDigests,
+} from "../tools/verification/p4_nightly_repair.mjs";
 import { P4_STATE_WRITER_POLICY_TEST_FILES } from "../tools/run_p4_state_writer_policy_tests.mjs";
 
 const SHA = "a".repeat(40);
 const TREE = "b".repeat(40);
 const PLAN_ID = "sha256:canonical-full-plan";
 const TAP = "TAP version 13\n1..1\nok 1 - canonical\n";
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function identity() {
   return {
@@ -133,6 +143,58 @@ function fixtures() {
   };
 }
 
+function mixedRepairPlan() {
+  return buildP4NightlyRepairPlan({
+    sourceRunId: "100",
+    currentRunId: "200",
+    rerunScope: "failed",
+    expectedSha: SHA,
+    expectedTree: TREE,
+    currentIdentity: identity(),
+    sourceRun: {
+      id: 100,
+      status: "completed",
+      event: "schedule",
+      path: ".github/workflows/nightly-verification.yml",
+      head_sha: SHA,
+      run_attempt: 2,
+    },
+    sourceJobs: [
+      { name: "Nightly P4 Checker and Python Boundaries", conclusion: "failure" },
+      { name: "Nightly P4 Canonical Full Policy TAP", conclusion: "success" },
+      { name: "Nightly P4.3 Fast Contracts and Routes", conclusion: "success" },
+    ],
+    sourceJobTotalCount: 3,
+    sourceArtifacts: [
+      {
+        id: 11,
+        name: `nightly-p4-full-policy-${SHA}-2`,
+        expired: false,
+        digest: `sha256:${"c".repeat(64)}`,
+      },
+      {
+        id: 12,
+        name: `nightly-p4-fast-${SHA}-2`,
+        expired: false,
+        digest: `sha256:${"d".repeat(64)}`,
+      },
+    ],
+    sourceArtifactTotalCount: 2,
+    toolDigests: captureP4NightlyRepairToolDigests(),
+  });
+}
+
+function resolveMixedAuthorities(value, plan) {
+  return value.authorities.map((receipt) => resolveP4NightlyAuthorityReceipt({
+    receipt,
+    role: receipt.role,
+    expectedSha: SHA,
+    expectedTree: TREE,
+    repairPlan: plan,
+    currentRunId: "200",
+  }));
+}
+
 test("P4 Nightly splits the former exact plan into three disjoint authorities", () => {
   const checker = buildP4NightlyAuthorityPlan("checker-boundaries");
   const full = buildP4NightlyAuthorityPlan("full-policy-tap");
@@ -166,4 +228,116 @@ test("P4 closeout fails closed on role, identity, evidence, full-plan, and fast-
     mutate(value);
     assert.throws(() => validateP4NightlyCloseout(value));
   }
+});
+
+test("P4 closeout accepts mixed executed and exact-prior origins without changing receipt digests", () => {
+  const value = fixtures();
+  const plan = mixedRepairPlan();
+  const priorDigests = value.authorities.map((receipt) => receipt.receiptDigest);
+  const result = validateP4NightlyCloseout({
+    ...value,
+    repairPlan: plan,
+    resolvedAuthorities: resolveMixedAuthorities(value, plan),
+    currentRunId: "200",
+  });
+  assert.deepEqual(result.authorityOrigins.map((entry) => entry.disposition), [
+    "executed-current-run",
+    "reused-exact-prior-run",
+    "reused-exact-prior-run",
+  ]);
+  assert.deepEqual(result.authorityOrigins.map((entry) => entry.originRunId), ["200", "100", "100"]);
+  assert.deepEqual(result.authorityOrigins.map((entry) => entry.receiptDigest), priorDigests);
+  assert.equal(result.repairPlanDigest, plan.planDigest);
+});
+
+test("P4 mixed-origin closeout rejects missing and swapped resolved provenance", () => {
+  const value = fixtures();
+  const plan = mixedRepairPlan();
+  const resolvedAuthorities = resolveMixedAuthorities(value, plan);
+  assert.throws(() => validateP4NightlyCloseout({
+    ...value,
+    repairPlan: plan,
+    resolvedAuthorities: resolvedAuthorities.slice(1),
+    currentRunId: "200",
+  }), (error) => error?.code === "p4-nightly-resolved-authority-count");
+
+  const swapped = structuredClone(resolvedAuthorities);
+  [swapped[0].originRunId, swapped[1].originRunId] = [swapped[1].originRunId, swapped[0].originRunId];
+  assert.throws(() => validateP4NightlyCloseout({
+    ...value,
+    repairPlan: plan,
+    resolvedAuthorities: swapped,
+    currentRunId: "200",
+  }), (error) => error?.code === "p4-nightly-resolved-authority-mismatch");
+});
+
+test("P4 mixed-origin receipts resolve and close out through the local CLIs", (t) => {
+  const value = fixtures();
+  const plan = mixedRepairPlan();
+  const runtimeTmp = path.join(REPO_ROOT, ".runtime", "tmp");
+  fs.mkdirSync(runtimeTmp, { recursive: true });
+  const root = fs.mkdtempSync(path.join(runtimeTmp, "p4-nightly-repair-local-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const planPath = path.join(root, "plan", "p4-repair-plan.json");
+  const evidencePath = path.join(root, "authorities", "checker", "p4-state-actions", "P4.3", "state-writer-policy-evidence.json");
+  const tapPath = path.join(root, "authorities", "full", "p4-state-actions", "P4.0", "state-writer-policy-tests.tap");
+  const completedPath = path.join(root, "authorities", "full", "p4-state-actions", "P4.0", "state-writer-policy-tests.completed.json");
+  for (const filePath of [planPath, evidencePath, tapPath, completedPath]) {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  }
+  fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`);
+  fs.writeFileSync(evidencePath, `${JSON.stringify(value.evidence, null, 2)}\n`);
+  fs.writeFileSync(tapPath, value.canonicalTap);
+  fs.writeFileSync(completedPath, `${JSON.stringify(value.completedArtifact, null, 2)}\n`);
+
+  const roleDirs = {
+    "checker-boundaries": "checker",
+    "full-policy-tap": "full",
+    "fast-contracts-routes": "fast",
+  };
+  const authorityPaths = [];
+  const resolvedPaths = [];
+  for (const receipt of value.authorities) {
+    const roleDir = roleDirs[receipt.role];
+    const authorityPath = path.join(root, "authorities", roleDir, "nightly", `p4-${receipt.role}.json`);
+    const resolvedPath = path.join(root, "authorities", roleDir, "nightly", `p4-${receipt.role}.resolved.json`);
+    fs.mkdirSync(path.dirname(authorityPath), { recursive: true });
+    fs.writeFileSync(authorityPath, `${JSON.stringify(receipt, null, 2)}\n`);
+    const resolver = spawnSync(process.execPath, [
+      "tools/verification/p4_nightly_receipt_resolver.mjs",
+      "--receipt", authorityPath,
+      "--role", receipt.role,
+      "--expected-sha", SHA,
+      "--expected-tree", TREE,
+      "--repair-plan", planPath,
+      "--current-run-id", "200",
+      "--out", resolvedPath,
+    ], { cwd: REPO_ROOT, encoding: "utf8" });
+    assert.equal(resolver.status, 0, resolver.stderr || resolver.stdout);
+    authorityPaths.push(authorityPath);
+    resolvedPaths.push(resolvedPath);
+  }
+
+  const outPath = path.join(root, "out", "p4-repair-closeout.json");
+  const closeout = spawnSync(process.execPath, [
+    "tools/verification/p4_nightly_closeout.mjs",
+    ...authorityPaths.flatMap((filePath) => ["--authority", filePath]),
+    ...resolvedPaths.flatMap((filePath) => ["--resolved-authority", filePath]),
+    "--expected-sha", SHA,
+    "--expected-tree", TREE,
+    "--evidence", evidencePath,
+    "--tap", tapPath,
+    "--completed", completedPath,
+    "--repair-plan", planPath,
+    "--current-run-id", "200",
+    "--out", outPath,
+  ], { cwd: REPO_ROOT, encoding: "utf8" });
+  assert.equal(closeout.status, 0, closeout.stderr || closeout.stdout);
+  const result = JSON.parse(fs.readFileSync(outPath, "utf8"));
+  assert.deepEqual(result.authorityOrigins.map((entry) => entry.originRunId), ["200", "100", "100"]);
+  assert.deepEqual(
+    result.authorityOrigins.map((entry) => entry.receiptDigest),
+    value.authorities.map((receipt) => receipt.receiptDigest),
+  );
 });

@@ -216,6 +216,123 @@ def extract_required_aggregator_script(job_block: str) -> str:
     return heredoc.group("script")
 
 
+def validate_p4_nightly_selective_repair_workflow(workflow: str) -> None:
+    inputs = parse_workflow_dispatch_inputs(workflow)
+    if set(inputs) != {"source_run_id", "rerun_scope"}:
+        raise AssertionError("selective repair input set drifted")
+    if inputs["source_run_id"].get("required") != "true":
+        raise AssertionError("source_run_id must be required")
+    if inputs["rerun_scope"].get("default") != "failed":
+        raise AssertionError("rerun_scope must default to failed")
+
+    jobs = parse_workflow_job_blocks(workflow)
+    if set(jobs) != {"plan", "reuse", "execute", "closeout"}:
+        raise AssertionError("selective repair job set drifted")
+    if parse_job_scalar(jobs["closeout"], "needs") != ["plan", "reuse", "execute"]:
+        raise AssertionError("closeout dependency set drifted")
+    if "needs.plan.outputs.execute_count != '0'" not in jobs["execute"]:
+        raise AssertionError("execute lane lost zero-spawn guard")
+    if "matrix: ${{ fromJSON(needs.plan.outputs.execute_matrix) }}" not in jobs["execute"]:
+        raise AssertionError("execute lane lost planner-owned matrix")
+
+    plan_steps = {str(step["name"]): step for step in parse_job_steps(jobs["plan"])}
+    if "actions/download-artifact@" in jobs["plan"]:
+        raise AssertionError("plan job cannot download its own future artifact")
+    fetch_run = parse_step_run(plan_steps["Fetch exact source run metadata"])
+    for fragment in (
+        "/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100",
+        "/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100",
+    ):
+        if fragment not in fetch_run:
+            raise AssertionError(f"source REST snapshot contract missing: {fragment}")
+    plan_run = parse_step_run(plan_steps["Build fail-closed repair plan"])
+    for fragment in (
+        '--source-run-id "$SOURCE_RUN_ID"',
+        '--rerun-scope "$RERUN_SCOPE"',
+        '--expected-sha "$EXPECTED_SHA"',
+        "git rev-parse 'HEAD^{tree}'",
+        "p4_nightly_receipt_resolver.mjs",
+        "p4_nightly_closeout.mjs",
+    ):
+        if fragment not in plan_run:
+            raise AssertionError(f"repair planner binding missing: {fragment}")
+
+    reuse_steps = parse_job_steps(jobs["reuse"])
+    reuse_names = [str(step["name"]) for step in reuse_steps]
+    if reuse_names.count("Download exact repair plan") != 1:
+        raise AssertionError("reuse job requires exactly one repair plan download")
+    if reuse_names.index("Download exact repair plan") >= reuse_names.index("Validate exact checker receipt"):
+        raise AssertionError("reuse repair plan download must precede receipt resolution")
+    reuse_source = "\n".join(str(line) for step in reuse_steps for line in step["lines"])
+    expected_reuse_counts = {
+        "p4_nightly_receipt_resolver.mjs": 3,
+        "run-id: ${{ inputs.source_run_id }}": 3,
+        "github-token: ${{ github.token }}": 3,
+        "--repair-plan .runtime/repair/plan/p4-repair-plan.json": 3,
+        '--current-run-id "${{ github.run_id }}"': 3,
+        ".resolved.json": 3,
+    }
+    for fragment, expected_count in expected_reuse_counts.items():
+        if reuse_source.count(fragment) != expected_count:
+            raise AssertionError(f"reuse binding count drifted for {fragment}")
+
+    execute_steps = {str(step["name"]): step for step in parse_job_steps(jobs["execute"])}
+    execute_names = list(execute_steps)
+    if execute_names.count("Download exact repair plan") != 1:
+        raise AssertionError("execute job requires exactly one repair plan download")
+    for step_name in (
+        "Download checker Python dependencies",
+        "Install checker Python dependencies",
+        "Execute selected authority once",
+        "Bind executed receipt to current repair run",
+    ):
+        if step_name not in execute_steps:
+            raise AssertionError(f"execute contract step missing: {step_name}")
+    if execute_names.index("Download checker Python dependencies") >= execute_names.index("Install checker Python dependencies"):
+        raise AssertionError("checker wheel download must precede install")
+    if execute_names.index("Install checker Python dependencies") >= execute_names.index("Execute selected authority once"):
+        raise AssertionError("checker install must precede authority execution")
+    if execute_names.index("Download exact repair plan") >= execute_names.index("Bind executed receipt to current repair run"):
+        raise AssertionError("execute repair plan download must precede receipt resolution")
+    download_run = parse_step_run(execute_steps["Download checker Python dependencies"])
+    install_run = parse_step_run(execute_steps["Install checker Python dependencies"])
+    if "python -m pip download -r requirements-dev.lock.txt --dest $env:WHEELHOUSE_DIR" not in download_run:
+        raise AssertionError("checker wheelhouse download drifted")
+    if "python -m pip install --no-index --find-links $env:WHEELHOUSE_DIR -r requirements-dev.lock.txt" not in install_run:
+        raise AssertionError("checker offline install drifted")
+    execute_run = parse_step_run(execute_steps["Execute selected authority once"])
+    if '--role "${{ matrix.role }}"' not in execute_run:
+        raise AssertionError("authority execution lost matrix role binding")
+    bind_run = parse_step_run(execute_steps["Bind executed receipt to current repair run"])
+    for fragment in (
+        "p4_nightly_receipt_resolver.mjs",
+        '--role "${{ matrix.role }}"',
+        "--repair-plan .runtime/repair/plan/p4-repair-plan.json",
+        '--current-run-id "${{ github.run_id }}"',
+        ".resolved.json",
+    ):
+        if fragment not in bind_run:
+            raise AssertionError(f"executed receipt binding missing: {fragment}")
+
+    closeout_steps = {str(step["name"]): step for step in parse_job_steps(jobs["closeout"])}
+    closeout_names = list(closeout_steps)
+    if closeout_names.count("Download repair plan") != 1:
+        raise AssertionError("closeout job requires exactly one repair plan download")
+    if closeout_names.index("Download repair plan") >= closeout_names.index("Validate mixed-origin exact closeout"):
+        raise AssertionError("closeout repair plan download must precede closeout")
+    closeout_run = parse_step_run(closeout_steps["Validate mixed-origin exact closeout"])
+    if closeout_run.count("--authority ") != 3:
+        raise AssertionError("closeout authority count drifted")
+    if closeout_run.count("--resolved-authority ") != 3:
+        raise AssertionError("closeout resolved authority count drifted")
+    for fragment in ("--repair-plan ", '--current-run-id "${{ github.run_id }}"'):
+        if fragment not in closeout_run:
+            raise AssertionError(f"closeout repair binding missing: {fragment}")
+    for forbidden in ("verify:nightly", "linux-core", "scenario-heavy"):
+        if forbidden in workflow:
+            raise AssertionError(f"selective repair expanded into forbidden lane: {forbidden}")
+
+
 class E2eStructuralToolingContractTest(unittest.TestCase):
     def setUp(self) -> None:
         TMP_BASE.mkdir(parents=True, exist_ok=True)
@@ -2153,9 +2270,89 @@ jobs:
         route_payload = json.loads(route_result.stdout)
         self.assertEqual(route_payload["unmatchedChangedFiles"], [])
         commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
-        self.assertIn("node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs", commands)
+        self.assertIn(
+            "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs "
+            "tests/p4_nightly_exact_repair_behavior.test.mjs",
+            commands,
+        )
         self.assertIn("verify:script-portfolio", commands)
         self.assertIn("node tools/select_verification_targets.mjs --check", commands)
+
+    def test_p4_nightly_selective_repair_reuses_only_exact_prior_receipts(self) -> None:
+        workflow = (
+            REPO_ROOT / ".github" / "workflows" / "p4-nightly-selective-repair.yml"
+        ).read_text(encoding="utf-8")
+        validate_p4_nightly_selective_repair_workflow(workflow)
+
+        route_result = run_command(
+            "node",
+            "tools/select_verification_targets.mjs",
+            ".github/workflows/p4-nightly-selective-repair.yml",
+            "--json",
+        )
+        self.assert_command_ok(route_result)
+        route_payload = json.loads(route_result.stdout)
+        self.assertEqual(route_payload["unmatchedChangedFiles"], [])
+        commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+        self.assertIn(
+            "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs "
+            "tests/p4_nightly_exact_repair_behavior.test.mjs",
+            commands,
+        )
+
+    def test_p4_nightly_selective_repair_rejects_structural_fail_open_mutations(self) -> None:
+        workflow = (
+            REPO_ROOT / ".github" / "workflows" / "p4-nightly-selective-repair.yml"
+        ).read_text(encoding="utf-8")
+        mutations = {
+            "plan downloads future artifact": workflow.replace(
+                "      - name: Fetch exact source run metadata",
+                "      - name: Download future repair plan\n"
+                "        uses: actions/download-artifact@forged\n"
+                "      - name: Fetch exact source run metadata",
+                1,
+            ),
+            "reuse omits repair plan download": workflow.replace(
+                "      - name: Download exact repair plan",
+                "      - name: Repair plan download removed",
+                1,
+            ),
+            "missing prior run binding": workflow.replace(
+                "run-id: ${{ inputs.source_run_id }}",
+                "run-id: ${{ github.run_id }}",
+                1,
+            ),
+            "missing reused plan binding": workflow.replace(
+                "--repair-plan .runtime/repair/plan/p4-repair-plan.json",
+                "--repair-plan-removed .runtime/repair/plan/p4-repair-plan.json",
+                1,
+            ),
+            "unconditional execute": workflow.replace(
+                "if: needs.plan.outputs.execute_count != '0'",
+                "if: always()",
+                1,
+            ),
+            "missing executed origin binding": workflow.replace(
+                '--role "${{ matrix.role }}"',
+                '--role "checker-boundaries"',
+                1,
+            ),
+            "missing resolved closeout input": workflow.replace(
+                "--resolved-authority .runtime/repair/authorities/checker/nightly/p4-checker-boundaries.resolved.json",
+                "--resolved-authority-removed .runtime/repair/authorities/checker/nightly/p4-checker-boundaries.resolved.json",
+                1,
+            ),
+            "live checker install": workflow.replace(
+                "python -m pip install --no-index --find-links $env:WHEELHOUSE_DIR -r requirements-dev.lock.txt",
+                "python -m pip install -r requirements-dev.lock.txt",
+                1,
+            ),
+            "full nightly expansion": workflow + "\n# verify:nightly\n",
+        }
+        for label, mutated in mutations.items():
+            with self.subTest(label=label):
+                with self.assertRaises(AssertionError):
+                    validate_p4_nightly_selective_repair_workflow(mutated)
 
     def test_release_consumer_calls_one_canonical_command(self) -> None:
         filename = "release-verification.yml"
