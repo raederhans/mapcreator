@@ -18,9 +18,9 @@
 - M8 delivery: `C:\Users\raede\.codex\worktrees\8750\mapcreator`, branch `codex/sc-m8-selective-repair`, clean source commit `2d12c6f7` based directly on `7cb8d49d`; replayed on the integration branch as `c691c782` with focused post-integration gates green.
 - M9 delivery: `C:\Users\raede\.codex\worktrees\dfe6\mapcreator`; active Git-backed analysis-bundle and real shadow-equivalence work, not yet committed.
 - M10 delivery: `C:\Users\raede\.codex\worktrees\9562\mapcreator`, branch `codex/sc-m10-artifact-root-contract`, clean source commit `86ad3542` based directly on `7cb8d49d`; replayed as `1964f054`. Shared catalog/route files are excluded, tracked `dist` and workflows are retained, and focused post-integration gates are green.
-- M11 delivery: `C:\Users\raede\.codex\worktrees\ce97\mapcreator`, branch `codex/sc-m11-dependency-checkout-profiles`, clean commit `09a5464c` based directly on `7cb8d49d`; ready but held behind M9 for semantic integration order.
-- M12 delivery: `C:\Users\raede\.codex\worktrees\2e3c\mapcreator`, branch `codex/sc-m12-migration-ledger` at the frozen base; active/queued ledger ingestion work, not yet committed.
-- Integration order: M8 -> M10 -> M9 -> M11 -> M12, subject to a fresh overlap check before every cherry-pick. Final catalog/route/cross-receipt wiring is root-owned and comes only after worker commits are admitted.
+- M11 delivery: `C:\Users\raede\.codex\worktrees\ce97\mapcreator`, branch `codex/sc-m11-dependency-checkout-profiles`, clean source commit `09a5464c` based directly on `7cb8d49d`; replayed as `8fe6e34d` with focused post-integration gates green.
+- M12 delivery: `C:\Users\raede\.codex\worktrees\2e3c\mapcreator`, branch `codex/sc-m12-migration-ledger`, clean source commit `d01220ea` based directly on `7cb8d49d`; replayed as `b4b0e5a1` with fail-closed ledger gates green and no removal authority.
+- Integration order: M8 -> M10 -> M11 -> M12 has completed after fresh zero-overlap checks while M9's resource-intensive sole-owner scan remains active. M9 is still admitted last at the checker/manifest semantic seam, followed by mandatory combined M9/M11 validation. Final catalog/route/cross-receipt wiring remains root-owned.
 - Retention boundary: all worker and historical P4 worktrees, branches, refs, receipts, tracked `dist`, and legacy projections remain retained. No push, PR, workflow dispatch, deployment, cleanup, or retirement is part of this phase.
 
 ## Worktree convergence snapshot — 2026-08-27

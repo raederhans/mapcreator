@@ -275,12 +275,15 @@ Current limitation: M1-M6 are complete locally. M5 legacy retirement remains del
 - [x] Complete M7 read-only readiness/overlap audit and freeze worker ownership plus serial integration responsibility.
 - [x] Receive and verify M8 commit `2d12c6f7bd7ee9bbb92166d36124c75985a8ef7d`, parent `7cb8d49d`, with a clean source worktree.
 - [x] Receive and verify M10 commit `86ad35426a2365b2dd089f09c12ca0e2b183a329`, parent `7cb8d49d`, with shared catalog/route files excluded and a clean source worktree.
-- [ ] Receive clean committed M9, M11, and M12 delivery packages with exact SHAs, path lists, focused tests, and honest deferred gates.
+- [x] Receive clean committed M11 delivery `09a5464c` and M12 delivery `d01220ea`, both based directly on `7cb8d49d`, with focused tests and honest deferred gates.
+- [ ] Receive the clean committed M9 delivery after its real repository shadow equivalence reaches a terminal result.
 - [x] Create and seal the local integration branch `codex/sc-m7-m12-integration-20260829` from `7cb8d49d` without touching the desktop parent WIP; planning baseline is `2f04b523`.
 - [x] Cherry-pick M8 as `c691c782`, then pass 13/13 behavior tests, 2/2 workflow adversarial tests, the 392-route schema check, and commit-range diff check.
 - [x] Cherry-pick M10 as `1964f054`, then pass admission 5/5, direct consumer 74/74, renderer inventory 13/13, and commit-range diff check. The accidentally broad startup-shell suite ended without a recoverable exit result and is not counted as evidence.
-- [ ] Recompute overlap and serially integrate M9, M11, and M12 as they become ready.
+- [x] Recompute zero direct overlap and integrate M11 as `8fe6e34d`; pass Node 8/8, Python closure 7/7, syntax, and diff checks.
+- [x] Recompute zero direct overlap and integrate M12 as `b4b0e5a1`; pass ledger 15/15, schema-only, expected missing-receipt exit 2, and diff checks.
+- [ ] Integrate M9 after its terminal evidence and then revalidate the combined M9/M11 authority seam.
 - [ ] Implement only the final root-owned shared catalog/route/receipt wiring required by the integrated file set.
 - [ ] Run bounded combined verification, update registry/context with exact Git facts, and leave all remote and destructive actions at their explicit stop points.
 
-Current state: M8 and M10 are integrated locally. M11 is ready at `09a5464c` and waits behind M9's semantic authority slice. M9 remains in real shadow verification; M12 is starting/queued. No remote side effect or cleanup has occurred.
+Current state: M8, M10, M11, and M12 are integrated locally. M11/M12 were admitted ahead of M9 only because their commits add disjoint files and their short gates do not share the M9 scanner; the original semantic order is restored by requiring a combined M9/M11 validation after M9 lands. M9 remains in real shadow verification. No remote side effect or cleanup has occurred.
