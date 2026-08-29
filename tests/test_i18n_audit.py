@@ -7,8 +7,10 @@ import re
 from pathlib import Path
 
 from tools.i18n_audit import build_localization_ownership_audit, collect_code_strings
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 
 
 class I18nAuditTest(unittest.TestCase):
@@ -538,7 +540,7 @@ const config = {
 
         for index_path in [
             REPO_ROOT / "index.html",
-            REPO_ROOT / "dist" / "app" / "index.html",
+            PAGES_DIST_ROOT / "app" / "index.html",
         ]:
             index_html = index_path.read_text(encoding="utf-8")
             self.assertIn(
@@ -599,7 +601,7 @@ const config = {
         }
 
         locales_paths = [REPO_ROOT / "data" / "locales.json"]
-        dist_locales_path = REPO_ROOT / "dist" / "app" / "data" / "locales.json"
+        dist_locales_path = PAGES_DIST_ROOT / "app" / "data" / "locales.json"
         if dist_locales_path.exists():
             locales_paths.append(dist_locales_path)
 

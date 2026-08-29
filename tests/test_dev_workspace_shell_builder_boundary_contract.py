@@ -2,15 +2,17 @@ from pathlib import Path
 import re
 import unittest
 
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
-DIST_DEV_WORKSPACE_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace.js"
+DIST_DEV_WORKSPACE_JS = PAGES_DIST_ROOT / "app" / "js" / "ui" / "dev_workspace.js"
 DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
-DIST_DEV_WORKSPACE_SHELL_BUILDER_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
+DIST_DEV_WORKSPACE_SHELL_BUILDER_JS = PAGES_DIST_ROOT / "app" / "js" / "ui" / "dev_workspace" / "dev_workspace_shell_builder.js"
 DEV_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "dev_state.js"
 STYLE_CSS = REPO_ROOT / "css" / "style.css"
-DIST_STYLE_CSS = REPO_ROOT / "dist" / "app" / "css" / "style.css"
+DIST_STYLE_CSS = PAGES_DIST_ROOT / "app" / "css" / "style.css"
 
 
 class DevWorkspaceShellBuilderBoundaryContractTest(unittest.TestCase):

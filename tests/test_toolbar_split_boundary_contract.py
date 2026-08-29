@@ -3,10 +3,12 @@ from pathlib import Path
 import re
 import unittest
 
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
-DIST_TOOLBAR_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "toolbar.js"
+DIST_TOOLBAR_JS = PAGES_DIST_ROOT / "app" / "js" / "ui" / "toolbar.js"
 INDEX_HTML = REPO_ROOT / "index.html"
 EXPORT_FAILURE_HANDLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_failure_handler.js"
 EXPORT_ARTIFACT_MODEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_artifact_model.js"

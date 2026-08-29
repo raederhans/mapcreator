@@ -2,8 +2,10 @@ from pathlib import Path
 import re
 import unittest
 
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 
 
 class UiReworkPlan02MainlineContractTest(unittest.TestCase):
@@ -163,7 +165,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
     def test_right_sidebar_has_smooth_collapse_handle(self):
         html_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
-        dist_css_content = (REPO_ROOT / "dist" / "app" / "css" / "style.css").read_text(encoding="utf-8")
+        dist_css_content = (PAGES_DIST_ROOT / "app" / "css" / "style.css").read_text(encoding="utf-8")
         sidebar_content = (REPO_ROOT / "js" / "ui" / "sidebar.js").read_text(encoding="utf-8")
 
         for token in [

@@ -1,8 +1,10 @@
 from pathlib import Path
 import unittest
 
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 RIVER_LAYER_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "river_layer_render_owner.js"
 
 
@@ -110,11 +112,11 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
 
     def test_scenario_guide_new_sections_are_registered_in_source_dist_and_locales(self):
         source_index = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
-        dist_index = (REPO_ROOT / "dist" / "app" / "index.html").read_text(encoding="utf-8")
+        dist_index = (PAGES_DIST_ROOT / "app" / "index.html").read_text(encoding="utf-8")
         source_controller = (REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js").read_text(encoding="utf-8")
-        dist_controller = (REPO_ROOT / "dist" / "app" / "js" / "ui" / "toolbar" / "scenario_guide_popover.js").read_text(encoding="utf-8")
+        dist_controller = (PAGES_DIST_ROOT / "app" / "js" / "ui" / "toolbar" / "scenario_guide_popover.js").read_text(encoding="utf-8")
         source_locales = (REPO_ROOT / "data" / "locales.json").read_text(encoding="utf-8")
-        dist_locales = (REPO_ROOT / "dist" / "app" / "data" / "locales.json").read_text(encoding="utf-8")
+        dist_locales = (PAGES_DIST_ROOT / "app" / "data" / "locales.json").read_text(encoding="utf-8")
 
         for section in ['"hgo"', '"appearance"', '"editing"']:
             self.assertIn(section, source_controller)
@@ -331,7 +333,7 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
 
     def test_layer_status_indicators_share_dot_and_tone_contract(self):
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
-        dist_css_content = (REPO_ROOT / "dist" / "app" / "css" / "style.css").read_text(encoding="utf-8")
+        dist_css_content = (PAGES_DIST_ROOT / "app" / "css" / "style.css").read_text(encoding="utf-8")
         diagnostics_content = (
             REPO_ROOT / "js" / "ui" / "toolbar" / "layer_status_diagnostics.js"
         ).read_text(encoding="utf-8")

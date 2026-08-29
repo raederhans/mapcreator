@@ -1,8 +1,10 @@
 from pathlib import Path
 import unittest
 
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 
 
 class FrontendRenderBoundaryContractTest(unittest.TestCase):
@@ -89,7 +91,7 @@ class FrontendRenderBoundaryContractTest(unittest.TestCase):
         owner_content = (
             REPO_ROOT / "js" / "core" / "renderer" / "viewport_resize_lifecycle_owner.js"
         ).read_text(encoding="utf-8")
-        dist_renderer = REPO_ROOT / "dist" / "app" / "js" / "core" / "map_renderer.js"
+        dist_renderer = PAGES_DIST_ROOT / "app" / "js" / "core" / "map_renderer.js"
 
         self.assertTrue(dist_renderer.exists())
 
