@@ -11,6 +11,18 @@
 - M5 catalog projection lane: `C:\Users\raede\.codex\worktrees\p4-nightly-m5-catalog-projection-20260829\mapcreator`, branch `codex/p4-nightly-m5-catalog-projection-20260829`, based on integration `69fceb02`. Implementation `d57d1647` is complete; receipt #1 binds SHA `d57d1647`, tree `14720de6`, and canonical identity `b7d7b19d...`. All legacy projections are retained until at least ten consecutive same-identity green receipts and a separate explicit retirement decision.
 - M6 Pages footprint lane: `C:\Users\raede\.codex\worktrees\p4-nightly-m6-pages-footprint-20260829\mapcreator`, branch `codex/p4-nightly-m6-pages-footprint-20260829`, based on integration `cd090299`. Implementation commits `61f3090c`, `e8a2b690`, and `c993cbbc`; the repaired frozen identity `c993cbbc` / `4f3b6c9b` passed serial runs `33212369000`, `33215161411`, and `33216626971`. Chained receipt `b3acee49...` is 3/3 green and retirement-eligible with `legacyTrackedDistRetained=true`. Root owns the enclosing no-fast-forward merge; the lane and remote measurement ref are retained as recovery evidence because cleanup/deletion was not authorized.
 
+## M7-M12 controlled continuation — 2026-08-29
+
+- Integration worktree: `C:\Users\raede\.codex\worktrees\bf46\mapcreator`, branch `codex/sc-m7-m12-integration-20260829`, frozen base `7cb8d49d90c24bd8bc8775f2ebe14af972294dd9`. Root is the sole integration owner.
+- Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698d` with 20 tracked modifications and is excluded from all integration actions.
+- M8 delivery: `C:\Users\raede\.codex\worktrees\8750\mapcreator`, branch `codex/sc-m8-selective-repair`, clean commit `2d12c6f7` based directly on `7cb8d49d`; ready for serial cherry-pick.
+- M9 delivery: `C:\Users\raede\.codex\worktrees\dfe6\mapcreator`; active Git-backed analysis-bundle and real shadow-equivalence work, not yet committed.
+- M10 delivery: `C:\Users\raede\.codex\worktrees\9562\mapcreator`, branch `codex/sc-m10-artifact-root-contract`, clean commit `86ad3542` based directly on `7cb8d49d`; shared catalog/route files are excluded from the final commit.
+- M11 delivery: `C:\Users\raede\.codex\worktrees\ce97\mapcreator`; active dependency/checkout profile work, not yet committed.
+- M12 delivery: `C:\Users\raede\.codex\worktrees\2e3c\mapcreator`, branch `codex/sc-m12-migration-ledger` at the frozen base; active/queued ledger ingestion work, not yet committed.
+- Integration order: M8 -> M10 -> M9 -> M11 -> M12, subject to a fresh overlap check before every cherry-pick. Final catalog/route/cross-receipt wiring is root-owned and comes only after worker commits are admitted.
+- Retention boundary: all worker and historical P4 worktrees, branches, refs, receipts, tracked `dist`, and legacy projections remain retained. No push, PR, workflow dispatch, deployment, cleanup, or retirement is part of this phase.
+
 ## Worktree convergence snapshot — 2026-08-27
 
 - Main identity: local `main@efd76074` exactly matched `origin/main@efd76074` before this registry closeout. The clean audit checkout passed `tests.test_global_transport_builder_contracts` 63/63, `test:node:verification-metadata` 41/41, and `git diff --check HEAD^1..HEAD`.

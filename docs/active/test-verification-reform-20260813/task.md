@@ -268,3 +268,19 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [x] Create Lore commits at stable phase boundaries, integrate them in order, produce the final local `--no-ff` merge commit, and reconcile worktree/registry truth. The enclosing integration merge incorporates this completion record; no main push or cleanup is part of this closeout.
 
 Current limitation: M1-M6 are complete locally. M5 legacy retirement remains deliberately ineligible at 1/10 green receipts. M6 establishes tracked-dist retirement eligibility but does not authorize or perform removal; tracked `dist` and every legacy surface remain retained. No main push or deployment is claimed.
+
+## 2026-08-29 M7-M12 integration execution
+
+- [x] Reopen the six existing user-visible M7-M12 tasks at reasoning level `high` or below and keep the root task as total supervisor.
+- [x] Complete M7 read-only readiness/overlap audit and freeze worker ownership plus serial integration responsibility.
+- [x] Receive and verify M8 commit `2d12c6f7bd7ee9bbb92166d36124c75985a8ef7d`, parent `7cb8d49d`, with a clean source worktree.
+- [x] Receive and verify M10 commit `86ad35426a2365b2dd089f09c12ca0e2b183a329`, parent `7cb8d49d`, with shared catalog/route files excluded and a clean source worktree.
+- [ ] Receive clean committed M9, M11, and M12 delivery packages with exact SHAs, path lists, focused tests, and honest deferred gates.
+- [ ] Create and seal the local integration branch `codex/sc-m7-m12-integration-20260829` from `7cb8d49d` without touching the desktop parent WIP.
+- [ ] Cherry-pick M8, run its narrow post-integration gate, and record the integrated SHA/tree.
+- [ ] Cherry-pick M10, run its narrow post-integration gate, and record the integrated SHA/tree.
+- [ ] Recompute overlap and serially integrate M9, M11, and M12 as they become ready.
+- [ ] Implement only the final root-owned shared catalog/route/receipt wiring required by the integrated file set.
+- [ ] Run bounded combined verification, update registry/context with exact Git facts, and leave all remote and destructive actions at their explicit stop points.
+
+Current state: M8 and M10 are locally ready; M9 and M11 are actively verifying; M12 is queued/starting. No remote side effect or cleanup has occurred.

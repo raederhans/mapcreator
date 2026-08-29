@@ -265,3 +265,24 @@ The user-supplied performance diagnosis is the frozen sequencing authority for t
 - M4 initial targets are P4 median at most 23 minutes, P4 worst-of-five at most 26 minutes, Nightly median at most 25 minutes, Nightly worst-of-five at most 30 minutes, at most 35 heavy P4 runner-minutes, and zero SHA/tree mismatch.
 - M5 does not begin until M4 stabilizes P4 plan identity and the declared performance budget is repaired or explicitly re-scoped; legacy metadata remains fail closed during the shadow window.
 - M6 does not stop tracking `dist` until at least three artifact-only Pages shadows prove manifest/hash/public-smoke equivalence and rollback availability.
+
+## 2026-08-29 M7-M12 controlled continuation
+
+The user authorized the primary agent to continue the existing M7-M12 user-visible tasks as total supervisor. The frozen implementation base is the completed local M1-M6 merge `7cb8d49d90c24bd8bc8775f2ebe14af972294dd9`; the desktop parent checkout remains a protected WIP lane and is never an integration target.
+
+- [x] M7 / Integration readiness and ownership audit: confirm `origin/main@aa57f7ab`, candidate `7cb8d49d`, zero open PRs, clean textual merge, worker ownership, and a serial integration order.
+- [x] M8 / Exact selective repair: bind mixed-origin receipts and artifacts to exact run/SHA/tree/plan/policy/tool identities; fail closed on incomplete REST snapshots and cross-job plan ordering. Candidate `2d12c6f7` is ready for local serial integration.
+- [ ] M9 / Repository analysis bundle: complete the Git-backed immutable producer, trusted receipt, checker/manifest shadow adapters, and one real same-identity equivalence run before committing.
+- [x] M10 / Pages artifact-root contract: add one explicit runtime artifact root plus compact admission receipt/summary while retaining tracked `dist`, legacy references, and all workflows. Candidate `86ad3542` is ready for local serial integration.
+- [ ] M11 / Dependency and checkout profiles: repair recursive Python classification, derive the minimal pinned Python Core profile, and bind a no-checkout validator closure to exact Git blobs before committing.
+- [ ] M12 / Migration debt ledger: add explicit, auditable, fail-closed receipt ingestion without granting deletion authority or changing Catalog/Pages producers.
+- [ ] Integrate one candidate at a time on `codex/sc-m7-m12-integration-20260829`, re-check overlap before each cherry-pick, and run the narrow gate selected by that candidate before admitting the next.
+- [ ] After all five candidates are integrated, close canonical catalog/route/shared receipt wiring in one root-owned seam, run the bounded combined verification matrix, and record all deferred main-thread/CI/Nightly gates.
+
+### M7-M12 safety and acceptance boundaries
+
+- No push, PR creation, workflow dispatch, deployment, branch-protection change, history rewrite, cleanup, tracked-`dist` deletion, or legacy retirement is part of the local integration phase.
+- Every worker commit must have parent `7cb8d49d`, a clean worktree, an explicit path allowlist, and fresh focused verification.
+- Shared files are integration-owner surfaces: M8 owns selective-repair/catalog projection changes; M9 owns checker/manifest adapter changes; M10 owns Pages builder/consumer changes; M11 owns dependency/checkout profiles; M12 owns the ledger. Cross-line route or Nightly wiring is deferred to the serial integration seam.
+- Local focused checks prove only the committed candidate. GitHub-hosted mixed-origin repair, full Nightly, full Pages artifact generation, browser/deployed smoke, performance, heavy geo/scenario data, and remote CI remain separate gates unless actually run on the final exact SHA.
+- Catalog remains at `1/10` and ineligible for retirement. Pages is evidence-eligible at `3/3`, but `removalAuthorized=false`; tracked `dist` and every legacy surface remain retained.
