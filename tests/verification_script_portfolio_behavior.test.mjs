@@ -52,11 +52,11 @@ test("canonical metadata source owns every projection and shadows the retained l
   assert.equal(report.authoredSurfacesBefore, 5);
   assert.equal(report.authoredSurfacesAfter, 1);
   assert.deepEqual(report.projections, {
-    verificationRecords: 137,
-    routes: 391,
-    commands: 347,
-    catalogEntries: 452,
-    leaves: 421,
+    verificationRecords: 143,
+    routes: 397,
+    commands: 353,
+    catalogEntries: 458,
+    leaves: 427,
     suites: 31,
     portfolioScripts: 340,
     superseders: 15,
@@ -1276,8 +1276,7 @@ test("preserves real build-test-drift and build-check chains as topological exec
     "verify:pages-dist-and-drift#inline:02",
     "test:py:landing-map-asset-contracts",
     "test:node:landing-showcase-view",
-    "test:node:sample-project-contracts",
-    "verify:pages-dist-and-drift#inline:06",
+    "verify:pages-dist-and-drift#inline:05",
   ]);
   assert.deepEqual(pages.executions.map((entry) => entry.dependsOn), [
     [],
@@ -1285,7 +1284,6 @@ test("preserves real build-test-drift and build-check chains as topological exec
     ["execution:0002"],
     ["execution:0003"],
     ["execution:0004"],
-    ["execution:0005"],
   ]);
   assert.equal(pages.executions[0].effectiveArgv.at(-1), "tools/build_pages_dist.py");
   if (process.platform === "win32") {
@@ -1309,6 +1307,19 @@ test("preserves real build-test-drift and build-check chains as topological exec
   );
   assert.equal(
     combined.normalizedLeaves.filter((leaf) => leaf === "python-unittest:tests.test_landing_map_asset_contracts").length,
+    1,
+  );
+
+  const pagesAndP4 = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["test:node:p4:p4-1", "verify:pages-dist-and-drift"],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.equal(
+    pagesAndP4.normalizedLeaves.filter(
+      (leaf) => leaf === "node-test:tests/sample_project_contracts.test.mjs",
+    ).length,
     1,
   );
 
@@ -1674,6 +1685,27 @@ test("real package scripts and verification domains form one mechanically consis
   });
   assert.deepEqual(consistency.unclassifiedCatalogEntries, []);
   assert.deepEqual(consistency.targetlessDiscoveryEntries, []);
+  const p4Plan = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["verify:p4:p4-3", "verify:p4:state-writer-policy"],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.deepEqual(
+    p4Plan.rootRecords.map(({ commandRef, disposition, supersededBy }) => ({
+      commandRef,
+      disposition,
+      ...(supersededBy ? { supersededBy } : {}),
+    })),
+    [
+      { commandRef: "verify:p4:p4-3", disposition: "planned" },
+      {
+        commandRef: "verify:p4:state-writer-policy",
+        disposition: "superseded",
+        supersededBy: "verify:p4:p4-3",
+      },
+    ],
+  );
   assert.deepEqual(consistency.selectorPlanFailures, []);
   assert.deepEqual(consistency.supersessionMismatches, []);
   assert.deepEqual(consistency.catalogIdentityMismatches, []);

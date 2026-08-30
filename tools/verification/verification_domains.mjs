@@ -292,6 +292,17 @@ function createP3PassFamilyRoute({
 }
 
 export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
+  // New post-shadow records are projected from the authored source so the
+  // retained legacy comparison stays exact without duplicating definitions.
+  ...buildCanonicalVerificationRecords()
+    .filter((entry) => [
+      "infra:p4-repository-analysis-bundle",
+      "infra:p4-repository-analysis-bundle-live-shadow",
+      "infra:dependency-checkout-artifacts",
+      "infra:python-import-closure",
+      "infra:migration-ledger",
+    ].includes(entry.id))
+    .map((entry) => Object.freeze(entry)),
   // Post-PR6 routes and authority expansions have no pre-canonical side table.
   // Project them from the authored source so the retained PR6 shadow stays
   // exact without creating another metadata authority.
@@ -501,6 +512,10 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     sourceRefs: [
       "tools/verification/verification_domains.mjs",
       "tools/verification/verification_metadata_helpers.mjs",
+      "tools/verification/catalog_projection_legacy.mjs",
+      "tools/verification/catalog_projection_shadow.mjs",
+      "tools/verification/catalog_projection_shadow_cli.mjs",
+      "tests/catalog_projection_shadow_behavior.test.mjs",
       "tests/verification_metadata_behavior.test.mjs",
       "docs/testing/verification-metadata.md",
       "package.json",
@@ -2953,7 +2968,12 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     packageScriptRequired: true,
     sourceRefs: [
       "tools/build_pages_dist.py",
+      "tools/pages_artifact_admission.py",
+      "tools/pages_artifact_root.py",
+      "tools/pages_artifact_shadow.py",
+      "tests/test_pages_artifact_admission.py",
       "tests/test_pages_dist_startup_shell.py",
+      "tests/test_pages_artifact_shadow.py",
       "dist/pages-dist-manifest.json",
       "dist/app",
       "js/core/map_renderer.js",
@@ -2961,6 +2981,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       "js/core/renderer",
       "js/core/renderer/cached_pass_compositor_owner.js",
       ".github/workflows/verify-shared.yml",
+      ".github/workflows/nightly-verification.yml",
     ],
     domain: "pages-dist",
     ownerHint: "deploy-runtime",
@@ -3229,6 +3250,41 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     ciProfile: "pr-fast",
     entrypointPolicy: deriveVerificationEntrypointPolicy({
       commandRef: "node --test tests/repository_footprint_behavior.test.mjs",
+      cost: "fast",
+      executionOwner: "child-safe",
+      ciProfiles: ["pr-fast"],
+    }),
+    supervisorDomain: "test-routing",
+    routeRegistry: true,
+  }),
+  Object.freeze({
+    id: "infra:p4-nightly-parallel-authorities",
+    commandRef: "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs tests/p4_nightly_exact_repair_behavior.test.mjs",
+    commandType: "direct",
+    packageScriptRequired: false,
+    sourceRefs: [
+      ".github/workflows/nightly-verification.yml",
+      ".github/workflows/p4-nightly-selective-repair.yml",
+      "tests/p4_nightly_exact_repair_behavior.test.mjs",
+      "tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+      "tests/test_e2e_structural_tooling.py",
+      "tools/verification/p4_nightly_authority.mjs",
+      "tools/verification/p4_nightly_closeout.mjs",
+      "tools/verification/p4_nightly_receipt_resolver.mjs",
+      "tools/verification/p4_nightly_repair.mjs",
+      "tools/verification/state_writer_policy_evidence.mjs",
+      "tools/verification/p4_state_writer_policy_test_lifecycle.mjs",
+      "tools/run_p4_state_writer_policy_tests.mjs",
+    ],
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    entrypointPolicy: deriveVerificationEntrypointPolicy({
+      commandRef: "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs tests/p4_nightly_exact_repair_behavior.test.mjs",
       cost: "fast",
       executionOwner: "child-safe",
       ciProfiles: ["pr-fast"],

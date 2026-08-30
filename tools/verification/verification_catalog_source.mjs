@@ -18,6 +18,14 @@ function sortedUnique(values, field) {
   return [...values].sort(compareText);
 }
 
+function sortedUniqueProjectionStrings(values, field) {
+  if (!Array.isArray(values)
+    || values.some((value) => typeof value !== "string" || value.length === 0)) {
+    throw new Error(`verification-metadata-source-projection-invalid-array:${field}`);
+  }
+  return sortedUnique(values, field);
+}
+
 const RECORD_SET_FIELDS = Object.freeze([
   "sourceRefs",
   "ownerHints",
@@ -40,6 +48,103 @@ const GATE_POLICY_SOURCE_FIELDS = Object.freeze([
   "entrypoints",
   "sharedRisks",
 ]);
+const PROJECTION_AUTHORITY_FIELDS = Object.freeze([
+  "schemaVersion",
+  "kind",
+  "heavyDependencyGroups",
+  "prProfiles",
+  "nightlyRoles",
+  "nightlyFinalDependencies",
+  "documentation",
+]);
+
+function requireExactObjectFields(value, fields, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`verification-metadata-source-projection-invalid:${label}`);
+  }
+  const actual = Object.keys(value).sort(compareText);
+  const expected = [...fields].sort(compareText);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`verification-metadata-source-projection-fields:${label}`);
+  }
+}
+
+function normalizeProjectionAuthority(authority, source) {
+  requireExactObjectFields(authority, PROJECTION_AUTHORITY_FIELDS, "authority");
+  if (authority.schemaVersion !== 1 || authority.kind !== "verification-catalog-projection-authority") {
+    throw new Error("verification-metadata-source-projection-invalid:authority-identity");
+  }
+  const normalized = structuredClone(authority);
+  if (!Array.isArray(normalized.heavyDependencyGroups)
+    || !Array.isArray(normalized.prProfiles)
+    || !Array.isArray(normalized.nightlyRoles)
+    || !Array.isArray(normalized.nightlyFinalDependencies)) {
+    throw new Error("verification-metadata-source-projection-invalid:authority-arrays");
+  }
+  const sourceRefs = new Set(source.records.flatMap((record) => record.sourceRefs));
+  const profiles = new Set(source.enums?.ciProfiles || []);
+  const groupIds = new Set();
+  for (const [index, group] of normalized.heavyDependencyGroups.entries()) {
+    requireExactObjectFields(group, ["id", "description", "patterns"], `heavyDependencyGroups.${index}`);
+    if (typeof group.id !== "string" || !group.id || groupIds.has(group.id)) {
+      throw new Error(`verification-metadata-source-projection-heavy-group:${group.id || "missing"}`);
+    }
+    if (typeof group.description !== "string" || !group.description.trim()) {
+      throw new Error(`verification-metadata-source-projection-heavy-description:${group.id}`);
+    }
+    groupIds.add(group.id);
+    group.patterns = sortedUniqueProjectionStrings(
+      group.patterns,
+      `projectionAuthority.heavyDependencyGroups.${group.id}.patterns`,
+    );
+    for (const pattern of group.patterns) {
+      if (!sourceRefs.has(pattern)) {
+        throw new Error(`verification-metadata-source-projection-source-gap:heavyDependencyGroups.${group.id}:${pattern}`);
+      }
+    }
+  }
+  normalized.heavyDependencyGroups.sort((left, right) => compareText(left.id, right.id));
+  normalized.prProfiles = sortedUniqueProjectionStrings(normalized.prProfiles, "projectionAuthority.prProfiles");
+  for (const profile of normalized.prProfiles) {
+    if (!profiles.has(profile)) {
+      throw new Error(`verification-metadata-source-projection-profile-gap:prProfiles:${profile}`);
+    }
+  }
+  const roleIds = new Set();
+  for (const [index, role] of normalized.nightlyRoles.entries()) {
+    requireExactObjectFields(role, ["id", "shards"], `nightlyRoles.${index}`);
+    if (typeof role.id !== "string" || !role.id || roleIds.has(role.id)) {
+      throw new Error(`verification-metadata-source-projection-nightly-role:${role.id || "missing"}`);
+    }
+    roleIds.add(role.id);
+    role.shards = sortedUniqueProjectionStrings(
+      role.shards,
+      `projectionAuthority.nightlyRoles.${role.id}.shards`,
+    );
+    if (role.shards.length === 0) {
+      throw new Error(`verification-metadata-source-projection-nightly-shards:${role.id}`);
+    }
+  }
+  normalized.nightlyRoles.sort((left, right) => compareText(left.id, right.id));
+  normalized.nightlyFinalDependencies = sortedUniqueProjectionStrings(
+    normalized.nightlyFinalDependencies,
+    "projectionAuthority.nightlyFinalDependencies",
+  );
+  if (normalized.nightlyFinalDependencies.length === 0
+    || normalized.nightlyFinalDependencies.some((roleId) => !roleIds.has(roleId) || roleId === "final")) {
+    throw new Error("verification-metadata-source-projection-nightly-final-dependencies");
+  }
+  requireExactObjectFields(normalized.documentation, ["sourceRefPrefixes"], "documentation");
+  normalized.documentation.sourceRefPrefixes = sortedUniqueProjectionStrings(
+    normalized.documentation.sourceRefPrefixes,
+    "projectionAuthority.documentation.sourceRefPrefixes",
+  );
+  if (normalized.documentation.sourceRefPrefixes.length === 0
+    || normalized.documentation.sourceRefPrefixes.some((prefix) => typeof prefix !== "string" || !prefix.endsWith("/"))) {
+    throw new Error("verification-metadata-source-projection-documentation-prefix");
+  }
+  return normalized;
+}
 
 function normalizeGatePolicyAuthority(policy) {
   if (!policy
@@ -86,7 +191,6 @@ function normalizeGatePolicyAuthority(policy) {
 
 export function normalizeVerificationMetadataSource(source) {
   const normalized = structuredClone(source);
-  normalized.gatePolicy = normalizeGatePolicyAuthority(normalized.gatePolicy);
   const recordIds = new Set();
   for (const record of normalized.records || []) {
     if (recordIds.has(record.id)) {
@@ -101,6 +205,8 @@ export function normalizeVerificationMetadataSource(source) {
     }
   }
   normalized.records.sort((left, right) => compareText(left.id, right.id));
+  normalized.projectionAuthority = normalizeProjectionAuthority(normalized.projectionAuthority, normalized);
+  normalized.gatePolicy = normalizeGatePolicyAuthority(normalized.gatePolicy);
   for (const [superseder, superseded] of Object.entries(normalized.supersession || {})) {
     normalized.supersession[superseder] = sortedUnique(superseded, `supersession.${superseder}`);
   }
@@ -613,7 +719,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
     "test:node:verify-core-runner": "node --test tests/verify_core_runner_behavior.test.mjs",
     "test:node:verification-profile": "node --test tests/verification_profile_behavior.test.mjs",
-    "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
+    "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs tests/catalog_projection_shadow_behavior.test.mjs",
     "test:node:verification-script-portfolio": "node --test tests/verification_script_portfolio_behavior.test.mjs",
     "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
     "test:node:visual-effects-pass-owner": "node --test tests/visual_effects_pass_owner_behavior.test.mjs",
@@ -648,8 +754,8 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:sample-project-contracts": "node --test tests/sample_project_contracts.test.mjs",
     "test:node:release-smoke-helper": "node --test tests/release_smoke_retry_behavior.node.test.mjs",
     "test:py:pages-dist-startup-shell-heavy": "npm run python -- -m unittest tests.test_pages_dist_startup_shell_heavy -q",
-    "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts",
-    "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
+    "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view",
+    "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
     "verify:dist-drift": "npm run python -- tools/build_pages_dist.py && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
     "build:global-transport-roads": "npm run python -- tools/build_global_transport_roads.py",
     "build:global-transport-rail": "npm run python -- tools/build_global_transport_rail.py",
@@ -719,6 +825,57 @@ const AUTHORED_VERIFICATION_METADATA = {
       "nightly",
       "release"
     ]
+  },
+  "projectionAuthority": {
+    "schemaVersion": 1,
+    "kind": "verification-catalog-projection-authority",
+    "heavyDependencyGroups": [
+      {
+        "id": "geo_stack",
+        "description": "Tests that import geospatial/scientific packages (geopandas/shapely/rasterio/numpy family).",
+        "patterns": [
+          "tests/test_urban_topology_contract.py",
+          "tests/test_tno_bundle_builder.py",
+          "tests/test_scenario_chunk_assets.py",
+          "tests/test_tno_water_geometries.py",
+          "tests/test_tno_named_marginal_water_contract.py",
+          "tests/test_physical_context_contours.py",
+          "tests/test_patch_checked_in_urban_artifacts.py",
+          "tests/test_city_assets.py",
+          "tests/test_global_transport_builder_contracts.py",
+          "tests/test_landing_map_asset_contracts.py",
+          "tests/test_local_canonicalization.py",
+          "tests/test_pages_dist_startup_shell_heavy.py",
+          "tests/test_political_topology_gap_contract.py",
+          "tests/test_polar_water_spherical_safety.py",
+          "tests/test_transport_country_source_contracts.py"
+        ]
+      }
+    ],
+    "prProfiles": [
+      "demo",
+      "perf-pr-gate",
+      "pr-fast",
+      "pr-smoke"
+    ],
+    "nightlyRoles": [
+      { "id": "browser", "shards": ["browser"] },
+      { "id": "final", "shards": ["final"] },
+      { "id": "linux-core", "shards": ["1", "2", "3"] },
+      { "id": "metadata", "shards": ["metadata"] },
+      { "id": "p4-checker-boundaries", "shards": ["p4-checker-boundaries"] },
+      { "id": "p4-closeout", "shards": ["p4-closeout"] },
+      { "id": "p4-fast", "shards": ["p4-fast"] },
+      { "id": "p4-full-policy", "shards": ["p4-full-policy"] },
+      { "id": "pages", "shards": ["pages"] },
+      { "id": "pages-artifact-shadow", "shards": ["pages-artifact-shadow"] },
+      { "id": "scenario-heavy", "shards": ["scenario-heavy"] },
+      { "id": "windows-governance", "shards": ["windows-governance"] }
+    ],
+    "nightlyFinalDependencies": ["metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy", "p4-closeout", "windows-governance"],
+    "documentation": {
+      "sourceRefPrefixes": ["docs/"]
+    }
   },
   "commandRefs": {
     "selectorSanity": "node tools/select_verification_targets.mjs --check",
@@ -3485,14 +3642,20 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "verify:pages-dist-and-drift",
       "sourceRefs": [
         "tools/build_pages_dist.py",
+        "tools/pages_artifact_admission.py",
+        "tools/pages_artifact_root.py",
+        "tools/pages_artifact_shadow.py",
+        "tests/test_pages_artifact_admission.py",
         "tests/test_pages_dist_startup_shell.py",
+        "tests/test_pages_artifact_shadow.py",
         "dist/pages-dist-manifest.json",
         "dist/app",
         "js/core/map_renderer.js",
         "js/core/map_renderer",
         "js/core/renderer",
         "js/core/renderer/cached_pass_compositor_owner.js",
-        ".github/workflows/verify-shared.yml"
+        ".github/workflows/verify-shared.yml",
+        ".github/workflows/nightly-verification.yml"
       ],
       "ownerHints": [
         "deploy-runtime"
@@ -4359,8 +4522,12 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "infra:verification-metadata",
       "commandRef": "test:node:verification-metadata",
       "sourceRefs": [
+        "tools/verification/catalog_projection_shadow.mjs",
+        "tools/verification/catalog_projection_legacy.mjs",
+        "tools/verification/catalog_projection_shadow_cli.mjs",
         "tools/verification/verification_domains.mjs",
         "tools/verification/verification_metadata_helpers.mjs",
+        "tests/catalog_projection_shadow_behavior.test.mjs",
         "tests/verification_metadata_behavior.test.mjs",
         "docs/testing/verification-metadata.md",
         "package.json"
@@ -11244,11 +11411,15 @@ const AUTHORED_VERIFICATION_METADATA = {
       "id": "node:test:node:verification-metadata",
       "commandRef": "test:node:verification-metadata",
       "sourceRefs": [
+        "tests/catalog_projection_shadow_behavior.test.mjs",
         "tests/verification_metadata_behavior.test.mjs",
         "tools/run_core_verification.mjs",
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
+        "tools/verification/catalog_projection_shadow.mjs",
+        "tools/verification/catalog_projection_legacy.mjs",
         "tools/verification/verification_catalog_projection.mjs",
+        "tools/verification/verification_catalog_source.mjs",
         "tools/verification/verification_domains.mjs",
         "tools/verification/verification_metadata_helpers.mjs"
       ],
@@ -17998,6 +18169,192 @@ const AUTHORED_VERIFICATION_METADATA = {
         "packageScriptRequired": true,
         "verifyCoreDefaultGroup": "renderer-owner",
         "supervisorDomain": "renderer-runtime",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:p4-nightly-parallel-authorities",
+      "commandRef": "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs tests/p4_nightly_exact_repair_behavior.test.mjs",
+      "sourceRefs": [
+        ".github/workflows/nightly-verification.yml",
+        ".github/workflows/p4-nightly-selective-repair.yml",
+        "tests/p4_nightly_exact_repair_behavior.test.mjs",
+        "tests/p4_nightly_parallel_authorities_behavior.test.mjs",
+        "tests/test_e2e_structural_tooling.py",
+        "tools/verification/p4_nightly_authority.mjs",
+        "tools/verification/p4_nightly_closeout.mjs",
+        "tools/verification/p4_nightly_receipt_resolver.mjs",
+        "tools/verification/p4_nightly_repair.mjs",
+        "tools/verification/state_writer_policy_evidence.mjs",
+        "tools/verification/p4_state_writer_policy_test_lifecycle.mjs",
+        "tools/run_p4_state_writer_policy_tests.mjs"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 132,
+      "selectorOrder": 383,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:p4-repository-analysis-bundle",
+      "commandRef": "node --test tests/p4_repository_analysis_bundle_behavior.test.mjs",
+      "sourceRefs": [
+        "tests/fixtures/p4_repository_analysis_bundle_source.json",
+        "tests/p4_repository_analysis_bundle_behavior.test.mjs",
+        "tools/build_state_writer_policy.mjs",
+        "tools/verification/p4_repository_analysis_bundle.mjs",
+        "tools/verification/p4_repository_analysis_bundle.schema.json",
+        "tools/verification/p4_repository_analysis_bundle_adapters.mjs",
+        "tools/verification/p4_repository_analysis_bundle_git.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.schema.json"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 133,
+      "selectorOrder": 384,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:p4-repository-analysis-bundle-live-shadow",
+      "commandRef": "node --input-type=module -e \"process.env.M9_LIVE_REPOSITORY_SHADOW='1'; await import('./tests/p4_repository_analysis_bundle_live_shadow.test.mjs')\"",
+      "sourceRefs": [
+        "tests/p4_repository_analysis_bundle_live_shadow.test.mjs",
+        "tools/build_state_writer_policy.mjs",
+        "tools/check_state_writer_policy.mjs",
+        "tools/verification/p4_repository_analysis_bundle.mjs",
+        "tools/verification/p4_repository_analysis_bundle.schema.json",
+        "tools/verification/p4_repository_analysis_bundle_adapters.mjs",
+        "tools/verification/p4_repository_analysis_bundle_git.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.mjs",
+        "tools/verification/p4_repository_analysis_bundle_receipt.schema.json"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["heavy"],
+      "cost": "heavy",
+      "resourceLocks": [".runtime-output"],
+      "executionOwners": ["main-thread"],
+      "profiles": ["full"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": 134,
+      "selectorOrder": 385,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true,
+        "optionalMainThread": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:dependency-checkout-artifacts",
+      "commandRef": "node --test tests/dependency_checkout_artifacts_behavior.test.mjs tests/dependency_checkout_profiles_behavior.test.mjs",
+      "sourceRefs": [
+        "tests/dependency_checkout_artifacts_behavior.test.mjs",
+        "tests/dependency_checkout_profiles_behavior.test.mjs",
+        "tools/verification/dependency_checkout_artifacts.mjs",
+        "tools/verification/dependency_checkout_profile.schema.json",
+        "tools/verification/dependency_checkout_profiles.mjs"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 135,
+      "selectorOrder": 386,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:python-import-closure",
+      "commandRef": "python -m unittest tests.test_python_import_closure -q",
+      "sourceRefs": [
+        "tests/test_python_import_closure.py",
+        "tools/verification/python_import_closure.py"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 136,
+      "selectorOrder": 387,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "infra:migration-ledger",
+      "commandRef": "node --test tests/migration_ledger_behavior.test.mjs",
+      "sourceRefs": [
+        "tests/migration_ledger_behavior.test.mjs",
+        "tools/verification/migration_ledger.json",
+        "tools/verification/migration_ledger.schema.json",
+        "tools/verification/migration_ledger_validator.mjs"
+      ],
+      "ownerHints": ["test-infra"],
+      "domains": ["test-routing"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 137,
+      "selectorOrder": 388,
+      "verification": {
+        "commandType": "direct",
+        "packageScriptRequired": false,
+        "supervisorDomain": "test-routing",
         "routeRegistry": true
       },
       "selector": {}

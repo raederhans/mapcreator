@@ -12,6 +12,7 @@ import {
 import {
   buildFrozenDerivedAliasTaintBaseline,
   buildHistoricalDerivedAliasProofCheckpoint,
+  buildHistoricalDerivedAliasProofIdentity,
   buildIncrementalDerivedAliasTaintBaseline,
   buildLegacyStateWriterSemanticAuthority,
   buildStateWriterDerivedAliasTaintModeManifest,
@@ -39,6 +40,10 @@ import {
   isP4StateActionCloseoutPhase,
   normalizeP4StateActionPhase,
 } from "./p4_state_action_phases.mjs";
+import {
+  hashP4StateWriterHistoricalProofJson,
+  startP4StateWriterHistoricalProofWorker,
+} from "./verification/p4_state_writer_historical_proof_worker.mjs";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_REPORT_ROOT = path.join(
@@ -1206,6 +1211,62 @@ export function buildStateWriterCloseoutTargetViolations({
   return violations;
 }
 
+export function validateP4StateWriterHistoricalProofResult({
+  workerSummary = null,
+  expectedIdentity = null,
+  expectedProof = null,
+} = {}) {
+  const expectedIdentitySha256 =
+    hashP4StateWriterHistoricalProofJson(expectedIdentity);
+  if (
+    !workerSummary
+    || workerSummary.status !== "passed"
+    || workerSummary.identitySha256 !== expectedIdentitySha256
+    || workerSummary.proofSha256
+      !== hashP4StateWriterHistoricalProofJson(expectedProof)
+    || workerSummary.policySha256 !== expectedIdentity?.policySha256
+    || !isDeepStrictEqual(workerSummary.identity, expectedIdentity)
+  ) {
+    const error = new Error(
+      "P4 historical proof worker result identity drifted from the checker request.",
+    );
+    error.code = "p4-historical-proof-worker-result-identity-mismatch";
+    throw error;
+  }
+  return structuredClone(expectedProof);
+}
+
+export async function joinP4StateWriterHistoricalProofWork({
+  inventoryPromise,
+  workerSession = null,
+} = {}) {
+  if (!workerSession) {
+    return {
+      inventory: await inventoryPromise,
+      workerSummary: null,
+    };
+  }
+  const guardedInventoryPromise = Promise.resolve(inventoryPromise)
+    .catch(async (error) => {
+      await workerSession.terminate();
+      throw error;
+    });
+  const [inventoryOutcome, workerOutcome] = await Promise.allSettled([
+    guardedInventoryPromise,
+    workerSession.result,
+  ]);
+  if (inventoryOutcome.status === "rejected") {
+    throw inventoryOutcome.reason;
+  }
+  if (workerOutcome.status === "rejected") {
+    throw workerOutcome.reason;
+  }
+  return {
+    inventory: inventoryOutcome.value,
+    workerSummary: workerOutcome.value,
+  };
+}
+
 export async function buildStateWriterPolicyReport({
   phase = "",
   policy = null,
@@ -1214,13 +1275,72 @@ export async function buildStateWriterPolicyReport({
   repositoryScanCache = null,
   historicalDerivedAliasProofCache = null,
 } = {}) {
+  const ownsCanonicalPolicy = policy === null;
   const loadedPolicy = policy || await readStateWriterPolicy();
   const requestedPhase = String(phase || "").trim()
     || String(loadedPolicy?.progress?.latestPhase || "").trim()
     || "P4.0";
   const normalizedPhase = normalizeP4StateActionPhase(requestedPhase);
-  const inventory = await scanStateWriterPolicySnapshot(loadedPolicy, {
+  const policyLatestPhase = String(
+    loadedPolicy?.progress?.latestPhase || "",
+  ).trim();
+  const sourceBaseSha = String(
+    loadedPolicy?.baseline?.sourceBaseSha || "",
+  ).trim();
+  const identity = buildStateWriterVerificationIdentity({
+    sourceBaseSha,
+    requireClean,
+  });
+  const previousPolicyState = previousPolicy === undefined
+    ? loadPreviousStateWriterPolicy({
+      phase: normalizedPhase,
+      trackedClean: identity.trackedClean,
+    })
+    : {
+      revision: "injected",
+      policy: previousPolicy,
+      violations: [],
+    };
+  const workerCandidatePaths = [
+    ...(loadedPolicy?.baselines?.derivedAliasTaint?.paths || []),
+  ].map(String).sort((left, right) => left.localeCompare(right));
+  const workerIdentityInputs = {
+    sourceSha: sourceBaseSha,
+    candidatePaths: workerCandidatePaths,
+    phase: policyLatestPhase,
+    taintMode: "strict",
+    checkpoint: buildHistoricalDerivedAliasProofCheckpoint({
+      phase: policyLatestPhase,
+      policy: loadedPolicy,
+    }),
+    previousPolicy: previousPolicyState.policy,
+    policy: loadedPolicy,
+  };
+  const historicalProofWorkerSession = (
+    ownsCanonicalPolicy
+    && Number(loadedPolicy?.schemaVersion) >= 2
+    && previousPolicyState.policy
+    && historicalDerivedAliasProofCache === null
+  )
+    ? startP4StateWriterHistoricalProofWorker({
+      request: {
+        identity: buildHistoricalDerivedAliasProofIdentity(
+          workerIdentityInputs,
+        ),
+        previousPolicy: previousPolicyState.policy,
+        policy: loadedPolicy,
+      },
+    })
+    : null;
+  const inventoryPromise = scanStateWriterPolicySnapshot(loadedPolicy, {
     repositoryScanCache,
+  });
+  const {
+    inventory,
+    workerSummary: historicalProofWorkerSummary,
+  } = await joinP4StateWriterHistoricalProofWork({
+    inventoryPromise,
+    workerSession: historicalProofWorkerSession,
   });
   const validation = validateStateWriterPolicySnapshot({
     policy: loadedPolicy,
@@ -1260,26 +1380,6 @@ export async function buildStateWriterPolicyReport({
     phase: normalizedPhase,
     currentMetrics: currentProgressMetrics,
   });
-  const policyLatestPhase = String(
-    loadedPolicy?.progress?.latestPhase || "",
-  ).trim();
-  const sourceBaseSha = String(
-    loadedPolicy?.baseline?.sourceBaseSha || "",
-  ).trim();
-  const identity = buildStateWriterVerificationIdentity({
-    sourceBaseSha,
-    requireClean,
-  });
-  const previousPolicyState = previousPolicy === undefined
-    ? loadPreviousStateWriterPolicy({
-      phase: normalizedPhase,
-      trackedClean: identity.trackedClean,
-    })
-    : {
-      revision: "injected",
-      policy: previousPolicy,
-      violations: [],
-    };
   let acceptedPolicyCheckpoint = null;
   const acceptedPolicyCheckpointViolations = [];
   if (previousPolicyState.policy) {
@@ -1303,16 +1403,48 @@ export async function buildStateWriterPolicyReport({
   const derivedAliasTaintProofViolations = [];
   if (Number(loadedPolicy?.schemaVersion) >= 2) {
     try {
-      expectedDerivedAliasTaintBaseline =
-        await recomputeDerivedAliasTaintBaseline({
-          previousPolicy: previousPolicyState.policy,
-          currentPolicy: loadedPolicy,
-          historicalDerivedAliasProofCache,
-          candidatePaths: Object.keys(
-            inventory?.derivedAliasTaintModeManifest?.modeByPath
-              || {},
-          ),
-        });
+      if (historicalProofWorkerSession) {
+        const workerSummary = historicalProofWorkerSummary;
+        const expectedIdentity = buildHistoricalDerivedAliasProofIdentity(
+          workerIdentityInputs,
+        );
+        const scannedStrictProductionPaths = Object.entries(
+          inventory?.derivedAliasTaintModeManifest?.modeByPath || {},
+        )
+          .filter(([relativePath, mode]) => (
+            !relativePath.startsWith("tests/") && mode === "strict"
+          ))
+          .map(([relativePath]) => relativePath)
+          .sort((left, right) => left.localeCompare(right));
+        const expectedPaths = [...new Set([
+          ...(previousPolicyState.policy?.baselines?.derivedAliasTaint?.paths || []),
+          ...scannedStrictProductionPaths,
+        ])].map(String).sort((left, right) => left.localeCompare(right));
+        if (!isDeepStrictEqual(expectedPaths, workerCandidatePaths)) {
+          const error = new Error(
+            "P4 historical proof worker candidate paths do not match the current repository scan.",
+          );
+          error.code = "p4-historical-proof-worker-path-identity-mismatch";
+          throw error;
+        }
+        expectedDerivedAliasTaintBaseline =
+          validateP4StateWriterHistoricalProofResult({
+            workerSummary,
+            expectedIdentity,
+            expectedProof: loadedPolicy.baselines.derivedAliasTaint,
+          });
+      } else {
+        expectedDerivedAliasTaintBaseline =
+          await recomputeDerivedAliasTaintBaseline({
+            previousPolicy: previousPolicyState.policy,
+            currentPolicy: loadedPolicy,
+            historicalDerivedAliasProofCache,
+            candidatePaths: Object.keys(
+              inventory?.derivedAliasTaintModeManifest?.modeByPath
+                || {},
+            ),
+          });
+      }
     } catch (error) {
       derivedAliasTaintProofViolations.push({
         code: "derived-alias-taint-baseline-source-proof-failed",

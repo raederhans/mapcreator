@@ -13,10 +13,12 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from tools import build_pages_dist
+from tools.pages_artifact_root import resolve_pages_artifact_root
 from tools.scenario_contract_paths import TNO_COVERAGE_REPORT_PATHS
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 LANDING_INDEX = REPO_ROOT / "landing" / "index.html"
 LANDING_APP_JS = REPO_ROOT / "landing" / "app.js"
 LANDING_STYLES_CSS = REPO_ROOT / "landing" / "styles.css"
@@ -26,13 +28,13 @@ DRAW_CANVAS_ORCHESTRATION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" 
 CACHED_PASS_COMPOSITOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "cached_pass_compositor_owner.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_frame_commit.js"
-DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
-DIST_APP_JS = REPO_ROOT / "dist" / "app.js"
-DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
+DIST_ROOT_INDEX = PAGES_DIST_ROOT / "index.html"
+DIST_APP_JS = PAGES_DIST_ROOT / "app.js"
+DIST_STYLES_CSS = PAGES_DIST_ROOT / "styles.css"
 EDITOR_INDEX = REPO_ROOT / "index.html"
-DIST_APP_INDEX = REPO_ROOT / "dist" / "app" / "index.html"
-DIST_APP_JS_ROOT = REPO_ROOT / "dist" / "app" / "js"
-DIST_MANIFEST = REPO_ROOT / "dist" / "pages-dist-manifest.json"
+DIST_APP_INDEX = PAGES_DIST_ROOT / "app" / "index.html"
+DIST_APP_JS_ROOT = PAGES_DIST_ROOT / "app" / "js"
+DIST_MANIFEST = PAGES_DIST_ROOT / "pages-dist-manifest.json"
 VERIFY_SHARED_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "verify-shared.yml"
 HERO_SCENARIO_ASSETS = (
     ("blank", "blank_base", "hero-blank.svg", "hero-blank.json"),
@@ -827,7 +829,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         records = manifest_payload["files"]
         available_paths = {record["path"] for record in records}
         module_graph = build_pages_dist.build_pages_module_graph(
-            dist_root=REPO_ROOT / "dist",
+            dist_root=PAGES_DIST_ROOT,
             available_paths=available_paths,
         )
         rebuilt_payload = build_pages_dist.build_dist_manifest_payload(
@@ -957,7 +959,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
     def test_pages_module_graph_tracks_owner_declared_dynamic_and_worker_edges(self) -> None:
         manifest_payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         graph = build_pages_dist.build_pages_module_graph(
-            dist_root=REPO_ROOT / "dist",
+            dist_root=PAGES_DIST_ROOT,
             available_paths={record["path"] for record in manifest_payload["files"]},
         )
         nodes_by_path = {node["path"]: node for node in graph["nodes"]}
@@ -2458,13 +2460,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
             with self.subTest(manifest_path=manifest_path):
                 expected_source_kind = "generated_ignored" if manifest_path.startswith("app/data/") else "dist"
                 self.assertEqual(record.get("source_kind"), expected_source_kind)
-                dist_path = REPO_ROOT / "dist" / manifest_path
+                dist_path = PAGES_DIST_ROOT / manifest_path
                 self.assertTrue(dist_path.exists())
                 self.assertEqual(record["size_bytes"], dist_path.stat().st_size)
 
         self.assertEqual(
             payload["total_bytes"],
-            sum((REPO_ROOT / "dist" / record["path"]).stat().st_size for record in payload["files"]),
+            sum((PAGES_DIST_ROOT / record["path"]).stat().st_size for record in payload["files"]),
         )
         self.assertEqual(payload["max_allowed_bytes"], build_pages_dist.MAX_PAGES_DIST_BYTES)
         self.assertEqual(build_pages_dist.MAX_PAGES_DIST_BYTES, build_pages_dist.GITHUB_PAGES_HARD_MAX_BYTES)
@@ -2626,7 +2628,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
         city_lights_entries_path = "app/data/city_lights/historical_1930_entries.json"
         self.assertEqual(
-            json.loads((REPO_ROOT / "dist" / city_lights_entries_path).read_text(encoding="utf-8")),
+            json.loads((PAGES_DIST_ROOT / city_lights_entries_path).read_text(encoding="utf-8")),
             json.loads(
                 (REPO_ROOT / "data" / "city_lights" / "historical_1930_entries.json").read_text(encoding="utf-8")
             ),
@@ -2635,14 +2637,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for expected_path in expected_landing_asset_paths:
             with self.subTest(asset_copy=expected_path):
                 self.assertEqual(
-                    (REPO_ROOT / "dist" / expected_path).read_bytes(),
+                    (PAGES_DIST_ROOT / expected_path).read_bytes(),
                     (REPO_ROOT / "landing" / expected_path).read_bytes(),
                 )
 
         for relative_path in ("index.html", "app.js", "styles.css"):
             with self.subTest(root_copy=relative_path):
                 self.assertEqual(
-                    (REPO_ROOT / "dist" / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n"),
+                    (PAGES_DIST_ROOT / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n"),
                     (REPO_ROOT / "landing" / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n"),
                 )
 
@@ -2702,7 +2704,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             for key, relative_path in ledger_files.items()
         }
         expected_report_paths = dict(TNO_COVERAGE_REPORT_PATHS)
-        dist_scenario_dir = REPO_ROOT / "dist" / "app" / "data" / "scenarios" / "tno_1962"
+        dist_scenario_dir = PAGES_DIST_ROOT / "app" / "data" / "scenarios" / "tno_1962"
         source_scenario_dir = REPO_ROOT / "data" / "scenarios" / "tno_1962"
         runtime_meta = json.loads((dist_scenario_dir / "runtime_meta.json").read_text(encoding="utf-8"))
         build_snapshot = json.loads((dist_scenario_dir / "build_snapshot.json").read_text(encoding="utf-8"))
@@ -2727,7 +2729,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         dist_paths = {record["path"] for record in payload["files"]}
-        hgo_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "hgo_catalogs" / "hgo_flags.png_manifest.json"
+        hgo_manifest_path = PAGES_DIST_ROOT / "app" / "data" / "hgo_catalogs" / "hgo_flags.png_manifest.json"
         hgo_manifest = json.loads(hgo_manifest_path.read_text(encoding="utf-8"))
         seen_paths: set[str] = set()
         allowed_tiers = set(build_pages_dist.HGO_IDENTITY_FLAG_TIERS)
@@ -2777,9 +2779,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         dist_paths = {record["path"] for record in payload["files"]}
-        registry_path = REPO_ROOT / "dist" / "app" / "data" / "runtime_asset_registry.json"
+        registry_path = PAGES_DIST_ROOT / "app" / "data" / "runtime_asset_registry.json"
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
-        data_manifest = json.loads((REPO_ROOT / "dist" / "app" / "data" / "manifest.json").read_text(encoding="utf-8"))
+        data_manifest = json.loads((PAGES_DIST_ROOT / "app" / "data" / "manifest.json").read_text(encoding="utf-8"))
         local_preview_assets = {
             "hgo_runtime_manifest": "data/hgo_runtime/manifest.json",
             "hgo_runtime_seed": "data/hgo_runtime/seed.json",
@@ -2800,7 +2802,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertNotIn(key, registry.get("assets", {}))
                 self.assertNotIn(key, data_manifest.get("runtime_asset_registry", {}).get("assets", {}))
                 self.assertNotIn(f"app/{url}", dist_paths)
-                self.assertFalse((REPO_ROOT / "dist" / "app" / url).exists())
+                self.assertFalse((PAGES_DIST_ROOT / "app" / url).exists())
 
         self.assertEqual(
             registry.get("pages_dist_policy", {}).get("removed_unpublished_asset_keys"),
@@ -2819,7 +2821,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             )
         )
 
-        catalog = json.loads((REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
+        catalog = json.loads((PAGES_DIST_ROOT / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
         catalog_entries = {entry["key"]: entry for entry in catalog.get("entries") or []}
         for key in unpublished_assets:
             with self.subTest(catalog_key=key):
@@ -2828,7 +2830,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
     def test_dist_data_manifest_outputs_reference_only_published_files(self) -> None:
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
-        data_manifest = json.loads((REPO_ROOT / "dist" / "app" / "data" / "manifest.json").read_text(encoding="utf-8"))
+        data_manifest = json.loads((PAGES_DIST_ROOT / "app" / "data" / "manifest.json").read_text(encoding="utf-8"))
         missing = []
 
         for output_key in data_manifest.get("outputs", {}):
@@ -2837,9 +2839,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 missing.append(f"{output_key} -> invalid path")
                 continue
             dist_path = (
-                REPO_ROOT / "dist" / "app" / relative_path
+                PAGES_DIST_ROOT / "app" / relative_path
                 if relative_path.parts and relative_path.parts[0] == "js"
-                else REPO_ROOT / "dist" / "app" / "data" / relative_path
+                else PAGES_DIST_ROOT / "app" / "data" / relative_path
             )
             if not dist_path.is_file():
                 missing.append(f"{output_key} -> {dist_path.relative_to(REPO_ROOT)}")
@@ -2851,7 +2853,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         dist_paths = {record["path"] for record in payload["files"]}
-        registry_path = REPO_ROOT / "dist" / "app" / "data" / "runtime_asset_registry.json"
+        registry_path = PAGES_DIST_ROOT / "app" / "data" / "runtime_asset_registry.json"
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
         missing: list[str] = []
 
@@ -2859,7 +2861,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             runtime_url = asset.get("url") if isinstance(asset, dict) else None
             if isinstance(runtime_url, str) and runtime_url.startswith("data/"):
                 dist_path = f"app/{runtime_url}"
-                if dist_path not in dist_paths or not (REPO_ROOT / "dist" / dist_path).is_file():
+                if dist_path not in dist_paths or not (PAGES_DIST_ROOT / dist_path).is_file():
                     missing.append(f"{asset_key} -> {runtime_url}")
 
         self.assertFalse(missing[:20], missing[:20])
@@ -2868,7 +2870,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         source_path = REPO_ROOT / "data" / "city_aliases.json"
-        dist_path = REPO_ROOT / "dist" / "app" / "data" / "city_aliases.json"
+        dist_path = PAGES_DIST_ROOT / "app" / "data" / "city_aliases.json"
         source_payload = json.loads(source_path.read_text(encoding="utf-8"))
         dist_payload = json.loads(dist_path.read_text(encoding="utf-8"))
         policy = dist_payload.get("pages_dist_policy", {})
@@ -2914,7 +2916,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             with self.subTest(expected_alias=expected_alias):
                 self.assertEqual(dist_alias_map.get(expected_alias), source_alias_map.get(expected_alias))
                 self.assertIn(dist_alias_map[expected_alias], dist_payload.get("geo", {}))
-        data_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "manifest.json"
+        data_manifest_path = PAGES_DIST_ROOT / "app" / "data" / "manifest.json"
         data_manifest = json.loads(data_manifest_path.read_text(encoding="utf-8"))
         city_manifest_record = data_manifest.get("outputs", {}).get("city_aliases.json", {})
         dist_bytes = dist_path.read_bytes()
@@ -2927,7 +2929,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             dist_payload.get("ambiguous_alias_count"),
         )
         self.assertEqual(city_manifest_record.get("pages_dist_policy"), policy)
-        catalog = json.loads((REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
+        catalog = json.loads((PAGES_DIST_ROOT / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
         city_catalog_entry = next(
             entry
             for entry in catalog.get("entries", [])
@@ -2947,7 +2949,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         dist_paths = {record["path"] for record in payload["files"]}
-        index_path = REPO_ROOT / "dist" / "app" / "data" / "scenarios" / "index.json"
+        index_path = PAGES_DIST_ROOT / "app" / "data" / "scenarios" / "index.json"
         scenario_index = json.loads(index_path.read_text(encoding="utf-8"))
         public_baseline_ids = ["blank_base", "modern_world", "hoi4_1936", "hoi4_1939", "tno_1962"]
         scenario_ids = [entry.get("scenario_id") for entry in scenario_index.get("scenarios", [])]
@@ -2992,7 +2994,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                         self.assertIn(f"app/{runtime_path}", dist_paths)
 
     def test_dist_transport_manifests_reference_only_published_pack_files(self) -> None:
-        transport_root = REPO_ROOT / "dist" / "app" / "data" / "transport_layers"
+        transport_root = PAGES_DIST_ROOT / "app" / "data" / "transport_layers"
         if not transport_root.exists():
             self.skipTest("dist transport layers are only available after build_pages_dist runs")
         missing: list[str] = []
@@ -3013,7 +3015,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                         continue
                     for runtime_path in mode_paths.values():
                         if isinstance(runtime_path, str) and runtime_path.startswith("data/transport_layers/"):
-                            if not (REPO_ROOT / "dist" / "app" / runtime_path).is_file():
+                            if not (PAGES_DIST_ROOT / "app" / runtime_path).is_file():
                                 missing.append(f"{manifest_path.relative_to(transport_root)} -> {runtime_path}")
 
         self.assertFalse(missing[:20], missing[:20])
@@ -3024,7 +3026,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         dist_paths = {record["path"] for record in payload["files"]}
         source_manifest_path = REPO_ROOT / "data" / "transport_layers" / "japan_industrial_zones" / "manifest.json"
-        dist_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "transport_layers" / "japan_industrial_zones" / "manifest.json"
+        dist_manifest_path = PAGES_DIST_ROOT / "app" / "data" / "transport_layers" / "japan_industrial_zones" / "manifest.json"
         source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
         dist_manifest = json.loads(dist_manifest_path.read_text(encoding="utf-8"))
         local_preview_paths = {
@@ -3039,7 +3041,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for runtime_path in local_preview_paths:
             with self.subTest(runtime_path=runtime_path):
                 self.assertNotIn(f"app/{runtime_path}", dist_paths)
-                self.assertFalse((REPO_ROOT / "dist" / "app" / runtime_path).exists())
+                self.assertFalse((PAGES_DIST_ROOT / "app" / runtime_path).exists())
 
         path_sections = [dist_manifest.get("paths", {})]
         variants = dist_manifest.get("variants", {})
@@ -3055,7 +3057,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertNotIn("industrial_zones", preview_paths)
 
     def test_dist_catalog_references_only_published_files(self) -> None:
-        catalog_path = REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json"
+        catalog_path = PAGES_DIST_ROOT / "app" / "data" / "CATALOG.json"
         if not catalog_path.exists():
             self.skipTest("dist catalog is only available after build_pages_dist runs")
         payload = json.loads(catalog_path.read_text(encoding="utf-8"))
@@ -3064,14 +3066,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for entry in entries:
             runtime_path = entry.get("url") if isinstance(entry, dict) else None
             if isinstance(runtime_path, str) and runtime_path.startswith("data/"):
-                if not (REPO_ROOT / "dist" / "app" / runtime_path).is_file():
+                if not (PAGES_DIST_ROOT / "app" / runtime_path).is_file():
                     missing.append(f"{entry.get('key', '<unknown>')} -> {runtime_path}")
 
         self.assertEqual(payload.get("counts", {}).get("entries"), len(entries))
         self.assertFalse(missing[:20], missing[:20])
 
     def test_dist_transport_manifests_do_not_alias_full_paths_to_preview(self) -> None:
-        transport_root = REPO_ROOT / "dist" / "app" / "data" / "transport_layers"
+        transport_root = PAGES_DIST_ROOT / "app" / "data" / "transport_layers"
         if not transport_root.exists():
             self.skipTest("dist transport layers are only available after build_pages_dist runs")
         aliased: list[str] = []
@@ -3109,7 +3111,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
     def test_dist_uk_industrial_manifest_uses_preview_only_reduced_contract(self) -> None:
         source_manifest_path = REPO_ROOT / "data" / "transport_layers" / "uk_industrial_zones" / "manifest.json"
-        dist_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "transport_layers" / "uk_industrial_zones" / "manifest.json"
+        dist_manifest_path = PAGES_DIST_ROOT / "app" / "data" / "transport_layers" / "uk_industrial_zones" / "manifest.json"
         if not dist_manifest_path.exists():
             self.skipTest("dist transport layers are only available after build_pages_dist runs")
 
@@ -3140,7 +3142,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertGreater(len(scenario_manifest_paths), 0)
         checked_urls = 0
         for manifest_path in scenario_manifest_paths:
-            manifest = json.loads((REPO_ROOT / "dist" / manifest_path).read_text(encoding="utf-8"))
+            manifest = json.loads((PAGES_DIST_ROOT / manifest_path).read_text(encoding="utf-8"))
             with self.subTest(manifest_path=manifest_path):
                 for key, value in manifest.items():
                     if key.endswith("_url") and isinstance(value, str) and value.startswith("data/scenarios/"):
@@ -3148,7 +3150,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                         self.assertIn(f"app/{value}", dist_paths)
                 detail_manifest_url = manifest.get("detail_chunk_manifest_url")
                 if isinstance(detail_manifest_url, str) and detail_manifest_url:
-                    detail_manifest = json.loads((REPO_ROOT / "dist" / "app" / detail_manifest_url).read_text(encoding="utf-8"))
+                    detail_manifest = json.loads((PAGES_DIST_ROOT / "app" / detail_manifest_url).read_text(encoding="utf-8"))
                     for chunk in detail_manifest.get("chunks", []):
                         chunk_url = chunk.get("url") if isinstance(chunk, dict) else ""
                         if isinstance(chunk_url, str) and chunk_url:
@@ -3158,7 +3160,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     bundle_url = manifest.get(f"startup_bundle_url_{language}")
                     if not isinstance(bundle_url, str) or not bundle_url:
                         continue
-                    bundle = json.loads((REPO_ROOT / "dist" / "app" / bundle_url).read_text(encoding="utf-8"))
+                    bundle = json.loads((PAGES_DIST_ROOT / "app" / bundle_url).read_text(encoding="utf-8"))
                     manifest_subset = bundle.get("manifest_subset")
                     self.assertIsInstance(manifest_subset, dict)
                     for key, value in manifest_subset.items():

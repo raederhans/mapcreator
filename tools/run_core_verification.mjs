@@ -51,8 +51,18 @@ const NIGHTLY_SCENARIO_HEAVY_ROUTE_COUNT = 15;
 
 export const NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS = Object.freeze([
   "verify:p4:state-writer-policy",
+  "test:python:p4:state-write-boundary",
+  "test:node:p4:p4-1",
+  "test:python:p4:p4-1-boundary",
+  "test:node:p4:p4-2a",
+  "test:python:p4:p4-2a-boundary",
+  "test:node:p4:p4-2b",
+  "test:python:p4:p4-2b-boundary",
+  "test:node:p4:p4-2c",
+  "test:python:p4:p4-2c-boundary",
   "test:node:p4:p4-3",
   "test:python:p4:p4-3-boundary",
+  "verify:pages-dist-and-drift",
   "verify:scenario-contracts:strict",
   "test:node:windows-job-runtime",
   "test:node:williams-crossover-governance",
@@ -303,7 +313,8 @@ export function buildNightlyLinuxCoreShardPlan({
 } = {}) {
   const excluded = new Set(NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS);
   const eligibleCommands = basePlan.commandsToRun.filter(
-    (entry) => !excluded.has(entry.commandRef),
+    (entry) => !excluded.has(entry.commandRef)
+      && !/^(?:verify|test:node|test:python):p4:/.test(entry.commandRef),
   );
   const prepared = leafCounter
     ? null
