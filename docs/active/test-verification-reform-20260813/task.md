@@ -288,3 +288,14 @@ Current limitation: M1-M6 are complete locally. M5 legacy retirement remains del
 - [x] Record the non-green adaptive dry-run honestly: one inherited `sample_project_contracts.test.mjs` resource-lock conflict between Pages and P4.1 cascades to 12 blocked main-thread roots. No suite/lock rewrite, remote action, or destructive action is taken in this phase.
 
 Current state: M8-M12 are integrated locally and the canonical route seam is committed. The local implementation objective is complete, with the inherited adaptive resource-lock conflict explicitly open and all full/remote gates still deferred. No push, PR, workflow dispatch, deployment, cleanup, tracked-`dist` deletion, or legacy retirement has occurred.
+
+## 2026-08-30 main convergence and cleanup
+
+- [x] Remove duplicate Pages ownership of the sample-project contract leaf while retaining independent and P4.1 coverage; the combined adaptive plan now has zero unmatched files and zero route gaps.
+- [x] Commit the repaired integration as `d97a9801`, merge it locally without conflicts, and prove the merge tree equals the fully tested integration tree.
+- [x] Respect protected-branch policy after direct push was rejected: publish PR #107, wait for all 10 checks to pass, and merge normally as `2b586b3240fee690b2f1e882004f16221f4ac7bf`.
+- [x] Confirm local `main`, `origin/main`, and the live remote ref are exactly equal before cleanup.
+- [x] Create recovery refs, remove 15 completed registered worktrees, delete 36 covered local branches, and atomically delete 20 covered remote branches with exact-SHA leases.
+- [x] Preserve the 13 independent unmerged local branches and the protected desktop WIP branch; leave tracked `dist` and every legacy projection surface intact.
+
+Current state: the implementation is on protected `main`; all PR #107 checks are green, no completed auxiliary Git worktree remains registered, and all deleted branch tips have recovery refs. The desktop checkout still has exactly its original 20 tracked modifications. Three Windows-held directories remain empty and unregistered, with no files or Git metadata. This documentation-only closeout is the sole remaining branch delta before final endpoint reconciliation and removal of the temporary closeout checkout.
