@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
   STATE_WRITER_POLICY_EVIDENCE_KIND,
   STATE_WRITER_POLICY_EVIDENCE_SCHEMA_VERSION,
   STATE_WRITER_POLICY_LIVE_FALLBACK_FORBID,
@@ -13,6 +14,7 @@ import {
   createStateWriterPolicyEvidence,
   createStateWriterPolicyEvidenceSession,
   ensureStateWriterPolicyEvidence,
+  produceStateWriterPolicyEvidence,
   validateStateWriterPolicyEvidence,
 } from "../tools/verification/state_writer_policy_evidence.mjs";
 
@@ -214,6 +216,47 @@ test("exact clean-tree checker evidence binds plan, policy, checkpoint, and repo
   assert.match(created.evidenceId, /^[0-9a-f]{64}$/);
   assert.equal(validated.status, "reusable-exact");
   assert.equal(validated.evidence.evidenceId, created.evidenceId);
+});
+
+test("explicit checker producer runs the checker once and publishes checker-producer evidence", () => {
+  const fixture = createFixture();
+  fs.unlinkSync(path.join(fixture.cwd, fixture.reportPath));
+  let checkerRuns = 0;
+  const result = produceStateWriterPolicyEvidence({
+    cwd: fixture.cwd,
+    phase: PHASE,
+    reportPath: fixture.reportPath,
+    evidencePath: fixture.evidencePath,
+    checkerPlan: fixture.checkerPlan,
+    runner(command, args, options) {
+      checkerRuns += 1;
+      assert.equal(command, fixture.checkerPlan.resolvedCommand.executable);
+      assert.deepEqual(args, fixture.checkerPlan.resolvedCommand.args);
+      assert.equal(options.cwd, fixture.cwd);
+      fs.writeFileSync(
+        path.join(fixture.cwd, fixture.reportPath),
+        `${JSON.stringify(fixture.report, null, 2)}\n`,
+        "utf8",
+      );
+      return { status: 0, stdout: "pass", stderr: "" };
+    },
+    ...fixture.dependencies,
+  });
+
+  assert.equal(checkerRuns, 1);
+  assert.equal(result.status, "produced-live");
+  assert.equal(
+    result.producer.role,
+    STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
+  );
+  assert.equal(result.evidenceId, result.evidence.evidenceId);
+  assert.equal(
+    validateEvidence(fixture, {
+      expectedEvidenceId: result.evidenceId,
+      expectedProducerRole: STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
+    }).evidenceId,
+    result.evidenceId,
+  );
 });
 
 test("producer and validator fence the exact clean identity after all reads", () => {

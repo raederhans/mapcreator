@@ -216,6 +216,123 @@ def extract_required_aggregator_script(job_block: str) -> str:
     return heredoc.group("script")
 
 
+def validate_p4_nightly_selective_repair_workflow(workflow: str) -> None:
+    inputs = parse_workflow_dispatch_inputs(workflow)
+    if set(inputs) != {"source_run_id", "rerun_scope"}:
+        raise AssertionError("selective repair input set drifted")
+    if inputs["source_run_id"].get("required") != "true":
+        raise AssertionError("source_run_id must be required")
+    if inputs["rerun_scope"].get("default") != "failed":
+        raise AssertionError("rerun_scope must default to failed")
+
+    jobs = parse_workflow_job_blocks(workflow)
+    if set(jobs) != {"plan", "reuse", "execute", "closeout"}:
+        raise AssertionError("selective repair job set drifted")
+    if parse_job_scalar(jobs["closeout"], "needs") != ["plan", "reuse", "execute"]:
+        raise AssertionError("closeout dependency set drifted")
+    if "needs.plan.outputs.execute_count != '0'" not in jobs["execute"]:
+        raise AssertionError("execute lane lost zero-spawn guard")
+    if "matrix: ${{ fromJSON(needs.plan.outputs.execute_matrix) }}" not in jobs["execute"]:
+        raise AssertionError("execute lane lost planner-owned matrix")
+
+    plan_steps = {str(step["name"]): step for step in parse_job_steps(jobs["plan"])}
+    if "actions/download-artifact@" in jobs["plan"]:
+        raise AssertionError("plan job cannot download its own future artifact")
+    fetch_run = parse_step_run(plan_steps["Fetch exact source run metadata"])
+    for fragment in (
+        "/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100",
+        "/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100",
+    ):
+        if fragment not in fetch_run:
+            raise AssertionError(f"source REST snapshot contract missing: {fragment}")
+    plan_run = parse_step_run(plan_steps["Build fail-closed repair plan"])
+    for fragment in (
+        '--source-run-id "$SOURCE_RUN_ID"',
+        '--rerun-scope "$RERUN_SCOPE"',
+        '--expected-sha "$EXPECTED_SHA"',
+        "git rev-parse 'HEAD^{tree}'",
+        "p4_nightly_receipt_resolver.mjs",
+        "p4_nightly_closeout.mjs",
+    ):
+        if fragment not in plan_run:
+            raise AssertionError(f"repair planner binding missing: {fragment}")
+
+    reuse_steps = parse_job_steps(jobs["reuse"])
+    reuse_names = [str(step["name"]) for step in reuse_steps]
+    if reuse_names.count("Download exact repair plan") != 1:
+        raise AssertionError("reuse job requires exactly one repair plan download")
+    if reuse_names.index("Download exact repair plan") >= reuse_names.index("Validate exact checker receipt"):
+        raise AssertionError("reuse repair plan download must precede receipt resolution")
+    reuse_source = "\n".join(str(line) for step in reuse_steps for line in step["lines"])
+    expected_reuse_counts = {
+        "p4_nightly_receipt_resolver.mjs": 3,
+        "run-id: ${{ inputs.source_run_id }}": 3,
+        "github-token: ${{ github.token }}": 3,
+        "--repair-plan .runtime/repair/plan/p4-repair-plan.json": 3,
+        '--current-run-id "${{ github.run_id }}"': 3,
+        ".resolved.json": 3,
+    }
+    for fragment, expected_count in expected_reuse_counts.items():
+        if reuse_source.count(fragment) != expected_count:
+            raise AssertionError(f"reuse binding count drifted for {fragment}")
+
+    execute_steps = {str(step["name"]): step for step in parse_job_steps(jobs["execute"])}
+    execute_names = list(execute_steps)
+    if execute_names.count("Download exact repair plan") != 1:
+        raise AssertionError("execute job requires exactly one repair plan download")
+    for step_name in (
+        "Download checker Python dependencies",
+        "Install checker Python dependencies",
+        "Execute selected authority once",
+        "Bind executed receipt to current repair run",
+    ):
+        if step_name not in execute_steps:
+            raise AssertionError(f"execute contract step missing: {step_name}")
+    if execute_names.index("Download checker Python dependencies") >= execute_names.index("Install checker Python dependencies"):
+        raise AssertionError("checker wheel download must precede install")
+    if execute_names.index("Install checker Python dependencies") >= execute_names.index("Execute selected authority once"):
+        raise AssertionError("checker install must precede authority execution")
+    if execute_names.index("Download exact repair plan") >= execute_names.index("Bind executed receipt to current repair run"):
+        raise AssertionError("execute repair plan download must precede receipt resolution")
+    download_run = parse_step_run(execute_steps["Download checker Python dependencies"])
+    install_run = parse_step_run(execute_steps["Install checker Python dependencies"])
+    if "python -m pip download -r requirements-dev.lock.txt --dest $env:WHEELHOUSE_DIR" not in download_run:
+        raise AssertionError("checker wheelhouse download drifted")
+    if "python -m pip install --no-index --find-links $env:WHEELHOUSE_DIR -r requirements-dev.lock.txt" not in install_run:
+        raise AssertionError("checker offline install drifted")
+    execute_run = parse_step_run(execute_steps["Execute selected authority once"])
+    if '--role "${{ matrix.role }}"' not in execute_run:
+        raise AssertionError("authority execution lost matrix role binding")
+    bind_run = parse_step_run(execute_steps["Bind executed receipt to current repair run"])
+    for fragment in (
+        "p4_nightly_receipt_resolver.mjs",
+        '--role "${{ matrix.role }}"',
+        "--repair-plan .runtime/repair/plan/p4-repair-plan.json",
+        '--current-run-id "${{ github.run_id }}"',
+        ".resolved.json",
+    ):
+        if fragment not in bind_run:
+            raise AssertionError(f"executed receipt binding missing: {fragment}")
+
+    closeout_steps = {str(step["name"]): step for step in parse_job_steps(jobs["closeout"])}
+    closeout_names = list(closeout_steps)
+    if closeout_names.count("Download repair plan") != 1:
+        raise AssertionError("closeout job requires exactly one repair plan download")
+    if closeout_names.index("Download repair plan") >= closeout_names.index("Validate mixed-origin exact closeout"):
+        raise AssertionError("closeout repair plan download must precede closeout")
+    closeout_run = parse_step_run(closeout_steps["Validate mixed-origin exact closeout"])
+    if closeout_run.count("--authority ") != 3:
+        raise AssertionError("closeout authority count drifted")
+    if closeout_run.count("--resolved-authority ") != 3:
+        raise AssertionError("closeout resolved authority count drifted")
+    for fragment in ("--repair-plan ", '--current-run-id "${{ github.run_id }}"'):
+        if fragment not in closeout_run:
+            raise AssertionError(f"closeout repair binding missing: {fragment}")
+    for forbidden in ("verify:nightly", "linux-core", "scenario-heavy"):
+        if forbidden in workflow:
+            raise AssertionError(f"selective repair expanded into forbidden lane: {forbidden}")
+
+
 class E2eStructuralToolingContractTest(unittest.TestCase):
     def setUp(self) -> None:
         TMP_BASE.mkdir(parents=True, exist_ok=True)
@@ -1850,6 +1967,15 @@ jobs:
         self.assertIn("unknown verification profile", workflow)
         self.assertIn("exit 2", workflow[validation_index:setup_python_index])
 
+    def test_verify_shared_keeps_two_checkout_commits_for_non_pr_fast_history(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        verify_job = parse_workflow_job_blocks(workflow)["verify"]
+        checkout = next(step for step in parse_job_steps(verify_job) if step.get("name") == "Checkout")
+        checkout_body = "\n".join(str(line) for line in checkout["lines"])
+
+        self.assertIn("fetch-depth: 2", checkout_body)
+        self.assertIn("git diff --name-only HEAD^ HEAD", verify_job)
+
     def test_deploy_minimal_installs_locked_node_dependencies_before_pages_build(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
         setup_node_index = workflow.index("- name: Setup Node")
@@ -1897,8 +2023,13 @@ jobs:
         jobs = parse_workflow_job_blocks(workflow)
         expected_jobs = {
             "metadata",
-            "p4-full",
+            "p4-checker-boundaries",
+            "p4-full-policy",
+            "p4-fast",
+            "p4-closeout",
             "linux-core",
+            "pages",
+            "pages-artifact-shadow",
             "browser",
             "scenario-heavy",
             "windows-governance",
@@ -1909,17 +2040,32 @@ jobs:
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("concurrency:", workflow)
         self.assertNotRegex(workflow, r"npm run verify:nightly(?:\s|$)")
-        self.assertEqual(workflow.count("npm run verify:p4:p4-3"), 1)
+        self.assertNotIn("npm run verify:p4:p4-3", workflow)
         self.assertNotIn("npm run verify:p4:state-writer-policy", workflow)
         self.assertNotIn("npm run perf:williams-crossover:run", workflow)
         self.assertNotRegex(workflow, r"--retries(?:=|\s)[1-9]")
         self.assertIn("fail-fast: false", jobs["linux-core"])
         self.assertIn("shard: [1, 2, 3]", jobs["linux-core"])
         self.assertEqual(parse_job_scalar(jobs["linux-core"], "runs-on"), "ubuntu-latest")
-        self.assertEqual(parse_job_scalar(jobs["p4-full"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["p4-checker-boundaries"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["p4-full-policy"], "runs-on"), "windows-latest")
+        self.assertEqual(parse_job_scalar(jobs["p4-fast"], "runs-on"), "ubuntu-latest")
         self.assertEqual(parse_job_scalar(jobs["windows-governance"], "runs-on"), "windows-latest")
-        self.assertEqual(parse_job_scalar(jobs["linux-core"], "needs"), ["p4-full"])
-        self.assertEqual(parse_job_scalar(jobs["scenario-heavy"], "needs"), ["p4-full"])
+        self.assertEqual(parse_job_scalar(jobs["p4-closeout"], "needs"), [
+            "p4-checker-boundaries", "p4-full-policy", "p4-fast",
+        ])
+        closeout_steps = parse_job_steps(jobs["p4-closeout"])
+        closeout_run = parse_step_run(next(
+            step for step in closeout_steps
+            if step.get("name") == "Validate exact three-authority P4 closeout"
+        ))
+        self.assertIn('EVIDENCE_ID=$(node -p "require(', closeout_run)
+        self.assertIn('echo "evidence_id=$EVIDENCE_ID" >> "$GITHUB_OUTPUT"', closeout_run)
+        self.assertNotIn('echo "evidence_id=$(node -p', closeout_run)
+        self.assertIsNone(parse_job_scalar(jobs["linux-core"], "needs"))
+        self.assertIsNone(parse_job_scalar(jobs["pages"], "needs"))
+        self.assertIsNone(parse_job_scalar(jobs["pages-artifact-shadow"], "needs"))
+        self.assertIsNone(parse_job_scalar(jobs["scenario-heavy"], "needs"))
         scenario_heavy_steps = parse_job_steps(jobs["scenario-heavy"])
         scenario_heavy_by_name = {str(step["name"]): step for step in scenario_heavy_steps}
         self.assertEqual(
@@ -1931,31 +2077,139 @@ jobs:
         )
         self.assertNotIn("unittest discover", jobs["scenario-heavy"])
 
-        p4_artifact_name = "nightly-p4-evidence-${{ github.sha }}-${{ github.run_attempt }}"
-        p4_artifact_steps = (
-            ("p4-full", "Upload exact P4 producer evidence"),
-            ("linux-core", "Download exact P4 producer evidence"),
-            ("scenario-heavy", "Download exact P4 producer evidence"),
-        )
-        self.assertEqual(workflow.count(f"name: {p4_artifact_name}"), len(p4_artifact_steps))
-        for job_id, step_name in p4_artifact_steps:
-            step = next(
-                entry for entry in parse_job_steps(jobs[job_id])
-                if entry.get("name") == step_name
-            )
-            step_body = "\n".join(str(line) for line in step["lines"])
-            self.assertIn(f"          name: {p4_artifact_name}", step_body)
+        artifact_counts = {
+            "nightly-p4-checker-boundaries-${{ github.sha }}-${{ github.run_attempt }}": 2,
+            "nightly-p4-full-policy-${{ github.sha }}-${{ github.run_attempt }}": 2,
+            "nightly-p4-fast-${{ github.sha }}-${{ github.run_attempt }}": 2,
+            "nightly-p4-closeout-${{ github.sha }}-${{ github.run_attempt }}": 1,
+        }
+        for artifact_name, expected_count in artifact_counts.items():
+            self.assertEqual(workflow.count(f"name: {artifact_name}"), expected_count)
+
+        closeout_run = parse_step_run(next(
+            step for step in parse_job_steps(jobs["p4-closeout"])
+            if step.get("name") == "Validate exact three-authority P4 closeout"
+        ))
+        self.assertEqual(closeout_run.count("--authority "), 3)
+        self.assertIn("--expected-sha \"${{ github.sha }}\"", closeout_run)
+        self.assertIn("git rev-parse 'HEAD^{tree}'", closeout_run)
+        self.assertNotIn("select_verification_targets", closeout_run)
+        self.assertNotIn("run_core_verification", closeout_run)
 
         for job_id in ("linux-core", "scenario-heavy"):
             env = parse_job_env(jobs[job_id])
-            self.assertEqual(env["STATE_WRITER_POLICY_EVIDENCE_MODE"], "strict")
-            self.assertEqual(env["STATE_WRITER_POLICY_LIVE_FALLBACK"], "forbid")
-            self.assertIn("needs['p4-full'].outputs.evidence_id", env["STATE_WRITER_POLICY_EVIDENCE_ID"])
+            self.assertEqual(set(env), {"WHEELHOUSE_DIR"})
             names = [str(step["name"]) for step in parse_job_steps(jobs[job_id])]
-            self.assertLess(
-                names.index("Download exact P4 producer evidence"),
-                names.index("Validate exact P4 producer evidence"),
-            )
+            self.assertNotIn("Download P4 closeout", names)
+            self.assertNotIn("Download exact P4 producer evidence", names)
+            self.assertNotIn("Validate exact P4 producer evidence", names)
+
+        pages_steps = parse_job_steps(jobs["pages"])
+        pages_by_name = {str(step["name"]): step for step in pages_steps}
+        self.assertEqual(
+            parse_step_run(pages_by_name["Run Pages dist and drift verification"]),
+            "npm run verify:pages-dist-and-drift",
+        )
+        pages_shadow_steps = parse_job_steps(jobs["pages-artifact-shadow"])
+        pages_shadow_by_name = {str(step["name"]): step for step in pages_shadow_steps}
+        self.assertEqual(
+            [str(step["name"]) for step in pages_shadow_steps],
+            [
+                "Checkout",
+                "Setup Python",
+                "Setup Node",
+                "Install Node dependencies",
+                "Install Chromium",
+                "Build artifact-only Pages shadow dist",
+                "Build legacy tracked Pages reference",
+                "Verify artifact-only Pages shadow",
+                "Start artifact-only Pages shadow server",
+                "Smoke artifact-only Pages shadow",
+                "Record artifact-only Pages shadow receipt",
+                "Upload artifact-only Pages shadow",
+            ],
+        )
+        self.assertEqual(parse_job_env(jobs["pages-artifact-shadow"]), {
+            "PLAYWRIGHT_BROWSERS_PATH": ".runtime/browser/ms-playwright",
+        })
+        self.assertNotIn("Install Python test dependencies", pages_shadow_by_name)
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Install Node dependencies"]),
+            "npm ci",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Install Chromium"]),
+            "npx playwright install --with-deps chromium",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Build artifact-only Pages shadow dist"]),
+            "python tools/build_pages_dist.py --output-root .runtime/pages-artifact-shadow/dist",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Build legacy tracked Pages reference"]),
+            "python tools/build_pages_dist.py",
+        )
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Verify artifact-only Pages shadow"]),
+            "python tools/pages_artifact_shadow.py verify --artifact-root .runtime/pages-artifact-shadow/dist "
+            "--run-id github-${{ github.run_id }}-${{ github.run_attempt }} "
+            "--comparison-out .runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json",
+        )
+        shadow_server_run = parse_step_run(pages_shadow_by_name["Start artifact-only Pages shadow server"])
+        self.assertIn("python -m http.server 4173 --bind 127.0.0.1 --directory .runtime/pages-artifact-shadow/dist", shadow_server_run)
+        self.assertIn("curl --fail --silent --show-error http://127.0.0.1:4173/", shadow_server_run)
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Smoke artifact-only Pages shadow"]),
+            "npm run test:e2e:pages-public-release-gate",
+        )
+        pages_shadow_smoke = "\n".join(str(line) for line in pages_shadow_by_name["Smoke artifact-only Pages shadow"]["lines"])
+        self.assertIn("SCENARIO_FORGE_PAGES_URL: http://127.0.0.1:4173/", pages_shadow_smoke)
+        self.assertIn("PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:4173/", pages_shadow_smoke)
+        self.assertNotIn("continue-on-error: true", pages_shadow_smoke)
+        pages_shadow_names = [str(step["name"]) for step in pages_shadow_steps]
+        receipt_index = pages_shadow_names.index("Record artifact-only Pages shadow receipt")
+        smoke_index = pages_shadow_names.index("Smoke artifact-only Pages shadow")
+        self.assertLess(smoke_index, receipt_index)
+        receipt_prefix = "\n".join(pages_shadow_names[:receipt_index])
+        self.assertNotIn("--public-smoke passed", receipt_prefix)
+        self.assertEqual(
+            parse_step_run(pages_shadow_by_name["Record artifact-only Pages shadow receipt"]),
+            "python tools/pages_artifact_shadow.py receipt --comparison "
+            ".runtime/reports/generated/nightly/pages-artifact-shadow-comparison.json "
+            "--public-smoke passed --out .runtime/reports/generated/nightly/pages-artifact-shadow.json",
+        )
+        pages_shadow_upload = "\n".join(str(line) for line in pages_shadow_by_name["Upload artifact-only Pages shadow"]["lines"])
+        self.assertIn("name: nightly-pages-artifact-shadow-${{ github.sha }}-${{ github.run_attempt }}", pages_shadow_upload)
+        self.assertIn(".runtime/pages-artifact-shadow/dist", pages_shadow_upload)
+        self.assertIn("pages-artifact-shadow-comparison.json", pages_shadow_upload)
+        self.assertIn("pages-artifact-shadow.json", pages_shadow_upload)
+        self.assertIn("if-no-files-found: error", pages_shadow_upload)
+        self.assertIn("include-hidden-files: true", pages_shadow_upload)
+        self.assertNotIn("dist/**", pages_shadow_upload)
+
+        browser_steps = parse_job_steps(jobs["browser"])
+        browser_by_name = {str(step["name"]): step for step in browser_steps}
+        browser_upload = "\n".join(str(line) for line in browser_by_name["Upload Nightly browser evidence"]["lines"])
+        self.assertNotIn(".runtime/browser/**", browser_upload)
+        self.assertNotIn("ms-playwright", browser_upload)
+        self.assertIn(".runtime/reports/**", browser_upload)
+        self.assertIn(".runtime/tests/**", browser_upload)
+
+        for job_id in ("metadata", "linux-core", "pages", "pages-artifact-shadow", "browser", "scenario-heavy"):
+            checkout = next(step for step in parse_job_steps(jobs[job_id]) if step.get("name") == "Checkout")
+            checkout_body = "\n".join(str(line) for line in checkout["lines"])
+            self.assertIn("fetch-depth: 1", checkout_body, job_id)
+        for job_id in ("p4-checker-boundaries", "p4-full-policy", "p4-fast", "p4-closeout", "windows-governance"):
+            checkout = next(step for step in parse_job_steps(jobs[job_id]) if step.get("name") == "Checkout")
+            checkout_body = "\n".join(str(line) for line in checkout["lines"])
+            self.assertIn("fetch-depth: 0", checkout_body, job_id)
+
+        linux_core_run = parse_step_run(next(
+            step for step in parse_job_steps(jobs["linux-core"])
+            if step.get("name") == "Run balanced Linux core shard"
+        ))
+        self.assertNotIn("pages-dist", linux_core_run)
+        self.assertNotIn("p4-", linux_core_run)
 
         windows_commands = {
             parse_step_run(step)
@@ -1978,15 +2232,17 @@ jobs:
         self.assertEqual(parse_job_scalar(jobs["final"], "needs"), [
             "metadata",
             "linux-core",
+            "pages",
+            "pages-artifact-shadow",
             "browser",
             "scenario-heavy",
-            "p4-full",
+            "p4-closeout",
             "windows-governance",
         ])
         aggregator = extract_required_aggregator_script(jobs["final"])
         required_results = {
             job: {"result": "success", "outputs": {}}
-            for job in expected_jobs - {"final"}
+            for job in parse_job_scalar(jobs["final"], "needs")
         }
         completed = run_command(
             "node",
@@ -1995,7 +2251,7 @@ jobs:
             env={"REQUIRED_RESULTS": json.dumps(required_results)},
         )
         self.assert_command_ok(completed)
-        required_results["p4-full"]["result"] = "failure"
+        required_results["p4-closeout"]["result"] = "failure"
         rejected = run_command(
             "node",
             "-e",
@@ -2014,8 +2270,89 @@ jobs:
         route_payload = json.loads(route_result.stdout)
         self.assertEqual(route_payload["unmatchedChangedFiles"], [])
         commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+        self.assertIn(
+            "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs "
+            "tests/p4_nightly_exact_repair_behavior.test.mjs",
+            commands,
+        )
         self.assertIn("verify:script-portfolio", commands)
         self.assertIn("node tools/select_verification_targets.mjs --check", commands)
+
+    def test_p4_nightly_selective_repair_reuses_only_exact_prior_receipts(self) -> None:
+        workflow = (
+            REPO_ROOT / ".github" / "workflows" / "p4-nightly-selective-repair.yml"
+        ).read_text(encoding="utf-8")
+        validate_p4_nightly_selective_repair_workflow(workflow)
+
+        route_result = run_command(
+            "node",
+            "tools/select_verification_targets.mjs",
+            ".github/workflows/p4-nightly-selective-repair.yml",
+            "--json",
+        )
+        self.assert_command_ok(route_result)
+        route_payload = json.loads(route_result.stdout)
+        self.assertEqual(route_payload["unmatchedChangedFiles"], [])
+        commands = [entry["commandRef"] for entry in route_payload["recommendedCommands"]]
+        self.assertIn(
+            "node --test tests/p4_nightly_parallel_authorities_behavior.test.mjs "
+            "tests/p4_nightly_exact_repair_behavior.test.mjs",
+            commands,
+        )
+
+    def test_p4_nightly_selective_repair_rejects_structural_fail_open_mutations(self) -> None:
+        workflow = (
+            REPO_ROOT / ".github" / "workflows" / "p4-nightly-selective-repair.yml"
+        ).read_text(encoding="utf-8")
+        mutations = {
+            "plan downloads future artifact": workflow.replace(
+                "      - name: Fetch exact source run metadata",
+                "      - name: Download future repair plan\n"
+                "        uses: actions/download-artifact@forged\n"
+                "      - name: Fetch exact source run metadata",
+                1,
+            ),
+            "reuse omits repair plan download": workflow.replace(
+                "      - name: Download exact repair plan",
+                "      - name: Repair plan download removed",
+                1,
+            ),
+            "missing prior run binding": workflow.replace(
+                "run-id: ${{ inputs.source_run_id }}",
+                "run-id: ${{ github.run_id }}",
+                1,
+            ),
+            "missing reused plan binding": workflow.replace(
+                "--repair-plan .runtime/repair/plan/p4-repair-plan.json",
+                "--repair-plan-removed .runtime/repair/plan/p4-repair-plan.json",
+                1,
+            ),
+            "unconditional execute": workflow.replace(
+                "if: needs.plan.outputs.execute_count != '0'",
+                "if: always()",
+                1,
+            ),
+            "missing executed origin binding": workflow.replace(
+                '--role "${{ matrix.role }}"',
+                '--role "checker-boundaries"',
+                1,
+            ),
+            "missing resolved closeout input": workflow.replace(
+                "--resolved-authority .runtime/repair/authorities/checker/nightly/p4-checker-boundaries.resolved.json",
+                "--resolved-authority-removed .runtime/repair/authorities/checker/nightly/p4-checker-boundaries.resolved.json",
+                1,
+            ),
+            "live checker install": workflow.replace(
+                "python -m pip install --no-index --find-links $env:WHEELHOUSE_DIR -r requirements-dev.lock.txt",
+                "python -m pip install -r requirements-dev.lock.txt",
+                1,
+            ),
+            "full nightly expansion": workflow + "\n# verify:nightly\n",
+        }
+        for label, mutated in mutations.items():
+            with self.subTest(label=label):
+                with self.assertRaises(AssertionError):
+                    validate_p4_nightly_selective_repair_workflow(mutated)
 
     def test_release_consumer_calls_one_canonical_command(self) -> None:
         filename = "release-verification.yml"
@@ -2037,8 +2374,9 @@ jobs:
     def test_nightly_and_release_install_locked_python_dependencies_before_lane_command(self) -> None:
         cases = (
             ("nightly-verification.yml", "metadata", "Run Nightly metadata contracts"),
-            ("nightly-verification.yml", "p4-full", "Run P4.3 exact full policy producer"),
+            ("nightly-verification.yml", "p4-checker-boundaries", "Run checker producer and all Python P4 boundaries"),
             ("nightly-verification.yml", "linux-core", "Run balanced Linux core shard"),
+            ("nightly-verification.yml", "pages", "Run Pages dist and drift verification"),
             ("nightly-verification.yml", "browser", "Run Nightly browser shard"),
             ("nightly-verification.yml", "scenario-heavy", "Run strict scenario contracts"),
             ("release-verification.yml", "verify-release", "Run canonical Release verification"),

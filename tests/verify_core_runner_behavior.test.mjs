@@ -25,6 +25,7 @@ import {
   runCoreVerification,
   runVerificationPlan,
 } from "../tools/run_core_verification.mjs";
+
 import {
   RESUMABLE_VERIFICATION_KIND,
   RESUMABLE_VERIFICATION_SCHEMA_VERSION,
@@ -69,6 +70,10 @@ import {
 import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
 import { VERIFICATION_METADATA_SOURCE_IDENTITY } from "../tools/verification/verification_catalog_projection.mjs";
 
+const M9_LIVE_REPOSITORY_SHADOW_COMMAND = VERIFICATION_DOMAINS.find(
+  (record) => record.id === "infra:p4-repository-analysis-bundle-live-shadow",
+)?.commandRef;
+
 const PACKAGE_SCRIPTS = {
   "test:node:city-lights-render-owner": "node --test tests/city_lights_render_owner_behavior.test.mjs",
   "test:node:day-night-runtime-owner": "node --test tests/day_night_runtime_owner_behavior.test.mjs",
@@ -101,7 +106,7 @@ const PACKAGE_SCRIPTS = {
   "verify:script-portfolio": "node tools/verification/script_portfolio.mjs check",
   "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
   "verify:supervisor-plan": "npm run test:node:supervisor-plan && node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tests/supervisor_plan_behavior.test.mjs",
-  "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
+  "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs tests/catalog_projection_shadow_behavior.test.mjs",
   "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
   "test:node:visual-effects-pass-owner": "node --test tests/visual_effects_pass_owner_behavior.test.mjs",
   "test:node:context-pass-orchestrator-owner": "node --test tests/context_pass_orchestrator_owner_behavior.test.mjs",
@@ -168,8 +173,8 @@ const PACKAGE_SCRIPTS = {
   "test:node:scenario-chunk-contracts": "node --test tests/scenario_chunk_contracts.test.mjs",
   "test:node:annotation-productization": "node --test tests/file_manager_project_roundtrip_behavior.test.mjs tests/export_workbench_state_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs",
   "test:py:landing-map-asset-contracts": "npm run python -- -m unittest tests.test_landing_map_asset_contracts -q",
-  "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts",
-  "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && npm run test:node:sample-project-contracts && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
+  "verify:pages-dist": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view",
+  "verify:pages-dist-and-drift": "npm run python -- tools/build_pages_dist.py && npm run python -- -m unittest tests.test_pages_dist_startup_shell -q && npm run test:py:landing-map-asset-contracts && npm run test:node:landing-showcase-view && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
   "verify:dist-drift": "npm run python -- tools/build_pages_dist.py && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",
   "test:e2e:smoke": "node tools/e2e_layering.mjs run smoke",
   "test:e2e:scenario-apply-concurrency": "node node_modules/@playwright/test/cli.js test tests/e2e/scenario_apply_concurrency.spec.js --workers=1 --retries=0",
@@ -536,6 +541,7 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
       "test:e2e:tno-contracts",
       "test:e2e:water-rendering",
       "test:e2e:city-rendering",
+      M9_LIVE_REPOSITORY_SHADOW_COMMAND,
     ],
   );
 });
@@ -566,6 +572,12 @@ test("Nightly Linux core sharding balances canonical leaves and excludes platfor
   for (const commandRef of NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS) {
     assert.equal(assignedCommandRefs.includes(commandRef), false, commandRef);
   }
+  assert.equal(
+    assignedCommandRefs.some((commandRef) => /^(?:verify|test:node|test:python):p4:/.test(commandRef)),
+    false,
+  );
+  assert.equal(assignedCommandRefs.includes("verify:pages-dist-and-drift"), false);
+  assert.equal(plan.requiresDistLaneOwner, false);
   assert.equal(plan.commandsToRun.length, assignments[0].commandRefs.length);
   assert.deepEqual(
     plan.commandsToRun.map((entry) => entry.commandRef),
@@ -680,10 +692,10 @@ test("default core plan applies strict command closure without changing test cov
 
   assert.equal(rawPlan.commandsToRun.length, 95);
   assert.equal(plan.commandsToRun.length, 89);
-  assert.equal(rawLeaves.length, 112);
-  assert.equal(retainedLeaves.length, 105);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 74);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 67);
+  assert.equal(rawLeaves.length, 111);
+  assert.equal(retainedLeaves.length, 104);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 73);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 66);
   assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 24);
   assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 24);
   assert.deepEqual(nodeFiles(plan), nodeFiles(rawPlan));
@@ -719,6 +731,7 @@ test("includeMainThread adds explicit E2E group and keeps optional E2E skipped",
       "test:e2e:tno-contracts",
       "test:e2e:water-rendering",
       "test:e2e:city-rendering",
+      M9_LIVE_REPOSITORY_SHADOW_COMMAND,
     ],
   );
 });
@@ -1828,7 +1841,7 @@ test("strict command supersession preserves the complete Node test-file closure"
   }
 });
 
-test("Pages checked gate keeps generation compatibility and performs one build", () => {
+test("Pages checked gate keeps generation compatibility without re-owning sample contracts", () => {
   const scripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
   const generation = scripts["verify:pages-dist"];
   const checked = scripts["verify:pages-dist-and-drift"];
@@ -1838,11 +1851,14 @@ test("Pages checked gate keeps generation compatibility and performs one build",
     "tests.test_pages_dist_startup_shell",
     "test:py:landing-map-asset-contracts",
     "test:node:landing-showcase-view",
-    "test:node:sample-project-contracts",
   ]) {
     assert.match(generation, new RegExp(contract.replaceAll(":", "\\:")));
     assert.match(checked, new RegExp(contract.replaceAll(":", "\\:")));
   }
+  assert.doesNotMatch(generation, /test:node:sample-project-contracts/);
+  assert.doesNotMatch(checked, /test:node:sample-project-contracts/);
+  assert.match(scripts["test:node:p4:p4-1"], /tests\/sample_project_contracts\.test\.mjs/);
+  assert.match(scripts["test:node:sample-project-contracts"], /tests\/sample_project_contracts\.test\.mjs/);
   assert.equal(generation.includes("git diff --exit-code"), false);
   assert.equal(checked.includes("git diff --exit-code"), true);
 });
@@ -2536,11 +2552,11 @@ test("production adaptive CLI plans the frozen PR7A changed-file fixture with on
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const artifact = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
   assert.deepEqual(artifact.changedFiles, expectedChangedFiles);
-  assert.equal(artifact.recommendedCommands.length, 245);
-  assert.equal(artifact.mainThreadSerialVerification.length, 27);
+  assert.equal(artifact.recommendedCommands.length, 251);
+  assert.equal(artifact.mainThreadSerialVerification.length, 28);
   assert.deepEqual(artifact.unmatchedChangedFiles, []);
   assert.deepEqual(artifact.executionPlan.routeGaps, []);
-  assert.equal(artifact.executionPlan.blockedMainThreadCommands.length, 27);
+  assert.equal(artifact.executionPlan.blockedMainThreadCommands.length, 28);
   assert.equal(artifact.executionStatus, "planned");
   assert.equal(artifact.executionResults, null);
   assert.ok(fs.existsSync(markdownPath));

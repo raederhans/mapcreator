@@ -96,7 +96,6 @@ function validatePassedEnvelope(envelope) {
     || identity.phase !== phase
     || JSON.stringify(identity.candidatePaths) !== JSON.stringify(candidatePaths)
     || identity.policySha256 !== policySha256
-    || identity.previousPolicySha256 !== policySha256
     || matches !== true
   ) {
     throw createWorkerError(
@@ -111,30 +110,74 @@ function validatePassedEnvelope(envelope) {
   });
 }
 
-async function buildPassedEnvelope() {
-  const policy = await readStateWriterPolicy();
-  const phase = policy.progress.latestPhase;
-  const sourceSha = policy.baseline.sourceBaseSha;
+function buildWorkerProofRequest({ previousPolicy, policy } = {}) {
+  const currentPolicy = policy || previousPolicy;
+  const phase = currentPolicy.progress.latestPhase;
+  const sourceSha = currentPolicy.baseline.sourceBaseSha;
   const candidatePaths = [
-    ...(policy.baselines.derivedAliasTaint?.paths || []),
-  ].sort((left, right) => left.localeCompare(right));
-  const identity = buildHistoricalDerivedAliasProofIdentity({
+    ...(currentPolicy.baselines.derivedAliasTaint?.paths || []),
+  ].map(String).sort((left, right) => left.localeCompare(right));
+  const identityInputs = {
     sourceSha,
     candidatePaths,
     phase,
     taintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
     checkpoint: buildHistoricalDerivedAliasProofCheckpoint({
       phase,
-      policy,
+      policy: currentPolicy,
     }),
-    previousPolicy: policy,
+    previousPolicy: previousPolicy || currentPolicy,
+    policy: currentPolicy,
+  };
+  return {
+    identity: buildHistoricalDerivedAliasProofIdentity(identityInputs),
+    previousPolicy: identityInputs.previousPolicy,
+    policy: currentPolicy,
+  };
+}
+
+function validateWorkerProofRequest(request) {
+  if (!request || typeof request !== "object" || Array.isArray(request)) {
+    throw createWorkerError(
+      "p4-historical-proof-worker-request-invalid",
+      "P4 historical proof worker requires one exact proof request.",
+    );
+  }
+  const normalized = buildWorkerProofRequest(request);
+  if (
+    hashP4StateWriterHistoricalProofJson(normalized.identity)
+      !== hashP4StateWriterHistoricalProofJson(request.identity)
+  ) {
+    throw createWorkerError(
+      "p4-historical-proof-worker-request-identity-mismatch",
+      "P4 historical proof worker request identity does not match its policy inputs.",
+    );
+  }
+  return normalized;
+}
+
+async function buildPassedEnvelope(request = null) {
+  const defaultPolicy = request ? null : await readStateWriterPolicy();
+  const {
+    identity,
     policy,
-  });
+  } = validateWorkerProofRequest(
+    request || buildWorkerProofRequest({
+      previousPolicy: defaultPolicy,
+      policy: defaultPolicy,
+    }),
+  );
+  const {
+    sourceSha,
+    candidatePaths,
+    phase,
+  } = identity;
   const proof = await buildFrozenDerivedAliasTaintBaseline({
     sourceBaseSha: sourceSha,
     relativePaths: candidatePaths,
     legacySemanticBaseline: policy.baselines.legacySemanticAuthority,
-    existingBaseline: policy.baselines.derivedAliasTaint || null,
+    transitionCheckpoints:
+      policy.baselines.derivedAliasTaint?.transitionCheckpoints || [],
     stateKeyAuthorityIndex: buildCanonicalStateKeyAuthorityIndex(),
   });
   assert.deepEqual(proof, policy.baselines.derivedAliasTaint);
@@ -177,7 +220,7 @@ async function runWorkerThread() {
         "P4 historical proof worker requires an exact versioned request.",
       );
     }
-    parentPort.postMessage(await buildPassedEnvelope());
+    parentPort.postMessage(await buildPassedEnvelope(workerData.request || null));
   } catch (error) {
     parentPort.postMessage(buildFailedEnvelope(error));
   }
@@ -195,6 +238,7 @@ export function startP4StateWriterHistoricalProofWorker(
     workerData: {
       kind: WORKER_REQUEST_KIND,
       schemaVersion: WORKER_SCHEMA_VERSION,
+      ...(options.request ? { request: structuredClone(options.request) } : {}),
     },
   });
   let messageCount = 0;

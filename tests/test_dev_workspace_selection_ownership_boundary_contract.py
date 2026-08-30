@@ -2,12 +2,14 @@ from pathlib import Path
 import re
 import unittest
 
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 DEV_MUTATION_SERVICE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "dev_mutation_service.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 SELECTION_OWNERSHIP_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "dev_workspace" / "selection_ownership_controller.js"
-DIST_SELECTION_OWNERSHIP_CONTROLLER_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "dev_workspace" / "selection_ownership_controller.js"
+DIST_SELECTION_OWNERSHIP_CONTROLLER_JS = PAGES_DIST_ROOT / "app" / "js" / "ui" / "dev_workspace" / "selection_ownership_controller.js"
 
 
 class DevWorkspaceSelectionOwnershipBoundaryContractTest(unittest.TestCase):

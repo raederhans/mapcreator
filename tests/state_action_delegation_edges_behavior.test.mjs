@@ -795,6 +795,141 @@ test("Day/Night actions have one registry owner and one live canonical handoff",
   assert.ok(unknownOwnerInventory.findings.length > 0);
 });
 
+test("source-bound owner proof prepares once and applies independently per binding", () => {
+  const ownerProof = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createDayNightRuntimeOwner",
+  );
+  assert.ok(ownerProof);
+  const source = fs.readFileSync(ownerProof.compositionModulePath, "utf8");
+  const ownerSlice = source.match(
+    /function getDayNightRuntimeOwner\(\) \{[\s\S]*?\n\}/,
+  )[0];
+  const scannerFixture = [
+    'import { state as runtimeState } from "./state.js";',
+    'import { state as otherState } from "./other_state.js";',
+    'import { createDayNightRuntimeOwner } from "./renderer/day_night_runtime_owner.js";',
+    'import { setPendingDayNightRefreshState } from "./state/actions/renderer_phase_actions.js";',
+    'import { setDayNightStyleConfigState } from "./state/actions/scenario_presentation_actions.js";',
+    "let dayNightRuntimeOwner = null;",
+    ownerSlice,
+    "export function buildRenderPassSignature() { return getDayNightRuntimeOwner().buildDayNightPassSignature(\"transform\", 0, 0); }",
+    "",
+  ].join("\n");
+  const runtimeBinding = {
+    id: "module:runtimeState",
+    kind: "module",
+    name: "runtimeState",
+    importSource: "./state.js",
+    importedName: "state",
+  };
+  const otherBinding = {
+    id: "module:otherState",
+    kind: "module",
+    name: "otherState",
+    importSource: "./other_state.js",
+    importedName: "state",
+  };
+  const instrumentationCounts = { apply: 0, prepare: 0 };
+  const forward = scanStateMutationInventory(scannerFixture, {
+    filePath: ownerProof.compositionModulePath,
+    bindings: [runtimeBinding, otherBinding],
+    analysisInstrumentation: {
+      onPrepareSourceBoundMutationDelegatingOwnerProof() {
+        instrumentationCounts.prepare += 1;
+      },
+      onApplySourceBoundMutationDelegatingOwnerProof() {
+        instrumentationCounts.apply += 1;
+      },
+    },
+  });
+  const reverse = scanStateMutationInventory(scannerFixture, {
+    filePath: ownerProof.compositionModulePath,
+    bindings: [otherBinding, runtimeBinding],
+  });
+  assert.deepEqual(instrumentationCounts, { apply: 2, prepare: 1 });
+  assert.deepEqual(reverse, forward);
+  assert.deepEqual(
+    forward.actionDelegations.map(({ bindingId, actionExportName }) => ({
+      bindingId,
+      actionExportName,
+    })),
+    [
+      "setDayNightStyleConfigState",
+      "setPendingDayNightRefreshState",
+    ].map((actionExportName) => ({
+      bindingId: runtimeBinding.id,
+      actionExportName,
+    })),
+  );
+
+  const raw = scanStateMutationInventory(scannerFixture, {
+    filePath: ownerProof.compositionModulePath,
+    bindings: [runtimeBinding, otherBinding],
+    recognizeCurrentContracts: false,
+  });
+  assert.deepEqual(raw.actionDelegations, []);
+  assert.ok(raw.findings.some(({ reason }) => (
+    reason === "unsupported-call-mutation"
+  )), JSON.stringify(raw.findings));
+
+  const virtual = scanStateMutationInventory(
+    scannerFixture.replace(
+      'import { state as runtimeState } from "./state.js";\n',
+      "",
+    ),
+    {
+      filePath: ownerProof.compositionModulePath,
+      bindings: [runtimeBinding],
+    },
+  );
+  assert.deepEqual(
+    virtual.actionDelegations.map(({ actionExportName }) => actionExportName),
+    ["setDayNightStyleConfigState", "setPendingDayNightRefreshState"],
+  );
+
+  const fingerprintDrift = scanStateMutationInventory(
+    scannerFixture.replace(
+      "function getDayNightRuntimeOwner() {",
+      "function getDayNightRuntimeOwner() {\n  // adjacent drift",
+    ),
+    {
+      filePath: ownerProof.compositionModulePath,
+      bindings: [runtimeBinding],
+    },
+  );
+  assert.ok(fingerprintDrift.findings.length > 0);
+
+  const facadeDrift = scanStateMutationInventory(
+    scannerFixture.replace(
+      ".buildDayNightPassSignature(\"transform\", 0, 0)",
+      ".unregisteredMethod(\"transform\", 0, 0)",
+    ),
+    {
+      filePath: ownerProof.compositionModulePath,
+      bindings: [runtimeBinding],
+    },
+  );
+  assert.ok(facadeDrift.findings.length > 0);
+
+  const duplicatedFactorySource = scannerFixture.replace(
+    "return dayNightRuntimeOwner;",
+    "createDayNightRuntimeOwner({}); return dayNightRuntimeOwner;",
+  );
+  let factoryDriftPreparedCandidateCount = -1;
+  scanStateMutationInventory(duplicatedFactorySource, {
+    filePath: ownerProof.compositionModulePath,
+    bindings: [runtimeBinding],
+    analysisInstrumentation: {
+      onCompleteSourceBoundMutationDelegatingOwnerProofPreparation({
+        candidateCount,
+      }) {
+        factoryDriftPreparedCandidateCount = candidateCount;
+      },
+    },
+  });
+  assert.equal(factoryDriftPreparedCandidateCount, 0);
+});
+
 test("click selection actions have one registry owner and one source-bound transaction handoff", () => {
   const expectedActions = [
     "clearClickHoveredIdState",

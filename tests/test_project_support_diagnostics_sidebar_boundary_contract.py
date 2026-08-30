@@ -2,8 +2,10 @@ from pathlib import Path
 import re
 import unittest
 
+from tools.pages_artifact_root import resolve_pages_artifact_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PAGES_DIST_ROOT = resolve_pages_artifact_root(repo_root=REPO_ROOT)
 SIDEBAR_JS = REPO_ROOT / "js" / "ui" / "sidebar.js"
 PROJECT_SUPPORT_DIAGNOSTICS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "sidebar" / "project_support_diagnostics_controller.js"
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
@@ -86,17 +88,17 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
 
     def test_project_support_release_surface_matches_source(self):
         pairs = [
-            (SIDEBAR_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "sidebar.js"),
+            (SIDEBAR_JS, PAGES_DIST_ROOT / "app" / "js" / "ui" / "sidebar.js"),
             (
                 PROJECT_SUPPORT_DIAGNOSTICS_CONTROLLER_JS,
-                REPO_ROOT / "dist" / "app" / "js" / "ui" / "sidebar" / "project_support_diagnostics_controller.js",
+                PAGES_DIST_ROOT / "app" / "js" / "ui" / "sidebar" / "project_support_diagnostics_controller.js",
             ),
-            (CORE_I18N_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "i18n.js"),
-            (CORE_I18N_CATALOG_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "i18n_catalog.js"),
-            (UI_I18N_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "i18n.js"),
-            (UI_I18N_CATALOG_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "i18n_catalog.js"),
-            (FILE_MANAGER_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "file_manager.js"),
-            (PROJECT_PACKAGE_IO_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "project_package_io.js"),
+            (CORE_I18N_JS, PAGES_DIST_ROOT / "app" / "js" / "core" / "i18n.js"),
+            (CORE_I18N_CATALOG_JS, PAGES_DIST_ROOT / "app" / "js" / "core" / "i18n_catalog.js"),
+            (UI_I18N_JS, PAGES_DIST_ROOT / "app" / "js" / "ui" / "i18n.js"),
+            (UI_I18N_CATALOG_JS, PAGES_DIST_ROOT / "app" / "js" / "ui" / "i18n_catalog.js"),
+            (FILE_MANAGER_JS, PAGES_DIST_ROOT / "app" / "js" / "core" / "file_manager.js"),
+            (PROJECT_PACKAGE_IO_JS, PAGES_DIST_ROOT / "app" / "js" / "core" / "project_package_io.js"),
         ]
 
         for source_path, dist_path in pairs:

@@ -242,7 +242,49 @@ Final closeout is complete. Fresh `origin/main@28215c12` was merged normally as 
 - [ ] Wave B: integrate platform-aware Nightly shards and the final Nightly aggregator.
 - [ ] Wave B: preserve the current P4.3 boundary-evidence authority while proving one full-policy producer per SHA and fail-closed consumer fallback reporting; do not misclassify currently unsupported P4.4/P4.5 plans as regressions.
 - [ ] Wave C: integrate catalog-derived PR requirement signals, smoke/demo scheduling, and comparable PR cost reporting.
-- [ ] Wave D: integrate canonical test-record dependency/platform/cost/entrypoint projections and retire only mechanically superseded metadata.
+- [x] Wave D: integrate the canonical catalog projections and fail-closed legacy shadow protocol; no legacy surface is retired before ten same-identity green receipts and an explicit later decision.
 - [ ] Wave E: integrate repository checkout/blob profiling and managed-large-asset growth policy; complete two artifact-only dist shadow deployments before any tracked-dist decision.
 - [ ] Run integration-overlap audit before every wave, preserve recovery refs, and keep user-owned execution worktrees uncleaned until their delivery is integrated or explicitly retained.
 - [ ] Complete remote timing/stability acceptance, synchronize task records and worktree registry with Git facts, and archive only when every remaining gap is closed or explicitly cancelled by the user.
+
+## 2026-08-28 P4/Nightly topology execution
+
+- [x] Refresh `origin/main` and freeze the implementation base at `aa57f7ab8a5c2fd8329c23dadc4b97575992d679`.
+- [x] Preserve the desktop checkout on `codex/preserved-main-wip-20260823@9869698d` with all 20 tracked modifications untouched.
+- [x] Create isolated integration worktree `C:\Users\raede\.codex\worktrees\p4-nightly-topology-20260828\mapcreator` on `codex/p4-nightly-topology-20260828`.
+- [x] Dispatch parallel read-only maps for M1, M2/M3/M6, and M5; integration, commits, shared outputs, long tests, push, and cleanup remain root-owned.
+- [x] Implement and verify M1 as `d56ba108`: one explicit P4.3 checker producer, zero boundary fallback, exact producer-role/evidence-ID binding, duplicate direct checker removed, full TAP retained; focused tests pass 33/33 and SF-ATS dry-run has zero unmatched files and route gaps.
+- [x] Implement and verify M2 as `c0027f26`: three disjoint P4 authorities, exact SHA/tree-bound artifacts, fail-closed closeout, canonical supersession preserved without a second checker, focused behavior/structure/projection checks green, and all 10 changed files mapped with zero adaptive route gaps.
+- [x] Implement and verify M3 as `0da10cd2`: Linux Core and Scenario Heavy start without P4 dependencies or evidence plumbing, all P4 command namespaces stay out of Core, Pages is an independent final dependency, and the focused runner/workflow/P4 plus four-file adaptive checks are green.
+- [x] Run and record M4 same-SHA report-only Nightly evidence for successful runs `33148914260`, `33150859988`, `33153844703`, `33155918484`, and `33159020815` on `1c78104c`; correctness and identity pass 5/5, while every declared performance budget fails.
+- [x] Repair the M4 performance blocker without weakening one-checker/zero-fallback/full-TAP/identity semantics: checker current-scan and exact historical proof now overlap, and the renderer escape-budget assertion reuses the canonical read-only inventory. Local canonical checker passes with policy semantics equal to the prior sample; canonical full TAP passes 428/428 in 588,390 ms, with the renderer assertion reduced from 77,046 ms to 3.396 ms.
+- [x] Freeze repaired SHA `775500e1` and complete five serial exact-SHA Nightly successes: `33166500132`, `33168546652`, `33170661034`, `33172856702`, and `33175208988`. P4 and Nightly wall-clock gates pass, but heavy P4 runner-work median/worst remains `36m50s/39m02s` against the `35m` budget, so M4 remains blocked.
+- [x] Repair the remaining heavy runner-work budget without regressing the now-passing P4/Nightly wall-clock or authority/identity gates, then repeat M4 on one new frozen SHA.
+  - [x] Implement the bounded scanner candidate: ordered Set declaration membership plus one ephemeral source-owner proof preparation per scan. Focused tests pass 69/69, paired 20/100-binding outputs are deep/JSON/hash equal with 20.6%/29.7% improvement, and independent review is clear.
+  - [x] Run clean-SHA canonical full/checker admission: full TAP passes 430/430 in 426,366 ms; checker passes in about 451 seconds with zero violations and semantic report fields unchanged; both leave zero residual Node processes.
+  - [x] Freeze SHA `367b4cc7` / tree `af26564e` and complete five valid serial runs: `33185725321`, `33188350585`, `33191004983`, `33193587245`, `33196055397`. P4 median/worst is `17m59s/19m22s`, Nightly is `18m09s/19m32s`, and heavy work is `27m38s/28m14s`; all authority, identity, and performance gates pass.
+- [x] Implement and verify M5 after M4 stabilizes the catalog identity: commit `d57d1647`; metadata 53/53, Core runner 80/80, portfolio/profile 70/70, Python structure/heavy 63/63, 392-route schema, independent review PASS, and clean-commit shadow receipt #1/10 green.
+- [x] Implement and verify M6 on frozen SHA `c993cbbc` / tree `4f3b6c9b`: Nightly runs `33212369000`, `33215161411`, and `33216626971` are three distinct exact-identity full successes; each proves artifact/reference manifest, tree, and per-file SHA equality for 9,514 files / 958,073,437 bytes, actual artifact public smoke, and rollback tree `5aa8e505`. The chained receipt is `b3acee49...` with `consecutiveGreenRuns=3`, `trackedDistRetirementEligible=true`, and `legacyTrackedDistRetained=true`; tracked `dist` is deliberately retained.
+- [x] Create Lore commits at stable phase boundaries, integrate them in order, produce the final local `--no-ff` merge commit, and reconcile worktree/registry truth. The enclosing integration merge incorporates this completion record; no main push or cleanup is part of this closeout.
+
+Current limitation: M1-M6 are complete locally. M5 legacy retirement remains deliberately ineligible at 1/10 green receipts. M6 establishes tracked-dist retirement eligibility but does not authorize or perform removal; tracked `dist` and every legacy surface remain retained. No main push or deployment is claimed.
+
+## 2026-08-29 M7-M12 integration execution
+
+- [x] Reopen the six existing user-visible M7-M12 tasks at reasoning level `high` or below and keep the root task as total supervisor.
+- [x] Complete M7 read-only readiness/overlap audit and freeze worker ownership plus serial integration responsibility.
+- [x] Receive and verify M8 commit `2d12c6f7bd7ee9bbb92166d36124c75985a8ef7d`, parent `7cb8d49d`, with a clean source worktree.
+- [x] Receive and verify M10 commit `86ad35426a2365b2dd089f09c12ca0e2b183a329`, parent `7cb8d49d`, with shared catalog/route files excluded and a clean source worktree.
+- [x] Receive clean committed M11 delivery `09a5464c` and M12 delivery `d01220ea`, both based directly on `7cb8d49d`, with focused tests and honest deferred gates.
+- [x] Receive clean M9 source commit `1c4de71e`, parent `7cb8d49d`, after checker and manifest bundled/live semantic equality plus receipt/blob fail-closed evidence reached a terminal result.
+- [x] Create and seal the local integration branch `codex/sc-m7-m12-integration-20260829` from `7cb8d49d` without touching the desktop parent WIP; planning baseline is `2f04b523`.
+- [x] Cherry-pick M8 as `c691c782`, then pass 13/13 behavior tests, 2/2 workflow adversarial tests, the 392-route schema check, and commit-range diff check.
+- [x] Cherry-pick M10 as `1964f054`, then pass admission 5/5, direct consumer 74/74, renderer inventory 13/13, and commit-range diff check. The accidentally broad startup-shell suite ended without a recoverable exit result and is not counted as evidence.
+- [x] Recompute zero direct overlap and integrate M11 as `8fe6e34d`; pass Node 8/8, Python closure 7/7, syntax, and diff checks.
+- [x] Recompute zero direct overlap and integrate M12 as `b4b0e5a1`; pass ledger 15/15, schema-only, expected missing-receipt exit 2, and diff checks.
+- [x] Integrate M9 as `63167944` after a fresh zero-overlap check, then pass the combined M9/M11 Node seam 24/24, Python closure 7/7, seven syntax checks, and diff/status checks.
+- [x] Implement the final root-owned catalog/route wiring as `ea00cd34`: extend the existing Pages authority, separate M9 fast versus opt-in heavy verification, add exact M11/M12 routes, and derive post-shadow legacy comparison records from the canonical source.
+- [x] Run bounded combined verification and update registry/context with exact Git facts. Metadata passes 44/44, portfolio 54/54, supervisor routing 8/8, catalog shadow 9/9, canonical/legacy equality and the 397-route schema pass; all 51 changed paths match.
+- [x] Record the non-green adaptive dry-run honestly: one inherited `sample_project_contracts.test.mjs` resource-lock conflict between Pages and P4.1 cascades to 12 blocked main-thread roots. No suite/lock rewrite, remote action, or destructive action is taken in this phase.
+
+Current state: M8-M12 are integrated locally and the canonical route seam is committed. The local implementation objective is complete, with the inherited adaptive resource-lock conflict explicitly open and all full/remote gates still deferred. No push, PR, workflow dispatch, deployment, cleanup, tracked-`dist` deletion, or legacy retirement has occurred.

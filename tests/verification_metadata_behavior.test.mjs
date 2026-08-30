@@ -19,6 +19,12 @@ import {
   VERIFICATION_DOMAINS,
 } from "../tools/verification/verification_domains.mjs";
 import {
+  buildCanonicalCatalogProjections,
+  buildCanonicalDocumentationProjection,
+  buildCanonicalHeavyDependencyGroups,
+  buildCanonicalNightlyTopology,
+  buildCanonicalPackageAliases,
+  buildCanonicalPrProfiles,
   normalizeVerificationMetadataSource,
   projectVerificationGatePolicySignals,
   VERIFICATION_GATE_POLICY_AUTHORITY,
@@ -43,12 +49,12 @@ test("authored catalog source covers command authority, policies, and every proj
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
   assert.equal(summary.packageScriptCount, 340);
-  assert.equal(summary.contributorRecords, 432);
-  assert.equal(summary.verificationRecordProjectionCount, 137);
-  assert.equal(summary.routeProjectionCount, 391);
-  assert.equal(summary.commandCount, 347);
+  assert.equal(summary.contributorRecords, 438);
+  assert.equal(summary.verificationRecordProjectionCount, 143);
+  assert.equal(summary.routeProjectionCount, 397);
+  assert.equal(summary.commandCount, 353);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 432);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 438);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -69,6 +75,11 @@ test("authored catalog source covers command authority, policies, and every proj
   }
   assert.equal(VERIFICATION_METADATA_SOURCE.estimatePolicy.kind, "verification-estimate-policy");
   assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 15);
+  assert.equal(summary.heavyDependencyGroupCount, 1);
+  assert.equal(summary.packageAliasCount, 16);
+  assert.equal(summary.prProfileCount, 4);
+  assert.equal(summary.nightlyRoleCount, 12);
+  assert.equal(summary.documentationProjectionCount, 48);
 });
 
 test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
@@ -110,6 +121,136 @@ test("authored catalog normalization rejects duplicate arrays and stabilizes sem
   assert.throws(
     () => normalizeVerificationMetadataSource(duplicateSupersession),
     /verification-metadata-source-duplicate-array-value:supersession\./,
+  );
+});
+
+test("M5 canonical projections are deterministic, detached, and source-identity bound", () => {
+  assert.deepEqual(Object.keys(buildCanonicalCatalogProjections()), [
+    "heavyDependencyGroups",
+    "packageAliases",
+    "prProfiles",
+    "nightlyTopology",
+    "documentation",
+  ]);
+  const projections = [
+    [buildCanonicalHeavyDependencyGroups, "heavyDependencyGroups"],
+    [buildCanonicalPackageAliases, "packageAliases"],
+    [buildCanonicalPrProfiles, "prProfiles"],
+    [buildCanonicalNightlyTopology, "nightlyTopology"],
+    [buildCanonicalDocumentationProjection, "documentation"],
+  ];
+  for (const [build, key] of projections) {
+    const first = build();
+    const second = build();
+    assert.deepEqual(first, second, key);
+    assert.deepEqual(first.authorityIdentity, VERIFICATION_METADATA_SOURCE_IDENTITY, key);
+    assert.notStrictEqual(first.authorityIdentity, VERIFICATION_METADATA_SOURCE_IDENTITY, key);
+  }
+
+  const heavy = buildCanonicalHeavyDependencyGroups();
+  assert.equal(heavy.heavyDependencyGroups[0].id, "geo_stack");
+  assert.equal(heavy.heavyDependencyGroups[0].patterns.length, 15);
+  heavy.heavyDependencyGroups[0].patterns.push("detached-only.py");
+  assert.equal(VERIFICATION_METADATA_SOURCE.projectionAuthority.heavyDependencyGroups[0].patterns.length, 15);
+
+  const aliases = buildCanonicalPackageAliases().packageAliases;
+  assert.deepEqual(
+    aliases.find((entry) => entry.commandRef === "test:node:modern-city-lights-owner"),
+    {
+      commandRef: "test:node:modern-city-lights-owner",
+      supersedes: [],
+      targetCommandRef: "test:node:city-lights-render-owner",
+    },
+  );
+  assert.ok(aliases.some((entry) => entry.commandRef === "verify:p4:p4-3" && entry.supersedes.length > 0));
+
+  const profiles = buildCanonicalPrProfiles().prProfiles;
+  assert.deepEqual(profiles.map((entry) => entry.id), ["demo", "perf-pr-gate", "pr-fast", "pr-smoke"]);
+
+  const topology = buildCanonicalNightlyTopology().nightlyTopology;
+  assert.deepEqual(
+    topology.roles.find((role) => role.id === "linux-core").shards,
+    ["1", "2", "3"],
+  );
+  assert.equal(topology.shards.filter((shard) => shard.roleId === "linux-core").length, 3);
+  assert.deepEqual(topology.finalDependencies, [
+    "browser",
+    "linux-core",
+    "metadata",
+    "p4-closeout",
+    "pages",
+    "pages-artifact-shadow",
+    "scenario-heavy",
+    "windows-governance",
+  ]);
+
+  const documentation = buildCanonicalDocumentationProjection().documentation;
+  assert.ok(documentation.length > 0);
+  assert.ok(documentation.every((entry) => entry.sourceRef.startsWith("docs/")));
+  assert.deepEqual(documentation.map((entry) => entry.sourceRef), documentation.map((entry) => entry.sourceRef).sort());
+});
+
+test("M5 projection authority normalizes order and binds injected source identity", () => {
+  const reordered = structuredClone(VERIFICATION_METADATA_SOURCE);
+  reordered.projectionAuthority.heavyDependencyGroups[0].patterns.reverse();
+  reordered.projectionAuthority.prProfiles.reverse();
+  reordered.projectionAuthority.nightlyRoles.reverse();
+  reordered.projectionAuthority.nightlyRoles[0].shards.reverse();
+  reordered.projectionAuthority.nightlyFinalDependencies.reverse();
+  assert.equal(verificationMetadataSourceDigest(reordered), VERIFICATION_METADATA_SOURCE_IDENTITY.digest);
+
+  const extendedDocumentation = structuredClone(VERIFICATION_METADATA_SOURCE);
+  extendedDocumentation.projectionAuthority.documentation.sourceRefPrefixes.push("docs/active/");
+  const projection = buildCanonicalDocumentationProjection(extendedDocumentation);
+  assert.notEqual(projection.authorityIdentity.digest, VERIFICATION_METADATA_SOURCE_IDENTITY.digest);
+  assert.equal(
+    projection.authorityIdentity.digest,
+    verificationMetadataSourceDigest(extendedDocumentation),
+  );
+});
+
+test("M5 projections fail closed on heavy, alias, profile, Nightly, and documentation drift", () => {
+  const unknownHeavyRef = structuredClone(VERIFICATION_METADATA_SOURCE);
+  unknownHeavyRef.projectionAuthority.heavyDependencyGroups[0].patterns.push("tests/unknown-heavy.py");
+  assert.throws(
+    () => buildCanonicalHeavyDependencyGroups(unknownHeavyRef),
+    /verification-metadata-source-projection-source-gap:heavyDependencyGroups\.geo_stack:tests\/unknown-heavy\.py/,
+  );
+
+  const unknownAliasTarget = structuredClone(VERIFICATION_METADATA_SOURCE);
+  unknownAliasTarget.packageScripts["test:node:modern-city-lights-owner"] = "npm run missing:alias-target";
+  assert.throws(
+    () => buildCanonicalPackageAliases(unknownAliasTarget),
+    /verification-metadata-package-alias-target:test:node:modern-city-lights-owner:missing:alias-target/,
+  );
+
+  const unknownProfile = structuredClone(VERIFICATION_METADATA_SOURCE);
+  unknownProfile.projectionAuthority.prProfiles.push("unknown-pr-profile");
+  assert.throws(
+    () => buildCanonicalPrProfiles(unknownProfile),
+    /verification-metadata-source-projection-profile-gap:prProfiles:unknown-pr-profile/,
+  );
+
+  const duplicateNightlyShard = structuredClone(VERIFICATION_METADATA_SOURCE);
+  const linuxCore = duplicateNightlyShard.projectionAuthority.nightlyRoles.find((role) => role.id === "linux-core");
+  linuxCore.shards.push(linuxCore.shards[0]);
+  assert.throws(
+    () => buildCanonicalNightlyTopology(duplicateNightlyShard),
+    /verification-metadata-source-duplicate-array-value:projectionAuthority\.nightlyRoles\.linux-core\.shards/,
+  );
+
+  const invalidDocumentation = structuredClone(VERIFICATION_METADATA_SOURCE);
+  invalidDocumentation.projectionAuthority.documentation.sourceRefPrefixes = ["docs"];
+  assert.throws(
+    () => buildCanonicalDocumentationProjection(invalidDocumentation),
+    /verification-metadata-source-projection-documentation-prefix/,
+  );
+
+  const unknownAuthorityField = structuredClone(VERIFICATION_METADATA_SOURCE);
+  unknownAuthorityField.projectionAuthority.shadowOverride = true;
+  assert.throws(
+    () => normalizeVerificationMetadataSource(unknownAuthorityField),
+    /verification-metadata-source-projection-fields:authority/,
   );
 });
 

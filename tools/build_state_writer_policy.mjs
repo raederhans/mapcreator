@@ -4780,7 +4780,7 @@ export function buildStateWriterDerivedAliasTaintModeManifest({
   return manifest;
 }
 
-async function discoverScannedCandidateBindings(
+export async function discoverScannedCandidateBindings(
   legacyAllowlistPaths,
   {
     previousPolicy = null,

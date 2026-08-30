@@ -242,3 +242,48 @@ Wave A is the only immediate implementation lane. Later waves may be explored in
 - Broad renderer extraction, renderer rewrite, TypeScript/framework migration, or new state-management architecture.
 - New proof-cache layers, cross-revision proof reuse, relaxed timeouts/allowlists, or silent test deferral.
 - Git history rewrite, irreversible asset deletion, force-push, production release, or unreviewed branch-protection policy expansion.
+
+## 2026-08-28 P4 authority and Nightly topology continuation
+
+The user-supplied performance diagnosis is the frozen sequencing authority for this continuation. Renderer slicing remains paused. Static mapping may run in parallel, but implementation follows these gates in order:
+
+- [x] M1 / P4 Single Checker Authority: add one explicit checker evidence producer, require all P4 boundary consumers to run with live fallback forbidden, remove the second direct checker, and prove one producer / zero fallback / one shared evidence identity.
+- [x] M2 / P4 Parallel Authorities: split checker-plus-boundaries, canonical Windows full policy TAP, and fast contracts/routes into independent jobs; add a closeout consumer that reruns no repository-scale analysis and rejects SHA/tree/evidence-role disagreement. Integrated as `c0027f26`.
+- [x] M3 / Nightly DAG Decoupling: start Scenario Heavy at time zero, remove P4 boundaries from Linux Core, and move Pages build/drift into its own job. Integrated as `0da10cd2`.
+- [x] M4 / Stable Measurement: five report-only Nightly executions on frozen SHA `1c78104c` all completed successfully and preserved one checker, zero fallback, one canonical full TAP, and zero SHA/tree mismatch. Performance admission is `FAIL`: P4 median/worst `31m15s/31m37s`, Nightly median/worst `31m26s/31m53s`, and heavy runner work median/worst `45m56s/47m08s`.
+- [x] M4 / Performance Repair Candidate: overlap the canonical checker repository scan with its identity-exact historical proof worker and reuse the manifest's canonical inventory for the renderer escape-budget assertion. Local checker verdict and semantic report fields match the prior sample; full TAP passes 428/428 in 9m48s. Remote five-run admission remains pending on one new frozen SHA.
+- [x] M4 / Repaired Five-Run Gate: exact-SHA runs `33166500132`, `33168546652`, `33170661034`, `33172856702`, and `33175208988` preserve all correctness/identity contracts. P4 median/worst `22m38s/25m07s` and Nightly median/worst `22m49s/25m20s` pass. Heavy P4 runner-work median/worst `36m50s/39m02s` fails the `35m` budget; M5 remains held.
+- [x] M4 / Heavy-Work Repair Gate: exact-SHA/tree runs `33185725321`, `33188350585`, `33191004983`, `33193587245`, and `33196055397` preserve one checker, zero fallback, one canonical full plan, clean authority identity, and passing routes/contracts. P4 median/worst `17m59s/19m22s`, Nightly median/worst `18m09s/19m32s`, and heavy work median/worst `27m38s/28m14s` all pass. M5 is unblocked.
+- [x] M5 / Catalog Projection Closure: implementation `d57d1647` generates the five mechanically verifiable catalog projections from the one canonical source, binds comparison/receipt identity fail closed, and keeps every legacy surface retained. Clean commit receipt #1 is green on SHA `d57d1647` / tree `14720de6`; retirement remains ineligible at `1/10` same-identity runs.
+- [x] M6 / Pages Artifact and Footprint: browser binaries are excluded from uploaded artifacts; checkout depth is job-specific while P4 and Windows historical-proof lanes retain full history; artifact-only Pages is compared against a disposable legacy tracked-dist reference. Frozen SHA `c993cbbc` / tree `4f3b6c9b` passed full Nightly runs `33212369000`, `33215161411`, and `33216626971`; chained receipt `b3acee49...` records three distinct exact-identity manifest/tree/per-file-equal public-smoke successes and rollback availability. Eligibility is recorded, but tracked `dist` remains retained and Git history is unchanged.
+
+### Continuation acceptance
+
+- M1 records exactly one full checker invocation, zero live fallback, producer role `checker-producer`, and one evidence ID consumed by every boundary.
+- M2 closeout accepts only one clean source SHA/tree across all authorities, one admitted canonical full TAP, passing boundaries/routes, and no repository-scale rerun.
+- M3 starts non-P4 lanes without P4 artifacts or environment variables and keeps all P4 boundary commands inside the P4 authority lane.
+- M4 initial targets are P4 median at most 23 minutes, P4 worst-of-five at most 26 minutes, Nightly median at most 25 minutes, Nightly worst-of-five at most 30 minutes, at most 35 heavy P4 runner-minutes, and zero SHA/tree mismatch.
+- M5 does not begin until M4 stabilizes P4 plan identity and the declared performance budget is repaired or explicitly re-scoped; legacy metadata remains fail closed during the shadow window.
+- M6 does not stop tracking `dist` until at least three artifact-only Pages shadows prove manifest/hash/public-smoke equivalence and rollback availability.
+
+## 2026-08-29 M7-M12 controlled continuation
+
+The user authorized the primary agent to continue the existing M7-M12 user-visible tasks as total supervisor. The frozen implementation base is the completed local M1-M6 merge `7cb8d49d90c24bd8bc8775f2ebe14af972294dd9`; the desktop parent checkout remains a protected WIP lane and is never an integration target.
+
+- [x] M7 / Integration readiness and ownership audit: confirm `origin/main@aa57f7ab`, candidate `7cb8d49d`, zero open PRs, clean textual merge, worker ownership, and a serial integration order.
+- [x] M8 / Exact selective repair: bind mixed-origin receipts and artifacts to exact run/SHA/tree/plan/policy/tool identities; fail closed on incomplete REST snapshots and cross-job plan ordering. Source `2d12c6f7` is integrated as `c691c782`.
+- [x] M9 / Repository analysis bundle: complete the Git-backed immutable producer, trusted receipt, checker/manifest shadow adapters, and one real same-identity semantic equivalence run. Source `1c4de71e` is integrated as `63167944`; the obsolete auxiliary assertion was fixed without rerunning the repository-scale scan.
+- [x] M10 / Pages artifact-root contract: add one explicit runtime artifact root plus compact admission receipt/summary while retaining tracked `dist`, legacy references, and all workflows. Source `86ad3542` is integrated as `1964f054`.
+- [x] M11 / Dependency and checkout profiles: repair recursive Python classification, derive the minimal pinned Python Core profile, and bind a no-checkout validator closure to exact Git blobs. Source `09a5464c` is integrated as `8fe6e34d`.
+- [x] M12 / Migration debt ledger: add explicit, auditable, fail-closed receipt ingestion without granting deletion authority or changing Catalog/Pages producers. Source `d01220ea` is integrated as `b4b0e5a1`.
+- [x] Integrate one candidate at a time on `codex/sc-m7-m12-integration-20260829`, re-check overlap before each cherry-pick, and run the narrow gate selected by that candidate before admitting the next.
+- [x] Close canonical catalog/route/shared receipt wiring in root-owned commit `ea00cd34`, run the bounded combined verification matrix, and record all deferred main-thread/CI/Nightly gates plus the inherited adaptive resource-lock gap.
+
+### M7-M12 safety and acceptance boundaries
+
+- No push, PR creation, workflow dispatch, deployment, branch-protection change, history rewrite, cleanup, tracked-`dist` deletion, or legacy retirement is part of the local integration phase.
+- Every worker commit must have parent `7cb8d49d`, a clean worktree, an explicit path allowlist, and fresh focused verification.
+- Shared files are integration-owner surfaces: M8 owns selective-repair/catalog projection changes; M9 owns checker/manifest adapter changes; M10 owns Pages builder/consumer changes; M11 owns dependency/checkout profiles; M12 owns the ledger. Cross-line route or Nightly wiring is deferred to the serial integration seam.
+- Local focused checks prove only the committed candidate. GitHub-hosted mixed-origin repair, full Nightly, full Pages artifact generation, browser/deployed smoke, performance, heavy geo/scenario data, and remote CI remain separate gates unless actually run on the final exact SHA.
+- Catalog remains at `1/10` and ineligible for retirement. Pages is evidence-eligible at `3/3`, but `removalAuthorized=false`; tracked `dist` and every legacy surface remain retained.
+- The combined selector matches all 51 continuation paths. Adaptive execution planning is not green: one pre-existing `tests/sample_project_contracts.test.mjs` resource-lock conflict between Pages and P4.1 cascades to 12 blocked main-thread roots and remains a separate repair decision.

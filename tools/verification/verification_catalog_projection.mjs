@@ -9,8 +9,44 @@ import {
   verificationMetadataSourceDigest,
 } from "./verification_catalog_source.mjs";
 
+const canonicalCatalogProjectionBundles = new WeakSet();
+
 function clone(value) {
   return structuredClone(value);
+}
+
+function freezeProjection(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) freezeProjection(child);
+  return Object.freeze(value);
+}
+
+function compareText(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values)].sort(compareText);
+}
+
+function projectionContext(source) {
+  const normalized = normalizeVerificationMetadataSource(source);
+  const identity = {
+    schemaVersion: 1,
+    kind: "verification-metadata-source-identity",
+    algorithm: "sha256",
+    digest: verificationMetadataSourceDigest(normalized),
+  };
+  return { source: normalized, identity };
+}
+
+function projectionEnvelope(kind, identity, key, value) {
+  return {
+    schemaVersion: 1,
+    kind,
+    authorityIdentity: clone(identity),
+    [key]: clone(value),
+  };
 }
 
 function single(record, field) {
@@ -99,6 +135,156 @@ export function buildCanonicalRouteIndex() {
     });
 }
 
+export function buildCanonicalHeavyDependencyGroups(source = VERIFICATION_METADATA_SOURCE) {
+  const context = projectionContext(source);
+  const groups = context.source.projectionAuthority.heavyDependencyGroups.map((group) => {
+    return {
+      id: group.id,
+      description: group.description,
+      patterns: clone(group.patterns),
+    };
+  });
+  return projectionEnvelope(
+    "verification-heavy-dependency-groups-projection",
+    context.identity,
+    "heavyDependencyGroups",
+    groups,
+  );
+}
+
+export function buildCanonicalPackageAliases(source = VERIFICATION_METADATA_SOURCE) {
+  const context = projectionContext(source);
+  const knownCommands = new Set([
+    ...Object.keys(context.source.packageScripts),
+    ...context.source.records.map((record) => record.commandRef),
+  ]);
+  const exactAliases = new Map();
+  for (const [commandRef, command] of Object.entries(context.source.packageScripts)) {
+    const match = /^npm run\s+([^\s]+)$/u.exec(command.trim());
+    if (!match) continue;
+    const targetCommandRef = match[1];
+    if (!knownCommands.has(targetCommandRef) || targetCommandRef === commandRef) {
+      throw new Error(`verification-metadata-package-alias-target:${commandRef}:${targetCommandRef}`);
+    }
+    exactAliases.set(commandRef, targetCommandRef);
+  }
+  const aliasCommands = uniqueSorted([
+    ...exactAliases.keys(),
+    ...Object.keys(context.source.supersession),
+  ]);
+  const aliases = aliasCommands.map((commandRef) => {
+    if (!knownCommands.has(commandRef)) {
+      throw new Error(`verification-metadata-package-alias-command:${commandRef}`);
+    }
+    const supersedes = clone(context.source.supersession[commandRef] || []);
+    for (const superseded of supersedes) {
+      if (!knownCommands.has(superseded) || superseded === commandRef) {
+        throw new Error(`verification-metadata-package-alias-supersession:${commandRef}:${superseded}`);
+      }
+    }
+    const projected = { commandRef, supersedes };
+    if (exactAliases.has(commandRef)) projected.targetCommandRef = exactAliases.get(commandRef);
+    return projected;
+  });
+  return projectionEnvelope(
+    "verification-package-aliases-projection",
+    context.identity,
+    "packageAliases",
+    aliases,
+  );
+}
+
+export function buildCanonicalPrProfiles(source = VERIFICATION_METADATA_SOURCE) {
+  const context = projectionContext(source);
+  const profiles = context.source.projectionAuthority.prProfiles.map((profile) => ({ id: profile }));
+  return projectionEnvelope(
+    "verification-pr-profiles-projection",
+    context.identity,
+    "prProfiles",
+    profiles,
+  );
+}
+
+export function buildCanonicalNightlyTopology(source = VERIFICATION_METADATA_SOURCE) {
+  const context = projectionContext(source);
+  const roles = context.source.projectionAuthority.nightlyRoles.map((role) => {
+    return {
+      id: role.id,
+      shards: clone(role.shards),
+    };
+  });
+  const shards = roles.flatMap((role) => role.shards.map((shard, index) => ({
+    id: `${role.id}:${shard}`,
+    roleId: role.id,
+    shard,
+    shardIndex: index + 1,
+    shardCount: role.shards.length,
+  }))).sort((left, right) => compareText(left.id, right.id));
+  return projectionEnvelope(
+    "verification-nightly-topology-projection",
+    context.identity,
+    "nightlyTopology",
+    {
+      roles,
+      shards,
+      finalDependencies: clone(context.source.projectionAuthority.nightlyFinalDependencies),
+    },
+  );
+}
+
+export function buildCanonicalDocumentationProjection(source = VERIFICATION_METADATA_SOURCE) {
+  const context = projectionContext(source);
+  const prefixes = context.source.projectionAuthority.documentation.sourceRefPrefixes;
+  const recordsBySourceRef = new Map();
+  for (const record of context.source.records) {
+    for (const sourceRef of record.sourceRefs) {
+      if (!prefixes.some((prefix) => sourceRef.startsWith(prefix))) continue;
+      if (!recordsBySourceRef.has(sourceRef)) recordsBySourceRef.set(sourceRef, []);
+      recordsBySourceRef.get(sourceRef).push(record);
+    }
+  }
+  const documentation = [...recordsBySourceRef.entries()]
+    .sort(([left], [right]) => compareText(left, right))
+    .map(([sourceRef]) => ({ sourceRef }));
+  if (documentation.length === 0) {
+    throw new Error("verification-metadata-documentation-projection-empty");
+  }
+  return projectionEnvelope(
+    "verification-documentation-projection",
+    context.identity,
+    "documentation",
+    documentation,
+  );
+}
+
+export function buildCanonicalCatalogProjectionBundle(source = VERIFICATION_METADATA_SOURCE) {
+  const envelopes = [
+    ["heavyDependencyGroups", buildCanonicalHeavyDependencyGroups(source)],
+    ["packageAliases", buildCanonicalPackageAliases(source)],
+    ["prProfiles", buildCanonicalPrProfiles(source)],
+    ["nightlyTopology", buildCanonicalNightlyTopology(source)],
+    ["documentation", buildCanonicalDocumentationProjection(source)],
+  ];
+  const authorityDigests = new Set(envelopes.map(([, envelope]) => envelope.authorityIdentity.digest));
+  if (authorityDigests.size !== 1) {
+    throw new Error("verification-metadata-catalog-projection-identity-mismatch");
+  }
+  const bundle = freezeProjection({
+    authorityIdentity: clone(envelopes[0][1].authorityIdentity),
+    projections: Object.fromEntries(envelopes.map(([key, envelope]) => [key, clone(envelope[key])])),
+  });
+  canonicalCatalogProjectionBundles.add(bundle);
+  return bundle;
+}
+
+export function isCanonicalCatalogProjectionBundle(value) {
+  return Boolean(value && typeof value === "object" && canonicalCatalogProjectionBundles.has(value));
+}
+
+export function buildCanonicalCatalogProjections(source = VERIFICATION_METADATA_SOURCE) {
+  return buildCanonicalCatalogProjectionBundle(source).projections;
+}
+
 export function verificationMetadataSourceSummary() {
   const records = VERIFICATION_METADATA_SOURCE.records;
   const commands = new Set(records.map((record) => record.commandRef));
@@ -115,6 +301,11 @@ export function verificationMetadataSourceSummary() {
     policyCount: VERIFICATION_METADATA_SOURCE.entrypointPolicies.length,
     supersederCount: Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length,
     supersessionEdgeCount: Object.values(VERIFICATION_METADATA_SOURCE.supersession).flat().length,
+    heavyDependencyGroupCount: VERIFICATION_METADATA_SOURCE.projectionAuthority.heavyDependencyGroups.length,
+    packageAliasCount: buildCanonicalPackageAliases().packageAliases.length,
+    prProfileCount: VERIFICATION_METADATA_SOURCE.projectionAuthority.prProfiles.length,
+    nightlyRoleCount: VERIFICATION_METADATA_SOURCE.projectionAuthority.nightlyRoles.length,
+    documentationProjectionCount: buildCanonicalDocumentationProjection().documentation.length,
   };
 }
 

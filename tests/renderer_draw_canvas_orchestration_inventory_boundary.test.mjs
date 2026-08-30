@@ -7,6 +7,18 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
+const PAGES_ARTIFACT_ROOT_ENV = "SCENARIO_FORGE_PAGES_ARTIFACT_ROOT";
+const explicitPagesArtifactRoot = String(process.env[PAGES_ARTIFACT_ROOT_ENV] || "").trim();
+const PAGES_DIST_ROOT = explicitPagesArtifactRoot
+  ? path.resolve(REPO_ROOT, explicitPagesArtifactRoot)
+  : path.join(REPO_ROOT, "dist");
+if (explicitPagesArtifactRoot) {
+  const runtimeRelative = path.relative(path.join(REPO_ROOT, ".runtime"), PAGES_DIST_ROOT);
+  assert.ok(runtimeRelative && !runtimeRelative.startsWith("..") && !path.isAbsolute(runtimeRelative));
+}
+function pagesDistPath(...segments) {
+  return path.relative(REPO_ROOT, path.join(PAGES_DIST_ROOT, ...segments)).replaceAll("\\", "/");
+}
 
 const DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md";
 const P21_DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md";
@@ -16,10 +28,16 @@ const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "js/core/map_renderer/draw_canvas_orchestration_owner.js";
 const CACHED_PASS_COMPOSITOR_OWNER_PATH = "js/core/renderer/cached_pass_compositor_owner.js";
 const TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH = "js/core/map_renderer/transformed_frame_compositor_owner.js";
-const DIST_MAP_RENDERER_PATH = "dist/app/js/core/map_renderer.js";
-const DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js";
-const DIST_CACHED_PASS_COMPOSITOR_OWNER_PATH = "dist/app/js/core/renderer/cached_pass_compositor_owner.js";
-const DIST_TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH = "dist/app/js/core/map_renderer/transformed_frame_compositor_owner.js";
+const DIST_MAP_RENDERER_PATH = pagesDistPath("app", "js", "core", "map_renderer.js");
+const DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = pagesDistPath(
+  "app", "js", "core", "map_renderer", "draw_canvas_orchestration_owner.js",
+);
+const DIST_CACHED_PASS_COMPOSITOR_OWNER_PATH = pagesDistPath(
+  "app", "js", "core", "renderer", "cached_pass_compositor_owner.js",
+);
+const DIST_TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH = pagesDistPath(
+  "app", "js", "core", "map_renderer", "transformed_frame_compositor_owner.js",
+);
 const HOST_OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
 const COMMIT_OWNER_PATH = "js/core/map_renderer/render_pass_commit_accounting_owner.js";
 const RENDER_REQUEST_BOUNDARY_OWNER_PATH = "js/core/map_renderer/render_request_boundary_owner.js";
