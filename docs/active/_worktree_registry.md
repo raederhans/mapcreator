@@ -1,5 +1,17 @@
 # Worktree Registry
 
+## Remaining branches and protected-WIP closeout — 2026-08-30
+
+- Protected-main integration: [PR #109](https://github.com/raederhans/scenario-forge/pull/109) merged the six-commit integration tip `70d0fe3c` as `main@9a022c2cb37637b4c11da2603a75fe0b734e4acb`. All ten reported checks passed: required PR verification, fast, smoke, demo, repository footprint, three strict scenario jobs, transport, and the 14m16s performance gate.
+- Current-main adaptations: the 20-file desktop WIP became the scenario/runtime, tests, generated Pages mirror, project-rule, and live-ledger commits; the Williams short-path work became `a1ea15f6`; the renderer projection contract became `079765dd`; the automation branch's still-accurate state-writer comments became `d2e511ea`; the shell-overlay import seam closed at `70d0fe3c` with canonical and legacy verification authority equal.
+- Superseded branches: `codex/audit-20260723-p4`, `codex/fix-pr-fast-use-selector`, `codex/fix-test-leaf-deduplication`, `codex/hgo-preview-projection-base-replace`, `codex/p43-policy-checkpoint-20260731`, `codex/tno-toponym-zh-audit`, `codex/wgi-post-push-truth-20260622`, and `codex/williams-rerun06-control-role-v2-20260712` had patch-equivalent or current-main semantic successors and contributed no further runtime bytes.
+- Archive-only branches: `codex/parent-wip-recovery-20260715`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and `codex/stale-main-wip-preserve-20260708` were mixed historical recovery snapshots. `codex/state-action-ownership-p4-20260719` contains future P4.4/P4.5 recovery material and was not replayed because canonical P4.3 admission prerequisites remain incomplete; its exact tip `65335370` is also published as tag `archive/p4-4-state-action-ownership-20260830`.
+- Recovery proof: 26 exact local refs under `refs/archive/branches/20260830/{local,remote}/` preserve every deleted local or remote tip. The original dirty desktop tree is exact at `refs/archive/wip/20260830/preserved-main-wip-before-integration@dbecf8c4` with tree `f39d1757`; it matched the 20-file checkout immediately before cleanup.
+- Cleanup: 17 old local branches and all nine pre-closeout remote `codex/*` branches were deleted after archive equality, fresh `main` equality, zero-open-PR, and per-ref exact-SHA lease checks. The two candidate worktrees were removed; the desktop checkout was cleaned and switched to `main@9a022c2c`.
+- Current topology: the clean desktop `main` checkout and this temporary documentation-closeout checkout are the only registered worktrees. This checkout and its branch are removed after this record reaches protected `main`.
+- Windows residual boundary: `8750\mapcreator`, `ce97\mapcreator`, and `p4-nightly-m6-pages-footprint-20260829\mapcreator` remain empty host directories with zero entries, no `.git`, and no worktree registration.
+- Authority boundary: this closeout integrates and cleans Git state. It does not deploy, publish a release, retire tracked `dist` or legacy projections, rewrite history, force-push, or change branch protection.
+
 ## Main convergence and completed-line cleanup — 2026-08-30
 
 - Published implementation checkpoint: PR #107 merged the completed P4 and SC continuation into protected `main` as `2b586b3240fee690b2f1e882004f16221f4ac7bf`. Before this documentation-only closeout, local `main`, `origin/main`, and the live remote ref were exactly equal at that SHA.
