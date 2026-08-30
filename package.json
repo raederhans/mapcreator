@@ -163,6 +163,7 @@
     "test:node:renderer-projection-path-owner": "node --test tests/renderer_projection_path_owner_behavior.test.mjs",
     "test:node:renderer-projection-path-lifecycle-inventory": "node --test tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs",
     "test:node:renderer-projection-path-lifecycle": "node --test tests/renderer_projection_path_owner_behavior.test.mjs tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs",
+    "test:node:renderer-projection-contract": "node --test tests/renderer_projection_contract_inventory.test.mjs",
     "test:node:renderer-svg-surface-lifecycle-owner": "node --test tests/renderer_svg_surface_lifecycle_owner_behavior.test.mjs",
     "test:node:renderer-svg-surface-lifecycle-inventory": "node --test tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs",
     "test:node:renderer-svg-surface-lifecycle": "node --test tests/renderer_svg_surface_lifecycle_owner_behavior.test.mjs tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs",

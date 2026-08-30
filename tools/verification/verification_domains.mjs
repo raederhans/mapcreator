@@ -313,6 +313,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       "test:node:scenario-chunk-contracts:heavy",
       "test:node:scenario-chunk-contracts:split",
       "test:node:scenario-chunk-contracts:shadow",
+      "test:node:renderer-projection-contract",
     ].includes(entry.commandRef))
     .map((entry) => Object.freeze({
       ...entry,
