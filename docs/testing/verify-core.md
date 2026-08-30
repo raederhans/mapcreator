@@ -47,7 +47,7 @@ Command supersession 在生成任何折叠结果前检查 selected command graph
 
 - `verify:pages-dist-and-drift`
 
-`verify:pages-dist` 保留 Pages mirror 生成和 startup/node contracts 入口。`verify:pages-dist-and-drift` 只构建一次，随后运行同一组 contracts 和 dist drift 检查。`verify:dist-drift` 保留为独立诊断命令；adaptive/supervisor 同时选中这些命令时，command supersession 会保留覆盖完整 admission 合同的 `verify:pages-dist-and-drift`。
+`verify:pages-dist` 保留 Pages mirror 生成、startup shell、landing assets 和 landing view contracts。Sample runtime/import contracts 由独立 `test:node:sample-project-contracts` route 与 P4.1 承接，避免 Pages 与 P4.1 用不同资源锁重复认领同一 leaf。`verify:pages-dist-and-drift` 只构建一次，随后运行同一组 Pages contracts 和 dist drift 检查。`verify:dist-drift` 保留为独立诊断命令；adaptive/supervisor 同时选中这些命令时，command supersession 会保留覆盖完整 admission 合同的 `verify:pages-dist-and-drift`。
 
 `pages` 分组会写入或检查 Pages mirror、dist manifest 和 `.runtime` 报告，所以运行 `verify:core` 时，integration owner 需要持有 dist lane。这个默认范围适合做 non-browser 核心安全线；它具备 dist / runtime-output 资源语义。
 

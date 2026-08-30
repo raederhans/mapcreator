@@ -1276,8 +1276,7 @@ test("preserves real build-test-drift and build-check chains as topological exec
     "verify:pages-dist-and-drift#inline:02",
     "test:py:landing-map-asset-contracts",
     "test:node:landing-showcase-view",
-    "test:node:sample-project-contracts",
-    "verify:pages-dist-and-drift#inline:06",
+    "verify:pages-dist-and-drift#inline:05",
   ]);
   assert.deepEqual(pages.executions.map((entry) => entry.dependsOn), [
     [],
@@ -1285,7 +1284,6 @@ test("preserves real build-test-drift and build-check chains as topological exec
     ["execution:0002"],
     ["execution:0003"],
     ["execution:0004"],
-    ["execution:0005"],
   ]);
   assert.equal(pages.executions[0].effectiveArgv.at(-1), "tools/build_pages_dist.py");
   if (process.platform === "win32") {
@@ -1309,6 +1307,19 @@ test("preserves real build-test-drift and build-check chains as topological exec
   );
   assert.equal(
     combined.normalizedLeaves.filter((leaf) => leaf === "python-unittest:tests.test_landing_map_asset_contracts").length,
+    1,
+  );
+
+  const pagesAndP4 = buildRepositoryVerificationSelectionPlan({
+    packageScripts: packageJson.scripts,
+    roots: ["test:node:p4:p4-1", "verify:pages-dist-and-drift"],
+    repoRoot: REPO_ROOT,
+    platform: process.platform,
+  });
+  assert.equal(
+    pagesAndP4.normalizedLeaves.filter(
+      (leaf) => leaf === "node-test:tests/sample_project_contracts.test.mjs",
+    ).length,
     1,
   );
 
