@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -4691,6 +4692,131 @@ $finalRead = $finalText | ConvertFrom-Json
     assert.equal(replayed.cleanup.absenceClassification, "no-mutation-before-original-discovery");
     assert.equal(replayed.capabilities, localizedCapabilities);
     assert.equal(replayed.events[0].output, localizedEventOutput);
+  },
+);
+
+test(
+  "power-scheme journal keeps atomic writes below classic MAX_PATH for a long runtime target",
+  { skip: process.platform !== "win32" },
+  async (t) => {
+    const helperPath = fileURLToPath(
+      new URL("../tools/perf/williams_crossover_power_scheme.ps1", import.meta.url),
+    );
+    const tempRoot = await makeRuntimeTemp("williams-power-long-path-");
+    const escapeJunctionPath = path.join(tempRoot, "escape-junction");
+    const linkedJournalPath = path.join(tempRoot, "linked-session.json");
+    const outsideRoot = await fs.mkdtemp(path.join(os.tmpdir(), "mapcreator-williams-link-target-"));
+    const outsideMarkerPath = path.join(outsideRoot, "outside-must-not-change.txt");
+    await fs.writeFile(outsideMarkerPath, "outside-must-not-change\n", "utf8");
+    t.after(async () => {
+      for (const linkPath of [escapeJunctionPath, linkedJournalPath]) {
+        try {
+          await fs.unlink(linkPath);
+        } catch (error) {
+          if (error?.code !== "ENOENT") throw error;
+        }
+      }
+      await fs.rm(tempRoot, { recursive: true, force: true });
+      await fs.rm(outsideRoot, { recursive: true, force: true });
+    });
+    const targetLength = 224;
+    const journalLeaf = "power-scheme-session.json";
+    const paddingLength = targetLength - tempRoot.length - journalLeaf.length - 2;
+    assert.ok(paddingLength > 0 && paddingLength < 240, `unexpected padding length: ${paddingLength}`);
+    const longParent = path.join(tempRoot, "w".repeat(paddingLength));
+    const journalPath = path.join(longParent, journalLeaf);
+    await fs.mkdir(longParent, { recursive: true });
+    await fs.symlink(REPO_ROOT, escapeJunctionPath, "junction");
+    await fs.symlink(outsideRoot, linkedJournalPath, "junction");
+    assert.equal(journalPath.length, targetLength);
+
+    const escapePowerShellLiteral = (value) => value.replaceAll("'", "''");
+    const script = `
+. '${escapePowerShellLiteral(helperPath)}'
+$journalPath = '${escapePowerShellLiteral(journalPath)}'
+$session = [ordered]@{ schemaVersion = 1; status = 'long-path-checkpoint'; events = @() }
+Write-WilliamsPowerSchemeSession -Session $session -Path $journalPath
+$persisted = Get-Content -Raw -LiteralPath $journalPath | ConvertFrom-Json
+$atomicPath = Get-WilliamsPowerSchemeAtomicTemporaryPath -Path $journalPath
+$atomicRoot = [IO.Path]::GetDirectoryName($atomicPath)
+$temporaryFilesBefore = @([IO.Directory]::GetFiles($atomicRoot, '*.tmp'))
+
+[IO.File]::SetAttributes($journalPath, [IO.FileAttributes]::ReadOnly)
+$failureType = $null
+try {
+  Write-WilliamsPowerSchemeSession -Session $session -Path $journalPath
+} catch {
+  $failureType = if ($_.Exception.InnerException) { $_.Exception.InnerException.GetType().FullName } else { $_.Exception.GetType().FullName }
+} finally {
+  [IO.File]::SetAttributes($journalPath, [IO.FileAttributes]::Normal)
+}
+$temporaryFilesAfter = @([IO.Directory]::GetFiles($atomicRoot, '*.tmp'))
+$runtimeRoot = [IO.Path]::GetFullPath((Join-Path '${escapePowerShellLiteral(REPO_ROOT)}' '.runtime'))
+$boundaryFailure = $null
+try {
+  [void](Get-WilliamsPowerSchemeAtomicTemporaryPath -Path (Join-Path '${escapePowerShellLiteral(REPO_ROOT)}' 'power-session-outside-runtime.json'))
+} catch {
+  $boundaryFailure = $_.Exception.Message
+}
+$junctionEscapeFailure = $null
+try {
+  [void](Get-WilliamsPowerSchemeAtomicTemporaryPath -Path (Join-Path '${escapePowerShellLiteral(escapeJunctionPath)}' 'escaped-session.json'))
+} catch {
+  $junctionEscapeFailure = $_.Exception.Message
+}
+$linkedTargetFailure = $null
+try {
+  Write-WilliamsPowerSchemeSession -Session $session -Path '${escapePowerShellLiteral(linkedJournalPath)}'
+} catch {
+  $linkedTargetFailure = $_.Exception.Message
+}
+$outsideTargetText = [IO.File]::ReadAllText('${escapePowerShellLiteral(outsideMarkerPath)}')
+$systemTempParent = Join-Path ([IO.Path]::GetTempPath()) ("mapcreator-williams-boundary-$([guid]::NewGuid().ToString('N'))")
+[void](New-Item -ItemType Directory -Force -Path $systemTempParent)
+try {
+  $systemTempAtomicPath = Get-WilliamsPowerSchemeAtomicTemporaryPath -Path (Join-Path $systemTempParent 'session.json')
+  $resolvedSystemTempRoot = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath ([IO.Path]::GetTempPath())).ProviderPath)
+  $systemTempAtomicInsideBoundary = $systemTempAtomicPath.StartsWith(($resolvedSystemTempRoot.TrimEnd('\\') + '\\'), [StringComparison]::OrdinalIgnoreCase)
+} finally {
+  Remove-Item -LiteralPath $systemTempParent -Recurse -Force
+}
+[ordered]@{
+  journalPathLength = $journalPath.Length
+  atomicPath = $atomicPath
+  atomicPathLength = $atomicPath.Length
+  atomicInsideRuntime = $atomicPath.StartsWith(($runtimeRoot.TrimEnd('\\') + '\\'), [StringComparison]::OrdinalIgnoreCase)
+  persisted = $persisted
+  failureType = $failureType
+  boundaryFailure = $boundaryFailure
+  junctionEscapeFailure = $junctionEscapeFailure
+  linkedTargetFailure = $linkedTargetFailure
+  outsideTargetText = $outsideTargetText
+  systemTempAtomicPathLength = $systemTempAtomicPath.Length
+  systemTempAtomicInsideBoundary = $systemTempAtomicInsideBoundary
+  temporaryFilesBefore = $temporaryFilesBefore
+  temporaryFilesAfter = $temporaryFilesAfter
+} | ConvertTo-Json -Depth 6
+`;
+    const result = spawnSync(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+      { encoding: "utf8", windowsHide: true },
+    );
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.journalPathLength, targetLength);
+    assert.ok(report.atomicPathLength < 260, `atomic path length was ${report.atomicPathLength}`);
+    assert.equal(report.atomicInsideRuntime, true);
+    assert.equal(report.persisted.status, "long-path-checkpoint");
+    assert.equal(report.failureType, "System.UnauthorizedAccessException");
+    assert.match(report.boundaryFailure, /repository \.runtime or system temporary boundary/);
+    assert.match(report.junctionEscapeFailure, /escaped the repository \.runtime boundary/);
+    assert.match(report.linkedTargetFailure, /session target must not be a reparse point/);
+    assert.equal(report.outsideTargetText, "outside-must-not-change\n");
+    assert.ok(report.systemTempAtomicPathLength < 260);
+    assert.equal(report.systemTempAtomicInsideBoundary, true);
+    assert.deepEqual(report.temporaryFilesAfter, report.temporaryFilesBefore);
   },
 );
 

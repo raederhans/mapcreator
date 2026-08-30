@@ -717,6 +717,126 @@ function ConvertTo-WilliamsMutableSession {
   }
 }
 
+function Test-WilliamsPathWithinBoundary {
+  param(
+    [Parameter(Mandatory = $true)][string]$CandidatePath,
+    [Parameter(Mandatory = $true)][string]$BoundaryPath
+  )
+
+  $candidateFullPath = [IO.Path]::GetFullPath($CandidatePath)
+  $boundaryFullPath = [IO.Path]::GetFullPath($BoundaryPath)
+  if ($candidateFullPath.Equals($boundaryFullPath, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+  $boundaryPrefix = $boundaryFullPath.TrimEnd([char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)) + [IO.Path]::DirectorySeparatorChar
+  return $candidateFullPath.StartsWith($boundaryPrefix, [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Assert-WilliamsPathHasNoReparsePoint {
+  param(
+    [Parameter(Mandatory = $true)][string]$ExistingPath,
+    [Parameter(Mandatory = $true)][string]$BoundaryPath,
+    [Parameter(Mandatory = $true)][string]$BoundaryLabel
+  )
+
+  $currentPath = [IO.Path]::GetFullPath($ExistingPath)
+  $boundaryFullPath = [IO.Path]::GetFullPath($BoundaryPath)
+  $boundaryRoot = [IO.Path]::GetPathRoot($boundaryFullPath)
+  if (-not $boundaryFullPath.Equals($boundaryRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    $boundaryFullPath = $boundaryFullPath.TrimEnd([char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar))
+  }
+  if (-not (Test-WilliamsPathWithinBoundary -CandidatePath $currentPath -BoundaryPath $boundaryFullPath)) {
+    throw "power-scheme session path escaped the $BoundaryLabel boundary: $currentPath"
+  }
+
+  while ($true) {
+    $item = Get-Item -Force -LiteralPath $currentPath
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "power-scheme session path escaped the $BoundaryLabel boundary through a reparse point: $currentPath"
+    }
+    if ($currentPath.Equals($boundaryFullPath, [StringComparison]::OrdinalIgnoreCase)) { return }
+    $parentPath = [IO.Path]::GetDirectoryName($currentPath)
+    if (-not $parentPath -or $parentPath.Equals($currentPath, [StringComparison]::OrdinalIgnoreCase)) {
+      throw "power-scheme session path escaped the $BoundaryLabel boundary: $currentPath"
+    }
+    $currentPath = $parentPath
+  }
+}
+
+function Get-WilliamsPowerSchemeAtomicTemporaryPath {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $fullPath = [IO.Path]::GetFullPath($Path)
+  if ($fullPath.Length -ge 260) {
+    throw "power-scheme session path exceeds the classic Win32 path boundary: $($fullPath.Length)"
+  }
+
+  $resolvedParent = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath ([IO.Path]::GetDirectoryName($fullPath))).ProviderPath)
+  $canonicalFullPath = [IO.Path]::GetFullPath((Join-Path $resolvedParent ([IO.Path]::GetFileName($fullPath))))
+  $repositoryRuntimeRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\.runtime'))
+  $systemTempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+  $insideRepositoryRuntime = Test-WilliamsPathWithinBoundary -CandidatePath $fullPath -BoundaryPath $repositoryRuntimeRoot
+  $insideSystemTemp = Test-WilliamsPathWithinBoundary -CandidatePath $fullPath -BoundaryPath $systemTempRoot
+
+  $allowedBoundary = if ($insideRepositoryRuntime) {
+    $resolvedRepositoryRuntimeRoot = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $repositoryRuntimeRoot).ProviderPath)
+    Assert-WilliamsPathHasNoReparsePoint -ExistingPath $resolvedParent -BoundaryPath $resolvedRepositoryRuntimeRoot -BoundaryLabel 'repository .runtime'
+    if (-not (Test-WilliamsPathWithinBoundary -CandidatePath $canonicalFullPath -BoundaryPath $resolvedRepositoryRuntimeRoot)) {
+      throw "power-scheme session path escaped the repository .runtime boundary: $canonicalFullPath"
+    }
+    $resolvedRepositoryRuntimeRoot
+  } elseif ($insideSystemTemp) {
+    $resolvedSystemTempRoot = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $systemTempRoot).ProviderPath)
+    Assert-WilliamsPathHasNoReparsePoint -ExistingPath $resolvedParent -BoundaryPath $resolvedSystemTempRoot -BoundaryLabel 'system temporary'
+    if (-not (Test-WilliamsPathWithinBoundary -CandidatePath $canonicalFullPath -BoundaryPath $resolvedSystemTempRoot)) {
+      throw "power-scheme session path escaped the system temporary boundary: $canonicalFullPath"
+    }
+    $resolvedSystemTempRoot
+  } else {
+    throw "power-scheme session path must stay inside the repository .runtime or system temporary boundary: $canonicalFullPath"
+  }
+
+  $atomicRoot = if ($insideRepositoryRuntime) {
+    Join-Path $resolvedRepositoryRuntimeRoot 'tmp\williams-power-session'
+  } else {
+    Join-Path $resolvedSystemTempRoot 'mapcreator-williams-power-session'
+  }
+  [void](New-Item -ItemType Directory -Force -Path $atomicRoot)
+  $resolvedAtomicRoot = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $atomicRoot).ProviderPath)
+  Assert-WilliamsPathHasNoReparsePoint -ExistingPath $resolvedAtomicRoot -BoundaryPath $allowedBoundary -BoundaryLabel 'allowed atomic-root'
+  if (-not (Test-WilliamsPathWithinBoundary -CandidatePath $resolvedAtomicRoot -BoundaryPath $allowedBoundary)) {
+    throw "power-scheme atomic root escaped its allowed boundary: $resolvedAtomicRoot"
+  }
+  if (-not [IO.Path]::GetPathRoot($resolvedAtomicRoot).Equals([IO.Path]::GetPathRoot($canonicalFullPath), [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'power-scheme atomic root must share the session path volume'
+  }
+
+  $temporaryPath = [IO.Path]::GetFullPath((Join-Path $resolvedAtomicRoot (".wps-$([guid]::NewGuid().ToString('N')).tmp")))
+  if (-not (Test-WilliamsPathWithinBoundary -CandidatePath $temporaryPath -BoundaryPath $resolvedAtomicRoot)) {
+    throw "power-scheme atomic path escaped its controlled root: $temporaryPath"
+  }
+  if ($temporaryPath.Length -ge 260) {
+    throw "power-scheme atomic path exceeds the classic Win32 path boundary: $($temporaryPath.Length)"
+  }
+  return $temporaryPath
+}
+
+function Assert-WilliamsPowerSchemeSessionTargetSafe {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  try {
+    $attributes = [IO.File]::GetAttributes([IO.Path]::GetFullPath($Path))
+  } catch [IO.FileNotFoundException] {
+    return
+  } catch [IO.DirectoryNotFoundException] {
+    return
+  }
+  if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw "power-scheme session target must not be a reparse point: $Path"
+  }
+  if (($attributes -band [IO.FileAttributes]::Directory) -ne 0) {
+    throw "power-scheme session target must be a file: $Path"
+  }
+}
+
 function Write-WilliamsPowerSchemeSession {
   param(
     [Parameter(Mandatory = $true)]$Session,
@@ -726,13 +846,15 @@ function Write-WilliamsPowerSchemeSession {
   $fullPath = [IO.Path]::GetFullPath($Path)
   $parent = Split-Path -Parent $fullPath
   if ($parent) { [void](New-Item -ItemType Directory -Force -Path $parent) }
-  $temporaryPath = "$fullPath.$([guid]::NewGuid().ToString('N')).tmp"
+  Assert-WilliamsPowerSchemeSessionTargetSafe -Path $fullPath
+  $temporaryPath = Get-WilliamsPowerSchemeAtomicTemporaryPath -Path $fullPath
   try {
     [IO.File]::WriteAllText(
       $temporaryPath,
       (($Session | ConvertTo-Json -Depth 8) + [Environment]::NewLine),
       [Text.UTF8Encoding]::new($false)
     )
+    Assert-WilliamsPowerSchemeSessionTargetSafe -Path $fullPath
     if ([IO.File]::Exists($fullPath)) {
       [IO.File]::Replace(
         $temporaryPath,
