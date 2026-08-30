@@ -45737,7 +45737,7 @@
     },
     {
       "path": "app/js/core/i18n_catalog.js",
-      "size_bytes": 98974,
+      "size_bytes": 99751,
       "source_kind": "dist"
     },
     {
@@ -46402,7 +46402,7 @@
     },
     {
       "path": "app/js/core/scenario/presentation_ocean_fill_restore.js",
-      "size_bytes": 8898,
+      "size_bytes": 9554,
       "source_kind": "dist"
     },
     {
@@ -46507,7 +46507,7 @@
     },
     {
       "path": "app/js/core/scenario_shell_overlay.js",
-      "size_bytes": 7516,
+      "size_bytes": 8435,
       "source_kind": "dist"
     },
     {
@@ -46767,7 +46767,7 @@
     },
     {
       "path": "app/js/ui/dev_workspace.js",
-      "size_bytes": 42656,
+      "size_bytes": 45776,
       "source_kind": "dist"
     },
     {
@@ -47687,7 +47687,7 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 6141753
+        "size_bytes": 6142530
       },
       {
         "file_count": 85,
@@ -47702,7 +47702,7 @@
       {
         "file_count": 8390,
         "id": "scenario-specific",
-        "size_bytes": 696175467
+        "size_bytes": 696177042
       },
       {
         "file_count": 4,
@@ -47712,7 +47712,7 @@
       {
         "file_count": 12,
         "id": "developer-only",
-        "size_bytes": 254825
+        "size_bytes": 257945
       },
       {
         "file_count": 0,
@@ -61798,15 +61798,15 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 2214249,
+        "deferred_graph_bytes": 2218025,
         "deferred_graph_file_count": 115,
         "deferred_module_count": 114,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 6112637,
+        "initial_graph_bytes": 6114333,
         "initial_graph_file_count": 237,
         "initial_module_count": 223,
         "initial_resource_count": 14,
-        "initial_script_bytes": 4754311,
+        "initial_script_bytes": 4756007,
         "initial_script_count": 225,
         "module_count": 342,
         "registry_resolved_dynamic_expression_count": 2,
@@ -61971,7 +61971,7 @@
           },
           {
             "path": "app/js/core/i18n_catalog.js",
-            "size_bytes": 98974
+            "size_bytes": 99751
           },
           {
             "path": "app/js/core/intensity_field.js",
@@ -62559,7 +62559,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 3716214
+        "size_bytes": 3716991
       },
       {
         "basis": "startup-resource-graph",
@@ -63609,7 +63609,7 @@
           },
           {
             "path": "app/js/core/scenario_shell_overlay.js",
-            "size_bytes": 7516
+            "size_bytes": 8435
           },
           {
             "path": "app/js/core/scenario_ui_sync.js",
@@ -63676,10 +63676,10 @@
           {
             "file_count": 14,
             "prefix": "app/js/core/scenario/",
-            "size_bytes": 315657
+            "size_bytes": 316313
           }
         ],
-        "size_bytes": 964324
+        "size_bytes": 965899
       },
       {
         "basis": "product-registry:scenario-runtime-data",
@@ -63751,7 +63751,7 @@
           },
           {
             "path": "app/js/ui/dev_workspace.js",
-            "size_bytes": 42656
+            "size_bytes": 45776
           }
         ],
         "path_prefixes": [
@@ -63761,7 +63761,7 @@
             "size_bytes": 185325
           }
         ],
-        "size_bytes": 254825
+        "size_bytes": 257945
       }
     ],
     "product_inventory": {
@@ -63791,7 +63791,7 @@
             "prefixes": []
           },
           "owner": "development-tools",
-          "size_bytes": 254825
+          "size_bytes": 257945
         },
         {
           "category": "export-only",
@@ -63881,7 +63881,7 @@
             "prefixes": []
           },
           "owner": "scenario-runtime",
-          "size_bytes": 964324
+          "size_bytes": 965899
         },
         {
           "category": "scenario-specific",
@@ -64163,7 +64163,7 @@
     {
       "file_count": 9452,
       "path": "app",
-      "size_bytes": 951217310
+      "size_bytes": 951222782
     },
     {
       "file_count": 57,
@@ -64196,5 +64196,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 958073437
+  "total_bytes": 958078909
 }

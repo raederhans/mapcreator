@@ -700,6 +700,8 @@ test("unit counter auto nation follows ownership after control retirement", asyn
   expect(result.display).toEqual({ tag: result.owner, source: "display" });
   expect(result.explicitOwner).toEqual({ tag: result.owner, source: "owner" });
   expect(result.legacyController).toEqual({ tag: result.owner, source: "owner" });
-  expect(result.editor.nationSource).toBe("controller");
-  expect(result.editor.nationTag).toBe(result.owner);
+  expect(result.editor).toEqual({
+    nationSource: "controller",
+    nationTag: "",
+  });
 });

@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { applyScenarioAndWaitIdle, gotoApp, waitForAppInteractive } = require("./support/playwright-app");
+const { gotoApp, waitForAppInteractive } = require("./support/playwright-app");
 
 const SHELL_STARTUP_PATH = "/?render_profile=balanced&startup_interaction=full&startup_worker=0&startup_cache=1&default_scenario=tno_1962";
 
@@ -11,15 +11,42 @@ async function waitForScenarioUiReady(page) {
   });
 }
 
+async function waitForShellOverlayReady(page, scenarioId, { timeout = 120_000 } = {}) {
+  const expectedScenarioId = String(scenarioId || "").trim();
+  await expect.poll(async () => page.evaluate(async (targetScenarioId) => {
+    const { state } = await import("/js/core/state.js");
+    const shellIds = Object.keys(state.scenarioAutoShellOwnerByFeatureId || {});
+    const ruPolarId = shellIds.find((id) => id.startsWith("RU_ARCTIC_FB_")) || "";
+    return {
+      activeScenarioId: String(state.activeScenarioId || ""),
+      idle: !state.scenarioApplyInFlight,
+      startupReady: !state.startupReadonly && !state.startupReadonlyUnlockInFlight,
+      bootReady: state.bootBlocking === false,
+      hasRuPolarOwner: !!ruPolarId && !!String(state.scenarioAutoShellOwnerByFeatureId?.[ruPolarId] || ""),
+      matchesTarget: String(state.activeScenarioId || "") === targetScenarioId,
+    };
+  }, expectedScenarioId), { timeout }).toEqual({
+    activeScenarioId: expectedScenarioId,
+    idle: true,
+    startupReady: true,
+    bootReady: true,
+    hasRuPolarOwner: true,
+    matchesTarget: true,
+  });
+}
+
 async function applyScenario(page, scenarioId) {
   const expectedScenarioId = String(scenarioId || "").trim();
-  await applyScenarioAndWaitIdle(page, expectedScenarioId, {
-    timeout: 120_000,
-    renderMode: "none",
-    markDirtyReason: "",
-    showToastOnComplete: false,
-    forceApply: true,
-  });
+  await page.evaluate(async (targetScenarioId) => {
+    const { applyScenarioByIdCommand } = await import("/js/core/scenario_dispatcher.js");
+    await applyScenarioByIdCommand(targetScenarioId, {
+      renderMode: "none",
+      markDirtyReason: "",
+      showToastOnComplete: false,
+      forceApply: true,
+    });
+  }, expectedScenarioId);
+  await waitForShellOverlayReady(page, expectedScenarioId);
 }
 
 async function resetScenario(page) {
@@ -108,36 +135,28 @@ test("scenario shell overlay recalculates on apply reset and clear", async ({ pa
     activeScenarioId: afterApply.activeScenarioId,
     hasRuPolar: !!afterApply.ruPolarId,
     hasOwnerMap: afterApply.ownerCount > 0,
-    hasControllerMap: afterApply.controllerCount > 0,
     hasRuPolarOwner: !!afterApply.ruPolarOwner,
-    hasRuPolarController: !!afterApply.ruPolarController,
   }).toEqual({
     activeScenarioId: "tno_1962",
     hasRuPolar: true,
     hasOwnerMap: true,
-    hasControllerMap: true,
     hasRuPolarOwner: true,
-    hasRuPolarController: true,
   });
 
   await resetScenario(page);
+  await waitForShellOverlayReady(page, "tno_1962");
   const afterReset = await readShellState(page);
   expect({
     activeScenarioId: afterReset.activeScenarioId,
     hasOwnerMap: afterReset.ownerCount > 0,
-    hasControllerMap: afterReset.controllerCount > 0,
     hasRuPolarOwner: !!afterReset.ruPolarOwner,
-    hasRuPolarController: !!afterReset.ruPolarController,
   }).toEqual({
     activeScenarioId: "tno_1962",
     hasOwnerMap: true,
-    hasControllerMap: true,
     hasRuPolarOwner: true,
-    hasRuPolarController: true,
   });
   expect(afterReset.ruPolarId).toBe(afterApply.ruPolarId);
   expect(afterReset.ruPolarOwner).toBe(afterApply.ruPolarOwner);
-  expect(afterReset.ruPolarController).toBe(afterApply.ruPolarController);
 
   await clearScenario(page);
   const afterClear = await readShellState(page);
@@ -145,12 +164,10 @@ test("scenario shell overlay recalculates on apply reset and clear", async ({ pa
     activeScenarioId: afterClear.activeScenarioId,
     borderMode: afterClear.borderMode,
     ownerCount: afterClear.ownerCount,
-    controllerCount: afterClear.controllerCount,
   }).toEqual({
     activeScenarioId: "",
     borderMode: "canonical",
     ownerCount: 0,
-    controllerCount: 0,
   });
   expect(afterClear.shellRevision).toBeGreaterThan(afterApply.shellRevision);
 
@@ -159,7 +176,6 @@ test("scenario shell overlay recalculates on apply reset and clear", async ({ pa
   expect(afterReapply.shellRevision).toBeGreaterThan(afterClear.shellRevision);
   expect(afterReapply.ruPolarId).toBe(afterApply.ruPolarId);
   expect(afterReapply.ruPolarOwner).toBe(afterApply.ruPolarOwner);
-  expect(afterReapply.ruPolarController).toBe(afterApply.ruPolarController);
 });
 
 test("delayed ui bootstrap keeps scenario sidebar palette and special region inspector in sync", async ({ page }) => {

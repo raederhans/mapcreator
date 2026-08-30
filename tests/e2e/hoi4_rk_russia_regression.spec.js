@@ -24,7 +24,7 @@ async function reapplyCoreTerritory(page, tag) {
     document.querySelector('#countryInspectorSection')?.setAttribute('open', '');
   });
   await page.fill('#countrySearch', tag);
-  const row = page.locator('.country-select-main-btn').filter({ hasText: `(${tag})` }).first();
+  const row = page.locator(`.country-select-row[data-country-code="${tag}"] .country-select-main-btn`).first();
   await expect(row).toBeVisible({ timeout: 15000 });
   await row.click();
   const reapplyBtn = page.locator('#presetTree').getByRole('button', { name: 'Reapply Core Territory' });

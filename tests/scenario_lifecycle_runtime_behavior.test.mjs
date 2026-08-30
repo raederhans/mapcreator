@@ -38,6 +38,37 @@ import {
   defaultCountryPalette,
   state as appState,
 } from "../js/core/state.js";
+import {
+  resolveScenarioShellOwnerCode,
+} from "../js/core/scenario_shell_overlay.js";
+
+test("scenario shell explicit hints outrank inferred neighbor majority", () => {
+  const ownerVotes = new Map([
+    ["NBR", 3],
+    ["MIN", 1],
+  ]);
+
+  assert.equal(resolveScenarioShellOwnerCode({
+    directOwnerCode: "DIR",
+    ownerHintCode: "OWN",
+    controllerHintCode: "CTL",
+    ownerVotes,
+    countryFallbackCode: "FBK",
+  }), "DIR");
+  assert.equal(resolveScenarioShellOwnerCode({
+    ownerHintCode: "OWN",
+    controllerHintCode: "CTL",
+    ownerVotes,
+    countryFallbackCode: "FBK",
+  }), "OWN");
+  assert.equal(resolveScenarioShellOwnerCode({
+    controllerHintCode: "CTL",
+    ownerVotes,
+    countryFallbackCode: "FBK",
+  }), "CTL");
+  assert.equal(resolveScenarioShellOwnerCode({ ownerVotes, countryFallbackCode: "FBK" }), "NBR");
+  assert.equal(resolveScenarioShellOwnerCode({ countryFallbackCode: "FBK" }), "FBK");
+});
 
 function createLifecycleRuntime(runtimeState, overrides = {}) {
   return createScenarioLifecycleRuntime({
@@ -2116,6 +2147,75 @@ test("scenario style defaults restore captures the pre-activation baseline after
     "scenario-style-defaults-activate",
     "scenario-style-defaults-clear",
   ]);
+});
+
+test("scenario style defaults extend their baseline and stay scoped across scenario switches", () => {
+  const baselineStyle = {
+    coastlines: {
+      color: "#333333",
+      opacity: 0.8,
+      width: 1.2,
+    },
+    empireBorders: {
+      color: "#666666",
+      opacity: 0.9,
+      width: 1,
+    },
+    ocean: {
+      fillColor: "#123456",
+      preset: "bathymetry_soft",
+      experimentalAdvancedStyles: true,
+    },
+  };
+  const tnoManifest = {
+    style_defaults: {
+      ocean: {
+        fillColor: "#345678",
+      },
+    },
+  };
+  const blankManifest = {
+    style_defaults: {
+      coastlines: {
+        width: 0.8,
+      },
+      empireBorders: {
+        opacity: 0.4,
+      },
+      ocean: {
+        fillColor: "#2d4769",
+      },
+    },
+  };
+  const runtimeState = createBaseState({
+    scenarioOceanFillBeforeActivate: null,
+    scenarioOceanStyleBeforeActivate: null,
+    scenarioPresentationStyleBeforeActivate: null,
+    styleConfig: structuredClone(baselineStyle),
+  });
+  const runtime = createScenarioOceanFillRestoreRuntime({ state: runtimeState });
+
+  runtime.syncScenarioOceanFillForActivation(tnoManifest);
+  assert.deepEqual(runtimeState.scenarioPresentationStyleBeforeActivate, {
+    ocean: baselineStyle.ocean,
+  });
+
+  runtime.syncScenarioOceanFillForActivation(blankManifest);
+  assert.deepEqual(runtimeState.scenarioPresentationStyleBeforeActivate, baselineStyle);
+  assert.equal(runtimeState.styleConfig.coastlines.width, 0.8);
+  assert.equal(runtimeState.styleConfig.empireBorders.opacity, 0.4);
+  assert.equal(runtimeState.styleConfig.ocean.fillColor, "#2d4769");
+
+  runtime.syncScenarioOceanFillForActivation(tnoManifest);
+  assert.deepEqual(runtimeState.styleConfig.coastlines, baselineStyle.coastlines);
+  assert.deepEqual(runtimeState.styleConfig.empireBorders, baselineStyle.empireBorders);
+  assert.equal(runtimeState.styleConfig.ocean.fillColor, "#345678");
+
+  runtime.restoreScenarioOceanFillAfterExit();
+  assert.deepEqual(runtimeState.styleConfig, baselineStyle);
+  assert.equal(runtimeState.scenarioOceanFillBeforeActivate, null);
+  assert.equal(runtimeState.scenarioOceanStyleBeforeActivate, null);
+  assert.equal(runtimeState.scenarioPresentationStyleBeforeActivate, null);
 });
 
 test("clearActiveScenario restores deferred coarse baseline when detail topology is still pending", () => {

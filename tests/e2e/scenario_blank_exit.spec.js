@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
-const { getAppUrl } = require("./support/playwright-app");
+const { getAppUrl, waitForRenderIdle } = require("./support/playwright-app");
 
 function resolveBaseUrl() {
   return getAppUrl();
@@ -165,15 +165,6 @@ async function flushPendingRender(page) {
   });
 }
 
-async function waitForStableExactRender(page, { timeout = 20_000 } = {}) {
-  await page.waitForFunction(async () => {
-    const { state } = await import('/js/core/state.js');
-    return String(state.renderPhase || '') === 'idle'
-      && !state.deferExactAfterSettle
-      && !state.exactAfterSettleHandle;
-  }, { timeout });
-}
-
 async function waitForDetailTopologySettled(page, { reason = 'e2e-scenario-blank-exit', timeout = 60_000 } = {}) {
   await page.evaluate(async (detailReason) => {
     const { state } = await import('/js/core/state.js');
@@ -186,7 +177,7 @@ async function waitForDetailTopologySettled(page, { reason = 'e2e-scenario-blank
     const { state } = await import('/js/core/state.js');
     return !state.detailPromotionInFlight && !state.detailDeferred;
   }, { timeout });
-  await waitForStableExactRender(page, { timeout });
+  await waitForRenderIdle(page, { scenarioId: '', timeout, requireInfra: true });
 }
 
 async function getBlankStateSnapshot(page) {
@@ -200,6 +191,19 @@ async function getBlankStateSnapshot(page) {
       controllerCount: 0,
       landFeatureCount: Array.isArray(state.landData?.features) ? state.landData.features.length : 0,
       runtimeFeatureCount: Number(state.runtimePoliticalTopology?.objects?.political?.geometries?.length || 0),
+      topologyBundleMode: String(state.topologyBundleMode || ''),
+      scenarioBorderMode: String(state.scenarioBorderMode || ''),
+      activePaletteId: String(state.activePaletteId || ''),
+      zoomTransform: {
+        x: Number(state.zoomTransform?.x || 0),
+        y: Number(state.zoomTransform?.y || 0),
+        k: Number(state.zoomTransform?.k || 1),
+      },
+      viewport: {
+        width: Number(state.width || 0),
+        height: Number(state.height || 0),
+        dpr: Number(state.dpr || 1),
+      },
       showBlankFeatureLabels: !!state.showBlankFeatureLabels,
       showCityPoints: !!state.showCityPoints,
       oceanFillColor: String(state.styleConfig?.ocean?.fillColor || ''),
@@ -246,7 +250,7 @@ test('blank_base stays ownerless editable and exiting scenarios returns to the c
   });
   await waitForDetailTopologySettled(page, { reason: 'scenario-blank-exit:baseline-clear' });
   await flushPendingRender(page);
-  await waitForStableExactRender(page);
+  await waitForRenderIdle(page, { scenarioId: '', timeout: 60_000, requireInfra: true });
   const clearedBaselinePixels = await captureCanvasSample(page);
 
   await ensureScenario(page, 'tno_1962');
@@ -341,32 +345,11 @@ test('blank_base stays ownerless editable and exiting scenarios returns to the c
   await ensureScenario(page, 'tno_1962');
   await clearScenario(page);
 
-  await expect.poll(async () => page.evaluate(async () => {
-    const { state } = await import('/js/core/state.js');
-    return {
-      activeScenarioId: String(state.activeScenarioId || ''),
-      mapSemanticMode: String(state.mapSemanticMode || ''),
-      activeSovereignCode: String(state.activeSovereignCode || ''),
-      sovereigntyCount: Object.keys(state.sovereigntyByFeatureId || {}).length,
-      controllerCount: 0,
-      landFeatureCount: Array.isArray(state.landData?.features) ? state.landData.features.length : 0,
-      runtimeFeatureCount: Number(state.runtimePoliticalTopology?.objects?.political?.geometries?.length || 0),
-      showBlankFeatureLabels: !!state.showBlankFeatureLabels,
-      showCityPoints: !!state.showCityPoints,
-      oceanFillColor: String(state.styleConfig?.ocean?.fillColor || ''),
-      renderProfile: String(state.renderProfile || ''),
-      dynamicBordersEnabled: state.dynamicBordersEnabled !== false,
-      showWaterRegions: state.showWaterRegions !== false,
-      showScenarioSpecialRegions: state.showScenarioSpecialRegions !== false,
-      showScenarioReliefOverlays: state.showScenarioReliefOverlays !== false,
-      hasScenarioGeoLocalePatch: !!state.scenarioGeoLocalePatchData,
-      hasScenarioCityOverrides: !!state.scenarioCityOverridesData,
-    };
-  }), { timeout: 30000 }).toEqual(clearedBaselineState);
+  await expect.poll(() => getBlankStateSnapshot(page), { timeout: 30000 }).toEqual(clearedBaselineState);
   await page.waitForTimeout(1200);
   await waitForDetailTopologySettled(page, { reason: 'scenario-blank-exit:final-clear' });
   await flushPendingRender(page);
-  await waitForStableExactRender(page);
+  await waitForRenderIdle(page, { scenarioId: '', timeout: 60_000, requireInfra: true });
 
   const clearedBlankPixels = await captureCanvasSample(page);
   const blankCanvasDelta = countChangedPixels(clearedBaselinePixels, clearedBlankPixels, 10);

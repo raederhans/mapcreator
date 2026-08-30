@@ -78,6 +78,21 @@ function pickScenarioMajorityCode(counterMap) {
   return String(ranked[0]?.[0] || "").trim().toUpperCase();
 }
 
+export function resolveScenarioShellOwnerCode({
+  directOwnerCode = "",
+  ownerHintCode = "",
+  controllerHintCode = "",
+  ownerVotes = null,
+  countryFallbackCode = "",
+} = {}) {
+  return canonicalScenarioCountryCode(directOwnerCode)
+    || canonicalScenarioCountryCode(ownerHintCode)
+    || canonicalScenarioCountryCode(controllerHintCode)
+    || pickScenarioMajorityCode(ownerVotes)
+    || canonicalScenarioCountryCode(countryFallbackCode)
+    || "";
+}
+
 function buildScenarioCanonicalFallbackMaps(geometries) {
   const ownerVotesByCountry = new Map();
 
@@ -133,7 +148,8 @@ export function refreshScenarioShellOverlays({
   let nextOwnerMap = {};
 
   if (runtimeState.activeScenarioId && isScenarioShellOverlayEnabled()) {
-    const geometries = runtimeState.runtimePoliticalTopology?.objects?.political?.geometries || [];
+    const geometrySource = runtimeState.runtimePoliticalTopology?.objects?.political?.geometries;
+    const geometries = Array.isArray(geometrySource) ? Array.from(geometrySource) : [];
     if (Array.isArray(geometries) && geometries.length) {
       const neighborGraph = getScenarioRuntimeNeighborGraph(geometries);
       const { ownerFallbackByCountry } = buildScenarioCanonicalFallbackMaps(geometries);
@@ -152,10 +168,18 @@ export function refreshScenarioShellOverlays({
           incrementScenarioCodeVote(ownerVotes, getScenarioEffectiveOwnerCodeByFeatureId(neighborId));
         });
 
+        const properties = geometry?.properties || {};
         const canonicalCountryCode = getScenarioRuntimeGeometryCountryCode(geometry);
         const directOwnerCode = canonicalScenarioCountryCode(runtimeState.sovereigntyByFeatureId?.[featureId] || "");
-        const resolvedOwnerCode =
-          directOwnerCode || pickScenarioMajorityCode(ownerVotes) || ownerFallbackByCountry[canonicalCountryCode] || "";
+        const ownerHintCode = canonicalScenarioCountryCode(properties.scenario_shell_owner_hint || "");
+        const controllerHintCode = canonicalScenarioCountryCode(properties.scenario_shell_controller_hint || "");
+        const resolvedOwnerCode = resolveScenarioShellOwnerCode({
+          directOwnerCode,
+          ownerHintCode,
+          controllerHintCode,
+          ownerVotes,
+          countryFallbackCode: ownerFallbackByCountry[canonicalCountryCode],
+        });
 
         if (resolvedOwnerCode) {
           nextOwnerMap[featureId] = resolvedOwnerCode;
@@ -194,4 +218,3 @@ export function refreshScenarioShellOverlays({
     ownerCount: Object.keys(nextOwnerMap).length,
   };
 }
-
