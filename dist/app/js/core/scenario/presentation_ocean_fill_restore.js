@@ -91,13 +91,27 @@ function createScenarioOceanFillRestoreRuntime({
   }
 
   function cloneScenarioStyleDefaultsSnapshot(styleOverride) {
-    const snapshot = {};
+    const snapshot = state.scenarioPresentationStyleBeforeActivate
+      ? structuredClone(state.scenarioPresentationStyleBeforeActivate)
+      : {};
     Object.keys(styleOverride || {}).forEach((groupKey) => {
+      if (Object.prototype.hasOwnProperty.call(snapshot, groupKey)) return;
       snapshot[groupKey] = {
         ...(state.styleConfig?.[groupKey] || {}),
       };
     });
-    return snapshot;
+    return Object.keys(snapshot).length ? snapshot : null;
+  }
+
+  function mergeScenarioStyleDefaultsWithBaseline(styleOverride, baselineSnapshot) {
+    const scopedOverride = {};
+    Object.keys(baselineSnapshot || {}).forEach((groupKey) => {
+      scopedOverride[groupKey] = {
+        ...(baselineSnapshot[groupKey] || {}),
+        ...(styleOverride?.[groupKey] || {}),
+      };
+    });
+    return Object.keys(scopedOverride).length ? scopedOverride : null;
   }
 
   function ensureStyleConfigGroup(groupKey) {
@@ -189,22 +203,26 @@ function createScenarioOceanFillRestoreRuntime({
 
   function syncScenarioOceanFillForActivation(manifest) {
     const nextOverride = getScenarioStyleDefaultsOverride(manifest);
-    const previousOverride = getScenarioStyleDefaultsOverride(state.activeScenarioManifest);
-    const effectiveOverride = nextOverride || previousOverride;
-    if (effectiveOverride && !state.scenarioPresentationStyleBeforeActivate) {
-      state.scenarioPresentationStyleBeforeActivate = cloneScenarioStyleDefaultsSnapshot(effectiveOverride);
-      state.scenarioOceanStyleBeforeActivate = {
-        ...(state.styleConfig?.ocean || {}),
-      };
-    }
-    if (state.scenarioOceanFillBeforeActivate === null) {
-      state.scenarioOceanFillBeforeActivate = normalizeScenarioOceanFillColor(state.styleConfig?.ocean?.fillColor);
-    }
+    const hadPresentationSnapshot = !!state.scenarioPresentationStyleBeforeActivate;
     if (nextOverride) {
-      updateScenarioStyleDefaults(nextOverride, "scenario-style-defaults-activate");
-    } else if (previousOverride && state.scenarioOceanFillBeforeActivate !== null) {
+      const baselineSnapshot = cloneScenarioStyleDefaultsSnapshot(nextOverride);
+      state.scenarioPresentationStyleBeforeActivate = baselineSnapshot;
+      if (!hadPresentationSnapshot) {
+        state.scenarioOceanStyleBeforeActivate = {
+          ...(state.styleConfig?.ocean || {}),
+        };
+      }
+      if (state.scenarioOceanFillBeforeActivate === null) {
+        state.scenarioOceanFillBeforeActivate = normalizeScenarioOceanFillColor(state.styleConfig?.ocean?.fillColor);
+      }
       updateScenarioStyleDefaults(
-        state.scenarioPresentationStyleBeforeActivate || { ocean: { fillColor: state.scenarioOceanFillBeforeActivate } },
+        mergeScenarioStyleDefaultsWithBaseline(nextOverride, baselineSnapshot),
+        "scenario-style-defaults-activate"
+      );
+    } else if (state.scenarioPresentationStyleBeforeActivate) {
+      updateScenarioStyleDefaults(
+        state.scenarioPresentationStyleBeforeActivate
+          || { ocean: { fillColor: state.scenarioOceanFillBeforeActivate } },
         "scenario-style-defaults-restore-baseline"
       );
     }

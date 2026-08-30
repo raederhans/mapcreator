@@ -267,6 +267,8 @@ function createViolation(code, details = {}) {
   };
 }
 
+// 路径分类只为通配键和诊断提供迁移归属；具体未注册键仍由
+// resolveStateWriterFindingAuthority 标成 unknown，不能借此获得写权限。
 export function classifyStateWriterFallbackAuthority(relativePath = "") {
   const normalizedPath = String(relativePath || "").replaceAll("\\", "/");
   if (
@@ -556,6 +558,8 @@ function flattenBindingGrants(binding = {}) {
   };
 }
 
+// 新策略优先用源代码指纹稳定匹配；旧策略缺少指纹时才退回行列坐标，
+// 这样插入无关代码不会自动扩大已有授权，同时保留旧快照可读性。
 function siteFingerprintMatches(site, finding) {
   const expected = String(site?.sourceFingerprint || "").trim();
   const actual = String(finding?.sourceFingerprint || "").trim();
@@ -2710,6 +2714,8 @@ export function discoverGlobalStateImportBindings(
     }));
 }
 
+// 一次快照校验同时对齐 schema、历史 allowlist、当前扫描结果和
+// caller-to-action ledger，调用方应把完整 violations 视为同一准入结果。
 export function validateStateWriterPolicySnapshot({
   policy = {},
   legacyAllowlistPaths = [],
@@ -3360,6 +3366,8 @@ export function validateStateWriterPolicySnapshot({
   };
 }
 
+// 报告并列呈现“目录登记”与真实 runtime facade；两侧差集用于发现
+// 新状态漏登记或已移除状态仍残留在权威目录中的漂移。
 export async function buildDefaultStateOwnershipReport({
   additionalFactoryGroups = [],
   additionalExplicitKeys = [],

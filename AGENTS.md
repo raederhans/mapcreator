@@ -1,100 +1,37 @@
-# Project Agent Rules
+# Mapcreator 项目规则
 
-## Browser Inspection First
-When the user asks any of the following (or equivalent intent), use Playwright MCP to inspect running localhost pages before proposing code changes:
-- "use browser inspection"
-- "open the page yourself"
-- "my description is unclear"
-- "check both scrolling and navigation"
-- "用浏览器检视"
-- "你自己打开页面看看"
-- "我描述不清楚"
-- "滚动和跳转都要检查"
+## 范围与所有权
 
-## Mode Decision Rules
-Traversal mode for `ops/browser-mcp/run-smoke-browser-inspection.sh`:
-1. Default: `auto`.
-2. If user explicitly asks full sweep (for example "遍历所有版块", "全量巡检", "scan all sections"), use `--mode full`.
-3. If user only asks general inspection, use `--mode quick`.
-4. In `auto`, run quick first and auto-upgrade to full when profile upgrade conditions are met.
+- 遵循全局规则，并保留用户、其他 agent 和其他 worktree 的未归属改动。
+- 改动保持在当前请求涉及的模块；优先现有项目脚本、测试入口和实现模式。
+- `data/` 下的改动同时遵循最近的 `data/AGENTS.md`。
 
-Configuration source of truth:
-- `ops/browser-mcp/inspection-profile.toml`
+## 浏览器检查
 
-## Budget Guardrails
-Respect profile budgets and stop early when budget is exhausted:
-- Quick budget: max sections/screenshots/runtime from `[budgets.quick]`
-- Full budget: max sections/screenshots/runtime from `[budgets.full]`
+- 用户明确要求浏览器检视，或 UI 行为无法通过代码和目标测试可靠证明时，使用 Playwright 检查 localhost 页面。
+- 一般检查使用 quick 模式；只有用户要求全量巡检或问题确实跨越全部版块时使用 full 模式。
+- 浏览器巡检配置以 `ops/browser-mcp/inspection-profile.toml` 为准，并遵守其中的时间、版块和截图预算。
+- 优先报告可复现的控制台错误、网络失败和行为问题；截图只作为确有帮助的辅助证据。
+- 除非用户明确要求，浏览器访问范围保持在 localhost。
 
-If budget causes incomplete coverage, report uncovered sections explicitly.
+## 运行时输出
 
-## Required Evidence Order
-When returning findings, prioritize output in this order:
-1. Console errors and warnings.
-2. Network failures and 4xx/5xx clues.
-3. Key screenshot paths under `.runtime/browser/mcp-artifacts/`.
-4. Reproduction steps.
-5. Minimal patch proposal.
+- 所有一次性运行输出放在 `.runtime/` 下。
+- 浏览器证据放在 `.runtime/browser/`，Playwright 输出放在 `.runtime/tests/playwright/`，生成报告放在 `.runtime/reports/generated/`，临时缓存放在 `.runtime/tmp/` 或 `.runtime/python/pycache/`。
+- 不在仓库根目录写入临时截图、日志、缓存或生成报告。
 
-## Scope Constraint
-Prefer localhost-only browsing for this project unless the user explicitly asks otherwise.
+## 验证
 
-## Runtime Output Policy
-- Use `.runtime/` as the only root for disposable runtime outputs.
-- Put browser inspection evidence under `.runtime/browser/`.
-- Put Playwright test outputs under `.runtime/tests/playwright/`.
-- Put generated reports under `.runtime/reports/generated/`.
-- Put temporary caches and scratch outputs under `.runtime/tmp/` or `.runtime/python/pycache/`.
-- Do not write temporary artifacts, caches, screenshots, logs, or generated reports directly under the repo root.
+- 文档、注释和不参与执行或解析的文本变更无需运行项目测试。
+- 隔离的行为变更默认运行一个最相关的目标测试或检查。
+- UI 运行时行为在必要时运行一个聚焦的浏览器或 Playwright 检查。
+- 共享契约、跨模块、数据、性能、构建、dist 或发布路径发生变化时，再扩大到相应的项目标准检查。
+- `test:adaptive`、supervisor、`verify:core`、`verify:pr`、nightly、release 和全量浏览器检查只用于验证框架自身改动、相关高风险路径、CI / 发布任务，或用户明确要求的场景。
+- bug 已复现、断言稳定且具有实际复发风险时，新增或更新回归测试。
+- 检查已充分证明当前声明后停止；不重复未受新改动影响的检查，不为普通改动生成完整证据包。
+- 不扩大 console、timeout 或 route allowlist 来掩盖真实失败。
 
-## SF-ATS Verification Contract
+## 汇报
 
-SF-ATS is the Scenario Forge Adaptive Test Supervisor contract for coding agents. Follow it for every code or test change.
-
-1. Identify touched Scenario Forge domains before edits and re-check the touched domains after edits.
-2. Run or dry-run adaptive selection before claiming completion.
-3. Run child-safe tests automatically when they match the touched domains and local dependencies are available.
-4. Reserve explicit lane ownership before running main-thread Playwright, browser, perf, dist, scenario-data, heavy-geo, or `.runtime` output-locking checks.
-5. Treat frontend visual impression as supporting context; completion evidence must come from deterministic checks.
-6. Prefer deterministic assertions, structured artifacts, Playwright traces, screenshots, failure-context files, runtime counters, scenario contract reports, generated supervisor reports, or CI artifacts as evidence.
-7. Add or update regression coverage for every real bug fix.
-8. If selector routing leaves a production file unmatched, add route coverage or document why the file is allowed to be unmatched.
-9. Final responses from coding agents must list files changed, commands run, exit status, artifacts written, checks intentionally skipped, main-thread or CI-only checks not run, route gaps found, regression coverage added or updated, and remaining risk.
-10. Do not broaden console allowlists, timeout allowlists, or route allowlists merely to make a failing check pass.
-
-# --- talk-normal BEGIN ---
-<!-- talk-normal 0.6.2 -->
-
-Be direct and informative. No filler, no fluff, but give enough to be useful.
-
-Your single hardest constraint: prefer direct positive claims. Do not use negation-based contrastive phrasing in any language or position — neither "reject then correct" (不是X，而是Y) nor "correct then reject" (X，而不是Y). If you catch yourself writing a sentence where a negative adverb sets up or follows a positive claim, restructure and state only the positive.
-
-Examples:
-BAD:  真正的创新者不是"有创意的人"，而是五种特质同时拉满的人
-GOOD: 真正的创新者是五种特质同时拉满的人
-
-BAD:  真正的创新者是五种特质同时拉满的人，而不是单纯"聪明"的人
-GOOD: 真正的创新者是五种特质同时拉满的人
-
-BAD:  这更像创始人筛选框架，不是交易信号
-GOOD: 这是一个创始人筛选框架
-
-BAD:  It's not about intelligence, it's about taste
-GOOD: Taste is what matters
-
-Rules:
-- Lead with the answer, then add context only if it genuinely helps
-- Do not use negation-based contrastive phrasing in any position. This covers any sentence structure where a negative adverb rejects an alternative to set up or append to a positive claim: in any order ("reject then correct" or "correct then reject"), chained ("不是A，不是B，而是C"), symmetric ("适合X，不适合Y"), or with or without an explicit "but / 而 / but rather" conjunction. Just state the positive claim directly. If a genuine distinction needs both sides, name them as parallel positive clauses. Narrow exception: technical statements about necessary or sufficient conditions in logic, math, or formal proofs.
-- End with a concrete recommendation or next step when relevant. Do not use summary-stamp closings — any closing phrase or label that announces "here comes my one-line summary" before delivering it. This covers "In conclusion", "In summary", "Hope this helps", "Feel free to ask", "一句话总结", "一句话落地", "一句话讲", "一句话概括", "一句话说", "一句话收尾", "总结一下", "简而言之", "概括来说", "总而言之", and any structural variant like "一句话X：" or "X一下：" that labels a summary before delivering it. If you have a final punchy claim, just state it as the last sentence without a summary label.
-- Kill all filler: "I'd be happy to", "Great question", "It's worth noting", "Certainly", "Of course", "Let me break this down", "首先我们需要", "值得注意的是", "综上所述", "让我们一起来看看"
-- Never restate the question
-- Yes/no questions: answer first, one sentence of reasoning
-- Comparisons: give your recommendation with brief reasoning, not a balanced essay
-- Code: give the code + usage example if non-trivial. No "Certainly! Here is..."
-- Explanations: 3-5 sentences max for conceptual questions. Cover the essence, not every subtopic. If the user wants more, they will ask.
-- Use structure (numbered steps, bullets) only when the content has natural sequential or parallel structure. Do not use bullets as decoration.
-- Match depth to complexity. Simple question = short answer. Complex question = structured but still tight.
-- Do not end with hypothetical follow-up offers or conditional next-step menus. This includes "If you want, I can also...", "如果你愿意，我还可以...", "If you tell me...", "如果你告诉我...", "如果你说X，我就Y", "我下一步可以...", "If you'd like, my next step could be...". Do not stage menus where the user has to say a magic phrase to unlock the next action. Answer what was asked, give the recommendation, stop. If a real next action is needed, just take it or name it directly without the conditional wrapper.
-- Do not restate the same point in "plain language" or "in human terms" after already explaining it. Say it once clearly. No "翻成人话", "in other words", "简单来说" rewording blocks.
-- When listing pros/cons or comparing options: max 3-4 points per side, pick the most important ones
-# --- talk-normal END ---
+- 最终说明改动结果、涉及文件、实际运行的检查及重要验证缺口。
+- 只有确实生成并与结论相关时才列出 artifact。

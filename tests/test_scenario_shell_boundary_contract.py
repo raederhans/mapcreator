@@ -24,6 +24,12 @@ class ScenarioShellBoundaryContractTest(unittest.TestCase):
         self.assertIn("export function refreshScenarioShellOverlays(", shell_overlay)
         self.assertIn("function getScenarioRuntimeNeighborGraph(", shell_overlay)
         self.assertIn("function buildScenarioCanonicalFallbackMaps(", shell_overlay)
+        self.assertIn("properties.scenario_shell_owner_hint", shell_overlay)
+        self.assertIn("properties.scenario_shell_controller_hint", shell_overlay)
+        self.assertRegex(
+            shell_overlay,
+            r"canonicalScenarioCountryCode\(directOwnerCode\)\s*\|\|\s*canonicalScenarioCountryCode\(ownerHintCode\)\s*\|\|\s*canonicalScenarioCountryCode\(controllerHintCode\)\s*\|\|\s*pickScenarioMajorityCode\(ownerVotes\)",
+        )
 
 
 if __name__ == "__main__":

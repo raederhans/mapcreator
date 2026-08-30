@@ -175,6 +175,7 @@ test("@dev dev workspace country save and locale save success flush through rend
         ok: true,
         savedAt: "2026-03-30T12:05:00Z",
         filePath: "/tmp/geo_locale_patch.json",
+        publishedPath: "/__test/dev-workspace-geo-locale.json",
       }),
     });
   });

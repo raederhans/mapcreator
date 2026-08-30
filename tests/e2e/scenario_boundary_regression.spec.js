@@ -117,7 +117,6 @@ async function setZoomPercent(page, percent) {
 async function readBoundaryRuntime(page) {
   return page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    const helperPrefixes = ["RU_ARCTIC_FB_", "ATLSHL_", "ATLWLD_"];
     const countHelpers = (collection) => {
       const features = Array.isArray(collection?.features) ? collection.features : [];
       return features.filter((feature, index) => {
@@ -126,13 +125,17 @@ async function readBoundaryRuntime(page) {
         const helperKind = String(props.scenario_helper_kind || "").trim().toLowerCase();
         const geometryRole = String(props.atl_geometry_role || "").trim().toLowerCase();
         const joinMode = String(props.atl_join_mode || "").trim().toLowerCase();
+        const isFieldDrivenInteractive = !!(props.atl_render_layer || props.atl_color_rule)
+          && props.atl_interactive === true;
         return helperKind === "shell_fallback"
-          || helperPrefixes.some((prefix) => id.startsWith(prefix))
-          || geometryRole === "shore_seal"
-          || (geometryRole === "sea_completion" && props.atl_render_layer !== "water")
-          || geometryRole === "donor_sea"
-          || joinMode === "gap_fill"
-          || (joinMode === "boolean_weld" && !(id.startsWith("ATLISL_") && geometryRole === "donor_island"));
+          || id.startsWith("RU_ARCTIC_FB_")
+          || (!isFieldDrivenInteractive && (
+            geometryRole === "shore_seal"
+            || (geometryRole === "sea_completion" && props.atl_render_layer !== "water")
+            || geometryRole === "donor_sea"
+            || joinMode === "gap_fill"
+            || (joinMode === "boolean_weld" && !(id.startsWith("ATLISL_") && geometryRole === "donor_island"))
+          ));
       }).length;
     };
 
@@ -208,7 +211,10 @@ test("scenario boundary regressions stay fixed", async ({ page }) => {
   await waitForScenarioUiReady(page);
   await waitForAppInteractive(page);
   await ensureScenario(page, "tno_1962");
-  await setZoomPercent(page, 100);
+  await setZoomPercent(page, 200);
+  await expect.poll(async () => (
+    await readBoundaryRuntime(page)
+  ).localOnlyCountryCount, { timeout: 30_000 }).toBeGreaterThan(0);
 
   const runtimeBefore = await readBoundaryRuntime(page);
   expect(runtimeBefore.activeScenarioId).toBe("tno_1962");

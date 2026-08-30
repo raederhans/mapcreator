@@ -842,6 +842,70 @@ function initDevWorkspace() {
     districtEditorController?.render({ hasActiveScenario });
 
     selectionOwnershipController?.render({ hasActiveScenario });
+
+    const tagInspectorState = structuredClone(runtimeState.devScenarioTagInspector || {});
+    const tagInspectorThreshold = Math.max(0, Number.parseInt(tagInspectorState.threshold, 10) || 0);
+    const tagInspectorRows = buildLowFeatureTagInspectorRows(tagInspectorThreshold);
+    const currentTagInspectorTag = normalizeScenarioTagInput(tagInspectorState.selectedTag);
+    const highlightedTag = normalizeScenarioTagInput(
+      String(runtimeState.inspectorHighlightCountryCode || "")
+    );
+    const selectedTagInspectorRow = tagInspectorRows.find((entry) => entry.tag === currentTagInspectorTag)
+      || tagInspectorRows[0]
+      || null;
+    if (scenarioTagInspectorTitle) {
+      scenarioTagInspectorTitle.textContent = hasActiveScenario
+        ? String(runtimeState.activeScenarioManifest?.display_name || runtimeState.activeScenarioId || "")
+        : ui("No active scenario");
+    }
+    if (scenarioTagInspectorHint) {
+      scenarioTagInspectorHint.textContent = hasActiveScenario
+        ? ui("Inspect small non-releasable countries, then choose one to highlight its territories.")
+        : ui("Activate a scenario to inspect small country tags.");
+    }
+    renderMetaRows(scenarioTagInspectorMeta, [
+      [ui("Threshold"), String(tagInspectorThreshold)],
+      [ui("Matches"), String(tagInspectorRows.length)],
+      [ui("Highlighted"), highlightedTag],
+    ].filter(([, value]) => String(value || "").trim()));
+    if (scenarioTagInspectorThresholdInput) {
+      const renderedThreshold = String(tagInspectorThreshold);
+      if (scenarioTagInspectorThresholdInput.value !== renderedThreshold) {
+        scenarioTagInspectorThresholdInput.value = renderedThreshold;
+      }
+      scenarioTagInspectorThresholdInput.disabled = !hasActiveScenario;
+    }
+    if (scenarioTagInspectorSelect) {
+      syncSelectOptions(
+        scenarioTagInspectorSelect,
+        tagInspectorRows.map((entry) => ({
+          value: entry.tag,
+          label: `${entry.tag} | ${entry.displayName || entry.nameEn || entry.tag} | ${entry.featureCountLive}`,
+        })),
+        { placeholderLabel: ui("Select country") }
+      );
+      if (scenarioTagInspectorSelect.value !== (selectedTagInspectorRow?.tag || "")) {
+        scenarioTagInspectorSelect.value = selectedTagInspectorRow?.tag || "";
+      }
+      scenarioTagInspectorSelect.disabled = !hasActiveScenario || !tagInspectorRows.length;
+    }
+    renderScenarioTagInspectorDetails(scenarioTagInspectorDetails, selectedTagInspectorRow);
+    const clearTagInspectorHighlightBtn = panel.querySelector("#devScenarioTagInspectorClearHighlightBtn");
+    if (clearTagInspectorHighlightBtn) {
+      clearTagInspectorHighlightBtn.disabled = !hasActiveScenario
+        || !highlightedTag;
+    }
+    if (scenarioTagInspectorStatus) {
+      const statusBits = [];
+      if (selectedTagInspectorRow?.tag) {
+        statusBits.push(`${ui("Selected")}: ${selectedTagInspectorRow.tag}`);
+      }
+      if (highlightedTag) {
+        statusBits.push(`${ui("Highlighted")}: ${highlightedTag}`);
+      }
+      scenarioTagInspectorStatus.textContent = statusBits.join(" | ");
+    }
+
     if (devQuickRebuildBordersBtn) {
       devQuickRebuildBordersBtn.disabled = !runtimeState.dynamicBordersDirty;
     }

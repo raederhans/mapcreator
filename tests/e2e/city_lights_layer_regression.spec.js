@@ -6,7 +6,7 @@ const {
 } = require("./support/playwright-app");
 const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
-const CITY_LIGHTS_BOOT_PATH = '/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1&dev_nocache=1';
+const CITY_LIGHTS_BOOT_PATH = '/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1';
 const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 const IGNORED_NETWORK_PATTERNS = [
   /\/data\/city_aliases\.json$/i,

@@ -583,6 +583,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:renderer-projection-path-owner": "node --test tests/renderer_projection_path_owner_behavior.test.mjs",
     "test:node:renderer-projection-path-lifecycle-inventory": "node --test tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs",
     "test:node:renderer-projection-path-lifecycle": "node --test tests/renderer_projection_path_owner_behavior.test.mjs tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs",
+    "test:node:renderer-projection-contract": "node --test tests/renderer_projection_contract_inventory.test.mjs",
     "test:node:renderer-svg-surface-lifecycle-owner": "node --test tests/renderer_svg_surface_lifecycle_owner_behavior.test.mjs",
     "test:node:renderer-svg-surface-lifecycle-inventory": "node --test tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs",
     "test:node:renderer-svg-surface-lifecycle": "node --test tests/renderer_svg_surface_lifecycle_owner_behavior.test.mjs tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs",
@@ -6984,6 +6985,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/political_raster_worker_client.js",
         "js/core/scenario/lifecycle_runtime.js",
         "js/core/scenario/presentation_ocean_fill_restore.js",
+        "js/core/scenario_shell_overlay.js",
         "js/core/scenario_apply_pipeline.js",
         "js/core/scenario_data_health.js",
         "js/core/scenario_manager.js",
@@ -7070,6 +7072,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/palette_manager.js",
         "js/core/scenario/lifecycle_runtime.js",
         "js/core/scenario/presentation_ocean_fill_restore.js",
+        "js/core/scenario_shell_overlay.js",
         "js/core/scenario_apply_pipeline.js",
         "js/core/scenario_data_health.js",
         "js/core/scenario_manager.js",
@@ -7134,6 +7137,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/political_raster_worker_client.js",
         "js/core/scenario/lifecycle_runtime.js",
         "js/core/scenario/presentation_ocean_fill_restore.js",
+        "js/core/scenario_shell_overlay.js",
         "js/core/scenario_apply_pipeline.js",
         "js/core/scenario_data_health.js",
         "js/core/scenario_manager.js",
@@ -8512,6 +8516,49 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
       "selectorOrder": 344,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "node:test:node:renderer-projection-contract",
+      "commandRef": "test:node:renderer-projection-contract",
+      "sourceRefs": [
+        "tests/renderer_projection_contract_inventory.test.mjs",
+        "tools/verification/renderer_projection_contract.mjs",
+        "js/core/map_renderer.js",
+        "js/core/map_renderer/renderer_runtime_context.js",
+        "js/core/map_renderer/public.js",
+        "js/core/renderer/renderer_projection_path_owner.js",
+        "js/core/renderer/renderer_surface_lifecycle_owner.js",
+        "js/core/renderer/renderer_surface_host.js",
+        "js/core/renderer/projected_geometry_bounds_owner.js",
+        "js/core/renderer/viewport_read_model_owner.js",
+        "docs/active/renderer-projection-path-lifecycle-preflight-20260627.md",
+        "package.json"
+      ],
+      "ownerHints": [
+        "renderer-runtime"
+      ],
+      "domains": [
+        "renderer-runtime"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": null,
+      "selectorOrder": 389,
       "verification": null,
       "selector": {}
     },
@@ -10219,6 +10266,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/political_raster_worker_client.js",
         "js/core/scenario/lifecycle_runtime.js",
         "js/core/scenario/presentation_ocean_fill_restore.js",
+        "js/core/scenario_shell_overlay.js",
         "js/core/scenario_apply_pipeline.js",
         "js/core/scenario_data_health.js",
         "js/core/scenario_manager.js",

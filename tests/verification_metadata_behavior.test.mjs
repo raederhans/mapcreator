@@ -48,13 +48,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 340);
-  assert.equal(summary.contributorRecords, 438);
+  assert.equal(summary.packageScriptCount, 341);
+  assert.equal(summary.contributorRecords, 439);
   assert.equal(summary.verificationRecordProjectionCount, 143);
-  assert.equal(summary.routeProjectionCount, 397);
-  assert.equal(summary.commandCount, 353);
+  assert.equal(summary.routeProjectionCount, 398);
+  assert.equal(summary.commandCount, 354);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 438);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 439);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -79,7 +79,7 @@ test("authored catalog source covers command authority, policies, and every proj
   assert.equal(summary.packageAliasCount, 16);
   assert.equal(summary.prProfileCount, 4);
   assert.equal(summary.nightlyRoleCount, 12);
-  assert.equal(summary.documentationProjectionCount, 48);
+  assert.equal(summary.documentationProjectionCount, 49);
 });
 
 test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
@@ -1497,6 +1497,7 @@ test("renderer runtime context projection and viewport files route to renderer o
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-projection-viewport-context-boundary"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-projection-path-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-projection-contract"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-read-model-owner"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-command-owner"));
 });
