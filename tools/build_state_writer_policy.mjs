@@ -373,6 +373,8 @@ function stableSiteFingerprint(site = {}) {
     ].join(":");
 }
 
+// 把 production writer 的既有授权投影成排序后的语义多重集，供后续阶段
+// 做“只能收窄”的差分；测试面与重复 binding 不进入冻结基线。
 export function buildLegacyStateWriterSemanticAuthority(
   writers = [],
 ) {
@@ -853,6 +855,8 @@ function validateDerivedAliasTaintBaseline(
   return violations;
 }
 
+// 冻结 revision 中本来不存在的文件返回 null；已确认存在却读取失败时
+// 抛出带路径和基准 SHA 的错误，避免把仓库故障解释为新增文件。
 function defaultReadSourceAtRevision(sourceBaseSha, relativePath) {
   const revisionPath = `${sourceBaseSha}:${relativePath}`;
   try {
@@ -4287,6 +4291,8 @@ function isBatchJavaScriptParseFailure(inventory) {
     );
 }
 
+// 同一源码只解析一次，再把共享扫描结果投影回每个 binding；语法失败也
+// 只生成一份文件级证据，避免 binding 数量放大同一个解析错误。
 export function scanStateWriterBindingInventoriesBatch(
   source,
   relativePath,
@@ -5227,6 +5233,8 @@ function summarizeWriterClassification(bindings) {
   };
 }
 
+// P4.0 冻结基线后，各阶段只能基于 previousPolicy 递进生成；显式刷新
+// 被限制在 P4.0，防止维护命令悄悄重定义历史允许面。
 export async function buildStateWriterPolicySnapshot({
   baseSha = "",
   generatedAt = "",
@@ -5710,6 +5718,8 @@ function policyBindingSignatures(policy) {
   return signatures;
 }
 
+// 先以稳定 binding signature 对齐当前发现与策略记录，再扫描已登记项；
+// compatibility-only 入口由专用合同管理，不进入生产 mutation inventory。
 export async function scanStateWriterPolicySnapshot(policy, {
   repositoryScanCache = null,
 } = {}) {
