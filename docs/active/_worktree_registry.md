@@ -1,5 +1,16 @@
 # Worktree Registry
 
+## Main convergence and completed-line cleanup — 2026-08-30
+
+- Published implementation checkpoint: PR #107 merged the completed P4 and SC continuation into protected `main` as `2b586b3240fee690b2f1e882004f16221f4ac7bf`. Before this documentation-only closeout, local `main`, `origin/main`, and the live remote ref were exactly equal at that SHA.
+- Verification: local metadata passed 53/53, the paired control-plane suite passed 134/134, sample-project contracts passed 18/18, canonical/retained shadow comparison was equal with zero spawn and no mismatches, the selector schema covered 397 routes, and the combined Pages/P4 adaptive dry-run had zero unmatched files and zero route gaps. PR #107 then passed all 10 reported checks, including required PR verification, three strict scenario jobs, transport, smoke, demo, and the 15m28s perf gate.
+- Worktree cleanup: 15 completed registered worktrees were removed after exact-path, clean-state, branch/HEAD, ancestry, patch-equivalence, or exact-tree checks. The temporary clean closeout checkout and the protected desktop checkout are the only registered worktrees at this record; the closeout checkout is removed after this record reaches `main`.
+- Windows residual boundary: `8750\mapcreator`, `ce97\mapcreator`, and `p4-nightly-m6-pages-footprint-20260829\mapcreator` remain only as empty host directories because Windows retained directory handles during removal. They contain zero entries, no `.git` metadata, and no worktree registration; they are not source or recovery authorities.
+- Branch cleanup: 36 completed local branches were deleted after recovery-ref and coverage checks. Twenty completed remote measurement/SC-v2 branches were deleted atomically with per-ref exact-SHA leases after a fresh fetch, exact `main` equality, ancestry proof, and confirmation that no open PR referenced them.
+- Recovery and retention: 37 local completion tips remain under `refs/archive/worktrees/20260830/*`, and the 20 deleted remote tips remain under `refs/archive/remotes/20260830/*`. Thirteen independent unmerged local branches plus `codex/preserved-main-wip-20260823` are deliberately retained.
+- Parent WIP protection: `C:\Users\raede\Desktop\dev\mapcreator` remains on `codex/preserved-main-wip-20260823@9869698da5331e9afcc961f42b4666469abe6c46` with its 20 tracked modifications untouched.
+- Authority boundary: this closeout performs Git integration and cleanup only. It does not deploy, release, retire tracked `dist`, retire legacy projection surfaces, rewrite history, or change branch protection.
+
 ## P4 authority and Nightly topology execution — 2026-08-28
 
 - Integration worktree: `C:\Users\raede\.codex\worktrees\p4-nightly-topology-20260828\mapcreator`, branch `codex/p4-nightly-topology-20260828`, frozen base `origin/main@aa57f7ab8a5c2fd8329c23dadc4b97575992d679`.
