@@ -11142,6 +11142,41 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
+      "id": "direct:transport-capability-maturity-projection",
+      "commandRef": "node --test tests/transport_capability_maturity_projection_behavior.test.mjs",
+      "sourceRefs": [
+        "data/transport_layers/japan_road/manifest.json",
+        "js/core/transport_capability_registry.js",
+        "js/ui/transport_workbench_family_registry.js",
+        "tests/transport_capability_maturity_projection_behavior.test.mjs"
+      ],
+      "ownerHints": [
+        "transport-workbench"
+      ],
+      "domains": [
+        "transport-workbench"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 394,
+      "verification": null,
+      "selector": {}
+    },
+    {
       "id": "node:test:node:transport-workbench-controller",
       "commandRef": "test:node:transport-workbench-controller",
       "sourceRefs": [
@@ -13801,9 +13836,45 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
-      "id": "direct:tno-startup-support-output-identity",
-      "commandRef": "python -m unittest tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_reuses_matching_output_identity tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_same_length_content_drift tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_missing_output tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_legacy_signature_rebuilds_then_reuses -q",
+      "id": "direct:content-addressed-artifact-cache",
+      "commandRef": "python -m unittest tests.test_content_addressed_artifact_cache tests.test_scenario_build_session -q",
       "sourceRefs": [
+        "map_builder/content_addressed_artifact_cache.py",
+        "map_builder/scenario_build_session.py",
+        "tests/test_content_addressed_artifact_cache.py",
+        "tests/test_scenario_build_session.py"
+      ],
+      "ownerHints": [
+        "scenario-builder"
+      ],
+      "domains": [
+        "scenario-build"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 393,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "direct:tno-startup-support-output-identity",
+      "commandRef": "python -m unittest tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_build_startup_support_stage_admits_and_records_content_addressed_identity tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_restores_matching_content_addressed_artifact tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_rollback_failure_preserves_backup_and_raises_fatal_error -q",
+      "sourceRefs": [
+        "map_builder/content_addressed_artifact_cache.py",
         "tests/test_tno_bundle_builder.py",
         "tools/patch_tno_1962_bundle.py"
       ],
@@ -13816,7 +13887,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "tiers": [
         "contract"
       ],
-      "cost": "contract",
+      "cost": "fast",
       "resourceLocks": [],
       "executionOwners": [
         "child-safe"

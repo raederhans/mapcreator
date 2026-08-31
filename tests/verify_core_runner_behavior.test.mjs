@@ -2545,7 +2545,7 @@ test("local projection treats selector coverage as fallback for exact indivisibl
   }
 });
 
-test("local projection selects the exact startup support identity contract without promoting heavy geo", () => {
+test("local projection selects the Stage C startup support sentinels without promoting heavy geo", () => {
   const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
   const selectorRoutes = buildRouteIndex();
   const binding = prepareRepositoryVerificationCatalogBinding({
@@ -2560,10 +2560,9 @@ test("local projection selects the exact startup support identity contract witho
     "tools/patch_tno_1962_bundle.py",
   ];
   const methods = [
-    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_reuses_matching_output_identity",
-    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_same_length_content_drift",
-    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_missing_output",
-    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_legacy_signature_rebuilds_then_reuses",
+    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_build_startup_support_stage_admits_and_records_content_addressed_identity",
+    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_restores_matching_content_addressed_artifact",
+    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_rollback_failure_preserves_backup_and_raises_fatal_error",
   ];
   const expectedCommand = ["python", "-m", "unittest", ...methods, "-q"].join(" ");
   const raw = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
@@ -2594,6 +2593,52 @@ test("local projection selects the exact startup support identity contract witho
     methods.map((method) => `python-unittest:${process.platform === "win32" ? method.toLowerCase() : method}`).sort(),
   );
   assert.equal(plan.executionCommands.length, 1);
+  assert.equal(adaptivePlanningExitCode(projected, plan), 0);
+});
+
+test("local projection keeps the combined Stage C change set inside the edit budget", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+  });
+  const changedFiles = [
+    "map_builder/content_addressed_artifact_cache.py",
+    "map_builder/scenario_build_session.py",
+    "tools/patch_tno_1962_bundle.py",
+    "tests/test_content_addressed_artifact_cache.py",
+    "tests/test_scenario_build_session.py",
+    "tests/test_tno_bundle_builder.py",
+    "js/core/transport_capability_registry.js",
+    "tests/transport_capability_maturity_projection_behavior.test.mjs",
+  ];
+  const raw = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
+    entrypoint: "edit",
+    routeAuthority: binding.preparedCatalog.authority,
+  });
+  const projected = bindSelectorPrCost(bindSelectionToPreparedCatalog(constrainAdaptiveEntrypointSelection(raw, "edit", {
+    preparedCatalog: binding.preparedCatalog,
+  }), binding.preparedCatalog));
+  const plan = applyLocalEntrypointExecutionBudget(buildExecutionPlan(projected, {
+    packageScripts,
+    preparedCatalog: binding.preparedCatalog,
+  }), "edit", { preparedCatalog: binding.preparedCatalog });
+
+  assert.deepEqual(projected.unmatchedChangedFiles, []);
+  assert.deepEqual(projected.localEntrypointRouteGaps, []);
+  assert.equal(projected.localLeafEquivalence.status, "equivalent");
+  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef).sort(), [
+    "node --test tests/transport_capability_maturity_projection_behavior.test.mjs",
+    "python -m unittest tests.test_content_addressed_artifact_cache tests.test_scenario_build_session -q",
+    "python -m unittest tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_build_startup_support_stage_admits_and_records_content_addressed_identity tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_restores_matching_content_addressed_artifact tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_rollback_failure_preserves_backup_and_raises_fatal_error -q",
+  ].sort());
+  assert.deepEqual(plan.routeGaps, []);
+  assert.equal(plan.selectedLeaves.length, 6);
+  assert.equal(plan.executionCommands.length, 3);
   assert.equal(adaptivePlanningExitCode(projected, plan), 0);
 });
 
