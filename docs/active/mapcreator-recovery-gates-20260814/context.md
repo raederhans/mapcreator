@@ -86,6 +86,7 @@
 
 - Entry identity：Stage C 原始进入身份为 `main@2bd9493f9f93e19689b6865b0822160cd787b171`；共同 baseline amendment 由 PR #115 合并为 `9bf4bc135dd8a23b2226c7dbf6d312a2ffd0ad76`，当前集成分支从该 SHA 开始。
 - Stage A 已由 PR #112 以 merge commit `c346eb708e8868396b0ae8c63f8173d1880c9498` 收口；Stage B 已由 PR #113 以 merge commit `46cd2d9bae9564a9ebfe55a951226d23943dde9a` 收口；docs closeout PR #114 的 merge commit 为当前 entry identity。
+- Stage C 已由 PR #116 以 merge commit `df1b14fa3cee45b539e1a8d4f7976ec816c765dc` 收口；10 项最终检查全部通过，本地 `main`、`origin/main` 与 live remote 已核对一致。
 - C1 当前事实：`ContentAddressedArtifactCache/v1` 已集成，startup-support 可按完整 content identity admit、lookup、materialize、verify 与 fail-closed restore；session/checkpoint 记录 manifest/tree identity，旧 signature 保留兼容重建路径。
 - C2 当前事实：road maturity projection 已集成；workbench preview、main-map overview、apply bridge 与 Pages `transport-workbench` owner 分别由自己的 evidence surface 决定，缺失、类型错误、family mismatch 与冲突均独立 fail closed。
 - Retirement truth：`pages-tracked-dist` 虽有历史 3/3 green eligibility，authorization 仍为 withheld，且 exact receipt bytes/identity 不可用；`catalog-projection` 仅 1/10。两者本阶段都必须保留。
@@ -94,9 +95,9 @@
 
 | Lane | Owner | Scope | State |
 | --- | --- | --- | --- |
-| Stage C integration | `/root` | task records、Git/index/refs、PR、worktrees、共享验证 | active；local candidate ready |
-| C1 content-addressed artifact | `01a056e9-5666-70c2-b2fe-4146e31ed613` | CAS core、startup-support/session adapter、focused Python tests | completed；candidate `44f34021`，integrated `03fd1267` |
-| C2 road maturity projection | `01a056e9-5684-7740-bc5e-f9a5462101c5` | transport capability maturity resolver、focused Node test | completed；candidate `a7bb1811`，integrated `90ce3ac0` |
+| Stage C integration | `/root` | task records、Git/index/refs、PR、worktrees、共享验证 | completed；PR #116 / `df1b14fa` |
+| C1 content-addressed artifact | `01a056e9-5666-70c2-b2fe-4146e31ed613` | CAS core、startup-support/session adapter、focused Python tests | archived；candidate `44f34021`，integrated `03fd1267` |
+| C2 road maturity projection | `01a056e9-5684-7740-bc5e-f9a5462101c5` | transport capability maturity resolver、focused Node test | archived；candidate `a7bb1811`，integrated `90ce3ac0` |
 | C1 read-only mapper | `/root/stage_c_content_map_v2` | 现有 artifact/cache/session/Pages seam | completed |
 | C2 read-only mapper | `/root/stage_c_maturity_map_v2` | road vertical-module/maturity/Pages owner seam | completed |
 
@@ -109,7 +110,14 @@
 
 ### Stage C next step
 
-由 `/root` 创建 integration PR，等待 required checks 后合并 protected `main`；随后归档原始候选 refs、归档两个 user-visible tasks，并解除两个隔离 worktree。
+Stage C 无剩余执行项。tracked dist、legacy catalog projection 与可信本地单写者边界继续保留；任何共享 cache、retirement 或下一阶段工作都需要新的显式范围与验收契约。
+
+### Stage C closeout receipts
+
+- PR #116 final head `1be2a19e761471063185cc0465711f0f6035d0ee`；10/10 checks PASS，包括 `PR Verify Required` 与远端 `perf-gate` 14m35s。
+- C1 archive ref：`refs/archive/runtime-architecture-reset/c1-content-addressed-artifact-20260831` → `44f34021284dad8523ee08cf34ec2f4032e71df8`。
+- C2 archive ref：`refs/archive/runtime-architecture-reset/c2-road-maturity-20260831` → `a7bb18118d39ebe03c99c0905b6afd4f111d8628`。
+- C1/C2 user-visible tasks 已归档；`866b`、`60cc` worktree 已解除注册；baseline/integration 本地与远端临时分支已删除。
 
 ### Stage C live process ownership
 
