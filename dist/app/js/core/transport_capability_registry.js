@@ -637,3 +637,116 @@ export function resolveTransportOverviewPatchFromWorkbench(
     },
   };
 }
+
+function isTransportCapabilityMaturityRecord(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepFreezeTransportCapabilityMaturity(value) {
+  if (Array.isArray(value)) {
+    value.forEach(deepFreezeTransportCapabilityMaturity);
+  } else if (value && typeof value === "object") {
+    Object.values(value).forEach(deepFreezeTransportCapabilityMaturity);
+  }
+  return Object.freeze(value);
+}
+
+function createTransportRoadMaturityProjection({
+  familyId = "",
+  ready = false,
+  workbenchPreview = { available: false, previewOnly: false },
+  mainMapOverview = { eligible: false, source: "manifest_summary" },
+  applyBridge = { supported: false, source: "manifest_summary" },
+  pagesOwner = { owner: "", readOnlyProjection: true },
+  reasonCodes = [],
+} = {}) {
+  return deepFreezeTransportCapabilityMaturity({
+    familyId,
+    ready,
+    workbenchPreview,
+    mainMapOverview,
+    applyBridge,
+    pagesOwner,
+    reasonCodes: [...reasonCodes],
+  });
+}
+
+// This is deliberately a read-only projection, not a second transport registry.
+// The workbench preview configuration and the manifest summary are separate
+// evidence: road's previewOnly carrier must never imply that its main-map path
+// is immature, and a registry default must never imply that it is ready.
+export function resolveTransportRoadFeatureMaturityProjection({
+  familyId,
+  workbenchPreview,
+  manifestSummary,
+} = {}) {
+  const normalizedFamilyId = typeof familyId === "string" ? familyId.trim().toLowerCase() : "";
+  if (normalizedFamilyId !== "road") {
+    return createTransportRoadMaturityProjection({
+      familyId: normalizedFamilyId,
+      reasonCodes: ["unsupported_family"],
+    });
+  }
+
+  const reasonCodes = [];
+  let previewAvailable = false;
+  let manifestEvidenceValid = false;
+  let mainMapEligible = false;
+  let applyBridgeSupported = false;
+  // road's Pages route is an existing product ownership fact, independent of
+  // whether the optional workbench preview carrier can be validated now.
+  const pagesOwner = { owner: "transport-workbench", readOnlyProjection: true };
+
+  if (workbenchPreview == null) {
+    reasonCodes.push("workbench_preview_missing");
+  } else if (!isTransportCapabilityMaturityRecord(workbenchPreview)) {
+    reasonCodes.push("workbench_preview_invalid_type");
+  } else if (typeof workbenchPreview.familyId !== "string" || workbenchPreview.familyId.trim().toLowerCase() !== "road") {
+    reasonCodes.push("workbench_preview_family_mismatch");
+  } else if (workbenchPreview.previewOnly !== true) {
+    reasonCodes.push("workbench_preview_semantics_invalid");
+  } else {
+    previewAvailable = true;
+  }
+
+  if (manifestSummary == null) {
+    reasonCodes.push("manifest_summary_missing");
+  } else if (!isTransportCapabilityMaturityRecord(manifestSummary)) {
+    reasonCodes.push("manifest_summary_invalid_type");
+  } else if (typeof manifestSummary.family !== "string" || manifestSummary.family.trim().toLowerCase() !== "road") {
+    reasonCodes.push("manifest_family_mismatch");
+  } else if (typeof manifestSummary.mainMapEligible !== "boolean") {
+    reasonCodes.push("manifest_main_map_eligible_invalid");
+  } else if (typeof manifestSummary.apply_bridge_supported !== "boolean") {
+    reasonCodes.push("manifest_apply_bridge_supported_invalid");
+  } else if (manifestSummary.mainMapEligible !== manifestSummary.apply_bridge_supported) {
+    reasonCodes.push("manifest_bridge_eligibility_conflict");
+  } else {
+    manifestEvidenceValid = true;
+    mainMapEligible = manifestSummary.mainMapEligible;
+    applyBridgeSupported = manifestSummary.apply_bridge_supported;
+    if (!mainMapEligible) reasonCodes.push("road_main_map_ineligible");
+    if (!applyBridgeSupported) reasonCodes.push("road_apply_bridge_unsupported");
+  }
+
+  const ready = previewAvailable && manifestEvidenceValid && mainMapEligible && applyBridgeSupported;
+  if (ready) reasonCodes.push("maturity_ready");
+  return createTransportRoadMaturityProjection({
+    familyId: "road",
+    ready,
+    workbenchPreview: {
+      available: previewAvailable,
+      previewOnly: previewAvailable,
+    },
+    mainMapOverview: {
+      eligible: mainMapEligible,
+      source: "manifest_summary",
+    },
+    applyBridge: {
+      supported: applyBridgeSupported,
+      source: "manifest_summary",
+    },
+    pagesOwner,
+    reasonCodes,
+  });
+}

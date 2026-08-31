@@ -84,19 +84,19 @@
 
 本节是 Stage C 的当前执行事实，优先于上方 2026-08-14 的历史 `Current truth`、ownership 与 `Next step`；历史内容保留用于追溯。
 
-- Entry identity：干净的 `main@2bd9493f9f93e19689b6865b0822160cd787b171`，本地 `main`、`origin/main` 与 live remote 在基线检查时一致。
+- Entry identity：Stage C 原始进入身份为 `main@2bd9493f9f93e19689b6865b0822160cd787b171`；共同 baseline amendment 由 PR #115 合并为 `9bf4bc135dd8a23b2226c7dbf6d312a2ffd0ad76`，当前集成分支从该 SHA 开始。
 - Stage A 已由 PR #112 以 merge commit `c346eb708e8868396b0ae8c63f8173d1880c9498` 收口；Stage B 已由 PR #113 以 merge commit `46cd2d9bae9564a9ebfe55a951226d23943dde9a` 收口；docs closeout PR #114 的 merge commit 为当前 entry identity。
-- C1 当前事实：startup-support 已有 `filename + byte_length + sha256` 输出身份和 fail-closed checkpoint reuse，但没有通用对象存储、materialize/restore 或损坏对象验证；Pages admission/shadow 已有 tree/manifest SHA，但没有内容寻址对象层。
-- C2 当前事实：仓库没有通用 feature-maturity registry；transport road 已具备 capability registry、vertical family handler、manifest evidence 与 Pages `transport-workbench` owner，是最窄的真实 maturity projection 切片。
+- C1 当前事实：`ContentAddressedArtifactCache/v1` 已集成，startup-support 可按完整 content identity admit、lookup、materialize、verify 与 fail-closed restore；session/checkpoint 记录 manifest/tree identity，旧 signature 保留兼容重建路径。
+- C2 当前事实：road maturity projection 已集成；workbench preview、main-map overview、apply bridge 与 Pages `transport-workbench` owner 分别由自己的 evidence surface 决定，缺失、类型错误、family mismatch 与冲突均独立 fail closed。
 - Retirement truth：`pages-tracked-dist` 虽有历史 3/3 green eligibility，authorization 仍为 withheld，且 exact receipt bytes/identity 不可用；`catalog-projection` 仅 1/10。两者本阶段都必须保留。
 
 ### Stage C ownership
 
 | Lane | Owner | Scope | State |
 | --- | --- | --- | --- |
-| Stage C integration | `/root` | task records、Git/index/refs、PR、worktrees、共享验证 | active |
-| C1 content-addressed artifact | user-visible Codex task pending | CAS core、startup-support/session adapter、focused Python tests | dispatch pending |
-| C2 road maturity projection | user-visible Codex task pending | transport capability maturity resolver、focused Node test | dispatch pending |
+| Stage C integration | `/root` | task records、Git/index/refs、PR、worktrees、共享验证 | active；local candidate ready |
+| C1 content-addressed artifact | `01a056e9-5666-70c2-b2fe-4146e31ed613` | CAS core、startup-support/session adapter、focused Python tests | completed；candidate `44f34021`，integrated `03fd1267` |
+| C2 road maturity projection | `01a056e9-5684-7740-bc5e-f9a5462101c5` | transport capability maturity resolver、focused Node test | completed；candidate `a7bb1811`，integrated `90ce3ac0` |
 | C1 read-only mapper | `/root/stage_c_content_map_v2` | 现有 artifact/cache/session/Pages seam | completed |
 | C2 read-only mapper | `/root/stage_c_maturity_map_v2` | road vertical-module/maturity/Pages owner seam | completed |
 
@@ -109,4 +109,10 @@
 
 ### Stage C next step
 
-提交本 amendment 形成共同 baseline；创建 C1/C2 隔离 worktree tasks，监督 focused implementation 与验证，然后由 `/root` 串行审查、集成和 protected-main PR 收口。
+由 `/root` 创建 integration PR，等待 required checks 后合并 protected `main`；随后归档原始候选 refs、归档两个 user-visible tasks，并解除两个隔离 worktree。
+
+### Stage C live process ownership
+
+| Process | Owner | Command / cwd / shared outputs | Log | Success / failure / stop | State |
+| --- | --- | --- | --- | --- | --- |
+| Pages/dist regeneration | `/root` | `npm run -s verify:pages-dist`；cwd `C:\Users\raede\Desktop\dev\mapcreator`；共享 `dist/` 与 `.runtime/` | `.runtime/tests/stage-c-pages-dist.log`；stderr `.runtime/tests/stage-c-pages-dist.stderr.log` | builder 913.73 MiB、startup shell 62/62、landing assets 10/10、showcase view 20/20；source/dist no-index diff clean | released / PASS |

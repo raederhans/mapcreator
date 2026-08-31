@@ -2918,6 +2918,50 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 refresh_named_water_snapshot=False,
             )
 
+    def test_build_startup_support_stage_admits_and_records_content_addressed_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            scenario_dir = root / "scenario"
+            checkpoint_dir = root / "checkpoint"
+            scenario_dir.mkdir()
+            checkpoint_dir.mkdir()
+
+            def write_support_outputs(**kwargs) -> None:
+                kwargs["runtime_bootstrap_output_path"].write_bytes(b"runtime")
+                kwargs["startup_locales_output_path"].write_bytes(b"locales")
+                kwargs["startup_geo_aliases_output_path"].write_bytes(b"aliases")
+
+            with (
+                patch.object(tno_bundle, "_scenario_build_session_lock", return_value=nullcontext()),
+                patch.object(tno_bundle, "_checkpoint_build_lock", return_value=nullcontext()),
+                patch.object(tno_bundle, "ensure_runtime_topology_checkpoints"),
+                patch.object(tno_bundle, "validate_geo_locale_checkpoint"),
+                patch.object(tno_bundle, "build_startup_bootstrap_assets", side_effect=write_support_outputs),
+                patch.object(tno_bundle, "_record_checkpoint_stage_outputs") as record_outputs_mock,
+            ):
+                tno_bundle.build_startup_support_assets_stage(scenario_dir, checkpoint_dir)
+
+            record_kwargs = record_outputs_mock.call_args.kwargs
+            artifact_identity = record_kwargs["stage_artifact"]
+            stage_signature = record_kwargs["stage_signature"]
+            self.assertEqual(stage_signature["artifact_identity"], artifact_identity)
+            self.assertRegex(artifact_identity["manifestDigest"], r"^sha256:[0-9a-f]{64}$")
+            self.assertRegex(artifact_identity["treeDigest"], r"^sha256:[0-9a-f]{64}$")
+            self.assertEqual(
+                artifact_identity["sourceIdentity"],
+                f"sha256:{stage_signature['signature']}",
+            )
+            self.assertEqual(
+                [entry["path"] for entry in artifact_identity["files"]],
+                sorted(
+                    [
+                        tno_bundle.CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME,
+                        tno_bundle.CHECKPOINT_STARTUP_LOCALES_FILENAME,
+                        tno_bundle.CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+                    ]
+                ),
+            )
+
     def test_write_bundle_stage_no_longer_rebuilds_chunk_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
@@ -3530,6 +3574,227 @@ class TnoBundleBuilderTest(unittest.TestCase):
                         checkpoint_dir=checkpoint_dir,
                     )
                 )
+
+    def test_startup_support_stage_restores_matching_content_addressed_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            artifact_identity = tno_bundle._admit_startup_support_artifact(
+                checkpoint_dir,
+                stage_signature=entry["signature"],
+            )
+            entry["artifact_identity"] = artifact_identity
+            output_path = checkpoint_dir / tno_bundle.CHECKPOINT_STARTUP_LOCALES_FILENAME
+            output_path.write_bytes(b"drifted")
+
+            with (
+                patch.object(tno_bundle, "load_stage_signature", return_value=entry),
+                patch.object(tno_bundle, "load_stage_artifact", return_value=artifact_identity),
+            ):
+                self.assertTrue(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+            self.assertEqual(output_path.read_bytes(), b"aa")
+
+    def test_startup_support_stage_rejects_damaged_cache_without_changing_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            artifact_identity = tno_bundle._admit_startup_support_artifact(
+                checkpoint_dir,
+                stage_signature=entry["signature"],
+            )
+            entry["artifact_identity"] = artifact_identity
+            output_path = checkpoint_dir / tno_bundle.CHECKPOINT_STARTUP_LOCALES_FILENAME
+            output_path.write_bytes(b"checkpoint-drift")
+            object_key = next(
+                item["sha256"]
+                for item in artifact_identity["files"]
+                if item["path"] == tno_bundle.CHECKPOINT_STARTUP_LOCALES_FILENAME
+            )
+            tno_bundle._startup_support_cache(checkpoint_dir)._object_path(object_key).write_bytes(b"cache-drift")
+
+            with (
+                patch.object(tno_bundle, "load_stage_signature", return_value=entry),
+                patch.object(tno_bundle, "load_stage_artifact", return_value=artifact_identity),
+            ):
+                self.assertFalse(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+
+            self.assertEqual(output_path.read_bytes(), b"checkpoint-drift")
+
+    def test_startup_support_stage_rejects_manifest_tree_identity_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            artifact_identity = tno_bundle._admit_startup_support_artifact(
+                checkpoint_dir,
+                stage_signature=entry["signature"],
+            )
+            drifted_identity = dict(artifact_identity)
+            drifted_identity["treeDigest"] = f"sha256:{'0' * 64}"
+            entry["artifact_identity"] = drifted_identity
+
+            with (
+                patch.object(tno_bundle, "load_stage_signature", return_value=entry),
+                patch.object(tno_bundle, "load_stage_artifact", return_value=drifted_identity),
+            ):
+                self.assertFalse(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+
+    def test_startup_support_forward_replace_failure_rolls_back_all_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            artifact_identity = tno_bundle._admit_startup_support_artifact(
+                checkpoint_dir,
+                stage_signature=entry["signature"],
+            )
+            entry["artifact_identity"] = artifact_identity
+            filenames = [item["filename"] for item in entry["output_identity"]]
+            for index, filename in enumerate(filenames, start=1):
+                (checkpoint_dir / filename).write_bytes(f"checkpoint-{index}".encode("utf-8"))
+            original_outputs = {
+                filename: (checkpoint_dir / filename).read_bytes()
+                for filename in filenames
+            }
+            forward_count = 0
+
+            def fail_second_forward_replace(source: Path, target: Path) -> None:
+                nonlocal forward_count
+                if Path(source).parent.name == "artifact":
+                    forward_count += 1
+                    if forward_count == 2:
+                        raise OSError("simulated forward replace failure")
+                os.replace(source, target)
+
+            with (
+                patch.object(tno_bundle, "load_stage_signature", return_value=entry),
+                patch.object(tno_bundle, "load_stage_artifact", return_value=artifact_identity),
+                patch.object(
+                    tno_bundle,
+                    "_replace_startup_support_file",
+                    side_effect=fail_second_forward_replace,
+                ),
+            ):
+                self.assertFalse(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+
+            self.assertEqual(
+                {
+                    filename: (checkpoint_dir / filename).read_bytes()
+                    for filename in filenames
+                },
+                original_outputs,
+            )
+
+    def test_startup_support_rollback_failure_preserves_backup_and_raises_fatal_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            artifact_identity = tno_bundle._admit_startup_support_artifact(
+                checkpoint_dir,
+                stage_signature=entry["signature"],
+            )
+            entry["artifact_identity"] = artifact_identity
+            filenames = [item["filename"] for item in entry["output_identity"]]
+            for index, filename in enumerate(filenames, start=1):
+                (checkpoint_dir / filename).write_bytes(f"checkpoint-{index}".encode("utf-8"))
+            original_outputs = {
+                filename: (checkpoint_dir / filename).read_bytes()
+                for filename in filenames
+            }
+            forward_count = 0
+            rollback_failed = False
+
+            def fail_forward_and_rollback_replace(source: Path, target: Path) -> None:
+                nonlocal forward_count, rollback_failed
+                source_path = Path(source)
+                if source_path.parent.name == "artifact":
+                    forward_count += 1
+                    if forward_count == 2:
+                        raise OSError("simulated forward replace failure")
+                elif source_path.parent.name == "rollback" and not rollback_failed:
+                    rollback_failed = True
+                    raise OSError("simulated rollback replace failure")
+                os.replace(source, target)
+
+            with (
+                patch.object(tno_bundle, "load_stage_signature", return_value=entry),
+                patch.object(tno_bundle, "load_stage_artifact", return_value=artifact_identity),
+                patch.object(
+                    tno_bundle,
+                    "_replace_startup_support_file",
+                    side_effect=fail_forward_and_rollback_replace,
+                ),
+                self.assertRaises(tno_bundle.StartupSupportArtifactRecoveryError) as raised,
+            ):
+                tno_bundle._stage_signature_is_current(
+                    tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                    scenario_dir=scenario_dir,
+                    checkpoint_dir=checkpoint_dir,
+                )
+
+            recovery_error = raised.exception
+            self.assertTrue(recovery_error.backup_path.is_dir())
+            self.assertIn(str(recovery_error.backup_path), str(recovery_error))
+            self.assertTrue(recovery_error.rollback_errors)
+            self.assertEqual(
+                {
+                    filename: (checkpoint_dir / filename).read_bytes()
+                    for filename in filenames[1:]
+                },
+                {
+                    filename: original_outputs[filename]
+                    for filename in filenames[1:]
+                },
+            )
+            self.assertEqual(
+                {
+                    filename: (recovery_error.backup_path / filename).read_bytes()
+                    for filename in filenames
+                },
+                original_outputs,
+            )
 
     def _write_startup_support_outputs(self, root: Path) -> tuple[Path, Path]:
         scenario_dir = root / "scenario"

@@ -2,7 +2,7 @@
 
 ## Current status
 
-`RUNTIME_ARCHITECTURE_RESET_STAGE_C_IN_PROGRESS` — 原 Recovery Gates 的 Gate 0、Gate 1、Gate 2，以及 Runtime Architecture Reset v1 的 Stage A、Stage B 已完成。Stage C 以 `main@2bd9493f9f93e19689b6865b0822160cd787b171` 为进入身份，并行执行本地内容寻址 artifact cache 与 transport-road 成熟度投影；主线程负责任务记录、串行集成、Git/refs 和最终验证。原 Gate 3→5 仍是历史路线图，不因本次 Stage C 自动宣称完成。
+`RUNTIME_ARCHITECTURE_RESET_STAGE_C_READY_FOR_REMOTE_GATE` — 原 Recovery Gates 的 Gate 0、Gate 1、Gate 2，以及 Runtime Architecture Reset v1 的 Stage A、Stage B 已完成。Stage C 已完成本地内容寻址 artifact cache、transport-road 成熟度投影、验证路由与 tracked Pages 镜像集成；当前候选等待 protected-main PR required checks。原 Gate 3→5 仍是历史路线图，不因本次 Stage C 自动宣称完成。
 
 ## Checklist
 
@@ -138,9 +138,14 @@ Stage B remaining boundaries: ChangeSet 仍不执行 live apply/undo、不写 hi
 
 - [x] 冻结进入身份 `main@2bd9493f9f93e19689b6865b0822160cd787b171`，确认工作树干净且 `origin/main` 同步。
 - [x] 完成两条只读代码勘察，确定 C1/C2 文件所有权、接口合同、冲突边界和最窄目标测试。
-- [ ] C1：建立 provider-neutral 的本地 `ContentAddressedArtifactCache/v1`，以完整 `sha256:<64 hex>` 对象身份承载 deterministic manifest、admit、lookup 与 fail-closed restore。
-- [ ] C1：将 Stage B 的 startup-support 三文件身份接入 CAS；保留现有 stage signature/provenance，并让 session metadata 记录 manifest/tree digest。任何对象缺失、损坏、身份漂移或 restore 失败都不得改变既有目标目录。
-- [ ] C2：为 transport `road` 建立只读 maturity projection，分别表达 workbench preview、main-map overview、apply bridge 与 Pages product owner；manifest truth 与 `previewOnly` 边界不得折叠为单一 `ready`。
-- [ ] 主线程串行审查并集成 C1/C2，运行各自 focused tests、架构/验证路由检查，并以 protected-main PR 远端检查收口。
+- [x] C1：建立 provider-neutral 的本地 `ContentAddressedArtifactCache/v1`，以完整 `sha256:<64 hex>` 对象身份承载 deterministic manifest、admit、lookup 与 fail-closed restore；集成 commit `03fd1267abf0584a5f8e3ede297450b0bf2056a5`。
+- [x] C1：将 Stage B 的 startup-support 三文件身份接入 CAS；保留现有 stage signature/provenance，并让 session metadata 记录 manifest/tree digest。对象缺失、损坏、身份漂移、forward replace 或 rollback 失败均有确定性合同，致命 rollback 失败保留 durable sibling backup。
+- [x] C2：为 transport `road` 建立只读 maturity projection，分别表达 workbench preview、main-map overview、apply bridge 与 Pages product owner；各 evidence surface 独立 fail closed，集成 commit `90ce3ac008114d438b9783ca615d4d0ed3490722`。
+- [x] 主线程串行审查并集成 C1/C2；C1 功能审查 `ACCEPT`、安全审查 `ACCEPT_WITH_RESIDUAL`，C2 审查 `ACCEPT`。
+- [x] canonical verification 新增两条 direct route，并将本地 TNO 哨兵限定为 admit/restore/fatal-rollback；combined edit change-set 在 3-command / 6-leaf 预算内真实执行 20 tests，shadow equality 与 403-route schema 通过；commit `f7f268c6`。
+- [x] tracked Pages dist 由单一 owner 重建；913.73 MiB，startup shell 62/62、landing assets 10/10、showcase view 20/20，source/dist 字节一致；commit `0eb6be75`。
+- [ ] 创建 protected-main PR，等待 required checks 全绿后合并并核对本地、`origin/main` 与 live remote exact SHA。
 
 Stage C boundaries: CAS 仅限仓库本机 `.runtime` / caller-provided local roots，不发布或恢复共享/远端 cache，不修改浏览器 IndexedDB startup cache；maturity projection 不登记 migration ledger。tracked `dist` 继续保留，legacy catalog projection 继续保留；不做额外性能模拟、浏览器、Nightly、Release、部署或任何未经授权的 retirement。
+
+Stage C residual: 缓存根、objects/manifests 与 prefix 的预置 symlink/reparse 已拒绝，但同权限恶意进程若在 `lstat` 与 path-based I/O 之间并发替换路径组件，仍超出当前“可信本地单写者”威胁模型；未来若扩大为共享或不可信缓存，必须先改为 handle-relative no-follow I/O。

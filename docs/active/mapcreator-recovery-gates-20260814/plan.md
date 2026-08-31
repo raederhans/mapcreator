@@ -122,3 +122,9 @@
 - 不删除 tracked `dist`，不退休 legacy catalog projection，不改变 migration ledger authorization。
 - 不扩展 thematic catalog-only surface，不声称 transport 全 family 已完成 vertical-module migration。
 - 不执行 live apply/undo、产品发布、生产部署或重复前期性能模拟。
+
+### Local execution result
+
+- Stage C baseline amendment 已由 PR #115 合并为 `9bf4bc135dd8a23b2226c7dbf6d312a2ffd0ad76`。
+- C1、C2、canonical verification route 与 tracked Pages mirror 已按独立 commit 集成；本地 focused、shadow、route schema、architecture 与 Pages 合同全部通过。
+- 当前只剩 protected-main PR required checks、merge SHA 核对、候选 refs 归档与两个隔离 worktree/task 清理；远端 gate 完成前不把 Stage C 标记为最终完成。

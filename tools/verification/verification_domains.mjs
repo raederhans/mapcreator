@@ -324,11 +324,13 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       supervisorDomain: entry.domain,
       routeRegistry: true,
     })),
-  // Stage B direct contracts are authored only in the canonical source. Derive
+  // Stage B/C direct contracts are authored only in the canonical source. Derive
   // the retained shadow records from that source.
   ...buildCanonicalRouteIndex()
     .filter((entry) => [
       "direct:tno-startup-support-output-identity",
+      "direct:content-addressed-artifact-cache",
+      "direct:transport-capability-maturity-projection",
       "direct:renderer-render-snapshot-change-set-contracts",
       "python:tests.test_map_renderer_render_snapshot_boundary_contract",
     ].includes(entry.id))
