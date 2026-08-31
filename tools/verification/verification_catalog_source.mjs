@@ -10641,6 +10641,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "sourceRefs": [
         "tests/startup_ready_handoff_behavior.test.mjs",
         "tests/main_startup_ready_handoff_boundary.test.mjs",
+        "js/bootstrap/deferred_ui_bootstrap.js",
         "js/bootstrap/post_ready_scheduler.js",
         "js/bootstrap/startup_ready_handoff.js"
       ],
