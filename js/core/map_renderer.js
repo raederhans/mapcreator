@@ -230,6 +230,7 @@ import { createTransformedFrameCompositorOwner } from "./map_renderer/transforme
 import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
+import { createRenderSnapshotOwner } from "./renderer/render_snapshot.js";
 import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js";
 import { createRendererViewportUpdateOwner } from "./renderer/renderer_viewport_update_owner.js";
 import { createRendererStartupTransactionOwner } from "./renderer/renderer_startup_transaction_owner.js";
@@ -994,6 +995,7 @@ let drawCanvasOrchestrationOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
+let renderSnapshotOwner = null;
 let viewportCommandOwner = null;
 let rendererViewportUpdateOwner = null;
 let rendererStartupTransactionOwner = null;
@@ -2865,6 +2867,23 @@ function getViewportReadModelOwner() {
     },
   });
   return viewportReadModelOwner;
+}
+
+function getRenderSnapshotOwner() {
+  if (renderSnapshotOwner) {
+    return renderSnapshotOwner;
+  }
+  renderSnapshotOwner = createRenderSnapshotOwner({
+    getters: {
+      getSovereignBaseColors: () => runtimeState.sovereignBaseColors,
+      getSovereigntyByFeatureId: () => runtimeState.sovereigntyByFeatureId,
+      getViewportTransform: () => runtimeState.zoomTransform || { x: 0, y: 0, k: 1 },
+      getViewportRenderSignature: () => getViewportReadModelOwner().getViewportRenderSignature(),
+      getProjectionRenderSignature: () => getViewportReadModelOwner().getProjectionRenderSignature(),
+      getViewportGeoBounds: () => getViewportReadModelOwner().getViewportGeoBounds(),
+    },
+  });
+  return renderSnapshotOwner;
 }
 
 function getViewportCommandOwner() {
@@ -19886,6 +19905,10 @@ function getViewportGeoBounds() {
   return getViewportReadModelOwner().getViewportGeoBounds();
 }
 
+function captureRenderSnapshot() {
+  return getRenderSnapshotOwner().captureRenderSnapshot();
+}
+
 function updateMap(transform) {
   return getRendererViewportUpdateOwner().updateMap(transform);
 }
@@ -20361,6 +20384,7 @@ export {
   getEffectiveCityCollection,
   isOpenOceanOverlayActive,
   renderExportPassesToCanvas,
+  captureRenderSnapshot,
 
   // Viewport, diagnostics, and render scheduling facade.
   requestInteractionRender,
