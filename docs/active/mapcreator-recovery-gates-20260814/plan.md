@@ -84,3 +84,41 @@
 - 当前 first-visible 数据来自单次 localhost 诊断；Gate 0 的 3 cold + 3 warm 样本将形成正式比较基线。
 - 现有 active docs 含历史 SHA 和 pending 状态；generated current status 优先表达机器事实。
 - 子代理共享同一工作目录；文件所有权、Git/index/refs 和 live-process 限制对所有子代理生效。
+
+## Runtime Architecture Reset v1 — Stage C amendment (2026-08-31)
+
+### Goal and entry identity
+
+- 从已收口的 `main@2bd9493f9f93e19689b6865b0822160cd787b171` 开始，把 Stage B 的“内容身份”推进为可验证、可恢复的本地内容寻址 artifact 合同。
+- 同时建立一个真实 vertical-module 的成熟度投影，先覆盖 transport `road`，避免把 workbench preview、main-map eligibility、apply bridge 与 Pages owner 混成单一状态。
+- 这是原 Recovery Gates 路线图上的独立执行 amendment；不静默重解释或关闭历史 Gate 3→5。
+
+### Parallel lanes and ownership
+
+1. **C1 — Content-addressed artifact cache + startup-support adapter**
+   - 独占新增 `map_builder/content_addressed_artifact_cache.py` 与对应 focused test。
+   - 可修改 `tools/patch_tno_1962_bundle.py`、`map_builder/scenario_build_session.py`、`tests/test_tno_bundle_builder.py`、`tests/test_scenario_build_session.py`。
+   - 若能保持窄接口，可由同一 owner 为 `tools/pages_artifact_admission.py` 增加只读/admit adapter；不得修改 Pages builder、shadow、workflow、tracked `dist` 或发布路径。
+2. **C2 — Transport-road maturity projection**
+   - 独占 `js/core/transport_capability_registry.js` 与新增 focused Node test；只在必要时读取既有 road manifest 和 family registry。
+   - 状态必须按 surface 分开，且 `mainMapEligible`、`apply_bridge_supported` 来自已加载 manifest evidence；`previewOnly` 仍只描述 workbench 边界。
+   - 不修改 migration ledger、Pages artifact digest/命名、legacy projection 或 tracked `dist`。
+3. **Integration owner — `/root`**
+   - 独占 task records、Git/index/refs、PR、worktree 生命周期、共享验证路由和所有长/共享测试。
+   - 两个候选只交付单职责 commit 与验证证据；主线程按 C1 → C2 串行审查和集成。
+
+### Acceptance criteria
+
+- CAS manifest 以排序后的相对 POSIX 路径、byte length 与文件 SHA-256 形成 canonical digest；拒绝绝对路径、路径穿越、重复路径、symlink/reparse、缺失或损坏对象。
+- restore 在完整校验通过前不改变目标；中断或失败时既有目标保持不变。source/builder/manifest/tree identity 不精确匹配时 fail closed。
+- startup-support checkpoint/session 记录 CAS manifest/tree digest，并在命中时真实 materialize/verify 本地对象；旧 signature 保持兼容重建路径，不把短 snapshot 目录名当内容地址。
+- road maturity projection 是 deterministic、只读且不可变的纯数据；缺失/矛盾 manifest evidence 返回明确 reason code，不凭 registry 默认值推断已成熟。
+- focused C1/C2 tests、现有 startup-support/session tests、transport road/manifest contracts 与架构边界检查通过；只有触及 Pages adapter 时才追加 Pages admission/shadow tests。
+- 远端 protected-main PR 的 required checks 全绿后才收口 Stage C；未运行 browser、Nightly、Release、deployment 或 performance 时必须明确保留该边界。
+
+### Explicit non-goals
+
+- 不建立共享、跨机器或远端 cache，不修改浏览器 IndexedDB startup cache。
+- 不删除 tracked `dist`，不退休 legacy catalog projection，不改变 migration ledger authorization。
+- 不扩展 thematic catalog-only surface，不声称 transport 全 family 已完成 vertical-module migration。
+- 不执行 live apply/undo、产品发布、生产部署或重复前期性能模拟。

@@ -2,7 +2,7 @@
 
 ## Current status
 
-`GATE_3_IN_PROGRESS` — Gate 0、Gate 1、Gate 2 已完成。Gate 2 建立四个 canonical verification entrypoints，关闭 changed-file false-green，Demo canonical 进入 3 分钟预算，代表性单 UI PR 组合 5-run 本机 p95 为 35.615 秒。最终 `verify:pr` 实际执行 204 条 child-safe 命令并显式 deferred 47 条 main-thread/full 命令，失败 0、production unmatched 0。当前开始 P4.3 A admission → P4.4 B replay/admission → capability seam 的串行 Gate 3 工作。
+`RUNTIME_ARCHITECTURE_RESET_STAGE_C_IN_PROGRESS` — 原 Recovery Gates 的 Gate 0、Gate 1、Gate 2，以及 Runtime Architecture Reset v1 的 Stage A、Stage B 已完成。Stage C 以 `main@2bd9493f9f93e19689b6865b0822160cd787b171` 为进入身份，并行执行本地内容寻址 artifact cache 与 transport-road 成熟度投影；主线程负责任务记录、串行集成、Git/refs 和最终验证。原 Gate 3→5 仍是历史路线图，不因本次 Stage C 自动宣称完成。
 
 ## Checklist
 
@@ -133,3 +133,14 @@ Stage A remaining boundaries: UI hydration 失败目前只有 console/recovery h
 - [x] [PR #113](https://github.com/raederhans/scenario-forge/pull/113) 的 10 项远端检查全部通过，并以 merge commit `46cd2d9bae9564a9ebfe55a951226d23943dde9a` 收口到 protected `main`；桌面 `HEAD`、本地 `main`、`origin/main` 与 live remote ref 已核对一致。两条原始候选已写入 archive refs，三个 Stage B worktree 均解除注册，功能分支已正常删除。
 
 Stage B remaining boundaries: ChangeSet 仍不执行 live apply/undo、不写 history/runtime state，也不触发 render；startup-support identity 只决定本地 checkpoint reuse，不复制、恢复或发布共享缓存。本阶段不退休 tracked `dist`/legacy projection，不做额外本地性能模拟、浏览器、Nightly、Release 或部署。
+
+## Runtime Architecture Reset v1 — Stage C execution (2026-08-31)
+
+- [x] 冻结进入身份 `main@2bd9493f9f93e19689b6865b0822160cd787b171`，确认工作树干净且 `origin/main` 同步。
+- [x] 完成两条只读代码勘察，确定 C1/C2 文件所有权、接口合同、冲突边界和最窄目标测试。
+- [ ] C1：建立 provider-neutral 的本地 `ContentAddressedArtifactCache/v1`，以完整 `sha256:<64 hex>` 对象身份承载 deterministic manifest、admit、lookup 与 fail-closed restore。
+- [ ] C1：将 Stage B 的 startup-support 三文件身份接入 CAS；保留现有 stage signature/provenance，并让 session metadata 记录 manifest/tree digest。任何对象缺失、损坏、身份漂移或 restore 失败都不得改变既有目标目录。
+- [ ] C2：为 transport `road` 建立只读 maturity projection，分别表达 workbench preview、main-map overview、apply bridge 与 Pages product owner；manifest truth 与 `previewOnly` 边界不得折叠为单一 `ready`。
+- [ ] 主线程串行审查并集成 C1/C2，运行各自 focused tests、架构/验证路由检查，并以 protected-main PR 远端检查收口。
+
+Stage C boundaries: CAS 仅限仓库本机 `.runtime` / caller-provided local roots，不发布或恢复共享/远端 cache，不修改浏览器 IndexedDB startup cache；maturity projection 不登记 migration ledger。tracked `dist` 继续保留，legacy catalog projection 继续保留；不做额外性能模拟、浏览器、Nightly、Release、部署或任何未经授权的 retirement。

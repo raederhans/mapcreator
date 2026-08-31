@@ -79,3 +79,34 @@
 ## Next step
 
 提交 Gate 2 收口；以当前 exact main identity 审计 P4.3 admission 输入，完成 A checkpoint 后再处理 P4.4 B replay/admission，随后重放 Gate 3 Appearance/Transport pure contract candidate。
+
+## Runtime Architecture Reset v1 — Stage C current truth (2026-08-31)
+
+本节是 Stage C 的当前执行事实，优先于上方 2026-08-14 的历史 `Current truth`、ownership 与 `Next step`；历史内容保留用于追溯。
+
+- Entry identity：干净的 `main@2bd9493f9f93e19689b6865b0822160cd787b171`，本地 `main`、`origin/main` 与 live remote 在基线检查时一致。
+- Stage A 已由 PR #112 以 merge commit `c346eb708e8868396b0ae8c63f8173d1880c9498` 收口；Stage B 已由 PR #113 以 merge commit `46cd2d9bae9564a9ebfe55a951226d23943dde9a` 收口；docs closeout PR #114 的 merge commit 为当前 entry identity。
+- C1 当前事实：startup-support 已有 `filename + byte_length + sha256` 输出身份和 fail-closed checkpoint reuse，但没有通用对象存储、materialize/restore 或损坏对象验证；Pages admission/shadow 已有 tree/manifest SHA，但没有内容寻址对象层。
+- C2 当前事实：仓库没有通用 feature-maturity registry；transport road 已具备 capability registry、vertical family handler、manifest evidence 与 Pages `transport-workbench` owner，是最窄的真实 maturity projection 切片。
+- Retirement truth：`pages-tracked-dist` 虽有历史 3/3 green eligibility，authorization 仍为 withheld，且 exact receipt bytes/identity 不可用；`catalog-projection` 仅 1/10。两者本阶段都必须保留。
+
+### Stage C ownership
+
+| Lane | Owner | Scope | State |
+| --- | --- | --- | --- |
+| Stage C integration | `/root` | task records、Git/index/refs、PR、worktrees、共享验证 | active |
+| C1 content-addressed artifact | user-visible Codex task pending | CAS core、startup-support/session adapter、focused Python tests | dispatch pending |
+| C2 road maturity projection | user-visible Codex task pending | transport capability maturity resolver、focused Node test | dispatch pending |
+| C1 read-only mapper | `/root/stage_c_content_map_v2` | 现有 artifact/cache/session/Pages seam | completed |
+| C2 read-only mapper | `/root/stage_c_maturity_map_v2` | road vertical-module/maturity/Pages owner seam | completed |
+
+### Stage C handoff constraints
+
+- C1 和 C2 文件所有权不重叠；两条执行任务不得修改 task records、Git refs、worktree registry、verification catalog 或对方 owner 文件。
+- worker 不得 push、创建 PR、合并、清理 worktree 或运行 Pages/dist、browser、Nightly、Release、performance 等共享/长任务。
+- 主线程在两个候选完成后按 C1 → C2 串行集成；如果 C1 选择 Pages adapter，则它同时独占 `tools/pages_artifact_admission.py` 与对应 tests，C2 不触碰 Pages 实现。
+- 内容寻址 key 使用完整 `sha256:<64 hex>`；任何 source/builder/object/manifest identity 不匹配都返回拒绝或 unavailable，不进行推断。
+
+### Stage C next step
+
+提交本 amendment 形成共同 baseline；创建 C1/C2 隔离 worktree tasks，监督 focused implementation 与验证，然后由 `/root` 串行审查、集成和 protected-main PR 收口。
