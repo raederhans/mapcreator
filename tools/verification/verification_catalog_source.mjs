@@ -8510,7 +8510,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
-      "id": "node:render-snapshot-change-set-contracts",
+      "id": "direct:renderer-render-snapshot-change-set-contracts",
       "commandRef": "node --test tests/render_snapshot_behavior.test.mjs tests/render_change_set_behavior.test.mjs",
       "sourceRefs": [
         "js/core/render_change_set.js",

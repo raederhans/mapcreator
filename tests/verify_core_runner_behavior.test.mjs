@@ -2493,6 +2493,57 @@ test("local projection covers selector sanity as an exact canonical local leaf",
   ));
 });
 
+test("local projection treats selector coverage as fallback for exact indivisible test routes", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+  });
+  const changedFiles = [
+    "js/core/map_renderer.js",
+    "js/core/render_change_set.js",
+    "js/core/renderer/render_snapshot.js",
+    "tests/render_change_set_behavior.test.mjs",
+    "tests/render_snapshot_behavior.test.mjs",
+    "tests/test_map_renderer_render_snapshot_boundary_contract.py",
+  ];
+  const raw = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
+    entrypoint: "edit",
+    routeAuthority: binding.preparedCatalog.authority,
+  });
+  const projected = bindSelectorPrCost(bindSelectionToPreparedCatalog(constrainAdaptiveEntrypointSelection(raw, "edit", {
+    preparedCatalog: binding.preparedCatalog,
+  }), binding.preparedCatalog));
+  const plan = applyLocalEntrypointExecutionBudget(buildExecutionPlan(projected, {
+    packageScripts,
+    preparedCatalog: binding.preparedCatalog,
+  }), "edit", { preparedCatalog: binding.preparedCatalog });
+  const expectedCommands = [
+    "node --test tests/render_snapshot_behavior.test.mjs tests/render_change_set_behavior.test.mjs",
+    "python -m unittest tests.test_map_renderer_render_snapshot_boundary_contract -q",
+  ];
+
+  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), expectedCommands);
+  assert.deepEqual(projected.localEntrypointRouteGaps, []);
+  assert.equal(projected.localLeafEquivalence.status, "equivalent");
+  assert.deepEqual(plan.routeGaps, []);
+  assert.deepEqual(plan.selectedLeaves.map((entry) => entry.leafId).sort(), [
+    "node-test:tests/render_change_set_behavior.test.mjs",
+    "node-test:tests/render_snapshot_behavior.test.mjs",
+    "python-unittest:tests.test_map_renderer_render_snapshot_boundary_contract",
+  ]);
+  assert.equal(plan.executionCommands.length, 2);
+  assert.equal(adaptivePlanningExitCode(projected, plan), 0);
+  for (const testFile of changedFiles.filter((file) => file.startsWith("tests/"))) {
+    const match = projected.matchedByFile.find((entry) => entry.changedFile === testFile);
+    assert.equal(match.matchedRouteIds.includes("infra:verification-selector"), false);
+  }
+});
+
 test("local-eligible source mismatch creates a route gap and blocks execution", () => {
   const commandRef = "test:node:verification-profile";
   const contributor = adaptiveContributor(commandRef, {

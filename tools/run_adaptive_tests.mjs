@@ -8,6 +8,7 @@ import {
   buildRecommendation,
   classifyExecutionOwners,
   normalizeChangedFiles,
+  projectLocalEntrypointTestRoutes,
 } from "./select_verification_targets.mjs";
 import { buildRouteIndex } from "./test_route_registry.mjs";
 import {
@@ -329,11 +330,14 @@ export function assertAdaptiveEntrypointAuthority(args, { runner = spawnSync } =
 }
 
 export function buildAdaptiveEntrypointRecommendation(changedFiles, allRoutes = buildRouteIndex(), {
-  entrypoint: _entrypoint = "",
+  entrypoint = "",
   routeAuthority = null,
 } = {}) {
   return buildRecommendation(changedFiles, allRoutes, {
     routeAuthority,
+    matchedRouteProjector: new Set(["edit", "impact"]).has(entrypoint)
+      ? projectLocalEntrypointTestRoutes
+      : null,
   });
 }
 

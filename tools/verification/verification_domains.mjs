@@ -327,7 +327,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
   // canonical source. Derive the retained shadow records from that source.
   ...buildCanonicalRouteIndex()
     .filter((entry) => [
-      "node:render-snapshot-change-set-contracts",
+      "direct:renderer-render-snapshot-change-set-contracts",
       "python:tests.test_map_renderer_render_snapshot_boundary_contract",
     ].includes(entry.id))
     .map((entry) => Object.freeze({
