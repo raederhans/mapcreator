@@ -66,9 +66,18 @@ import {
   prepareVerificationCatalog,
   prepareRepositoryVerificationCatalogBinding,
   prepareRepositoryVerificationCatalog,
+  VERIFICATION_TIER_ENTRYPOINTS,
 } from "../tools/verification/script_portfolio.mjs";
 import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
 import { VERIFICATION_METADATA_SOURCE_IDENTITY } from "../tools/verification/verification_catalog_projection.mjs";
+import {
+  buildCommitVerificationPlan,
+  discoverChangedFiles as discoverCommitChangedFiles,
+  parsePorcelainChangedFiles,
+  parseCommitVerificationArgs,
+  runCommitVerification,
+  runCommitVerificationCli,
+} from "../tools/run_commit_verification.mjs";
 
 const M9_LIVE_REPOSITORY_SHADOW_COMMAND = VERIFICATION_DOMAINS.find(
   (record) => record.id === "infra:p4-repository-analysis-bundle-live-shadow",
@@ -1892,12 +1901,32 @@ test("adaptive child-safe execution substitutes quick coverage for the full P4 p
   )));
 });
 
-test("verification portfolio exposes five tiers while Demo remains the PR product journey", () => {
+test("verification tiers keep commit selection child-safe and reserve broader gates", () => {
   const scripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
-  assert.equal(
-    scripts["verify:edit"],
-    "npm run verify:script-portfolio && node tools/select_verification_targets.mjs --check && node tools/run_adaptive_tests.mjs --entrypoint edit --execute --defer-main-thread",
-  );
+  assert.deepEqual(VERIFICATION_TIER_ENTRYPOINTS, [
+    {
+      tier: 0,
+      id: "commit",
+      commandRef: "verify:commit",
+      executionScope: "child-safe",
+      commitProjection: {
+        controlPlaneRecordId: "infra:local-verification-closure",
+        controlPlaneTestFiles: [
+          "tests/verification_metadata_behavior.test.mjs",
+          "tests/catalog_projection_shadow_behavior.test.mjs",
+          "tests/verification_script_portfolio_behavior.test.mjs",
+          "tests/verify_core_runner_behavior.test.mjs",
+        ],
+      },
+    },
+    { tier: 1, id: "impact", commandRef: "verify:impact", executionScope: "child-safe" },
+    { tier: 2, id: "pr", commandRef: "verify:pr", executionScope: "pr" },
+    { tier: 3, id: "main", commandRef: "verify:core", executionScope: "main" },
+    { tier: 4, id: "nightly", commandRef: "verify:nightly", executionScope: "nightly" },
+    { tier: 5, id: "release", commandRef: "verify:release", executionScope: "release" },
+  ]);
+  assert.equal(scripts["verify:commit"], "node tools/run_commit_verification.mjs");
+  assert.match(scripts["verify:edit"], /run_adaptive_tests\.mjs --entrypoint edit --execute --defer-main-thread/);
   assert.equal(
     scripts["verify:impact"],
     "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread",
@@ -1924,6 +1953,150 @@ test("verification portfolio exposes five tiers while Demo remains the PR produc
     assert.ok(plan.commandsToRun.some((entry) => entry.commandRef === "verify:p4:state-writer-policy"));
     assert.ok(plan.commandsToRun.some((entry) => entry.commandRef === "verify:pages-dist-and-drift"));
   }
+});
+
+test("commit runner batches its canonical control-plane contract and keeps product edits adaptive", () => {
+  const controlPlan = buildCommitVerificationPlan([
+    "docs/active/test-verification-reform-20260813/task.md",
+  ]);
+  assert.equal(controlPlan.mode, "control-plane");
+  assert.deepEqual(controlPlan.commands.at(-1), ["node", [
+    "--test",
+    "tests/verification_metadata_behavior.test.mjs",
+    "tests/catalog_projection_shadow_behavior.test.mjs",
+    "tests/verification_script_portfolio_behavior.test.mjs",
+    "tests/verify_core_runner_behavior.test.mjs",
+  ]]);
+  assert.equal(controlPlan.commands.some(([, args]) => args.includes("verify:pages-dist")), false);
+
+  const derivedControlPlan = buildCommitVerificationPlan([
+    "tools/run_adaptive_tests.mjs",
+    "tools/select_verification_targets.mjs",
+    "tools/verification/script_portfolio.mjs",
+    "tools/verification/verification_profile.mjs",
+    "tools/ai_test_supervisor/domain_registry.json",
+  ]);
+  assert.equal(derivedControlPlan.mode, "control-plane+adaptive-edit");
+  assert.deepEqual(
+    derivedControlPlan.commands.find(([, args]) => args[0] === "--test"),
+    controlPlan.commands.at(-1),
+  );
+
+  const sharedPackagePlan = buildCommitVerificationPlan(["package.json"]);
+  assert.equal(sharedPackagePlan.mode, "control-plane+adaptive-edit");
+  assert.equal(sharedPackagePlan.commands.filter(([, args]) => args[0] === "--test").length, 1);
+  assert.deepEqual(sharedPackagePlan.commands.at(-1).at(1).slice(-2), [
+    "--changed-file",
+    "package.json",
+  ]);
+
+  const productPlan = buildCommitVerificationPlan(["js/core/scenario_chunk_manager.js"]);
+  assert.equal(productPlan.mode, "adaptive-edit");
+  assert.deepEqual(productPlan.commands.at(-1), ["node", [
+    "tools/run_adaptive_tests.mjs",
+    "--entrypoint",
+    "edit",
+    "--execute",
+    "--defer-main-thread",
+    "--changed-file",
+    "js/core/scenario_chunk_manager.js",
+  ]]);
+
+  const mixedPlan = buildCommitVerificationPlan([
+    "package.json",
+    "js/core/scenario_chunk_manager.js",
+  ]);
+  assert.equal(mixedPlan.mode, "control-plane+adaptive-edit");
+  assert.equal(mixedPlan.commands.filter(([, args]) => args[0] === "--test").length, 1);
+  assert.deepEqual(mixedPlan.commands.at(-1).at(1).slice(-4), [
+    "--changed-file", "js/core/scenario_chunk_manager.js",
+    "--changed-file", "package.json",
+  ]);
+});
+
+test("commit runner discovers unstaged, staged, and untracked paths from porcelain", () => {
+  assert.deepEqual(parsePorcelainChangedFiles([
+    " M unstaged.js",
+    "M  staged.py",
+    "?? untracked.mjs",
+  ].join("\0") + "\0"), ["staged.py", "unstaged.js", "untracked.mjs"]);
+  const renamedFiles = parsePorcelainChangedFiles("R  docs/renamed.md\0js/core/scenario_chunk_manager.js\0");
+  assert.deepEqual(renamedFiles, [
+    "docs/renamed.md",
+    "js/core/scenario_chunk_manager.js",
+  ]);
+  const renamedPlan = buildCommitVerificationPlan(renamedFiles);
+  assert.equal(renamedPlan.mode, "adaptive-edit");
+  assert.deepEqual(renamedPlan.commands.at(-1).at(1).slice(-2), [
+    "--changed-file",
+    "js/core/scenario_chunk_manager.js",
+  ]);
+  assert.throws(() => parsePorcelainChangedFiles("M malformed\0"), /verify-commit-porcelain-malformed/);
+
+  const calls = [];
+  assert.deepEqual(discoverCommitChangedFiles({
+    runner: (bin, args) => {
+      calls.push([bin, args]);
+      return { status: 0, stdout: " M unstaged.js\0M  staged.py\0?? untracked.mjs\0" };
+    },
+  }), ["staged.py", "unstaged.js", "untracked.mjs"]);
+  assert.deepEqual(calls, [["git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]]]);
+});
+
+test("commit runner CLI takes explicit changed files and fails closed for malformed input", () => {
+  assert.deepEqual(parseCommitVerificationArgs([
+    "--changed-file", "js/core/scenario_chunk_manager.js",
+    "--changed-file", "js/core/scenario_chunk_manager.js",
+  ]), {
+    changedFiles: ["js/core/scenario_chunk_manager.js"],
+    hasExplicitChangedFiles: true,
+  });
+  assert.throws(() => parseCommitVerificationArgs(["--unknown"]), /verify-commit-cli-unknown-arg/);
+  assert.throws(() => parseCommitVerificationArgs(["--changed-file"]), /verify-commit-cli-changed-file-missing/);
+
+  const calls = [];
+  assert.equal(runCommitVerificationCli(["--changed-file", "js/core/scenario_chunk_manager.js"], {
+    runner: (bin, args) => {
+      calls.push([bin, args]);
+      return { status: 0 };
+    },
+  }), 0);
+  assert.equal(calls.some(([, args]) => args.join(" ").includes("git status --porcelain")), false);
+  assert.deepEqual(calls.at(-1)[1], [
+    "tools/run_adaptive_tests.mjs",
+    "--entrypoint",
+    "edit",
+    "--execute",
+    "--defer-main-thread",
+    "--changed-file",
+    "js/core/scenario_chunk_manager.js",
+  ]);
+});
+
+test("commit runner executes its plan through the platform npm executable", () => {
+  const calls = [];
+  const status = runCommitVerification({
+    changedFiles: ["package.json"],
+    runner: (bin, args) => {
+      calls.push([bin, args]);
+      return { status: 0 };
+    },
+  });
+  assert.equal(status, 0);
+  if (process.platform === "win32") {
+    assert.equal(calls[0][0], process.env.ComSpec || "cmd.exe");
+    assert.deepEqual(calls[0][1], ["/d", "/s", "/c", "npm run verify:script-portfolio"]);
+  } else {
+    assert.equal(calls[0][0], "npm");
+    assert.deepEqual(calls[0][1], ["run", "verify:script-portfolio"]);
+  }
+  assert.deepEqual(calls.find(([, args]) => args[0] === "--test")[1], [
+    "--test",
+    "tests/verification_metadata_behavior.test.mjs",
+    "tests/catalog_projection_shadow_behavior.test.mjs",
+    "tests/verification_script_portfolio_behavior.test.mjs",
+    "tests/verify_core_runner_behavior.test.mjs",
+  ]);
 });
 
 test("adaptive history discovery requires its exact base and rejects last-commit fallback", () => {
@@ -2552,7 +2725,7 @@ test("production adaptive CLI plans the frozen PR7A changed-file fixture with on
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const artifact = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
   assert.deepEqual(artifact.changedFiles, expectedChangedFiles);
-  assert.equal(artifact.recommendedCommands.length, 251);
+  assert.equal(artifact.recommendedCommands.length, 252);
   assert.equal(artifact.mainThreadSerialVerification.length, 28);
   assert.deepEqual(artifact.unmatchedChangedFiles, []);
   assert.deepEqual(artifact.executionPlan.routeGaps, []);

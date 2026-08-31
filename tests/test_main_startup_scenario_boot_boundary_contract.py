@@ -89,7 +89,7 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn('invalidateAllRenderPasses("bootstrap-first-political-frame");', donor_content)
         self.assertLess(
             donor_content.index('invalidateAllRenderPasses("bootstrap-first-political-frame");'),
-            donor_content.index("if (startupUiBootstrapPromise) {"),
+            donor_content.index("void observeUiHydration();"),
         )
         self.assertIn("renderDispatcher.flush();", donor_content)
         self.assertIn("await finalizeReadyState(renderDispatcher);", donor_content)

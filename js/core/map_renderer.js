@@ -63,19 +63,6 @@ import {
   setDebugCountryCoverageState, setFirstVisibleFramePaintedState,
   setRenderPerfContextBreakdownState, setRenderPerfMetricEntryState,
 } from "./state/actions/renderer_diagnostics_actions.js";
-import {
-  MODERN_CITY_LIGHTS_BASE_THRESHOLD,
-  MODERN_CITY_LIGHTS_CORRIDOR_THRESHOLD,
-  MODERN_CITY_LIGHTS_GRID,
-  MODERN_CITY_LIGHTS_GRID_HEIGHT,
-  MODERN_CITY_LIGHTS_STATS,
-  MODERN_CITY_LIGHTS_GRID_WIDTH,
-  MODERN_CITY_LIGHTS_STEP_LAT_DEG,
-  MODERN_CITY_LIGHTS_STEP_LON_DEG,
-} from "./city_lights_modern_asset.js";
-import {
-  HISTORICAL_1930_CITY_LIGHTS_ENTRIES,
-} from "./city_lights_historical_1930_asset.js";
 import { ColorManager } from "./color_manager.js";
 import {
   getCanvasColorRelativeLuminance,
@@ -160,6 +147,7 @@ import { createOceanRenderOwner } from "./renderer/ocean_render_owner.js";
 import { createPhysicalLayerRenderOwner } from "./renderer/physical_layer_render_owner.js";
 import { createScenarioReliefOverlayRenderOwner } from "./renderer/scenario_relief_overlay_render_owner.js";
 import { createCityLightsRenderOwner } from "./renderer/city_lights_render_owner.js";
+import { createCityLightsAssetProvider } from "./renderer/city_lights_asset_provider.js";
 import { createTransportOverviewRenderOwner } from "./renderer/transport_overview_render_owner.js";
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
 import {
@@ -979,6 +967,7 @@ let oceanRenderOwner = null;
 let physicalLayerRenderOwner = null;
 let scenarioReliefOverlayRenderOwner = null;
 let cityLightsRenderOwner = null;
+const cityLightsAssetProvider = createCityLightsAssetProvider();
 let dayNightRuntimeOwner = null;
 let transportOverviewRenderOwner = null;
 let strategicOverlayRenderOwner = null;
@@ -2322,19 +2311,8 @@ function getCityLightsRenderOwner() {
   }
   cityLightsRenderOwner = createCityLightsRenderOwner({
     state,
-    assets: {
-      HISTORICAL_1930_CITY_LIGHTS_ENTRIES,
-      HISTORICAL_DERIVED_GLOW_MAX_ENTRIES: 520,
-      HISTORICAL_DERIVED_GLOW_MIN_WEIGHT: 0.62,
-      MODERN_CITY_LIGHTS_BASE_THRESHOLD,
-      MODERN_CITY_LIGHTS_CORRIDOR_THRESHOLD,
-      MODERN_CITY_LIGHTS_GRID,
-      MODERN_CITY_LIGHTS_GRID_HEIGHT,
-      MODERN_CITY_LIGHTS_GRID_WIDTH,
-      MODERN_CITY_LIGHTS_STATS,
-      MODERN_CITY_LIGHTS_STEP_LAT_DEG,
-      MODERN_CITY_LIGHTS_STEP_LON_DEG,
-    },
+    assets: cityLightsAssetProvider.getAssets(),
+    assetProvider: cityLightsAssetProvider,
     getters: {
       getContext: () => rendererSurfaceHost.getContext(),
       getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
@@ -2375,6 +2353,16 @@ function getCityLightsRenderOwner() {
       stableJson,
       stringHash,
       withRenderTarget,
+    },
+    effects: {
+      onModernAssetsReady: () => {
+        cityLightsRenderOwner = null;
+        invalidateRenderPasses("dayNight", "modern-city-lights-asset-ready");
+        requestRendererRender("modern-city-lights-asset-ready");
+      },
+      onModernAssetsError: (error) => {
+        console.error("[renderer] Failed to load the Modern City Lights asset.", error);
+      },
     },
   });
   return cityLightsRenderOwner;

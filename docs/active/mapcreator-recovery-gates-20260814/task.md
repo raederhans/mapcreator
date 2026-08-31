@@ -111,3 +111,14 @@
 - P4 Python phase boundary 实测单条曾耗时 734.191 秒并进入 full state-writer 扫描；Gate 2 已修正 route metadata，正式执行归属 Gate 3 admission / Nightly / Release 主线程。
 - 当前 P4.3 policy artifact来自 dirty `dff0b800` 诊断运行，无法用于 A admission；Gate 3 将在 Gate 2 clean commit 上生成同阶段 observation refresh，并在最终 policy commit 上运行 clean-identity full/exact gates。
 - Gate 3 pure domain seam candidate 位于隔离 worktree `8288`，需要正式 B admission 后重放；Gate 4 startup/dist candidate 保持隔离。
+
+## Runtime Architecture Reset v1 — Stage A execution (2026-08-31)
+
+- [x] 将 City Lights 现代图标脚本从启动依赖图切到图层首次实际请求；首次请求仍复用同一个 promise，旧图标路径不加载该脚本。
+- [x] 将首帧 map-ready 与延迟 UI hydration 分成正交生命周期；四条 map-ready 路径统一收口，延迟控件在 hydration ready 前保持 inert，UI import 失败不回滚已经可用的地图。
+- [x] 建立 canonical `verify:commit`：真实 working-tree/显式 changed-file 输入、固定 control-plane 批次、共享源双重覆盖、产品源 adaptive child-safe 路由，以及高 fan-out fail-closed escalation。
+- [x] 在隔离集成分支将候选重放为 `7023eea8`、`614659d6`、`5bb13c7f`；合并树暴露的 startup-ready/deferred-UI 目录接缝由 `5d8ca24a` 修复，独立审查均为 `ACCEPT`。
+- [x] 聚焦合并验证：runtime Node 123/123、metadata/shadow 53/53、portfolio 54/54、verify-core runner 84/84、Python startup boundaries 19/19、342-script portfolio、51-spec import graph、398-route selector schema、`verify:dist-drift` 全部通过。
+- [ ] 通过 protected-main PR 完成远端门禁与 main 收口；本阶段不在本机重复性能模拟，也不声称 browser、nightly、release 或部署验证。
+
+Stage A remaining boundaries: UI hydration 失败目前只有 console/recovery hook，尚无用户可见重试提示；City Lights 首次请求没有有界超时重试；旧 startup-failure recovery 的兼容参数仍保留。Stage B 才处理 RenderSnapshot/ChangeSet 与后续内容寻址构建切片；本阶段不删除 tracked `dist` 或 legacy projection。

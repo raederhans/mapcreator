@@ -151,10 +151,10 @@ function getStartupScenarioBootOwner() {
   return startupScenarioBootOwnerLoader.loadValueOnce();
 }
 
-async function scheduleStartupSampleProjectDeeplinkAfterReady() {
+async function tryScheduleStartupSampleProjectDeeplink() {
   return runOptionalStartupTask({
     loadModule: startupSampleProjectDeeplinkModuleLoader.loadModuleOnce,
-    run: ({ scheduleStartupSampleProjectDeeplink }) => scheduleStartupSampleProjectDeeplink({
+    run: (sampleProjectDeeplinkModule) => sampleProjectDeeplinkModule.tryScheduleStartupSampleProjectDeeplink({
       targetState: state,
       postReadyScheduler,
       helpers: {
@@ -206,6 +206,7 @@ function getDeferredDetailPromotionOwner() {
   deferredDetailPromotionOwner = createDeferredDetailPromotionOwner({
     runtimeState: state,
     helpers: {
+      buildInteractionInfrastructureAfterStartup,
       canRunPostReadyIdleWork: postReadyScheduler.canRunIdleWork,
       checkpointBootMetric,
       completeBootSequenceLogging,
@@ -223,6 +224,7 @@ function getDeferredDetailPromotionOwner() {
       setStartupReadonlyState,
       startBootMetric,
       startDeferredFullInteractionInfrastructureBuild: startupReadyHandoff.startDeferredFullInteractionInfrastructureBuild,
+      tryScheduleStartupSampleProjectDeeplink,
       warnOnStartupBundleIntegrity,
     },
   });
@@ -389,6 +391,7 @@ async function finalizeReadyState(renderDispatcher) {
       progress: 100,
       canContinueWithoutScenario: false,
     });
+    void tryScheduleStartupSampleProjectDeeplink();
     getStartupReadyHandoffOwner().scheduleReadyPostBootWork(renderDispatcher, "ready-state");
     return;
   }
@@ -411,6 +414,7 @@ async function finalizeReadyState(renderDispatcher) {
     progress: 100,
     canContinueWithoutScenario: false,
   });
+  void tryScheduleStartupSampleProjectDeeplink();
   getStartupReadyHandoffOwner().scheduleReadyPostBootWork(renderDispatcher, "ready-state");
 }
 
@@ -436,14 +440,59 @@ async function bootstrap() {
   setBootContinueHandler(null);
   deferredUiBootstrapper.reset();
   getStartupReadyHandoffOwner().reset("bootstrap");
+  getStartupReadyHandoffOwner().beginUiHydration();
   postReadyScheduler.reset("bootstrap");
+  deferredUiBootstrapper.setInteractionState("pending");
   setStartupInteractionMode(state, resolveStartupInteractionMode());
   setStartupReadonlyState(false);
 
   let renderDispatcher = null;
   let startupUiBootstrapPromise = null;
-  let startupUiBootstrapAwaited = false;
-  let startupUiBootstrapFailed = false;
+  let uiHydrationObservation = null;
+  const observeUiHydration = () => {
+    if (!startupUiBootstrapPromise || uiHydrationObservation) {
+      return uiHydrationObservation;
+    }
+    uiHydrationObservation = getStartupReadyHandoffOwner().observePostReadyUiBootstrap(
+      startupUiBootstrapPromise,
+      {
+        runPostScenarioUiReplay,
+        handleUiBootstrapReady: async () => {
+          deferredUiBootstrapper.setInteractionState("ready");
+          void tryScheduleStartupSampleProjectDeeplink();
+        },
+        handleUiBootstrapFailure: async (uiBootstrapError) => {
+          deferredUiBootstrapper.setInteractionState("failed");
+          console.error("[boot] Deferred UI hydration failed after map initialization.", uiBootstrapError);
+        },
+      },
+    );
+    return uiHydrationObservation;
+  };
+  const recoverStartupFailure = async (error) => {
+    const failureRecovery = await handleStartupFailure({
+      error,
+      targetState: runtimeState,
+      renderDispatcher,
+      startupUiBootstrapPromise: null,
+      startupUiBootstrapAwaited: true,
+      startupUiBootstrapFailed: false,
+      helpers: {
+        finalizeReadyState,
+        getBootLanguage,
+        getBootProgressWindow,
+        checkpointBootMetricOnce,
+        finishBootMetric,
+        invalidateAllRenderPasses,
+        rollbackStartupScenarioToBaseMap,
+        runPostScenarioUiReplay,
+        setBootContinueHandler,
+        setBootState,
+        setStartupReadonlyState,
+      },
+    });
+    return failureRecovery;
+  };
   try {
     bindBeforeUnload();
     if (isUiShellDebugMode()) {
@@ -455,9 +504,6 @@ async function bootstrap() {
           },
           onStartupUiBootstrapPromise: (promise) => {
             startupUiBootstrapPromise = promise;
-          },
-          onStartupUiBootstrapAwaited: (value) => {
-            startupUiBootstrapAwaited = !!value;
           },
         },
         helpers: {
@@ -482,7 +528,8 @@ async function bootstrap() {
       });
       renderDispatcher = uiShellBootResult.renderDispatcher;
       startupUiBootstrapPromise = uiShellBootResult.startupUiBootstrapPromise;
-      startupUiBootstrapAwaited = !!uiShellBootResult.startupUiBootstrapAwaited;
+      getStartupReadyHandoffOwner().markUiHydrationReady();
+      deferredUiBootstrapper.setInteractionState("ready");
       return;
     }
     // Phase: 加载基础拓扑 | Input: 启动配置与 bootstrap 资源 promise | Output: startupBaseData + 已注入基础 state 字段。
@@ -578,47 +625,16 @@ async function bootstrap() {
     renderDispatcher.flush();
     assertStartupFirstVisibleFrameAccepted("bootstrap-first-political-frame");
 
-    if (startupUiBootstrapPromise) {
-      startupUiBootstrapAwaited = true;
-      try {
-        await startupUiBootstrapPromise;
-      } catch (uiBootstrapError) {
-        startupUiBootstrapFailed = true;
-        throw uiBootstrapError;
-      }
-      runPostScenarioUiReplay({ full: true });
-    }
-
     // Phase: 触发 detail promotion | Input: 当前 scenario/state/renderDispatcher | Output: ready state 或 readonly 解锁调度。
     await finalizeReadyState(renderDispatcher);
-    void scheduleStartupSampleProjectDeeplinkAfterReady();
+    void observeUiHydration();
     void postStartupSupportKeyUsageReport({
       scenarioId: String(runtimeState.activeScenarioId || defaultScenarioBundle?.manifest?.scenario_id || "").trim(),
       source: scenarioBundleSource,
     });
   } catch (error) {
-    const failureRecovery = await handleStartupFailure({
-      error,
-      targetState: runtimeState,
-      renderDispatcher,
-      startupUiBootstrapPromise,
-      startupUiBootstrapAwaited,
-      startupUiBootstrapFailed,
-      helpers: {
-        finalizeReadyState,
-        getBootLanguage,
-        getBootProgressWindow,
-        checkpointBootMetricOnce,
-        finishBootMetric,
-        invalidateAllRenderPasses,
-        rollbackStartupScenarioToBaseMap,
-        runPostScenarioUiReplay,
-        setBootContinueHandler,
-        setBootState,
-        setStartupReadonlyState,
-      },
-    });
-    startupUiBootstrapFailed = !!failureRecovery.startupUiBootstrapFailed;
+    void observeUiHydration();
+    await recoverStartupFailure(error);
   }
 }
 

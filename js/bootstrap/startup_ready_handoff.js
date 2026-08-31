@@ -1,5 +1,6 @@
 import { POST_READY_IDLE_QUIET_MS } from "./post_ready_scheduler.js";
 import { patchScenarioChunkLoadState } from "../core/state/actions/scenario_chunk_runtime_actions.js";
+import { setUiHydrationState } from "../core/state/actions/boot_actions.js";
 
 const DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";
 
@@ -168,6 +169,62 @@ export function createStartupReadyHandoffOwner({
     schedulePostReadyVisualWarmup();
   }
 
+  function beginUiHydration() {
+    return setUiHydrationState(targetRuntime, {
+      status: "pending",
+      error: "",
+      updatedAt: Date.now(),
+    });
+  }
+
+  function markUiHydrationReady() {
+    return setUiHydrationState(targetRuntime, {
+      status: "ready",
+      error: "",
+      updatedAt: Date.now(),
+    });
+  }
+
+  function observePostReadyUiBootstrap(startupUiBootstrapPromise, {
+    runPostScenarioUiReplay,
+    handleUiBootstrapReady,
+    handleUiBootstrapFailure,
+  } = {}) {
+    if (!startupUiBootstrapPromise || typeof startupUiBootstrapPromise.then !== "function") {
+      return Promise.resolve({ ready: false, skipped: true, error: null });
+    }
+    if (typeof runPostScenarioUiReplay !== "function") {
+      throw new TypeError("observePostReadyUiBootstrap requires runPostScenarioUiReplay.");
+    }
+    if (typeof handleUiBootstrapFailure !== "function") {
+      throw new TypeError("observePostReadyUiBootstrap requires handleUiBootstrapFailure.");
+    }
+    if (typeof handleUiBootstrapReady !== "function") {
+      throw new TypeError("observePostReadyUiBootstrap requires handleUiBootstrapReady.");
+    }
+    return Promise.resolve(startupUiBootstrapPromise)
+      .then(async () => {
+        markUiHydrationReady();
+        runPostScenarioUiReplay({
+          full: true,
+          reason: "post-ready-ui-bootstrap",
+          scenarioId: String(targetRuntime.activeScenarioId || "").trim(),
+          scenarioApplyRequestId: Math.max(0, Number(targetRuntime.currentScenarioApplyRequestId || 0)),
+        });
+        await handleUiBootstrapReady();
+        return { ready: true, skipped: false, error: null };
+      })
+      .catch(async (error) => {
+        setUiHydrationState(targetRuntime, {
+          status: "failed",
+          error: error?.message || String(error || "UI hydration failed."),
+          updatedAt: Date.now(),
+        });
+        await handleUiBootstrapFailure(error);
+        return { ready: false, skipped: false, error };
+      });
+  }
+
   function startDeferredFullInteractionInfrastructureBuild(reason = "post-ready-full-interaction") {
     postReadyScheduler.scheduleTask("post-ready-full-interaction-infra", () => {
       if (targetRuntime.detailDeferred && !targetRuntime.detailPromotionCompleted) {
@@ -273,8 +330,11 @@ export function createStartupReadyHandoffOwner({
   }
 
   return {
+    beginUiHydration,
     reset,
     flushPendingScenarioChunkRefreshAfterReady,
+    observePostReadyUiBootstrap,
+    markUiHydrationReady,
     scheduleReadyPostBootWork,
     startDeferredFullInteractionInfrastructureBuild,
     schedulePostReadyHydration,

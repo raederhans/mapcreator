@@ -8,6 +8,20 @@ const DEFERRED_UI_MODULE_PATHS = Object.freeze([
   "../ui/shortcuts.js",
 ]);
 
+const UI_INTERACTION_ROOT_IDS = Object.freeze([
+  "leftSidebar",
+  "rightSidebar",
+  "bottomDock",
+  "scenarioContextBar",
+  "zoomControls",
+]);
+const UI_INTERACTION_ROOT_SELECTORS = Object.freeze([".map-overlay-controls"]);
+
+function normalizeUiHydrationStatus(status) {
+  const normalized = String(status || "pending").trim().toLowerCase();
+  return normalized === "ready" || normalized === "failed" ? normalized : "pending";
+}
+
 function getTimeoutFn(globalScope) {
   return typeof globalScope?.setTimeout === "function"
     ? globalScope.setTimeout.bind(globalScope)
@@ -24,12 +38,47 @@ export async function yieldToMain({ globalScope = globalThis } = {}) {
   });
 }
 
+export function attachDeferredUiBootstrapRejectionObserver(promise) {
+  if (!promise || typeof promise.then !== "function") {
+    return promise;
+  }
+  void Promise.resolve(promise).catch(() => {});
+  return promise;
+}
+
 export function createDeferredUiBootstrapper({
   globalScope = globalThis,
+  documentRef = globalThis.document,
   importModule = (path) => import(path),
   initTranslationsFn = initTranslations,
 } = {}) {
   let deferredUiBootstrapPromise = null;
+
+  function setInteractionState(status = "pending") {
+    const normalizedStatus = normalizeUiHydrationStatus(status);
+    const ready = normalizedStatus === "ready";
+    if (documentRef?.body?.dataset) {
+      documentRef.body.dataset.uiHydrationState = normalizedStatus;
+    }
+    const interactionRoots = new Set(
+      UI_INTERACTION_ROOT_IDS
+        .map((rootId) => documentRef?.getElementById?.(rootId))
+        .filter(Boolean),
+    );
+    for (const selector of UI_INTERACTION_ROOT_SELECTORS) {
+      documentRef?.querySelectorAll?.(selector)?.forEach((root) => interactionRoots.add(root));
+    }
+    for (const root of interactionRoots) {
+      root.inert = !ready;
+      root.setAttribute?.("aria-disabled", ready ? "false" : "true");
+      if (normalizedStatus === "pending") {
+        root.setAttribute?.("aria-busy", "true");
+      } else {
+        root.removeAttribute?.("aria-busy");
+      }
+    }
+    return normalizedStatus;
+  }
 
   function bootstrapDeferredUi(renderApp) {
     if (deferredUiBootstrapPromise) {
@@ -55,6 +104,7 @@ export function createDeferredUiBootstrapper({
       initShortcuts();
       return true;
     })();
+    attachDeferredUiBootstrapRejectionObserver(deferredUiBootstrapPromise);
     return deferredUiBootstrapPromise;
   }
 
@@ -68,6 +118,7 @@ export function createDeferredUiBootstrapper({
 
   return {
     bootstrapDeferredUi,
+    setInteractionState,
     reset,
     getPromise,
   };

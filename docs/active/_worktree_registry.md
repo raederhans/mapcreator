@@ -1,5 +1,14 @@
 # Worktree Registry
 
+## Runtime Architecture Reset v1 Stage A integration — 2026-08-31
+
+- Frozen base and owner: root assembled `codex/runtime-architecture-reset-a1-a2-20260831` in `C:\Users\raede\.codex\worktrees\rar-a1-a2\mapcreator` from clean `origin/main@04e5fd963f14ace75ca4834800f833732982ed03`; the desktop `main` checkout remained untouched.
+- Runtime lane: user-visible task `01a055c1-98b7-7a63-bd27-20e648e6758b` delivered City Lights boot-cut and map-ready/UI-hydration candidates through `499cbb30`; root replayed their exact trees as `7023eea8` and `614659d6` after independent reviewer and architecture `ACCEPT` verdicts.
+- Verification lane: user-visible task `01a055c1-98c7-7d61-a400-7fea23f4de35` delivered the commit-tier candidate through `4b08ec16`; root replayed it as `5bb13c7f` after independent `ACCEPT` review.
+- Integration seam: the combined tree correctly exposed one canonical/retained route mismatch for the new startup-ready test dependency on deferred UI bootstrap. Root commit `5d8ca24a` added the missing canonical source ref; the bounded independent follow-up review returned `ACCEPT`.
+- Local evidence: runtime Node 123/123, metadata/shadow 53/53, portfolio 54/54, verify-core runner 84/84, Python startup boundaries 19/19, 342-script portfolio, 51-spec import graph, 398-route schema, dist drift, and range diff checks pass on the integration tree.
+- Promotion and cleanup boundary: protected `main` is reached only through a normal PR. Source and integration worktrees may be removed only after exact merged ancestry, clean status, and live `main` equality are proven. This record does not authorize force-push, deployment, release, tracked-`dist` deletion, legacy-projection retirement, or performance-budget rewriting.
+
 ## Remaining branches and protected-WIP closeout — 2026-08-30
 
 - Protected-main integration: [PR #109](https://github.com/raederhans/scenario-forge/pull/109) merged the six-commit integration tip `70d0fe3c` as `main@9a022c2cb37637b4c11da2603a75fe0b734e4acb`. All ten reported checks passed: required PR verification, fast, smoke, demo, repository footprint, three strict scenario jobs, transport, and the 14m16s performance gate.

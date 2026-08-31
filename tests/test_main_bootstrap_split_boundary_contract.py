@@ -43,16 +43,22 @@ class MainBootstrapSplitBoundaryContractTest(unittest.TestCase):
         )
         self.assertLess(
             content.index('assertStartupFirstVisibleFrameAccepted("bootstrap-first-political-frame");'),
-            content.index("void scheduleStartupSampleProjectDeeplinkAfterReady();"),
-        )
-        self.assertLess(
-            content.index("await startupUiBootstrapPromise;"),
-            content.index("void scheduleStartupSampleProjectDeeplinkAfterReady();"),
+            content.index("await finalizeReadyState(renderDispatcher);"),
         )
         self.assertLess(
             content.index("await finalizeReadyState(renderDispatcher);"),
-            content.index("void scheduleStartupSampleProjectDeeplinkAfterReady();"),
+            content.index("void observeUiHydration();"),
         )
+        ui_observer_index = content.index("getStartupReadyHandoffOwner().observePostReadyUiBootstrap(")
+        ui_ready_handler_index = content.index("handleUiBootstrapReady: async () => {", ui_observer_index)
+        ui_ready_sample_index = content.index(
+            "void tryScheduleStartupSampleProjectDeeplink();",
+            ui_ready_handler_index,
+        )
+        self.assertLess(ui_observer_index, ui_ready_handler_index)
+        self.assertLess(ui_ready_handler_index, ui_ready_sample_index)
+        self.assertIn('deferredUiBootstrapper.setInteractionState("ready");', content)
+        self.assertNotIn("await startupUiBootstrapPromise;", content)
 
     def test_startup_bootstrap_support_owns_startup_helpers(self):
         donor_content = MAIN_JS.read_text(encoding="utf-8")
@@ -91,20 +97,24 @@ class MainBootstrapSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("async function bootstrap()", content)
         self.assertIn("bootstrap();", content)
 
-    def test_main_keeps_startup_ui_bootstrap_failure_and_recovery_contract(self):
+    def test_main_keeps_ui_hydration_failure_orthogonal_to_startup_recovery(self):
         content = MAIN_JS.read_text(encoding="utf-8")
         failure_recovery_content = STARTUP_FAILURE_RECOVERY_JS.read_text(encoding="utf-8")
 
         self.assertIn("async function rollbackStartupScenarioToBaseMap() {", content)
         self.assertIn('const { clearActiveScenario } = await import("./core/scenario_manager.js");', content)
         self.assertIn("let startupUiBootstrapPromise = null;", content)
-        self.assertIn("let startupUiBootstrapAwaited = false;", content)
-        self.assertIn("let startupUiBootstrapFailed = false;", content)
+        self.assertIn("let uiHydrationObservation = null;", content)
         self.assertIn("startupUiBootstrapPromise = deferredUiBootstrapper.bootstrapDeferredUi(renderApp);", content)
         self.assertIn("bootstrapDeferredUi,", content)
-        self.assertIn("if (startupUiBootstrapPromise) {", content)
-        self.assertIn("startupUiBootstrapAwaited = true;", content)
-        self.assertIn("startupUiBootstrapFailed = true;", content)
+        self.assertIn("if (!startupUiBootstrapPromise || uiHydrationObservation)", content)
+        self.assertIn("getStartupReadyHandoffOwner().observePostReadyUiBootstrap(", content)
+        self.assertIn('deferredUiBootstrapper.setInteractionState("failed");', content)
+        self.assertIn("async function tryScheduleStartupSampleProjectDeeplink()", content)
+        self.assertNotIn("pausePostReadyWorkForUiFailure", content)
+        self.assertIn("startupUiBootstrapPromise: null,", content)
+        self.assertIn("startupUiBootstrapAwaited: true,", content)
+        self.assertIn("startupUiBootstrapFailed: false,", content)
         self.assertIn("if (startupUiBootstrapPromise && !startupUiBootstrapAwaited) {", failure_recovery_content)
         self.assertIn("await helpers.rollbackStartupScenarioToBaseMap();", failure_recovery_content)
         self.assertIn("allowDuringBootBlocking: true,", content)

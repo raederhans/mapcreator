@@ -104,7 +104,7 @@ class StartupShellTest(unittest.TestCase):
         )
         self.assertLess(
             main_js.index('invalidateAllRenderPasses("bootstrap-first-political-frame");'),
-            main_js.index("if (startupUiBootstrapPromise) {"),
+            main_js.index("void observeUiHydration();"),
         )
         self.assertIn('setBootPreviewVisibleState(state, active);', startup_boot_overlay_js)
         self.assertIn('import { createRenderDispatcher } from "./startup_bootstrap_support.js";', render_runtime_binding_js)

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  attachDeferredUiBootstrapRejectionObserver,
   createDeferredUiBootstrapper,
   yieldToMain,
 } from "../js/bootstrap/deferred_ui_bootstrap.js";
@@ -52,8 +53,46 @@ function createHarness() {
     },
   };
   const renderApp = () => calls.push(["renderApp"]);
+  const controlledIds = [
+    "leftSidebar",
+    "rightSidebar",
+    "bottomDock",
+    "scenarioContextBar",
+    "zoomControls",
+  ];
+  const roots = Object.fromEntries(controlledIds.map((id) => [id, {
+    id,
+    inert: false,
+    attributes: new Map(),
+    setAttribute(name, value) {
+      this.attributes.set(name, value);
+    },
+    removeAttribute(name) {
+      this.attributes.delete(name);
+    },
+  }]));
+  roots.mapOverlayControls = {
+    id: "mapOverlayControls",
+    inert: false,
+    attributes: new Map(),
+    setAttribute(name, value) {
+      this.attributes.set(name, value);
+    },
+    removeAttribute(name) {
+      this.attributes.delete(name);
+    },
+  };
+  const mapContainer = { id: "mapContainer", inert: false };
+  const documentRef = {
+    body: { dataset: {} },
+    getElementById: (id) => (id === "mapContainer" ? mapContainer : roots[id] || null),
+    querySelectorAll: (selector) => (
+      selector === ".map-overlay-controls" ? [roots.mapOverlayControls] : []
+    ),
+  };
   const bootstrapper = createDeferredUiBootstrapper({
     globalScope,
+    documentRef,
     importModule: async (path) => {
       importCalls.push(path);
       return modules[path];
@@ -68,6 +107,9 @@ function createHarness() {
     calls,
     importCalls,
     renderApp,
+    roots,
+    mapContainer,
+    documentRef,
   };
 }
 
@@ -77,6 +119,46 @@ test("bootstrapDeferredUi dynamically imports the five UI modules", async () => 
   assert.equal(await harness.bootstrapper.bootstrapDeferredUi(harness.renderApp), true);
 
   assert.deepEqual(harness.importCalls, EXPECTED_MODULE_PATHS);
+});
+
+test("deferred UI rejection observer attaches immediately without replacing the promise", async () => {
+  const promise = Promise.resolve(true);
+  const nativeCatch = promise.catch.bind(promise);
+  let catchAttached = false;
+  promise.catch = (handler) => {
+    catchAttached = true;
+    return nativeCatch(handler);
+  };
+
+  assert.equal(attachDeferredUiBootstrapRejectionObserver(promise), promise);
+  assert.equal(catchAttached, true);
+  assert.equal(await promise, true);
+});
+
+test("UI interaction roots remain inert until hydration is explicitly ready", () => {
+  const harness = createHarness();
+
+  assert.equal(harness.bootstrapper.setInteractionState("pending"), "pending");
+  assert.equal(harness.documentRef.body.dataset.uiHydrationState, "pending");
+  for (const root of Object.values(harness.roots)) {
+    assert.equal(root.inert, true);
+    assert.equal(root.attributes.get("aria-disabled"), "true");
+    assert.equal(root.attributes.get("aria-busy"), "true");
+  }
+  assert.equal(harness.mapContainer.inert, false, "UI hydration gating must not disable map interaction");
+
+  assert.equal(harness.bootstrapper.setInteractionState("failed"), "failed");
+  for (const root of Object.values(harness.roots)) {
+    assert.equal(root.inert, true);
+    assert.equal(root.attributes.has("aria-busy"), false);
+  }
+  assert.equal(harness.mapContainer.inert, false);
+
+  assert.equal(harness.bootstrapper.setInteractionState("ready"), "ready");
+  for (const root of Object.values(harness.roots)) {
+    assert.equal(root.inert, false);
+    assert.equal(root.attributes.get("aria-disabled"), "false");
+  }
 });
 
 test("bootstrapDeferredUi preserves precise yield and init order", async () => {

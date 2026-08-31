@@ -7,7 +7,10 @@ import {
   loadPublicSampleProjectIntoRuntime,
   writeSampleProjectState,
 } from "../js/core/sample_project_import_workflow.js";
-import { scheduleStartupSampleProjectDeeplink } from "../js/bootstrap/startup_sample_project_deeplink.js";
+import {
+  scheduleStartupSampleProjectDeeplink,
+  tryScheduleStartupSampleProjectDeeplink,
+} from "../js/bootstrap/startup_sample_project_deeplink.js";
 import { registerRuntimeHook } from "../js/core/state/index.js";
 import {
   loadPublicSampleProjectList,
@@ -485,7 +488,7 @@ test("sample startup import failures record state without duplicate sample toast
   const manifest = readJson(SAMPLE_RUNS_PATH);
   const scheduledTasks = [];
   const helperToasts = [];
-  const targetState = {};
+  const targetState = { bootPhase: "ready", uiHydrationStatus: "ready" };
   const didSchedule = scheduleStartupSampleProjectDeeplink({
     targetState,
     postReadyScheduler: {
@@ -531,6 +534,55 @@ test("sample startup import failures record state without duplicate sample toast
   assert.equal(targetState.sampleProjectDeeplink.sampleId, "tno-1962-atlantropa-briefing");
   assert.equal(targetState.sampleProjectDeeplink.scenarioId, "tno_1962");
   assert.equal(targetState.sampleProjectDeeplink.errorCode, "sample-project-import-failed");
+});
+
+test("sample startup deeplink stays fail-closed until both map and UI are ready", () => {
+  const scheduledTasks = [];
+  const targetState = { bootPhase: "ready", uiHydrationStatus: "pending" };
+  const options = {
+    targetState,
+    postReadyScheduler: {
+      scheduleTask: (...args) => scheduledTasks.push(args),
+    },
+    helpers: {
+      search: "?sample=tno-1962-atlantropa-briefing",
+    },
+  };
+
+  assert.equal(scheduleStartupSampleProjectDeeplink(options), false);
+  targetState.uiHydrationStatus = "failed";
+  assert.equal(scheduleStartupSampleProjectDeeplink(options), false);
+  targetState.uiHydrationStatus = "ready";
+  targetState.bootPhase = "error";
+  assert.equal(scheduleStartupSampleProjectDeeplink(options), false);
+  assert.deepEqual(scheduledTasks, []);
+  assert.equal(targetState.sampleProjectDeeplink, undefined);
+});
+
+test("sample startup deeplink schedules exactly once whichever ready gate opens first", () => {
+  for (const gateOrder of [
+    ["uiHydrationStatus", "bootPhase"],
+    ["bootPhase", "uiHydrationStatus"],
+  ]) {
+    const scheduledTasks = [];
+    const targetState = { bootPhase: "warmup", uiHydrationStatus: "pending" };
+    const options = {
+      targetState,
+      postReadyScheduler: {
+        scheduleTask: (...args) => scheduledTasks.push(args),
+      },
+      helpers: {
+        search: "?sample=tno-1962-atlantropa-briefing",
+      },
+    };
+
+    targetState[gateOrder[0]] = "ready";
+    assert.equal(tryScheduleStartupSampleProjectDeeplink(options), false);
+    targetState[gateOrder[1]] = "ready";
+    assert.equal(tryScheduleStartupSampleProjectDeeplink(options), true);
+    assert.equal(tryScheduleStartupSampleProjectDeeplink(options), false);
+    assert.equal(scheduledTasks.length, 1, `duplicate schedule for ${gateOrder.join("->")}`);
+  }
 });
 
 test("shared sample import workflow preserves committed sample during failed switch", async () => {
@@ -1040,7 +1092,7 @@ test("sample startup state writes notify banner refresh hook for bad links", asy
   const scheduledTasks = [];
   const refreshSnapshots = [];
   const helperToasts = [];
-  const targetState = {};
+  const targetState = { bootPhase: "ready", uiHydrationStatus: "ready" };
 
   registerRuntimeHook(targetState, "refreshSampleProjectBannerFn", (sampleState) => {
     refreshSnapshots.push({

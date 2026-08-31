@@ -23,7 +23,6 @@ const UI_SHELL_BOOT_HELPER_NAMES = Object.freeze([
 const UI_SHELL_HOOK_NAMES = Object.freeze([
   "onRenderDispatcher",
   "onStartupUiBootstrapPromise",
-  "onStartupUiBootstrapAwaited",
 ]);
 
 function assertObjectRecord(value, name) {
@@ -117,7 +116,6 @@ export async function runUiShellDebugBoot({
   hooks.onStartupUiBootstrapPromise?.(startupUiBootstrapPromise);
 
   await startupUiBootstrapPromise;
-  hooks.onStartupUiBootstrapAwaited?.(true);
 
   helpers.revealUiShellDebugTerritoryPanels();
   helpers.runPostScenarioUiReplay({ full: true });
@@ -144,7 +142,6 @@ export async function runUiShellDebugBoot({
     renderDispatcher: renderRuntime.renderDispatcher,
     renderApp: renderRuntime.renderApp,
     startupUiBootstrapPromise,
-    startupUiBootstrapAwaited: true,
     territoryPreview: uiShellTerritorySeed,
   };
 }

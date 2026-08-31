@@ -19,6 +19,7 @@ import {
   setStartupScenarioBootstrapCacheStatus,
   setUiShellDebugState,
   setUiShellDebugTerritorySeededState,
+  setUiHydrationState,
 } from "../js/core/state/actions/boot_actions.js";
 import {
   createDefaultBootState,
@@ -80,6 +81,31 @@ test("boot phase action preserves the assigned phase value and return identity",
     }),
     phase,
   );
+});
+
+test("UI hydration action keeps a fail-closed pending-ready-failed lifecycle", () => {
+  const target = createDefaultBootState();
+  assert.equal(target.uiHydrationStatus, "pending");
+
+  assert.equal(setUiHydrationState(target, { status: "ready", updatedAt: 10 }), "ready");
+  assert.equal(target.uiHydrationStatus, "ready");
+  assert.equal(target.uiHydrationError, "");
+
+  assert.equal(setUiHydrationState(target, {
+    status: "failed",
+    error: "toolbar unavailable",
+    updatedAt: 20,
+  }), "failed");
+  assert.deepEqual({
+    status: target.uiHydrationStatus,
+    error: target.uiHydrationError,
+    updatedAt: target.uiHydrationUpdatedAt,
+  }, {
+    status: "failed",
+    error: "toolbar unavailable",
+    updatedAt: 20,
+  });
+  assert.equal(setUiHydrationState(target, { status: "unknown" }), "pending");
 });
 
 test("compatibility boot field facade returns the existing phase when the patch omits it", () => {

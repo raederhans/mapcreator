@@ -55,10 +55,10 @@ test("canonical metadata source owns every projection and shadows the retained l
     verificationRecords: 143,
     routes: 398,
     commands: 354,
-    catalogEntries: 459,
-    leaves: 428,
+    catalogEntries: 460,
+    leaves: 429,
     suites: 31,
-    portfolioScripts: 341,
+    portfolioScripts: 342,
     superseders: 15,
     supersessionEdges: 41,
   });
@@ -66,7 +66,7 @@ test("canonical metadata source owns every projection and shadows the retained l
   assert.deepEqual(COMMAND_SUPERSESSION_SOURCE_IDENTITY, VERIFICATION_METADATA_SOURCE_IDENTITY);
   const prepared = prepareRepositoryVerificationCatalog({ packageScripts });
   assert.deepEqual(prepared.sourceIdentity.metadataSourceIdentity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  const driftedScripts = { ...packageScripts, "verify:edit": "node forged-edit.mjs" };
+  const driftedScripts = { ...packageScripts, "verify:commit": "node forged-commit.mjs" };
   assert.throws(
     () => prepareRepositoryVerificationCatalog({ packageScripts: driftedScripts }),
     /verification-catalog-package-shadow-drift/,
@@ -269,7 +269,8 @@ test("shadow estimate comparison covers aggregation and every cost-class field",
 
 function completeFixture(extra = {}) {
   return {
-    "verify:edit": "node edit.mjs",
+    "verify:commit": "node commit.mjs",
+    "verify:core": "node core.mjs",
     "verify:impact": "node impact.mjs",
     "verify:release": "node release.mjs",
     "verify:pr": "node pr.mjs",
@@ -289,8 +290,9 @@ test("classifies every script exactly once with stable name ordering", () => {
   assert.deepEqual(portfolio.productJourneyEntrypoints, VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS);
   assert.deepEqual(portfolio.scripts.map((entry) => entry.name), [
     "alpha",
+    "verify:commit",
+    "verify:core",
     "verify:demo",
-    "verify:edit",
     "verify:impact",
     "verify:nightly",
     "verify:pr",
@@ -298,8 +300,8 @@ test("classifies every script exactly once with stable name ordering", () => {
     "zeta",
   ]);
   assert.deepEqual(portfolio.summary, {
-    total: 8,
-    canonical: 6,
+    total: 9,
+    canonical: 7,
     internal: 2,
     superseded: 0,
     complete: true,
@@ -339,8 +341,9 @@ test("does not infer supersession when the exact superseder is absent", () => {
 test("reports every missing canonical entrypoint in contract order", () => {
   const portfolio = buildScriptPortfolio({ "verify:pr": "node pr.mjs" });
   assert.deepEqual(portfolio.missingCanonicalEntrypoints, [
-    "verify:edit",
+    "verify:commit",
     "verify:impact",
+    "verify:core",
     "verify:nightly",
     "verify:release",
     "verify:demo",
@@ -360,7 +363,7 @@ test("JSON, Markdown, and summary formats are deterministic", () => {
   assert.match(formatScriptPortfolioMarkdown(portfolio), /\| internal \| internal \|  \| node x\.mjs \\| tee out \|/);
   assert.equal(
     formatScriptPortfolioSummary(portfolio),
-    "scripts=7 canonical=6 internal=1 superseded=0 complete=true missingCanonical=none\n",
+    "scripts=8 canonical=7 internal=1 superseded=0 complete=true missingCanonical=none\n",
   );
 });
 
