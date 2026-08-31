@@ -42,9 +42,14 @@ from map_builder.geo.topology import compute_neighbor_graph
 from map_builder.geo.utils import build_named_topology
 from map_builder.io.readers import read_json_strict
 from map_builder.io.writers import write_json_atomic
+from map_builder.content_addressed_artifact_cache import (
+    ArtifactCacheError,
+    ContentAddressedArtifactCache,
+)
 from map_builder.scenario_build_session import (
     SCENARIO_BUILD_STATE_FILENAME,
     ensure_scenario_build_session,
+    load_stage_artifact,
     load_stage_signature,
     record_stage_outputs,
     stable_stage_signature,
@@ -325,6 +330,7 @@ def _record_checkpoint_stage_outputs(
     stage: str,
     filenames: list[str],
     stage_signature: dict[str, object] | None = None,
+    stage_artifact: dict[str, object] | None = None,
 ) -> None:
     ensure_scenario_build_session(
         scenario_id=SCENARIO_ID,
@@ -345,6 +351,7 @@ def _record_checkpoint_stage_outputs(
         output_paths=existing_paths,
         root=ROOT,
         stage_signature=stage_signature,
+        stage_artifact=stage_artifact,
     )
 
 
@@ -364,6 +371,137 @@ def _startup_support_output_identity(checkpoint_dir: Path) -> list[dict[str, obj
         }
         for path in sorted(output_paths, key=lambda candidate: candidate.name)
     ]
+
+
+def _startup_support_cache(checkpoint_dir: Path) -> ContentAddressedArtifactCache:
+    return ContentAddressedArtifactCache(
+        Path(checkpoint_dir).resolve().parent / ".artifact-cache" / "v1"
+    )
+
+
+def _startup_support_source_identity(stage_signature: str) -> str:
+    signature = str(stage_signature or "").strip()
+    if not re.fullmatch(r"[0-9a-f]{64}", signature):
+        raise ValueError("startup-support stage signature must be a complete lowercase SHA-256")
+    return f"sha256:{signature}"
+
+
+def _startup_support_builder_identity() -> str:
+    return f"sha256:{file_content_hash(ROOT / 'tools' / 'build_startup_bootstrap_assets.py')}"
+
+
+def _admit_startup_support_artifact(
+    checkpoint_dir: Path,
+    *,
+    stage_signature: str,
+) -> dict[str, object]:
+    return _startup_support_cache(checkpoint_dir).admit(
+        checkpoint_dir,
+        paths=[
+            CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME,
+            CHECKPOINT_STARTUP_LOCALES_FILENAME,
+            CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+        ],
+        source_identity=_startup_support_source_identity(stage_signature),
+        builder_identity=_startup_support_builder_identity(),
+    )
+
+
+class StartupSupportArtifactRecoveryError(RuntimeError):
+    def __init__(
+        self,
+        *,
+        backup_path: Path,
+        forward_error: BaseException,
+        rollback_errors: list[tuple[str, BaseException]],
+    ) -> None:
+        self.backup_path = Path(backup_path)
+        self.forward_error = forward_error
+        self.rollback_errors = tuple(rollback_errors)
+        rollback_summary = "; ".join(
+            f"{filename}: {error}" for filename, error in rollback_errors
+        )
+        super().__init__(
+            "startup-support restore failed and rollback was incomplete; "
+            f"durable backup retained at {self.backup_path}; "
+            f"forward error: {forward_error}; rollback errors: {rollback_summary}"
+        )
+
+
+def _replace_startup_support_file(source: Path, target: Path) -> None:
+    os.replace(source, target)
+
+
+def _restore_startup_support_artifact(
+    checkpoint_dir: Path,
+    artifact_identity: dict[str, object],
+    *,
+    expected_output_identity: list[dict[str, object]],
+) -> bool:
+    checkpoint_dir = Path(checkpoint_dir).resolve()
+    temporary_parent = Path(
+        tempfile.mkdtemp(prefix=f".{checkpoint_dir.name}.startup-support-", dir=str(checkpoint_dir.parent))
+    )
+    restored_root = temporary_parent / "artifact"
+    backup_root = checkpoint_dir.parent / f".{checkpoint_dir.name}.startup-support-backup-{uuid.uuid4().hex}"
+    filenames = [str(entry["filename"]) for entry in expected_output_identity]
+    existing_files = {filename: (checkpoint_dir / filename).is_file() for filename in filenames}
+    preserve_backup = False
+    try:
+        _startup_support_cache(checkpoint_dir).restore(
+            str(artifact_identity.get("manifestDigest") or ""),
+            restored_root,
+            source_identity=str(artifact_identity.get("sourceIdentity") or ""),
+            builder_identity=str(artifact_identity.get("builderIdentity") or ""),
+            tree_digest=str(artifact_identity.get("treeDigest") or ""),
+        )
+        restored_identity = _startup_support_output_identity(restored_root)
+        if restored_identity != expected_output_identity:
+            return False
+        backup_root.mkdir()
+        for filename, exists in existing_files.items():
+            if exists:
+                shutil.copyfile(checkpoint_dir / filename, backup_root / filename)
+        try:
+            for filename in filenames:
+                _replace_startup_support_file(restored_root / filename, checkpoint_dir / filename)
+            if _startup_support_output_identity(checkpoint_dir) != expected_output_identity:
+                raise ArtifactCacheError("Restored startup-support output identity mismatch")
+        except BaseException as forward_error:
+            rollback_root = temporary_parent / "rollback"
+            rollback_errors: list[tuple[str, BaseException]] = []
+            try:
+                rollback_root.mkdir()
+            except BaseException as rollback_error:
+                rollback_errors.append(("<rollback-staging>", rollback_error))
+            for filename, existed in existing_files.items():
+                try:
+                    target = checkpoint_dir / filename
+                    if existed:
+                        rollback_path = rollback_root / filename
+                        shutil.copyfile(backup_root / filename, rollback_path)
+                        _replace_startup_support_file(rollback_path, target)
+                    else:
+                        target.unlink(missing_ok=True)
+                except BaseException as rollback_error:
+                    rollback_errors.append((filename, rollback_error))
+            if rollback_errors:
+                preserve_backup = True
+                raise StartupSupportArtifactRecoveryError(
+                    backup_path=backup_root,
+                    forward_error=forward_error,
+                    rollback_errors=rollback_errors,
+                ) from forward_error
+            raise
+        return True
+    except StartupSupportArtifactRecoveryError:
+        raise
+    except (ArtifactCacheError, OSError, ValueError):
+        return False
+    finally:
+        shutil.rmtree(temporary_parent, ignore_errors=True)
+        if not preserve_backup:
+            shutil.rmtree(backup_root, ignore_errors=True)
 
 
 def _build_stage_signature_entry(
@@ -419,16 +557,51 @@ def _stage_signature_is_current(
     if not isinstance(existing_entry, dict):
         return False
     existing_signature = str(existing_entry.get("signature") or "").strip()
+    if existing_signature != entry["signature"]:
+        return False
     if stage == STAGE_STARTUP_SUPPORT_ASSETS:
         existing_output_identity = existing_entry.get("output_identity")
         current_output_identity = entry.get("output_identity")
+        artifact_identity = load_stage_artifact(checkpoint_dir, stage)
+        embedded_artifact_identity = existing_entry.get("artifact_identity")
+        if isinstance(embedded_artifact_identity, dict):
+            if not isinstance(artifact_identity, dict) or artifact_identity != embedded_artifact_identity:
+                return False
+            artifact_identity = dict(embedded_artifact_identity)
+        if isinstance(artifact_identity, dict):
+            expected_source_identity = _startup_support_source_identity(existing_signature)
+            expected_builder_identity = _startup_support_builder_identity()
+            if (
+                artifact_identity.get("sourceIdentity") != expected_source_identity
+                or artifact_identity.get("builderIdentity") != expected_builder_identity
+            ):
+                return False
+            try:
+                cached = _startup_support_cache(checkpoint_dir).lookup(
+                    str(artifact_identity.get("manifestDigest") or ""),
+                    source_identity=expected_source_identity,
+                    builder_identity=expected_builder_identity,
+                    tree_digest=str(artifact_identity.get("treeDigest") or ""),
+                )
+            except (ArtifactCacheError, ValueError):
+                return False
+            if cached is None:
+                return False
+            if isinstance(existing_output_identity, list) and current_output_identity != existing_output_identity:
+                if not _restore_startup_support_artifact(
+                    checkpoint_dir,
+                    artifact_identity,
+                    expected_output_identity=existing_output_identity,
+                ):
+                    return False
+                current_output_identity = _startup_support_output_identity(checkpoint_dir)
         if (
             not isinstance(existing_output_identity, list)
             or not isinstance(current_output_identity, list)
             or existing_output_identity != current_output_identity
         ):
             return False
-    return existing_signature == entry["signature"]
+    return True
 RUNTIME_ACTIVE_SERVER_METADATA_PATH = ROOT / ".runtime" / "dev" / "active_server.json"
 HGO_ROOT = ROOT / "historic geographic overhaul"
 TNO_ROOT_CANDIDATES = [
@@ -13068,6 +13241,16 @@ def build_startup_support_assets_stage(
                 startup_geo_aliases_output_path=checkpoint_dir / CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
                 startup_support_whitelist_path=scenario_dir / "derived" / "startup_support_whitelist.json",
             )
+            stage_signature = _build_stage_signature_entry(
+                STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            artifact_identity = _admit_startup_support_artifact(
+                checkpoint_dir,
+                stage_signature=str(stage_signature["signature"]),
+            )
+            stage_signature["artifact_identity"] = dict(artifact_identity)
             _record_checkpoint_stage_outputs(
                 checkpoint_dir,
                 scenario_dir=scenario_dir,
@@ -13075,11 +13258,8 @@ def build_startup_support_assets_stage(
                 filenames=[
                     *(artifact.filename for artifact in scenario_bundle_platform.SCENARIO_STARTUP_SUPPORT_STAGE_ARTIFACTS),
                 ],
-                stage_signature=_build_stage_signature_entry(
-                    STAGE_STARTUP_SUPPORT_ASSETS,
-                    scenario_dir=scenario_dir,
-                    checkpoint_dir=checkpoint_dir,
-                ),
+                stage_signature=stage_signature,
+                stage_artifact=artifact_identity,
             )
 
 

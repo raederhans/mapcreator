@@ -8,6 +8,7 @@ from pathlib import Path
 from map_builder.scenario_build_session import (
     SCENARIO_BUILD_ROOT_RELATIVE,
     SCENARIO_BUILD_STATE_FILENAME,
+    load_stage_artifact,
     load_stage_signature,
     record_published_target,
     record_stage_outputs,
@@ -61,6 +62,7 @@ class ScenarioBuildSessionTest(unittest.TestCase):
             self.assertIn("manifest.json", state_payload["input_hashes"])
             self.assertIn("scenario_mutations.json", state_payload["input_hashes"])
             self.assertEqual(state_payload["stage_signatures"], {})
+            self.assertEqual(state_payload["stage_artifacts"], {})
 
     def test_record_stage_outputs_persists_stage_signature(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -101,12 +103,21 @@ class ScenarioBuildSessionTest(unittest.TestCase):
                     "signature": signature,
                     "payload": signature_payload,
                 },
+                stage_artifact={
+                    "schema": "ContentAddressedArtifactCache/v1",
+                    "manifestDigest": f"sha256:{'a' * 64}",
+                    "treeDigest": f"sha256:{'b' * 64}",
+                },
             )
 
             saved_signature = load_stage_signature(build_dir, "countries")
             self.assertIsNotNone(saved_signature)
             self.assertEqual(saved_signature["signature"], signature)
             self.assertTrue(stage_signature_matches(build_dir, "countries", signature))
+            saved_artifact = load_stage_artifact(build_dir, "countries")
+            self.assertIsNotNone(saved_artifact)
+            self.assertEqual(saved_artifact["manifestDigest"], f"sha256:{'a' * 64}")
+            self.assertEqual(saved_artifact["treeDigest"], f"sha256:{'b' * 64}")
 
     def test_record_published_target_persists_artifact_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
