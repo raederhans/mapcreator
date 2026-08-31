@@ -90,6 +90,7 @@ function createOwner(overrides = {}) {
       MODERN_CITY_LIGHTS_STEP_LON_DEG: 180,
       ...overrides.assets,
     },
+    assetProvider: overrides.assetProvider,
     getters: {
       getContext: () => context,
       getPathCanvas: () => {},
@@ -128,6 +129,7 @@ function createOwner(overrides = {}) {
       },
       ...overrides.helpers,
     },
+    effects: overrides.effects,
   });
 }
 
@@ -181,6 +183,67 @@ function drawWithNormalizedConfig(owner, rawConfig) {
   owner.drawNightLightsLayer(1, config, {});
   return config;
 }
+
+test("city lights owner requests modern assets only for the enabled modern variant", async () => {
+  const calls = [];
+  let resolveLoad;
+  const loadPromise = new Promise((resolve) => {
+    resolveLoad = resolve;
+  });
+  const assetProvider = {
+    isModernAssetsReady: () => false,
+    ensureModernAssets: () => {
+      calls.push("load-modern");
+      return loadPromise;
+    },
+  };
+  const owner = createOwner({
+    assetProvider,
+    effects: {
+      onModernAssetsReady: () => calls.push("modern-ready"),
+      onModernAssetsError: (error) => calls.push(`modern-error:${error.message}`),
+    },
+  });
+
+  owner.drawNightLightsLayer(1, { cityLightsEnabled: false, cityLightsStyle: "modern" }, {});
+  owner.drawNightLightsLayer(1, { cityLightsEnabled: true, cityLightsStyle: "historical_1930s" }, {});
+  assert.deepEqual(calls, []);
+
+  owner.drawNightLightsLayer(1, { cityLightsEnabled: true, cityLightsStyle: "modern" }, {});
+  owner.drawNightLightsLayer(1, { cityLightsEnabled: true, cityLightsStyle: "modern" }, {});
+  assert.deepEqual(calls, ["load-modern"], "concurrent draw passes must share one asset request");
+
+  resolveLoad();
+  await loadPromise;
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(calls, ["load-modern", "modern-ready"]);
+});
+
+test("city lights owner reports modern asset load failure without drawing stale data", async () => {
+  const failure = new Error("asset unavailable");
+  const calls = [];
+  const owner = createOwner({
+    assetProvider: {
+      isModernAssetsReady: () => false,
+      ensureModernAssets: async () => {
+        calls.push("load-modern");
+        throw failure;
+      },
+    },
+    effects: {
+      onModernAssetsReady: () => calls.push("modern-ready"),
+      onModernAssetsError: (error) => calls.push(error),
+    },
+  });
+
+  owner.drawNightLightsLayer(1, { cityLightsEnabled: true, cityLightsStyle: "modern" }, {});
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.deepEqual(calls, ["load-modern", failure]);
+});
 
 test("city lights dispatcher reaches the modern draw body through the real config normalizer", () => {
   const rawConfigs = [

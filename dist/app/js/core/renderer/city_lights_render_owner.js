@@ -3,7 +3,9 @@ const defaultColorManager = {
   hexToRgb: () => null,
 };
 
-export function createCityLightsRenderOwner({ state = {}, assets = {}, getters = {}, helpers = {} } = {}) {
+export function createCityLightsRenderOwner({
+  state = {}, assets = {}, assetProvider = null, getters = {}, helpers = {}, effects = {},
+} = {}) {
   const runtimeState = state;
   const {
     HISTORICAL_1930_CITY_LIGHTS_ENTRIES = [],
@@ -60,6 +62,13 @@ export function createCityLightsRenderOwner({ state = {}, assets = {}, getters =
     },
     withRenderTarget = (targetContext, callback) => callback?.(),
   } = helpers;
+  const onModernAssetsReady = typeof effects.onModernAssetsReady === "function"
+    ? effects.onModernAssetsReady
+    : () => {};
+  const onModernAssetsError = typeof effects.onModernAssetsError === "function"
+    ? effects.onModernAssetsError
+    : () => {};
+  let modernAssetLoadPromise = null;
 
   const modernCityLightsGeometryCache = {
     projectionKey: '',
@@ -1496,6 +1505,17 @@ export function createCityLightsRenderOwner({ state = {}, assets = {}, getters =
     }
     const variant = String(config.cityLightsStyle || "modern").trim().toLowerCase();
     if (variant === "modern") {
+      if (assetProvider && !assetProvider.isModernAssetsReady()) {
+        if (!modernAssetLoadPromise) {
+          modernAssetLoadPromise = assetProvider.ensureModernAssets()
+            .then(() => onModernAssetsReady())
+            .catch((error) => onModernAssetsError(error))
+            .finally(() => {
+              modernAssetLoadPromise = null;
+            });
+        }
+        return;
+      }
       drawModernNightLightsLayer(k, config, solarState);
       return;
     }
