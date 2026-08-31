@@ -6,6 +6,7 @@ import {
 } from "../js/bootstrap/startup_ready_handoff.js";
 import { POST_READY_IDLE_QUIET_MS } from "../js/bootstrap/post_ready_scheduler.js";
 import { attachDeferredUiBootstrapRejectionObserver } from "../js/bootstrap/deferred_ui_bootstrap.js";
+import { setUiHydrationState } from "../js/core/state/actions/boot_actions.js";
 
 function createSchedulerRecorder({ order = null } = {}) {
   const tasks = [];
@@ -78,13 +79,18 @@ function createOwnerHarness({
   scheduler = createSchedulerRecorder(),
   helpers = createHelpers(),
 } = {}) {
+  const ownerHelpers = {
+    ...helpers,
+    commitUiHydrationState: helpers.commitUiHydrationState
+      || ((patch) => setUiHydrationState(targetRuntime, patch)),
+  };
   const owner = createStartupReadyHandoffOwner({
     runtimeState: targetRuntime,
     postReadyScheduler: scheduler,
-    helpers,
+    helpers: ownerHelpers,
   });
   return {
-    helpers,
+    helpers: ownerHelpers,
     owner,
     scheduler,
     targetRuntime,

@@ -67,6 +67,7 @@ test("main delegates phase8 ready handoff policy to the startup ready handoff ow
   const delegatedPolicyTokens = [
     "function getStartupReadyHandoffOwner()",
     "createStartupReadyHandoffOwner({",
+    "commitUiHydrationState: (patch) => setUiHydrationState(state, patch)",
     "flushPendingScenarioChunkRefreshAfterReady: startupReadyHandoff.flushPendingScenarioChunkRefreshAfterReady",
     "getStartupReadyHandoffOwner().observePostReadyUiBootstrap(",
     "schedulePostReadyDeferredContextWarmup: startupReadyHandoff.schedulePostReadyDeferredContextWarmup",
