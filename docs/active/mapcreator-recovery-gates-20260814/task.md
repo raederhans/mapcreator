@@ -128,8 +128,8 @@ Stage A remaining boundaries: UI hydration 失败目前只有 console/recovery h
 - [x] 建立严格、深冻结、可序列化的 `RenderSnapshot/v1`，只覆盖 palette、ownership 与 viewport；`map_renderer` 仅新增 lazy snapshot owner 与只读 facade。
 - [x] 建立纯 `RenderChangeSet/v1` 的 parse/create/compare、exact base-stale 与 declarative preview/compare/apply/undo intent；独立审查发现并关闭 apply/undo 缺 base 与稀疏数组身份碰撞两条 fail-open 路径。
 - [x] 为 `startup_support_assets` 的三个既有输出记录稳定 `filename + byte length + SHA-256` 内容身份；旧签名、缺失输出及同长度内容漂移均 fail closed。
-- [x] 将新增 Node/Python 合同绑定到 canonical child-safe direct routes；retained shadow 仍由 canonical source 投影。metadata/portfolio 98/98、shadow equal、400 routes、356 commands、零 unmatched 已通过。
+- [x] 将新增 Node/Python 合同绑定到 canonical child-safe direct routes，并只在本地 edit/impact 投影中用 exact indivisible test route 替代 generic selector fallback；retained shadow 仍由 canonical source 投影。metadata/portfolio 98/98、control batch 193/193、focused `verify:commit` 200/200 Node + 63/63 Python、shadow equal、401 routes、357 commands、零 mismatch 已通过。
 - [x] 按当前 tracked-dist 合同将两个 render handoff 模块登记为同一 on-demand product owner，生成 913.73 MiB Pages 镜像；source/dist 三组文件一致，Pages startup/inventory 合同 62/62 通过。
-- [ ] 通过新的 protected-main PR 完成 Stage B 远端门禁、main 收口与候选工作树清理。
+- [ ] [PR #113](https://github.com/raederhans/scenario-forge/pull/113) 已建立；等待 protected-main 远端必需门禁后完成 main 收口与候选工作树清理。
 
 Stage B remaining boundaries: ChangeSet 仍不执行 live apply/undo、不写 history/runtime state，也不触发 render；startup-support identity 只决定本地 checkpoint reuse，不复制、恢复或发布共享缓存。本阶段不退休 tracked `dist`/legacy projection，不做额外本地性能模拟、浏览器、Nightly、Release 或部署。
