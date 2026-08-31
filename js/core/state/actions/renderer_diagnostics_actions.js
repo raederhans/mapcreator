@@ -216,6 +216,39 @@ function cloneDiagnosticValue(value, seen = new WeakMap()) {
   return clone;
 }
 
+function createRejectedRenderSnapshotRecordCarrier() {
+  return Object.create(Object.freeze({ rejectedRenderSnapshotRecord: true }));
+}
+
+function cloneRenderSnapshotRecord(target, key) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
+  if (!descriptor) {
+    return key in target ? createRejectedRenderSnapshotRecordCarrier() : {};
+  }
+  if (!Object.hasOwn(descriptor, "value")) {
+    return createRejectedRenderSnapshotRecordCarrier();
+  }
+  const value = descriptor.value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return value;
+  }
+  for (const ownKey of Reflect.ownKeys(value)) {
+    const ownDescriptor = Object.getOwnPropertyDescriptor(value, ownKey);
+    if (
+      typeof ownKey !== "string"
+      || !ownDescriptor?.enumerable
+      || !Object.hasOwn(ownDescriptor, "value")
+    ) {
+      return createRejectedRenderSnapshotRecordCarrier();
+    }
+  }
+  return cloneDiagnosticValue(value);
+}
+
 function cloneRenderSnapshotState(target, getters) {
   for (const name of [
     "getViewportRenderSignature",
@@ -228,29 +261,13 @@ function cloneRenderSnapshotState(target, getters) {
       );
     }
   }
-  const sovereignBaseColors = getOwnDataPropertyValue(
-    target,
-    "sovereignBaseColors",
-  );
-  const sovereigntyByFeatureId = getOwnDataPropertyValue(
-    target,
-    "sovereigntyByFeatureId",
-  );
   const transform = getOwnDataPropertyValue(target, "zoomTransform");
   const transformRecord = transform && typeof transform === "object"
     ? transform
     : {};
   return Object.freeze({
-    sovereignBaseColors: cloneDiagnosticValue(
-      sovereignBaseColors && typeof sovereignBaseColors === "object"
-        ? sovereignBaseColors
-        : {},
-    ),
-    sovereigntyByFeatureId: cloneDiagnosticValue(
-      sovereigntyByFeatureId && typeof sovereigntyByFeatureId === "object"
-        ? sovereigntyByFeatureId
-        : {},
-    ),
+    sovereignBaseColors: cloneRenderSnapshotRecord(target, "sovereignBaseColors"),
+    sovereigntyByFeatureId: cloneRenderSnapshotRecord(target, "sovereigntyByFeatureId"),
     viewportTransform: Object.freeze({
       x: Number(getOwnDataPropertyValue(transformRecord, "x") ?? 0),
       y: Number(getOwnDataPropertyValue(transformRecord, "y") ?? 0),

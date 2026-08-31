@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  RENDER_SNAPSHOT_ERROR,
+  createRenderSnapshotOwner,
+} from "../js/core/renderer/render_snapshot.js";
+
 const MODULE_PATH = "../js/core/state/actions/renderer_diagnostics_actions.js";
 const SOURCE_URL = new URL(MODULE_PATH, import.meta.url);
 
@@ -261,6 +266,42 @@ test("render snapshot capture detaches a coherent render-state view without invo
     () => captureRenderSnapshotState(target, {}),
     /getters\.getViewportRenderSignature must be a function/,
   );
+});
+
+test("render snapshot facade rejects non-own-data palette and ownership carriers without invoking getters", async () => {
+  const { captureRenderSnapshotState } = await loadActions();
+  const owner = createRenderSnapshotOwner();
+  const getters = {
+    getViewportRenderSignature: () => "100|200|1",
+    getProjectionRenderSignature: () => "projection:na",
+    getViewportGeoBounds: () => [-10, -5, 20, 15],
+  };
+  let getterCalls = 0;
+  const accessorRecord = {};
+  Object.defineProperty(accessorRecord, "US", {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return "#123456";
+    },
+  });
+  const inheritedRecord = Object.create({ feature_1: "US" });
+
+  for (const [sovereignBaseColors, sovereigntyByFeatureId] of [
+    [accessorRecord, { feature_1: "US" }],
+    [{ US: "#123456" }, inheritedRecord],
+    [new Map([["US", "#123456"]]), { feature_1: "US" }],
+    [{ US: "#123456" }, new Set(["feature_1"])],
+  ]) {
+    assert.throws(
+      () => owner.captureRenderSnapshot(captureRenderSnapshotState({
+        sovereignBaseColors,
+        sovereigntyByFeatureId,
+      }, getters)),
+      (error) => error?.code === RENDER_SNAPSHOT_ERROR.INVALID,
+    );
+  }
+  assert.equal(getterCalls, 0);
 });
 
 test("first-visible and country-coverage actions retain scalar/reference semantics", async () => {
