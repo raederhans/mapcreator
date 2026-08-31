@@ -8510,6 +8510,41 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
+      "id": "node:render-snapshot-change-set-contracts",
+      "commandRef": "node --test tests/render_snapshot_behavior.test.mjs tests/render_change_set_behavior.test.mjs",
+      "sourceRefs": [
+        "js/core/render_change_set.js",
+        "js/core/renderer/render_snapshot.js",
+        "tests/render_change_set_behavior.test.mjs",
+        "tests/render_snapshot_behavior.test.mjs"
+      ],
+      "ownerHints": [
+        "renderer-runtime"
+      ],
+      "domains": [
+        "renderer-runtime"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 390,
+      "verification": null,
+      "selector": {}
+    },
+    {
       "id": "node:test:node:renderer-political-pass-orchestration-preflight",
       "commandRef": "test:node:renderer-political-pass-orchestration-preflight",
       "sourceRefs": [
@@ -14191,6 +14226,41 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
       "selectorOrder": 358,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "python:tests.test_map_renderer_render_snapshot_boundary_contract",
+      "commandRef": "python -m unittest tests.test_map_renderer_render_snapshot_boundary_contract -q",
+      "sourceRefs": [
+        "js/core/map_renderer.js",
+        "js/core/render_change_set.js",
+        "js/core/renderer/render_snapshot.js",
+        "tests/test_map_renderer_render_snapshot_boundary_contract.py"
+      ],
+      "ownerHints": [
+        "renderer-runtime"
+      ],
+      "domains": [
+        "renderer-runtime"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "contract",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 391,
       "verification": null,
       "selector": {}
     },

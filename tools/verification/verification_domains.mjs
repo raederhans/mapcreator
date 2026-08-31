@@ -323,6 +323,21 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       supervisorDomain: entry.domain,
       routeRegistry: true,
     })),
+  // Stage B render handoff contracts are direct commands authored only in the
+  // canonical source. Derive the retained shadow records from that source.
+  ...buildCanonicalRouteIndex()
+    .filter((entry) => [
+      "node:render-snapshot-change-set-contracts",
+      "python:tests.test_map_renderer_render_snapshot_boundary_contract",
+    ].includes(entry.id))
+    .map((entry) => Object.freeze({
+      ...entry,
+      commandType: "direct",
+      packageScriptRequired: false,
+      sourceRefs: entry.sourceRef.split(","),
+      supervisorDomain: entry.domain,
+      routeRegistry: true,
+    })),
   Object.freeze({
     id: "infra:local-verification-closure",
     commandRef: "verify:local-infra",
