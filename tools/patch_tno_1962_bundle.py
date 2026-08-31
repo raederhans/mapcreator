@@ -348,6 +348,24 @@ def _record_checkpoint_stage_outputs(
     )
 
 
+def _startup_support_output_identity(checkpoint_dir: Path) -> list[dict[str, object]] | None:
+    output_paths = [
+        checkpoint_dir / CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME,
+        checkpoint_dir / CHECKPOINT_STARTUP_LOCALES_FILENAME,
+        checkpoint_dir / CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+    ]
+    if not all(path.is_file() for path in output_paths):
+        return None
+    return [
+        {
+            "filename": path.name,
+            "byte_length": path.stat().st_size,
+            "sha256": file_content_hash(path),
+        }
+        for path in sorted(output_paths, key=lambda candidate: candidate.name)
+    ]
+
+
 def _build_stage_signature_entry(
     stage: str,
     *,
@@ -368,11 +386,14 @@ def _build_stage_signature_entry(
         tno_root=tno_root,
         hgo_root=hgo_root,
     )
-    return {
+    entry = {
         "signature": stable_stage_signature(payload),
         "payload": payload,
         "recorded_at": utc_timestamp(),
     }
+    if stage == STAGE_STARTUP_SUPPORT_ASSETS:
+        entry["output_identity"] = _startup_support_output_identity(checkpoint_dir)
+    return entry
 
 
 def _stage_signature_is_current(
@@ -398,6 +419,15 @@ def _stage_signature_is_current(
     if not isinstance(existing_entry, dict):
         return False
     existing_signature = str(existing_entry.get("signature") or "").strip()
+    if stage == STAGE_STARTUP_SUPPORT_ASSETS:
+        existing_output_identity = existing_entry.get("output_identity")
+        current_output_identity = entry.get("output_identity")
+        if (
+            not isinstance(existing_output_identity, list)
+            or not isinstance(current_output_identity, list)
+            or existing_output_identity != current_output_identity
+        ):
+            return False
     return existing_signature == entry["signature"]
 RUNTIME_ACTIVE_SERVER_METADATA_PATH = ROOT / ".runtime" / "dev" / "active_server.json"
 HGO_ROOT = ROOT / "historic geographic overhaul"

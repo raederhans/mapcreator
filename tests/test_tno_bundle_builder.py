@@ -3435,6 +3435,115 @@ class TnoBundleBuilderTest(unittest.TestCase):
                     )
                 )
 
+    def test_startup_support_stage_signature_reuses_matching_output_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+
+            with patch.object(tno_bundle, "load_stage_signature", return_value=entry):
+                self.assertTrue(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+
+            self.assertEqual(
+                [item["filename"] for item in entry["output_identity"]],
+                sorted([
+                    tno_bundle.CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME,
+                    tno_bundle.CHECKPOINT_STARTUP_LOCALES_FILENAME,
+                    tno_bundle.CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
+                ]),
+            )
+            self.assertTrue(
+                all(set(item) == {"filename", "byte_length", "sha256"} for item in entry["output_identity"])
+            )
+
+    def test_startup_support_stage_signature_rejects_same_length_content_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            output_path = checkpoint_dir / tno_bundle.CHECKPOINT_STARTUP_LOCALES_FILENAME
+            output_path.write_bytes(b"bb")
+
+            with patch.object(tno_bundle, "load_stage_signature", return_value=entry):
+                self.assertFalse(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+
+    def test_startup_support_stage_signature_rejects_missing_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            (checkpoint_dir / tno_bundle.CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME).unlink()
+
+            with patch.object(tno_bundle, "load_stage_signature", return_value=entry):
+                self.assertFalse(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+
+    def test_startup_support_stage_legacy_signature_rebuilds_then_reuses(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            scenario_dir, checkpoint_dir = self._write_startup_support_outputs(Path(tmp_dir))
+            rebuilt_entry = tno_bundle._build_stage_signature_entry(
+                tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                scenario_dir=scenario_dir,
+                checkpoint_dir=checkpoint_dir,
+            )
+            legacy_entry = {key: value for key, value in rebuilt_entry.items() if key != "output_identity"}
+
+            with patch.object(tno_bundle, "load_stage_signature", return_value=legacy_entry):
+                self.assertFalse(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+            with patch.object(tno_bundle, "load_stage_signature", return_value=rebuilt_entry):
+                self.assertTrue(
+                    tno_bundle._stage_signature_is_current(
+                        tno_bundle.STAGE_STARTUP_SUPPORT_ASSETS,
+                        scenario_dir=scenario_dir,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                )
+
+    def _write_startup_support_outputs(self, root: Path) -> tuple[Path, Path]:
+        scenario_dir = root / "scenario"
+        checkpoint_dir = root / "checkpoint"
+        scenario_dir.mkdir(parents=True, exist_ok=True)
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        for filename, contents in (
+            (tno_bundle.CHECKPOINT_RUNTIME_BOOTSTRAP_TOPOLOGY_FILENAME, b"aa"),
+            (tno_bundle.CHECKPOINT_STARTUP_LOCALES_FILENAME, b"aa"),
+            (tno_bundle.CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME, b"aa"),
+        ):
+            (checkpoint_dir / filename).write_bytes(contents)
+        return scenario_dir, checkpoint_dir
+
     def test_main_runtime_topology_stage_builds_missing_water_stage_first(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenario_dir = Path(tmp_dir) / "scenario"
