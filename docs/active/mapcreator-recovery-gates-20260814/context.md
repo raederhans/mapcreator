@@ -124,3 +124,30 @@ Stage C 无剩余执行项。tracked dist、legacy catalog projection 与可信�
 | Process | Owner | Command / cwd / shared outputs | Log | Success / failure / stop | State |
 | --- | --- | --- | --- | --- | --- |
 | Pages/dist regeneration | `/root` | `npm run -s verify:pages-dist`；cwd `C:\Users\raede\Desktop\dev\mapcreator`；共享 `dist/` 与 `.runtime/` | `.runtime/tests/stage-c-pages-dist.log`；stderr `.runtime/tests/stage-c-pages-dist.stderr.log` | builder 913.73 MiB、startup shell 62/62、landing assets 10/10、showcase view 20/20；source/dist no-index diff clean | released / PASS |
+
+## Post-Stage-C R1 current truth (2026-08-31)
+
+- Reconciliation baseline：`main == origin/main == 45fbb58e70a2a212552a89f835422146bcaaed0b`，初始工作树干净且只有主 checkout。
+- 原始六 Epic 路线仍有 Gate 3→5 未完成；Stage A–C 是三个基础设施 amendment，不是整条原计划的最终阶段替代。
+- 当前 checked-in policy 为 schema 2、`progress.latestPhase=P4.3`；技术 source `2ee6653f` 已在 main ancestry，P4.4 recovery source `65335370` 不在 main ancestry；两个 admission marker 均未写入。
+- R1 只同时启动三个文件面不重叠的候选：P4.3 current-main drift、静态 startup graph、Export vertical seam。P4.4 保持 blocked，直到主监督写入正式 `A_ADMITTED_SHA`。
+
+### R1 task ownership
+
+| Lane | Owner | Scope | State |
+| --- | --- | --- | --- |
+| R1 integration / task records / live gates | `/root` | Git/index/refs、共享 files/routes、review、frozen SHA、long gates、admission markers | active |
+| P4.3 candidate | `client-new-thread:c1c90d1a-bace-48a3-b3d2-ecfd60f15fbb` | P4.3 drift、聚焦 source/policy/route fixes；不写 A marker | queued / worktree setup |
+| Startup resource graph | `client-new-thread:ca61daef-6921-4702-aee0-082c280758fd` | 新 static graph/contract 与 focused tests | queued / worktree setup |
+| Export vertical seam | `client-new-thread:d06e7b78-4f86-4c04-beac-944522d00bee` | Export 专属模块与 focused tests | queued / worktree setup |
+
+### R1 live-process ownership
+
+| Process | Owner | Command / cwd / shared outputs | Success / failure / stop | State |
+| --- | --- | --- | --- | --- |
+| P4.3 canonical checkpoint builder | `/root` | exact command在 source integration 后固定；目标 `tools/state_writer_policy.json` 与 supervisor-owned `.runtime` log | 同一 frozen SHA、clean identity、单 writer；相同失败三次停止重跑 | reserved / inactive |
+| Pages/dist | `/root` | `verify:pages-dist` / `verify:dist-drift`；共享 `dist/`、`.runtime` | source/dist identity 与完整 gate；只在最终 candidate 运行 | reserved / inactive |
+| Browser / Playwright | `/root` | localhost profile；`.runtime/browser/`、`.runtime/tests/playwright/` | exact admission journeys；端口与进程完全释放 | reserved / inactive |
+| Standard performance | `/root` | `npm run -s perf:gate`；supervisor-owned log/artifact | frozen SHA、environment admitted；结构切片落定前不运行 | reserved / inactive |
+
+Non-owner tasks 只能运行无共享输出的 focused child-safe tests。它们不得启动、轮询、重试、停止或解释以上 live process；交接时必须报告精确 commit、changed files、聚焦证据和未运行门禁。
