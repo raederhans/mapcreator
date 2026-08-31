@@ -45582,7 +45582,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_ready_handoff.js",
-      "size_bytes": 12484,
+      "size_bytes": 12843,
       "source_kind": "dist"
     },
     {
@@ -46772,7 +46772,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 24931,
+      "size_bytes": 24591,
       "source_kind": "dist"
     },
     {
@@ -47707,7 +47707,7 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 5324802
+        "size_bytes": 5324821
       },
       {
         "file_count": 87,
@@ -57098,7 +57098,7 @@
               "expression": "\"./core/scenario_manager.js\"",
               "expression_index": 2,
               "kind": "literal_dynamic_import",
-              "line": 241,
+              "line": 249,
               "reference": "./core/scenario_manager.js",
               "resolution": "literal"
             }
@@ -57132,7 +57132,7 @@
               {
                 "column": 41,
                 "kind": "literal-dynamic-import",
-                "line": 241,
+                "line": 249,
                 "local": true,
                 "reference": "./core/scenario_manager.js",
                 "resolved_path": "app/js/core/scenario_manager.js"
@@ -61945,11 +61945,11 @@
         "deferred_graph_file_count": 117,
         "deferred_module_count": 116,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 5306122,
+        "initial_graph_bytes": 5306141,
         "initial_graph_file_count": 238,
         "initial_module_count": 224,
         "initial_resource_count": 14,
-        "initial_script_bytes": 3947796,
+        "initial_script_bytes": 3947815,
         "initial_script_count": 226,
         "module_count": 346,
         "registry_resolved_dynamic_expression_count": 2,
@@ -62046,7 +62046,7 @@
           },
           {
             "path": "app/js/bootstrap/startup_ready_handoff.js",
-            "size_bytes": 12484
+            "size_bytes": 12843
           },
           {
             "path": "app/js/core/city_lights_historical_1930_asset.js",
@@ -62674,7 +62674,7 @@
           },
           {
             "path": "app/js/main.js",
-            "size_bytes": 24931
+            "size_bytes": 24591
           },
           {
             "path": "app/js/ui/i18n.js",
@@ -62702,7 +62702,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 2899263
+        "size_bytes": 2899282
       },
       {
         "basis": "startup-resource-graph",
@@ -64346,7 +64346,7 @@
     {
       "file_count": 9456,
       "path": "app",
-      "size_bytes": 951266964
+      "size_bytes": 951266983
     },
     {
       "file_count": 57,
@@ -64379,5 +64379,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 958129204
+  "total_bytes": 958129223
 }

@@ -182,10 +182,13 @@ function getStartupReadyHandoffOwner() {
   startupReadyHandoffOwner = createStartupReadyHandoffOwner({
     runtimeState: state,
     postReadyScheduler,
+    effects: {
+      commitUiHydrationState: (patch) => setUiHydrationState(runtimeState, patch),
+      getStartupUiBootstrapPromise: deferredUiBootstrapper.getPromise,
+    },
     helpers: {
       buildInteractionInfrastructureAfterStartup,
       checkpointBootMetric,
-      commitUiHydrationState: (patch) => setUiHydrationState(state, patch),
       completeBootSequenceLogging,
       ensureActiveScenarioBundleHydrated,
       ensureContextLayerDataReady,
@@ -204,7 +207,6 @@ function getDeferredDetailPromotionOwner() {
   if (deferredDetailPromotionOwner) {
     return deferredDetailPromotionOwner;
   }
-  const startupReadyHandoff = getStartupReadyHandoffOwner();
   deferredDetailPromotionOwner = createDeferredDetailPromotionOwner({
     runtimeState: state,
     helpers: {
@@ -213,19 +215,25 @@ function getDeferredDetailPromotionOwner() {
       checkpointBootMetric,
       completeBootSequenceLogging,
       finishBootMetric,
-      flushPendingScenarioChunkRefreshAfterReady: startupReadyHandoff.flushPendingScenarioChunkRefreshAfterReady,
+      flushPendingScenarioChunkRefreshAfterReady:
+        getStartupReadyHandoffOwner().flushPendingScenarioChunkRefreshAfterReady,
       getBootProgressWindow,
       hasStartupReadonlyUnlockScheduled,
       requestMainRender,
-      schedulePostReadyDeferredContextWarmup: startupReadyHandoff.schedulePostReadyDeferredContextWarmup,
-      schedulePostReadyHydration: startupReadyHandoff.schedulePostReadyHydration,
-      schedulePostReadyPoliticalReconcile: startupReadyHandoff.schedulePostReadyPoliticalReconcile,
-      schedulePostReadyVisualWarmup: startupReadyHandoff.schedulePostReadyVisualWarmup,
+      schedulePostReadyDeferredContextWarmup:
+        getStartupReadyHandoffOwner().schedulePostReadyDeferredContextWarmup,
+      schedulePostReadyHydration:
+        getStartupReadyHandoffOwner().schedulePostReadyHydration,
+      schedulePostReadyPoliticalReconcile:
+        getStartupReadyHandoffOwner().schedulePostReadyPoliticalReconcile,
+      schedulePostReadyVisualWarmup:
+        getStartupReadyHandoffOwner().schedulePostReadyVisualWarmup,
       scheduleStartupReadonlyUnlockTimer,
       setBootState,
       setStartupReadonlyState,
       startBootMetric,
-      startDeferredFullInteractionInfrastructureBuild: startupReadyHandoff.startDeferredFullInteractionInfrastructureBuild,
+      startDeferredFullInteractionInfrastructureBuild:
+        getStartupReadyHandoffOwner().startDeferredFullInteractionInfrastructureBuild,
       tryScheduleStartupSampleProjectDeeplink,
       warnOnStartupBundleIntegrity,
     },
@@ -449,14 +457,12 @@ async function bootstrap() {
   setStartupReadonlyState(false);
 
   let renderDispatcher = null;
-  let startupUiBootstrapPromise = null;
   let uiHydrationObservation = null;
   const observeUiHydration = () => {
-    if (!startupUiBootstrapPromise || uiHydrationObservation) {
-      return uiHydrationObservation;
+    if (!deferredUiBootstrapper.getPromise() || uiHydrationObservation) {
+      return;
     }
     uiHydrationObservation = getStartupReadyHandoffOwner().observePostReadyUiBootstrap(
-      startupUiBootstrapPromise,
       {
         runPostScenarioUiReplay,
         handleUiBootstrapReady: async () => {
@@ -469,31 +475,6 @@ async function bootstrap() {
         },
       },
     );
-    return uiHydrationObservation;
-  };
-  const recoverStartupFailure = async (error) => {
-    const failureRecovery = await handleStartupFailure({
-      error,
-      targetState: runtimeState,
-      renderDispatcher,
-      startupUiBootstrapPromise: null,
-      startupUiBootstrapAwaited: true,
-      startupUiBootstrapFailed: false,
-      helpers: {
-        finalizeReadyState,
-        getBootLanguage,
-        getBootProgressWindow,
-        checkpointBootMetricOnce,
-        finishBootMetric,
-        invalidateAllRenderPasses,
-        rollbackStartupScenarioToBaseMap,
-        runPostScenarioUiReplay,
-        setBootContinueHandler,
-        setBootState,
-        setStartupReadonlyState,
-      },
-    });
-    return failureRecovery;
   };
   try {
     bindBeforeUnload();
@@ -503,9 +484,6 @@ async function bootstrap() {
         hooks: {
           onRenderDispatcher: (nextRenderDispatcher) => {
             renderDispatcher = nextRenderDispatcher;
-          },
-          onStartupUiBootstrapPromise: (promise) => {
-            startupUiBootstrapPromise = promise;
           },
         },
         helpers: {
@@ -529,7 +507,6 @@ async function bootstrap() {
         },
       });
       renderDispatcher = uiShellBootResult.renderDispatcher;
-      startupUiBootstrapPromise = uiShellBootResult.startupUiBootstrapPromise;
       getStartupReadyHandoffOwner().markUiHydrationReady();
       deferredUiBootstrapper.setInteractionState("ready");
       return;
@@ -595,7 +572,7 @@ async function bootstrap() {
     renderDispatcher = renderRuntime.renderDispatcher;
     const { renderApp } = renderRuntime;
     void deferredMilsymbolLoader.loadMilsymbol();
-    startupUiBootstrapPromise = deferredUiBootstrapper.bootstrapDeferredUi(renderApp);
+    void deferredUiBootstrapper.bootstrapDeferredUi(renderApp);
 
     // Phase: 应用启动场景 | Input: scenarioBundlePromise + UI bootstrap promise | Output: active scenario state + source/recovery metadata。
     // UI bootstrap 与 scenario apply 并行启动，但 post-scenario UI replay 必须等 UI 绑定完成，避免控件用旧状态覆盖刚应用的场景。
@@ -636,7 +613,27 @@ async function bootstrap() {
     });
   } catch (error) {
     void observeUiHydration();
-    await recoverStartupFailure(error);
+    await handleStartupFailure({
+      error,
+      targetState: runtimeState,
+      renderDispatcher,
+      startupUiBootstrapPromise: null,
+      startupUiBootstrapAwaited: true,
+      startupUiBootstrapFailed: false,
+      helpers: {
+        finalizeReadyState,
+        getBootLanguage,
+        getBootProgressWindow,
+        checkpointBootMetricOnce,
+        finishBootMetric,
+        invalidateAllRenderPasses,
+        rollbackStartupScenarioToBaseMap,
+        runPostScenarioUiReplay,
+        setBootContinueHandler,
+        setBootState,
+        setStartupReadonlyState,
+      },
+    });
   }
 }
 
