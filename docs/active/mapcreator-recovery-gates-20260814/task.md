@@ -119,6 +119,16 @@
 - [x] 建立 canonical `verify:commit`：真实 working-tree/显式 changed-file 输入、固定 control-plane 批次、共享源双重覆盖、产品源 adaptive child-safe 路由，以及高 fan-out fail-closed escalation。
 - [x] 在隔离集成分支将候选重放为 `7023eea8`、`614659d6`、`5bb13c7f`；合并树暴露的 startup-ready/deferred-UI 目录接缝由 `5d8ca24a` 修复，独立审查均为 `ACCEPT`。
 - [x] 聚焦合并验证：runtime Node 123/123、metadata/shadow 53/53、portfolio 54/54、verify-core runner 84/84、Python startup boundaries 19/19、342-script portfolio、51-spec import graph、398-route selector schema、`verify:dist-drift` 全部通过。
-- [ ] 通过 protected-main PR 完成远端门禁与 main 收口；本阶段不在本机重复性能模拟，也不声称 browser、nightly、release 或部署验证。
+- [x] [PR #112](https://github.com/raederhans/scenario-forge/pull/112) 的 10 项远端检查全部通过，并以 merge commit `c346eb708e8868396b0ae8c63f8173d1880c9498` 收口到 protected `main`；桌面 `HEAD`、本地 `main`、`origin/main` 与 live remote ref 已核对一致。本阶段没有在本机重复性能模拟，也不声称 browser、nightly、release 或部署验证。
 
 Stage A remaining boundaries: UI hydration 失败目前只有 console/recovery hook，尚无用户可见重试提示；City Lights 首次请求没有有界超时重试；旧 startup-failure recovery 的兼容参数仍保留。Stage B 才处理 RenderSnapshot/ChangeSet 与后续内容寻址构建切片；本阶段不删除 tracked `dist` 或 legacy projection。
+
+## Runtime Architecture Reset v1 — Stage B execution (2026-08-31)
+
+- [x] 建立严格、深冻结、可序列化的 `RenderSnapshot/v1`，只覆盖 palette、ownership 与 viewport；`map_renderer` 仅新增 lazy snapshot owner 与只读 facade。
+- [x] 建立纯 `RenderChangeSet/v1` 的 parse/create/compare、exact base-stale 与 declarative preview/compare/apply/undo intent；独立审查发现并关闭 apply/undo 缺 base 与稀疏数组身份碰撞两条 fail-open 路径。
+- [x] 为 `startup_support_assets` 的三个既有输出记录稳定 `filename + byte length + SHA-256` 内容身份；旧签名、缺失输出及同长度内容漂移均 fail closed。
+- [x] 将新增 Node/Python 合同绑定到 canonical child-safe direct routes；retained shadow 仍由 canonical source 投影。metadata/portfolio 98/98、shadow equal、400 routes、356 commands、零 unmatched 已通过。
+- [ ] 通过新的 protected-main PR 完成 Stage B 远端门禁、main 收口与候选工作树清理。
+
+Stage B remaining boundaries: ChangeSet 仍不执行 live apply/undo、不写 history/runtime state，也不触发 render；startup-support identity 只决定本地 checkpoint reuse，不复制、恢复或发布共享缓存。本阶段不退休 tracked `dist`/legacy projection，不做额外本地性能模拟、浏览器、Nightly、Release 或部署。
