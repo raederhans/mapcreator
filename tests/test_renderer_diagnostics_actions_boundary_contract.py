@@ -39,6 +39,7 @@ READ_ONLY_ACTION_NAMES = {
     "captureRenderPerfMetricsState",
     "captureRenderPerfContextBreakdownState",
     "captureRenderPerfMetricEntryState",
+    "captureRenderSnapshotState",
 }
 MAP_RENDERER_DIRECT_ACTION_NAMES = {
     *READ_ONLY_ACTION_NAMES,

@@ -324,6 +324,7 @@ const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
       "captureRenderPerfMetricEntryState",
       "captureRenderPerfMetricsState",
       "captureProjectedBoundsDiagnosticsState",
+      "captureRenderSnapshotState",
     ]),
   ],
   [
@@ -718,6 +719,8 @@ function freezeStateDetachedCaptureEntry({
 const RENDERER_DIAGNOSTICS_DETACHED_CLONE_HELPERS = Object.freeze({
   cloneDiagnosticValue:
     "07c39f1ebbb3d2328aae5713dc6e3e8c43d74c500d8bb18aea9797f5c1e25a24",
+  cloneRenderSnapshotState:
+    "1750e82c5a58a0c918afbaa540b1ab4f2530c2d9335393b5c6ff61ee27bbdcf2",
 });
 const RENDERER_DIAGNOSTICS_DETACHED_READ_HELPERS = Object.freeze({
   getOwnDataPropertyValue:
@@ -735,6 +738,7 @@ export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
   ["captureRenderPerfContextBreakdownState", "32ae271183ee8222ed3530bad2e1485d2d080ff78e017122b5be3ab9da35b5bb"],
   ["captureRenderPerfMetricEntryState", "8d057da5caba32bb63f40cd8d8f09753ac38ff455260151504a1a4de408b4a7c"],
   ["captureProjectedBoundsDiagnosticsState", "4352b61b815a7393990db64f2c3e0e355a620f5abaea8d9a8ff78445010e05ea"],
+  ["captureRenderSnapshotState", "3dca9a11ba57c7f36de5f7b72171ab7b5e04fe2d69f334ba57ea1e9cee09b62e"],
 ].map(([exportName, sourceFingerprint]) =>
   freezeStateDetachedCaptureEntry({
     modulePath: "js/core/state/actions/renderer_diagnostics_actions.js",

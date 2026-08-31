@@ -216,6 +216,52 @@ function cloneDiagnosticValue(value, seen = new WeakMap()) {
   return clone;
 }
 
+function cloneRenderSnapshotState(target, getters) {
+  for (const name of [
+    "getViewportRenderSignature",
+    "getProjectionRenderSignature",
+    "getViewportGeoBounds",
+  ]) {
+    if (typeof getters?.[name] !== "function") {
+      throw new TypeError(
+        `[renderer_diagnostics_actions] getters.${name} must be a function`,
+      );
+    }
+  }
+  const sovereignBaseColors = getOwnDataPropertyValue(
+    target,
+    "sovereignBaseColors",
+  );
+  const sovereigntyByFeatureId = getOwnDataPropertyValue(
+    target,
+    "sovereigntyByFeatureId",
+  );
+  const transform = getOwnDataPropertyValue(target, "zoomTransform");
+  const transformRecord = transform && typeof transform === "object"
+    ? transform
+    : {};
+  return Object.freeze({
+    sovereignBaseColors: cloneDiagnosticValue(
+      sovereignBaseColors && typeof sovereignBaseColors === "object"
+        ? sovereignBaseColors
+        : {},
+    ),
+    sovereigntyByFeatureId: cloneDiagnosticValue(
+      sovereigntyByFeatureId && typeof sovereigntyByFeatureId === "object"
+        ? sovereigntyByFeatureId
+        : {},
+    ),
+    viewportTransform: Object.freeze({
+      x: Number(getOwnDataPropertyValue(transformRecord, "x") ?? 0),
+      y: Number(getOwnDataPropertyValue(transformRecord, "y") ?? 0),
+      k: Number(getOwnDataPropertyValue(transformRecord, "k") ?? 1),
+    }),
+    viewportRenderSignature: getters.getViewportRenderSignature(),
+    projectionRenderSignature: getters.getProjectionRenderSignature(),
+    viewportGeoBounds: cloneDiagnosticValue(getters.getViewportGeoBounds()),
+  });
+}
+
 export function captureRenderPerfMetricsState(target) {
   assertStateTarget(target);
   const metrics = getOwnDataPropertyValue(target, "renderPerfMetrics");
@@ -265,6 +311,11 @@ export function captureProjectedBoundsDiagnosticsState(target) {
     };
   }
   return cloneDiagnosticValue(diagnostics);
+}
+
+export function captureRenderSnapshotState(target, getters) {
+  assertStateTarget(target);
+  return cloneRenderSnapshotState(target, getters);
 }
 
 export function ensureRenderPerfMetricsState(target) {

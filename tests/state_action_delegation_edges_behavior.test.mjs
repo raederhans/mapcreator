@@ -68,6 +68,7 @@ test("source-bound detached captures return fresh values and fail closed on alia
       ["captureRenderPerfContextBreakdownState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureRenderPerfMetricEntryState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureProjectedBoundsDiagnosticsState", "js/core/state/actions/renderer_diagnostics_actions.js"],
+      ["captureRenderSnapshotState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureExactAfterSettleControllerState", "js/core/state/actions/renderer_exact_refresh_actions.js"],
     ].map(([exportName, modulePath]) => ({ modulePath, exportName, targetArgumentIndex: 0 })),
   );

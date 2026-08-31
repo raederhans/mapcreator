@@ -612,6 +612,7 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
     assert.ok(entry.sourceRefs.includes("tests/day_night_runtime_owner_behavior.test.mjs"));
     assert.ok(entry.sourceRefs.includes("js/core/renderer/visual_effects_pass_owner.js"));
     assert.ok(entry.sourceRefs.includes("tests/visual_effects_pass_owner_behavior.test.mjs"));
+    assert.ok(entry.sourceRefs.includes("js/core/renderer/render_snapshot.js"));
   }
 
   const exactEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "p4:p4-3-exact-phase");
@@ -650,6 +651,12 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
   assert.ok(
     boundaryEntry.sourceRefs.includes(
       "tests/test_day_night_runtime_owner_boundary_contract.py",
+    ),
+  );
+  assert.ok(actionEntry.sourceRefs.includes("tests/render_snapshot_behavior.test.mjs"));
+  assert.ok(
+    boundaryEntry.sourceRefs.includes(
+      "tests/test_map_renderer_render_snapshot_boundary_contract.py",
     ),
   );
   assert.ok(

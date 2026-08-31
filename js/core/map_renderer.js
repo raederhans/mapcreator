@@ -58,7 +58,7 @@ import {
 } from "./state/actions/renderer_cache_actions.js";
 import {
   captureProjectedBoundsDiagnosticsState, captureRenderPerfContextBreakdownState,
-  captureRenderPerfMetricEntryState, captureRenderPerfMetricsState,
+  captureRenderPerfMetricEntryState, captureRenderPerfMetricsState, captureRenderSnapshotState,
   commitRenderPerfMetricState, ensureRenderPerfMetricsState,
   setDebugCountryCoverageState, setFirstVisibleFramePaintedState,
   setRenderPerfContextBreakdownState, setRenderPerfMetricEntryState,
@@ -995,7 +995,7 @@ let drawCanvasOrchestrationOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
-let renderSnapshotOwner = null;
+const renderSnapshotOwner = createRenderSnapshotOwner();
 let viewportCommandOwner = null;
 let rendererViewportUpdateOwner = null;
 let rendererStartupTransactionOwner = null;
@@ -2867,23 +2867,6 @@ function getViewportReadModelOwner() {
     },
   });
   return viewportReadModelOwner;
-}
-
-function getRenderSnapshotOwner() {
-  if (renderSnapshotOwner) {
-    return renderSnapshotOwner;
-  }
-  renderSnapshotOwner = createRenderSnapshotOwner({
-    getters: {
-      getSovereignBaseColors: () => runtimeState.sovereignBaseColors,
-      getSovereigntyByFeatureId: () => runtimeState.sovereigntyByFeatureId,
-      getViewportTransform: () => runtimeState.zoomTransform || { x: 0, y: 0, k: 1 },
-      getViewportRenderSignature: () => getViewportReadModelOwner().getViewportRenderSignature(),
-      getProjectionRenderSignature: () => getViewportReadModelOwner().getProjectionRenderSignature(),
-      getViewportGeoBounds: () => getViewportReadModelOwner().getViewportGeoBounds(),
-    },
-  });
-  return renderSnapshotOwner;
 }
 
 function getViewportCommandOwner() {
@@ -19906,7 +19889,13 @@ function getViewportGeoBounds() {
 }
 
 function captureRenderSnapshot() {
-  return getRenderSnapshotOwner().captureRenderSnapshot();
+  return renderSnapshotOwner.captureRenderSnapshot(
+    captureRenderSnapshotState(runtimeState, {
+      getViewportRenderSignature,
+      getProjectionRenderSignature,
+      getViewportGeoBounds,
+    }),
+  );
 }
 
 function updateMap(transform) {

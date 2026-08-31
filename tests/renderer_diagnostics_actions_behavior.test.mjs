@@ -17,6 +17,7 @@ test("renderer diagnostics actions stay import-free with target-first exports", 
     "captureRenderPerfContextBreakdownState",
     "captureRenderPerfMetricEntryState",
     "captureProjectedBoundsDiagnosticsState",
+    "captureRenderSnapshotState",
     "ensureRenderPerfMetricsState",
     "replaceRenderPerfMetricsState",
     "setRenderPerfMetricEntryState",
@@ -38,6 +39,7 @@ test("renderer diagnostics actions reject invalid targets", async () => {
     assert.throws(() => actions.captureRenderPerfContextBreakdownState(target), /target must be an object/);
     assert.throws(() => actions.captureRenderPerfMetricEntryState(target, "frame"), /target must be an object/);
     assert.throws(() => actions.captureProjectedBoundsDiagnosticsState(target), /target must be an object/);
+    assert.throws(() => actions.captureRenderSnapshotState(target), /target must be an object/);
     assert.throws(() => actions.ensureRenderPerfMetricsState(target), /target must be an object/);
     assert.throws(() => actions.replaceRenderPerfMetricsState(target, {}), /target must be an object/);
     assert.throws(() => actions.setRenderPerfMetricEntryState(target, { name: "frame", entry: {} }), /target must be an object/);
@@ -191,6 +193,74 @@ test("projected-bounds capture detaches nested counters from the mutable state r
     byGeometryType: {},
     byReason: {},
   });
+});
+
+test("render snapshot capture detaches a coherent render-state view without invoking accessors", async () => {
+  const { captureRenderSnapshotState } = await loadActions();
+  const colors = { US: "#123456", nested: { source: "palette" } };
+  const owners = { feature_1: "US" };
+  let accessorCalls = 0;
+  const transform = { x: 1, y: 2, k: 3, apply() {} };
+  Object.defineProperty(transform, "ignored", {
+    get() {
+      accessorCalls += 1;
+      return 99;
+    },
+  });
+  const target = {
+    sovereignBaseColors: colors,
+    sovereigntyByFeatureId: owners,
+    zoomTransform: transform,
+  };
+  const viewportGeoBounds = [-10, -5, 20, 15];
+  const getters = {
+    getViewportRenderSignature: () => "100|200|1",
+    getProjectionRenderSignature: () => "projection:na",
+    getViewportGeoBounds: () => viewportGeoBounds,
+  };
+
+  const snapshot = captureRenderSnapshotState(target, getters);
+  assert.deepEqual(snapshot, {
+    sovereignBaseColors: colors,
+    sovereigntyByFeatureId: owners,
+    viewportTransform: { x: 1, y: 2, k: 3 },
+    viewportRenderSignature: "100|200|1",
+    projectionRenderSignature: "projection:na",
+    viewportGeoBounds,
+  });
+  assert.equal(Object.isFrozen(snapshot), true);
+  assert.equal(Object.isFrozen(snapshot.viewportTransform), true);
+  assert.notEqual(snapshot.sovereignBaseColors, colors);
+  assert.notEqual(snapshot.sovereignBaseColors.nested, colors.nested);
+  assert.notEqual(snapshot.sovereigntyByFeatureId, owners);
+  assert.equal(accessorCalls, 0);
+
+  colors.US = "#abcdef";
+  colors.nested.source = "changed";
+  owners.feature_1 = "CA";
+  transform.x = 999;
+  viewportGeoBounds[0] = -180;
+  assert.deepEqual(snapshot, {
+    sovereignBaseColors: { US: "#123456", nested: { source: "palette" } },
+    sovereigntyByFeatureId: { feature_1: "US" },
+    viewportTransform: { x: 1, y: 2, k: 3 },
+    viewportRenderSignature: "100|200|1",
+    projectionRenderSignature: "projection:na",
+    viewportGeoBounds: [-10, -5, 20, 15],
+  });
+
+  assert.deepEqual(captureRenderSnapshotState({}, getters), {
+    sovereignBaseColors: {},
+    sovereigntyByFeatureId: {},
+    viewportTransform: { x: 0, y: 0, k: 1 },
+    viewportRenderSignature: "100|200|1",
+    projectionRenderSignature: "projection:na",
+    viewportGeoBounds: [-180, -5, 20, 15],
+  });
+  assert.throws(
+    () => captureRenderSnapshotState(target, {}),
+    /getters\.getViewportRenderSignature must be a function/,
+  );
 });
 
 test("first-visible and country-coverage actions retain scalar/reference semantics", async () => {

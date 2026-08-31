@@ -246,29 +246,15 @@ export function getRenderSnapshotIdentity(value) {
   return JSON.stringify(parseRenderSnapshot(value));
 }
 
-export function createRenderSnapshotOwner({ getters = {} } = {}) {
-  const requiredGetterNames = [
-    "getSovereignBaseColors",
-    "getSovereigntyByFeatureId",
-    "getViewportTransform",
-    "getViewportRenderSignature",
-    "getProjectionRenderSignature",
-    "getViewportGeoBounds",
-  ];
-  requiredGetterNames.forEach((name) => {
-    if (typeof getters[name] !== "function") {
-      fail(RENDER_SNAPSHOT_ERROR.INVALID, `Render snapshot owner requires ${name}.`, { name });
-    }
-  });
-
-  function captureRenderSnapshot() {
-    const transform = getters.getViewportTransform();
+export function createRenderSnapshotOwner() {
+  function captureRenderSnapshot(renderState) {
+    const transform = renderState?.viewportTransform;
     return createRenderSnapshot({
       palette: {
-        sovereignBaseColors: getters.getSovereignBaseColors(),
+        sovereignBaseColors: renderState?.sovereignBaseColors,
       },
       ownership: {
-        sovereigntyByFeatureId: getters.getSovereigntyByFeatureId(),
+        sovereigntyByFeatureId: renderState?.sovereigntyByFeatureId,
       },
       viewport: {
         transform: {
@@ -276,9 +262,9 @@ export function createRenderSnapshotOwner({ getters = {} } = {}) {
           y: Number(transform?.y ?? 0),
           k: Number(transform?.k ?? 1),
         },
-        renderSignature: getters.getViewportRenderSignature(),
-        projectionSignature: getters.getProjectionRenderSignature(),
-        geoBounds: getters.getViewportGeoBounds(),
+        renderSignature: renderState?.viewportRenderSignature,
+        projectionSignature: renderState?.projectionRenderSignature,
+        geoBounds: renderState?.viewportGeoBounds,
       },
     });
   }
