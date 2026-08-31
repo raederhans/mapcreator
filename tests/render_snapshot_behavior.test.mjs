@@ -10,6 +10,7 @@ import {
   createRenderSnapshotOwner,
   getRenderSnapshotIdentity,
   parseRenderSnapshot,
+  renderSnapshotInternals,
 } from "../js/core/renderer/render_snapshot.js";
 
 function createSnapshot(overrides = {}) {
@@ -135,6 +136,22 @@ test("render snapshot rejects runtime carriers non-finite numbers cycles and uns
       ...base,
       ownership: { sovereigntyByFeatureId: cyclic },
     }),
+    (error) => error.code === RENDER_SNAPSHOT_ERROR.INVALID,
+  );
+});
+
+test("strict JSON cloning rejects sparse arrays and non-standard array own keys", () => {
+  const sparse = [];
+  sparse.length = 1;
+  assert.throws(
+    () => renderSnapshotInternals.cloneJsonValue(sparse),
+    (error) => error.code === RENDER_SNAPSHOT_ERROR.INVALID,
+  );
+
+  const extraKey = ["declared"];
+  extraKey.runtime = "ignored-by-json";
+  assert.throws(
+    () => renderSnapshotInternals.cloneJsonValue(extraKey),
     (error) => error.code === RENDER_SNAPSHOT_ERROR.INVALID,
   );
 });

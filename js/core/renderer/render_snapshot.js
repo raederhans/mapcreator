@@ -91,6 +91,24 @@ function cloneJsonValue(value, path = "$", ancestors = new WeakSet()) {
   ancestors.add(value);
   let result;
   if (Array.isArray(value)) {
+    const expectedKeys = new Set(["length"]);
+    for (let index = 0; index < value.length; index += 1) {
+      const key = String(index);
+      expectedKeys.add(key);
+      if (!Object.hasOwn(value, key)) {
+        fail(RENDER_SNAPSHOT_ERROR.INVALID, `${path} must not contain sparse array entries.`, {
+          path,
+          index,
+        });
+      }
+    }
+    const extraKeys = Reflect.ownKeys(value).filter((key) => !expectedKeys.has(key));
+    if (extraKeys.length) {
+      fail(RENDER_SNAPSHOT_ERROR.INVALID, `${path} contains unsupported array fields.`, {
+        path,
+        extraKeys: extraKeys.map(String),
+      });
+    }
     result = value.map((entry, index) => cloneJsonValue(entry, `${path}[${index}]`, ancestors));
   } else {
     requireRecord(value, path);

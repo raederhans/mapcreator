@@ -241,14 +241,21 @@ export function createRenderChangeSetActionIntent(
 ) {
   const changeSet = parseRenderChangeSet(value);
   const normalizedAction = normalizeAction(action);
+  const commitsState = normalizedAction === RENDER_CHANGE_SET_ACTION.APPLY
+    || normalizedAction === RENDER_CHANGE_SET_ACTION.UNDO;
+  if (commitsState && currentSnapshot === undefined) {
+    fail(
+      RENDER_CHANGE_SET_ERROR.INVALID,
+      `${normalizedAction} action intents require currentSnapshot.`,
+      { action: normalizedAction, path: "currentSnapshot" },
+    );
+  }
   if (currentSnapshot !== undefined) {
     assertRenderChangeSetBaseSnapshot(changeSet, currentSnapshot, { action: normalizedAction });
   }
   const { baseline, target } = getActionSnapshots(changeSet, normalizedAction);
   const sessionOnly = normalizedAction === RENDER_CHANGE_SET_ACTION.PREVIEW
     || normalizedAction === RENDER_CHANGE_SET_ACTION.COMPARE;
-  const commitsState = normalizedAction === RENDER_CHANGE_SET_ACTION.APPLY
-    || normalizedAction === RENDER_CHANGE_SET_ACTION.UNDO;
   return deepFreeze({
     action: normalizedAction,
     changeSetId: changeSet.id,

@@ -130,6 +130,33 @@ test("preview compare apply and undo produce declarative action intents without 
   }
 });
 
+test("apply and undo intents require a current base snapshot and reject stale bases", () => {
+  const value = changeSet();
+
+  for (const action of [RENDER_CHANGE_SET_ACTION.APPLY, RENDER_CHANGE_SET_ACTION.UNDO]) {
+    assert.throws(
+      () => createRenderChangeSetActionIntent(value, action),
+      (error) => error.code === RENDER_CHANGE_SET_ERROR.INVALID
+        && error.details.path === "currentSnapshot",
+    );
+  }
+  assert.throws(
+    () => createRenderChangeSetActionIntent(value, RENDER_CHANGE_SET_ACTION.APPLY, {
+      currentSnapshot: value.after,
+    }),
+    (error) => error.code === RENDER_CHANGE_SET_ERROR.BASE_STALE,
+  );
+  assert.throws(
+    () => createRenderChangeSetActionIntent(value, RENDER_CHANGE_SET_ACTION.UNDO, {
+      currentSnapshot: value.before,
+    }),
+    (error) => error.code === RENDER_CHANGE_SET_ERROR.BASE_STALE,
+  );
+
+  assert.equal(createRenderChangeSetActionIntent(value, "preview").sessionOnly, true);
+  assert.equal(createRenderChangeSetActionIntent(value, "compare").sessionOnly, true);
+});
+
 test("action intent rejects unsupported actions and hostile provenance carriers", () => {
   assert.throws(
     () => createRenderChangeSetActionIntent(changeSet(), "commit"),
@@ -143,6 +170,18 @@ test("action intent rejects unsupported actions and hostile provenance carriers"
   );
   assert.throws(
     () => changeSet({ provenance: { hook() {} } }),
+    (error) => error.code === RENDER_CHANGE_SET_ERROR.INVALID,
+  );
+  const sparse = [];
+  sparse.length = 1;
+  assert.throws(
+    () => changeSet({ provenance: { sparse } }),
+    (error) => error.code === RENDER_CHANGE_SET_ERROR.INVALID,
+  );
+  const extraKey = ["source"];
+  extraKey.channel = "runtime";
+  assert.throws(
+    () => changeSet({ provenance: { extraKey } }),
     (error) => error.code === RENDER_CHANGE_SET_ERROR.INVALID,
   );
 });
