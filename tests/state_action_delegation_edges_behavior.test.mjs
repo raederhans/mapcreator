@@ -931,6 +931,61 @@ test("source-bound owner proof prepares once and applies independently per bindi
   assert.equal(factoryDriftPreparedCandidateCount, 0);
 });
 
+test("startup ready handoff has one source-bound hydration action effect", async () => {
+  const ownerProof = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createStartupReadyHandoffOwner",
+  );
+  assert.ok(ownerProof);
+  assert.equal(ownerProof.compositionModulePath, "js/main.js");
+  assert.equal(ownerProof.compositionExportName, "getStartupReadyHandoffOwner");
+  assert.equal(ownerProof.ownerBindingName, "startupReadyHandoffOwner");
+  assert.deepEqual(ownerProof.actionExports, ["setUiHydrationState"]);
+  assert.ok(ownerProof.methods.includes("observePostReadyUiBootstrap"));
+  assert.ok(ownerProof.methods.includes("scheduleReadyPostBootWork"));
+
+  const compositionSource = fs.readFileSync(ownerProof.compositionModulePath, "utf8");
+  const factorySource = fs.readFileSync(ownerProof.factoryModulePath, "utf8");
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource,
+    factorySource,
+    entry: ownerProof,
+  }).violations, []);
+
+  const discovery = await discoverStateWriterBindingsForSource(
+    ownerProof.compositionModulePath,
+    compositionSource,
+    "production",
+    { scanAllParameters: true, includeInventories: true },
+  );
+  const moduleInventory = discovery.bindingInventories.find(({ binding }) => (
+    binding.kind === "module" && binding.name === "runtimeState"
+  ));
+  assert.ok(moduleInventory);
+  assert.deepEqual(
+    moduleInventory.actionDelegations
+      .filter(({ actionExportName }) => actionExportName === "setUiHydrationState")
+      .map(({ actionExportName }) => actionExportName),
+    ["setUiHydrationState"],
+  );
+  const retiredProgressionFingerprints = new Set([
+    "26a46030",
+    "b48eb2fe",
+    "b8749af3",
+    "c1aef68e",
+    "cb9a4c29",
+    "cd1615e5",
+    "ffe6e265",
+  ]);
+  assert.deepEqual(
+    moduleInventory.findings.filter(({ sourceFingerprint }) => (
+      [...retiredProgressionFingerprints].some((prefix) => (
+        sourceFingerprint.startsWith(prefix)
+      ))
+    )),
+    [],
+  );
+});
+
 test("click selection actions have one registry owner and one source-bound transaction handoff", () => {
   const expectedActions = [
     "clearClickHoveredIdState",

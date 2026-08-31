@@ -42,6 +42,7 @@ const RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH =
 const BOOT_ACTION_EXPORT_NAMES = Object.freeze([
   "setStartupInteractionMode",
   "setBootPreviewVisibleState",
+  "setUiHydrationState",
   "commitStartupReadonlyStateFields",
   "clearStartupReadonlyStateFields",
   "clearStartupReadonlyStateForReason",
@@ -720,7 +721,7 @@ const RENDERER_DIAGNOSTICS_DETACHED_CLONE_HELPERS = Object.freeze({
   cloneDiagnosticValue:
     "07c39f1ebbb3d2328aae5713dc6e3e8c43d74c500d8bb18aea9797f5c1e25a24",
   cloneRenderSnapshotState:
-    "1750e82c5a58a0c918afbaa540b1ab4f2530c2d9335393b5c6ff61ee27bbdcf2",
+    "42fde0ba77866db20458a91410bbae52441beb5e05ec5dbb3868c73add2e52bf",
 });
 const RENDERER_DIAGNOSTICS_DETACHED_READ_HELPERS = Object.freeze({
   getOwnDataPropertyValue:
@@ -983,6 +984,34 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
       "setClickSelectedColorState",
       "setClickSelectedSpecialRegionIdState",
       "setClickSelectedWaterRegionIdState",
+    ],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/main.js",
+    compositionExportName: "getStartupReadyHandoffOwner",
+    compositionSourceFingerprint:
+      "d95f89b89a45a0334a8f227572f5ee3dabb39415aadb9929961de3e3eff1c709",
+    factoryModulePath: "js/bootstrap/startup_ready_handoff.js",
+    factoryExportName: "createStartupReadyHandoffOwner",
+    factorySourceFingerprint:
+      "9600bd838ce894c18e28f715ac2b66dbd2317135b3bea78fe546b36b3b1bd6d2",
+    ownerBindingName: "startupReadyHandoffOwner",
+    methods: [
+      "beginUiHydration",
+      "reset",
+      "flushPendingScenarioChunkRefreshAfterReady",
+      "observePostReadyUiBootstrap",
+      "markUiHydrationReady",
+      "scheduleReadyPostBootWork",
+      "startDeferredFullInteractionInfrastructureBuild",
+      "schedulePostReadyHydration",
+      "schedulePostReadyPoliticalReconcile",
+      "schedulePostReadyDeferredContextWarmup",
+      "schedulePostReadyVisualWarmup",
+    ],
+    actionModulePath: BOOT_ACTION_MODULE_PATH,
+    actionExports: [
+      "setUiHydrationState",
     ],
   }),
 ]);
