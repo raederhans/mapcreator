@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -8,6 +9,39 @@ const PAGES_MANIFEST_PATH = "dist/pages-dist-manifest.json";
 const SOURCE_ENTRY_HTML_PATH = "index.html";
 const STAGE_A_LAZY_LOADER_PATH = "js/bootstrap/startup_lazy_module_loader.js";
 const SOURCE_MODULE_EXTENSIONS = [".js", ".mjs"];
+const PAGES_REACHABILITY_SCHEMA_VERSION = 2;
+const PAGES_APP_ROOT_PREFIXES = ["js/", "vendor/", "data/", "css/"];
+
+function requireWorkspaceDependency(specifier) {
+  const localRequire = createRequire(import.meta.url);
+  try {
+    return localRequire(specifier);
+  } catch (error) {
+    if (error?.code !== "MODULE_NOT_FOUND") throw error;
+    const gitMarkerPath = path.join(REPO_ROOT, ".git");
+    if (!fs.statSync(gitMarkerPath).isFile()) throw error;
+    const gitMarker = fs.readFileSync(gitMarkerPath, "utf8").trim();
+    if (!gitMarker.startsWith("gitdir:")) throw error;
+    const gitDirectoryValue = gitMarker.slice("gitdir:".length).trim();
+    const gitDirectory = path.resolve(REPO_ROOT, gitDirectoryValue);
+    const commonDirectory = path.resolve(
+      gitDirectory,
+      fs.readFileSync(path.join(gitDirectory, "commondir"), "utf8").trim(),
+    );
+    const checkoutRequire = createRequire(path.join(path.dirname(commonDirectory), "package.json"));
+    return checkoutRequire(specifier);
+  }
+}
+
+const acorn = requireWorkspaceDependency("acorn");
+const acornWalk = requireWorkspaceDependency("acorn-walk");
+const acornWalkPackage = requireWorkspaceDependency("acorn-walk/package.json");
+if (acorn.version !== "8.17.0" || acornWalkPackage.version !== "8.3.5") {
+  throw new Error(
+    `Startup resource graph requires acorn@8.17.0 and acorn-walk@8.3.5; `
+    + `loaded acorn@${acorn.version} and acorn-walk@${acornWalkPackage.version}`,
+  );
+}
 
 export const STARTUP_RESOURCE_CLASSES = Object.freeze([
   "critical",
@@ -42,9 +76,17 @@ function repoFileExists(repoPath, { rootDir = REPO_ROOT } = {}) {
 }
 
 function resolveSourceSpecifier(fromPath, specifier, { rootDir = REPO_ROOT } = {}) {
-  const reference = String(specifier || "").trim();
-  if (!reference.startsWith(".")) return null;
-  const candidateBase = normalizedRepoPath(path.posix.join(path.posix.dirname(fromPath), reference));
+  const reference = String(specifier || "").trim().split("#", 1)[0].split("?", 1)[0];
+  let candidateBase;
+  if (reference.startsWith("/")) {
+    const rootRelative = reference.replace(/^\/+/, "");
+    if (!PAGES_APP_ROOT_PREFIXES.some((prefix) => rootRelative.startsWith(prefix))) return null;
+    candidateBase = normalizedRepoPath(rootRelative);
+  } else if (reference.startsWith(".")) {
+    candidateBase = normalizedRepoPath(path.posix.join(path.posix.dirname(fromPath), reference));
+  } else {
+    return null;
+  }
   const candidates = path.posix.extname(candidateBase)
     ? [candidateBase]
     : [
@@ -74,51 +116,62 @@ function extractEditorModuleEntrypoint(htmlText) {
   return normalizedRepoPath(matches[0][1]);
 }
 
+function literalString(node) {
+  if (node?.type === "Literal" && typeof node.value === "string") return node.value;
+  if (node?.type === "TemplateLiteral" && node.expressions.length === 0) {
+    return node.quasis[0]?.value?.cooked ?? node.quasis[0]?.value?.raw ?? "";
+  }
+  return null;
+}
+
 function parseModuleReferences(sourcePath, sourceText, { rootDir = REPO_ROOT } = {}) {
   const staticSpecifiers = [];
   const dynamicImports = [];
-  const lineAndColumnAt = (offset) => {
-    const prefix = sourceText.slice(0, offset);
-    const line = prefix.split("\n").length;
-    return { column: offset - prefix.lastIndexOf("\n"), line };
-  };
-  const addStatic = (reference, kind, offset) => {
-    if (!reference.startsWith(".")) return;
+  const ast = acorn.parse(sourceText, {
+    allowHashBang: true,
+    ecmaVersion: "latest",
+    locations: true,
+    sourceType: "module",
+  });
+  const locationFor = (node) => ({
+    column: node.loc.start.column + 1,
+    line: node.loc.start.line,
+  });
+  const addStatic = (node, kind) => {
+    const reference = literalString(node.source);
+    if (reference === null) return;
     const resolvedPath = resolveSourceSpecifier(sourcePath, reference, { rootDir });
-    const location = lineAndColumnAt(offset);
     staticSpecifiers.push({
-      column: location.column,
+      ...locationFor(node),
       kind,
-      line: location.line,
       reference,
       resolved_path: resolvedPath,
     });
   };
 
-  for (const match of sourceText.matchAll(/\bfrom\s*["']([^"']+)["']/gu)) {
-    addStatic(match[1], "from-clause", match.index + match[0].indexOf(match[1]));
-  }
-  for (const match of sourceText.matchAll(/\bimport\s*["']([^"']+)["']/gu)) {
-    addStatic(match[1], "side-effect-import", match.index + match[0].indexOf(match[1]));
-  }
-  for (const match of sourceText.matchAll(/\bimport\s*\(\s*([^)]*?)\s*\)/gu)) {
-    const expression = String(match[1] || "").trim();
-    const expressionOffset = match.index + match[0].indexOf(match[1]) + match[1].indexOf(expression);
-    const location = lineAndColumnAt(expressionOffset);
-    const quote = expression[0];
-    const literal = (quote === "'" || quote === '"') && expression.at(-1) === quote;
-    const reference = literal ? expression.slice(1, -1) : null;
-    dynamicImports.push({
-      column: location.column,
-      expression,
-      kind: literal ? "literal" : "expression",
-      line: location.line,
-      reference,
-      resolved_path: literal && reference.startsWith(".")
-        ? resolveSourceSpecifier(sourcePath, reference, { rootDir })
-        : null,
-    });
-  }
+  acornWalk.simple(ast, {
+    ExportAllDeclaration(node) {
+      addStatic(node, "export-all-source");
+    },
+    ExportNamedDeclaration(node) {
+      if (node.source) addStatic(node, "export-named-source");
+    },
+    ImportDeclaration(node) {
+      addStatic(node, "import-declaration");
+    },
+    ImportExpression(node) {
+      const reference = literalString(node.source);
+      dynamicImports.push({
+        ...locationFor(node),
+        expression: sourceText.slice(node.source.start, node.source.end),
+        kind: reference === null ? "expression" : "literal",
+        reference,
+        resolved_path: reference !== null
+          ? resolveSourceSpecifier(sourcePath, reference, { rootDir })
+          : null,
+      });
+    },
+  });
 
   return {
     dynamic_imports: dynamicImports.sort((left, right) => left.line - right.line || left.column - right.column),
@@ -289,6 +342,39 @@ export function buildStartupResourceGraph({ rootDir = REPO_ROOT, manifestPath = 
 
       const sourceText = readRepoText(sourcePath, { rootDir });
       const references = parseModuleReferences(sourcePath, sourceText, { rootDir });
+      const sourceStaticDistPaths = sortUnique(references.static_imports
+        .map((reference) => reference.resolved_path)
+        .filter(Boolean)
+        .map(distPathForSourcePath));
+      const manifestStaticDistPaths = sortUnique(manifestNode?.static_imports || []);
+      const sourceOnlyStaticPaths = sourceStaticDistPaths.filter((entry) => !manifestStaticDistPaths.includes(entry));
+      const manifestOnlyStaticPaths = manifestStaticDistPaths.filter((entry) => !sourceStaticDistPaths.includes(entry));
+      if (manifestNode && (sourceOnlyStaticPaths.length || manifestOnlyStaticPaths.length)) {
+        issues.push(makeIssue("pages-static-edge-mismatch", {
+          manifest_only: manifestOnlyStaticPaths,
+          source_only: sourceOnlyStaticPaths,
+          source_path: sourcePath,
+        }));
+      }
+      const sourceLiteralDynamicDistPaths = sortUnique(references.dynamic_imports
+        .filter((expression) => expression.kind === "literal" && expression.resolved_path)
+        .map((expression) => distPathForSourcePath(expression.resolved_path)));
+      const manifestLiteralDynamicDistPaths = sortUnique(
+        (manifestNode?.reference_locations?.dynamic_imports || [])
+          .filter((reference) => reference.local && reference.resolved_path)
+          .map((reference) => reference.resolved_path),
+      );
+      const sourceOnlyDynamicPaths = sourceLiteralDynamicDistPaths
+        .filter((entry) => !manifestLiteralDynamicDistPaths.includes(entry));
+      const manifestOnlyDynamicPaths = manifestLiteralDynamicDistPaths
+        .filter((entry) => !sourceLiteralDynamicDistPaths.includes(entry));
+      if (manifestNode && (sourceOnlyDynamicPaths.length || manifestOnlyDynamicPaths.length)) {
+        issues.push(makeIssue("pages-literal-dynamic-edge-mismatch", {
+          manifest_only: manifestOnlyDynamicPaths,
+          source_only: sourceOnlyDynamicPaths,
+          source_path: sourcePath,
+        }));
+      }
       record.static_imports = sortUnique(references.static_imports
         .map((reference) => reference.resolved_path)
         .filter(isSourceModulePath));
@@ -492,6 +578,12 @@ export function buildStartupResourceGraph({ rootDir = REPO_ROOT, manifestPath = 
 export function validateStartupResourceGraph(graph) {
   const issues = [...(Array.isArray(graph?.issues) ? graph.issues : [])];
   const manifest = graph?.manifest || {};
+  if (manifest.schema_version !== PAGES_REACHABILITY_SCHEMA_VERSION) {
+    issues.push(makeIssue("pages-reachability-schema-version-mismatch", {
+      actual: Number.isFinite(manifest.schema_version) ? manifest.schema_version : null,
+      expected: PAGES_REACHABILITY_SCHEMA_VERSION,
+    }));
+  }
   if (manifest.admission_status !== "complete") {
     issues.push(makeIssue("pages-reachability-admission-incomplete", { actual: manifest.admission_status || null }));
   }
@@ -511,7 +603,7 @@ export function validateStartupResourceGraph(graph) {
     if (!String(record.product_owner || "").trim()) {
       issues.push(makeIssue("missing-product-owner", { source_path: record.source_path || null }));
     }
-    if (record.base_startup && record.manifest_load_phase && record.manifest_load_phase !== "initial") {
+    if (record.base_startup && record.classification !== "critical") {
       issues.push(makeIssue("optional-resource-in-base-startup-graph", {
         classification: record.classification,
         manifest_load_phase: record.manifest_load_phase,
