@@ -739,6 +739,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "verify:core:main-thread": "node tools/run_core_verification.mjs --include-main-thread",
     "verify:script-portfolio": "node tools/verification/script_portfolio.mjs check",
     "verify:local-infra": "node --test tests/verification_script_portfolio_behavior.test.mjs tests/verification_metadata_behavior.test.mjs tests/verify_core_runner_behavior.test.mjs tests/verification_profile_behavior.test.mjs && npm run python -- -m unittest tests.test_e2e_structural_tooling -q && node tools/select_verification_targets.mjs --check",
+    "verify:commit": "node tools/run_commit_verification.mjs",
     "verify:edit": "npm run verify:script-portfolio && node tools/select_verification_targets.mjs --check && node tools/run_adaptive_tests.mjs --entrypoint edit --execute --defer-main-thread",
     "verify:impact": "node tools/run_adaptive_tests.mjs --entrypoint impact --execute --defer-main-thread",
     "verify:pr": "npm run verify:script-portfolio && npm run verify:test-import-graph && node tools/select_verification_targets.mjs --check && npm run verify:architecture-boundaries && npm run verify:test:e2e-layers && npm run verify:test-console-allowlist && npm run verify:test-timeout-guardrails && npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell tests.test_e2e_structural_tooling -q && npm run verify:scenario-contracts:strict && node tools/run_adaptive_tests.mjs --execute --defer-main-thread --history-base origin/main",
@@ -1091,9 +1092,18 @@ const AUTHORED_VERIFICATION_METADATA = {
     "tier": [
       {
         "tier": 0,
-        "id": "edit",
-        "commandRef": "verify:edit",
-        "executionScope": "child-safe"
+        "id": "commit",
+        "commandRef": "verify:commit",
+        "executionScope": "child-safe",
+        "commitProjection": {
+          "controlPlaneRecordId": "infra:local-verification-closure",
+          "controlPlaneTestFiles": [
+            "tests/verification_metadata_behavior.test.mjs",
+            "tests/catalog_projection_shadow_behavior.test.mjs",
+            "tests/verification_script_portfolio_behavior.test.mjs",
+            "tests/verify_core_runner_behavior.test.mjs"
+          ]
+        }
       },
       {
         "tier": 1,
@@ -1109,12 +1119,18 @@ const AUTHORED_VERIFICATION_METADATA = {
       },
       {
         "tier": 3,
+        "id": "main",
+        "commandRef": "verify:core",
+        "executionScope": "main"
+      },
+      {
+        "tier": 4,
         "id": "nightly",
         "commandRef": "verify:nightly",
         "executionScope": "nightly"
       },
       {
-        "tier": 4,
+        "tier": 5,
         "id": "release",
         "commandRef": "verify:release",
         "executionScope": "release"
@@ -3600,12 +3616,19 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tests/verify_core_runner_behavior.test.mjs",
         "tools/ai_test_supervisor/domain_registry.json",
         "tools/run_adaptive_tests.mjs",
+        "tools/run_commit_verification.mjs",
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
         "tools/verification/script_portfolio.mjs",
         "tools/verification/verification_domains.mjs",
         "tests/verification_profile_behavior.test.mjs",
-        "tools/verification/verification_profile.mjs"
+        "tools/verification/verification_profile.mjs",
+        "docs/active/test-verification-reform-20260813/task.md",
+        "tests/catalog_projection_shadow_behavior.test.mjs",
+        "tools/run_core_verification.mjs",
+        "tools/verification/command_supersession.mjs",
+        "tools/verification/verification_catalog_projection.mjs",
+        "tools/verification/verification_catalog_source.mjs"
       ],
       "ownerHints": [
         "test-infra"
@@ -11573,6 +11596,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "sourceRefs": [
         "tests/verify_core_runner_behavior.test.mjs",
         "tools/run_adaptive_tests.mjs",
+        "tools/run_commit_verification.mjs",
         "tools/run_core_verification.mjs",
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",

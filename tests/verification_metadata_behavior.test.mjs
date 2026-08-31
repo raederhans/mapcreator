@@ -48,7 +48,7 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 341);
+  assert.equal(summary.packageScriptCount, 342);
   assert.equal(summary.contributorRecords, 439);
   assert.equal(summary.verificationRecordProjectionCount, 143);
   assert.equal(summary.routeProjectionCount, 398);
@@ -79,7 +79,7 @@ test("authored catalog source covers command authority, policies, and every proj
   assert.equal(summary.packageAliasCount, 16);
   assert.equal(summary.prProfileCount, 4);
   assert.equal(summary.nightlyRoleCount, 12);
-  assert.equal(summary.documentationProjectionCount, 49);
+  assert.equal(summary.documentationProjectionCount, 50);
 });
 
 test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
