@@ -2591,7 +2591,7 @@ test("local projection selects the exact startup support identity contract witho
   assert.deepEqual(plan.routeGaps, []);
   assert.deepEqual(
     plan.selectedLeaves.map((entry) => entry.leafId).sort(),
-    methods.map((method) => `python-unittest:${method.toLowerCase()}`).sort(),
+    methods.map((method) => `python-unittest:${process.platform === "win32" ? method.toLowerCase() : method}`).sort(),
   );
   assert.equal(plan.executionCommands.length, 1);
   assert.equal(adaptivePlanningExitCode(projected, plan), 0);
