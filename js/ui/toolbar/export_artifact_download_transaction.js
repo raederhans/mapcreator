@@ -69,7 +69,7 @@ function assertDownloadableArtifact(target, artifact) {
 }
 
 function markExportFailureStage(error, stage) {
-  if (error && typeof error === "object" && !error.exportKind && !error.exportStage) {
+  if (error && typeof error === "object" && !error.exportStage) {
     try {
       error.exportStage = stage;
       if (error.exportStage === stage) return error;
@@ -79,6 +79,8 @@ function markExportFailureStage(error, stage) {
   }
   const wrapped = new Error(String(error?.message || error || "Export transaction failed."));
   wrapped.exportStage = stage;
+  const exportKind = String(error?.exportKind || "").trim();
+  if (exportKind) wrapped.exportKind = exportKind;
   if (error !== undefined) wrapped.cause = error;
   return wrapped;
 }
@@ -117,10 +119,10 @@ export function createExportArtifactDownloadTransaction({
     transactionId: 0,
   });
 
-  const emitLifecycle = (phase, details = {}) => {
+  const emitLifecycle = (transactionId, phase, details = {}) => {
     lifecycle = Object.freeze({
       phase,
-      transactionId: transactionSequence,
+      transactionId,
       ...details,
     });
     onLifecycle?.(lifecycle);
@@ -138,6 +140,7 @@ export function createExportArtifactDownloadTransaction({
 
     jobsInFlight += 1;
     transactionSequence += 1;
+    const transactionId = transactionSequence;
     let target = "composite";
     let stage = "artifact";
     try {
@@ -151,7 +154,7 @@ export function createExportArtifactDownloadTransaction({
       exportUi.scale = String(scale);
       const extension = target === "composite" && exportUi.format === "jpg" ? "jpg" : "png";
       if (target === "composite") exportUi.format = extension;
-      emitLifecycle(EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING, { target, scale });
+      emitLifecycle(transactionId, EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING, { target, scale });
 
       let artifact;
       if (target === "per-layer") {
@@ -163,14 +166,14 @@ export function createExportArtifactDownloadTransaction({
       }
       assertDownloadableArtifact(target, artifact);
 
-      emitLifecycle(EXPORT_ARTIFACT_DOWNLOAD_PHASES.ARTIFACT_READY, {
+      emitLifecycle(transactionId, EXPORT_ARTIFACT_DOWNLOAD_PHASES.ARTIFACT_READY, {
         target,
         scale,
         extension: target === "composite" ? extension : artifact?.extension,
         fileStem: target === "composite" ? "map_snapshot" : artifact?.fileStem,
       });
       stage = "download";
-      emitLifecycle(EXPORT_ARTIFACT_DOWNLOAD_PHASES.DOWNLOADING, { target, scale });
+      emitLifecycle(transactionId, EXPORT_ARTIFACT_DOWNLOAD_PHASES.DOWNLOADING, { target, scale });
       if (target === "composite") {
         await triggerCanvasDownload(artifact, extension, "map_snapshot");
       } else {
@@ -185,7 +188,7 @@ export function createExportArtifactDownloadTransaction({
         extension: target === "composite" ? extension : artifact?.extension,
         fileStem: target === "composite" ? "map_snapshot" : artifact?.fileStem,
       });
-      emitLifecycle(EXPORT_ARTIFACT_DOWNLOAD_PHASES.READY, receipt);
+      emitLifecycle(transactionId, EXPORT_ARTIFACT_DOWNLOAD_PHASES.READY, receipt);
       return receipt;
     } catch (error) {
       const failure = markExportFailureStage(error, stage);
@@ -194,7 +197,7 @@ export function createExportArtifactDownloadTransaction({
         target,
         failureKind: classifyExportFailure(failure),
       });
-      emitLifecycle(EXPORT_ARTIFACT_DOWNLOAD_PHASES.FAILED, receipt);
+      emitLifecycle(transactionId, EXPORT_ARTIFACT_DOWNLOAD_PHASES.FAILED, receipt);
       showExportFailureToast(failure);
       return receipt;
     } finally {

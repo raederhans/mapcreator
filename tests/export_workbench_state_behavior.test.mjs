@@ -243,6 +243,75 @@ test("export artifact download transaction fails with stage-aware taxonomy", asy
   assert.equal(classifyExportFailure(failures[0]), EXPORT_FAILURE_KINDS.DOWNLOAD_FAILED);
 });
 
+test("export artifact download transaction preserves explicit failure kinds across stage wrapping", async () => {
+  const failures = [];
+  const invalidParameters = new Error("invalid export scale");
+  invalidParameters.exportKind = EXPORT_FAILURE_KINDS.INVALID_PARAMS;
+  Object.freeze(invalidParameters);
+  const transaction = createExportArtifactDownloadTransaction({
+    getExportUi: () => ({ target: "composite", format: "png" }),
+    getSelectedExportScale: () => 1,
+    buildPerLayerExportPackage: async () => assert.fail("unexpected layer package"),
+    buildBakePackPackage: async () => assert.fail("unexpected bake package"),
+    buildCompositeExportCanvas: async () => { throw invalidParameters; },
+    triggerBlobDownload: async () => assert.fail("unexpected blob download"),
+    triggerCanvasDownload: async () => assert.fail("download must not start"),
+    showToast() {},
+    showExportFailureToast: (error) => failures.push(error),
+    t: (key) => key,
+  });
+
+  const receipt = await transaction.run();
+
+  assert.equal(receipt.failureKind, EXPORT_FAILURE_KINDS.INVALID_PARAMS);
+  assert.equal(failures[0].exportKind, EXPORT_FAILURE_KINDS.INVALID_PARAMS);
+  assert.equal(failures[0].exportStage, "artifact");
+  assert.equal(failures[0].cause, invalidParameters);
+});
+
+test("concurrent export lifecycle events retain their originating transaction IDs", async () => {
+  const lifecycle = [];
+  const pendingArtifacts = [];
+  const transaction = createExportArtifactDownloadTransaction({
+    getExportUi: () => ({ target: "composite", format: "png" }),
+    getSelectedExportScale: () => 1,
+    buildPerLayerExportPackage: async () => assert.fail("unexpected layer package"),
+    buildBakePackPackage: async () => assert.fail("unexpected bake package"),
+    buildCompositeExportCanvas: () => new Promise((resolve) => pendingArtifacts.push(resolve)),
+    triggerBlobDownload: async () => assert.fail("unexpected blob download"),
+    triggerCanvasDownload: async () => {},
+    showToast() {},
+    showExportFailureToast: () => assert.fail("unexpected export failure"),
+    t: (key) => key,
+    onLifecycle: (entry) => lifecycle.push(entry),
+    maxConcurrentJobs: 2,
+  });
+
+  const first = transaction.run();
+  const second = transaction.run();
+  assert.deepEqual(lifecycle.map(({ phase, transactionId }) => [phase, transactionId]), [
+    [EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING, 1],
+    [EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING, 2],
+  ]);
+
+  pendingArtifacts[1]({ id: "second" });
+  await second;
+  pendingArtifacts[0]({ id: "first" });
+  await first;
+
+  for (const transactionId of [1, 2]) {
+    assert.deepEqual(
+      lifecycle.filter((entry) => entry.transactionId === transactionId).map((entry) => entry.phase),
+      [
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING,
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.ARTIFACT_READY,
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.DOWNLOADING,
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.READY,
+      ],
+    );
+  }
+});
+
 test("export artifact download transaction rejects incomplete package artifacts before download", async () => {
   const lifecycle = [];
   const failures = [];
