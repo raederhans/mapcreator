@@ -147,6 +147,7 @@ const LOCAL_INFRA_SOURCE_REFS = Object.freeze([
 const LOCAL_PROFILE_SOURCE_REFS = Object.freeze([
   ...LOCAL_INFRA_SOURCE_REFS,
   "tests/verification_profile_behavior.test.mjs",
+  "tools/verification/verification_catalog_source.mjs",
   "tools/verification/verification_profile.mjs",
 ]);
 
@@ -323,10 +324,11 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       supervisorDomain: entry.domain,
       routeRegistry: true,
     })),
-  // Stage B render handoff contracts are direct commands authored only in the
-  // canonical source. Derive the retained shadow records from that source.
+  // Stage B direct contracts are authored only in the canonical source. Derive
+  // the retained shadow records from that source.
   ...buildCanonicalRouteIndex()
     .filter((entry) => [
+      "direct:tno-startup-support-output-identity",
       "direct:renderer-render-snapshot-change-set-contracts",
       "python:tests.test_map_renderer_render_snapshot_boundary_contract",
     ].includes(entry.id))
@@ -351,7 +353,6 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       "tools/run_core_verification.mjs",
       "tools/verification/command_supersession.mjs",
       "tools/verification/verification_catalog_projection.mjs",
-      "tools/verification/verification_catalog_source.mjs",
     ],
     domain: "test-routing",
     ownerHint: "test-infra",

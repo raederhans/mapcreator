@@ -4604,6 +4604,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
         "tools/verification/script_portfolio.mjs",
+        "tools/verification/verification_catalog_source.mjs",
         "tools/verification/verification_domains.mjs",
         "tests/verification_profile_behavior.test.mjs",
         "tools/verification/verification_profile.mjs"
@@ -4700,6 +4701,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
         "tools/verification/script_portfolio.mjs",
+        "tools/verification/verification_catalog_source.mjs",
         "tools/verification/verification_domains.mjs",
         "tests/verification_profile_behavior.test.mjs",
         "tools/verification/verification_profile.mjs",
@@ -13795,6 +13797,39 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 0,
       "verificationOrder": null,
       "selectorOrder": 363,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "direct:tno-startup-support-output-identity",
+      "commandRef": "python -m unittest tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_reuses_matching_output_identity tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_same_length_content_drift tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_missing_output tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_legacy_signature_rebuilds_then_reuses -q",
+      "sourceRefs": [
+        "tests/test_tno_bundle_builder.py",
+        "tools/patch_tno_1962_bundle.py"
+      ],
+      "ownerHints": [
+        "geo-contract"
+      ],
+      "domains": [
+        "geo-contract"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "contract",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 392,
       "verification": null,
       "selector": {}
     },
