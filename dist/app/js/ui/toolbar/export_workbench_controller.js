@@ -5,6 +5,7 @@
 import { resolveSampleExportRecommendationContext } from "../../core/sample_export_recommendation.js";
 import { replaceExportWorkbenchUiState } from "../../core/state/index.js";
 import { normalizeExportAdjustmentValue } from "./export_artifact_model.js";
+import { createExportArtifactDownloadTransaction } from "./export_artifact_download_transaction.js";
 
 const EXPORT_MAIN_LAYER_VIEW_MODELS = Object.freeze([
   Object.freeze({ id: "background", name: "Background", summary: "Base frame", passNames: ["background"] }),
@@ -43,6 +44,18 @@ function identityT(key) {
 function assertRequiredCallableDependency(value, name) {
   if (typeof value !== "function") {
     throw new TypeError(`createExportWorkbenchController requires ${name} to be a function.`);
+  }
+}
+
+function assertRequiredObjectDependency(value, name) {
+  if (!value || typeof value !== "object") {
+    throw new TypeError(`createExportWorkbenchController requires ${name} to be an object.`);
+  }
+}
+
+function assertRequiredArrayDependency(value, name) {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`createExportWorkbenchController requires ${name} to be an array.`);
   }
 }
 
@@ -215,9 +228,7 @@ function createExportWorkbenchController({
   buildCompositeSourceCanvas,
   buildSingleExportSourceCanvas,
   applyExportAdjustmentsToCanvas,
-  buildPerLayerExportOutputs,
   buildPerLayerExportPackage,
-  buildBakePackOutputs,
   buildBakePackPackage,
   buildCompositeExportCanvas,
   getSelectedExportScale,
@@ -226,12 +237,19 @@ function createExportWorkbenchController({
   bakeLayer,
   exportMaxConcurrentJobs = 1,
 } = {}) {
+  assertRequiredObjectDependency(state, "state");
+  assertRequiredCallableDependency(t, "t");
   assertRequiredCallableDependency(showToast, "showToast");
   assertRequiredCallableDependency(showExportFailureToast, "showExportFailureToast");
+  assertRequiredCallableDependency(normalizeExportWorkbenchUiState, "normalizeExportWorkbenchUiState");
+  assertRequiredArrayDependency(renderPassNames, "renderPassNames");
+  assertRequiredCallableDependency(buildCompositeSourceCanvas, "buildCompositeSourceCanvas");
+  assertRequiredCallableDependency(buildSingleExportSourceCanvas, "buildSingleExportSourceCanvas");
+  assertRequiredCallableDependency(applyExportAdjustmentsToCanvas, "applyExportAdjustmentsToCanvas");
+  assertRequiredCallableDependency(bakeLayer, "bakeLayer");
 
   let exportWorkbenchDraggedLayerId = "";
   let exportWorkbenchPreviewRenderToken = 0;
-  let exportJobsInFlight = 0;
 
   const getExportUi = () => ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState);
 
@@ -644,55 +662,26 @@ function createExportWorkbenchController({
     void renderExportWorkbenchPreview();
   };
 
+  const exportArtifactDownloadTransaction = createExportArtifactDownloadTransaction({
+    getExportUi: syncExportWorkbenchControlsFromState,
+    getSelectedExportScale,
+    buildPerLayerExportPackage,
+    buildBakePackPackage,
+    buildCompositeExportCanvas,
+    triggerBlobDownload,
+    triggerCanvasDownload,
+    showToast,
+    showExportFailureToast,
+    t,
+    maxConcurrentJobs: exportMaxConcurrentJobs,
+  });
+
   const handleExportAction = async () => {
-    if (exportJobsInFlight >= exportMaxConcurrentJobs) {
-      showToast(
-        t("An export is already in progress. Wait for it to finish before starting another export.", "ui"),
-        { title: t("Export queue is full", "ui"), tone: "warning", duration: 4200 }
-      );
-      return;
+    const receipt = await exportArtifactDownloadTransaction.run();
+    if (receipt.status === "ready" && receipt.target === "bake-pack") {
+      renderExportWorkbenchUi(true);
     }
-    exportJobsInFlight += 1;
-    try {
-      const exportUi = syncExportWorkbenchControlsFromState();
-      const scaleMultiplier = getSelectedExportScale();
-      exportUi.scale = String(scaleMultiplier);
-      const extension = exportUi.target === "per-layer" || exportUi.target === "bake-pack"
-        ? "png"
-        : (exportUi.format === "jpg" ? "jpg" : "png");
-      if (exportUi.target === "composite") {
-        exportUi.format = extension;
-      }
-      const exportTargetKind = exportUi.target;
-      if (exportTargetKind === "per-layer") {
-        const layerPackage = await buildPerLayerExportPackage(exportUi, scaleMultiplier);
-        triggerBlobDownload(layerPackage.blob, layerPackage.extension, layerPackage.fileStem);
-        showToast(t("Layer package downloaded.", "ui"), {
-          title: t("Layer package exported", "ui"),
-          tone: "success",
-        });
-      } else if (exportTargetKind === "bake-pack") {
-        const bakePackage = await buildBakePackPackage(exportUi, scaleMultiplier);
-        triggerBlobDownload(bakePackage.blob, bakePackage.extension, bakePackage.fileStem);
-        renderExportWorkbenchUi(true);
-        showToast(t("Bake package downloaded.", "ui"), {
-          title: t("Bake pack exported", "ui"),
-          tone: "success",
-        });
-      } else {
-        const exportCanvas = await buildCompositeExportCanvas(exportUi, scaleMultiplier);
-        triggerCanvasDownload(exportCanvas, extension, "map_snapshot");
-        showToast(t("Map snapshot downloaded.", "ui"), {
-          title: t("Snapshot exported", "ui"),
-          tone: "success",
-        });
-      }
-    } catch (error) {
-      console.error("Snapshot export failed:", error);
-      showExportFailureToast(error);
-    } finally {
-      exportJobsInFlight = Math.max(0, exportJobsInFlight - 1);
-    }
+    return receipt;
   };
 
   const bindExportWorkbenchEvents = () => {

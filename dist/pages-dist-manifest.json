@@ -45782,7 +45782,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 783131,
+      "size_bytes": 782603,
       "source_kind": "dist"
     },
     {
@@ -46152,7 +46152,7 @@
     },
     {
       "path": "app/js/core/renderer/render_snapshot.js",
-      "size_bytes": 9752,
+      "size_bytes": 9318,
       "source_kind": "dist"
     },
     {
@@ -46572,7 +46572,7 @@
     },
     {
       "path": "app/js/core/state/actions/renderer_diagnostics_actions.js",
-      "size_bytes": 13858,
+      "size_bytes": 16283,
       "source_kind": "dist"
     },
     {
@@ -46956,18 +46956,23 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/toolbar/export_artifact_download_transaction.js",
+      "size_bytes": 7670,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/toolbar/export_artifact_model.js",
       "size_bytes": 6538,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/export_failure_handler.js",
-      "size_bytes": 1861,
+      "size_bytes": 3828,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 35255,
+      "size_bytes": 34779,
       "source_kind": "dist"
     },
     {
@@ -47577,7 +47582,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2070390,
+      "size_bytes": 2071996,
       "source_kind": "dist"
     },
     {
@@ -47702,17 +47707,17 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 5322826
+        "size_bytes": 5324723
       },
       {
-        "file_count": 86,
+        "file_count": 87,
         "id": "startup-deferred-runtime",
-        "size_bytes": 3392276
+        "size_bytes": 3399946
       },
       {
         "file_count": 821,
         "id": "on-demand-product",
-        "size_bytes": 252916480
+        "size_bytes": 252917652
       },
       {
         "file_count": 8390,
@@ -47722,7 +47727,7 @@
       {
         "file_count": 4,
         "id": "export-only",
-        "size_bytes": 50496
+        "size_bytes": 51987
       },
       {
         "file_count": 12,
@@ -51065,7 +51070,7 @@
               {
                 "column": 1,
                 "kind": "export-named-source",
-                "line": 20300,
+                "line": 20289,
                 "local": true,
                 "reference": "./map_renderer/render_pass_catalog.js",
                 "resolved_path": "app/js/core/map_renderer/render_pass_catalog.js"
@@ -59604,6 +59609,32 @@
           "dynamic_import_expressions": [],
           "dynamic_imports": [],
           "load_phase": "deferred-runtime",
+          "path": "app/js/ui/toolbar/export_artifact_download_transaction.js",
+          "product_category": "startup-deferred-runtime",
+          "reference_locations": {
+            "dynamic_imports": [],
+            "resource_references": [],
+            "static_imports": [
+              {
+                "column": 1,
+                "kind": "import-declaration",
+                "line": 4,
+                "local": true,
+                "reference": "./export_failure_handler.js",
+                "resolved_path": "app/js/ui/toolbar/export_failure_handler.js"
+              }
+            ]
+          },
+          "resource_references": [],
+          "source_bindings": [],
+          "static_imports": [
+            "app/js/ui/toolbar/export_failure_handler.js"
+          ]
+        },
+        {
+          "dynamic_import_expressions": [],
+          "dynamic_imports": [],
+          "load_phase": "deferred-runtime",
           "path": "app/js/ui/toolbar/export_artifact_model.js",
           "product_category": "startup-deferred-runtime",
           "reference_locations": {
@@ -59683,6 +59714,14 @@
                 "local": true,
                 "reference": "./export_artifact_model.js",
                 "resolved_path": "app/js/ui/toolbar/export_artifact_model.js"
+              },
+              {
+                "column": 1,
+                "kind": "import-declaration",
+                "line": 8,
+                "local": true,
+                "reference": "./export_artifact_download_transaction.js",
+                "resolved_path": "app/js/ui/toolbar/export_artifact_download_transaction.js"
               }
             ]
           },
@@ -59691,6 +59730,7 @@
           "static_imports": [
             "app/js/core/sample_export_recommendation.js",
             "app/js/core/state/index.js",
+            "app/js/ui/toolbar/export_artifact_download_transaction.js",
             "app/js/ui/toolbar/export_artifact_model.js"
           ]
         },
@@ -61910,21 +61950,21 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 3052758,
-        "deferred_graph_file_count": 116,
-        "deferred_module_count": 115,
+        "deferred_graph_bytes": 3061919,
+        "deferred_graph_file_count": 117,
+        "deferred_module_count": 116,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 5304580,
+        "initial_graph_bytes": 5306043,
         "initial_graph_file_count": 238,
         "initial_module_count": 224,
         "initial_resource_count": 14,
-        "initial_script_bytes": 3946254,
+        "initial_script_bytes": 3947717,
         "initial_script_count": 226,
-        "module_count": 345,
+        "module_count": 346,
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 948978521,
+        "untraversed_dist_bytes": 948980127,
         "untraversed_dist_file_count": 9150,
         "untraversed_module_count": 6
       },
@@ -62099,7 +62139,7 @@
           },
           {
             "path": "app/js/core/map_renderer.js",
-            "size_bytes": 783131
+            "size_bytes": 782603
           },
           {
             "path": "app/js/core/map_renderer/canvas_layer_manager.js",
@@ -62539,7 +62579,7 @@
           },
           {
             "path": "app/js/core/state/actions/renderer_diagnostics_actions.js",
-            "size_bytes": 13858
+            "size_bytes": 16283
           },
           {
             "path": "app/js/core/state/actions/renderer_exact_refresh_actions.js",
@@ -62671,7 +62711,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 2897287
+        "size_bytes": 2899184
       },
       {
         "basis": "startup-resource-graph",
@@ -62810,7 +62850,7 @@
       {
         "basis": "deferred-module-graph",
         "category": "startup-deferred-runtime",
-        "file_count": 84,
+        "file_count": 85,
         "owner": "editor-deferred-features",
         "path_exceptions": [
           {
@@ -62908,6 +62948,10 @@
           {
             "path": "app/js/ui/toolbar/appearance_transport_summary.js",
             "size_bytes": 10896
+          },
+          {
+            "path": "app/js/ui/toolbar/export_artifact_download_transaction.js",
+            "size_bytes": 7670
           },
           {
             "path": "app/js/ui/toolbar/export_artifact_model.js",
@@ -63125,7 +63169,7 @@
             "size_bytes": 274769
           }
         ],
-        "size_bytes": 2527081
+        "size_bytes": 2534751
       },
       {
         "basis": "product-registry:milsymbol-deferred-vendor",
@@ -63516,11 +63560,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2070390
+            "size_bytes": 2071996
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2070390
+        "size_bytes": 2071996
       },
       {
         "basis": "product-registry:render-handoff-contract-modules",
@@ -63534,11 +63578,11 @@
           },
           {
             "path": "app/js/core/renderer/render_snapshot.js",
-            "size_bytes": 9752
+            "size_bytes": 9318
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 18251
+        "size_bytes": 17817
       },
       {
         "basis": "product-registry:thematic-product-data",
@@ -63851,15 +63895,15 @@
           },
           {
             "path": "app/js/ui/toolbar/export_failure_handler.js",
-            "size_bytes": 1861
+            "size_bytes": 3828
           },
           {
             "path": "app/js/ui/toolbar/export_workbench_controller.js",
-            "size_bytes": 35255
+            "size_bytes": 34779
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 50496
+        "size_bytes": 51987
       },
       {
         "basis": "product-registry:developer-modules",
@@ -63899,7 +63943,7 @@
       }
     ],
     "product_inventory": {
-      "classified_file_count": 9517,
+      "classified_file_count": 9518,
       "exact_exclusions": [],
       "publication_ownership_status": "complete",
       "registry_rules": [
@@ -63943,7 +63987,7 @@
             "prefixes": []
           },
           "owner": "export-capability",
-          "size_bytes": 50496
+          "size_bytes": 51987
         },
         {
           "category": "scenario-specific",
@@ -64072,7 +64116,7 @@
             "prefixes": []
           },
           "owner": "render-handoff-contract",
-          "size_bytes": 18251
+          "size_bytes": 17817
         },
         {
           "category": "on-demand-product",
@@ -64268,11 +64312,11 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2070390
+          "size_bytes": 2071996
         }
       ],
       "status": "complete",
-      "total_file_count": 9517,
+      "total_file_count": 9518,
       "unknown_file_count": 0,
       "unknown_paths": []
     },
@@ -64281,8 +64325,8 @@
       "graph_scan_status": "complete",
       "registry_resolved_dynamic_expression_count": 2,
       "status": "complete",
-      "total_file_count": 9517,
-      "traversed_file_count": 367,
+      "total_file_count": 9518,
+      "traversed_file_count": 368,
       "unresolved_dynamic_expression_count": 0,
       "unresolved_reference_count": 0,
       "untraversed_file_count": 9150,
@@ -64309,9 +64353,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9455,
+      "file_count": 9456,
       "path": "app",
-      "size_bytes": 951256261
+      "size_bytes": 951266885
     },
     {
       "file_count": 57,
@@ -64321,7 +64365,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2070390
+      "size_bytes": 2071996
     },
     {
       "file_count": 1,
@@ -64344,5 +64388,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 958117264
+  "total_bytes": 958129494
 }
