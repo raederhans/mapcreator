@@ -130,6 +130,6 @@ Stage A remaining boundaries: UI hydration 失败目前只有 console/recovery h
 - [x] 为 `startup_support_assets` 的三个既有输出记录稳定 `filename + byte length + SHA-256` 内容身份；旧签名、缺失输出及同长度内容漂移均 fail closed。
 - [x] 将新增 Node/Python 合同绑定到 canonical child-safe direct routes，并只在本地 edit/impact 投影中用 exact indivisible test route 替代 generic selector fallback；retained shadow 仍由 canonical source 投影。metadata/portfolio 98/98、control batch 193/193、focused `verify:commit` 200/200 Node + 63/63 Python、shadow equal、401 routes、357 commands、零 mismatch 已通过。
 - [x] 按当前 tracked-dist 合同将两个 render handoff 模块登记为同一 on-demand product owner，生成 913.73 MiB Pages 镜像；source/dist 三组文件一致，Pages startup/inventory 合同 62/62 通过。
-- [ ] [PR #113](https://github.com/raederhans/scenario-forge/pull/113) 已建立；等待 protected-main 远端必需门禁后完成 main 收口与候选工作树清理。
+- [x] [PR #113](https://github.com/raederhans/scenario-forge/pull/113) 的 10 项远端检查全部通过，并以 merge commit `46cd2d9bae9564a9ebfe55a951226d23943dde9a` 收口到 protected `main`；桌面 `HEAD`、本地 `main`、`origin/main` 与 live remote ref 已核对一致。两条原始候选已写入 archive refs，三个 Stage B worktree 均解除注册，功能分支已正常删除。
 
 Stage B remaining boundaries: ChangeSet 仍不执行 live apply/undo、不写 history/runtime state，也不触发 render；startup-support identity 只决定本地 checkpoint reuse，不复制、恢复或发布共享缓存。本阶段不退休 tracked `dist`/legacy projection，不做额外本地性能模拟、浏览器、Nightly、Release 或部署。
