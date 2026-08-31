@@ -15,6 +15,7 @@ class BootStateActionsBoundaryContractTest(unittest.TestCase):
         required_exports = (
             "setStartupInteractionMode",
             "setBootPreviewVisibleState",
+            "setUiHydrationState",
             "commitStartupReadonlyStateFields",
             "clearStartupReadonlyStateFields",
             "clearStartupReadonlyStateForReason",
@@ -83,6 +84,9 @@ class BootStateActionsBoundaryContractTest(unittest.TestCase):
             "bootPreviewVisible",
             "bootError",
             "bootCanContinueWithoutScenario",
+            "uiHydrationStatus",
+            "uiHydrationError",
+            "uiHydrationUpdatedAt",
             "startupInteractionMode",
             "startupReadonly",
             "startupReadonlyReason",

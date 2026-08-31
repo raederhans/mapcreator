@@ -1,7 +1,7 @@
 import { loadDeferredDetailBundle } from "../core/data_loader.js";
 import { refreshScenarioDataHealth } from "../core/scenario_data_health.js";
 import {
-  buildInteractionInfrastructureAfterStartup,
+  buildInteractionInfrastructureAfterStartup as buildInteractionInfrastructureAfterStartupDefault,
 } from "../core/map_renderer/public.js";
 import {
   refreshMapDataForScenarioApply,
@@ -19,6 +19,7 @@ export function createDeferredDetailPromotionOwner({
   helpers = {},
 } = {}) {
   const {
+    buildInteractionInfrastructureAfterStartup = buildInteractionInfrastructureAfterStartupDefault,
     canRunPostReadyIdleWork,
     checkpointBootMetric,
     completeBootSequenceLogging,
@@ -36,6 +37,7 @@ export function createDeferredDetailPromotionOwner({
     setStartupReadonlyState,
     startBootMetric,
     startDeferredFullInteractionInfrastructureBuild,
+    tryScheduleStartupSampleProjectDeeplink,
     warnOnStartupBundleIntegrity,
   } = helpers;
 
@@ -312,6 +314,7 @@ export function createDeferredDetailPromotionOwner({
         progress: 100,
         canContinueWithoutScenario: false,
       });
+      void tryScheduleStartupSampleProjectDeeplink?.();
       completeBootSequenceLogging?.();
       flushPendingScenarioChunkRefreshAfterReady?.("startup-readonly-unlocked");
       startDeferredFullInteractionInfrastructureBuild?.("startup-readonly-unlocked");
@@ -377,6 +380,7 @@ export function createDeferredDetailPromotionOwner({
             progress: 100,
             canContinueWithoutScenario: false,
           });
+          void tryScheduleStartupSampleProjectDeeplink?.();
           checkpointBootMetric?.("time-to-interactive");
           checkpointBootMetric?.("first-interactive");
           completeBootSequenceLogging?.();

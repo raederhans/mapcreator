@@ -44,6 +44,8 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
         self.assertIn("getDeferredPromotionDelay(runtimeState.renderProfile)", owner_content)
         self.assertIn("schedulePostReadyPoliticalReconcile", donor_content)
         self.assertIn("schedulePostReadyPoliticalReconcile", owner_content)
+        self.assertIn("tryScheduleStartupSampleProjectDeeplink", owner_content)
+        self.assertEqual(owner_content.count("void tryScheduleStartupSampleProjectDeeplink?.();"), 2)
 
         self.assertNotIn("loadDeferredDetailBundle({", donor_content)
         self.assertNotIn("refreshScenarioDataHealth({", donor_content)
@@ -143,6 +145,7 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
         self.assertIn("return getDeferredDetailPromotionOwner().scheduleStartupReadonlyUnlock(renderDispatcher, {", donor_content)
         self.assertIn("const deferredDetailPromotion = getDeferredDetailPromotionOwner();", donor_content)
         self.assertIn("return deferredDetailPromotion.scheduleDeferredDetailPromotion(renderDispatcher);", donor_content)
+        self.assertIn("tryScheduleStartupSampleProjectDeeplink,", donor_content)
         self.assertIn("async function finalizeReadyState(renderDispatcher) {", donor_content)
         self.assertIn("scheduleStartupReadonlyUnlock(renderDispatcher);", donor_content)
         self.assertIn("scheduleDeferredDetailPromotion(renderDispatcher);", donor_content)

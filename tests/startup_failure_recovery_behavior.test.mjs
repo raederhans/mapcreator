@@ -168,11 +168,36 @@ test("deferred UI bootstrap rejection is logged and reported", async () => {
     consoleApi: harness.consoleApi,
   });
 
-  assert.equal(result.startupUiBootstrapFailed, true);
-  assert.equal(result.deferredUiBootstrapError, uiBootstrapError);
-  assert.equal(harness.consoleErrors[0][0], "Deferred UI bootstrap failed during startup:");
-  assert.equal(harness.consoleErrors[0][1], uiBootstrapError);
+  assert.equal(result.startupUiBootstrapFailed, false);
+  assert.equal(result.deferredUiBootstrapError, null);
+  const observation = await result.deferredUiBootstrapObservation;
+  assert.deepEqual(observation, { failed: true, error: uiBootstrapError });
+  assert.equal(harness.consoleErrors.at(-1)[0], "Deferred UI bootstrap failed during startup:");
+  assert.equal(harness.consoleErrors.at(-1)[1], uiBootstrapError);
   assert.equal(harness.targetState.scenarioApplyInFlight, false);
+});
+
+test("startup failure recovery publishes the error without waiting for deferred UI", async () => {
+  const deferredUiBootstrap = createDeferredPromise();
+  const harness = createHarness();
+
+  const result = await handleStartupFailure({
+    error: new Error("scenario boot failed"),
+    targetState: harness.targetState,
+    renderDispatcher: harness.renderDispatcher,
+    startupUiBootstrapPromise: deferredUiBootstrap.promise,
+    startupUiBootstrapAwaited: false,
+    helpers: harness.helpers,
+    consoleApi: harness.consoleApi,
+  });
+
+  assert.equal(harness.bootStates.at(-1).phase, "error");
+  assert.equal(harness.calls.includes("runPostScenarioUiReplay:true"), false);
+  assert.ok(result.deferredUiBootstrapObservation);
+
+  deferredUiBootstrap.resolve();
+  assert.deepEqual(await result.deferredUiBootstrapObservation, { failed: false, error: null });
+  assert.equal(harness.calls.filter((call) => call === "runPostScenarioUiReplay:true").length, 1);
 });
 
 test("failure path replays UI, unlocks readonly state, records metrics, and sets error state", async () => {
@@ -318,7 +343,8 @@ test("handleStartupFailure only writes scenarioApplyInFlight on target state", a
   ]);
 });
 
-test("continue handler skips rejected deferred UI bootstrap promise after recovery records it", async () => {
+test("continue handler skips rejected deferred UI bootstrap promise after async recovery records it", async () => {
+  const uiError = new Error("ui failed");
   const harness = createHarness({
     targetState: {
       activeScenarioId: "tno_1962",
@@ -329,13 +355,14 @@ test("continue handler skips rejected deferred UI bootstrap promise after recove
     error: new Error("startup failed"),
     targetState: harness.targetState,
     renderDispatcher: harness.renderDispatcher,
-    startupUiBootstrapPromise: Promise.reject(new Error("ui failed")),
+    startupUiBootstrapPromise: Promise.reject(uiError),
     startupUiBootstrapAwaited: false,
     helpers: harness.helpers,
     consoleApi: harness.consoleApi,
   });
 
-  assert.equal(result.startupUiBootstrapFailed, true);
+  const observation = await result.deferredUiBootstrapObservation;
+  assert.deepEqual(observation, { failed: true, error: uiError });
   harness.calls.length = 0;
   await harness.getContinueHandler()();
 

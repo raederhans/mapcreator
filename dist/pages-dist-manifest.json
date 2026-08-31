@@ -45527,12 +45527,12 @@
     },
     {
       "path": "app/js/bootstrap/deferred_detail_promotion.js",
-      "size_bytes": 17855,
+      "size_bytes": 18169,
       "source_kind": "dist"
     },
     {
       "path": "app/js/bootstrap/deferred_ui_bootstrap.js",
-      "size_bytes": 1967,
+      "size_bytes": 3703,
       "source_kind": "dist"
     },
     {
@@ -45572,7 +45572,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_failure_recovery.js",
-      "size_bytes": 3591,
+      "size_bytes": 4134,
       "source_kind": "dist"
     },
     {
@@ -45582,12 +45582,12 @@
     },
     {
       "path": "app/js/bootstrap/startup_ready_handoff.js",
-      "size_bytes": 10349,
+      "size_bytes": 12504,
       "source_kind": "dist"
     },
     {
       "path": "app/js/bootstrap/startup_sample_project_deeplink.js",
-      "size_bytes": 1722,
+      "size_bytes": 2013,
       "source_kind": "dist"
     },
     {
@@ -45597,7 +45597,7 @@
     },
     {
       "path": "app/js/bootstrap/ui_shell_boot.js",
-      "size_bytes": 4706,
+      "size_bytes": 4591,
       "source_kind": "dist"
     },
     {
@@ -46552,7 +46552,7 @@
     },
     {
       "path": "app/js/core/state/actions/boot_actions.js",
-      "size_bytes": 5841,
+      "size_bytes": 6368,
       "source_kind": "dist"
     },
     {
@@ -46632,7 +46632,7 @@
     },
     {
       "path": "app/js/core/state/boot_state.js",
-      "size_bytes": 3955,
+      "size_bytes": 4044,
       "source_kind": "dist"
     },
     {
@@ -46762,7 +46762,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 24075,
+      "size_bytes": 24832,
       "source_kind": "dist"
     },
     {
@@ -47567,7 +47567,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2067088,
+      "size_bytes": 2067458,
       "source_kind": "dist"
     },
     {
@@ -47692,22 +47692,22 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 5311699
+        "size_bytes": 5317506
       },
       {
         "file_count": 86,
         "id": "startup-deferred-runtime",
-        "size_bytes": 3391985
+        "size_bytes": 3392276
       },
       {
         "file_count": 819,
         "id": "on-demand-product",
-        "size_bytes": 252894927
+        "size_bytes": 252895297
       },
       {
         "file_count": 8390,
         "id": "scenario-specific",
-        "size_bytes": 696177042
+        "size_bytes": 696177356
       },
       {
         "file_count": 4,
@@ -47717,7 +47717,7 @@
       {
         "file_count": 12,
         "id": "developer-only",
-        "size_bytes": 257945
+        "size_bytes": 257830
       },
       {
         "file_count": 0,
@@ -48015,7 +48015,7 @@
               "expression": "path",
               "expression_index": 0,
               "kind": "unresolved_dynamic_expression",
-              "line": 29,
+              "line": 52,
               "registry_id": "deferred-ui-bootstrap",
               "resolution": "declarative-registry",
               "runtime_targets": [
@@ -48513,6 +48513,14 @@
                 "local": true,
                 "reference": "../core/state/actions/scenario_chunk_runtime_actions.js",
                 "resolved_path": "app/js/core/state/actions/scenario_chunk_runtime_actions.js"
+              },
+              {
+                "column": 1,
+                "kind": "import-declaration",
+                "line": 3,
+                "local": true,
+                "reference": "../core/state/actions/boot_actions.js",
+                "resolved_path": "app/js/core/state/actions/boot_actions.js"
               }
             ]
           },
@@ -48520,6 +48528,7 @@
           "source_bindings": [],
           "static_imports": [
             "app/js/bootstrap/post_ready_scheduler.js",
+            "app/js/core/state/actions/boot_actions.js",
             "app/js/core/state/actions/scenario_chunk_runtime_actions.js"
           ]
         },
@@ -57033,7 +57042,7 @@
               "expression": "\"./core/scenario_manager.js\"",
               "expression_index": 2,
               "kind": "literal_dynamic_import",
-              "line": 237,
+              "line": 239,
               "reference": "./core/scenario_manager.js",
               "resolution": "literal"
             }
@@ -57067,7 +57076,7 @@
               {
                 "column": 41,
                 "kind": "literal-dynamic-import",
-                "line": 237,
+                "line": 239,
                 "local": true,
                 "reference": "./core/scenario_manager.js",
                 "resolved_path": "app/js/core/scenario_manager.js"
@@ -61841,21 +61850,21 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 3052467,
+        "deferred_graph_bytes": 3052758,
         "deferred_graph_file_count": 116,
         "deferred_module_count": 115,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 5283502,
+        "initial_graph_bytes": 5289508,
         "initial_graph_file_count": 237,
         "initial_module_count": 223,
         "initial_resource_count": 14,
-        "initial_script_bytes": 3925176,
+        "initial_script_bytes": 3931182,
         "initial_script_count": 225,
         "module_count": 343,
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 948966720,
+        "untraversed_dist_bytes": 948967090,
         "untraversed_dist_file_count": 9149,
         "untraversed_module_count": 5
       },
@@ -61910,7 +61919,7 @@
         "path_exceptions": [
           {
             "path": "app/js/bootstrap/deferred_ui_bootstrap.js",
-            "size_bytes": 1967
+            "size_bytes": 3703
           },
           {
             "path": "app/js/bootstrap/deferred_vendor_loader.js",
@@ -61938,7 +61947,7 @@
           },
           {
             "path": "app/js/bootstrap/startup_failure_recovery.js",
-            "size_bytes": 3591
+            "size_bytes": 4134
           },
           {
             "path": "app/js/bootstrap/startup_lazy_module_loader.js",
@@ -61946,7 +61955,7 @@
           },
           {
             "path": "app/js/bootstrap/startup_ready_handoff.js",
-            "size_bytes": 10349
+            "size_bytes": 12504
           },
           {
             "path": "app/js/core/city_lights_historical_1930_asset.js",
@@ -62462,7 +62471,7 @@
           },
           {
             "path": "app/js/core/state/actions/boot_actions.js",
-            "size_bytes": 5841
+            "size_bytes": 6368
           },
           {
             "path": "app/js/core/state/actions/renderer_cache_actions.js",
@@ -62490,7 +62499,7 @@
           },
           {
             "path": "app/js/core/state/boot_state.js",
-            "size_bytes": 3955
+            "size_bytes": 4044
           },
           {
             "path": "app/js/core/state/border_cache_state.js",
@@ -62574,7 +62583,7 @@
           },
           {
             "path": "app/js/main.js",
-            "size_bytes": 24075
+            "size_bytes": 24832
           },
           {
             "path": "app/js/ui/i18n.js",
@@ -62602,7 +62611,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 2886160
+        "size_bytes": 2891967
       },
       {
         "basis": "startup-resource-graph",
@@ -62750,7 +62759,7 @@
           },
           {
             "path": "app/js/bootstrap/startup_sample_project_deeplink.js",
-            "size_bytes": 1722
+            "size_bytes": 2013
           },
           {
             "path": "app/js/core/city_lights_modern_asset.js",
@@ -63056,7 +63065,7 @@
             "size_bytes": 274769
           }
         ],
-        "size_bytes": 2526790
+        "size_bytes": 2527081
       },
       {
         "basis": "product-registry:milsymbol-deferred-vendor",
@@ -63447,11 +63456,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2067088
+            "size_bytes": 2067458
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2067088
+        "size_bytes": 2067458
       },
       {
         "basis": "product-registry:thematic-product-data",
@@ -63536,7 +63545,7 @@
         "path_exceptions": [
           {
             "path": "app/js/bootstrap/deferred_detail_promotion.js",
-            "size_bytes": 17855
+            "size_bytes": 18169
           },
           {
             "path": "app/js/bootstrap/startup_scenario_boot.js",
@@ -63726,7 +63735,7 @@
             "size_bytes": 316313
           }
         ],
-        "size_bytes": 965899
+        "size_bytes": 966213
       },
       {
         "basis": "product-registry:scenario-runtime-data",
@@ -63786,7 +63795,7 @@
           },
           {
             "path": "app/js/bootstrap/ui_shell_boot.js",
-            "size_bytes": 4706
+            "size_bytes": 4591
           },
           {
             "path": "app/js/bootstrap/ui_shell_debug_seed.js",
@@ -63808,7 +63817,7 @@
             "size_bytes": 185325
           }
         ],
-        "size_bytes": 257945
+        "size_bytes": 257830
       }
     ],
     "product_inventory": {
@@ -63838,7 +63847,7 @@
             "prefixes": []
           },
           "owner": "development-tools",
-          "size_bytes": 257945
+          "size_bytes": 257830
         },
         {
           "category": "export-only",
@@ -63928,7 +63937,7 @@
             "prefixes": []
           },
           "owner": "scenario-runtime",
-          "size_bytes": 965899
+          "size_bytes": 966213
         },
         {
           "category": "scenario-specific",
@@ -64167,7 +64176,7 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2067088
+          "size_bytes": 2067458
         }
       ],
       "status": "complete",
@@ -64210,7 +64219,7 @@
     {
       "file_count": 9453,
       "path": "app",
-      "size_bytes": 951226393
+      "size_bytes": 951232690
     },
     {
       "file_count": 57,
@@ -64220,7 +64229,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2067088
+      "size_bytes": 2067458
     },
     {
       "file_count": 1,
@@ -64243,5 +64252,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 958084094
+  "total_bytes": 958090761
 }

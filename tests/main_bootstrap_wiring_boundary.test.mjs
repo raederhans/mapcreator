@@ -68,6 +68,7 @@ test("main delegates phase8 ready handoff policy to the startup ready handoff ow
     "function getStartupReadyHandoffOwner()",
     "createStartupReadyHandoffOwner({",
     "flushPendingScenarioChunkRefreshAfterReady: startupReadyHandoff.flushPendingScenarioChunkRefreshAfterReady",
+    "getStartupReadyHandoffOwner().observePostReadyUiBootstrap(",
     "schedulePostReadyDeferredContextWarmup: startupReadyHandoff.schedulePostReadyDeferredContextWarmup",
     "schedulePostReadyHydration: startupReadyHandoff.schedulePostReadyHydration",
     "schedulePostReadyPoliticalReconcile: startupReadyHandoff.schedulePostReadyPoliticalReconcile",
@@ -90,7 +91,9 @@ test("main bootstrap reset preserves deferred UI and post-ready scheduler reset"
   assert.ok(bootstrapStart > 0);
   assert.ok(ordinaryStartupStart > bootstrapStart);
   assert.ok(bootstrapResetSource.includes("deferredUiBootstrapper.reset();"));
+  assert.ok(bootstrapResetSource.includes("getStartupReadyHandoffOwner().beginUiHydration();"));
   assert.ok(bootstrapResetSource.includes('postReadyScheduler.reset("bootstrap");'));
+  assert.ok(bootstrapResetSource.includes('deferredUiBootstrapper.setInteractionState("pending");'));
 });
 
 test("main keeps deferred vendor loading on the ordinary startup path only", () => {

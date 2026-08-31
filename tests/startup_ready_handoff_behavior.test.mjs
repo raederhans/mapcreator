@@ -5,6 +5,7 @@ import {
   createStartupReadyHandoffOwner,
 } from "../js/bootstrap/startup_ready_handoff.js";
 import { POST_READY_IDLE_QUIET_MS } from "../js/bootstrap/post_ready_scheduler.js";
+import { attachDeferredUiBootstrapRejectionObserver } from "../js/bootstrap/deferred_ui_bootstrap.js";
 
 function createSchedulerRecorder({ order = null } = {}) {
   const tasks = [];
@@ -30,6 +31,7 @@ function createSchedulerRecorder({ order = null } = {}) {
 
 function createTargetRuntime(overrides = {}) {
   return {
+    bootPhase: "ready",
     bootBlocking: false,
     detailDeferred: false,
     detailPromotionCompleted: false,
@@ -116,6 +118,83 @@ test("scheduleReadyPostBootWork preserves ready handoff order", () => {
     "schedulePostReadyDeferredContextWarmup",
     "schedulePostReadyVisualWarmup",
   ]);
+});
+
+test("observePostReadyUiBootstrap replays the latest scenario only after UI is ready", async () => {
+  let resolveUi;
+  const uiPromise = new Promise((resolve) => {
+    resolveUi = resolve;
+  });
+  const targetRuntime = createTargetRuntime({
+    activeScenarioId: "scenario-at-ready",
+    currentScenarioApplyRequestId: 4,
+  });
+  const { owner } = createOwnerHarness({ targetRuntime });
+  const replays = [];
+  const readyCalls = [];
+  const failures = [];
+
+  const observation = owner.observePostReadyUiBootstrap(uiPromise, {
+    runPostScenarioUiReplay: (options) => replays.push(options),
+    handleUiBootstrapReady: async () => readyCalls.push("ready"),
+    handleUiBootstrapFailure: async (error) => failures.push(error),
+  });
+  targetRuntime.activeScenarioId = "scenario-selected-after-ready";
+  targetRuntime.currentScenarioApplyRequestId = 5;
+  assert.deepEqual(replays, []);
+
+  resolveUi();
+  const result = await observation;
+
+  assert.deepEqual(result, { ready: true, skipped: false, error: null });
+  assert.deepEqual(failures, []);
+  assert.deepEqual(readyCalls, ["ready"]);
+  assert.equal(targetRuntime.uiHydrationStatus, "ready");
+  assert.deepEqual(replays, [{
+    full: true,
+    reason: "post-ready-ui-bootstrap",
+    scenarioId: "scenario-selected-after-ready",
+    scenarioApplyRequestId: 5,
+  }]);
+});
+
+test("observePostReadyUiBootstrap routes rejection through explicit recovery", async () => {
+  const failure = new Error("toolbar import failed");
+  const recovered = [];
+  const { owner, targetRuntime } = createOwnerHarness();
+  assert.equal(owner.beginUiHydration(), "pending");
+
+  const result = await owner.observePostReadyUiBootstrap(Promise.reject(failure), {
+    runPostScenarioUiReplay: () => assert.fail("failed UI must not replay"),
+    handleUiBootstrapReady: async () => assert.fail("failed UI must not open interaction"),
+    handleUiBootstrapFailure: async (error) => recovered.push(error),
+  });
+
+  assert.deepEqual(recovered, [failure]);
+  assert.equal(targetRuntime.uiHydrationStatus, "failed");
+  assert.equal(targetRuntime.uiHydrationError, "toolbar import failed");
+  assert.equal(targetRuntime.bootPhase, "ready");
+  assert.equal(targetRuntime.bootBlocking, false);
+  assert.deepEqual(result, { ready: false, skipped: false, error: failure });
+});
+
+test("an immediately guarded UI rejection still reaches the failed lifecycle observer", async () => {
+  const failure = new Error("fast toolbar import failure");
+  const guardedPromise = attachDeferredUiBootstrapRejectionObserver(Promise.reject(failure));
+  const { owner, targetRuntime } = createOwnerHarness();
+  owner.beginUiHydration();
+
+  await Promise.resolve();
+  const result = await owner.observePostReadyUiBootstrap(guardedPromise, {
+    runPostScenarioUiReplay: () => assert.fail("fast rejection must not replay"),
+    handleUiBootstrapReady: async () => assert.fail("fast rejection must not open UI"),
+    handleUiBootstrapFailure: async () => {},
+  });
+
+  assert.equal(result.ready, false);
+  assert.equal(result.error, failure);
+  assert.equal(targetRuntime.uiHydrationStatus, "failed");
+  assert.equal(targetRuntime.uiHydrationError, failure.message);
 });
 
 test("flushPendingScenarioChunkRefreshAfterReady seeds first-ready pending reason", () => {

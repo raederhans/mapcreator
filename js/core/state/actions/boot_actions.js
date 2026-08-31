@@ -23,6 +23,23 @@ export function setBootPreviewVisibleState(target, active) {
   return nextVisible;
 }
 
+export function setUiHydrationState(target, {
+  status = "pending",
+  error = "",
+  updatedAt = 0,
+} = {}) {
+  if (!isStateTarget(target)) {
+    return "pending";
+  }
+  const normalizedStatus = ["pending", "ready", "failed"].includes(String(status || "").trim())
+    ? String(status).trim()
+    : "pending";
+  target.uiHydrationStatus = normalizedStatus;
+  target.uiHydrationError = normalizedStatus === "failed" ? String(error || "") : "";
+  target.uiHydrationUpdatedAt = Number(updatedAt) || 0;
+  return normalizedStatus;
+}
+
 export function commitStartupReadonlyStateFields(
   target,
   {

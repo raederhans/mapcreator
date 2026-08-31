@@ -35,11 +35,10 @@ test("main wires UI shell hooks before returning from debug startup", () => {
   assert.ok(bootCallSource.includes("renderDispatcher = nextRenderDispatcher;"));
   assert.ok(bootCallSource.includes("onStartupUiBootstrapPromise: (promise) => {"));
   assert.ok(bootCallSource.includes("startupUiBootstrapPromise = promise;"));
-  assert.ok(bootCallSource.includes("onStartupUiBootstrapAwaited: (value) => {"));
-  assert.ok(bootCallSource.includes("startupUiBootstrapAwaited = !!value;"));
+  assert.equal(bootCallSource.includes("onStartupUiBootstrapAwaited"), false);
+  assert.doesNotMatch(mainSource, /startupUiBootstrapAwaited\s*=/);
   assert.ok(mainSource.includes("renderDispatcher = uiShellBootResult.renderDispatcher;"));
   assert.ok(mainSource.includes("startupUiBootstrapPromise = uiShellBootResult.startupUiBootstrapPromise;"));
-  assert.ok(mainSource.includes("startupUiBootstrapAwaited = !!uiShellBootResult.startupUiBootstrapAwaited;"));
 });
 
 test("main injects the complete UI shell helper surface", () => {
@@ -83,6 +82,8 @@ test("UI shell boot owner exports expected API and owns moved debug tokens", () 
   assert.ok(ownerSource.includes('documentRef.body?.classList.add("app-ui-shell-debug")'));
   assert.ok(ownerSource.includes('flushReason: "ui-shell-render-now"'));
   assert.ok(ownerSource.includes("globalScope.__mapcreatorUiShellDebug = {"));
+  assert.equal(ownerSource.includes("onStartupUiBootstrapAwaited"), false);
+  assert.equal(ownerSource.includes("startupUiBootstrapAwaited"), false);
 });
 
 test("UI shell boot owner imports only the canonical boot action dependency", () => {

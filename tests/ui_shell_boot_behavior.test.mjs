@@ -185,10 +185,6 @@ test("runUiShellDebugBoot starts UI shell and exposes failure recovery state bef
         hookCalls.push(["startupUiBootstrapPromise", promise]);
         harness.calls.push("hook:onStartupUiBootstrapPromise");
       },
-      onStartupUiBootstrapAwaited(value) {
-        hookCalls.push(["startupUiBootstrapAwaited", value]);
-        harness.calls.push(`hook:onStartupUiBootstrapAwaited:${value}`);
-      },
     },
   });
 
@@ -204,7 +200,6 @@ test("runUiShellDebugBoot starts UI shell and exposes failure recovery state bef
     ["renderDispatcher", harness.renderDispatcher],
     ["startupUiBootstrapPromise", deferredUiBootstrap.promise],
   ]);
-  assert.equal(harness.calls.includes("hook:onStartupUiBootstrapAwaited:true"), false);
   assert.equal(harness.globalScope.__mapcreatorUiShellDebug, undefined);
   assert.ok(
     harness.calls.indexOf("hook:onStartupUiBootstrapPromise")
@@ -218,10 +213,11 @@ test("runUiShellDebugBoot starts UI shell and exposes failure recovery state bef
   assert.equal(result.renderDispatcher, harness.renderDispatcher);
   assert.equal(result.renderApp, harness.renderApp);
   assert.equal(result.startupUiBootstrapPromise, deferredUiBootstrap.promise);
-  assert.equal(result.startupUiBootstrapAwaited, true);
   assert.equal(result.territoryPreview, harness.territoryPreview);
-  assert.equal(hookCalls.at(-1)[0], "startupUiBootstrapAwaited");
-  assert.equal(hookCalls.at(-1)[1], true);
+  assert.deepEqual(hookCalls, [
+    ["renderDispatcher", harness.renderDispatcher],
+    ["startupUiBootstrapPromise", deferredUiBootstrap.promise],
+  ]);
 });
 
 test("runUiShellDebugBoot preserves boot states, renderer options, localization, metrics, and debug global", async () => {
@@ -328,9 +324,6 @@ test("runUiShellDebugBoot propagates UI bootstrap rejection after exposing recov
         },
         onStartupUiBootstrapPromise(promise) {
           hookCalls.push(["startupUiBootstrapPromise", promise]);
-        },
-        onStartupUiBootstrapAwaited(value) {
-          hookCalls.push(["startupUiBootstrapAwaited", value]);
         },
       },
     }),

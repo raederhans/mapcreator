@@ -65,8 +65,10 @@ test("startup ready handoff owner uses target-first actions without importing gl
 
   assert.deepEqual(coreStateImports, [
     "../core/state/actions/scenario_chunk_runtime_actions.js",
+    "../core/state/actions/boot_actions.js",
   ]);
   assert.ok(ownerSource.includes("patchScenarioChunkLoadState(targetRuntime,"));
+  assert.ok(ownerSource.includes("setUiHydrationState(targetRuntime,"));
   assert.equal(/from\s+["'][^"']*map_renderer\/public\.js["']/.test(ownerSource), false);
   assert.equal(/from\s+["'][^"']*startup_data_pipeline\.js["']/.test(ownerSource), false);
   assert.ok(ownerSource.includes("runtimeState,"));

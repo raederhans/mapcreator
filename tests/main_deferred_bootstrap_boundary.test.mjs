@@ -67,6 +67,8 @@ test("deferred UI bootstrap owns dynamic UI import order without static UI owner
     /import\s+[^;]*from\s+["']\.\.\/ui\/(?:toolbar|sidebar|scenario_controls|styled_selects|shortcuts)\.js["']/;
 
   assert.ok(ownerSource.includes("export async function yieldToMain"));
+  assert.ok(ownerSource.includes("export function attachDeferredUiBootstrapRejectionObserver"));
+  assert.ok(ownerSource.includes("attachDeferredUiBootstrapRejectionObserver(deferredUiBootstrapPromise);"));
   assert.ok(ownerSource.includes("export function createDeferredUiBootstrapper"));
   assert.ok(ownerSource.includes('"../ui/toolbar.js"'));
   assert.ok(ownerSource.includes('"../ui/sidebar.js"'));

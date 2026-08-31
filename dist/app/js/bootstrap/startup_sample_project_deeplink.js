@@ -16,6 +16,12 @@ export function scheduleStartupSampleProjectDeeplink({
   if (!targetState || typeof targetState !== "object" || !postReadyScheduler) {
     return false;
   }
+  if (
+    String(targetState.uiHydrationStatus || "pending") !== "ready"
+    || String(targetState.bootPhase || "") !== "ready"
+  ) {
+    return false;
+  }
   const sampleId = getSampleProjectIdFromUrl({
     search: helpers.search,
     searchParamsCtor: helpers.searchParamsCtor,
@@ -23,10 +29,10 @@ export function scheduleStartupSampleProjectDeeplink({
   if (!sampleId) return false;
 
   const existingState = targetState.sampleProjectDeeplink;
-  // sample deeplink 只排进 post-ready 阶段；这里挡住同一个样例已在 loading/importing/success 阶段时的重复导入。
+  // sample deeplink 只排进 post-ready 阶段；这里挡住同一个样例已排队或正在/已经导入时的重复调度。
   if (
     existingState?.sampleId === sampleId
-    && ["loading", "importing", "success"].includes(String(existingState.status || ""))
+    && ["pending", "loading", "importing", "success"].includes(String(existingState.status || ""))
   ) {
     return false;
   }
@@ -59,4 +65,8 @@ export function scheduleStartupSampleProjectDeeplink({
     },
   );
   return true;
+}
+
+export function tryScheduleStartupSampleProjectDeeplink(options = {}) {
+  return scheduleStartupSampleProjectDeeplink(options);
 }

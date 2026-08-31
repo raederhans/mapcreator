@@ -15,7 +15,13 @@ test("main imports and delegates startup failure recovery", () => {
 
   assert.match(mainSource, /from "\.\/bootstrap\/startup_failure_recovery\.js";/);
   assert.match(mainSource, /handleStartupFailure\(\{/);
-  assert.match(mainSource, /startupUiBootstrapFailed = !!failureRecovery\.startupUiBootstrapFailed;/);
+  assert.match(mainSource, /startupUiBootstrapPromise: null,/);
+  assert.match(mainSource, /startupUiBootstrapAwaited: true,/);
+  assert.match(mainSource, /startupUiBootstrapFailed: false,/);
+  assert.doesNotMatch(
+    mainSource,
+    /handleUiBootstrapFailure:[\s\S]*?recoverStartupFailure\(uiBootstrapError\)/,
+  );
 });
 
 test("main no longer owns startup failure recovery strings", () => {
