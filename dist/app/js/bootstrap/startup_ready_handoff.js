@@ -1,12 +1,12 @@
 import { POST_READY_IDLE_QUIET_MS } from "./post_ready_scheduler.js";
 import { patchScenarioChunkLoadState } from "../core/state/actions/scenario_chunk_runtime_actions.js";
-import { setUiHydrationState } from "../core/state/actions/boot_actions.js";
 
 const DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";
 
 const REQUIRED_HELPERS = Object.freeze([
   "buildInteractionInfrastructureAfterStartup",
   "checkpointBootMetric",
+  "commitUiHydrationState",
   "completeBootSequenceLogging",
   "ensureActiveScenarioBundleHydrated",
   "ensureContextLayerDataReady",
@@ -54,6 +54,7 @@ export function createStartupReadyHandoffOwner({
 
   const buildInteractionInfrastructureAfterStartup = helpers.buildInteractionInfrastructureAfterStartup;
   const checkpointBootMetric = helpers.checkpointBootMetric;
+  const commitUiHydrationState = helpers.commitUiHydrationState;
   const completeBootSequenceLogging = helpers.completeBootSequenceLogging;
   const ensureActiveScenarioBundleHydrated = helpers.ensureActiveScenarioBundleHydrated;
   const ensureContextLayerDataReady = helpers.ensureContextLayerDataReady;
@@ -170,7 +171,7 @@ export function createStartupReadyHandoffOwner({
   }
 
   function beginUiHydration() {
-    return setUiHydrationState(targetRuntime, {
+    return commitUiHydrationState({
       status: "pending",
       error: "",
       updatedAt: Date.now(),
@@ -178,7 +179,7 @@ export function createStartupReadyHandoffOwner({
   }
 
   function markUiHydrationReady() {
-    return setUiHydrationState(targetRuntime, {
+    return commitUiHydrationState({
       status: "ready",
       error: "",
       updatedAt: Date.now(),
@@ -215,7 +216,7 @@ export function createStartupReadyHandoffOwner({
         return { ready: true, skipped: false, error: null };
       })
       .catch(async (error) => {
-        setUiHydrationState(targetRuntime, {
+        commitUiHydrationState({
           status: "failed",
           error: error?.message || String(error || "UI hydration failed."),
           updatedAt: Date.now(),

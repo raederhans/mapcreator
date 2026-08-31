@@ -5,6 +5,7 @@ import {
   setBootPreviewVisibleState,
   setStartupInitialScenarioChunkVisualPromotion,
   setStartupInteractionMode,
+  setUiHydrationState,
 } from "./core/state/actions/boot_actions.js";
 import { createStartupBootOverlayController } from "./bootstrap/startup_boot_overlay.js";
 import { createStartupDataPipelineOwner } from "./bootstrap/startup_data_pipeline.js";
@@ -184,6 +185,7 @@ function getStartupReadyHandoffOwner() {
     helpers: {
       buildInteractionInfrastructureAfterStartup,
       checkpointBootMetric,
+      commitUiHydrationState: (patch) => setUiHydrationState(state, patch),
       completeBootSequenceLogging,
       ensureActiveScenarioBundleHydrated,
       ensureContextLayerDataReady,

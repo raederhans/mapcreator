@@ -45582,7 +45582,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_ready_handoff.js",
-      "size_bytes": 12504,
+      "size_bytes": 12484,
       "source_kind": "dist"
     },
     {
@@ -46772,7 +46772,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 24832,
+      "size_bytes": 24931,
       "source_kind": "dist"
     },
     {
@@ -47582,7 +47582,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2071996,
+      "size_bytes": 2071627,
       "source_kind": "dist"
     },
     {
@@ -47707,7 +47707,7 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 5324723
+        "size_bytes": 5324802
       },
       {
         "file_count": 87,
@@ -47717,7 +47717,7 @@
       {
         "file_count": 821,
         "id": "on-demand-product",
-        "size_bytes": 252917652
+        "size_bytes": 252917283
       },
       {
         "file_count": 8390,
@@ -48528,14 +48528,6 @@
                 "local": true,
                 "reference": "../core/state/actions/scenario_chunk_runtime_actions.js",
                 "resolved_path": "app/js/core/state/actions/scenario_chunk_runtime_actions.js"
-              },
-              {
-                "column": 1,
-                "kind": "import-declaration",
-                "line": 3,
-                "local": true,
-                "reference": "../core/state/actions/boot_actions.js",
-                "resolved_path": "app/js/core/state/actions/boot_actions.js"
               }
             ]
           },
@@ -48543,7 +48535,6 @@
           "source_bindings": [],
           "static_imports": [
             "app/js/bootstrap/post_ready_scheduler.js",
-            "app/js/core/state/actions/boot_actions.js",
             "app/js/core/state/actions/scenario_chunk_runtime_actions.js"
           ]
         },
@@ -57089,7 +57080,7 @@
               "expression": "\"./bootstrap/startup_scenario_boot.js\"",
               "expression_index": 0,
               "kind": "literal_dynamic_import",
-              "line": 90,
+              "line": 91,
               "reference": "./bootstrap/startup_scenario_boot.js",
               "resolution": "literal"
             },
@@ -57098,7 +57089,7 @@
               "expression": "\"./bootstrap/startup_sample_project_deeplink.js\"",
               "expression_index": 1,
               "kind": "literal_dynamic_import",
-              "line": 102,
+              "line": 103,
               "reference": "./bootstrap/startup_sample_project_deeplink.js",
               "resolution": "literal"
             },
@@ -57107,7 +57098,7 @@
               "expression": "\"./core/scenario_manager.js\"",
               "expression_index": 2,
               "kind": "literal_dynamic_import",
-              "line": 239,
+              "line": 241,
               "reference": "./core/scenario_manager.js",
               "resolution": "literal"
             }
@@ -57125,7 +57116,7 @@
               {
                 "column": 23,
                 "kind": "literal-dynamic-import",
-                "line": 90,
+                "line": 91,
                 "local": true,
                 "reference": "./bootstrap/startup_scenario_boot.js",
                 "resolved_path": "app/js/bootstrap/startup_scenario_boot.js"
@@ -57133,7 +57124,7 @@
               {
                 "column": 23,
                 "kind": "literal-dynamic-import",
-                "line": 102,
+                "line": 103,
                 "local": true,
                 "reference": "./bootstrap/startup_sample_project_deeplink.js",
                 "resolved_path": "app/js/bootstrap/startup_sample_project_deeplink.js"
@@ -57141,7 +57132,7 @@
               {
                 "column": 41,
                 "kind": "literal-dynamic-import",
-                "line": 239,
+                "line": 241,
                 "local": true,
                 "reference": "./core/scenario_manager.js",
                 "resolved_path": "app/js/core/scenario_manager.js"
@@ -57176,7 +57167,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 9,
+                "line": 10,
                 "local": true,
                 "reference": "./bootstrap/startup_boot_overlay.js",
                 "resolved_path": "app/js/bootstrap/startup_boot_overlay.js"
@@ -57184,7 +57175,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 10,
+                "line": 11,
                 "local": true,
                 "reference": "./bootstrap/startup_data_pipeline.js",
                 "resolved_path": "app/js/bootstrap/startup_data_pipeline.js"
@@ -57192,7 +57183,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 11,
+                "line": 12,
                 "local": true,
                 "reference": "./bootstrap/deferred_detail_promotion.js",
                 "resolved_path": "app/js/bootstrap/deferred_detail_promotion.js"
@@ -57200,7 +57191,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 12,
+                "line": 13,
                 "local": true,
                 "reference": "./bootstrap/post_ready_scheduler.js",
                 "resolved_path": "app/js/bootstrap/post_ready_scheduler.js"
@@ -57208,7 +57199,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 13,
+                "line": 14,
                 "local": true,
                 "reference": "./bootstrap/startup_ready_handoff.js",
                 "resolved_path": "app/js/bootstrap/startup_ready_handoff.js"
@@ -57216,7 +57207,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 14,
+                "line": 15,
                 "local": true,
                 "reference": "./bootstrap/main_runtime_diagnostics.js",
                 "resolved_path": "app/js/bootstrap/main_runtime_diagnostics.js"
@@ -57224,7 +57215,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 15,
+                "line": 16,
                 "local": true,
                 "reference": "./bootstrap/render_runtime_binding.js",
                 "resolved_path": "app/js/bootstrap/render_runtime_binding.js"
@@ -57232,7 +57223,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 16,
+                "line": 17,
                 "local": true,
                 "reference": "./bootstrap/startup_failure_recovery.js",
                 "resolved_path": "app/js/bootstrap/startup_failure_recovery.js"
@@ -57240,7 +57231,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 17,
+                "line": 18,
                 "local": true,
                 "reference": "./bootstrap/ui_shell_boot.js",
                 "resolved_path": "app/js/bootstrap/ui_shell_boot.js"
@@ -57248,7 +57239,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 18,
+                "line": 19,
                 "local": true,
                 "reference": "./bootstrap/deferred_vendor_loader.js",
                 "resolved_path": "app/js/bootstrap/deferred_vendor_loader.js"
@@ -57256,7 +57247,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 19,
+                "line": 20,
                 "local": true,
                 "reference": "./bootstrap/deferred_ui_bootstrap.js",
                 "resolved_path": "app/js/bootstrap/deferred_ui_bootstrap.js"
@@ -57264,7 +57255,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 20,
+                "line": 21,
                 "local": true,
                 "reference": "./bootstrap/startup_lazy_module_loader.js",
                 "resolved_path": "app/js/bootstrap/startup_lazy_module_loader.js"
@@ -57272,7 +57263,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 21,
+                "line": 22,
                 "local": true,
                 "reference": "./bootstrap/startup_bootstrap_support.js",
                 "resolved_path": "app/js/bootstrap/startup_bootstrap_support.js"
@@ -57280,7 +57271,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 30,
+                "line": 31,
                 "local": true,
                 "reference": "./core/map_renderer/public.js",
                 "resolved_path": "app/js/core/map_renderer/public.js"
@@ -57288,7 +57279,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 38,
+                "line": 39,
                 "local": true,
                 "reference": "./core/render_boundary.js",
                 "resolved_path": "app/js/core/render_boundary.js"
@@ -57296,7 +57287,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 39,
+                "line": 40,
                 "local": true,
                 "reference": "./core/state/index.js",
                 "resolved_path": "app/js/core/state/index.js"
@@ -57304,7 +57295,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 40,
+                "line": 41,
                 "local": true,
                 "reference": "./core/scenario_post_apply_effects.js",
                 "resolved_path": "app/js/core/scenario_post_apply_effects.js"
@@ -57312,7 +57303,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 41,
+                "line": 42,
                 "local": true,
                 "reference": "./core/i18n.js",
                 "resolved_path": "app/js/core/i18n.js"
@@ -57320,7 +57311,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 42,
+                "line": 43,
                 "local": true,
                 "reference": "./bootstrap/ui_shell_debug_seed.js",
                 "resolved_path": "app/js/bootstrap/ui_shell_debug_seed.js"
@@ -57328,7 +57319,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 46,
+                "line": 47,
                 "local": true,
                 "reference": "./core/mapcreator_snapshot.js",
                 "resolved_path": "app/js/core/mapcreator_snapshot.js"
@@ -57336,7 +57327,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 47,
+                "line": 48,
                 "local": true,
                 "reference": "./ui/i18n.js",
                 "resolved_path": "app/js/ui/i18n.js"
@@ -57344,7 +57335,7 @@
               {
                 "column": 1,
                 "kind": "import-declaration",
-                "line": 48,
+                "line": 49,
                 "local": true,
                 "reference": "./core/dirty_state.js",
                 "resolved_path": "app/js/core/dirty_state.js"
@@ -61954,17 +61945,17 @@
         "deferred_graph_file_count": 117,
         "deferred_module_count": 116,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 5306043,
+        "initial_graph_bytes": 5306122,
         "initial_graph_file_count": 238,
         "initial_module_count": 224,
         "initial_resource_count": 14,
-        "initial_script_bytes": 3947717,
+        "initial_script_bytes": 3947796,
         "initial_script_count": 226,
         "module_count": 346,
         "registry_resolved_dynamic_expression_count": 2,
         "registry_target_set_mismatch_count": 0,
         "unresolved_dynamic_expression_count": 0,
-        "untraversed_dist_bytes": 948980127,
+        "untraversed_dist_bytes": 948979758,
         "untraversed_dist_file_count": 9150,
         "untraversed_module_count": 6
       },
@@ -62055,7 +62046,7 @@
           },
           {
             "path": "app/js/bootstrap/startup_ready_handoff.js",
-            "size_bytes": 12504
+            "size_bytes": 12484
           },
           {
             "path": "app/js/core/city_lights_historical_1930_asset.js",
@@ -62683,7 +62674,7 @@
           },
           {
             "path": "app/js/main.js",
-            "size_bytes": 24832
+            "size_bytes": 24931
           },
           {
             "path": "app/js/ui/i18n.js",
@@ -62711,7 +62702,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 2899184
+        "size_bytes": 2899263
       },
       {
         "basis": "startup-resource-graph",
@@ -63560,11 +63551,11 @@
           },
           {
             "path": "pages-dist-manifest.json",
-            "size_bytes": 2071996
+            "size_bytes": 2071627
           }
         ],
         "path_prefixes": [],
-        "size_bytes": 2071996
+        "size_bytes": 2071627
       },
       {
         "basis": "product-registry:render-handoff-contract-modules",
@@ -64312,7 +64303,7 @@
             "prefixes": []
           },
           "owner": "pages-release",
-          "size_bytes": 2071996
+          "size_bytes": 2071627
         }
       ],
       "status": "complete",
@@ -64355,7 +64346,7 @@
     {
       "file_count": 9456,
       "path": "app",
-      "size_bytes": 951266885
+      "size_bytes": 951266964
     },
     {
       "file_count": 57,
@@ -64365,7 +64356,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 2071996
+      "size_bytes": 2071627
     },
     {
       "file_count": 1,
@@ -64388,5 +64379,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 958129494
+  "total_bytes": 958129204
 }
