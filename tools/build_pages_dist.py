@@ -605,6 +605,16 @@ PAGES_PRODUCT_INVENTORY_RULES = (
         ),
     },
     {
+        "id": "render-handoff-contract-modules",
+        "category": "on-demand-product",
+        "owner": "render-handoff-contract",
+        "override_reachability": True,
+        "paths": (
+            "app/js/core/render_change_set.js",
+            "app/js/core/renderer/render_snapshot.js",
+        ),
+    },
+    {
         "id": "on-demand-module-entries",
         "category": "on-demand-product",
         "owner": "editor-on-demand-features",

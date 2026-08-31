@@ -2351,6 +2351,7 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
     "tools/run_adaptive_tests.mjs",
     "tools/select_verification_targets.mjs",
     "tools/verification/script_portfolio.mjs",
+    "tools/verification/verification_catalog_source.mjs",
     "tools/verification/verification_domains.mjs",
   ];
   const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
@@ -2491,6 +2492,109 @@ test("local projection covers selector sanity as an exact canonical local leaf",
   assert.ok(projected.localLeafEquivalence.projectedLocalLeaves.includes(
     "node-script:tools/select_verification_targets.mjs",
   ));
+});
+
+test("local projection treats selector coverage as fallback for exact indivisible test routes", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+  });
+  const changedFiles = [
+    "js/core/map_renderer.js",
+    "js/core/render_change_set.js",
+    "js/core/renderer/render_snapshot.js",
+    "tests/render_change_set_behavior.test.mjs",
+    "tests/render_snapshot_behavior.test.mjs",
+    "tests/test_map_renderer_render_snapshot_boundary_contract.py",
+  ];
+  const raw = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
+    entrypoint: "edit",
+    routeAuthority: binding.preparedCatalog.authority,
+  });
+  const projected = bindSelectorPrCost(bindSelectionToPreparedCatalog(constrainAdaptiveEntrypointSelection(raw, "edit", {
+    preparedCatalog: binding.preparedCatalog,
+  }), binding.preparedCatalog));
+  const plan = applyLocalEntrypointExecutionBudget(buildExecutionPlan(projected, {
+    packageScripts,
+    preparedCatalog: binding.preparedCatalog,
+  }), "edit", { preparedCatalog: binding.preparedCatalog });
+  const expectedCommands = [
+    "node --test tests/render_snapshot_behavior.test.mjs tests/render_change_set_behavior.test.mjs",
+    "python -m unittest tests.test_map_renderer_render_snapshot_boundary_contract -q",
+  ];
+
+  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), expectedCommands);
+  assert.deepEqual(projected.localEntrypointRouteGaps, []);
+  assert.equal(projected.localLeafEquivalence.status, "equivalent");
+  assert.deepEqual(plan.routeGaps, []);
+  assert.deepEqual(plan.selectedLeaves.map((entry) => entry.leafId).sort(), [
+    "node-test:tests/render_change_set_behavior.test.mjs",
+    "node-test:tests/render_snapshot_behavior.test.mjs",
+    "python-unittest:tests.test_map_renderer_render_snapshot_boundary_contract",
+  ]);
+  assert.equal(plan.executionCommands.length, 2);
+  assert.equal(adaptivePlanningExitCode(projected, plan), 0);
+  for (const testFile of changedFiles.filter((file) => file.startsWith("tests/"))) {
+    const match = projected.matchedByFile.find((entry) => entry.changedFile === testFile);
+    assert.equal(match.matchedRouteIds.includes("infra:verification-selector"), false);
+  }
+});
+
+test("local projection selects the exact startup support identity contract without promoting heavy geo", () => {
+  const packageScripts = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).scripts;
+  const selectorRoutes = buildRouteIndex();
+  const binding = prepareRepositoryVerificationCatalogBinding({
+    packageScripts,
+    verificationRecords: VERIFICATION_DOMAINS,
+    selectorRoutes,
+    repoRoot: process.cwd(),
+    platform: process.platform,
+  });
+  const changedFiles = [
+    "tests/test_tno_bundle_builder.py",
+    "tools/patch_tno_1962_bundle.py",
+  ];
+  const methods = [
+    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_reuses_matching_output_identity",
+    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_same_length_content_drift",
+    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_missing_output",
+    "tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_legacy_signature_rebuilds_then_reuses",
+  ];
+  const expectedCommand = ["python", "-m", "unittest", ...methods, "-q"].join(" ");
+  const raw = buildAdaptiveEntrypointRecommendation(changedFiles, selectorRoutes, {
+    entrypoint: "edit",
+    routeAuthority: binding.preparedCatalog.authority,
+  });
+  const projected = bindSelectorPrCost(bindSelectionToPreparedCatalog(constrainAdaptiveEntrypointSelection(raw, "edit", {
+    preparedCatalog: binding.preparedCatalog,
+  }), binding.preparedCatalog));
+  const plan = applyLocalEntrypointExecutionBudget(buildExecutionPlan(projected, {
+    packageScripts,
+    preparedCatalog: binding.preparedCatalog,
+  }), "edit", { preparedCatalog: binding.preparedCatalog });
+
+  assert.deepEqual(projected.recommendedCommands.map((entry) => entry.commandRef), [expectedCommand]);
+  assert.deepEqual(projected.localEntrypointRouteGaps, []);
+  assert.equal(projected.localLeafEquivalence.status, "equivalent");
+  assert.ok(projected.deferredByTier.some((entry) => (
+    entry.commandRef === "python -m unittest tests.test_tno_bundle_builder -q"
+      && entry.minimumDepth === "nightly"
+  )));
+  for (const entry of projected.matchedByFile) {
+    assert.ok(entry.matchedRouteIds.includes("direct:tno-startup-support-output-identity"));
+  }
+  assert.deepEqual(plan.routeGaps, []);
+  assert.deepEqual(
+    plan.selectedLeaves.map((entry) => entry.leafId).sort(),
+    methods.map((method) => `python-unittest:${process.platform === "win32" ? method.toLowerCase() : method}`).sort(),
+  );
+  assert.equal(plan.executionCommands.length, 1);
+  assert.equal(adaptivePlanningExitCode(projected, plan), 0);
 });
 
 test("local-eligible source mismatch creates a route gap and blocks execution", () => {

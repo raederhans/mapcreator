@@ -1,5 +1,15 @@
 # Worktree Registry
 
+## Runtime Architecture Reset v1 Stage B integration — 2026-08-31
+
+- Frozen base and owner: root created `codex/runtime-architecture-reset-b1-b2-20260831` in `C:\Users\raede\.codex\worktrees\rar-b1-b2\mapcreator` from clean merged Stage A `main@c346eb708e8868396b0ae8c63f8173d1880c9498`; the desktop `main` checkout remains clean and separate.
+- Render handoff lane: user-visible task `01a0561f-4142-7080-a561-38538b683d2f` delivered candidate `150e8888`; root replayed it as `5127d250`. Independent review rejected two fail-open edges, closed by `0b9ae645`: committing intents now require an exact current base, and strict JSON identity rejects sparse or extended arrays.
+- Startup-support identity lane: user-visible task `01a0561f-412e-7c41-89e7-6305856d15a9` delivered candidate `f52cd04a`; independent review returned `ACCEPT`, and root replayed it as `8ab43e50`.
+- Verification authority: `1e3beaae` binds the new RenderSnapshot/ChangeSet tests to canonical child-safe direct routes; `934d0c79` and `a5c598d6` preserve exact local test identity and add the four-case startup-support route without promoting the heavy TNO lanes. The retained route shadow is derived from the canonical records; current projection is 401 routes, 357 commands, 463 catalog entries, and 432 leaves with zero mismatch.
+- Local evidence: RenderSnapshot/ChangeSet 12/12, four startup-support identity cases 4/4, metadata/portfolio 98/98, control batch 193/193, focused `verify:commit` 200/200 Node plus 63/63 Python with 3 commands executed and 0 deferred, shadow equality, Pages startup/inventory 62/62, 913.73 MiB tracked-dist regeneration, three exact source/dist mirrors, `verify:dist-drift`, and diff checks pass. No local performance simulation, browser, Nightly, Release, deployment, live apply/undo, or shared-cache restore was run.
+- Remote closure: [PR #113](https://github.com/raederhans/scenario-forge/pull/113) is open against protected `main`; remote required checks, merge verification, archive refs, and removal of the three registered Stage B worktrees remain pending.
+- Promotion and cleanup boundary: this branch reaches protected `main` only through a normal PR and all required checks. Candidate and integration worktrees are removed only after clean status, merged coverage, archive refs, and local/tracking/live `main` equality are proven.
+
 ## Runtime Architecture Reset v1 Stage A integration — 2026-08-31
 
 - Frozen base and owner: root assembled `codex/runtime-architecture-reset-a1-a2-20260831` in `C:\Users\raede\.codex\worktrees\rar-a1-a2\mapcreator` from clean `origin/main@04e5fd963f14ace75ca4834800f833732982ed03`; the desktop `main` checkout remained untouched.
@@ -7,7 +17,7 @@
 - Verification lane: user-visible task `01a055c1-98c7-7d61-a400-7fea23f4de35` delivered the commit-tier candidate through `4b08ec16`; root replayed it as `5bb13c7f` after independent `ACCEPT` review.
 - Integration seam: the combined tree correctly exposed one canonical/retained route mismatch for the new startup-ready test dependency on deferred UI bootstrap. Root commit `5d8ca24a` added the missing canonical source ref; the bounded independent follow-up review returned `ACCEPT`.
 - Local evidence: runtime Node 123/123, metadata/shadow 53/53, portfolio 54/54, verify-core runner 84/84, Python startup boundaries 19/19, 342-script portfolio, 51-spec import graph, 398-route schema, dist drift, and range diff checks pass on the integration tree.
-- Promotion and cleanup boundary: protected `main` is reached only through a normal PR. Source and integration worktrees may be removed only after exact merged ancestry, clean status, and live `main` equality are proven. This record does not authorize force-push, deployment, release, tracked-`dist` deletion, legacy-projection retirement, or performance-budget rewriting.
+- Promotion and cleanup: [PR #112](https://github.com/raederhans/scenario-forge/pull/112) passed all 10 reported checks and merged as `main@c346eb708e8868396b0ae8c63f8173d1880c9498`; desktop `HEAD`, local `main`, `origin/main`, and live remote ref were exact. Candidate tips remain recoverable at `refs/archive/runtime-architecture-reset/{a1-runtime-20260831,a2-verification-20260831}`. All three Stage A worktrees were unregistered; `aa92\mapcreator` and `541f\mapcreator` remain only as empty, no-`.git` Windows handle-held directories. The merged local/remote feature branch was deleted normally. This record does not authorize force-push, deployment, release, tracked-`dist` deletion, legacy-projection retirement, or performance-budget rewriting.
 
 ## Remaining branches and protected-WIP closeout — 2026-08-30
 

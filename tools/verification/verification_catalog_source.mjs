@@ -4604,6 +4604,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
         "tools/verification/script_portfolio.mjs",
+        "tools/verification/verification_catalog_source.mjs",
         "tools/verification/verification_domains.mjs",
         "tests/verification_profile_behavior.test.mjs",
         "tools/verification/verification_profile.mjs"
@@ -4700,6 +4701,7 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
         "tools/verification/script_portfolio.mjs",
+        "tools/verification/verification_catalog_source.mjs",
         "tools/verification/verification_domains.mjs",
         "tests/verification_profile_behavior.test.mjs",
         "tools/verification/verification_profile.mjs",
@@ -8506,6 +8508,41 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
       "selectorOrder": 341,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "direct:renderer-render-snapshot-change-set-contracts",
+      "commandRef": "node --test tests/render_snapshot_behavior.test.mjs tests/render_change_set_behavior.test.mjs",
+      "sourceRefs": [
+        "js/core/render_change_set.js",
+        "js/core/renderer/render_snapshot.js",
+        "tests/render_change_set_behavior.test.mjs",
+        "tests/render_snapshot_behavior.test.mjs"
+      ],
+      "ownerHints": [
+        "renderer-runtime"
+      ],
+      "domains": [
+        "renderer-runtime"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 390,
       "verification": null,
       "selector": {}
     },
@@ -13764,6 +13801,39 @@ const AUTHORED_VERIFICATION_METADATA = {
       "selector": {}
     },
     {
+      "id": "direct:tno-startup-support-output-identity",
+      "commandRef": "python -m unittest tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_reuses_matching_output_identity tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_same_length_content_drift tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_signature_rejects_missing_output tests.test_tno_bundle_builder.TnoBundleBuilderTest.test_startup_support_stage_legacy_signature_rebuilds_then_reuses -q",
+      "sourceRefs": [
+        "tests/test_tno_bundle_builder.py",
+        "tools/patch_tno_1962_bundle.py"
+      ],
+      "ownerHints": [
+        "geo-contract"
+      ],
+      "domains": [
+        "geo-contract"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "contract",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 392,
+      "verification": null,
+      "selector": {}
+    },
+    {
       "id": "python-heavy:geo_stack:tests/test_tno_bundle_builder.py",
       "commandRef": "python -m unittest tests.test_tno_bundle_builder -q",
       "sourceRefs": [
@@ -14191,6 +14261,41 @@ const AUTHORED_VERIFICATION_METADATA = {
       "entrypointPolicyIndex": 4,
       "verificationOrder": null,
       "selectorOrder": 358,
+      "verification": null,
+      "selector": {}
+    },
+    {
+      "id": "python:tests.test_map_renderer_render_snapshot_boundary_contract",
+      "commandRef": "python -m unittest tests.test_map_renderer_render_snapshot_boundary_contract -q",
+      "sourceRefs": [
+        "js/core/map_renderer.js",
+        "js/core/render_change_set.js",
+        "js/core/renderer/render_snapshot.js",
+        "tests/test_map_renderer_render_snapshot_boundary_contract.py"
+      ],
+      "ownerHints": [
+        "renderer-runtime"
+      ],
+      "domains": [
+        "renderer-runtime"
+      ],
+      "tiers": [
+        "contract"
+      ],
+      "cost": "contract",
+      "resourceLocks": [],
+      "executionOwners": [
+        "child-safe"
+      ],
+      "profiles": [
+        "pr-fast"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "entrypointPolicyIndex": 5,
+      "verificationOrder": null,
+      "selectorOrder": 391,
       "verification": null,
       "selector": {}
     },

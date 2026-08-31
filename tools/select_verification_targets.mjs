@@ -157,6 +157,17 @@ function isDirectRouteMatch(route, changedFile) {
   });
 }
 
+function projectLocalEntrypointTestRoutes({ changedFile, matchedRoutes }) {
+  if (!/^tests\/.*\.(?:mjs|py)$/.test(changedFile)) return matchedRoutes;
+  const hasExactIndivisibleRoute = matchedRoutes.some((route) => (
+    route.id !== "infra:verification-selector"
+    && route.entrypointPolicy?.localProjection?.mode === "indivisible"
+    && routeSourceRefs(route).includes(changedFile)
+  ));
+  if (!hasExactIndivisibleRoute) return matchedRoutes;
+  return matchedRoutes.filter((route) => route.id !== "infra:verification-selector");
+}
+
 function isPythonUnitTestFile(changedFile) {
   return /^tests\/(?:.*\/)?test_[^/]+\.py$/.test(changedFile);
 }
@@ -853,5 +864,6 @@ if (isMainModule) {
 export {
   buildRecommendation,
   normalizeChangedFiles,
+  projectLocalEntrypointTestRoutes,
   routeMatchesChangedFile,
 };
