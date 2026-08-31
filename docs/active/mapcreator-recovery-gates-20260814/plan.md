@@ -128,3 +128,30 @@
 - Stage C baseline amendment 已由 PR #115 合并为 `9bf4bc135dd8a23b2226c7dbf6d312a2ffd0ad76`。
 - C1、C2、canonical verification route 与 tracked Pages mirror 已按独立 commit 集成；本地 focused、shadow、route schema、architecture 与 Pages 合同全部通过。
 - PR #116 的 10 项最终检查全部通过，并以 `df1b14fa3cee45b539e1a8d4f7976ec816c765dc` 合并到 protected `main`；候选 refs、tasks、worktrees 与临时分支均已按可恢复顺序收口，Stage C 完成。
+
+## Original-plan continuation amendment — R1 (2026-08-31)
+
+### Reconciled scope
+
+- Stage A 已覆盖原 Phase A 的 City-light boot cut、ready-before-full-UI 与 `verify:commit` 基础；不代表全部 panel 已按首次打开动态加载。
+- Stage B 已覆盖 `RenderSnapshot/v1` 与 `RenderChangeSet/v1` 的纯合同；live apply/undo、history/runtime/render wiring 仍属于 Gate 5。
+- Stage C 已覆盖本地 CAS 的一个真实 startup-support adapter 与 road maturity 首个 projection；全 stage 产品面、artifact cutover、tracked-dist retirement、vertical feature migration 和 runtime-hook 退休均未完成。
+- Gate 3、Gate 4 与 Gate 5 继续使用本计划原验收，不因 Stage A–C amendment 自动勾选。
+
+### R1 work packages and ownership
+
+1. **Gate 4 static startup graph**
+   - 独立新增 startup module/resource graph 与聚焦合同；分类 `critical`、`deferred`、`scenario-specific`、`export-only`、`dev-only`。
+   - 不运行真实 perf、Pages/dist、browser 或 shared `.runtime`；不修改共享 Pages builder、canonical routes 或 UI composition roots。
+2. **Gate 3 Export vertical seam**
+   - 收口 Export lifecycle、required dependency、artifact/download transaction 与 error taxonomy 的窄接口。
+   - worker 只修改 Export 专属模块和 focused tests；`js/ui/toolbar.js` 的任何最终 wiring 由主监督单 owner 串行完成。
+3. **Gate 5A P4.3 candidate**
+   - 先核对 P4.3 current-main drift 并提交聚焦 source fixes；不得写 `A_ADMITTED_SHA`。
+   - checkpoint generator、Pages/dist、browser、core main-thread、standard perf 与最终 admission 由主监督在 R1 source integration 后的 frozen SHA 上串行执行。
+
+### Dependency and admission order
+
+`R1 source candidates → supervisor integration/review → frozen SHA → P4.3 exact admission/A_ADMITTED_SHA → P4.4 semantic replay/exact admission/B_ADMITTED_SHA → Appearance/Transport live lifecycle → recoverable Demo → final release verdict`。
+
+P4.4、live ChangeSet、tracked-dist retirement、共享 cache 与 P4.5 runtime-hook 退休都不得越过各自前置准入或授权。性能实测只在结构切片落定且 frozen SHA 可比较后运行一次，不在 R1 早期重复模拟。

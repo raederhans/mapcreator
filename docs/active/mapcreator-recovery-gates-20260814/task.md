@@ -151,3 +151,28 @@ Stage C boundaries: CAS 仅限仓库本机 `.runtime` / caller-provided local ro
 Stage C residual: 缓存根、objects/manifests 与 prefix 的预置 symlink/reparse 已拒绝，但同权限恶意进程若在 `lstat` 与 path-based I/O 之间并发替换路径组件，仍超出当前“可信本地单写者”威胁模型；未来若扩大为共享或不可信缓存，必须先改为 handle-relative no-follow I/O。
 
 Stage C closeout: 原始 C1/C2 候选分别保留在 `refs/archive/runtime-architecture-reset/c1-content-addressed-artifact-20260831` 与 `refs/archive/runtime-architecture-reset/c2-road-maturity-20260831`；两个 user-visible tasks 已归档，两个隔离 worktree 已解除注册，Stage C baseline/integration 临时分支已在确认进入 `main` 后删除。
+
+## Original-plan reconciliation and continuation tranche R1 (2026-08-31)
+
+对照“项目结构优化”原始六 Epic 路线，Stage A–C 只完成了基础切片，不能关闭原 Gate 3→5。当前精确状态如下：
+
+- [x] 启动止血基础：Modern City Lights 退出基础启动图，map-ready 不再等待完整 UI hydration，canonical `verify:commit` 已建立。
+- [x] 渲染交接基础：`RenderSnapshot/v1` 与纯 `RenderChangeSet/v1` intent 已建立。
+- [ ] `RenderChangeSet/v1` live Preview / Compare / Apply / Undo、history/runtime/render wiring 尚未完成。
+- [ ] Export / Startup / Interaction / Sidebar-Toolbar / Scenario chunk 五条 Gate 3 vertical seam 尚未正式验收；`map_renderer.js` import、Toolbar/Sidebar composition 与 required-dependency ratchet 尚未全部达标。
+- [ ] Gate 4 startup module/resource graph、first-visible 与 artifact frozen-SHA budgets 尚未完成；本轮先实现静态确定性合同，不重复早期性能模拟。
+- [ ] CAS 目前只接入 TNO startup-support 三文件；base/scenario/optional/web 产品面、共享/远端 cache 与全 stage 覆盖尚未完成。
+- [ ] road maturity 目前只是首个只读 projection；其它 family、真实 consumers 与通用 feature maturity matrix 尚未完成。
+- [ ] tracked `dist` retirement、generated JS/perf trace 迁移均未授权或未完成。
+- [ ] `A_ADMITTED_SHA`、`B_ADMITTED_SHA`、Appearance/Transport live change-set、恢复型 Demo 与 final release verdict 均未完成。
+
+### Active R1 execution tasks
+
+- [~] Gate 5A P4.3 admission candidate：queued client task `client-new-thread:c1c90d1a-bace-48a3-b3d2-ecfd60f15fbb`；仅做当前主线 drift、聚焦修复与候选交付，不写 `A_ADMITTED_SHA`，不抢跑共享长门禁。
+- [~] Gate 4 startup resource graph / budget contract：queued client task `client-new-thread:ca61daef-6921-4702-aee0-082c280758fd`；只新增确定性静态 graph/contract，不运行 perf、Pages、browser 或 shared `.runtime`。
+- [~] Gate 3 Export vertical seam：queued client task `client-new-thread:d06e7b78-4f86-4c04-beac-944522d00bee`；独占 Export 专属模块与聚焦测试，共享 `toolbar.js` wiring 需主监督另行串行处理。
+- [ ] 主监督逐个审查并整合 R1 候选，在最终 source candidate 上冻结 exact SHA。
+- [ ] 冻结后由唯一 live-test owner 执行 P4.3 checkpoint/exact/Pages/browser/core-main-thread/perf 组合并写入 `A_ADMITTED_SHA`。
+- [ ] A 正式准入后才创建 P4.4 replay/admission 执行任务；B 正式准入后才激活 Appearance/Transport live lifecycle。
+
+R1 的整合顺序为：静态 startup graph → Export seam → 其它必要 source fixes → frozen SHA → P4.3 formal admission。任何在 P4.3 exact checkpoint 之后落入 source tree 的代码都必须使 admission 重新绑定最终候选，不能复用旧结果。
