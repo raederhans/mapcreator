@@ -127,4 +127,4 @@
 
 - Stage C baseline amendment 已由 PR #115 合并为 `9bf4bc135dd8a23b2226c7dbf6d312a2ffd0ad76`。
 - C1、C2、canonical verification route 与 tracked Pages mirror 已按独立 commit 集成；本地 focused、shadow、route schema、architecture 与 Pages 合同全部通过。
-- 当前只剩 protected-main PR required checks、merge SHA 核对、候选 refs 归档与两个隔离 worktree/task 清理；远端 gate 完成前不把 Stage C 标记为最终完成。
+- PR #116 的 10 项最终检查全部通过，并以 `df1b14fa3cee45b539e1a8d4f7976ec816c765dc` 合并到 protected `main`；候选 refs、tasks、worktrees 与临时分支均已按可恢复顺序收口，Stage C 完成。
