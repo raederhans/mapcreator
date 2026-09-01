@@ -1336,6 +1336,9 @@ const EXPECTED_LAZY_STATE_KEYS_BY_AUTHORITY = Object.freeze({
     "longAnimationFrameObserver",
     "postReadyTaskDiagnostics",
     "startupInitialScenarioChunkVisualPromotion",
+    "uiHydrationError",
+    "uiHydrationStatus",
+    "uiHydrationUpdatedAt",
     "uiShellDebug",
     "uiShellDebugTerritorySeeded",
   ]),
@@ -1903,7 +1906,7 @@ test("canonical authority index locks the complete lazy-key catalog by domain an
     .map(([key]) => key)
     .sort();
 
-  assert.equal(expectedLazyKeys.length, 56);
+  assert.equal(expectedLazyKeys.length, 59);
   assert.deepEqual(actualLazyKeys, expectedLazyKeys);
   assert.deepEqual(
     Object.fromEntries(
@@ -3346,6 +3349,10 @@ test("default state ownership locks the 16 plus 9 and 402 plus 488 baselines", a
   assert.equal(report.compatibilityHookCount, 86);
   assert.equal(report.postCompatKeyCount, 488);
   assert.ok(report.authorityOnlyLazyKeys.includes("scenarioAtlantropaRevision"));
+  assert.deepEqual(
+    report.authorityOnlyLazyKeys.filter((key) => key.startsWith("uiHydration")),
+    ["uiHydrationError", "uiHydrationStatus", "uiHydrationUpdatedAt"],
+  );
   assert.deepEqual(report.collisions, []);
   assert.equal(report.actualFacadeKeyCount, 488);
   assert.deepEqual(report.unownedActualFacadeKeys, []);

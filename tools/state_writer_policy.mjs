@@ -235,6 +235,9 @@ const LAZY_STATE_KEY_DOMAINS = Object.freeze({
   specialZonePreviousTool: Object.freeze(["ui", "P4.4"]),
   startupInitialScenarioChunkVisualPromotion: Object.freeze(["boot", "P4.1"]),
   syncDayNightClockTimerFn: Object.freeze(["runtime-hooks", "P4.5"]),
+  uiHydrationError: Object.freeze(["boot", "P4.1"]),
+  uiHydrationStatus: Object.freeze(["boot", "P4.1"]),
+  uiHydrationUpdatedAt: Object.freeze(["boot", "P4.1"]),
   uiShellDebug: Object.freeze(["boot", "P4.1"]),
   uiShellDebugTerritorySeeded: Object.freeze(["boot", "P4.1"]),
   updateSpecialZonesWorkbenchCurrentTargetUIFn: Object.freeze([
