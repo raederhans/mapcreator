@@ -796,6 +796,53 @@ test("Day/Night actions have one registry owner and one live canonical handoff",
   assert.ok(unknownOwnerInventory.findings.length > 0);
 });
 
+test("scenario style defaults use one P4.3 action handoff without legacy alias authority", async () => {
+  const entries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+    ({ exportName }) => exportName === "mergeScenarioStyleDefaultsState",
+  );
+  assert.deepEqual(entries.map(({ modulePath, targetArgumentIndex, introducedInPhase }) => ({
+    modulePath,
+    targetArgumentIndex,
+    introducedInPhase,
+  })), [{
+    modulePath: "js/core/state/actions/scenario_presentation_actions.js",
+    targetArgumentIndex: 0,
+    introducedInPhase: "P4.3",
+  }]);
+
+  const relativePath = "js/core/scenario/presentation_ocean_fill_restore.js";
+  const source = fs.readFileSync(relativePath, "utf8");
+  const actionCall = "mergeScenarioStyleDefaultsState(state, projectedOverride)";
+  assert.equal(source.split(actionCall).length - 1, 1);
+  const { bindingInventories } = await discoverStateWriterBindingsForSource(
+    relativePath,
+    source,
+    "production",
+    {
+      scanAllParameters: true,
+      includeInventories: true,
+    },
+  );
+  const actionDelegations = bindingInventories.flatMap(
+    ({ actionDelegations: delegations }) => delegations,
+  );
+  assert.deepEqual(
+    actionDelegations
+      .filter(({ actionExportName }) => (
+        actionExportName === "mergeScenarioStyleDefaultsState"
+      ))
+      .map(({ actionExportName }) => actionExportName),
+    ["mergeScenarioStyleDefaultsState"],
+  );
+  const findings = bindingInventories.flatMap(({ findings: values }) => values);
+  assert.equal(findings.some(({ sourceFingerprint }) => (
+    sourceFingerprint
+      === "b87e63dd78b611d49e68df89e99c837dbaa3915ab6e5bf28b983fc15f53b9e22"
+    || sourceFingerprint
+      === "cc52c4a40d11016bfc97a3f61ed1e34e48aa964578291cdb48d280138cd835de0"
+  )), false);
+});
+
 test("source-bound owner proof prepares once and applies independently per binding", () => {
   const ownerProof = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
     ({ factoryExportName }) => factoryExportName === "createDayNightRuntimeOwner",

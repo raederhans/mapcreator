@@ -84,6 +84,10 @@ const SCENARIO_PRESENTATION_ACTION_EXPORT_NAMES = Object.freeze([
   "restoreScenarioTransactionPresentationState",
 ]);
 
+const SCENARIO_PRESENTATION_STYLE_DEFAULTS_ACTION_EXPORT_NAMES = Object.freeze([
+  "mergeScenarioStyleDefaultsState",
+]);
+
 const SCENARIO_PRESENTATION_DAY_NIGHT_ACTION_EXPORT_NAMES = Object.freeze([
   "setDayNightStyleConfigState",
 ]);
@@ -278,6 +282,11 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
   Object.freeze({
     modulePath: RENDERER_PHASE_ACTION_MODULE_PATH,
     exportNames: RENDERER_PHASE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_PRESENTATION_STYLE_DEFAULTS_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.3",
   }),
   Object.freeze({
