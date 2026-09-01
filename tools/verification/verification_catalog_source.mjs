@@ -4994,7 +4994,9 @@ const AUTHORED_VERIFICATION_METADATA = {
         "js/core/export_artifact_package.js",
         "js/core/state/ui_state.js",
         "js/core/state_defaults.js",
+        "js/ui/toolbar/export_artifact_download_transaction.js",
         "js/ui/toolbar/export_artifact_model.js",
+        "js/ui/toolbar/export_failure_handler.js",
         "js/ui/toolbar/export_workbench_controller.js",
         "js/core/renderer/strategic_overlay_runtime_owner.js"
       ],
@@ -10680,7 +10682,8 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tests/main_startup_ready_handoff_boundary.test.mjs",
         "js/bootstrap/deferred_ui_bootstrap.js",
         "js/bootstrap/post_ready_scheduler.js",
-        "js/bootstrap/startup_ready_handoff.js"
+        "js/bootstrap/startup_ready_handoff.js",
+        "js/core/state/actions/boot_actions.js"
       ],
       "ownerHints": [
         "startup"
