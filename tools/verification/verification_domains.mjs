@@ -302,6 +302,7 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       "infra:dependency-checkout-artifacts",
       "infra:python-import-closure",
       "infra:migration-ledger",
+      "node:test:node:startup-resource-graph",
     ].includes(entry.id))
     .map((entry) => Object.freeze(entry)),
   // Post-PR6 routes and authority expansions have no pre-canonical side table.

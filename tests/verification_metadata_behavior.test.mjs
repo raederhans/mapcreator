@@ -48,13 +48,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 342);
-  assert.equal(summary.contributorRecords, 444);
-  assert.equal(summary.verificationRecordProjectionCount, 143);
-  assert.equal(summary.routeProjectionCount, 403);
-  assert.equal(summary.commandCount, 359);
+  assert.equal(summary.packageScriptCount, 343);
+  assert.equal(summary.contributorRecords, 445);
+  assert.equal(summary.verificationRecordProjectionCount, 144);
+  assert.equal(summary.routeProjectionCount, 404);
+  assert.equal(summary.commandCount, 360);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 444);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 445);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -442,6 +442,30 @@ test("landing map generators and checked-in assets route to the map asset contra
       `${sourceRef} should select the landing map asset contracts`,
     );
   }
+});
+
+test("startup resource graph implementation and contract select the canonical child-safe contract", () => {
+  const sourceRefs = [
+    "tools/startup_resource_graph.mjs",
+    "tests/startup_resource_graph_contract.test.mjs",
+  ];
+  const report = buildRecommendation(sourceRefs);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const sourceRef of sourceRefs) {
+    const graphCommand = commandsForChangedFile(report, sourceRef).find((command) => (
+      command.commandRef === "test:node:startup-resource-graph"
+    ));
+    assert.ok(graphCommand, `${sourceRef} should select the startup resource graph contract`);
+    assert.equal(graphCommand.executionOwner, "child-safe");
+    assert.deepEqual(graphCommand.resourceLocks, []);
+    assert.deepEqual(graphCommand.routeIds, ["node:test:node:startup-resource-graph"]);
+  }
+  assert.deepEqual(
+    commandsForChangedFile(report, "tools/startup_resource_graph.mjs")
+      .map((command) => command.commandRef),
+    ["test:node:startup-resource-graph"],
+  );
 });
 
 test("scenario chunk split routes keep quick local and defer data-reading paths to full", () => {

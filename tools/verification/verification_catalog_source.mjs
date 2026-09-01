@@ -460,6 +460,7 @@ const AUTHORED_VERIFICATION_METADATA = {
     "test:node:deferred-bootstrap": "node --test tests/deferred_vendor_loader_behavior.test.mjs tests/deferred_ui_bootstrap_behavior.test.mjs tests/main_deferred_bootstrap_boundary.test.mjs",
     "test:node:main-bootstrap-wiring": "node --test tests/main_bootstrap_wiring_boundary.test.mjs",
     "test:node:startup-ready-handoff": "node --test tests/startup_ready_handoff_behavior.test.mjs tests/main_startup_ready_handoff_boundary.test.mjs",
+    "test:node:startup-resource-graph": "node --test tests/startup_resource_graph_contract.test.mjs",
     "python": "node tools/run_python.mjs",
     "test:node:backend-cloud-support": "node --test tests/backend_client_behavior.test.mjs tests/project_support_diagnostics_controller_behavior.test.mjs tests/backend_console_helpers.test.mjs",
     "test:node:backend-console-helpers": "node --test tests/backend_console_helpers.test.mjs",
@@ -18614,6 +18615,33 @@ const AUTHORED_VERIFICATION_METADATA = {
         "commandType": "direct",
         "packageScriptRequired": false,
         "supervisorDomain": "test-routing",
+        "routeRegistry": true
+      },
+      "selector": {}
+    },
+    {
+      "id": "node:test:node:startup-resource-graph",
+      "commandRef": "test:node:startup-resource-graph",
+      "sourceRefs": [
+        "package.json",
+        "tests/startup_resource_graph_contract.test.mjs",
+        "tools/startup_resource_graph.mjs"
+      ],
+      "ownerHints": ["startup-runtime"],
+      "domains": ["startup"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 4,
+      "verificationOrder": 138,
+      "selectorOrder": 389,
+      "verification": {
+        "commandType": "package-script",
+        "packageScriptRequired": true,
+        "supervisorDomain": "startup",
         "routeRegistry": true
       },
       "selector": {}
