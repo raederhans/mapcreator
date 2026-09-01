@@ -247,6 +247,40 @@ function makeIssue(code, fields = {}) {
   return { code, ...fields };
 }
 
+function summarizeIssues(issues) {
+  const summariesByCode = new Map();
+  for (const issue of issues) {
+    const code = String(issue.code || "");
+    const summary = summariesByCode.get(code) || {
+      classificationCounts: new Map(),
+      issueCount: 0,
+    };
+    summary.issueCount += 1;
+    if (String(issue.classification || "").trim()) {
+      const classification = String(issue.classification);
+      summary.classificationCounts.set(
+        classification,
+        (summary.classificationCounts.get(classification) || 0) + 1,
+      );
+    }
+    summariesByCode.set(code, summary);
+  }
+  return [...summariesByCode.entries()]
+    .sort(([leftCode], [rightCode]) => stableCompare(leftCode, rightCode))
+    .map(([code, summary]) => ({
+      classification_counts: [...summary.classificationCounts.entries()]
+        .sort(([leftClassification], [rightClassification]) => (
+          stableCompare(leftClassification, rightClassification)
+        ))
+        .map(([classification, issueCount]) => ({
+          classification,
+          issue_count: issueCount,
+        })),
+      code,
+      issue_count: summary.issueCount,
+    }));
+}
+
 /**
  * Build a source-first startup graph and correlate every observed editor resource
  * to the checked-in Pages reachability/product-ownership manifest.
@@ -620,6 +654,7 @@ export function validateStartupResourceGraph(graph) {
     .sort((left, right) => stableCompare(JSON.stringify(left), JSON.stringify(right)));
   return {
     issue_count: orderedIssues.length,
+    issue_summary: summarizeIssues(orderedIssues),
     issues: orderedIssues,
     status: orderedIssues.length ? "rejected" : "complete",
   };

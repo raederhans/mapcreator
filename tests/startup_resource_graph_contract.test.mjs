@@ -27,9 +27,39 @@ test("startup resource graph is deterministic and reconciles the source entrypoi
   assert.equal(first.manifest.publication_ownership_status, "complete");
   assert.equal(first.validation.status, "rejected");
   assert.ok(first.validation.issues.some((issue) => issue.code === "optional-resource-in-base-startup-graph"));
-  assert.ok(first.validation.issues
-    .filter((issue) => issue.code === "optional-resource-in-base-startup-graph")
-    .every((issue) => issue.classification !== "critical"));
+  const optionalBaseStartupIssues = first.validation.issues
+    .filter((issue) => issue.code === "optional-resource-in-base-startup-graph");
+  assert.ok(optionalBaseStartupIssues.length > 0);
+  assert.ok(optionalBaseStartupIssues.every((issue) => issue.classification !== "critical"));
+  assert.deepEqual(
+    first.validation.issue_summary.map((summary) => summary.code),
+    [...new Set(first.validation.issues.map((issue) => issue.code))]
+      .sort((left, right) => left.localeCompare(right)),
+  );
+  for (const summary of first.validation.issue_summary) {
+    const summarizedIssues = first.validation.issues.filter((issue) => issue.code === summary.code);
+    const expectedClassifications = [...new Set(summarizedIssues
+      .map((issue) => issue.classification)
+      .filter((classification) => typeof classification === "string" && classification.trim()))]
+      .sort((left, right) => left.localeCompare(right));
+    assert.equal(summary.issue_count, summarizedIssues.length);
+    assert.deepEqual(
+      summary.classification_counts.map(({ classification }) => classification),
+      expectedClassifications,
+    );
+    for (const classificationSummary of summary.classification_counts) {
+      assert.equal(
+        classificationSummary.issue_count,
+        summarizedIssues.filter((issue) => (
+          issue.classification === classificationSummary.classification
+        )).length,
+      );
+    }
+  }
+  assert.equal(
+    first.validation.issue_summary.reduce((total, summary) => total + summary.issue_count, 0),
+    first.validation.issue_count,
+  );
   assert.deepEqual(Object.keys(first.categories), STARTUP_RESOURCE_CLASSES);
   assert.ok(first.categories.critical.includes("js/main.js"));
   assert.ok(first.categories.deferred.includes("js/bootstrap/startup_sample_project_deeplink.js"));
@@ -73,6 +103,27 @@ test("startup resource graph rejects optional base-startup re-entry and missing 
     "optional-resource-in-base-startup-graph",
     "optional-resource-in-base-startup-graph",
   ]);
+  assert.deepEqual(result.issue_summary, [
+    {
+      classification_counts: [],
+      code: "missing-product-owner",
+      issue_count: 1,
+    },
+    {
+      classification_counts: [
+        { classification: "deferred", issue_count: 1 },
+        { classification: "dev-only", issue_count: 1 },
+        { classification: "export-only", issue_count: 1 },
+        { classification: "scenario-specific", issue_count: 1 },
+      ],
+      code: "optional-resource-in-base-startup-graph",
+      issue_count: 4,
+    },
+  ]);
+  assert.equal(
+    result.issue_summary.reduce((total, summary) => total + summary.issue_count, 0),
+    result.issue_count,
+  );
 });
 
 test("startup resource graph parses source edges with Pages Acorn semantics and fails closed on externals", () => {
@@ -205,6 +256,11 @@ test("startup resource graph accepts only Pages reachability schema version 2", 
       actual: schemaVersion === undefined ? null : schemaVersion,
       code: "pages-reachability-schema-version-mismatch",
       expected: 2,
+    }]);
+    assert.deepEqual(result.issue_summary, [{
+      classification_counts: [],
+      code: "pages-reachability-schema-version-mismatch",
+      issue_count: 1,
     }]);
   }
 });
