@@ -75,7 +75,6 @@
     "js/ui/toolbar/transport_appearance_controller.js",
     "js/ui/toolbar/transport_workbench_right_deck_owner.js",
     "js/ui/toolbar/transport_workbench_state_owner.js",
-    "tests/deferred_detail_promotion_force_unlock_behavior.test.mjs",
     "tests/e2e/city_label_i18n_redraw.spec.js",
     "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
     "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",

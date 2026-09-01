@@ -101282,53 +101282,6 @@
       ]
     },
     {
-      "path": "tests/deferred_detail_promotion_force_unlock_behavior.test.mjs",
-      "surface": "test",
-      "domain": "boot",
-      "authority": "legacy-direct",
-      "migrationPhase": "P4.1",
-      "bindings": [
-        {
-          "id": "test-file-root:runtimeState",
-          "kind": "test-file-root",
-          "name": "runtimeState",
-          "authority": "test-fixture",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "bootPhase",
-                "startupReadonly",
-                "startupReadonlyUnlockInFlight"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "bootPhase"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonly"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyUnlockInFlight"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": []
-            }
-          ]
-        }
-      ]
-    },
-    {
       "path": "tests/dev_workspace_selection_ownership_behavior.test.mjs",
       "surface": "test",
       "domain": "cross-domain",
