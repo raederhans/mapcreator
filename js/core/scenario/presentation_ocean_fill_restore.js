@@ -141,9 +141,9 @@ function createScenarioOceanFillRestoreRuntime({
     const previous = getStyleDefaultsSignature(styleOverride);
     Object.entries(styleOverride).forEach(([groupKey, groupOverride]) => {
       if (!groupOverride || typeof groupOverride !== "object") return;
-      const target = ensureStyleConfigGroup(groupKey);
+      ensureStyleConfigGroup(groupKey);
       Object.entries(groupOverride).forEach(([key, value]) => {
-        target[key] = value;
+        state.styleConfig[groupKey][key] = value;
       });
     });
     const next = getStyleDefaultsSignature(styleOverride);
