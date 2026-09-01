@@ -104790,10 +104790,7 @@
           "startupReadonly",
           "startupReadonlyReason",
           "startupReadonlySince",
-          "startupReadonlyUnlockInFlight",
-          "uiHydrationError",
-          "uiHydrationStatus",
-          "uiHydrationUpdatedAt"
+          "startupReadonlyUnlockInFlight"
         ]
       },
       {
