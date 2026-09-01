@@ -46642,7 +46642,7 @@
     },
     {
       "path": "app/js/core/state/boot_state.js",
-      "size_bytes": 4044,
+      "size_bytes": 3955,
       "source_kind": "dist"
     },
     {
@@ -47707,7 +47707,7 @@
       {
         "file_count": 204,
         "id": "startup-critical",
-        "size_bytes": 5324821
+        "size_bytes": 5324732
       },
       {
         "file_count": 87,
@@ -61954,11 +61954,11 @@
         "deferred_graph_file_count": 117,
         "deferred_module_count": 116,
         "deferred_resource_count": 1,
-        "initial_graph_bytes": 5312973,
+        "initial_graph_bytes": 5312884,
         "initial_graph_file_count": 238,
         "initial_module_count": 224,
         "initial_resource_count": 14,
-        "initial_script_bytes": 3954647,
+        "initial_script_bytes": 3954558,
         "initial_script_count": 226,
         "module_count": 346,
         "registry_resolved_dynamic_expression_count": 2,
@@ -62599,7 +62599,7 @@
           },
           {
             "path": "app/js/core/state/boot_state.js",
-            "size_bytes": 4044
+            "size_bytes": 3955
           },
           {
             "path": "app/js/core/state/border_cache_state.js",
@@ -62711,7 +62711,7 @@
             "size_bytes": 41831
           }
         ],
-        "size_bytes": 2899282
+        "size_bytes": 2899193
       },
       {
         "basis": "startup-resource-graph",
@@ -64355,7 +64355,7 @@
     {
       "file_count": 9456,
       "path": "app",
-      "size_bytes": 951277179
+      "size_bytes": 951277090
     },
     {
       "file_count": 57,
@@ -64388,5 +64388,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 958139836
+  "total_bytes": 958139747
 }
