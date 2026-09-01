@@ -46417,7 +46417,7 @@
     },
     {
       "path": "app/js/core/scenario/presentation_ocean_fill_restore.js",
-      "size_bytes": 9554,
+      "size_bytes": 9560,
       "source_kind": "dist"
     },
     {
@@ -47722,7 +47722,7 @@
       {
         "file_count": 8390,
         "id": "scenario-specific",
-        "size_bytes": 696177356
+        "size_bytes": 696177362
       },
       {
         "file_count": 4,
@@ -61941,7 +61941,7 @@
       ],
       "schema_version": 2,
       "summary": {
-        "deferred_graph_bytes": 3061919,
+        "deferred_graph_bytes": 3061925,
         "deferred_graph_file_count": 117,
         "deferred_module_count": 116,
         "deferred_resource_count": 1,
@@ -63845,10 +63845,10 @@
           {
             "file_count": 14,
             "prefix": "app/js/core/scenario/",
-            "size_bytes": 316313
+            "size_bytes": 316319
           }
         ],
-        "size_bytes": 966213
+        "size_bytes": 966219
       },
       {
         "basis": "product-registry:scenario-runtime-data",
@@ -64050,7 +64050,7 @@
             "prefixes": []
           },
           "owner": "scenario-runtime",
-          "size_bytes": 966213
+          "size_bytes": 966219
         },
         {
           "category": "scenario-specific",
@@ -64346,7 +64346,7 @@
     {
       "file_count": 9456,
       "path": "app",
-      "size_bytes": 951266983
+      "size_bytes": 951266989
     },
     {
       "file_count": 57,
@@ -64379,5 +64379,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 958129223
+  "total_bytes": 958129229
 }
