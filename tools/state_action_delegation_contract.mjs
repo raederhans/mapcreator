@@ -3623,10 +3623,10 @@ const P44_STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT = Object.freeze([
       "mutateRuntimeSpecialZoneLayersState",
     ),
     actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
-    actionExportName: "commitSpecialZoneLayersState",
+    actionExportName: "mutateSpecialZoneLayersStateAction",
     targetArgumentIndex: 0,
     replacementActionSourceFingerprint:
-      "84879d13d4320985ed649bfc4929c419bf6d26e5ded3278f006dfcb658086fea",
+      "cf041e72cc1e203765e488c5b64e90272fcba9ad11e293c197dae60c7a79cb3f",
   }),
   freezeCrossFileMigrationEntry({
     retiredCallerPath: "js/core/special_zone_layers.js",

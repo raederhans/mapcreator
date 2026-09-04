@@ -7426,7 +7426,7 @@ test("P4.4 cross-file migrations exactly match frozen callers and current action
         replacementCallerPath: "js/core/special_zone_layers.js",
         actionModulePath:
           "js/core/state/actions/special_zone_actions.js",
-        actionExportName: "commitSpecialZoneLayersState",
+        actionExportName: "mutateSpecialZoneLayersStateAction",
       },
       {
         retiredMembershipIdentity:
