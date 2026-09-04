@@ -246,8 +246,13 @@ function createSpecialZonesWorkbenchController({
         }
         // 首次保存可能发生在 optional asset 载入前；已有本地 layer 时保存点击时的本地意图。
         if (!job.requestedState.layers.length) {
-          stateToSave = serializeSpecialZoneLayersState(normalizeState(), {
-            topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+          stateToSave = serializeSpecialZoneLayersState(runtimeState.specialZoneLayers, {
+            defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
+            topologyFingerprint: String(
+              runtimeState.scenarioBaselineHash
+              || runtimeState.activeScenarioManifest?.source?.runtime_topology_sha256
+              || "",
+            ).trim(),
           });
         }
       }
@@ -320,7 +325,12 @@ function createSpecialZonesWorkbenchController({
   const getDevSelectionFeatureIds = () => {
     const ordered = Array.isArray(runtimeState.devSelectionOrder) ? runtimeState.devSelectionOrder : [];
     const indexed = runtimeState.devSelectionFeatureIds instanceof Set ? Array.from(runtimeState.devSelectionFeatureIds) : [];
-    return Array.from(new Set([...ordered, ...indexed].map(featureIdFromDevSelectionEntry).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    const featureIds = new Set();
+    for (const entry of [...ordered, ...indexed]) {
+      const featureId = featureIdFromDevSelectionEntry(entry);
+      if (featureId) featureIds.add(featureId);
+    }
+    return Array.from(featureIds).sort((a, b) => a.localeCompare(b));
   };
 
   const getActiveLandFeatureId = () => {
@@ -468,7 +478,7 @@ function createSpecialZonesWorkbenchController({
     overlayToggleText.textContent = translate("Show special zones overlay");
     overlayToggleLabel.append(overlayToggleNode, overlayToggleText);
     overlayToggleNode.addEventListener("change", async () => {
-      setSpecialZonesVisibilityState(runtimeState, overlayToggleNode.checked);
+      setSpecialZonesVisibilityState(runtimeState, Boolean(overlayToggleNode.checked));
       markDirty?.("toggle-special-zones");
       if (runtimeState.showSpecialZones) {
         await loadScenarioSpecialZoneLayers();
@@ -1072,8 +1082,13 @@ function createSpecialZonesWorkbenchController({
       const scenarioId = loadContext.scenarioId;
       if (!scenarioId) return;
       const saveRequestId = ++saveRequestSequence;
-      const requestedState = serializeSpecialZoneLayersState(normalizeState(), {
-        topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+      const requestedState = serializeSpecialZoneLayersState(runtimeState.specialZoneLayers, {
+        defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
+        topologyFingerprint: String(
+          runtimeState.scenarioBaselineHash
+          || runtimeState.activeScenarioManifest?.source?.runtime_topology_sha256
+          || "",
+        ).trim(),
       });
       saveBtn.disabled = true;
       saveBtn.classList.add("is-loading");

@@ -146,6 +146,7 @@ const IMPORTED_COMPAT_TARGET_HELPERS = new Map([
   ["bindStateCompatSurface", 0],
   ["callRuntimeHook", 0],
   ["callRuntimeHooks", 0],
+  ["registerRuntimeHook", 0],
 ]);
 
 const LOGICAL_ASSIGNMENT_OPERATORS = new Set(["||=", "&&=", "??="]);
@@ -3279,6 +3280,12 @@ function analyzeBindingMutations(
           targetClassification,
           importedDelegation.pureNormalizerContract,
         )
+        : importedDelegation.detachedCaptureContract
+          ? isSanctionedImportedDetachedCaptureTargetArgument(
+            node.arguments[importedTargetIndex],
+            targetClassification,
+            importedDelegation.detachedCaptureContract,
+          )
         : isSanctionedImportedStateActionTargetArgument(
           node.arguments[importedTargetIndex],
           targetClassification,
@@ -3694,6 +3701,30 @@ function analyzeBindingMutations(
     ).split(".").filter(Boolean);
     return Boolean(
       expectedKeys.length
+      && segments.length === expectedKeys.length
+      && segments.every(
+        (segment, index) =>
+          !segment.dynamic && segment.key === expectedKeys[index],
+      )
+    );
+  }
+
+  function isSanctionedImportedDetachedCaptureTargetArgument(
+    argument,
+    classification,
+    contractEntry,
+  ) {
+    const expectedKeys = String(
+      contractEntry?.targetArgumentStaticPath || "",
+    ).split(".").filter(Boolean);
+    if (!expectedKeys.length) {
+      return isDirectStateRootArgument(argument, classification);
+    }
+    const node = unwrapChain(argument);
+    const segments = classification?.reference?.segments || [];
+    return Boolean(
+      node?.type === "MemberExpression"
+      && classification?.status === "exact"
       && segments.length === expectedKeys.length
       && segments.every(
         (segment, index) =>

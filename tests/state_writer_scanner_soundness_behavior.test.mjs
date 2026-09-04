@@ -1013,6 +1013,33 @@ test("registered imported actions accept a defaulted full-root state target only
   );
 });
 
+test("runtime hook registration accepts only the exact imported compat target", () => {
+  const binding = {
+    id: "module:runtimeState",
+    kind: "module",
+    name: "runtimeState",
+  };
+  const accepted = scanStateMutations(`
+    import { state as runtimeState } from "../core/state.js";
+    import { registerRuntimeHook as registerHook } from "../core/state/index.js";
+    registerHook(runtimeState, "refreshUiFn", () => true);
+  `, {
+    filePath: "js/ui/runtime_hook_fixture.js",
+    bindings: [binding],
+  });
+  assert.deepEqual(accepted, []);
+
+  const wrongSource = scanStateMutations(`
+    import { state as runtimeState } from "../core/state.js";
+    import { registerRuntimeHook } from "../core/other_helper.js";
+    registerRuntimeHook(runtimeState, "refreshUiFn", () => true);
+  `, {
+    filePath: "js/ui/runtime_hook_fixture.js",
+    bindings: [binding],
+  });
+  assert.ok(wrongSource.some(({ reason }) => reason === "state-alias-escape"));
+});
+
 test("local helper return aliases retain state identity through direct, wrapped, and container results", () => {
   const source = `
     function getState() {

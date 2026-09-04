@@ -26,6 +26,7 @@ import {
 } from "../core/map_renderer/public.js";
 import { captureHistoryState, canRedoHistory, canUndoHistory, pushHistoryEntry, redoHistory, undoHistory } from "../core/history_manager.js";
 import { callRuntimeHook, registerRuntimeHook } from "../core/state/index.js";
+import { setExportBakeState } from "../core/state/actions/export_workbench_actions.js";
 import {
   buildPaletteQuickSwatches,
   getPaletteSourceOptions,
@@ -2457,7 +2458,7 @@ function initToolbar({ render } = {}) {
     } else {
       nextArtifacts.push(entry);
     }
-    exportWorkbenchController.setExportBakeArtifacts(nextArtifacts);
+    setExportBakeState(state, { bakeArtifacts: nextArtifacts });
     return entry;
   };
 

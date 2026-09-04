@@ -339,6 +339,7 @@ const SPECIAL_ZONE_ACTION_EXPORT_NAMES = Object.freeze([
   "ensureSpecialZoneEditorState",
   "patchSpecialZoneEditorState",
   "commitSpecialZoneLayersState",
+  "mutateSpecialZoneLayersStateAction",
   "restoreSpecialZoneSnapshotState",
   "setSpecialZoneMembershipBrushModeState",
   "setSpecialZonePresetCategoryState",
@@ -940,6 +941,7 @@ function freezeStateDetachedCaptureEntry({
   modulePath,
   exportName,
   targetArgumentIndex = 0,
+  targetArgumentStaticPath = "",
   sourceFingerprint,
   cloneHelperFingerprints = {},
   readHelperFingerprints = {},
@@ -948,6 +950,7 @@ function freezeStateDetachedCaptureEntry({
     modulePath: normalizeModulePath(modulePath),
     exportName: String(exportName || ""),
     targetArgumentIndex: Number(targetArgumentIndex),
+    targetArgumentStaticPath: String(targetArgumentStaticPath || ""),
     sourceFingerprint: String(sourceFingerprint || ""),
     cloneHelperFingerprints: Object.freeze({ ...cloneHelperFingerprints }),
     readHelperFingerprints: Object.freeze({ ...readHelperFingerprints }),
@@ -969,6 +972,10 @@ const RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS = Object.freeze({
     "b9489b346935a1e0aee1a10326837eaa58dd731bf8433c25ce173f7dff5e147d",
   cloneExactAfterSettleValue:
     "ca872828fa16a380cef3eee73cc1c3bc1dbe6c645f69c07be08b37a0de097c0f",
+});
+const SPECIAL_ZONE_DETACHED_CLONE_HELPERS = Object.freeze({
+  normalizeSpecialZoneLayersState:
+    "b9ed5eb75af3d1cc9f573429472ec8fc289de74a3d0b10af9e6d6a5698ff3092",
 });
 
 export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
@@ -994,6 +1001,15 @@ export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
     sourceFingerprint:
       "fa0f35be1303057d2afb495edb0d96aece6e3eceba195f1b77dc52d8eca5d438",
     cloneHelperFingerprints: RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS,
+  }),
+  freezeStateDetachedCaptureEntry({
+    modulePath: "js/core/special_zone_layers.js",
+    exportName: "serializeSpecialZoneLayersState",
+    targetArgumentIndex: 0,
+    targetArgumentStaticPath: "specialZoneLayers",
+    sourceFingerprint:
+      "d66a2b978f9e70f1b4c7d00d7b7ecdd51419688c84a9acbec55e020ecb31f7a3",
+    cloneHelperFingerprints: SPECIAL_ZONE_DETACHED_CLONE_HELPERS,
   }),
 ]));
 
@@ -1028,6 +1044,12 @@ export function validateStateDetachedCaptureContract(
       || !isValidExportName(entry.exportName)
       || !Number.isInteger(entry.targetArgumentIndex)
       || entry.targetArgumentIndex < 0
+      || (
+        entry.targetArgumentStaticPath
+        && !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(
+          String(entry.targetArgumentStaticPath),
+        )
+      )
       || !/^[a-f0-9]{64}$/.test(String(entry.sourceFingerprint || ""))
       || !Object.entries(entry.cloneHelperFingerprints || {}).every(
         ([name, fingerprint]) => isValidExportName(name) && /^[a-f0-9]{64}$/.test(fingerprint),
@@ -2199,10 +2221,20 @@ export function inspectStateDetachedCaptureSource(source, entry) {
   }
   const functions = topLevelFunctionDeclarations(ast);
   const capture = functions.get(entry.exportName);
-  if (!capture || !((ast.body || []).some((statement) => (
+  const directlyExported = (ast.body || []).some((statement) => (
     statement.type === "ExportNamedDeclaration"
-    && statement.declaration === capture
-  )))) {
+    && (
+      statement.declaration === capture
+      || (
+        !statement.source
+        && (statement.specifiers || []).some((specifier) => (
+          specifier.local?.name === entry.exportName
+          && specifier.exported?.name === entry.exportName
+        ))
+      )
+    )
+  ));
+  if (!capture || !directlyExported) {
     violations.push(createViolation("state-detached-capture-direct-export-invalid", {
       modulePath: entry.modulePath,
       exportName: entry.exportName,
@@ -2278,7 +2310,7 @@ export function inspectStateDetachedCaptureSource(source, entry) {
         && expressionContainsDetachedCaptureAlias(
           node.init,
           aliases,
-          new Set(),
+          safeCloneHelperNames,
         )
         && !aliases.has(node.id.name)
       ) {

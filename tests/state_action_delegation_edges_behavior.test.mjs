@@ -71,6 +71,7 @@ test("source-bound detached captures return fresh values and fail closed on alia
       ["captureProjectedBoundsDiagnosticsState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureRenderSnapshotState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureExactAfterSettleControllerState", "js/core/state/actions/renderer_exact_refresh_actions.js"],
+      ["serializeSpecialZoneLayersState", "js/core/special_zone_layers.js"],
     ].map(([exportName, modulePath]) => ({ modulePath, exportName, targetArgumentIndex: 0 })),
   );
 
@@ -82,6 +83,36 @@ test("source-bound detached captures return fresh values and fail closed on alia
       entry.exportName,
     );
   }
+
+  const specialZoneEntry = STATE_DETACHED_CAPTURE_CONTRACT.find(
+    ({ exportName }) => exportName === "serializeSpecialZoneLayersState",
+  );
+  const specialZoneSource = fs.readFileSync(specialZoneEntry.modulePath, "utf8");
+  assert.ok(inspectStateDetachedCaptureSource(
+    specialZoneSource.replace(
+      "const normalized = normalizeSpecialZoneLayersState(rawState, options);",
+      "const normalized = rawState;",
+    ),
+    specialZoneEntry,
+  ).violations.some(({ code }) => code === "state-detached-capture-source-drift"));
+  assert.ok(inspectStateDetachedCaptureSource(
+    specialZoneSource.replace(
+      "function normalizeSpecialZoneLayersState(rawState, options = {}) {",
+      "function normalizeSpecialZoneLayersState(rawState, options = {}) { void options;",
+    ),
+    specialZoneEntry,
+  ).violations.some(({ code }) => code === "state-detached-capture-clone-helper-source-drift"));
+  const specialZoneCaller = `
+    import { state as runtimeState } from "../core/state.js";
+    import { serializeSpecialZoneLayersState } from "../core/special_zone_layers.js";
+    const snapshot = serializeSpecialZoneLayersState(runtimeState.specialZoneLayers);
+    consumeSnapshot(snapshot);
+  `;
+  assert.deepEqual(scan(specialZoneCaller).findings, []);
+  assert.ok(scan(specialZoneCaller.replace(
+    "runtimeState.specialZoneLayers",
+    "runtimeState.unregisteredLayers",
+  )).findings.some(({ reason }) => reason === "state-alias-escape"));
 
   const source = [
     'import { state as runtimeState } from "../core/state.js";',
@@ -544,6 +575,7 @@ test("P4.4 action modules admit every direct export only at the P4.4 boundary", 
       modulePath,
     );
   }
+
   assert.deepEqual(
     validateStateActionModulePhaseAdmissions({ modulePaths, phase: "P4.4" }),
     [],
