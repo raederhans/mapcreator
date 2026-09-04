@@ -175,7 +175,7 @@ function applyStyleSnapshot(stylePatch) {
   if (!entries.length) {
     return applyAppearanceStylePathPatchState(runtimeState, stylePatch);
   }
-  let styleConfig = runtimeState.styleConfig;
+  let styleConfig = null;
   entries.forEach(([path, value]) => {
     styleConfig = applyAppearanceStylePathPatchState(runtimeState, { [path]: value });
   });

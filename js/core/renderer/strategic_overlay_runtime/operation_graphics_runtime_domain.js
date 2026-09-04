@@ -92,7 +92,7 @@ export function createOperationGraphicsRuntimeDomain({
   function undoOperationGraphicVertex() {
     ensureOperationGraphicsEditorState();
     if (!state.operationGraphicsEditor.active || !state.operationGraphicsEditor.points.length) return;
-    patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { points: state.operationGraphicsEditor.points.slice(0, -1) });
+    patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { points: Array.from(state.operationGraphicsEditor.points).slice(0, -1) });
     setStrategicOverlayDirtyState(state, "operationGraphicsDirty", true);
     updateStrategicOverlayUi();
     renderNow();
@@ -115,7 +115,7 @@ export function createOperationGraphicsRuntimeDomain({
     ensureOperationGraphicsEditorState();
     const kind = String(state.operationGraphicsEditor.kind || defaultOperationGraphicKind);
     const minPoints = getOperationGraphicMinPoints(kind);
-    const points = Array.isArray(state.operationGraphicsEditor.points) ? state.operationGraphicsEditor.points : [];
+    const points = Array.isArray(state.operationGraphicsEditor.points) ? Array.from(state.operationGraphicsEditor.points) : [];
     if (!state.operationGraphicsEditor.active || points.length < minPoints) {
       cancelOperationGraphicDraw();
       return false;
@@ -123,17 +123,18 @@ export function createOperationGraphicsRuntimeDomain({
     ensureOperationGraphicCounter();
     const before = captureHistoryState({ strategicOverlay: true });
     const id = `opg_${state.operationGraphicsEditor.counter}`;
-    const nextGraphics = [...state.operationGraphics, {
-      id,
-      kind,
-      label: String(state.operationGraphicsEditor.label || "").trim(),
-      points: [...points],
-      stylePreset: normalizeOperationGraphicStylePreset(state.operationGraphicsEditor.stylePreset, kind),
-      stroke: normalizeOperationGraphicStroke(state.operationGraphicsEditor.stroke) || null,
-      width: normalizeOperationGraphicWidth(state.operationGraphicsEditor.width),
-      opacity: normalizeOperationGraphicOpacity(state.operationGraphicsEditor.opacity),
-    }];
-    commitStrategicOverlayCollectionsState(state, { operationGraphics: nextGraphics });
+    commitStrategicOverlayCollectionsState(state, {
+      operationGraphics: [...Array.from(state.operationGraphics), {
+        id,
+        kind,
+        label: String(state.operationGraphicsEditor.label || "").trim(),
+        points: [...points],
+        stylePreset: normalizeOperationGraphicStylePreset(state.operationGraphicsEditor.stylePreset, kind),
+        stroke: normalizeOperationGraphicStroke(state.operationGraphicsEditor.stroke) || null,
+        width: normalizeOperationGraphicWidth(state.operationGraphicsEditor.width),
+        opacity: normalizeOperationGraphicOpacity(state.operationGraphicsEditor.opacity),
+      }],
+    });
     patchStrategicOverlayEditorState(state, "operationGraphicsEditor", {
       counter: state.operationGraphicsEditor.counter + 1,
       selectedId: id,

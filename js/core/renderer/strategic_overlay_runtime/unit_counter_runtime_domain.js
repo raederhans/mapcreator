@@ -76,7 +76,7 @@ export function createUnitCounterRuntimeDomain({
       }
       attachedByLineId.get(lineId).push(String(counter.id || "").trim());
     });
-    const entityPatches = (state.operationalLines || []).flatMap((line) => {
+    const entityPatches = Array.from(state.operationalLines || []).flatMap((line) => {
       const entityId = String(line?.id || "").trim();
       if (!entityId) return [];
       const nextIds = attachedByLineId.get(entityId) || [];
@@ -129,41 +129,42 @@ export function createUnitCounterRuntimeDomain({
       || (String(state.unitCounterEditor.renderer || "").toLowerCase() === "milstd" ? defaultUnitCounterMilstdSidc : "")
     ).trim().toUpperCase();
     const normalizedCombatState = getNormalizedUnitCounterCombatState(state.unitCounterEditor);
-    const nextCounters = [...state.unitCounters, {
-      id,
-      renderer: String(state.unitCounterEditor.renderer || preset.defaultRenderer || state.annotationView?.unitRendererDefault || defaultUnitCounterRenderer),
-      sidc: nextToken,
-      symbolCode: nextToken,
-      label: String(state.unitCounterEditor.label || "").trim(),
-      nationTag: nationResolution.tag,
-      nationSource: requestedNationSource,
-      presetId: preset.id,
-      iconId: String(state.unitCounterEditor.iconId || preset.iconId || "").trim().toLowerCase(),
-      unitType: String(state.unitCounterEditor.unitType || preset.unitType || "").trim().toUpperCase(),
-      echelon: String(state.unitCounterEditor.echelon || preset.defaultEchelon || "").trim().toLowerCase(),
-      subLabel: String(state.unitCounterEditor.subLabel || "").trim(),
-      strengthText: String(state.unitCounterEditor.strengthText || "").trim(),
-      baseFillColor: normalizedCombatState.baseFillColor,
-      organizationPct: normalizedCombatState.organizationPct,
-      equipmentPct: normalizedCombatState.equipmentPct,
-      statsPresetId: normalizedCombatState.statsPresetId,
-      statsSource: normalizedCombatState.statsSource,
-      size: normalizeUnitCounterSizeToken(state.unitCounterEditor.size || "medium"),
-      facing: 0,
-      zIndex: state.unitCounters.length,
-      anchor: {
-        lon: coord[0],
-        lat: coord[1],
-        featureId,
-      },
-      layoutAnchor: {
-        kind: attachment ? "attachment" : "feature",
-        key: attachment?.lineId || featureId,
-        slotIndex: null,
-      },
-      attachment,
-    }];
-    commitStrategicOverlayCollectionsState(state, { unitCounters: nextCounters });
+    commitStrategicOverlayCollectionsState(state, {
+      unitCounters: [...Array.from(state.unitCounters), {
+        id,
+        renderer: String(state.unitCounterEditor.renderer || preset.defaultRenderer || state.annotationView?.unitRendererDefault || defaultUnitCounterRenderer),
+        sidc: nextToken,
+        symbolCode: nextToken,
+        label: String(state.unitCounterEditor.label || "").trim(),
+        nationTag: nationResolution.tag,
+        nationSource: requestedNationSource,
+        presetId: preset.id,
+        iconId: String(state.unitCounterEditor.iconId || preset.iconId || "").trim().toLowerCase(),
+        unitType: String(state.unitCounterEditor.unitType || preset.unitType || "").trim().toUpperCase(),
+        echelon: String(state.unitCounterEditor.echelon || preset.defaultEchelon || "").trim().toLowerCase(),
+        subLabel: String(state.unitCounterEditor.subLabel || "").trim(),
+        strengthText: String(state.unitCounterEditor.strengthText || "").trim(),
+        baseFillColor: normalizedCombatState.baseFillColor,
+        organizationPct: normalizedCombatState.organizationPct,
+        equipmentPct: normalizedCombatState.equipmentPct,
+        statsPresetId: normalizedCombatState.statsPresetId,
+        statsSource: normalizedCombatState.statsSource,
+        size: normalizeUnitCounterSizeToken(state.unitCounterEditor.size || "medium"),
+        facing: 0,
+        zIndex: state.unitCounters.length,
+        anchor: {
+          lon: coord[0],
+          lat: coord[1],
+          featureId,
+        },
+        layoutAnchor: {
+          kind: attachment ? "attachment" : "feature",
+          key: attachment?.lineId || featureId,
+          slotIndex: null,
+        },
+        attachment,
+      }],
+    });
     patchStrategicOverlayEditorState(state, "unitCounterEditor", {
       counter: state.unitCounterEditor.counter + 1,
       selectedId: id,

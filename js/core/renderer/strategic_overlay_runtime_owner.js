@@ -233,7 +233,7 @@ export function createStrategicOverlayRuntimeOwner({
   function undoOperationalLineVertex() {
     ensureOperationalLineEditorState();
     if (!state.operationalLineEditor.active || !state.operationalLineEditor.points.length) return;
-    patchStrategicOverlayEditorState(state, "operationalLineEditor", { points: state.operationalLineEditor.points.slice(0, -1) });
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", { points: Array.from(state.operationalLineEditor.points).slice(0, -1) });
     setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     updateStrategicOverlayUi();
     renderNow();
@@ -256,25 +256,26 @@ export function createStrategicOverlayRuntimeOwner({
   function finishOperationalLineDraw() {
     ensureOperationalLineEditorState();
     const kind = String(state.operationalLineEditor.kind || defaultOperationalLineKind);
-    const points = Array.isArray(state.operationalLineEditor.points) ? state.operationalLineEditor.points : [];
+    const points = Array.isArray(state.operationalLineEditor.points) ? Array.from(state.operationalLineEditor.points) : [];
     if (!state.operationalLineEditor.active || points.length < getOperationalLineMinPoints(kind)) {
       return false;
     }
     ensureOperationalLineCounter();
     const before = captureHistoryState({ strategicOverlay: true });
     const id = `opl_${state.operationalLineEditor.counter}`;
-    const nextLines = [...state.operationalLines, {
-      id,
-      kind,
-      label: String(state.operationalLineEditor.label || "").trim(),
-      points: [...points],
-      stylePreset: normalizeOperationalLineStylePreset(state.operationalLineEditor.stylePreset, kind),
-      stroke: normalizeOperationGraphicStroke(state.operationalLineEditor.stroke) || null,
-      width: normalizeOperationGraphicWidth(state.operationalLineEditor.width),
-      opacity: normalizeOperationGraphicOpacity(state.operationalLineEditor.opacity),
-      attachedCounterIds: [],
-    }];
-    commitStrategicOverlayCollectionsState(state, { operationalLines: nextLines });
+    commitStrategicOverlayCollectionsState(state, {
+      operationalLines: [...Array.from(state.operationalLines), {
+        id,
+        kind,
+        label: String(state.operationalLineEditor.label || "").trim(),
+        points: [...points],
+        stylePreset: normalizeOperationalLineStylePreset(state.operationalLineEditor.stylePreset, kind),
+        stroke: normalizeOperationGraphicStroke(state.operationalLineEditor.stroke) || null,
+        width: normalizeOperationGraphicWidth(state.operationalLineEditor.width),
+        opacity: normalizeOperationGraphicOpacity(state.operationalLineEditor.opacity),
+        attachedCounterIds: [],
+      }],
+    });
     patchStrategicOverlayEditorState(state, "operationalLineEditor", {
       counter: state.operationalLineEditor.counter + 1,
       selectedId: id,
