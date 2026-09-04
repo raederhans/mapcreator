@@ -1,6 +1,11 @@
 // Special zone editor compatibility adapter.
 // 新的编辑主路径是 layer-based workbench；这个 adapter 只保留旧 toolbar facade 和旧项目读取后的提示面。
 
+import {
+  ensureManualSpecialZonesState,
+  patchSpecialZoneEditorState,
+} from "../../core/state/actions/special_zone_actions.js";
+
 function createSpecialZoneEditorController({
   runtimeState,
   specialZoneEditorHint = null,
@@ -11,18 +16,12 @@ function createSpecialZoneEditorController({
 
   const normalizeSpecialZoneEditorState = () => {
     if (!runtimeState || typeof runtimeState !== "object") return;
-    if (!runtimeState.specialZoneEditor || typeof runtimeState.specialZoneEditor !== "object") {
-      runtimeState.specialZoneEditor = {};
-    }
-    runtimeState.specialZoneEditor.active = false;
-    runtimeState.specialZoneEditor.zoneType = String(runtimeState.specialZoneEditor.zoneType || "custom");
-    runtimeState.specialZoneEditor.label = String(runtimeState.specialZoneEditor.label || "");
-    if (!runtimeState.manualSpecialZones || runtimeState.manualSpecialZones.type !== "FeatureCollection") {
-      runtimeState.manualSpecialZones = { type: "FeatureCollection", features: [] };
-    }
-    if (!Array.isArray(runtimeState.manualSpecialZones.features)) {
-      runtimeState.manualSpecialZones.features = [];
-    }
+    patchSpecialZoneEditorState(runtimeState, {
+      active: false,
+      zoneType: String(runtimeState.specialZoneEditor?.zoneType || "custom"),
+      label: String(runtimeState.specialZoneEditor?.label || ""),
+    });
+    ensureManualSpecialZonesState(runtimeState);
   };
 
   const renderSpecialZoneEditorUI = () => {

@@ -256,6 +256,50 @@ test("operation graphic runtime owner commits midpoint insertion", () => {
   assert.equal(historyEntries.length, 1);
 });
 
+test("operation graphic ordinary updates replace the selected entity and preserve neighbors", () => {
+  const neighbor = { id: "opg_neighbor", kind: "offensive", label: "Neighbor", points: [[5, 5], [6, 6]] };
+  const selected = {
+    id: "opg_1",
+    kind: "offensive",
+    label: "Before",
+    points: [[0, 0], [1, 1]],
+    stylePreset: "offensive",
+    stroke: "#111111",
+    width: 2,
+    opacity: 1,
+  };
+  const runtimeState = {
+    operationGraphics: [neighbor, selected],
+    operationGraphicsDirty: false,
+    operationGraphicsEditor: {
+      active: false,
+      mode: "edit",
+      points: [[0, 0], [1, 1]],
+      selectedId: "opg_1",
+      selectedVertexIndex: -1,
+    },
+  };
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      captureHistoryState: () => ({}),
+      ensureOperationGraphicsEditorState: () => {},
+      getOperationGraphicById: (id) => runtimeState.operationGraphics.find((entry) => entry.id === id) || null,
+      getOperationGraphicMinPoints: () => 2,
+      normalizeOperationGraphicOpacity: Number,
+      normalizeOperationGraphicStroke: String,
+      normalizeOperationGraphicStylePreset: String,
+      normalizeOperationGraphicWidth: Number,
+    },
+  });
+
+  assert.equal(owner.updateSelectedOperationGraphic({ label: "After", width: 4 }), true);
+  assert.equal(runtimeState.operationGraphics[0], neighbor);
+  assert.notEqual(runtimeState.operationGraphics[1], selected);
+  assert.equal(runtimeState.operationGraphics[1].label, "After");
+  assert.equal(runtimeState.operationGraphics[1].width, 4);
+});
+
 test("special zone runtime owner retires legacy manual feature creation", () => {
   let uiRefreshCount = 0;
   let renderCount = 0;
@@ -446,6 +490,43 @@ test("operational line runtime owner commits history and updates modal selection
   assert.equal(renderCount, 1);
 });
 
+test("operational line ordinary updates replace the selected entity and preserve neighbors", () => {
+  const neighbor = { id: "opl_neighbor", kind: "frontline", label: "Neighbor", points: [[5, 5], [6, 6]] };
+  const selected = {
+    id: "opl_1",
+    kind: "frontline",
+    label: "Before",
+    points: [[0, 0], [1, 1]],
+    attachedCounterIds: [],
+  };
+  const runtimeState = {
+    operationGraphicsEditor: {},
+    operationalLines: [neighbor, selected],
+    operationalLinesDirty: false,
+    operationalLineEditor: { selectedId: "opl_1" },
+    strategicOverlayUi: {},
+  };
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      captureHistoryState: () => ({}),
+      ensureOperationGraphicsEditorState: () => {},
+      ensureOperationalLineEditorState: () => {},
+      getOperationalLineById: (id) => runtimeState.operationalLines.find((entry) => entry.id === id) || null,
+      normalizeOperationGraphicOpacity: Number,
+      normalizeOperationGraphicStroke: String,
+      normalizeOperationGraphicWidth: Number,
+      normalizeOperationalLineStylePreset: String,
+    },
+  });
+
+  assert.equal(owner.updateSelectedOperationalLine({ label: "After", width: 5 }), true);
+  assert.equal(runtimeState.operationalLines[0], neighbor);
+  assert.notEqual(runtimeState.operationalLines[1], selected);
+  assert.equal(runtimeState.operationalLines[1].label, "After");
+  assert.equal(runtimeState.operationalLines[1].width, 5);
+});
+
 test("unit counter nation resolution maps retired controller source to ownership", () => {
   const runtimeState = {
     activeSovereignCode: "FRA",
@@ -564,11 +645,15 @@ test("unit counter runtime owner placement syncs line attachments and history", 
 test("unit counter runtime owner detach clears line attachments", () => {
   const historyEntries = [];
   const dirtyReasons = [];
+  const untouchedLine = {
+    id: "opl_2",
+    attachedCounterIds: [],
+  };
   const runtimeState = {
     operationalLines: [{
       id: "opl_1",
       attachedCounterIds: ["unit_1"],
-    }],
+    }, untouchedLine],
     operationalLinesDirty: false,
     unitCounters: [{
       id: "unit_1",
@@ -608,10 +693,45 @@ test("unit counter runtime owner detach clears line attachments", () => {
   assert.equal(runtimeState.unitCounters[0].layoutAnchor.kind, "feature");
   assert.equal(runtimeState.unitCounters[0].layoutAnchor.key, "GER");
   assert.deepEqual(runtimeState.operationalLines[0].attachedCounterIds, []);
+  assert.equal(runtimeState.operationalLines[1], untouchedLine);
   assert.equal(runtimeState.unitCountersDirty, true);
   assert.equal(runtimeState.operationalLinesDirty, true);
   assert.equal(historyEntries[0].kind, "update-unit-counter");
   assert.deepEqual(dirtyReasons, ["update-unit-counter"]);
+});
+
+test("unit counter ordinary updates replace the selected entity and preserve neighbors", () => {
+  const neighbor = { id: "unit_neighbor", label: "Neighbor" };
+  const selected = {
+    id: "unit_1",
+    label: "Before",
+    renderer: "game",
+    size: "medium",
+    anchor: { lon: 12, lat: 48, featureId: "GER" },
+    layoutAnchor: { kind: "feature", key: "GER", slotIndex: null },
+    attachment: null,
+  };
+  const runtimeState = {
+    operationalLines: [],
+    unitCounters: [neighbor, selected],
+    unitCountersDirty: false,
+    unitCounterEditor: { selectedId: "unit_1" },
+  };
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      assignUnitCounterEditorFromCounter: () => {},
+      captureHistoryState: () => ({}),
+      ensureUnitCounterEditorState: () => {},
+      normalizeUnitCounterSizeToken: String,
+    },
+  });
+
+  assert.equal(owner.updateSelectedUnitCounter({ label: "After", size: "large" }), true);
+  assert.equal(runtimeState.unitCounters[0], neighbor);
+  assert.notEqual(runtimeState.unitCounters[1], selected);
+  assert.equal(runtimeState.unitCounters[1].label, "After");
+  assert.equal(runtimeState.unitCounters[1].size, "large");
 });
 
 test("unit counter runtime owner commits drag moves and detaches line attachments", () => {

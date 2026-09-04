@@ -1,4 +1,7 @@
 // Strategic overlay render scheduler owner.
+import { setStrategicOverlayDirtyState } from "../state/actions/strategic_overlay_actions.js";
+import { setSpecialZonesOverlayDirtyState } from "../state/actions/special_zone_actions.js";
+
 export function createStrategicOverlayRenderOwner({
   state,
   constants = {},
@@ -34,11 +37,11 @@ export function createStrategicOverlayRenderOwner({
     unitCounters = false,
     specialZones = false,
   } = {}) {
-    if (frontline) state.frontlineOverlayDirty = true;
-    if (operationalLines) state.operationalLinesDirty = true;
-    if (operationGraphics) state.operationGraphicsDirty = true;
-    if (unitCounters) state.unitCountersDirty = true;
-    if (specialZones) state.specialZonesOverlayDirty = true;
+    if (frontline) setStrategicOverlayDirtyState(state, "frontlineOverlayDirty", true);
+    if (operationalLines) setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
+    if (operationGraphics) setStrategicOverlayDirtyState(state, "operationGraphicsDirty", true);
+    if (unitCounters) setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
+    if (specialZones) setSpecialZonesOverlayDirtyState(state, true);
   }
 
   function markAllOverlaysDirty() {
@@ -131,7 +134,7 @@ export function createStrategicOverlayRenderOwner({
       return false;
     }
     renderSpecialZones();
-    state.specialZonesOverlayDirty = false;
+    setSpecialZonesOverlayDirtyState(state, false);
     lastSpecialZonesOverlaySignature = nextSignature;
     return true;
   }
@@ -145,7 +148,7 @@ export function createStrategicOverlayRenderOwner({
       return false;
     }
     renderFrontlineOverlay();
-    state.frontlineOverlayDirty = false;
+    setStrategicOverlayDirtyState(state, "frontlineOverlayDirty", false);
     lastFrontlineOverlaySignature = nextSignature;
     return true;
   }
@@ -159,7 +162,7 @@ export function createStrategicOverlayRenderOwner({
       return false;
     }
     renderOperationGraphicsOverlay();
-    state.operationGraphicsDirty = false;
+    setStrategicOverlayDirtyState(state, "operationGraphicsDirty", false);
     lastOperationGraphicsOverlaySignature = nextSignature;
     return true;
   }
@@ -173,7 +176,7 @@ export function createStrategicOverlayRenderOwner({
       return false;
     }
     renderOperationalLinesOverlay();
-    state.operationalLinesDirty = false;
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", false);
     lastOperationalLinesOverlaySignature = nextSignature;
     return true;
   }
@@ -187,7 +190,7 @@ export function createStrategicOverlayRenderOwner({
       return false;
     }
     renderUnitCountersOverlay();
-    state.unitCountersDirty = false;
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", false);
     lastUnitCountersOverlaySignature = nextSignature;
     return true;
   }

@@ -1,4 +1,12 @@
 // Unit counter runtime mutations.
+import {
+  commitStrategicOverlayCollectionsState,
+  patchStrategicOverlayEntityGroupState,
+  patchStrategicOverlayEntityState,
+  patchStrategicOverlayEditorState,
+  setStrategicOverlayDirtyState,
+} from "../../state/actions/strategic_overlay_actions.js";
+
 export function createUnitCounterRuntimeDomain({
   state,
   defaults = {},
@@ -58,6 +66,10 @@ export function createUnitCounterRuntimeDomain({
     unitCounterDragSession.moved = false;
   }
 
+  const patchEditor = (patch) => patchStrategicOverlayEditorState(state, "unitCounterEditor", patch);
+  const markUnitCountersDirty = () => setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
+  const markOperationalLinesDirty = () => setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
+
   function syncOperationalLineAttachedCounterIds() {
     const attachedByLineId = new Map();
     (state.unitCounters || []).forEach((counter) => {
@@ -68,10 +80,25 @@ export function createUnitCounterRuntimeDomain({
       }
       attachedByLineId.get(lineId).push(String(counter.id || "").trim());
     });
-    state.operationalLines = (state.operationalLines || []).map((line) => ({
-      ...line,
-      attachedCounterIds: attachedByLineId.get(String(line.id || "").trim()) || [],
-    }));
+    const entityPatches = (state.operationalLines || []).flatMap((line) => {
+      const entityId = String(line?.id || "").trim();
+      if (!entityId) return [];
+      const nextIds = attachedByLineId.get(entityId) || [];
+      const currentIds = Array.isArray(line?.attachedCounterIds) ? line.attachedCounterIds : [];
+      if (
+        currentIds.length === nextIds.length
+        && currentIds.every((value, index) => String(value || "").trim() === nextIds[index])
+      ) {
+        return [];
+      }
+      return [{ entityId, patch: { attachedCounterIds: nextIds } }];
+    });
+    patchStrategicOverlayEntityGroupState(
+      state,
+      "operationalLines",
+      entityPatches,
+      { markDirty: false },
+    );
   }
 
   function placeUnitCounterFromEvent(event) {
@@ -106,7 +133,7 @@ export function createUnitCounterRuntimeDomain({
       || (String(state.unitCounterEditor.renderer || "").toLowerCase() === "milstd" ? defaultUnitCounterMilstdSidc : "")
     ).trim().toUpperCase();
     const normalizedCombatState = getNormalizedUnitCounterCombatState(state.unitCounterEditor);
-    state.unitCounters.push({
+    const nextCounters = [...state.unitCounters, {
       id,
       renderer: String(state.unitCounterEditor.renderer || preset.defaultRenderer || state.annotationView?.unitRendererDefault || defaultUnitCounterRenderer),
       sidc: nextToken,
@@ -139,14 +166,17 @@ export function createUnitCounterRuntimeDomain({
         slotIndex: null,
       },
       attachment,
+    }];
+    commitStrategicOverlayCollectionsState(state, { unitCounters: nextCounters });
+    patchEditor({
+      counter: state.unitCounterEditor.counter + 1,
+      selectedId: id,
+      returnSelectionId: null,
+      active: false,
     });
-    state.unitCounterEditor.counter += 1;
-    state.unitCounterEditor.selectedId = id;
-    state.unitCounterEditor.returnSelectionId = null;
-    state.unitCounterEditor.active = false;
     syncOperationalLineAttachedCounterIds();
-    state.unitCountersDirty = true;
-    state.operationalLinesDirty = true;
+    markUnitCountersDirty();
+    markOperationalLinesDirty();
     commitHistoryEntry({
       kind: "place-unit-counter",
       before,
@@ -190,39 +220,41 @@ export function createUnitCounterRuntimeDomain({
       statsPresetId,
       statsSource,
     });
-    state.unitCounterEditor.active = true;
-    state.unitCounterEditor.renderer = String(renderer || preset.defaultRenderer || defaultUnitCounterRenderer);
-    state.unitCounterEditor.label = String(label || "");
-    state.unitCounterEditor.sidc = String(sidc || symbolCode || preset.baseSidc || "").trim().toUpperCase();
-    state.unitCounterEditor.symbolCode = String(symbolCode || sidc || preset.baseSidc || "").trim().toUpperCase();
-    state.unitCounterEditor.nationTag = canonicalCountryCode(nationTag || "");
-    state.unitCounterEditor.nationSource = normalizeUnitCounterNationSource(nationSource, "display");
-    state.unitCounterEditor.presetId = preset.id;
-    state.unitCounterEditor.iconId = String(iconId || preset.iconId || "").trim().toLowerCase();
-    state.unitCounterEditor.unitType = String(unitType || preset.unitType || "").trim().toUpperCase();
-    state.unitCounterEditor.echelon = String(echelon || preset.defaultEchelon || "").trim().toLowerCase();
-    state.unitCounterEditor.subLabel = String(subLabel || "");
-    state.unitCounterEditor.strengthText = String(strengthText || "");
-    state.unitCounterEditor.layoutAnchor = {
-      kind: attachment?.lineId ? "attachment" : "feature",
-      key: String(attachment?.lineId || ""),
-      slotIndex: null,
-    };
-    state.unitCounterEditor.attachment = attachment?.lineId
-      ? {
-        kind: String(attachment.kind || defaultCounterAttachmentKind).trim().toLowerCase() || defaultCounterAttachmentKind,
-        lineId: String(attachment.lineId || "").trim(),
-      }
-      : null;
-    state.unitCounterEditor.baseFillColor = normalizedCombatState.baseFillColor;
-    state.unitCounterEditor.organizationPct = normalizedCombatState.organizationPct;
-    state.unitCounterEditor.equipmentPct = normalizedCombatState.equipmentPct;
-    state.unitCounterEditor.statsPresetId = normalizedCombatState.statsPresetId;
-    state.unitCounterEditor.statsSource = normalizedCombatState.statsSource;
-    state.unitCounterEditor.size = normalizeUnitCounterSizeToken(size || "medium");
-    state.unitCounterEditor.selectedId = null;
-    state.unitCounterEditor.returnSelectionId = returnSelectionId;
-    state.unitCountersDirty = true;
+    patchEditor({
+      active: true,
+      renderer: String(renderer || preset.defaultRenderer || defaultUnitCounterRenderer),
+      label: String(label || ""),
+      sidc: String(sidc || symbolCode || preset.baseSidc || "").trim().toUpperCase(),
+      symbolCode: String(symbolCode || sidc || preset.baseSidc || "").trim().toUpperCase(),
+      nationTag: canonicalCountryCode(nationTag || ""),
+      nationSource: normalizeUnitCounterNationSource(nationSource, "display"),
+      presetId: preset.id,
+      iconId: String(iconId || preset.iconId || "").trim().toLowerCase(),
+      unitType: String(unitType || preset.unitType || "").trim().toUpperCase(),
+      echelon: String(echelon || preset.defaultEchelon || "").trim().toLowerCase(),
+      subLabel: String(subLabel || ""),
+      strengthText: String(strengthText || ""),
+      layoutAnchor: {
+        kind: attachment?.lineId ? "attachment" : "feature",
+        key: String(attachment?.lineId || ""),
+        slotIndex: null,
+      },
+      attachment: attachment?.lineId
+        ? {
+          kind: String(attachment.kind || defaultCounterAttachmentKind).trim().toLowerCase() || defaultCounterAttachmentKind,
+          lineId: String(attachment.lineId || "").trim(),
+        }
+        : null,
+      baseFillColor: normalizedCombatState.baseFillColor,
+      organizationPct: normalizedCombatState.organizationPct,
+      equipmentPct: normalizedCombatState.equipmentPct,
+      statsPresetId: normalizedCombatState.statsPresetId,
+      statsSource: normalizedCombatState.statsSource,
+      size: normalizeUnitCounterSizeToken(size || "medium"),
+      selectedId: null,
+      returnSelectionId,
+    });
+    markUnitCountersDirty();
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -231,12 +263,12 @@ export function createUnitCounterRuntimeDomain({
     ensureUnitCounterEditorState();
     const returnSelectionId = String(state.unitCounterEditor.returnSelectionId || "").trim();
     if (returnSelectionId && (state.unitCounters || []).some((entry) => String(entry?.id || "") === returnSelectionId)) {
-      state.unitCounterEditor.returnSelectionId = null;
+      patchEditor({ returnSelectionId: null });
       selectUnitCounterById(returnSelectionId);
       return;
     }
     resetUnitCounterEditorState({ preserveSelection: false, preserveCounter: true });
-    state.unitCountersDirty = true;
+    markUnitCountersDirty();
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -246,14 +278,12 @@ export function createUnitCounterRuntimeDomain({
     const selectedId = String(id || "").trim();
     const counter = (state.unitCounters || []).find((entry) => String(entry?.id || "") === selectedId) || null;
     if (counter) {
-      state.unitCounterEditor.active = false;
-      state.unitCounterEditor.selectedId = selectedId || null;
-      state.unitCounterEditor.returnSelectionId = null;
+      patchEditor({ active: false, selectedId: selectedId || null, returnSelectionId: null });
       assignUnitCounterEditorFromCounter(counter);
     } else {
       resetUnitCounterEditorState({ preserveSelection: false, preserveCounter: true });
     }
-    state.unitCountersDirty = true;
+    markUnitCountersDirty();
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -265,51 +295,54 @@ export function createUnitCounterRuntimeDomain({
     const counter = (state.unitCounters || []).find((entry) => String(entry?.id || "") === selectedId);
     if (!counter) return false;
     const before = captureHistoryState({ strategicOverlay: true });
-    if (partial.renderer) counter.renderer = String(partial.renderer || defaultUnitCounterRenderer);
-    if (partial.label !== undefined) counter.label = String(partial.label || "");
+    const entityPatch = {};
+    if (partial.renderer) entityPatch.renderer = String(partial.renderer || defaultUnitCounterRenderer);
+    if (partial.label !== undefined) entityPatch.label = String(partial.label || "");
     if (partial.sidc !== undefined || partial.symbolCode !== undefined) {
       const nextToken = String(partial.sidc || partial.symbolCode || "").trim().toUpperCase();
-      counter.sidc = nextToken;
-      counter.symbolCode = nextToken;
+      entityPatch.sidc = nextToken;
+      entityPatch.symbolCode = nextToken;
     }
-    if (partial.nationTag !== undefined) counter.nationTag = canonicalCountryCode(partial.nationTag || "");
+    if (partial.nationTag !== undefined) entityPatch.nationTag = canonicalCountryCode(partial.nationTag || "");
     if (partial.nationSource !== undefined) {
-      counter.nationSource = normalizeUnitCounterNationSource(partial.nationSource, "display");
+      entityPatch.nationSource = normalizeUnitCounterNationSource(partial.nationSource, "display");
     }
-    if (partial.presetId !== undefined) counter.presetId = String(partial.presetId || defaultUnitCounterPresetId).trim().toLowerCase() || defaultUnitCounterPresetId;
-    if (partial.iconId !== undefined) counter.iconId = String(partial.iconId || "").trim().toLowerCase();
-    if (partial.unitType !== undefined) counter.unitType = String(partial.unitType || "").trim().toUpperCase();
-    if (partial.echelon !== undefined) counter.echelon = String(partial.echelon || "").trim().toLowerCase();
-    if (partial.subLabel !== undefined) counter.subLabel = String(partial.subLabel || "");
-    if (partial.strengthText !== undefined) counter.strengthText = String(partial.strengthText || "");
-    if (partial.baseFillColor !== undefined) counter.baseFillColor = normalizeUnitCounterBaseFillColor(partial.baseFillColor);
-    if (partial.organizationPct !== undefined) counter.organizationPct = normalizeUnitCounterStatPercent(partial.organizationPct, defaultUnitCounterOrganizationPct);
-    if (partial.equipmentPct !== undefined) counter.equipmentPct = normalizeUnitCounterStatPercent(partial.equipmentPct, defaultUnitCounterEquipmentPct);
-    if (partial.statsPresetId !== undefined) counter.statsPresetId = normalizeUnitCounterStatsPresetId(partial.statsPresetId || "regular");
+    if (partial.presetId !== undefined) entityPatch.presetId = String(partial.presetId || defaultUnitCounterPresetId).trim().toLowerCase() || defaultUnitCounterPresetId;
+    if (partial.iconId !== undefined) entityPatch.iconId = String(partial.iconId || "").trim().toLowerCase();
+    if (partial.unitType !== undefined) entityPatch.unitType = String(partial.unitType || "").trim().toUpperCase();
+    if (partial.echelon !== undefined) entityPatch.echelon = String(partial.echelon || "").trim().toLowerCase();
+    if (partial.subLabel !== undefined) entityPatch.subLabel = String(partial.subLabel || "");
+    if (partial.strengthText !== undefined) entityPatch.strengthText = String(partial.strengthText || "");
+    if (partial.baseFillColor !== undefined) entityPatch.baseFillColor = normalizeUnitCounterBaseFillColor(partial.baseFillColor);
+    if (partial.organizationPct !== undefined) entityPatch.organizationPct = normalizeUnitCounterStatPercent(partial.organizationPct, defaultUnitCounterOrganizationPct);
+    if (partial.equipmentPct !== undefined) entityPatch.equipmentPct = normalizeUnitCounterStatPercent(partial.equipmentPct, defaultUnitCounterEquipmentPct);
+    if (partial.statsPresetId !== undefined) entityPatch.statsPresetId = normalizeUnitCounterStatsPresetId(partial.statsPresetId || "regular");
     if (partial.statsSource !== undefined) {
-      counter.statsSource = ["preset", "random", "manual"].includes(String(partial.statsSource || "").trim().toLowerCase())
+      entityPatch.statsSource = ["preset", "random", "manual"].includes(String(partial.statsSource || "").trim().toLowerCase())
         ? String(partial.statsSource || "").trim().toLowerCase()
         : "preset";
     }
-    if (partial.size) counter.size = normalizeUnitCounterSizeToken(partial.size || "medium");
+    if (partial.size) entityPatch.size = normalizeUnitCounterSizeToken(partial.size || "medium");
     if (partial.attachment !== undefined) {
-      counter.attachment = partial.attachment?.lineId
+      const nextAttachment = partial.attachment?.lineId
         ? {
           kind: String(partial.attachment.kind || defaultCounterAttachmentKind).trim().toLowerCase() || defaultCounterAttachmentKind,
           lineId: String(partial.attachment.lineId || "").trim(),
         }
         : null;
-      counter.layoutAnchor = {
+      entityPatch.attachment = nextAttachment;
+      entityPatch.layoutAnchor = {
         ...(counter.layoutAnchor || {}),
-        kind: counter.attachment ? "attachment" : "feature",
-        key: counter.attachment?.lineId || String(counter.anchor?.featureId || ""),
+        kind: nextAttachment ? "attachment" : "feature",
+        key: nextAttachment?.lineId || String(counter.anchor?.featureId || ""),
         slotIndex: null,
       };
     }
+    patchStrategicOverlayEntityState(state, "unitCounters", selectedId, entityPatch);
     syncOperationalLineAttachedCounterIds();
     selectUnitCounterById(selectedId);
-    state.unitCountersDirty = true;
-    state.operationalLinesDirty = true;
+    markUnitCountersDirty();
+    markOperationalLinesDirty();
     commitHistoryEntry({
       kind: "update-unit-counter",
       before,
@@ -328,11 +361,11 @@ export function createUnitCounterRuntimeDomain({
     const before = captureHistoryState({ strategicOverlay: true });
     const nextCounters = (state.unitCounters || []).filter((entry) => String(entry?.id || "") !== selectedId);
     if (nextCounters.length === (state.unitCounters || []).length) return false;
-    state.unitCounters = nextCounters;
+    commitStrategicOverlayCollectionsState(state, { unitCounters: nextCounters });
     resetUnitCounterEditorState({ preserveSelection: false, preserveCounter: true });
     syncOperationalLineAttachedCounterIds();
-    state.unitCountersDirty = true;
-    state.operationalLinesDirty = true;
+    markUnitCountersDirty();
+    markOperationalLinesDirty();
     commitHistoryEntry({
       kind: "delete-unit-counter",
       before,
@@ -351,7 +384,7 @@ export function createUnitCounterRuntimeDomain({
     unitCounterDragSession.before = captureHistoryState({ strategicOverlay: true });
     unitCounterDragSession.counterId = counterId;
     unitCounterDragSession.moved = false;
-    state.unitCounterEditor.selectedId = counterId;
+    patchEditor({ selectedId: counterId });
     updateStrategicOverlayUi();
     return true;
   }
@@ -382,7 +415,7 @@ export function createUnitCounterRuntimeDomain({
       lon,
       lat,
     };
-    state.unitCountersDirty = true;
+    markUnitCountersDirty();
     return true;
   }
 
@@ -403,8 +436,8 @@ export function createUnitCounterRuntimeDomain({
         slotIndex: null,
       };
       syncOperationalLineAttachedCounterIds();
-      state.operationalLinesDirty = true;
-      state.unitCountersDirty = true;
+      markOperationalLinesDirty();
+      markUnitCountersDirty();
       commitHistoryEntry({
         kind: "move-unit-counter",
         before,
@@ -421,9 +454,9 @@ export function createUnitCounterRuntimeDomain({
   function selectUnitCounterFromRender(counter = null) {
     if (!counter || typeof counter !== "object") return false;
     ensureUnitCounterEditorState();
-    state.unitCounterEditor.selectedId = String(counter.id || "");
+    patchEditor({ selectedId: String(counter.id || "") });
     assignUnitCounterEditorFromCounter(counter);
-    state.unitCountersDirty = true;
+    markUnitCountersDirty();
     updateStrategicOverlayUi();
     renderNow();
     return true;

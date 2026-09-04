@@ -449,18 +449,6 @@ function createSpecialZonePatternPreviewStyle(style = {}) {
   };
 }
 
-function setSpecialZoneMembershipBrushModeState(target, mode = "add") {
-  if (!target || typeof target !== "object") return "";
-  target.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(mode);
-  return target.specialZoneMembershipBrushMode;
-}
-
-function setSpecialZonePresetCategoryState(target, category = "all") {
-  if (!target || typeof target !== "object") return "";
-  target.specialZonePresetCategory = String(category || "all").trim() || "all";
-  return target.specialZonePresetCategory;
-}
-
 function registerSpecialZonesWorkbenchRuntimeHooks(target, hooks = {}) {
   if (!target || typeof target !== "object") return;
   if (typeof hooks.renderWorkbench === "function") {
@@ -647,7 +635,5 @@ export {
   resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
   setRuntimeSpecialZoneLayersState,
-  setSpecialZoneMembershipBrushModeState,
-  setSpecialZonePresetCategoryState,
   updateSpecialZoneLayerMembership,
 };
