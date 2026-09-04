@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  applyAppearancePresetToRuntimeState,
   createAppearancePresetFromRuntimeState,
   createDefaultAppearancePresetsState,
   createIntensityFieldsState,
@@ -11,6 +10,7 @@ import {
   updateIntensityFieldChannel,
   upsertAppearancePreset,
 } from "../js/core/state.js";
+import { applyAppearancePresetState } from "../js/core/state/actions/appearance_preset_actions.js";
 import {
   createDefaultStyleConfig,
 } from "../js/core/state/ui_state.js";
@@ -91,7 +91,7 @@ test("history undo and redo restore applied appearance style, visibility, and in
     now: Date.UTC(2026, 5, 12),
   });
   const before = captureHistoryState({ appearanceState: true });
-  applyAppearancePresetToRuntimeState(state, preset);
+  applyAppearancePresetState(state, preset);
   const after = captureHistoryState({ appearanceState: true });
 
   assert.equal(pushHistoryEntry({ before, after, meta: { kind: "appearance-preset-apply" } }), true);

@@ -3,6 +3,12 @@ import {
   URBAN_MANUAL_DEFAULT_COLOR,
   normalizeUrbanStyleConfig,
 } from "../../core/state.js";
+import {
+  patchAppearanceStyleGroupState,
+  setAppearanceStyleGroupState,
+} from "../../core/state/actions/appearance_actions.js";
+import { setSelectedColorState } from "../../core/state/actions/appearance_selection_actions.js";
+import { setAppearanceVisibilityState } from "../../core/state/actions/appearance_visibility_actions.js";
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { createTransportAppearanceController } from "./transport_appearance_controller.js";
 import { createAppearanceParentBorderOwner } from "./appearance_parent_border_owner.js";
@@ -470,12 +476,16 @@ export function createAppearanceControlsController({
   };
 
   const syncUrbanConfig = () => {
-    runtimeState.styleConfig.urban = normalizeUrbanStyleConfig(runtimeState.styleConfig.urban);
-    if (runtimeState.styleConfig.urban.mode === "manual") {
-      runtimeState.styleConfig.urban.color = normalizeOceanFillColor(runtimeState.styleConfig.urban.color || URBAN_MANUAL_DEFAULT_COLOR);
-    }
-    runtimeState.styleConfig.urban.adaptiveTintColor = normalizeOceanFillColor(runtimeState.styleConfig.urban.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR);
-    return runtimeState.styleConfig.urban;
+    const normalized = normalizeUrbanStyleConfig(runtimeState.styleConfig.urban);
+    return setAppearanceStyleGroupState(runtimeState, "urban", {
+      ...normalized,
+      color: normalized.mode === "manual"
+        ? normalizeOceanFillColor(normalized.color || URBAN_MANUAL_DEFAULT_COLOR)
+        : normalized.color,
+      adaptiveTintColor: normalizeOceanFillColor(
+        normalized.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR,
+      ),
+    });
   };
 
   const getUrbanCapability = () => {
@@ -575,7 +585,7 @@ export function createAppearanceControlsController({
       btn.title = normalized;
       btn.setAttribute("aria-label", `${t("Recent", "ui")}: ${normalized}`);
       btn.addEventListener("click", () => {
-        runtimeState.selectedColor = normalized;
+        setSelectedColorState(runtimeState, normalized);
         updateSwatchUI();
       });
       recentContainer.appendChild(btn);
@@ -663,7 +673,7 @@ export function createAppearanceControlsController({
     if (toggleUrban && toggleUrban.dataset.bound !== "true") {
       toggleUrban.checked = !!runtimeState.showUrban;
       toggleUrban.addEventListener("change", (event) => {
-        runtimeState.showUrban = event.target.checked;
+        setAppearanceVisibilityState(runtimeState, "showUrban", event.target.checked);
         if (runtimeState.showUrban && typeof runtimeState.ensureContextLayerDataFn === "function") {
           void runtimeState.ensureContextLayerDataFn("urban", { reason: "toolbar-toggle", renderNow: true });
         }
@@ -674,10 +684,12 @@ export function createAppearanceControlsController({
 
     if (urbanMode && urbanMode.dataset.bound !== "true") {
       urbanMode.addEventListener("change", (event) => {
-        const cfg = syncUrbanConfig();
+        syncUrbanConfig();
         const requestedMode = String(event.target.value || "adaptive");
         const capability = getUrbanCapability();
-        cfg.mode = requestedMode === "adaptive" && !capability.adaptiveAvailable ? "manual" : requestedMode;
+        patchAppearanceStyleGroupState(runtimeState, "urban", {
+          mode: requestedMode === "adaptive" && !capability.adaptiveAvailable ? "manual" : requestedMode,
+        });
         syncUrbanControls();
         scheduleLayerRenderDirty("urban-mode");
       });
@@ -685,8 +697,10 @@ export function createAppearanceControlsController({
     }
     if (urbanColor && urbanColor.dataset.bound !== "true") {
       urbanColor.addEventListener("input", (event) => {
-        const cfg = syncUrbanConfig();
-        cfg.color = normalizeOceanFillColor(event.target.value);
+        syncUrbanConfig();
+        patchAppearanceStyleGroupState(runtimeState, "urban", {
+          color: normalizeOceanFillColor(event.target.value),
+        });
         scheduleLayerRenderDirty("urban-color");
       });
       urbanColor.dataset.bound = "true";
@@ -695,16 +709,19 @@ export function createAppearanceControlsController({
       urbanOpacity.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
         const value = Number(event.target.value);
-        cfg.fillOpacity = clamp(Number.isFinite(value) ? value / 100 : cfg.fillOpacity, 0, 1);
-        if (urbanOpacityValue) urbanOpacityValue.textContent = `${Math.round(cfg.fillOpacity * 100)}%`;
+        const fillOpacity = clamp(Number.isFinite(value) ? value / 100 : cfg.fillOpacity, 0, 1);
+        patchAppearanceStyleGroupState(runtimeState, "urban", { fillOpacity });
+        if (urbanOpacityValue) urbanOpacityValue.textContent = `${Math.round(fillOpacity * 100)}%`;
         scheduleLayerRenderDirty("urban-opacity");
       });
       urbanOpacity.dataset.bound = "true";
     }
     if (urbanBlendMode && urbanBlendMode.dataset.bound !== "true") {
       urbanBlendMode.addEventListener("change", (event) => {
-        const cfg = syncUrbanConfig();
-        cfg.blendMode = String(event.target.value || "multiply");
+        syncUrbanConfig();
+        patchAppearanceStyleGroupState(runtimeState, "urban", {
+          blendMode: String(event.target.value || "multiply"),
+        });
         scheduleLayerRenderDirty("urban-blend");
       });
       urbanBlendMode.dataset.bound = "true";
@@ -713,8 +730,9 @@ export function createAppearanceControlsController({
       urbanAdaptiveStrength.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
         const value = Number(event.target.value);
-        cfg.adaptiveStrength = clamp(Number.isFinite(value) ? value / 100 : cfg.adaptiveStrength, 0, 1);
-        if (urbanAdaptiveStrengthValue) urbanAdaptiveStrengthValue.textContent = `${Math.round(cfg.adaptiveStrength * 100)}%`;
+        const adaptiveStrength = clamp(Number.isFinite(value) ? value / 100 : cfg.adaptiveStrength, 0, 1);
+        patchAppearanceStyleGroupState(runtimeState, "urban", { adaptiveStrength });
+        if (urbanAdaptiveStrengthValue) urbanAdaptiveStrengthValue.textContent = `${Math.round(adaptiveStrength * 100)}%`;
         scheduleLayerRenderDirty("urban-adaptive-strength");
       });
       urbanAdaptiveStrength.dataset.bound = "true";
@@ -723,8 +741,9 @@ export function createAppearanceControlsController({
       urbanStrokeOpacity.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
         const value = Number(event.target.value);
-        cfg.strokeOpacity = clamp(Number.isFinite(value) ? value / 100 : cfg.strokeOpacity, 0, 1);
-        if (urbanStrokeOpacityValue) urbanStrokeOpacityValue.textContent = `${Math.round(cfg.strokeOpacity * 100)}%`;
+        const strokeOpacity = clamp(Number.isFinite(value) ? value / 100 : cfg.strokeOpacity, 0, 1);
+        patchAppearanceStyleGroupState(runtimeState, "urban", { strokeOpacity });
+        if (urbanStrokeOpacityValue) urbanStrokeOpacityValue.textContent = `${Math.round(strokeOpacity * 100)}%`;
         scheduleLayerRenderDirty("urban-stroke-opacity");
       });
       urbanStrokeOpacity.dataset.bound = "true";
@@ -733,16 +752,19 @@ export function createAppearanceControlsController({
       urbanToneBias.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
         const value = Number(event.target.value);
-        cfg.toneBias = clamp(Number.isFinite(value) ? value / 100 : cfg.toneBias, -0.3, 0.3);
-        if (urbanToneBiasValue) urbanToneBiasValue.textContent = formatUrbanToneBias(cfg.toneBias);
+        const toneBias = clamp(Number.isFinite(value) ? value / 100 : cfg.toneBias, -0.3, 0.3);
+        patchAppearanceStyleGroupState(runtimeState, "urban", { toneBias });
+        if (urbanToneBiasValue) urbanToneBiasValue.textContent = formatUrbanToneBias(toneBias);
         scheduleLayerRenderDirty("urban-tone-bias");
       });
       urbanToneBias.dataset.bound = "true";
     }
     if (urbanAdaptiveTintEnabled && urbanAdaptiveTintEnabled.dataset.bound !== "true") {
       urbanAdaptiveTintEnabled.addEventListener("change", (event) => {
-        const cfg = syncUrbanConfig();
-        cfg.adaptiveTintEnabled = !!event.target.checked;
+        syncUrbanConfig();
+        patchAppearanceStyleGroupState(runtimeState, "urban", {
+          adaptiveTintEnabled: !!event.target.checked,
+        });
         syncUrbanControls();
         scheduleLayerRenderDirty("urban-adaptive-tint-enabled");
       });
@@ -751,7 +773,11 @@ export function createAppearanceControlsController({
     if (urbanAdaptiveTintColor && urbanAdaptiveTintColor.dataset.bound !== "true") {
       urbanAdaptiveTintColor.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
-        cfg.adaptiveTintColor = normalizeOceanFillColor(event.target.value || cfg.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR);
+        patchAppearanceStyleGroupState(runtimeState, "urban", {
+          adaptiveTintColor: normalizeOceanFillColor(
+            event.target.value || cfg.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR,
+          ),
+        });
         scheduleLayerRenderDirty("urban-adaptive-tint-color");
       });
       urbanAdaptiveTintColor.dataset.bound = "true";
@@ -760,18 +786,20 @@ export function createAppearanceControlsController({
       urbanAdaptiveTintStrength.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
         const value = Number(event.target.value);
-        cfg.adaptiveTintStrength = clamp(Number.isFinite(value) ? value / 100 : cfg.adaptiveTintStrength, 0, 0.5);
-        if (urbanAdaptiveTintStrengthValue) urbanAdaptiveTintStrengthValue.textContent = `${Math.round(cfg.adaptiveTintStrength * 100)}%`;
+        const adaptiveTintStrength = clamp(Number.isFinite(value) ? value / 100 : cfg.adaptiveTintStrength, 0, 0.5);
+        patchAppearanceStyleGroupState(runtimeState, "urban", { adaptiveTintStrength });
+        if (urbanAdaptiveTintStrengthValue) urbanAdaptiveTintStrengthValue.textContent = `${Math.round(adaptiveTintStrength * 100)}%`;
         scheduleLayerRenderDirty("urban-adaptive-tint-strength");
       });
       urbanAdaptiveTintStrength.dataset.bound = "true";
     }
     if (urbanMinArea && urbanMinArea.dataset.bound !== "true") {
       urbanMinArea.addEventListener("input", (event) => {
-        const cfg = syncUrbanConfig();
         const value = Number(event.target.value);
-        cfg.minAreaPx = clamp(Number.isFinite(value) ? value : 1, 1, 80);
-        if (urbanMinAreaValue) urbanMinAreaValue.textContent = `${Math.round(cfg.minAreaPx)}`;
+        syncUrbanConfig();
+        const minAreaPx = clamp(Number.isFinite(value) ? value : 1, 1, 80);
+        patchAppearanceStyleGroupState(runtimeState, "urban", { minAreaPx });
+        if (urbanMinAreaValue) urbanMinAreaValue.textContent = `${Math.round(minAreaPx)}`;
         scheduleLayerRenderDirty("urban-area");
       });
       urbanMinArea.dataset.bound = "true";

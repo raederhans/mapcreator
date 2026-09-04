@@ -4,11 +4,16 @@ import {
   serializeIntensityFieldsState,
 } from "./state/intensity_field_state.js";
 import {
-  applyAppearancePresetToRuntimeState,
   createAppearanceSnapshotFromRuntimeState,
   normalizeAppearancePresetsState,
   serializeAppearancePresetsState,
 } from "./state/appearance_preset_state.js";
+import { applyAppearanceStylePathPatchState } from "./state/actions/appearance_actions.js";
+import {
+  applyAppearancePresetState,
+  setAppearancePresetsState,
+} from "./state/actions/appearance_preset_actions.js";
+import { setIntensityFieldsState } from "./state/actions/intensity_field_actions.js";
 import { markDirty } from "./dirty_state.js";
 import { markLegacyColorStateDirty, rebuildOwnerIndex } from "./sovereignty_manager.js";
 import { flushRenderBoundary } from "./render_boundary.js";
@@ -158,25 +163,7 @@ function applyEntries(target, patch) {
 }
 
 function applyStyleSnapshot(stylePatch) {
-  if (!stylePatch || typeof stylePatch !== "object") return;
-  Object.entries(stylePatch).forEach(([path, value]) => {
-    const segments = String(path || "").split(".").filter(Boolean);
-    if (!segments.length) return;
-    let cursor = runtimeState.styleConfig;
-    for (let index = 0; index < segments.length - 1; index += 1) {
-      const segment = segments[index];
-      if (!cursor[segment] || typeof cursor[segment] !== "object") {
-        cursor[segment] = {};
-      }
-      cursor = cursor[segment];
-    }
-    const last = segments[segments.length - 1];
-    if (value === null || value === undefined) {
-      delete cursor[last];
-    } else {
-      cursor[last] = value;
-    }
-  });
+  return applyAppearanceStylePathPatchState(runtimeState, stylePatch);
 }
 
 function hasHistoryDelta(before, after) {
@@ -301,15 +288,18 @@ function applyHistorySnapshot(snapshot, direction, entry) {
         current.channels[channelId] = channel;
       }
     });
-    runtimeState.intensityFields = current;
+    setIntensityFieldsState(runtimeState, current);
     markDirty("intensity-field-history");
   }
   if (snapshot.appearancePresets && typeof snapshot.appearancePresets === "object") {
-    runtimeState.appearancePresets = normalizeAppearancePresetsState(snapshot.appearancePresets);
+    setAppearancePresetsState(
+      runtimeState,
+      normalizeAppearancePresetsState(snapshot.appearancePresets),
+    );
     markDirty("appearance-presets-history");
   }
   if (snapshot.appearanceState && typeof snapshot.appearanceState === "object") {
-    applyAppearancePresetToRuntimeState(runtimeState, snapshot.appearanceState);
+    applyAppearancePresetState(runtimeState, snapshot.appearanceState);
     markDirty("appearance-state-history");
   }
   if (hasAnnotationView) {

@@ -1,13 +1,16 @@
 import {
-  applyAppearancePresetToRuntimeState,
   buildAppearancePresetExportPayload,
   createAppearancePresetFromRuntimeState,
-  deleteAppearancePreset,
   getSelectedAppearancePreset,
-  mergeAppearancePresetImportPayload,
-  normalizeAppearancePresetsState,
-  upsertAppearancePreset,
 } from "../../core/state.js";
+import {
+  applyAppearancePresetState,
+  deleteAppearancePresetState,
+  mergeAppearancePresetImportPayloadState,
+  normalizeAppearancePresetsIntoState,
+  setAppearancePresetsState,
+  upsertAppearancePresetState,
+} from "../../core/state/actions/appearance_preset_actions.js";
 
 function getPresetCountLabel(count, t) {
   const label = count === 1 ? "preset" : "presets";
@@ -73,8 +76,7 @@ export function createAppearancePresetsOwner({
   now = () => Date.now(),
 } = {}) {
   const ensurePresetState = () => {
-    runtimeState.appearancePresets = normalizeAppearancePresetsState(runtimeState.appearancePresets);
-    return runtimeState.appearancePresets;
+    return normalizeAppearancePresetsIntoState(runtimeState);
   };
 
   const getSelectedPreset = () => getSelectedAppearancePreset(ensurePresetState());
@@ -138,7 +140,7 @@ export function createAppearancePresetsOwner({
     if (shouldUpdateSelected) {
       preset.createdAt = selectedPreset.createdAt;
     }
-    runtimeState.appearancePresets = upsertAppearancePreset(currentState, preset);
+    upsertAppearancePresetState(runtimeState, preset);
     if (nodes.nameInput) nodes.nameInput.value = "";
     const after = captureHistoryState({ appearancePresets: true });
     pushAppearancePresetHistory(before, after, "appearance-preset-save");
@@ -153,7 +155,7 @@ export function createAppearancePresetsOwner({
     const normalizedId = String(presetId || "").trim();
     if (nextState.byId[normalizedId]) {
       nextState.selectedPresetId = normalizedId;
-      runtimeState.appearancePresets = nextState;
+      setAppearancePresetsState(runtimeState, nextState);
     }
     const after = captureHistoryState({ appearancePresets: true });
     pushAppearancePresetHistory(before, after, "appearance-preset-select");
@@ -166,7 +168,7 @@ export function createAppearancePresetsOwner({
     if (!preset) return false;
     const before = captureHistoryState({ appearanceState: true });
     // apply 影响真实渲染态，历史快照只包 appearanceState；预设列表本身保持不变。
-    applyAppearancePresetToRuntimeState(runtimeState, preset);
+    applyAppearancePresetState(runtimeState, preset);
     const after = captureHistoryState({ appearanceState: true });
     pushAppearancePresetHistory(before, after, "appearance-preset-apply");
     afterApply(preset);
@@ -180,7 +182,7 @@ export function createAppearancePresetsOwner({
     const preset = getSelectedPreset();
     if (!preset) return false;
     const before = captureHistoryState({ appearancePresets: true });
-    runtimeState.appearancePresets = deleteAppearancePreset(runtimeState.appearancePresets, preset.id);
+    deleteAppearancePresetState(runtimeState, preset.id);
     const after = captureHistoryState({ appearancePresets: true });
     pushAppearancePresetHistory(before, after, "appearance-preset-delete");
     renderAppearancePresetsUi();
@@ -200,7 +202,7 @@ export function createAppearancePresetsOwner({
 
   const importAppearancePresetPayload = (payload) => {
     const before = captureHistoryState({ appearancePresets: true });
-    runtimeState.appearancePresets = mergeAppearancePresetImportPayload(runtimeState.appearancePresets, payload);
+    mergeAppearancePresetImportPayloadState(runtimeState, payload);
     const after = captureHistoryState({ appearancePresets: true });
     pushAppearancePresetHistory(before, after, "appearance-preset-import");
     renderAppearancePresetsUi();

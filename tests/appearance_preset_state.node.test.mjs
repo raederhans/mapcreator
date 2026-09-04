@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  applyAppearancePresetToRuntimeState,
   buildAppearancePresetExportPayload,
   createAppearancePresetFromRuntimeState,
   createDefaultAppearancePresetsState,
@@ -13,6 +12,7 @@ import {
   upsertAppearancePreset,
   updateIntensityFieldChannel,
 } from "../js/core/state.js";
+import { applyAppearancePresetState } from "../js/core/state/actions/appearance_preset_actions.js";
 
 function createRuntimeAppearanceState({
   pointLon = 139.7,
@@ -96,7 +96,7 @@ test("appearance preset applies a full appearance snapshot to runtime state", ()
     intensityFields: createIntensityFieldsState(),
   };
 
-  applyAppearancePresetToRuntimeState(target, preset);
+  applyAppearancePresetState(target, preset);
 
   assert.equal(target.styleConfig.ocean.fillColor, "#123456");
   assert.equal(target.styleConfig.urban.color, "#445566");
@@ -140,7 +140,7 @@ test("appearance preset bumps stale intensity revisions when channel content cha
   };
 
   presetFields.channels.oceanDepth.revision = targetRevision - 1;
-  applyAppearancePresetToRuntimeState(target, preset);
+  applyAppearancePresetState(target, preset);
 
   assert.equal(target.intensityFields.channels.oceanDepth.revision, targetRevision + 1);
   assert.equal(sampleIntensityField(target.intensityFields, "oceanDepth", 10, 46), 1);
@@ -152,7 +152,7 @@ test("appearance preset bumps stale intensity revisions when channel content cha
   };
   presetFields.channels.oceanDepth.revision = targetRevision;
 
-  applyAppearancePresetToRuntimeState(matchingRevisionTarget, preset);
+  applyAppearancePresetState(matchingRevisionTarget, preset);
 
   assert.equal(matchingRevisionTarget.intensityFields.channels.oceanDepth.revision, targetRevision + 1);
 });
@@ -181,9 +181,9 @@ test("appearance preset apply bumps intensity revisions beyond the current runti
     intensityFields: createIntensityFieldsState(),
   };
 
-  applyAppearancePresetToRuntimeState(target, first);
+  applyAppearancePresetState(target, first);
   const firstAppliedRevision = target.intensityFields.channels.urbanGlow.revision;
-  applyAppearancePresetToRuntimeState(target, second);
+  applyAppearancePresetState(target, second);
 
   assert.equal(target.intensityFields.channels.urbanGlow.revision, firstAppliedRevision + 1);
   assert.ok(sampleIntensityField(target.intensityFields, "urbanGlow", -73.9, 40.7) < 0.8);
