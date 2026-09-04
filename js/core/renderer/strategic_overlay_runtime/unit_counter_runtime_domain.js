@@ -66,10 +66,6 @@ export function createUnitCounterRuntimeDomain({
     unitCounterDragSession.moved = false;
   }
 
-  const patchEditor = (patch) => patchStrategicOverlayEditorState(state, "unitCounterEditor", patch);
-  const markUnitCountersDirty = () => setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
-  const markOperationalLinesDirty = () => setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
-
   function syncOperationalLineAttachedCounterIds() {
     const attachedByLineId = new Map();
     (state.unitCounters || []).forEach((counter) => {
@@ -168,15 +164,15 @@ export function createUnitCounterRuntimeDomain({
       attachment,
     }];
     commitStrategicOverlayCollectionsState(state, { unitCounters: nextCounters });
-    patchEditor({
+    patchStrategicOverlayEditorState(state, "unitCounterEditor", {
       counter: state.unitCounterEditor.counter + 1,
       selectedId: id,
       returnSelectionId: null,
       active: false,
     });
     syncOperationalLineAttachedCounterIds();
-    markUnitCountersDirty();
-    markOperationalLinesDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     commitHistoryEntry({
       kind: "place-unit-counter",
       before,
@@ -220,7 +216,7 @@ export function createUnitCounterRuntimeDomain({
       statsPresetId,
       statsSource,
     });
-    patchEditor({
+    patchStrategicOverlayEditorState(state, "unitCounterEditor", {
       active: true,
       renderer: String(renderer || preset.defaultRenderer || defaultUnitCounterRenderer),
       label: String(label || ""),
@@ -254,7 +250,7 @@ export function createUnitCounterRuntimeDomain({
       selectedId: null,
       returnSelectionId,
     });
-    markUnitCountersDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -263,12 +259,12 @@ export function createUnitCounterRuntimeDomain({
     ensureUnitCounterEditorState();
     const returnSelectionId = String(state.unitCounterEditor.returnSelectionId || "").trim();
     if (returnSelectionId && (state.unitCounters || []).some((entry) => String(entry?.id || "") === returnSelectionId)) {
-      patchEditor({ returnSelectionId: null });
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { returnSelectionId: null });
       selectUnitCounterById(returnSelectionId);
       return;
     }
     resetUnitCounterEditorState({ preserveSelection: false, preserveCounter: true });
-    markUnitCountersDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -278,12 +274,12 @@ export function createUnitCounterRuntimeDomain({
     const selectedId = String(id || "").trim();
     const counter = (state.unitCounters || []).find((entry) => String(entry?.id || "") === selectedId) || null;
     if (counter) {
-      patchEditor({ active: false, selectedId: selectedId || null, returnSelectionId: null });
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { active: false, selectedId: selectedId || null, returnSelectionId: null });
       assignUnitCounterEditorFromCounter(counter);
     } else {
       resetUnitCounterEditorState({ preserveSelection: false, preserveCounter: true });
     }
-    markUnitCountersDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -341,8 +337,8 @@ export function createUnitCounterRuntimeDomain({
     patchStrategicOverlayEntityState(state, "unitCounters", selectedId, entityPatch);
     syncOperationalLineAttachedCounterIds();
     selectUnitCounterById(selectedId);
-    markUnitCountersDirty();
-    markOperationalLinesDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     commitHistoryEntry({
       kind: "update-unit-counter",
       before,
@@ -364,8 +360,8 @@ export function createUnitCounterRuntimeDomain({
     commitStrategicOverlayCollectionsState(state, { unitCounters: nextCounters });
     resetUnitCounterEditorState({ preserveSelection: false, preserveCounter: true });
     syncOperationalLineAttachedCounterIds();
-    markUnitCountersDirty();
-    markOperationalLinesDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     commitHistoryEntry({
       kind: "delete-unit-counter",
       before,
@@ -384,7 +380,7 @@ export function createUnitCounterRuntimeDomain({
     unitCounterDragSession.before = captureHistoryState({ strategicOverlay: true });
     unitCounterDragSession.counterId = counterId;
     unitCounterDragSession.moved = false;
-    patchEditor({ selectedId: counterId });
+    patchStrategicOverlayEditorState(state, "unitCounterEditor", { selectedId: counterId });
     updateStrategicOverlayUi();
     return true;
   }
@@ -415,7 +411,7 @@ export function createUnitCounterRuntimeDomain({
       lon,
       lat,
     };
-    markUnitCountersDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
     return true;
   }
 
@@ -436,8 +432,8 @@ export function createUnitCounterRuntimeDomain({
         slotIndex: null,
       };
       syncOperationalLineAttachedCounterIds();
-      markOperationalLinesDirty();
-      markUnitCountersDirty();
+      setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
+      setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
       commitHistoryEntry({
         kind: "move-unit-counter",
         before,
@@ -454,9 +450,9 @@ export function createUnitCounterRuntimeDomain({
   function selectUnitCounterFromRender(counter = null) {
     if (!counter || typeof counter !== "object") return false;
     ensureUnitCounterEditorState();
-    patchEditor({ selectedId: String(counter.id || "") });
+    patchStrategicOverlayEditorState(state, "unitCounterEditor", { selectedId: String(counter.id || "") });
     assignUnitCounterEditorFromCounter(counter);
-    markUnitCountersDirty();
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
     updateStrategicOverlayUi();
     renderNow();
     return true;

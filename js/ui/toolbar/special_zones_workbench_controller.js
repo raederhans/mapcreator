@@ -188,10 +188,6 @@ function createSpecialZonesWorkbenchController({
     return new Set();
   };
 
-  const setPresetCategoryOpen = (category, isOpen) => {
-    setSpecialZonePresetCategoryOpenState(runtimeState, category, isOpen);
-  };
-
   const createScenarioLayerLoadContext = () => ({
     scenarioId: String(runtimeState.activeScenarioId || "").trim(),
     scenarioApplyRequestId: Math.max(0, Number(runtimeState.currentScenarioApplyRequestId || 0)),
@@ -597,7 +593,7 @@ function createSpecialZonesWorkbenchController({
         group.className = "special-zone-preset-group";
         group.dataset.presetCategory = category;
         group.open = openPresetCategories.has(category);
-        group.addEventListener("toggle", () => setPresetCategoryOpen(category, group.open));
+        group.addEventListener("toggle", () => setSpecialZonePresetCategoryOpenState(runtimeState, category, group.open));
         const summary = document.createElement("summary");
         summary.className = "special-zone-preset-group-summary";
         const label = document.createElement("span");

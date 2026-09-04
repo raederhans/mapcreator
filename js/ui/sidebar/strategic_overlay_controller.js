@@ -185,12 +185,8 @@ export function createStrategicOverlayController({
     counterEditorModalPreviouslyFocused: null,
     suppressListChange: false,
   };
-  const patchOperationalLineEditor = (patch) => patchStrategicOverlayEditorState(state, "operationalLineEditor", patch);
-  const patchOperationGraphicsEditor = (patch) => patchStrategicOverlayEditorState(state, "operationGraphicsEditor", patch);
-  const patchStrategicUi = (patch) => patchStrategicOverlayEditorState(state, "strategicOverlayUi", patch);
-
   const ensureStrategicOverlayUiState = () => {
-    patchStrategicUi({
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
       counterEditorModalOpen: !!state.strategicOverlayUi?.counterEditorModalOpen,
       counterCatalogSource: String(state.strategicOverlayUi?.counterCatalogSource || "internal").trim().toLowerCase() === "hoi4"
         ? "hoi4"
@@ -369,7 +365,7 @@ export function createStrategicOverlayController({
   const setStrategicWorkspaceModalState = (nextOpen, section = "line") => {
     const wasOpen = !!state.strategicOverlayUi?.modalOpen;
     const nextIsOpen = !!nextOpen;
-    patchStrategicUi({
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
       modalOpen: nextIsOpen,
       modalSection: section === "counter" ? "counter" : "line",
     });
@@ -822,7 +818,7 @@ export function createStrategicOverlayController({
     if (button.dataset.bound) return;
     button.addEventListener("click", () => {
       const nextKind = String(button.dataset.lineKind || "frontline");
-      patchStrategicUi({
+      patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
         activeMode: nextKind,
         modalSection: "line",
       });
@@ -843,8 +839,8 @@ export function createStrategicOverlayController({
   if (operationalLineKindSelect && !operationalLineKindSelect.dataset.bound) {
     operationalLineKindSelect.addEventListener("change", (event) => {
       const nextKind = String(event.target.value || "frontline");
-      patchOperationalLineEditor({ kind: nextKind, stylePreset: nextKind });
-      patchStrategicUi({
+      patchStrategicOverlayEditorState(state, "operationalLineEditor", { kind: nextKind, stylePreset: nextKind });
+      patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
         activeMode: nextKind,
         modalSection: "line",
       });
@@ -859,11 +855,11 @@ export function createStrategicOverlayController({
   }
   if (operationalLineLabelInput && !operationalLineLabelInput.dataset.bound) {
     operationalLineLabelInput.addEventListener("input", (event) => {
-      patchOperationalLineEditor({ label: String(event.target.value || "") });
+      patchStrategicOverlayEditorState(state, "operationalLineEditor", { label: String(event.target.value || "") });
     });
     operationalLineLabelInput.addEventListener("change", (event) => {
       const nextLabel = String(event.target.value || "");
-      patchOperationalLineEditor({ label: nextLabel });
+      patchStrategicOverlayEditorState(state, "operationalLineEditor", { label: nextLabel });
       if (!state.operationalLineEditor.active && state.operationalLineEditor.selectedId) {
         mapRenderer.updateSelectedOperationalLine({ label: nextLabel });
       } else if (render) {
@@ -876,7 +872,7 @@ export function createStrategicOverlayController({
   if (operationalLineStrokeInput && !operationalLineStrokeInput.dataset.bound) {
     operationalLineStrokeInput.addEventListener("change", (event) => {
       const nextStroke = String(event.target.value || "");
-      patchOperationalLineEditor({ stroke: nextStroke });
+      patchStrategicOverlayEditorState(state, "operationalLineEditor", { stroke: nextStroke });
       if (!state.operationalLineEditor.active && state.operationalLineEditor.selectedId) {
         mapRenderer.updateSelectedOperationalLine({ stroke: nextStroke });
       } else if (render) {
@@ -889,7 +885,7 @@ export function createStrategicOverlayController({
   if (operationalLineWidthInput && !operationalLineWidthInput.dataset.bound) {
     operationalLineWidthInput.addEventListener("change", (event) => {
       const nextWidth = Number(event.target.value || 0);
-      patchOperationalLineEditor({ width: nextWidth });
+      patchStrategicOverlayEditorState(state, "operationalLineEditor", { width: nextWidth });
       if (!state.operationalLineEditor.active && state.operationalLineEditor.selectedId) {
         mapRenderer.updateSelectedOperationalLine({ width: nextWidth });
       } else if (render) {
@@ -902,7 +898,7 @@ export function createStrategicOverlayController({
   if (operationalLineOpacityInput && !operationalLineOpacityInput.dataset.bound) {
     operationalLineOpacityInput.addEventListener("change", (event) => {
       const nextOpacity = Number(event.target.value || 1);
-      patchOperationalLineEditor({ opacity: nextOpacity });
+      patchStrategicOverlayEditorState(state, "operationalLineEditor", { opacity: nextOpacity });
       if (!state.operationalLineEditor.active && state.operationalLineEditor.selectedId) {
         mapRenderer.updateSelectedOperationalLine({ opacity: nextOpacity });
       } else if (render) {
@@ -915,7 +911,7 @@ export function createStrategicOverlayController({
   if (operationalLineStartBtn && !operationalLineStartBtn.dataset.bound) {
     operationalLineStartBtn.addEventListener("click", () => {
       const nextKind = String(operationalLineKindSelect?.value || state.operationalLineEditor?.kind || "frontline");
-      patchStrategicUi({
+      patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
         activeMode: nextKind,
         modalSection: "line",
       });
@@ -954,7 +950,7 @@ export function createStrategicOverlayController({
   }
   if (operationalLineList && !operationalLineList.dataset.bound) {
     operationalLineList.addEventListener("change", (event) => {
-      patchStrategicUi({
+      patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
         modalSection: "line",
       });
       mapRenderer.selectOperationalLineById(String(event.target.value || ""));
@@ -986,7 +982,7 @@ export function createStrategicOverlayController({
       if (!state.operationGraphicsEditor.active && state.operationGraphicsEditor.selectedId) {
         mapRenderer.updateSelectedOperationGraphic({ kind: nextKind });
       } else {
-        patchOperationGraphicsEditor({ kind: nextKind });
+        patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { kind: nextKind });
         if (render) {
           render();
         }
@@ -1001,7 +997,7 @@ export function createStrategicOverlayController({
       if (!state.operationGraphicsEditor.active && state.operationGraphicsEditor.selectedId) {
         mapRenderer.updateSelectedOperationGraphic({ stylePreset: nextPreset });
       } else {
-        patchOperationGraphicsEditor({ stylePreset: nextPreset });
+        patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { stylePreset: nextPreset });
         if (render) {
           render();
         }
@@ -1012,11 +1008,11 @@ export function createStrategicOverlayController({
   }
   if (operationGraphicLabelInput && !operationGraphicLabelInput.dataset.bound) {
     operationGraphicLabelInput.addEventListener("input", (event) => {
-      patchOperationGraphicsEditor({ label: String(event.target.value || "") });
+      patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { label: String(event.target.value || "") });
     });
     operationGraphicLabelInput.addEventListener("change", (event) => {
       const nextLabel = String(event.target.value || "");
-      patchOperationGraphicsEditor({ label: nextLabel });
+      patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { label: nextLabel });
       if (!state.operationGraphicsEditor.active && state.operationGraphicsEditor.selectedId) {
         mapRenderer.updateSelectedOperationGraphic({ label: nextLabel });
       } else if (render) {
@@ -1029,7 +1025,7 @@ export function createStrategicOverlayController({
   if (operationGraphicStrokeInput && !operationGraphicStrokeInput.dataset.bound) {
     operationGraphicStrokeInput.addEventListener("change", (event) => {
       const nextStroke = String(event.target.value || "");
-      patchOperationGraphicsEditor({ stroke: nextStroke });
+      patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { stroke: nextStroke });
       if (!state.operationGraphicsEditor.active && state.operationGraphicsEditor.selectedId) {
         mapRenderer.updateSelectedOperationGraphic({ stroke: nextStroke });
       } else if (render) {
@@ -1042,7 +1038,7 @@ export function createStrategicOverlayController({
   if (operationGraphicWidthInput && !operationGraphicWidthInput.dataset.bound) {
     operationGraphicWidthInput.addEventListener("change", (event) => {
       const nextWidth = Number(event.target.value || 0);
-      patchOperationGraphicsEditor({ width: nextWidth });
+      patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { width: nextWidth });
       if (!state.operationGraphicsEditor.active && state.operationGraphicsEditor.selectedId) {
         mapRenderer.updateSelectedOperationGraphic({ width: nextWidth });
       } else if (render) {
@@ -1055,7 +1051,7 @@ export function createStrategicOverlayController({
   if (operationGraphicOpacityInput && !operationGraphicOpacityInput.dataset.bound) {
     operationGraphicOpacityInput.addEventListener("change", (event) => {
       const nextOpacity = Number(event.target.value || 1);
-      patchOperationGraphicsEditor({ opacity: nextOpacity });
+      patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { opacity: nextOpacity });
       if (!state.operationGraphicsEditor.active && state.operationGraphicsEditor.selectedId) {
         mapRenderer.updateSelectedOperationGraphic({ opacity: nextOpacity });
       } else if (render) {

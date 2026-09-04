@@ -15,18 +15,13 @@ export function createSpecialZonesRuntimeDomain({
   renderSpecialZoneEditorOverlay,
   updateSpecialZoneEditorUI,
 }) {
-  const patchEditor = (patch) => patchSpecialZoneEditorState(state, patch, {
-    defaultZoneType: defaultSpecialZoneType,
-  });
-  const markOverlayDirty = () => setSpecialZonesOverlayDirtyState(state, true);
-
   function appendSpecialZoneVertexFromEvent(event) {
     ensureSpecialZoneEditorState();
     // Legacy freehand special zones have exited the main editing path.
     // Layer membership editing is now handled by the special zones workbench.
     if (event?.preventDefault) event.preventDefault();
-    patchEditor({ active: false, vertices: [] });
-    markOverlayDirty();
+    patchSpecialZoneEditorState(state, { active: false, vertices: [] });
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
     return false;
@@ -34,8 +29,8 @@ export function createSpecialZonesRuntimeDomain({
 
   function retireLegacyDrawState() {
     ensureSpecialZoneEditorState();
-    patchEditor({ active: false, vertices: [] });
-    markOverlayDirty();
+    patchSpecialZoneEditorState(state, { active: false, vertices: [] });
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
     return true;
@@ -43,13 +38,13 @@ export function createSpecialZonesRuntimeDomain({
 
   function startSpecialZoneDraw({ zoneType = defaultSpecialZoneType, label = "" } = {}) {
     ensureSpecialZoneEditorState();
-    patchEditor({
+    patchSpecialZoneEditorState(state, {
       active: false,
       vertices: [],
       zoneType: String(zoneType || defaultSpecialZoneType),
       label: String(label || ""),
     });
-    markOverlayDirty();
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
     return false;
@@ -70,15 +65,15 @@ export function createSpecialZonesRuntimeDomain({
 
   function selectSpecialZoneById(id) {
     ensureSpecialZoneEditorState();
-    patchEditor({ selectedId: String(id || "").trim() || null });
-    markOverlayDirty();
+    patchSpecialZoneEditorState(state, { selectedId: String(id || "").trim() || null });
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
   }
 
   function deleteSelectedManualSpecialZone() {
     ensureSpecialZoneEditorState();
-    patchEditor({ selectedId: null });
+    patchSpecialZoneEditorState(state, { selectedId: null });
     return false;
   }
 

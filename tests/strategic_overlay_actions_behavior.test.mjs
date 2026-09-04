@@ -330,6 +330,18 @@ test("strategic overlay callers retain direct entity mutation only in declared d
     path.join(REPO_ROOT, "js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js"),
     "utf8",
   );
+  const specialZonesRuntimeSource = fs.readFileSync(
+    path.join(REPO_ROOT, "js/core/renderer/strategic_overlay_runtime/special_zones_runtime_domain.js"),
+    "utf8",
+  );
+  const specialZoneLayersSource = fs.readFileSync(
+    path.join(REPO_ROOT, "js/core/special_zone_layers.js"),
+    "utf8",
+  );
+  const specialZonesWorkbenchSource = fs.readFileSync(
+    path.join(REPO_ROOT, "js/ui/toolbar/special_zones_workbench_controller.js"),
+    "utf8",
+  );
 
   assert.doesNotMatch(operationGraphicsSource, /graphic\.points\.splice\(/);
   const graphicDragSource = getFunctionSource(operationGraphicsSource, "moveOperationGraphicVertexDrag");
@@ -370,5 +382,43 @@ test("strategic overlay callers retain direct entity mutation only in declared d
   assert.doesNotMatch(
     counterBindingsSource,
     /state\.(?:unitCounterEditor|strategicOverlayUi)\.[A-Za-z_$][\w$]*\s*=/,
+  );
+  [
+    operationGraphicsSource,
+    unitCounterSource,
+    runtimeOwnerSource,
+    sidebarControllerSource,
+    counterBindingsSource,
+    specialZonesRuntimeSource,
+    specialZonesWorkbenchSource,
+  ].forEach((source) => {
+    assert.doesNotMatch(
+      source,
+      /const (?:patchEditor|markOverlayDirty|markUnitCountersDirty|markOperationalLinesDirty|patchOperationalLineEditor|patchOperationGraphicsEditor|patchStrategicUi|patchUnitCounterEditor|setPresetCategoryOpen)\b/,
+    );
+  });
+  assert.doesNotMatch(
+    specialZoneLayersSource,
+    /target\.(?:specialZoneLayers|specialZonesOverlayDirty|specialZoneEditor)\s*(?:=|\+=|-=|\|=|\?\?=)/,
+  );
+  assert.match(
+    getFunctionSource(operationGraphicsSource, "appendOperationGraphicVertexFromEvent"),
+    /patchStrategicOverlayEditorState\(state, "operationGraphicsEditor"/,
+  );
+  assert.match(
+    getFunctionSource(unitCounterSource, "placeUnitCounterFromEvent"),
+    /patchStrategicOverlayEditorState\(state, "unitCounterEditor"/,
+  );
+  assert.match(
+    getFunctionSource(runtimeOwnerSource, "appendOperationalLineVertexFromEvent"),
+    /patchStrategicOverlayEditorState\(state, "operationalLineEditor"/,
+  );
+  assert.match(
+    getFunctionSource(specialZonesRuntimeSource, "selectSpecialZoneById"),
+    /patchSpecialZoneEditorState\(state,/,
+  );
+  assert.match(
+    specialZoneLayersSource,
+    /commitSpecialZoneLayersState\(target, nextState, options\)/,
   );
 });
