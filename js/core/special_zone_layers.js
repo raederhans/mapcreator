@@ -3,6 +3,7 @@
 
 import {
   commitSpecialZoneLayersState,
+  mutateSpecialZoneLayersStateAction,
   patchSpecialZoneEditorState,
 } from "./state/actions/special_zone_actions.js";
 
@@ -261,7 +262,7 @@ function serializeSpecialZoneLayersState(rawState, options = {}) {
     })),
     activeStoryStepId: normalized.activeStoryStepId,
     topologyFingerprint: normalized.topologyFingerprint,
-    diagnostics: [...normalized.diagnostics],
+    diagnostics: normalized.diagnostics.map((entry) => ({ ...entry })),
   };
 }
 
@@ -290,12 +291,9 @@ function setRuntimeSpecialZoneLayersState(target, nextState, options = {}) {
 }
 
 function mutateRuntimeSpecialZoneLayersState(target, mutation, options = {}) {
-  const current = normalizeSpecialZoneLayersState(target?.specialZoneLayers || null, options);
-  const nextState = mutateSpecialZoneLayersState(current, mutation);
-  if (target && typeof target === "object") {
-    return commitSpecialZoneLayersState(target, nextState, options);
-  }
-  return nextState;
+  if (!target || typeof target !== "object") return undefined;
+  mutateSpecialZoneLayersStateAction(target, mutation, options);
+  return undefined;
 }
 
 function activateSpecialZoneMembershipToolState(target, tool = "multi") {

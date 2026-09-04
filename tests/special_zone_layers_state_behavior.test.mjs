@@ -56,10 +56,11 @@ test("runtime layer normalization preserves dirty state while mutations mark it"
     specialZoneLayers: initialLayers,
     specialZonesOverlayDirty: false,
   };
-  mutateRuntimeSpecialZoneLayersState(mutatedTarget, {
+  const mutationResult = mutateRuntimeSpecialZoneLayersState(mutatedTarget, {
     action: "addLayer",
     layer: createLayerFromPreset("custom", { id: "dirty-layer" }),
   });
+  assert.equal(mutationResult, undefined);
   assert.equal(mutatedTarget.specialZonesOverlayDirty, true);
 });
 
@@ -210,6 +211,20 @@ test("serialization and render feature bridge preserve canonical ids", () => {
     patch: { visible: false, legendVisible: true },
   }));
   assert.equal(buildSpecialZoneRenderFeatures(hiddenMapLayer, featureById).features.length, 0);
+});
+
+test("serialization detaches diagnostic entries from the input state", () => {
+  const fixtureState = createEmptySpecialZoneLayersState();
+  fixtureState.diagnostics.push({ code: "detached", detail: "input" });
+
+  const serialized = serializeSpecialZoneLayersState(fixtureState);
+  assert.notEqual(serialized.diagnostics[0], fixtureState.diagnostics[0]);
+
+  serialized.diagnostics[0].detail = "serialized";
+  assert.equal(fixtureState.diagnostics[0].detail, "input");
+
+  fixtureState.diagnostics[0].detail = "mutated-input";
+  assert.equal(serialized.diagnostics[0].detail, "serialized");
 });
 
 test("style preset updates preserve members and replace mode keeps one explicit set", () => {

@@ -2,6 +2,7 @@
 // Persistence, rendering, UI feedback, metrics, and runtime hooks stay in callers.
 
 import {
+  mutateSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
   normalizeSpecialZoneMembershipBrushModeState,
 } from "../../special_zone_layers.js";
@@ -36,8 +37,30 @@ const SPECIAL_ZONE_LAYER_OPTION_KEYS = Object.freeze([
   "defaultSource",
 ]);
 
-const SPECIAL_ZONE_COMMIT_CONTROL_KEYS = Object.freeze([
-  "markDirty",
+const SPECIAL_ZONE_COMMIT_CONTROL_KEYS = Object.freeze(["markDirty"]);
+
+const SPECIAL_ZONE_LAYER_MUTATION_KEYS = Object.freeze([
+  "action",
+  "layer",
+  "presetId",
+  "id",
+  "name",
+  "category",
+  "source",
+  "visible",
+  "legendVisible",
+  "style",
+  "memberFeatureIds",
+  "layerId",
+  "patch",
+  "newLayerId",
+  "layerIds",
+  "featureIds",
+  "sourceLayerId",
+  "operation",
+  "storySteps",
+  "activeStoryStepId",
+  "storyStepId",
 ]);
 
 function assertStateTarget(target) {
@@ -165,6 +188,20 @@ export function commitSpecialZoneLayersState(
     target.specialZonesOverlayDirty = true;
   }
   return normalized;
+}
+
+export function mutateSpecialZoneLayersStateAction(target, mutation, options = {}) {
+  assertStateTarget(target);
+  const inputs = detachActionInputs({
+    mutation: projectFields({ mutation }, "mutation", SPECIAL_ZONE_LAYER_MUTATION_KEYS),
+    options: projectFields({ options }, "options", SPECIAL_ZONE_LAYER_OPTION_KEYS) || {},
+  });
+  const current = normalizeSpecialZoneLayersState(
+    structuredClone(target.specialZoneLayers),
+    inputs.options,
+  );
+  const nextState = mutateSpecialZoneLayersState(current, inputs.mutation);
+  return commitSpecialZoneLayersState(target, nextState, inputs.options);
 }
 
 export function restoreSpecialZoneSnapshotState(

@@ -419,6 +419,6 @@ test("strategic overlay callers retain direct entity mutation only in declared d
   );
   assert.match(
     specialZoneLayersSource,
-    /commitSpecialZoneLayersState\(target, nextState, options\)/,
+    /mutateSpecialZoneLayersStateAction\(target, mutation, options\)/,
   );
 });

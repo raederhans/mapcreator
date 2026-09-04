@@ -8,6 +8,7 @@ import {
   commitSpecialZoneLayersState,
   ensureManualSpecialZonesState,
   ensureSpecialZoneEditorState,
+  mutateSpecialZoneLayersStateAction,
   patchSpecialZoneEditorState,
   restoreSpecialZoneSnapshotState,
   setSpecialZoneMembershipBrushModeState,
@@ -166,6 +167,26 @@ test("special zone layer commit uses canonical normalization and owns dirty stat
   target.specialZonesOverlayDirty = false;
   commitSpecialZoneLayersState(target, next, {}, { markDirty: false });
   assert.equal(target.specialZonesOverlayDirty, false);
+});
+
+test("special zone layer mutation action normalizes, mutates, and commits inside the action", () => {
+  const target = {
+    specialZoneLayers: {
+      layers: [{ id: "zone", memberFeatureIds: ["b", "a"] }],
+      activeLayerId: "zone",
+    },
+    specialZonesOverlayDirty: false,
+  };
+
+  const next = mutateSpecialZoneLayersStateAction(target, {
+    action: "addMembers",
+    layerId: "zone",
+    featureIds: ["c", "a"],
+  });
+
+  assert.equal(next, target.specialZoneLayers);
+  assert.deepEqual(next.layers[0].memberFeatureIds, ["a", "b", "c"]);
+  assert.equal(target.specialZonesOverlayDirty, true);
 });
 
 test("special zone snapshot restore preserves absent properties and normalizes present properties", () => {
