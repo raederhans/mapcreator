@@ -484,10 +484,22 @@ test("P4.2b optional and city action exports have one canonical owner", () => {
     assert.equal(entries[0].modulePath, modulePath);
     assert.equal(entries[0].introducedInPhase, "P4.2b");
   }
-  assert.ok(STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.every(
-    ({ modulePath }) =>
-      modulePath === "js/core/state/actions/scenario_activation_actions.js",
-  ));
+  assert.deepEqual(
+    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.filter(
+      ({ retiredMembership }) =>
+        retiredMembership === "scenario|P4.2|assign|*",
+    ).map(({ modulePath, exportName }) => ({ modulePath, exportName })),
+    [
+      {
+        modulePath: "js/core/state/actions/scenario_activation_actions.js",
+        exportName: "applyScenarioChunkOptionalLayerState",
+      },
+      {
+        modulePath: "js/core/state/actions/scenario_activation_actions.js",
+        exportName: "restoreScenarioChunkPromotionState",
+      },
+    ],
+  );
   assert.deepEqual(
     validateStateActionModulePhaseAdmissions({
       modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
