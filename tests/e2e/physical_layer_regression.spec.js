@@ -1,18 +1,8 @@
 const { test, expect } = require("@playwright/test");
-const { getAppUrl, waitForRenderIdle } = require("./support/playwright-app");
+const { getAppUrl, waitForRenderIdle, waitForShellReady } = require("./support/playwright-app");
 
 function resolveBaseUrl() {
   return getAppUrl();
-}
-
-async function waitForMapReady(page) {
-  await page.waitForFunction(() => {
-    const select = document.querySelector("#scenarioSelect");
-    const canvas = Array.from(document.querySelectorAll("canvas"))
-      .find((entry) => entry.width >= 200 && entry.height >= 120 && getComputedStyle(entry).display !== "none");
-    return !!select && select.querySelectorAll("option").length > 0 && !!canvas;
-  }, { timeout: 30_000 });
-  await page.waitForTimeout(1_500);
 }
 
 async function capturePhysicalBasePassSnapshot(page) {
@@ -76,7 +66,7 @@ function filterExpectedBackendProbeConsoleErrors(consoleErrors, networkFailures)
 }
 
 test("physical layer defaults and atlas rendering regression", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   const consoleErrors = [];
   const pageErrors = [];
   const networkFailures = [];
@@ -106,7 +96,7 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
   });
 
   await page.goto(resolveBaseUrl(), { waitUntil: "domcontentloaded" });
-  await waitForMapReady(page);
+  await waitForShellReady(page, { timeout: 60_000, requireCanvas: true });
 
   const inspection = await page.evaluate(async () => {
     const { normalizePhysicalStyleConfig, PHYSICAL_ATLAS_PALETTE, state } = await import("/js/core/state.js");

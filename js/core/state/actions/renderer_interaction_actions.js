@@ -1,6 +1,8 @@
 // Canonical renderer interaction-state mutations.
 // Event handling, render scheduling, metrics, and async recovery work stay in composition roots.
 
+import { setSelectedColorState } from "./appearance_selection_actions.js";
+
 function assertStateTarget(target) {
   if (!target || typeof target !== "object" || Array.isArray(target)) {
     throw new TypeError("[renderer_interaction_actions] target must be an object");
@@ -109,8 +111,7 @@ export function setClickHoverOverlayDirtyState(target, dirty) {
 
 export function setClickSelectedColorState(target, color) {
   assertStateTarget(target);
-  target.selectedColor = color;
-  return color;
+  return setSelectedColorState(target, color);
 }
 
 export function removeClickWaterRegionOverrideState(target, regionId) {

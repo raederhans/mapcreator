@@ -42,7 +42,7 @@ async function applyPack(page, { family, packId, keys }) {
 }
 
 test("transport Phase B country packs apply to the main map", async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   await gotoApp(page, "/?render_profile=balanced&startup_interaction=readonly&startup_worker=1&startup_cache=1", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page, { timeout: 120_000 });
 

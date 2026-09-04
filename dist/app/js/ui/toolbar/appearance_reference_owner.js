@@ -1,4 +1,9 @@
 import { normalizeReferenceImageState } from "../../core/state.js";
+import {
+  patchReferenceImageState,
+  setReferenceImageState,
+  setReferenceImageUrlState,
+} from "../../core/state/actions/appearance_reference_actions.js";
 
 function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -39,8 +44,7 @@ export function createAppearanceReferenceOwner({
   const nodes = collectReferenceNodes(documentRef);
 
   const syncReferenceState = () => {
-    runtimeState.referenceImageState = normalizeReferenceImageState(runtimeState.referenceImageState, { clamp });
-    return runtimeState.referenceImageState;
+    return setReferenceImageState(runtimeState, runtimeState.referenceImageState, { clamp });
   };
 
   const applyReferenceStyles = ({ force = false } = {}) => {
@@ -76,7 +80,7 @@ export function createAppearanceReferenceOwner({
     if (runtimeState.referenceImageUrl && typeof urlApi?.revokeObjectURL === "function") {
       urlApi.revokeObjectURL(runtimeState.referenceImageUrl);
     }
-    runtimeState.referenceImageUrl = null;
+    setReferenceImageUrlState(runtimeState, null);
   };
 
   const clearReferenceImage = ({ markDirty: shouldMarkDirty = true } = {}) => {
@@ -120,9 +124,9 @@ export function createAppearanceReferenceOwner({
           return;
         }
         revokeReferenceUrl();
-        runtimeState.referenceImageUrl = typeof urlApi?.createObjectURL === "function"
+        setReferenceImageUrlState(runtimeState, typeof urlApi?.createObjectURL === "function"
           ? urlApi.createObjectURL(file)
-          : "";
+          : "");
         nodes.image.src = runtimeState.referenceImageUrl;
         applyReferenceStyles({ force: true });
         markDirty("reference-image-file");
@@ -133,7 +137,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.opacity,
       (element) => {
-        syncReferenceState().opacity = clamp(readNumber(element, 60) / 100, 0, 1);
+        patchReferenceImageState(runtimeState, {
+          opacity: clamp(readNumber(element, 60) / 100, 0, 1),
+        }, { clamp });
       },
       (element) => {
         if (nodes.opacityValue) nodes.opacityValue.textContent = `${element.value}%`;
@@ -143,7 +149,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.scale,
       (element) => {
-        syncReferenceState().scale = clamp(readNumber(element, 1), 0.2, 3);
+        patchReferenceImageState(runtimeState, {
+          scale: clamp(readNumber(element, 1), 0.2, 3),
+        }, { clamp });
       },
       () => {
         if (nodes.scaleValue) nodes.scaleValue.textContent = `${syncReferenceState().scale.toFixed(2)}x`;
@@ -153,7 +161,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.offsetX,
       (element) => {
-        syncReferenceState().offsetX = clamp(readNumber(element, 0), -1000, 1000);
+        patchReferenceImageState(runtimeState, {
+          offsetX: clamp(readNumber(element, 0), -1000, 1000),
+        }, { clamp });
       },
       () => {
         if (nodes.offsetXValue) nodes.offsetXValue.textContent = `${syncReferenceState().offsetX}px`;
@@ -163,7 +173,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.offsetY,
       (element) => {
-        syncReferenceState().offsetY = clamp(readNumber(element, 0), -1000, 1000);
+        patchReferenceImageState(runtimeState, {
+          offsetY: clamp(readNumber(element, 0), -1000, 1000),
+        }, { clamp });
       },
       () => {
         if (nodes.offsetYValue) nodes.offsetYValue.textContent = `${syncReferenceState().offsetY}px`;

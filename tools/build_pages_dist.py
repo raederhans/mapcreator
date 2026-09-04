@@ -482,6 +482,7 @@ DEVELOPER_PRODUCT_MODULE_PATHS = (
 EXPORT_PRODUCT_MODULE_PATHS = (
     "app/js/core/export_artifact_package.js",
     "app/js/core/sample_export_recommendation.js",
+    "app/js/ui/toolbar/export_artifact_download_transaction.js",
     "app/js/ui/toolbar/export_artifact_pipeline.js",
     "app/js/ui/toolbar/export_failure_handler.js",
     "app/js/ui/toolbar/export_workbench_contract.js",

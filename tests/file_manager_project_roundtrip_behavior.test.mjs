@@ -344,6 +344,7 @@ test("project import through funnel clears toolbar-owned export bake cache once"
   );
 
   assert.equal(result.exportBakeCacheClearCount, 1);
+  assert.equal(Object.hasOwn(fixtureState, "clearExportBakeCacheFn"), false);
 });
 
 function getTransportOverviewVisibilityFields() {

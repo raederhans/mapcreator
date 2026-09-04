@@ -35,7 +35,7 @@ const JOB_CONCLUSIONS = new Set([
 const ROLE_JOBS = Object.freeze({
   "checker-boundaries": "Nightly P4 Checker and Python Boundaries",
   "full-policy-tap": "Nightly P4 Canonical Full Policy TAP",
-  "fast-contracts-routes": "Nightly P4.3 Fast Contracts and Routes",
+  "fast-contracts-routes": "Nightly P4.4 Fast Contracts and Routes",
 });
 const ROLE_ARTIFACT_PREFIXES = Object.freeze({
   "checker-boundaries": "nightly-p4-checker-boundaries",

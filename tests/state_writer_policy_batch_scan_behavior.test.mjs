@@ -5,6 +5,7 @@ import test from "node:test";
 
 import {
   discoverStateWriterBindingsForSource,
+  isDelegationOnlyStateWriterCandidate,
   scanStateWriterBindingInventoriesBatch,
   scanStateWriterPolicySnapshot,
   shouldRetainScannedWriterCandidate,
@@ -232,6 +233,7 @@ test("delegate-only domain actions remain writer candidates without admitting no
   };
 
   assert.equal(shouldRetainScannedWriterCandidate(delegatedAction), true);
+  assert.equal(isDelegationOnlyStateWriterCandidate(delegatedAction), true);
   assert.equal(
     shouldRetainScannedWriterCandidate({ ...delegatedAction, actionDelegations: [] }),
     false,
@@ -254,6 +256,13 @@ test("delegate-only domain actions remain writer candidates without admitting no
       actionDelegations: [],
     }),
     true,
+  );
+  assert.equal(
+    isDelegationOnlyStateWriterCandidate({
+      ...delegatedAction,
+      findings: [{ key: "bootPhase" }],
+    }),
+    false,
   );
 });
 

@@ -276,6 +276,7 @@ const APPEARANCE_SELECTION_ACTION_EXPORT_NAMES = Object.freeze([
 
 const APPEARANCE_VISIBILITY_ACTION_EXPORT_NAMES = Object.freeze([
   "setAppearanceVisibilityState",
+  "setAppearanceVisibilitySnapshotState",
   "patchAppearanceVisibilityState",
 ]);
 
@@ -310,6 +311,7 @@ const TRANSPORT_ACTION_EXPORT_NAMES = Object.freeze([
 
 const UI_CHROME_ACTION_EXPORT_NAMES = Object.freeze([
   "ensureUiChromeState",
+  "setUiChromeState",
   "patchUiChromeState",
   "setActiveDockPopoverState",
   "setRestoredSupportSurfaceViewState",
@@ -2567,6 +2569,17 @@ const STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID = new Map([
   ],
 ]);
 
+const STATE_ACTION_REFERENCE_IDENTITY_ARGUMENT_INDEXES_BY_ID = new Map([
+  [`${APPEARANCE_ACTION_MODULE_PATH}#setAppearanceStyleConfigState`, Object.freeze([1])],
+  [`${APPEARANCE_ACTION_MODULE_PATH}#setAppearanceStyleGroupState`, Object.freeze([2])],
+  [`${APPEARANCE_ACTION_MODULE_PATH}#setAppearanceParentBorderEnabledMapState`, Object.freeze([1])],
+  [`${APPEARANCE_SELECTION_ACTION_MODULE_PATH}#setSelectedColorState`, Object.freeze([1])],
+  [`${APPEARANCE_VISIBILITY_ACTION_MODULE_PATH}#setAppearanceVisibilitySnapshotState`, Object.freeze([2])],
+  [`${SPECIAL_ZONE_ACTION_MODULE_PATH}#commitSpecialZoneLayersState`, Object.freeze([1])],
+  [`${UI_CHROME_ACTION_MODULE_PATH}#setUiChromeState`, Object.freeze([1])],
+  [`${UI_VISIBILITY_ACTION_MODULE_PATH}#commitUiVisibilityState`, Object.freeze([1])],
+]);
+
 function freezeAllowedDynamicSite({
   operation,
   key,
@@ -2619,6 +2632,10 @@ function freezeDelegationEntry({
       STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID.get(
         `${normalizedModulePath}#${normalizedExportName}`,
       ) || Object.freeze([]),
+    referenceIdentityArgumentIndexes:
+      STATE_ACTION_REFERENCE_IDENTITY_ARGUMENT_INDEXES_BY_ID.get(
+        `${normalizedModulePath}#${normalizedExportName}`,
+      ) || Object.freeze([]),
     allowedDynamicSites:
       STATE_ACTION_ALLOWED_DYNAMIC_SITES_BY_ID.get(
         `${normalizedModulePath}#${normalizedExportName}`,
@@ -2643,6 +2660,228 @@ export const STATE_ACTION_DELEGATION_CONTRACT = Object.freeze(
     )
   ),
 );
+
+function freezeActionSuccessorEdge({
+  enclosingFunctionIdentity,
+  actionModulePath,
+  actionExportName,
+  targetArgumentIndex = 0,
+  sourceFingerprint,
+  occurrenceIndex = 0,
+  terminalMembership = "",
+}) {
+  return Object.freeze({
+    enclosingFunctionIdentity: String(enclosingFunctionIdentity || ""),
+    actionModulePath: normalizeModulePath(actionModulePath),
+    actionExportName: String(actionExportName || ""),
+    targetArgumentIndex: Number(targetArgumentIndex),
+    sourceFingerprint: String(sourceFingerprint || ""),
+    occurrenceIndex: Number(occurrenceIndex),
+    terminalMembership: normalizeStateActionMembership(
+      terminalMembership,
+    ),
+  });
+}
+
+function freezeActionSuccessorProofEntry({
+  modulePath,
+  exportName,
+  replacementMembership,
+  carrierFunctions,
+  successorEdges,
+  requiredDirectMemberships = [],
+}) {
+  const replacement = normalizeStateActionMembership(
+    replacementMembership,
+  );
+  const normalized = {
+    modulePath: normalizeModulePath(modulePath),
+    exportName: String(exportName || ""),
+    replacementMembership: replacement,
+    requiredDirectMemberships: Object.freeze(
+      requiredDirectMemberships.map(normalizeStateActionMembership),
+    ),
+    carrierFunctions: Object.freeze(carrierFunctions.map((entry) =>
+      Object.freeze({
+        functionName: String(entry.functionName || ""),
+        sourceFingerprint: String(entry.sourceFingerprint || ""),
+      })
+    )),
+    successorEdges: Object.freeze(successorEdges.map((edge) =>
+      freezeActionSuccessorEdge({
+        ...edge,
+        terminalMembership:
+          edge.terminalMembership || replacement,
+      })
+    )),
+  };
+  return Object.freeze({
+    ...normalized,
+    contractIdentity: createHash("sha256")
+      .update(JSON.stringify(normalized))
+      .digest("hex"),
+  });
+}
+
+const SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY =
+  '{"kind":"function","ancestry":[{"name":"restoreScenarioPresentationStateFromValidated","ordinal":0}]}';
+const APPEARANCE_VISIBILITY_RELAY_FUNCTION_IDENTITY =
+  '{"kind":"function","ancestry":[{"name":"setAppearanceVisibilityState","ordinal":0}]}';
+
+function successorEdge(actionModulePath, actionExportName, sourceFingerprint,
+  occurrenceIndex = 0, enclosingFunctionIdentity = APPEARANCE_VISIBILITY_RELAY_FUNCTION_IDENTITY) {
+  return {
+    enclosingFunctionIdentity,
+    actionModulePath,
+    actionExportName,
+    targetArgumentIndex: 0,
+    sourceFingerprint,
+    occurrenceIndex,
+  };
+}
+
+const SCENARIO_RESTORE_SUCCESSORS = Object.freeze({
+  parentBordersVisible: [successorEdge(APPEARANCE_VISIBILITY_ACTION_MODULE_PATH, "setAppearanceVisibilitySnapshotState", "2e0f5953f63502a06e1886b79c66b6b12c1b25f054a5f5b2d8a0885a928b9b18", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  parentBorderEnabledByCountry: [successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceParentBorderEnabledMapState", "a03126d95a092f78f2fdc19413b7f4af87cf2525760277b6e379fec7e56a3f72", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  styleConfig: [
+    successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceStyleGroupState", "f77bdee999a5f11a70dc7cb1421d0a872fd317fe9e79df7f4bb3ca88b4f65109", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+    successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceStyleConfigState", "320b6b090abe4f7aafcba4703b78857873a06c08b21f2d61abe85e87df0e6008", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+  ],
+  ui: [
+    successorEdge(UI_CHROME_ACTION_MODULE_PATH, "patchUiChromeState", "8bf9a22cf562f52d1e986ca50368d27b05be1510a973f0bbdfb66820a79481af", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+    {
+      ...successorEdge(UI_CHROME_ACTION_MODULE_PATH, "setUiChromeState", "6c92df76d0808f166c2e8b3789796f889ae67016a8cdf1d16da6ddef513db898", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+      terminalMembership: "ui|P4.4|define-property|ui",
+    },
+  ],
+  showCityPoints: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "3917a3be2b5885e6055e813bd69e21da9694ea8a0c653e0711d80e32cff9a988", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showWaterRegions: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "d31f2ebd3b9efad7a2b4f8a89183f23e155f7f3274b7e17fe27aee4a3d0f2f7e", 1, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showScenarioSpecialRegions: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "49209ea256d0776f46911ed6428baacbc5f289e43caf83ab79e3f800546884bf", 2, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showScenarioReliefOverlays: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "99e1e0763e4aa603ceb87e87aeb2b0ea9773b402fe06b42fe8c34f7b92e8060f", 4, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showStrategicResourceMarkers: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "6df3f099c8df42610c49e445079fd2d6567c0fba872c1b0f3d0599949fde99af", 5, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  strategicChoroplethMetric: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "fe5f72f21cf3631b11f97bf04b3d6861d9e0292bb7ba321fcae75ebc1698d207", 6, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+});
+
+const VISIBILITY_SUCCESSOR_FINGERPRINTS = Object.freeze({
+  showCityPoints: ["ef137e6d95996769aadc088639caf87eb0b1d56f1b5139fdf00c29437d578816", 7],
+  showStrategicResourceMarkers: ["9b31391661f92a53741d415258171bfdfd54ae1627f554202da9310fdd83f41a", 8],
+  strategicChoroplethMetric: ["057504ca5226f31d7cde94089a62f645945a5dfceedccd37135c37e38d8c370b", 9],
+  showUrban: ["1c23f6c2f846f28d5861b0f3da57d590cd6a81022c6d8389e5f3a70bbdcb3281", 10],
+  showPhysical: ["d5128fe29925d25a4bb6ccd39b757cd92139765005a3ef50f39c7c09086b3782", 11],
+  showRivers: ["fdf6a5b996b1a92309f924b0d88c9b10fe75a560718d0df24da115f8e8773b6e", 12],
+});
+const SCENARIO_CHUNK_HYBRID_DIRECT_MEMBERSHIPS = Object.freeze([
+  "scenario|P4.2|assign|scenarioAtlantropaData",
+  "scenario|P4.2|assign|scenarioAtlantropaRevision",
+  "scenario|P4.2|assign|scenarioReliefOverlayRevision",
+  "scenario|P4.2|assign|scenarioReliefOverlaysData",
+  "scenario|P4.2|assign|scenarioSpecialRegionsData",
+  "scenario|P4.2|assign|scenarioStrategicValuesData",
+  "scenario|P4.2|assign|scenarioStrategicValuesRevision",
+  "scenario|P4.2|assign|scenarioWaterRegionsData",
+]);
+
+const successorEntries = [];
+for (const [key, edges] of Object.entries(SCENARIO_RESTORE_SUCCESSORS)) {
+  const replacementMembership = key === "parentBordersVisible"
+    ? "content|P4.2|assign|parentBordersVisible"
+    : key === "parentBorderEnabledByCountry"
+      ? "renderer|P4.3|assign|parentBorderEnabledByCountry"
+      : `ui|P4.4|assign|${key}`;
+  successorEntries.push(freezeActionSuccessorProofEntry({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportName: "restoreScenarioTransactionPresentationState",
+    replacementMembership,
+    carrierFunctions: [
+      { functionName: "restoreScenarioTransactionPresentationState", sourceFingerprint: "9133d927670747ac2aba6c59442afdeb347ddfb396f821b0e893a2515bfee8d9" },
+      { functionName: "restoreScenarioPresentationStateFromValidated", sourceFingerprint: "12dff0f3f892f7b45c6b34aa01d94717364958fd7790d9e0ff11cea41965aa61" },
+    ],
+    successorEdges: edges,
+  }));
+}
+for (const [key, [fingerprint, occurrenceIndex]] of Object.entries(VISIBILITY_SUCCESSOR_FINGERPRINTS)) {
+  successorEntries.push(freezeActionSuccessorProofEntry({
+    modulePath: APPEARANCE_VISIBILITY_ACTION_MODULE_PATH,
+    exportName: "setAppearanceVisibilityState",
+    replacementMembership: `ui|P4.4|assign|${key}`,
+    carrierFunctions: [{ functionName: "setAppearanceVisibilityState", sourceFingerprint: "8d4a1032dfc1f9d4eb7f20337fe6269332d809d639543fe117cea6eee5a29c41" }],
+    successorEdges: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", fingerprint, occurrenceIndex)],
+  }));
+}
+successorEntries.push(
+  freezeActionSuccessorProofEntry({
+    modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+    exportName: "applyScenarioChunkOptionalLayerState",
+    replacementMembership: "scenario|P4.2|assign|*",
+    requiredDirectMemberships:
+      SCENARIO_CHUNK_HYBRID_DIRECT_MEMBERSHIPS,
+    carrierFunctions: [{ functionName: "applyScenarioChunkOptionalLayerState", sourceFingerprint: "e57211283e41e92a4a68f016950b7215be74563a6e58860a36e42db20e8f6866" }],
+    successorEdges: [{
+      ...successorEdge(SPECIAL_ZONE_ACTION_MODULE_PATH, "commitSpecialZoneLayersState", "9c5e9b6f5722f2eb0461db89f615e90f1e0bb892a2a4cb843287b90221783bb4", 0, '{"kind":"function","ancestry":[{"name":"applyScenarioChunkOptionalLayerState","ordinal":0}]}'),
+      terminalMembership: "ui|P4.4|assign|specialZoneLayers",
+    }],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+    exportName: "restoreScenarioChunkPromotionState",
+    replacementMembership: "scenario|P4.2|assign|*",
+    requiredDirectMemberships:
+      SCENARIO_CHUNK_HYBRID_DIRECT_MEMBERSHIPS,
+    carrierFunctions: [{ functionName: "restoreScenarioChunkPromotionState", sourceFingerprint: "ef7f68540902b9f5a2b5916311ff4f9b33813f122c3b9431b90a1079ab297f3a" }],
+    successorEdges: [
+      {
+        ...successorEdge(SPECIAL_ZONE_ACTION_MODULE_PATH, "commitSpecialZoneLayersState", "39fa88ef1fdc10d6f07b01feb0f9a80c087c3f7a318b9ab80eb7ed578e9c4e75", 0, '{"kind":"function","ancestry":[{"name":"restoreScenarioChunkPromotionState","ordinal":0}]}'),
+        terminalMembership: "ui|P4.4|assign|specialZoneLayers",
+      },
+      {
+        ...successorEdge(SPECIAL_ZONE_ACTION_MODULE_PATH, "commitSpecialZoneLayersState", "ae8a608f6851731064dabf89ac7615738e83aebdd1e276e87d8385dadd3073d0", 1, '{"kind":"function","ancestry":[{"name":"restoreScenarioChunkPromotionState","ordinal":0}]}'),
+        terminalMembership: "ui|P4.4|assign|specialZoneLayers",
+      },
+    ],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    exportName: "setSpecialZonesVisibilityState",
+    replacementMembership: "ui|P4.4|assign|showSpecialZones",
+    carrierFunctions: [{ functionName: "setSpecialZonesVisibilityState", sourceFingerprint: "c95dff5b54150378af045b1a43dca529fed47c934000eacb944eac5296ccbe51" }],
+    successorEdges: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "1cc43eb500139f636aa2cb1e16f5deddc26fe7bf752daed23c682a612c74a288", 0, '{"kind":"function","ancestry":[{"name":"setSpecialZonesVisibilityState","ordinal":0}]}')],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: TRANSPORT_ACTION_MODULE_PATH,
+    exportName: "applyTransportWorkbenchOverviewState",
+    replacementMembership: "ui|P4.4|assign|styleConfig",
+    carrierFunctions: [{ functionName: "applyTransportWorkbenchOverviewState", sourceFingerprint: "46056c49e4fd86246219b1c9f719ee643893a819ff81938b2c1f346c69d3d587" }],
+    successorEdges: [successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceStyleGroupState", "eaea368a81306342fb11279d196cef0fdb600b4793c9853662655a3770a87266", 0, '{"kind":"function","ancestry":[{"name":"applyTransportWorkbenchOverviewState","ordinal":0}]}')],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    exportName: "setClickSelectedColorState",
+    replacementMembership: "color|P4.4|assign|selectedColor",
+    carrierFunctions: [{ functionName: "setClickSelectedColorState", sourceFingerprint: "29ad3281276fd64baaffcb0fe4c9f3a19ddc2cd554a1825d8ed54506f882e62e" }],
+    successorEdges: [successorEdge(APPEARANCE_SELECTION_ACTION_MODULE_PATH, "setSelectedColorState", "4e3b5bf002f14c1caf299322dceae4409ad330194cbcc86669f51775ebd18a33", 0, '{"kind":"function","ancestry":[{"name":"setClickSelectedColorState","ordinal":0}]}')],
+  }),
+);
+
+export const STATE_ACTION_SUCCESSOR_PROOF_CONTRACT = Object.freeze(
+  successorEntries.sort((left, right) =>
+    `${left.modulePath}#${left.exportName}#${left.replacementMembership}`.localeCompare(
+      `${right.modulePath}#${right.exportName}#${right.replacementMembership}`,
+    )
+  ),
+);
+
+export function findStateActionSuccessorProofContractEntry(
+  modulePath,
+  exportName,
+  replacementMembership,
+) {
+  return STATE_ACTION_SUCCESSOR_PROOF_CONTRACT.find((entry) =>
+    entry.modulePath === normalizeModulePath(modulePath)
+    && entry.exportName === String(exportName || "")
+    && entry.replacementMembership
+      === normalizeStateActionMembership(replacementMembership)
+  ) || null;
+}
 
 const CONTRACT_ENTRY_BY_ID = new Map(
   STATE_ACTION_DELEGATION_CONTRACT.map((entry) => [
@@ -2785,13 +3024,11 @@ export const STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT =
       exportName: "applyTransportWorkbenchOverviewState",
       retiredMembership: "cross-domain|multi-phase|assign|*",
       requiredConcreteMemberships: [
-        "ui|P4.4|assign|styleConfig",
         "ui|P4.4|define-property|showAirports",
         "ui|P4.4|define-property|showPorts",
         "ui|P4.4|define-property|showRail",
         "ui|P4.4|define-property|showRoad",
         "ui|P4.4|define-property|showTransport",
-        "ui|P4.4|define-property|styleConfig",
         "ui|P4.4|define-property|transportWorkbenchPointDeltas",
         "ui|P4.4|define-property|transportWorkbenchUi",
       ],
@@ -4581,6 +4818,138 @@ function legacyMembershipReplacementEntryId(entry = {}) {
   ].join("#");
 }
 
+export function validateStateActionSuccessorProofContract(
+  entries = STATE_ACTION_SUCCESSOR_PROOF_CONTRACT,
+) {
+  if (!Array.isArray(entries)) {
+    return [createViolation(
+      "state-action-successor-proof-contract-invalid",
+      { reason: "entries-not-array" },
+    )];
+  }
+  const violations = [];
+  const seen = new Set();
+  const identities = [];
+  for (const [index, entry] of entries.entries()) {
+    const identity = [
+      normalizeModulePath(entry?.modulePath),
+      String(entry?.exportName || ""),
+      normalizeStateActionMembership(entry?.replacementMembership),
+    ].join("#");
+    identities.push(identity);
+    const carrierFunctions = entry?.carrierFunctions;
+    const successorEdges = entry?.successorEdges;
+    const normalizedForIdentity = {
+      modulePath: normalizeModulePath(entry?.modulePath),
+      exportName: String(entry?.exportName || ""),
+      replacementMembership:
+        normalizeStateActionMembership(entry?.replacementMembership),
+      requiredDirectMemberships: entry?.requiredDirectMemberships,
+      carrierFunctions,
+      successorEdges,
+    };
+    const valid = Boolean(
+      findStateActionDelegationContractEntry(
+        entry?.modulePath,
+        entry?.exportName,
+      )
+      && parseStateActionMembership(entry?.replacementMembership)
+      && Array.isArray(entry?.requiredDirectMemberships)
+      && entry.requiredDirectMemberships.every((membership) =>
+        parseStateActionMembership(membership)
+      )
+      && new Set(entry.requiredDirectMemberships).size
+        === entry.requiredDirectMemberships.length
+      && Array.isArray(carrierFunctions)
+      && carrierFunctions.length > 0
+      && carrierFunctions.some((carrier) =>
+        carrier?.functionName === entry?.exportName
+      )
+      && new Set(carrierFunctions.map(
+        (carrier) => carrier?.functionName,
+      )).size === carrierFunctions.length
+      && carrierFunctions.every((carrier) =>
+        isValidExportName(carrier?.functionName)
+        && /^[0-9a-f]{64}$/i.test(
+          String(carrier?.sourceFingerprint || ""),
+        )
+      )
+      && Array.isArray(successorEdges)
+      && successorEdges.length > 0
+      && new Set(successorEdges.map((edge) => JSON.stringify(edge)))
+        .size === successorEdges.length
+      && successorEdges.every((edge) =>
+        edge?.enclosingFunctionIdentity
+        && findStateActionDelegationContractEntry(
+          edge?.actionModulePath,
+          edge?.actionExportName,
+        )
+        && Number.isInteger(edge?.targetArgumentIndex)
+        && edge.targetArgumentIndex === 0
+        && Number.isInteger(edge?.occurrenceIndex)
+        && edge.occurrenceIndex >= 0
+        && parseStateActionMembership(edge?.terminalMembership)
+        && !(
+          normalizeModulePath(edge?.actionModulePath)
+            === normalizeModulePath(entry?.modulePath)
+          && String(edge?.actionExportName || "")
+            === String(entry?.exportName || "")
+        )
+        && /^[0-9a-f]{64}$/i.test(
+          String(edge?.sourceFingerprint || ""),
+        )
+      )
+      && /^[0-9a-f]{64}$/i.test(
+        String(entry?.contractIdentity || ""),
+      )
+      && entry.contractIdentity === createHash("sha256")
+        .update(JSON.stringify(normalizedForIdentity))
+        .digest("hex")
+    );
+    const legacyReplacement =
+      STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.find(
+        (candidate) =>
+          candidate.modulePath === normalizedForIdentity.modulePath
+          && candidate.exportName === normalizedForIdentity.exportName
+          && candidate.retiredMembership
+            === normalizedForIdentity.replacementMembership,
+      );
+    const hybridCoverage = [...new Set([
+      ...(entry?.requiredDirectMemberships || []),
+      ...(entry?.successorEdges || []).map(
+        (edge) => edge.terminalMembership,
+      ),
+    ])].sort();
+    const hybridCoverageValid = entry?.requiredDirectMemberships?.length
+      ? Boolean(
+        legacyReplacement
+        && JSON.stringify(hybridCoverage) === JSON.stringify(
+          [...legacyReplacement.requiredConcreteMemberships].sort(),
+        )
+      )
+      : true;
+    if (!valid || !hybridCoverageValid) {
+      violations.push(createViolation(
+        "state-action-successor-proof-entry-invalid",
+        { index, identity },
+      ));
+    }
+    if (seen.has(identity)) {
+      violations.push(createViolation(
+        "state-action-successor-proof-entry-duplicate",
+        { index, identity },
+      ));
+    }
+    seen.add(identity);
+  }
+  if (JSON.stringify(identities) !== JSON.stringify([...identities].sort())) {
+    violations.push(createViolation(
+      "state-action-successor-proof-order-invalid",
+    ));
+  }
+  return violations;
+}
+
 const LEGACY_MEMBERSHIP_REPLACEMENT_OPERATIONS = Object.freeze({
   assign: Object.freeze(["assign", "define-property"]),
   "collection-mutate": Object.freeze(["assign"]),
@@ -5311,6 +5680,43 @@ export function validateStateActionDelegationContract(
         seenReadOnlyIndexes.add(readOnlyArgumentIndex);
       }
     }
+    if (
+      entry.referenceIdentityArgumentIndexes !== undefined
+      && !Array.isArray(entry.referenceIdentityArgumentIndexes)
+    ) {
+      violations.push(
+        createViolation(
+          "state-action-contract-reference-identity-argument-indexes-invalid",
+          { index, modulePath, exportName },
+        ),
+      );
+    } else {
+      const seenReferenceIdentityIndexes = new Set();
+      for (
+        const referenceIdentityArgumentIndex of
+        entry.referenceIdentityArgumentIndexes || []
+      ) {
+        if (
+          !Number.isInteger(referenceIdentityArgumentIndex)
+          || referenceIdentityArgumentIndex < 0
+          || referenceIdentityArgumentIndex === entry.targetArgumentIndex
+          || seenReferenceIdentityIndexes.has(referenceIdentityArgumentIndex)
+        ) {
+          violations.push(
+            createViolation(
+              "state-action-contract-reference-identity-argument-index-invalid",
+              {
+                index,
+                modulePath,
+                exportName,
+                referenceIdentityArgumentIndex,
+              },
+            ),
+          );
+        }
+        seenReferenceIdentityIndexes.add(referenceIdentityArgumentIndex);
+      }
+    }
     const entryId = contractEntryId(entry);
     if (seenEntryIds.has(entryId)) {
       violations.push(
@@ -5530,6 +5936,7 @@ export function validateStateActionModuleSource(
     contractEntries = STATE_ACTION_DELEGATION_CONTRACT,
   } = {},
 ) {
+  const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   const normalizedPath = normalizeModulePath(filePath);
   const entries = (Array.isArray(contractEntries) ? contractEntries : [])
     .filter(
@@ -5540,7 +5947,7 @@ export function validateStateActionModuleSource(
 
   let ast;
   try {
-    ast = parseModuleSource(source);
+    ast = parseModuleSource(canonicalSource);
   } catch (error) {
     return [
       ...violations,
@@ -5553,6 +5960,34 @@ export function validateStateActionModuleSource(
 
   const { directFunctions, nonDirectExports } =
     collectNamedExportShapes(ast);
+  const topLevelFunctions = topLevelFunctionDeclarations(ast);
+  for (const successorEntry of STATE_ACTION_SUCCESSOR_PROOF_CONTRACT.filter(
+    (entry) => entry.modulePath === normalizedPath
+  )) {
+    for (const carrier of successorEntry.carrierFunctions) {
+      const functionNode = topLevelFunctions.get(carrier.functionName);
+      const actualSourceFingerprint = functionNode
+        ? fingerprintFunctionSource(canonicalSource, functionNode)
+        : "";
+      if (
+        !functionNode
+        || actualSourceFingerprint !== carrier.sourceFingerprint
+      ) {
+        violations.push(createViolation(
+          "state-action-successor-carrier-source-drift",
+          {
+            modulePath: normalizedPath,
+            exportName: successorEntry.exportName,
+            replacementMembership:
+              successorEntry.replacementMembership,
+            functionName: carrier.functionName,
+            expectedSourceFingerprint: carrier.sourceFingerprint,
+            actualSourceFingerprint,
+          },
+        ));
+      }
+    }
+  }
   const registeredReadOnlyExportCount = [
     ...directFunctions.keys(),
     ...nonDirectExports.keys(),

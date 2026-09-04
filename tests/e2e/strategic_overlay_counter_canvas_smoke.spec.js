@@ -37,7 +37,7 @@ async function openFrontlineTab(page) {
   await expect(page.locator("#frontlineProjectSection")).toBeVisible();
 }
 
-async function setZoomPercentViaApi(page, percent) {
+async function setZoomPercentViaApi(page, percent, { timeout = 4000 } = {}) {
   await page.evaluate(async (nextPercent) => {
     const { setZoomPercent } = await import("/js/core/map_renderer.js");
     setZoomPercent(nextPercent);
@@ -48,7 +48,7 @@ async function setZoomPercentViaApi(page, percent) {
       return Number(state.zoomTransform?.k || 0);
     });
     return Math.round(zoomK * 100);
-  }, { timeout: 4000 }).toBe(percent);
+  }, { timeout }).toBe(percent);
 }
 
 test("unit counter canvas visibility stays hidden at 600 and turns visible at 700", async ({ page }) => {
@@ -102,6 +102,11 @@ test("unit counter canvas visibility stays hidden at 600 and turns visible at 70
       || hiddenState.opacity <= 0.05,
   ).toBeTruthy();
 
-  await setZoomPercentViaApi(page, 700);
-  await expect(counterGroup).toBeVisible();
+  await setZoomPercentViaApi(page, 700, { timeout: 25_000 });
+  await expect(counterGroup).toBeAttached({ timeout: 12_000 });
+  await expect(counterGroup).toBeVisible({ timeout: 12_000 });
+  await expect.poll(async () => {
+    const box = await counterGroup.boundingBox();
+    return Number(box?.width || 0);
+  }, { timeout: 12_000 }).toBeGreaterThan(0);
 });

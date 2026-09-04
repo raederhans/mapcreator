@@ -152,6 +152,41 @@ test("transport actions bypass inherited container and visibility setters", () =
   assert.equal(target.styleConfig.transportOverview.rail.opacity, 0.75);
 });
 
+test("transport overview delegation preserves style descriptors and return identity", () => {
+  const currentOverview = { rail: { opacity: 0.4 } };
+  const styleConfig = {};
+  Object.defineProperty(styleConfig, "transportOverview", {
+    configurable: false,
+    enumerable: false,
+    value: currentOverview,
+    writable: true,
+  });
+  const target = {};
+  Object.defineProperty(target, "styleConfig", {
+    configurable: false,
+    enumerable: false,
+    value: styleConfig,
+    writable: true,
+  });
+
+  assert.equal(ensureTransportOverviewStyleConfigState(target), currentOverview);
+  const overview = applyTransportWorkbenchOverviewState(target, {
+    familyId: "rail",
+    familyConfig: { opacity: 0.8 },
+  });
+
+  assert.equal(overview, target.styleConfig.transportOverview);
+  assert.equal(overview.rail.opacity, 0.8);
+  assert.deepEqual(
+    Object.getOwnPropertyDescriptor(target, "styleConfig"),
+    { configurable: false, enumerable: false, value: styleConfig, writable: true },
+  );
+  assert.deepEqual(
+    Object.getOwnPropertyDescriptor(styleConfig, "transportOverview"),
+    { configurable: false, enumerable: false, value: overview, writable: true },
+  );
+});
+
 test("transport workbench initialization bypasses state accessors", () => {
   const getterCalls = { inherited: 0, own: 0 };
   const prototypeState = {};

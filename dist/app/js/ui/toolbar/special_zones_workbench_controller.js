@@ -6,23 +6,28 @@ import {
   SPECIAL_ZONE_PATTERN_IDS,
   SPECIAL_ZONE_PRESETS,
   activateSpecialZoneMembershipToolState,
+  captureScenarioLayerSaveRequestState,
   createLayerFromPreset,
   createSpecialZonePatternPreviewStyle,
   exitSpecialZoneMembershipToolState,
   getSpecialZoneStoryPreviewSteps,
   mutateSpecialZoneLayersState,
-  mutateRuntimeSpecialZoneLayersState,
   normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
   parseSpecialZoneMemberImportText,
   registerSpecialZonesWorkbenchRuntimeHooks,
   resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
-  setRuntimeSpecialZoneLayersState,
-  setSpecialZoneMembershipBrushModeState,
-  setSpecialZonePresetCategoryState,
 } from "../../core/special_zone_layers.js";
+import {
+  commitSpecialZoneLayersState,
+  setSpecialZoneMembershipBrushModeState,
+  setSpecialZonePresetCategoryOpenState,
+  setSpecialZonePresetCategoryState,
+  setSpecialZonesVisibilityState,
+} from "../../core/state/actions/special_zone_actions.js";
 import { callRuntimeHook } from "../../core/state/index.js";
+import { createLatestRequestQueue } from "./latest_request_queue.js";
 
 function createButton(label, className = "secondary-btn") {
   const button = document.createElement("button");
@@ -155,13 +160,15 @@ function createSpecialZonesWorkbenchController({
   let scenarioLayerLoadPromise = null;
   let scenarioLayerLoadScenarioId = "";
   let scenarioLayerLoadRequestId = 0;
+  let saveRequestSequence = 0;
 
   const translate = (value) => (typeof t === "function" ? t(value, "ui") : value);
 
-  const normalizeState = () => {
+  const normalizeState = (options = {}) => {
     return normalizeRuntimeSpecialZoneLayersState(runtimeState, {
       defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
       topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+      ...options,
     });
   };
 
@@ -179,15 +186,6 @@ function createSpecialZonesWorkbenchController({
       return new Set(rawCategories.map((category) => String(category || "").trim()).filter(Boolean));
     }
     return new Set();
-  };
-
-  const setPresetCategoryOpen = (category, isOpen) => {
-    const normalizedCategory = String(category || "").trim();
-    if (!normalizedCategory) return;
-    const openCategories = getOpenPresetCategories();
-    if (isOpen) openCategories.add(normalizedCategory);
-    else openCategories.delete(normalizedCategory);
-    runtimeState.specialZonePresetOpenCategories = Array.from(openCategories);
   };
 
   const createScenarioLayerLoadContext = () => ({
@@ -213,6 +211,82 @@ function createSpecialZonesWorkbenchController({
       && loadedScenarioLayerRequestId === scenarioApplyRequestId;
   };
 
+  const isSameScenarioLayerSaveContext = (left = {}, right = {}) => (
+    String(left.scenarioId || "").trim() === String(right.scenarioId || "").trim()
+    && Math.max(0, Number(left.scenarioApplyRequestId || 0))
+      === Math.max(0, Number(right.scenarioApplyRequestId || 0))
+  );
+
+  const isScenarioLayerSaveJobCurrent = (job) => (
+    job?.saveRequestId === saveRequestSequence
+    && isScenarioLayerLoadContextCurrent(job?.loadContext)
+  );
+
+  const settleScenarioLayerSaveWaiter = (waiter) => {
+    waiter.saveButton.classList.remove("is-loading");
+    waiter.saveButton.removeAttribute("aria-busy");
+    waiter.syncButtonState();
+  };
+
+  const executeScenarioLayerSaveJob = async (job) => {
+    try {
+      if (!isScenarioLayerLoadContextCurrent(job.loadContext)) return;
+      let stateToSave = job.requestedState;
+      if (!isScenarioLayerCacheLoadedForContext(job.loadContext)) {
+        await loadScenarioSpecialZoneLayers(job.loadContext);
+        if (
+          !isScenarioLayerLoadContextCurrent(job.loadContext)
+          || !isScenarioLayerCacheLoadedForContext(job.loadContext)
+        ) {
+          throw new Error("Scenario special zone layer asset load unavailable.");
+        }
+        // 首次保存可能发生在 optional asset 载入前；已有本地 layer 时保存点击时的本地意图。
+        if (!job.requestedState.layers.length) {
+          stateToSave = serializeSpecialZoneLayersState(runtimeState.specialZoneLayers, {
+            defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
+            topologyFingerprint: String(
+              runtimeState.scenarioBaselineHash
+              || runtimeState.activeScenarioManifest?.source?.runtime_topology_sha256
+              || "",
+            ).trim(),
+          });
+        }
+      }
+      const response = await fetch("/__dev/scenario/special-zone-layers/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenarioId: job.scenarioId,
+          specialZoneLayers: stateToSave,
+        }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (!isScenarioLayerSaveJobCurrent(job)) return;
+      if (!result?.ok) throw new Error(result?.error || "Scenario special zone save failed.");
+      commitSpecialZoneLayersState(runtimeState, result.specialZoneLayers || normalizeState(), {
+        defaultSource: "scenario",
+        topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+      });
+      render?.();
+      if (statusNode) statusNode.textContent = translate("Scenario special zone layers saved.");
+      showToast?.(translate("Scenario special zone layers saved."), { title: translate("Special zones saved"), tone: "success" });
+    } catch (error) {
+      if (!isScenarioLayerSaveJobCurrent(job)) return;
+      console.warn("[special-zone-layers] Scenario save unavailable.", error);
+      if (statusNode) statusNode.textContent = translate("Scenario special zone layer save failed.");
+      showToast?.(translate("Scenario layer asset save is available only in the local dev server."), { title: translate("Read-only scenario asset"), tone: "warning" });
+    }
+  };
+
+  const scenarioLayerSaveQueue = createLatestRequestQueue({
+    isSameRequest: (left, right) => (
+      isSameScenarioLayerSaveContext(left.loadContext, right.loadContext)
+    ),
+    execute: executeScenarioLayerSaveJob,
+    settle: settleScenarioLayerSaveWaiter,
+  });
+
   const isScenarioLayerCacheFailedForContext = (context = {}) => {
     const scenarioId = String(context.scenarioId || "").trim();
     const scenarioApplyRequestId = Math.max(0, Number(context.scenarioApplyRequestId || 0));
@@ -224,7 +298,12 @@ function createSpecialZonesWorkbenchController({
   const getDevSelectionFeatureIds = () => {
     const ordered = Array.isArray(runtimeState.devSelectionOrder) ? runtimeState.devSelectionOrder : [];
     const indexed = runtimeState.devSelectionFeatureIds instanceof Set ? Array.from(runtimeState.devSelectionFeatureIds) : [];
-    return Array.from(new Set([...ordered, ...indexed].map(featureIdFromDevSelectionEntry).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    const featureIds = new Set();
+    for (const entry of [...ordered, ...indexed]) {
+      const featureId = featureIdFromDevSelectionEntry(entry);
+      if (featureId) featureIds.add(featureId);
+    }
+    return Array.from(featureIds).sort((a, b) => a.localeCompare(b));
   };
 
   const getActiveLandFeatureId = () => {
@@ -271,7 +350,7 @@ function createSpecialZonesWorkbenchController({
 
   const setLoadFailedSpecialZoneLayersState = (scenarioId) => {
     const topologyFingerprint = resolveSpecialZoneTopologyFingerprint(runtimeState);
-    setRuntimeSpecialZoneLayersState(runtimeState, {
+    commitSpecialZoneLayersState(runtimeState, {
       version: 1,
       layers: [],
       activeLayerId: "",
@@ -286,7 +365,6 @@ function createSpecialZonesWorkbenchController({
       defaultSource: "scenario",
       topologyFingerprint,
     });
-    runtimeState.specialZonesOverlayDirty = true;
   };
 
   const applyPatternPreviewStyle = (node, style = {}) => {
@@ -326,13 +404,16 @@ function createSpecialZonesWorkbenchController({
     const before = typeof captureHistoryState === "function"
       ? captureHistoryState({ strategicOverlay: true })
       : null;
-    mutateRuntimeSpecialZoneLayersState(runtimeState, mutation, {
+    const nextState = mutateSpecialZoneLayersState(normalizeState({
+      validFeatureIds: getValidFeatureIds(),
+    }), mutation);
+    commitSpecialZoneLayersState(runtimeState, nextState, {
       defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
       topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
       validFeatureIds: getValidFeatureIds(),
     });
     if (mutation?.action === "addLayer") {
-      runtimeState.showSpecialZones = true;
+      setSpecialZonesVisibilityState(runtimeState, true);
     }
     markDirty?.(label);
     if (typeof pushHistoryEntry === "function") {
@@ -370,7 +451,7 @@ function createSpecialZonesWorkbenchController({
     overlayToggleText.textContent = translate("Show special zones overlay");
     overlayToggleLabel.append(overlayToggleNode, overlayToggleText);
     overlayToggleNode.addEventListener("change", async () => {
-      runtimeState.showSpecialZones = !!overlayToggleNode.checked;
+      setSpecialZonesVisibilityState(runtimeState, Boolean(overlayToggleNode.checked));
       markDirty?.("toggle-special-zones");
       if (runtimeState.showSpecialZones) {
         await loadScenarioSpecialZoneLayers();
@@ -495,7 +576,7 @@ function createSpecialZonesWorkbenchController({
         group.className = "special-zone-preset-group";
         group.dataset.presetCategory = category;
         group.open = openPresetCategories.has(category);
-        group.addEventListener("toggle", () => setPresetCategoryOpen(category, group.open));
+        group.addEventListener("toggle", () => setSpecialZonePresetCategoryOpenState(runtimeState, category, group.open));
         const summary = document.createElement("summary");
         summary.className = "special-zone-preset-group-summary";
         const label = document.createElement("span");
@@ -970,62 +1051,21 @@ function createSpecialZonesWorkbenchController({
     };
     syncScenarioSaveButtonState();
     saveBtn.addEventListener("click", async () => {
-      const loadContext = createScenarioLayerLoadContext();
-      const scenarioId = loadContext.scenarioId;
-      if (!scenarioId) return;
-      let stateToSave = null;
+      const saveRequestId = saveRequestSequence + 1;
+      const request = captureScenarioLayerSaveRequestState(
+        runtimeState,
+        saveRequestId,
+      );
+      if (!request.scenarioId) return;
+      saveRequestSequence = saveRequestId;
       saveBtn.disabled = true;
       saveBtn.classList.add("is-loading");
       saveBtn.setAttribute("aria-busy", "true");
       if (statusNode) statusNode.textContent = translate("Saving scenario special zone layers…");
-      try {
-        if (!isScenarioLayerCacheLoadedForContext(loadContext)) {
-          const pendingState = serializeSpecialZoneLayersState(normalizeState(), {
-            topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
-          });
-          await loadScenarioSpecialZoneLayers(loadContext);
-          if (
-            !isScenarioLayerLoadContextCurrent(loadContext)
-            || !isScenarioLayerCacheLoadedForContext(loadContext)
-          ) {
-            throw new Error("Scenario special zone layer asset load unavailable.");
-          }
-          // 首次保存可能发生在 optional asset 载入前；已有本地 layer 时保存本地意图，避免载入结果覆盖用户刚做的编辑。
-          stateToSave = pendingState.layers.length
-            ? pendingState
-            : serializeSpecialZoneLayersState(normalizeState(), {
-                topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
-              });
-        }
-        const response = await fetch("/__dev/scenario/special-zone-layers/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            scenarioId,
-            specialZoneLayers: stateToSave || serializeSpecialZoneLayersState(normalizeState(), {
-              topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
-            }),
-          }),
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        if (!result?.ok) throw new Error(result?.error || "Scenario special zone save failed.");
-        setRuntimeSpecialZoneLayersState(runtimeState, result.specialZoneLayers || normalizeState(), {
-          defaultSource: "scenario",
-          topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
-        });
-        render?.();
-        if (statusNode) statusNode.textContent = translate("Scenario special zone layers saved.");
-        showToast?.(translate("Scenario special zone layers saved."), { title: translate("Special zones saved"), tone: "success" });
-      } catch (error) {
-        console.warn("[special-zone-layers] Scenario save unavailable.", error);
-        if (statusNode) statusNode.textContent = translate("Scenario special zone layer save failed.");
-        showToast?.(translate("Scenario layer asset save is available only in the local dev server."), { title: translate("Read-only scenario asset"), tone: "warning" });
-      } finally {
-        saveBtn.classList.remove("is-loading");
-        saveBtn.removeAttribute("aria-busy");
-        syncScenarioSaveButtonState();
-      }
+      await scenarioLayerSaveQueue.enqueue(request, {
+        saveButton: saveBtn,
+        syncButtonState: syncScenarioSaveButtonState,
+      });
     });
 
     const memberActions = document.createElement("div");

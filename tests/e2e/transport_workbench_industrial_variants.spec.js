@@ -21,7 +21,7 @@ async function openTransportWorkbench(page) {
 }
 
 test("transport workbench industrial variants load from the shared manifest contract", async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
 
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);

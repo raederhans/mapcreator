@@ -44,11 +44,12 @@ export const P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS = Object.freeze([
   "npm run test:python:p4:p4-2b-boundary",
   "npm run test:python:p4:p4-2c-boundary",
   "npm run test:python:p4:p4-3-boundary",
+  "npm run test:python:p4:p4-4-boundary",
 ]);
 
 export const P4_NIGHTLY_FAST_COMMANDS = Object.freeze([
-  "npm run test:node:p4:p4-3",
-  "node tools/check_p4_state_action_routes.mjs --phase P4.3 --history-base HEAD^",
+  "npm run test:node:p4:p4-4",
+  "node tools/check_p4_state_action_routes.mjs --phase P4.4 --history-base HEAD^",
 ]);
 
 export const P4_NIGHTLY_FULL_POLICY_COMMAND =
@@ -131,7 +132,7 @@ export function buildP4NightlyAuthorityPlan(role) {
     return Object.freeze({
       role,
       commands: Object.freeze([
-        "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.3",
+        "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.4",
         ...P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS,
       ]),
     });
@@ -181,12 +182,12 @@ export function runP4NightlyAuthority(role, {
   };
 
   if (role === "checker-boundaries") {
-    const evidencePath = defaultStateWriterPolicyEvidencePath("P4.3");
-    const reportPath = defaultStateWriterPolicyReportPath("P4.3");
-    const checkerPlan = buildStateWriterCheckerPlan({ phase: "P4.3", reportPath });
+    const evidencePath = defaultStateWriterPolicyEvidencePath("P4.4");
+    const reportPath = defaultStateWriterPolicyReportPath("P4.4");
+    const checkerPlan = buildStateWriterCheckerPlan({ phase: "P4.4", reportPath });
     const produced = evidenceProducer({
       cwd,
-      phase: "P4.3",
+      phase: "P4.4",
       evidencePath,
       reportPath,
       checkerPlan,
@@ -201,7 +202,7 @@ export function runP4NightlyAuthority(role, {
     for (const commandRef of P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS) {
       const validated = evidenceValidator({
         cwd,
-        phase: "P4.3",
+        phase: "P4.4",
         evidencePath,
         checkerPlan,
         expectedEvidenceId: produced.evidenceId,

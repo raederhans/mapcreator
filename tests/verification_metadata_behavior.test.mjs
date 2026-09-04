@@ -49,12 +49,12 @@ test("authored catalog source covers command authority, policies, and every proj
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
   assert.equal(summary.packageScriptCount, 346);
-  assert.equal(summary.contributorRecords, 448);
+  assert.equal(summary.contributorRecords, 449);
   assert.equal(summary.verificationRecordProjectionCount, 147);
-  assert.equal(summary.routeProjectionCount, 407);
+  assert.equal(summary.routeProjectionCount, 408);
   assert.equal(summary.commandCount, 363);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 448);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 449);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -418,6 +418,28 @@ test("verification metadata validates against package scripts and supervisor dom
   );
 });
 
+test("timeout guardrail allowlist selects the timeout guardrail contract", () => {
+  const sourceRef = "tools/test-timeout-guardrail-allowlist.json";
+  const verificationEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:test-timeout-guardrails"
+  ));
+  const selectorRoute = buildRouteIndex().find((entry) => (
+    entry.id === "infra:test-timeout-guardrails"
+  ));
+
+  assert.ok(verificationEntry?.sourceRefs.includes(sourceRef));
+  assert.ok(selectorRoute?.sourceRef.split(",").includes(sourceRef));
+
+  const report = buildRecommendation([sourceRef]);
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  const command = commandsForChangedFile(report, sourceRef).find((entry) => (
+    entry.commandRef === "verify:test-timeout-guardrails"
+  ));
+  assert.ok(command);
+  assert.equal(command.executionOwner, "child-safe");
+  assert.deepEqual(command.routeIds, ["infra:test-timeout-guardrails"]);
+});
+
 test("landing map generators and checked-in assets route to the map asset contracts", () => {
   const sourceRefs = [
     "tools/build_landing_europe_1936_showcase.py",
@@ -613,10 +635,10 @@ test("P4.1 full boot root and exact gate stay in the nightly main-thread tier", 
       entry.commandRef === exactPhaseEntry.commandRef
     ));
     const currentCommand = perFileCommands.find((entry) => (
-      entry.commandRef === "verify:p4:p4-3"
+      entry.commandRef === "verify:p4:p4-4"
     ));
     assert.equal(staleCommand, undefined, `${sourceRef} should not select the stale P4.1 exact phase command`);
-    assert.ok(currentCommand, `${sourceRef} should select the current P4.3 exact phase command`);
+    assert.ok(currentCommand, `${sourceRef} should select the current P4.4 exact phase command`);
     assert.ok(currentCommand.domains.includes("state-ownership"));
   }
 });
@@ -657,7 +679,7 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
   assert.deepEqual(evidenceReport.unmatchedChangedFiles, []);
   for (const sourceRef of evidenceSources) {
     assert.ok(commandsForChangedFile(evidenceReport, sourceRef).some((entry) => (
-      entry.commandRef === "verify:p4:p4-3"
+      entry.commandRef === "verify:p4:p4-4"
       && entry.domains.includes("state-ownership")
     )));
   }
@@ -737,13 +759,13 @@ test("shared P4 control files select only the policy current exact phase gate", 
     .map((entry) => entry.commandRef)
     .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
 
-  assert.deepEqual(exactPhaseCommands, ["verify:p4:p4-3"]);
+  assert.deepEqual(exactPhaseCommands, ["verify:p4:p4-4"]);
   assert.throws(
     () => buildRecommendation(
       changedFiles,
-      buildRouteIndex().filter((route) => route.id !== "p4:p4-3-exact-phase"),
+      buildRouteIndex().filter((route) => route.id !== "p4:p4-4-exact-phase"),
     ),
-    /No exact verification route is registered for current P4 phase P4\.3/,
+    /No exact verification route is registered for current P4 phase P4\.4/,
   );
 
   const renamedHistoricalRoutes = buildRouteIndex().map((route) => (
@@ -757,7 +779,7 @@ test("shared P4 control files select only the policy current exact phase gate", 
     const renamedExactCommands = commandsForChangedFile(renamedReport, sourceRef)
       .map((entry) => entry.commandRef)
       .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
-    assert.deepEqual(renamedExactCommands, ["verify:p4:p4-3"]);
+    assert.deepEqual(renamedExactCommands, ["verify:p4:p4-4"]);
   }
 });
 
@@ -810,9 +832,9 @@ test("P4.2a full scenario root and exact gate stay in the nightly main-thread ti
   assert.deepEqual(exactPhaseReport.unmatchedChangedFiles, []);
   for (const sourceRef of exactPhaseEntry.sourceRefs) {
     const command = commandsForChangedFile(exactPhaseReport, sourceRef).find((entry) => (
-      entry.commandRef === "verify:p4:p4-3"
+      entry.commandRef === "verify:p4:p4-4"
     ));
-    assert.ok(command, `${sourceRef} should select the current P4.3 exact phase command`);
+    assert.ok(command, `${sourceRef} should select the current P4.4 exact phase command`);
     assert.ok(command.domains.includes("state-ownership"));
     assert.equal(command.domains.includes("renderer-runtime"), false);
   }

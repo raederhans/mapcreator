@@ -198,7 +198,7 @@ test("historical owner routes stay direct while the selector upgrades execution 
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation([changedFile], routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: "P4.4",
     changedFiles: [changedFile],
     recommendation,
     routes,
@@ -206,10 +206,10 @@ test("historical owner routes stay direct while the selector upgrades execution 
 
   assert.equal(report.verdict, "pass");
   assert.ok(report.files[0].directStateOwnershipRecommendations.length > 0);
-  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-3"]);
+  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-4"]);
   assert.equal(
     report.files[0].directStateOwnershipRecommendations.some((route) => (
-      route.commandRef === "verify:p4:p4-3"
+      route.commandRef === "verify:p4:p4-4"
     )),
     false,
   );
@@ -232,7 +232,7 @@ test("P4.4 replay owners expose both leaf contracts and their exact phase route"
   }
 });
 
-test("the current selector control plane has zero P4.3 route gaps", () => {
+test("the current selector control plane has zero P4.4 route gaps", () => {
   const changedFiles = [
     "tools/select_verification_targets.mjs",
     "tools/check_p4_state_action_routes.mjs",
@@ -248,7 +248,7 @@ test("the current selector control plane has zero P4.3 route gaps", () => {
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation(changedFiles, routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: "P4.4",
     changedFiles,
     recommendation,
     routes,
@@ -259,7 +259,7 @@ test("the current selector control plane has zero P4.3 route gaps", () => {
   assert.deepEqual(report.unmatchedChangedFiles, []);
 });
 
-test("Appearance and Transport milestone coordination stays on the exact P4.3 route", () => {
+test("Appearance and Transport milestone coordination stays on the exact P4.4 route", () => {
   const changedFiles = [
     "docs/active/appearance-transport-platformization-milestones-20260812/context.md",
     "docs/active/appearance-transport-platformization-milestones-20260812/plan.md",
@@ -268,7 +268,7 @@ test("Appearance and Transport milestone coordination stays on the exact P4.3 ro
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation(changedFiles, routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: "P4.4",
     changedFiles,
     recommendation,
     routes,
@@ -277,7 +277,7 @@ test("Appearance and Transport milestone coordination stays on the exact P4.3 ro
   assert.equal(report.verdict, "pass");
   assert.deepEqual(report.unmatchedChangedFiles, []);
   for (const matchedFile of recommendation.matchedByFile) {
-    assert.ok(matchedFile.matchedRouteIds.includes("p4:p4-3-exact-phase"));
+    assert.ok(matchedFile.matchedRouteIds.includes("p4:p4-4-exact-phase"));
   }
 });
 

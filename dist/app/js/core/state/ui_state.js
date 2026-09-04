@@ -33,6 +33,9 @@ import {
 } from "../transport_capability_registry.js";
 import { getDefaultTransportWorkbenchPackIdForFamily } from "../transport_pack_resolver.js";
 import { createEmptySpecialZoneLayersState } from "../special_zone_layers.js";
+import {
+  applyTransportWorkbenchOverviewState as applyTransportWorkbenchOverviewStateAction,
+} from "./actions/transport_actions.js";
 
 const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportRuntimeCapabilityFamilyIds();
 const TRANSPORT_OVERVIEW_VISIBILITY_FIELDS = listTransportOverviewCapabilityFamilyIds()
@@ -84,46 +87,9 @@ export function createDefaultTransportWorkbenchUiState() {
   };
 }
 
-
+// Compatibility entrypoint for legacy callers. Transport writes remain owned by the canonical action.
 export function applyTransportWorkbenchOverviewState(target, patch = {}) {
-  if (!target || typeof target !== "object" || !patch || typeof patch !== "object") {
-    return null;
-  }
-  if (!target.styleConfig || typeof target.styleConfig !== "object") {
-    target.styleConfig = {};
-  }
-  const currentOverviewConfig = normalizeTransportOverviewStyleConfig(
-    target.styleConfig.transportOverview || {},
-  );
-  const familyId = String(patch.familyId || "").trim();
-  // 这里负责 workbench -> main map 的窄桥接：只把 renderer 真正消费的 overview
-  // 配置写回 styleConfig，preview camera 这类本地 UI 状态继续留在 workbench。
-  const nextOverviewConfig = {
-    ...currentOverviewConfig,
-    visualMode: patch.visualMode,
-  };
-  // workbench -> main map 的桥只发布 overview 认可的字段；
-  // preview camera、局部交互模式等 workbench 私有状态继续留在 transportWorkbenchUi。
-  if (familyId) {
-    nextOverviewConfig[familyId] = {
-      ...(currentOverviewConfig[familyId] || {}),
-      ...(patch.familyConfig || {}),
-    };
-    if (patch.activePackId) {
-      nextOverviewConfig.activePackIdByFamily = {
-        ...(currentOverviewConfig.activePackIdByFamily || {}),
-        [familyId]: String(patch.activePackId || "").trim().toLowerCase(),
-      };
-    }
-  }
-  // Workbench apply may only publish the normalized overview fields that the
-  // main map renderer already understands; workbench-only preview controls stay local.
-  target.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(nextOverviewConfig);
-  target.showTransport = true;
-  if (patch.visibilityField) {
-    target[patch.visibilityField] = true;
-  }
-  return target.styleConfig.transportOverview;
+  return applyTransportWorkbenchOverviewStateAction(target, patch);
 }
 
 export function ensureTransportOverviewStyleConfigState(target) {

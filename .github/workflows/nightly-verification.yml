@@ -131,7 +131,7 @@ jobs:
           retention-days: 14
 
   p4-fast:
-    name: Nightly P4.3 Fast Contracts and Routes
+    name: Nightly P4.4 Fast Contracts and Routes
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -146,7 +146,7 @@ jobs:
           cache: npm
       - name: Install Node dependencies
         run: npm ci
-      - name: Run fast P4.3 contracts and routes
+      - name: Run fast P4.4 contracts and routes
         run: node tools/verification/p4_nightly_authority.mjs --role fast-contracts-routes --out .runtime/reports/generated/nightly/p4-fast-contracts-routes.json
       - name: Upload fast contracts and routes authority
         if: always()
@@ -197,7 +197,7 @@ jobs:
             --authority .runtime/p4-authorities/fast/nightly/p4-fast-contracts-routes.json \
             --expected-sha "${{ github.sha }}" \
             --expected-tree "$TREE_SHA" \
-            --evidence .runtime/p4-authorities/checker/p4-state-actions/P4.3/state-writer-policy-evidence.json \
+            --evidence .runtime/p4-authorities/checker/p4-state-actions/P4.4/state-writer-policy-evidence.json \
             --tap .runtime/p4-authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.tap \
             --completed .runtime/p4-authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.completed.json \
             --out .runtime/reports/generated/nightly/p4-closeout.json

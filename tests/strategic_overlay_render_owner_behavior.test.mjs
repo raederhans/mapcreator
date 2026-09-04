@@ -85,7 +85,10 @@ test("strategic overlay render owner force renders and skips non-idle dynamic ov
       renderOperationGraphicsOverlay: () => calls.push("operationGraphics"),
       renderOperationalLinesOverlay: () => calls.push("operationalLines"),
       renderUnitCountersOverlay: () => calls.push("unitCounters"),
-      syncUnitCounterScalesDuringZoom: () => calls.push("sync"),
+      syncUnitCounterScalesDuringZoom: () => {
+        calls.push("sync");
+        return false;
+      },
     },
   });
 
@@ -98,6 +101,44 @@ test("strategic overlay render owner force renders and skips non-idle dynamic ov
   assert.equal(owner.renderUnitCountersIfNeeded({ force: true }), true);
   owner.syncUnitCounterScalesDuringZoom();
   assert.deepEqual(calls, ["unitCounters", "sync"]);
+});
+
+test("strategic overlay render owner materializes an empty visible counter layer once during zoom", () => {
+  const calls = [];
+  const state = {
+    annotationView: {},
+    renderPhase: "interacting",
+    topologyRevision: 1,
+    unitCounters: [{ id: "unit_1" }],
+    unitCountersDirty: false,
+    zoomTransform: { k: 7 },
+  };
+  let needsMaterialization = true;
+  const owner = createStrategicOverlayRenderOwner({
+    state,
+    helpers: {
+      getProjectionRenderSignature: () => "projection-c",
+    },
+    renderers: {
+      renderUnitCountersOverlay: () => calls.push("unitCounters"),
+      syncUnitCounterScalesDuringZoom: () => {
+        calls.push("sync");
+        const result = needsMaterialization;
+        needsMaterialization = false;
+        return result;
+      },
+    },
+  });
+
+  assert.equal(owner.syncUnitCounterScalesDuringZoom(), true);
+  assert.deepEqual(calls, ["sync", "unitCounters"]);
+  assert.equal(state.unitCountersDirty, false);
+
+  assert.equal(owner.syncUnitCounterScalesDuringZoom(), false);
+  assert.deepEqual(calls, ["sync", "unitCounters", "sync"]);
+
+  state.renderPhase = "idle";
+  assert.equal(owner.renderUnitCountersIfNeeded(), false);
 });
 
 test("strategic overlay render owner dirty API stays strategic-only", () => {

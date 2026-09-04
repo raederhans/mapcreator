@@ -110,6 +110,8 @@ const PACKAGE_SCRIPTS = {
   "test:python:p4:p4-2c-boundary": "npm run python -- -m unittest tests.test_scenario_health_actions_boundary_contract tests.test_startup_hydration_boundary_contract tests.test_scenario_data_health_boundary_contract tests.test_scenario_presentation_runtime_boundary_contract tests.test_scenario_lifecycle_runtime_boundary_contract tests.test_scenario_rollback_boundary_contract tests.test_scenario_runtime_state_boundary_contract tests.test_scenario_state_actions_boundary_contract tests.test_state_write_guardrail_contract -q",
   "test:node:p4:p4-3": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/state_action_delegation_edges_behavior.test.mjs tests/state_writer_policy_batch_scan_behavior.test.mjs tests/renderer_phase_actions_behavior.test.mjs tests/renderer_interaction_actions_behavior.test.mjs tests/renderer_exact_refresh_actions_behavior.test.mjs tests/render_pass_cache_state_normalizer_behavior.test.mjs tests/renderer_cache_actions_behavior.test.mjs tests/renderer_diagnostics_actions_behavior.test.mjs tests/render_perf_metrics_runtime_owner_behavior.test.mjs tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs tests/renderer_render_phase_lifecycle_inventory.test.mjs tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs tests/zoom_interaction_lifecycle_owner_behavior.test.mjs tests/renderer_runtime_state_behavior.test.mjs tests/physical_layer_contracts.test.mjs tests/scenario_chunk_contracts.test.mjs",
   "test:python:p4:p4-3-boundary": "npm run python -- -m unittest tests.test_renderer_control_actions_boundary_contract tests.test_renderer_exact_refresh_actions_boundary_contract tests.test_renderer_cache_actions_boundary_contract tests.test_renderer_diagnostics_actions_boundary_contract tests.test_renderer_runtime_state_boundary_contract tests.test_map_renderer_interaction_context_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_state_write_guardrail_contract -q",
+  "test:node:p4:p4-4": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/state_action_delegation_edges_behavior.test.mjs tests/state_writer_policy_batch_scan_behavior.test.mjs tests/appearance_actions_behavior.test.mjs tests/appearance_preset_actions_behavior.test.mjs tests/appearance_preset_history.node.test.mjs tests/appearance_preset_state.node.test.mjs tests/appearance_reference_actions_behavior.test.mjs tests/appearance_selection_actions_behavior.test.mjs tests/appearance_state_action_callers_behavior.test.mjs tests/appearance_visibility_actions_behavior.test.mjs tests/intensity_field_actions_behavior.test.mjs tests/export_workbench_actions_behavior.test.mjs tests/transport_actions_behavior.test.mjs tests/transport_workbench_state_owner_behavior.test.mjs tests/ui_chrome_actions_behavior.test.mjs tests/ui_dirty_actions_behavior.test.mjs tests/ui_visibility_actions_behavior.test.mjs tests/ui_state_action_callers_behavior.test.mjs tests/strategic_overlay_actions_behavior.test.mjs tests/special_zone_actions_behavior.test.mjs tests/special_zones_workbench_controller_behavior.test.mjs tests/strategic_overlay_runtime_owner_behavior.test.mjs",
+  "test:python:p4:p4-4-boundary": "npm run python -- -m unittest tests.test_state_write_guardrail_contract -q",
   "verify:test-console-allowlist": "node tools/check_console_allowlist_decay.mjs",
   "verify:test-timeout-guardrails": "node tools/check_test_timeout_guardrails.mjs",
   "verify:script-portfolio": "node tools/verification/script_portfolio.mjs check",
@@ -699,14 +701,14 @@ test("default core plan applies strict command closure without changing test cov
     )),
   )].sort();
 
-  assert.equal(rawPlan.commandsToRun.length, 95);
-  assert.equal(plan.commandsToRun.length, 89);
-  assert.equal(rawLeaves.length, 111);
-  assert.equal(retainedLeaves.length, 104);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 73);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 66);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 24);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 24);
+  assert.equal(rawPlan.commandsToRun.length, 97);
+  assert.equal(plan.commandsToRun.length, 91);
+  assert.equal(rawLeaves.length, 113);
+  assert.equal(retainedLeaves.length, 106);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 74);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 67);
+  assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 25);
+  assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 25);
   assert.deepEqual(nodeFiles(plan), nodeFiles(rawPlan));
   assert.deepEqual(
     plan.supersededCommands.map(({ commandRef }) => commandRef).sort(),
@@ -1128,7 +1130,7 @@ function fakeStateWriterEvidenceResult({
     status: disposition === "produced-live" ? "produced-live" : "reusable-exact",
     disposition,
     evidenceId: "a".repeat(64),
-    evidencePath: ".runtime/reports/generated/p4-state-actions/P4.3/state-writer-policy-evidence.json",
+    evidencePath: ".runtime/reports/generated/p4-state-actions/P4.4/state-writer-policy-evidence.json",
     sourceVerificationSha: "b".repeat(40),
     sourceVerificationTreeSha: "c".repeat(40),
     producer: {
@@ -1138,7 +1140,7 @@ function fakeStateWriterEvidenceResult({
       producedAt: "2026-08-13T00:00:00.000Z",
       disposition: "produced-live",
     },
-    evidence: { phase: "P4.3" },
+    evidence: { phase: "P4.4" },
   };
 }
 
@@ -1673,10 +1675,10 @@ test("command supersession preserves current policy evidence beside historical e
     "verify:p4:state-writer-policy",
   ]);
   assert.deepEqual(collapseSupersededCommands([
-    "verify:p4:p4-3",
+    "verify:p4:p4-4",
     "verify:p4:state-writer-policy",
     "test:node:p4:state-writer-policy",
-  ]), ["verify:p4:p4-3"]);
+  ]), ["verify:p4:p4-4"]);
 });
 
 const STRICT_COMMAND_CLOSURE_SUPERSESSION = Object.freeze({
@@ -1872,17 +1874,17 @@ test("Pages checked gate keeps generation compatibility without re-owning sample
   assert.equal(checked.includes("git diff --exit-code"), true);
 });
 
-test("adaptive command supersession keeps the exact P4.3 gate as the complete heavy lane", () => {
+test("adaptive command supersession keeps the exact P4.4 gate as the complete heavy lane", () => {
   const commands = collapseSupersededCommands([
-    "test:node:p4:p4-3",
-    "test:python:p4:p4-3-boundary",
+    "test:node:p4:p4-4",
+    "test:python:p4:p4-4-boundary",
     "test:node:p4:state-writer-policy:quick",
     "test:node:p4:state-writer-policy",
     "verify:p4:state-writer-policy",
-    "verify:p4:p4-3",
+    "verify:p4:p4-4",
   ]);
 
-  assert.deepEqual(commands, ["verify:p4:p4-3"]);
+  assert.deepEqual(commands, ["verify:p4:p4-4"]);
 });
 
 test("adaptive child-safe execution substitutes quick coverage for the full P4 policy lane", () => {
@@ -1897,7 +1899,7 @@ test("adaptive child-safe execution substitutes quick coverage for the full P4 p
   assert.equal(mainThreadPlan.commandsToRun.includes("test:node:p4:state-writer-policy"), false);
   assert.equal(mainThreadPlan.commandsToRun.includes("test:node:p4:state-writer-policy:quick"), false);
   assert.ok(mainThreadPlan.commandsToRun.some((commandRef) => (
-    commandRef === "verify:p4:state-writer-policy" || commandRef === "verify:p4:p4-3"
+    commandRef === "verify:p4:state-writer-policy" || commandRef === "verify:p4:p4-4"
   )));
 });
 
@@ -2874,11 +2876,11 @@ test("production adaptive CLI plans the frozen PR7A changed-file fixture with on
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const artifact = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
   assert.deepEqual(artifact.changedFiles, expectedChangedFiles);
-  assert.equal(artifact.recommendedCommands.length, 252);
-  assert.equal(artifact.mainThreadSerialVerification.length, 28);
+  assert.equal(artifact.recommendedCommands.length, 255);
+  assert.equal(artifact.mainThreadSerialVerification.length, 30);
   assert.deepEqual(artifact.unmatchedChangedFiles, []);
   assert.deepEqual(artifact.executionPlan.routeGaps, []);
-  assert.equal(artifact.executionPlan.blockedMainThreadCommands.length, 28);
+  assert.equal(artifact.executionPlan.blockedMainThreadCommands.length, 30);
   assert.equal(artifact.executionStatus, "planned");
   assert.equal(artifact.executionResults, null);
   assert.ok(fs.existsSync(markdownPath));
@@ -2892,6 +2894,7 @@ test("production adaptive CLI plans the frozen PR7A changed-file fixture with on
   assert.deepEqual(sharedLeaf.resourceLocks, expectedLocks);
   assert.deepEqual(sharedLeaf.sourceRootRefs, [
     "test:node:p4:p4-2b",
+    "test:node:p4:p4-3",
     "verify:tno-coverage-chain",
   ]);
   for (const commandRef of [
@@ -2900,6 +2903,7 @@ test("production adaptive CLI plans the frozen PR7A changed-file fixture with on
     "test:node:p4:p4-2b",
     "test:node:p4:p4-2c",
     "test:node:p4:p4-3",
+    "test:node:p4:p4-4",
     "verify:tno-coverage-chain",
   ]) {
     const root = artifact.mainThreadSerialVerification.find((entry) => entry.commandRef === commandRef);

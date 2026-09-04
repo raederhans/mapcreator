@@ -303,6 +303,9 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
       "infra:python-import-closure",
       "infra:migration-ledger",
       "node:test:node:startup-resource-graph",
+      "verify-core:p4:p4-4-ui-actions",
+      "verify-core:p4:p4-4-writer-guardrail",
+      "p4:p4-4-exact-phase",
     ].includes(entry.id))
     .map((entry) => Object.freeze(entry)),
   // Post-PR6 routes and authority expansions have no pre-canonical side table.
@@ -1569,7 +1572,11 @@ export const LEGACY_VERIFICATION_DOMAINS = Object.freeze([
     commandRef: "verify:test-timeout-guardrails",
     commandType: "package-script",
     packageScriptRequired: true,
-    sourceRefs: ["tools/check_test_timeout_guardrails.mjs", "tests/e2e/test-layer-manifest.json"],
+    sourceRefs: [
+      "tools/check_test_timeout_guardrails.mjs",
+      "tools/test-timeout-guardrail-allowlist.json",
+      "tests/e2e/test-layer-manifest.json",
+    ],
     domain: "playwright-observability",
     ownerHint: "test-infra",
     layer: "contract",

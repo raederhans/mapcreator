@@ -368,6 +368,44 @@ test("scenario presentation authority uses one complete catalog for capture, com
   });
 });
 
+test("scenario presentation commit and full restore preserve exact container identities", async () => {
+  const {
+    captureScenarioPresentationState,
+    commitScenarioPresentationState,
+    restoreScenarioPresentationState,
+  } = await import("../js/core/state/actions/scenario_presentation_actions.js");
+  const target = createAuthorityTarget(PRESENTATION_KEYS);
+  const snapshot = captureScenarioPresentationState(target);
+  const patch = createAuthorityPatch(PRESENTATION_KEYS);
+  const identityKeys = [
+    "parentBordersVisible",
+    "parentBorderEnabledByCountry",
+    "ui",
+    "styleConfig",
+    "showCityPoints",
+    "showWaterRegions",
+    "showScenarioSpecialRegions",
+    "showScenarioAtlantropa",
+    "showScenarioReliefOverlays",
+    "showStrategicResourceMarkers",
+    "strategicChoroplethMetric",
+  ];
+
+  commitScenarioPresentationState(target, patch);
+  for (const key of identityKeys) {
+    assert.equal(target[key], patch[key], `commit identity drifted for ${key}`);
+  }
+
+  restoreScenarioPresentationState(target, snapshot);
+  for (const key of identityKeys) {
+    assert.equal(
+      target[key],
+      snapshot.values[key],
+      `restore identity drifted for ${key}`,
+    );
+  }
+});
+
 test("scenario transaction presentation restore preserves unrelated nested state", async () => {
   const {
     restoreScenarioTransactionPresentationBeforeAuditState,

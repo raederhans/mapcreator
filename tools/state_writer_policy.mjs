@@ -57,6 +57,7 @@ import {
   expandStateActionMembershipsWithLegacyReplacements,
   findStateActionDelegationContractEntry,
   findStateActionCrossFileMigrationContractEntry,
+  findStateActionSuccessorProofContractEntry,
   validateStateActionCrossFileMigrationContract,
 } from "./state_action_delegation_contract.mjs";
 import {
@@ -999,13 +1000,22 @@ function isRegisteredP4Phase(value) {
 }
 
 function callerToActionLedgerEntryProofs(entry = {}) {
-  return Array.isArray(entry?.functionProofs)
+  const firstHopProofs = Array.isArray(entry?.functionProofs)
     ? entry.functionProofs.map((proof) => ({
       ...entry,
       ...proof,
       functionProofs: undefined,
     }))
     : [entry];
+  return firstHopProofs.flatMap((proof) => [
+    proof,
+    ...(proof.successorActionProofs || []).map((successor) => ({
+      ...proof,
+      ...successor,
+      successorActionProofs: undefined,
+      successorProofContractIdentity: undefined,
+    })),
+  ]);
 }
 
 function validateCallerToActionLedgerSchema(policy = {}) {
@@ -1040,6 +1050,11 @@ function validateCallerToActionLedgerSchema(policy = {}) {
         latestPhase,
         "P4.2b",
       ) >= 0
+    )
+    || (
+      ledgerSchemaVersion === 3
+      && isRegisteredP4Phase(latestPhase)
+      && compareP4StateActionPhases(latestPhase, "P4.4") >= 0
     );
   if (!ledgerSchemaVersionValid) {
     violations.push(
@@ -1154,9 +1169,11 @@ function validateCallerToActionLedgerSchema(policy = {}) {
         "line",
         "column",
         "sourceFingerprint",
+        "successorActionProofs",
+        "successorProofContractIdentity",
       ];
       const multiFunctionProofInvalid =
-        ledgerSchemaVersion !== 2
+        ![2, 3].includes(ledgerSchemaVersion)
         || !retiredCallerPath
         || !parsedRetiredCallerBindingIdentity
         || retiredMembershipIdentity !== [
@@ -1283,6 +1300,18 @@ function validateCallerToActionLedgerSchema(policy = {}) {
         binding?.authority === "domain-action"
         && binding?.functionName === actionExportName,
     );
+    const actionBindingMemberships = new Set(
+      (actionBinding?.grants || []).flatMap(
+        (grant) => (grant?.memberships || []).map(
+          (membership) => [
+            String(grant?.domain || ""),
+            String(grant?.migrationPhase || ""),
+            String(membership?.operation || ""),
+            String(membership?.key || ""),
+          ].join("|"),
+        ),
+      ),
+    );
     const actionOwnsMembership =
       expandStateActionMembershipsWithLegacyReplacements({
         modulePath: actionModulePath,
@@ -1304,6 +1333,123 @@ function validateCallerToActionLedgerSchema(policy = {}) {
         operation,
         key,
       ].join("|"));
+    const successorActionProofs = Array.isArray(
+      entry?.successorActionProofs,
+    ) ? entry.successorActionProofs : null;
+    const successorContract =
+      findStateActionSuccessorProofContractEntry(
+        actionModulePath,
+        actionExportName,
+        [domain, migrationPhase, operation, key].join("|"),
+      );
+    const firstActionBindingIdentity = actionBinding
+      ? JSON.stringify({
+        kind: String(actionBinding.kind || ""),
+        name: "",
+        functionName: String(actionBinding.functionName || ""),
+        parameterName: "",
+        parameterIndex: Number(actionBinding.parameterIndex),
+        parameterPath: String(actionBinding.parameterPath || ""),
+        importSource: "",
+        importedName: "",
+        aliasSources: [],
+        aliasOperators: [],
+      })
+      : "";
+    const successorDescriptor = (proof) => ({
+      enclosingFunctionIdentity: String(
+        proof?.enclosingFunctionIdentity || "",
+      ),
+      actionModulePath: String(proof?.actionModulePath || ""),
+      actionExportName: String(proof?.actionExportName || ""),
+      targetArgumentIndex: Number(proof?.targetArgumentIndex),
+      sourceFingerprint: String(proof?.sourceFingerprint || ""),
+      occurrenceIndex: Number(proof?.occurrenceIndex),
+      terminalMembership: String(
+        proof?.terminalMembership || "",
+      ),
+    });
+    const expectedSuccessorDescriptors = successorContract
+      ? successorContract.successorEdges.map(successorDescriptor)
+        .sort((left, right) => JSON.stringify(left).localeCompare(
+          JSON.stringify(right),
+        ))
+      : [];
+    const actualSuccessorDescriptors = successorActionProofs
+      ? successorActionProofs.map(successorDescriptor)
+        .sort((left, right) => JSON.stringify(left).localeCompare(
+          JSON.stringify(right),
+        ))
+      : [];
+    const successorProofsValid = successorActionProofs
+      ? (
+        ledgerSchemaVersion === 3
+        && !actionOwnsMembership
+        && successorContract
+        && entry?.successorProofContractIdentity
+          === successorContract.contractIdentity
+        && successorActionProofs.length > 0
+        && JSON.stringify(actualSuccessorDescriptors)
+          === JSON.stringify(expectedSuccessorDescriptors)
+        && successorContract.requiredDirectMemberships.every(
+          (requiredMembership) =>
+            actionBindingMemberships.has(requiredMembership)
+        )
+        && successorActionProofs.every((successor) => {
+          const terminalContract =
+            findStateActionDelegationContractEntry(
+              successor?.actionModulePath,
+              successor?.actionExportName,
+            );
+          const terminalWriter = (policy?.writers || []).find(
+            (writer) =>
+              writer?.path === successor?.actionModulePath
+              && writer?.authority === "domain-action",
+          );
+          const terminalBinding = terminalWriter?.bindings?.find(
+            (binding) =>
+              binding?.authority === "domain-action"
+              && binding?.functionName
+                === successor?.actionExportName,
+          );
+          const terminalOwnsMembership = (terminalBinding?.grants || [])
+            .some((grant) => (grant?.memberships || []).some(
+              (membership) => [
+                String(grant?.domain || ""),
+                String(grant?.migrationPhase || ""),
+                String(membership?.operation || ""),
+                String(membership?.key || ""),
+              ].join("|")
+                === String(successor?.terminalMembership || ""),
+            ));
+          return successor?.callerPath === actionModulePath
+            && successor?.callerBindingIdentity
+              === firstActionBindingIdentity
+            && terminalContract
+            && Number(successor?.targetArgumentIndex)
+              === terminalContract.targetArgumentIndex
+            && terminalOwnsMembership
+            && /^[0-9a-f]{64}$/i.test(
+              String(successor?.actionCallEdgeIdentity || ""),
+            )
+            && /^[0-9a-f]{64}$/i.test(
+              String(successor?.sourceFingerprint || ""),
+            )
+            && Number.isInteger(Number(successor?.start))
+            && Number.isInteger(Number(successor?.end))
+            && Number.isInteger(Number(successor?.line))
+            && Number.isInteger(Number(successor?.column));
+        })
+      )
+      : (
+        entry?.successorActionProofs === undefined
+        && entry?.successorProofContractIdentity === undefined
+        && actionOwnsMembership
+        && (
+          ledgerSchemaVersion < 3
+          || !successorContract
+        )
+      );
     const targetArgumentIndex = Number(entry?.targetArgumentIndex);
     const occurrenceIndex = Number(entry?.occurrenceIndex);
     const start = Number(entry?.start);
@@ -1503,7 +1649,7 @@ function validateCallerToActionLedgerSchema(policy = {}) {
       || retiredMembershipIdentity !== expectedRetiredIdentity
       || !retiredMemberships.has(retiredMembershipIdentity)
       || !actionContract
-      || !actionOwnsMembership
+      || !successorProofsValid
       || !Number.isInteger(targetArgumentIndex)
       || targetArgumentIndex !== actionContract?.targetArgumentIndex
       || !Number.isInteger(occurrenceIndex)
@@ -1870,6 +2016,42 @@ export function validateStateWriterPolicySchema(policy = {}) {
         );
       }
       const grants = Array.isArray(binding.grants) ? binding.grants : [];
+      const delegationOnly = binding.delegationOnly === true;
+      if (
+        binding.delegationOnly !== undefined
+        && binding.delegationOnly !== true
+      ) {
+        violations.push(
+          createViolation("binding-delegation-only-invalid", {
+            path: writerPath,
+            bindingId,
+          }),
+        );
+      }
+      if (
+        delegationOnly
+        && (
+          writer.surface !== "production"
+          || binding.authority !== "domain-action"
+          || binding.kind !== "function-parameter"
+          || !writerPath.startsWith("js/core/state/actions/")
+        )
+      ) {
+        violations.push(
+          createViolation("binding-delegation-only-scope-invalid", {
+            path: writerPath,
+            bindingId,
+          }),
+        );
+      }
+      if (delegationOnly && grants.length) {
+        violations.push(
+          createViolation("binding-delegation-only-grants-present", {
+            path: writerPath,
+            bindingId,
+          }),
+        );
+      }
       if (binding.authority === "compatibility-only") {
         if (grants.length) {
           violations.push(
@@ -1881,7 +2063,11 @@ export function validateStateWriterPolicySchema(policy = {}) {
         }
         continue;
       }
-      if (!grants.length && binding.authority !== "test-fixture") {
+      if (
+        !grants.length
+        && binding.authority !== "test-fixture"
+        && !delegationOnly
+      ) {
         violations.push(
           createViolation("binding-grants-empty", {
             path: writerPath,
@@ -2913,6 +3099,19 @@ export function validateStateWriterPolicySnapshot({
         }),
       );
       continue;
+    }
+    if (
+      (binding.delegationOnly === true)
+      !== (scan.delegationOnly === true)
+    ) {
+      violations.push(
+        createViolation("binding-delegation-only-drift", {
+          path,
+          bindingId: binding.id,
+          expected: binding.delegationOnly === true,
+          actual: scan.delegationOnly === true,
+        }),
+      );
     }
     findingRecords.push({
       path,

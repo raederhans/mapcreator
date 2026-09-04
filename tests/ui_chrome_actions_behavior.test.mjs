@@ -12,6 +12,7 @@ import {
   patchUiChromeState,
   setActiveDockPopoverState,
   setRestoredSupportSurfaceViewState,
+  setUiChromeState,
 } from "../js/core/state/actions/ui_chrome_actions.js";
 
 test("ui chrome actions preserve the ui root and write only admitted fields", () => {
@@ -97,6 +98,34 @@ test("ui chrome actions bypass inherited ui and field setters", () => {
   assert.equal(Object.hasOwn(target, "ui"), true);
   assert.equal(Object.hasOwn(target.ui, "dockCollapsed"), true);
   assert.equal(target.ui.dockCollapsed, true);
+});
+
+test("ui chrome actions preserve exact scenario snapshot and nested rollback identity", () => {
+  const snapshotUi = { version: "snapshot" };
+  const target = {};
+  assert.equal(setUiChromeState(target, snapshotUi), snapshotUi);
+  assert.equal(target.ui, snapshotUi);
+
+  const currentUi = {
+    politicalEditingExpanded: false,
+    scenarioVisualAdjustmentsOpen: true,
+    retained: "current",
+  };
+  target.ui = currentUi;
+  patchUiChromeState(
+    target,
+    {
+      politicalEditingExpanded: true,
+      scenarioVisualAdjustmentsOpen: false,
+    },
+    { normalizeExisting: false },
+  );
+  assert.equal(target.ui, currentUi);
+  assert.deepEqual(target.ui, {
+    politicalEditingExpanded: true,
+    scenarioVisualAdjustmentsOpen: false,
+    retained: "current",
+  });
 });
 
 test("ui chrome actions keep non-target parameters read-only", async () => {

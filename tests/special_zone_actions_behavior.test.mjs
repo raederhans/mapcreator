@@ -250,6 +250,15 @@ test("special zone finite setters normalize brush mode and boolean dirty state",
   assert.throws(() => setSpecialZonesOverlayDirtyState([], true), /target must be an object/);
 });
 
+test("special zone visibility delegates to the canonical UI visibility action", () => {
+  const source = fs.readFileSync(
+    path.join(REPO_ROOT, "js/core/state/actions/special_zone_actions.js"),
+    "utf8",
+  );
+  assert.match(source, /commitUiVisibilityState\(target, \{ showSpecialZones: nextVisible \}\)/);
+  assert.doesNotMatch(source, /target\.showSpecialZones\s*=/);
+});
+
 test("manual special zone compatibility state is repaired through one action boundary", () => {
   const target = { manualSpecialZones: { type: "FeatureCollection", features: "bad" } };
   const repaired = ensureManualSpecialZonesState(target);

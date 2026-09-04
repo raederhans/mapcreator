@@ -18,6 +18,7 @@ import {
   inspectStateMutationDelegatingOwnerSources,
   validateStateActionModuleSource,
   validateStateActionModulePhaseAdmissions,
+  validateStateActionDelegationContract,
   validateStateImportedPureNormalizerContract,
   validateStateDetachedCaptureContract,
   validateStateMutationDelegatingOwnerContract,
@@ -1602,6 +1603,124 @@ test("registered actions accept only declared static non-root read-only argument
       evidenceKind: "unknown-call-argument",
       key: "runtimeChunkLoadState",
     })),
+  );
+});
+
+test("canonical actions accept only declared exact parameter identity transfers", async () => {
+  const declaredTransfers = new Map([
+    ["setAppearanceStyleConfigState", [1]],
+    ["setAppearanceStyleGroupState", [2]],
+    ["setAppearanceParentBorderEnabledMapState", [1]],
+    ["setSelectedColorState", [1]],
+    ["setAppearanceVisibilitySnapshotState", [2]],
+    ["commitSpecialZoneLayersState", [1]],
+    ["setUiChromeState", [1]],
+    ["commitUiVisibilityState", [1]],
+  ]);
+  for (const [exportName, expectedIndexes] of declaredTransfers) {
+    const entries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+      (entry) => entry.exportName === exportName,
+    );
+    assert.equal(entries.length, 1, exportName);
+    assert.deepEqual(
+      entries[0].referenceIdentityArgumentIndexes,
+      expectedIndexes,
+      exportName,
+    );
+  }
+  assert.deepEqual(validateStateActionDelegationContract(), []);
+  const selectedColorEntry = STATE_ACTION_DELEGATION_CONTRACT.find(
+    ({ exportName }) => exportName === "setSelectedColorState",
+  );
+  assert.ok(validateStateActionDelegationContract([{
+    ...selectedColorEntry,
+    referenceIdentityArgumentIndexes: [0],
+  }]).some(({ code }) => (
+    code === "state-action-contract-reference-identity-argument-index-invalid"
+  )));
+
+  const callerPath = "js/core/state/actions/renderer_interaction_actions.js";
+  const source = [
+    'import { setSelectedColorState as commitColor } from "./appearance_selection_actions.js";',
+    "export function setClickSelectedColorState(target, color) {",
+    "  commitColor(target, color);",
+    "}",
+    "",
+  ].join("\n");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(callerPath, source),
+    [],
+  );
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      source.replace("commitColor(target, color)", "commitColor(target, color.value)"),
+    ),
+    [],
+  );
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      source.replace("commitColor(target, color)", "commitColor(target, alias)")
+        .replace(
+          "export function setClickSelectedColorState(target, color) {",
+          "export function setClickSelectedColorState(target, color) {\n  const alias = color;",
+        ),
+    ),
+    [],
+  );
+
+  for (const rejectedSource of [
+    source.replace("commitColor(target, color)", "commitColor(color, target)"),
+    source.replace("commitColor(target, color)", "commitColor(target, color[dynamicKey])")
+      .replace(
+        "export function setClickSelectedColorState(target, color) {",
+        'const dynamicKey = "value";\nexport function setClickSelectedColorState(target, color) {',
+      ),
+    source.replace("commitColor(target, color)", "commitColor(target, { color })"),
+    source.replace(
+      'import { setSelectedColorState as commitColor } from "./appearance_selection_actions.js";',
+      'import { unregisteredSelectedColorState as commitColor } from "./appearance_selection_actions.js";',
+    ),
+    source.replace("commitColor(target, color)", "commitColor[color](target, color)"),
+  ]) {
+    const violations = await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      rejectedSource,
+    );
+    assert.ok(
+      violations.some(({ reason }) => reason === "state-alias-escape"),
+      rejectedSource,
+    );
+  }
+});
+
+test("declared identity argument also accepts static payload projections without transferring the container", async () => {
+  const callerPath = "js/core/state/actions/appearance_visibility_actions.js";
+  const source = [
+    'import { commitUiVisibilityState } from "./ui_visibility_actions.js";',
+    "export function patchAppearanceVisibilityState(target, patch) {",
+    "  commitUiVisibilityState(target, {",
+    "    showWaterRegions: patch.showWaterRegions,",
+    "    nested: { metric: patch.strategicChoroplethMetric },",
+    "  });",
+    "}",
+    "",
+  ].join("\n");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(callerPath, source),
+    [],
+  );
+
+  const rootInContainer = source.replace(
+    "showWaterRegions: patch.showWaterRegions,",
+    "showWaterRegions: patch,",
+  );
+  assert.ok(
+    (await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      rootInContainer,
+    )).some(({ reason }) => reason === "state-alias-escape"),
   );
 });
 

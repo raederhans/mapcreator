@@ -64,14 +64,14 @@ function fixtures() {
   const evidence = {
     schemaVersion: 1,
     kind: "state-writer-policy-checker-evidence",
-    phase: "P4.3",
+    phase: "P4.4",
     producer: { role: "checker-producer" },
     verificationIdentity: identity(),
   };
   evidence.evidenceId = crypto.createHash("sha256").update(stableJson(evidence)).digest("hex");
   const evidenceId = evidence.evidenceId;
   const checkerCommands = [
-    command("node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.3", evidenceId),
+    command("node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.4", evidenceId),
     ...P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS.map((commandRef) => command(commandRef)),
   ];
   const authorities = [
@@ -162,7 +162,7 @@ function mixedRepairPlan() {
     sourceJobs: [
       { name: "Nightly P4 Checker and Python Boundaries", conclusion: "failure" },
       { name: "Nightly P4 Canonical Full Policy TAP", conclusion: "success" },
-      { name: "Nightly P4.3 Fast Contracts and Routes", conclusion: "success" },
+      { name: "Nightly P4.4 Fast Contracts and Routes", conclusion: "success" },
     ],
     sourceJobTotalCount: 3,
     sourceArtifacts: [
@@ -199,9 +199,28 @@ test("P4 Nightly splits the former exact plan into three disjoint authorities", 
   const checker = buildP4NightlyAuthorityPlan("checker-boundaries");
   const full = buildP4NightlyAuthorityPlan("full-policy-tap");
   const fast = buildP4NightlyAuthorityPlan("fast-contracts-routes");
+  assert.equal(
+    checker.commands[0],
+    "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.4",
+  );
+  assert.equal(
+    P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS.includes(
+      "npm run test:python:p4:p4-3-boundary",
+    ),
+    true,
+  );
+  assert.equal(
+    P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS.includes(
+      "npm run test:python:p4:p4-4-boundary",
+    ),
+    true,
+  );
   assert.equal(checker.commands.length, 1 + P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS.length);
   assert.deepEqual(full.commands, [P4_NIGHTLY_FULL_POLICY_COMMAND]);
-  assert.deepEqual(fast.commands, P4_NIGHTLY_FAST_COMMANDS);
+  assert.deepEqual(fast.commands, [
+    "npm run test:node:p4:p4-4",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.4 --history-base HEAD^",
+  ]);
   assert.equal(new Set([...checker.commands, ...full.commands, ...fast.commands]).size,
     checker.commands.length + full.commands.length + fast.commands.length);
 });
@@ -280,7 +299,7 @@ test("P4 mixed-origin receipts resolve and close out through the local CLIs", (t
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const planPath = path.join(root, "plan", "p4-repair-plan.json");
-  const evidencePath = path.join(root, "authorities", "checker", "p4-state-actions", "P4.3", "state-writer-policy-evidence.json");
+  const evidencePath = path.join(root, "authorities", "checker", "p4-state-actions", "P4.4", "state-writer-policy-evidence.json");
   const tapPath = path.join(root, "authorities", "full", "p4-state-actions", "P4.0", "state-writer-policy-tests.tap");
   const completedPath = path.join(root, "authorities", "full", "p4-state-actions", "P4.0", "state-writer-policy-tests.completed.json");
   for (const filePath of [planPath, evidencePath, tapPath, completedPath]) {

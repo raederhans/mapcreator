@@ -240,7 +240,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:test-timeout-guardrails",
     commandRef: "verify:test-timeout-guardrails",
-    sourceRef: "tools/check_test_timeout_guardrails.mjs,tests/e2e/test-layer-manifest.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
+    sourceRef: "tools/check_test_timeout_guardrails.mjs,tools/test-timeout-guardrail-allowlist.json,tests/e2e/test-layer-manifest.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "playwright-observability",
     ownerHint: "test-infra",
     layer: "contract",

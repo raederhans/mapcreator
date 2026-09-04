@@ -62,6 +62,8 @@ export const NIGHTLY_LINUX_CORE_EXCLUDED_COMMAND_REFS = Object.freeze([
   "test:python:p4:p4-2c-boundary",
   "test:node:p4:p4-3",
   "test:python:p4:p4-3-boundary",
+  "test:node:p4:p4-4",
+  "test:python:p4:p4-4-boundary",
   "verify:pages-dist-and-drift",
   "verify:scenario-contracts:strict",
   "test:node:windows-job-runtime",

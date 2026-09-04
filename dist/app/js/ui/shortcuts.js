@@ -4,6 +4,7 @@ import {
   emitStateBusEvent,
 } from "../core/state/index.js";
 import { state as runtimeState } from "../core/state.js";
+import { setSelectedColorState } from "../core/state/actions/appearance_selection_actions.js";
 import { FileManager } from "../core/file_manager.js";
 import { redoHistory, undoHistory } from "../core/history_manager.js";
 import { flushRenderBoundary } from "../core/render_boundary.js";
@@ -79,7 +80,7 @@ function pickQuickSwatch(index) {
   const button = swatches[index];
   const color = String(button?.dataset?.color || "").trim();
   if (!color) return false;
-  runtimeState.selectedColor = color;
+  setSelectedColorState(runtimeState, color);
   emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_SWATCH_UI);
   return true;
 }

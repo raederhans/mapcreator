@@ -42,6 +42,33 @@ test("appearance actions own parent-border country enablement without mutating c
     () => setAppearanceParentBorderEnabledMapState(target, []),
     /enabled map must be an object/,
   );
+
+  const snapshotMap = { version: "before" };
+  assert.deepEqual(
+    setAppearanceParentBorderEnabledMapState(
+      target,
+      snapshotMap,
+      { normalize: false },
+    ),
+    snapshotMap,
+  );
+  assert.equal(target.parentBorderEnabledByCountry, snapshotMap);
+});
+
+test("appearance style patch can preserve the existing group identity for rollback", () => {
+  const ocean = { fillColor: "#000000", opacity: 0.5 };
+  const target = { styleConfig: { ocean } };
+
+  assert.equal(
+    patchAppearanceStyleGroupState(
+      target,
+      "ocean",
+      { fillColor: "#123456" },
+      { preserveGroupIdentity: true },
+    ),
+    ocean,
+  );
+  assert.deepEqual(ocean, { fillColor: "#123456", opacity: 0.5 });
 });
 
 test("appearance actions apply history style paths while preserving style-config identity", () => {

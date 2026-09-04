@@ -4,6 +4,11 @@ import {
   normalizePhysicalStyleConfig,
 } from "../../core/state.js";
 import {
+  patchAppearanceStyleGroupState,
+  setAppearanceStyleGroupState,
+} from "../../core/state/actions/appearance_actions.js";
+import { setAppearanceVisibilityState } from "../../core/state/actions/appearance_visibility_actions.js";
+import {
   captureHistoryState as captureRuntimeHistoryState,
   pushHistoryEntry as pushRuntimeHistoryEntry,
 } from "../../core/history_manager.js";
@@ -93,11 +98,11 @@ export function createAppearancePhysicalOwner({
   const nodes = collectPhysicalNodes(documentRef);
 
   const syncPhysicalConfig = () => {
-    runtimeState.styleConfig.physical = normalizePhysicalStyleConfig(runtimeState.styleConfig.physical);
-    runtimeState.styleConfig.physical.contourColor = normalizeOceanFillColor(
-      runtimeState.styleConfig.physical.contourColor || "#6b5947",
-    );
-    return runtimeState.styleConfig.physical;
+    const normalized = normalizePhysicalStyleConfig(runtimeState.styleConfig.physical);
+    return setAppearanceStyleGroupState(runtimeState, "physical", {
+      ...normalized,
+      contourColor: normalizeOceanFillColor(normalized.contourColor || "#6b5947"),
+    });
   };
 
   const intensityFieldEditor = createIntensityFieldEditorSection({
@@ -137,12 +142,11 @@ export function createAppearancePhysicalOwner({
     const current = syncPhysicalConfig();
     const resolvedPreset = normalizePhysicalPreset(preset);
     const next = createPhysicalStyleConfigForPreset(resolvedPreset);
-    runtimeState.styleConfig.physical = normalizePhysicalStyleConfig({
+    return setAppearanceStyleGroupState(runtimeState, "physical", normalizePhysicalStyleConfig({
       ...next,
       mode: preserveMode ? current.mode : next.mode,
       contourColor: current.contourColor || next.contourColor,
-    });
-    return runtimeState.styleConfig.physical;
+    }));
   };
 
   const getPhysicalPresetHint = (preset) => {
@@ -197,7 +201,10 @@ export function createAppearancePhysicalOwner({
     if (!element || element.dataset.bound === "true") return;
     element.addEventListener("input", (event) => {
       const cfg = syncPhysicalConfig();
-      mutate(cfg, event);
+      const patch = mutate(cfg, event);
+      if (patch && typeof patch === "object") {
+        patchAppearanceStyleGroupState(runtimeState, "physical", patch);
+      }
       renderDirty(reason);
     });
     element.dataset.bound = "true";
@@ -207,7 +214,10 @@ export function createAppearancePhysicalOwner({
     if (!element || element.dataset.bound === "true") return;
     element.addEventListener("change", (event) => {
       const cfg = syncPhysicalConfig();
-      mutate(cfg, event);
+      const patch = mutate(cfg, event);
+      if (patch && typeof patch === "object") {
+        patchAppearanceStyleGroupState(runtimeState, "physical", patch);
+      }
       renderDirty(reason);
     });
     element.dataset.bound = "true";
@@ -217,7 +227,7 @@ export function createAppearancePhysicalOwner({
     if (nodes.togglePhysical && nodes.togglePhysical.dataset.bound !== "true") {
       nodes.togglePhysical.checked = !!runtimeState.showPhysical;
       nodes.togglePhysical.addEventListener("change", (event) => {
-        runtimeState.showPhysical = !!event.target.checked;
+        setAppearanceVisibilityState(runtimeState, "showPhysical", event.target.checked);
         if (runtimeState.showPhysical && typeof runtimeState.ensureContextLayerDataFn === "function") {
           void runtimeState.ensureContextLayerDataFn(["physical-set", "physical-contours-set"], { reason: "toolbar-toggle", renderNow: true });
         }
@@ -235,60 +245,70 @@ export function createAppearancePhysicalOwner({
       nodes.physicalPreset.dataset.bound = "true";
     }
 
-    bindPhysicalChange(nodes.physicalMode, (cfg, event) => { cfg.mode = String(event.target.value || "atlas_and_contours"); }, "physical-mode");
-    bindPhysicalInput(nodes.physicalOpacity, (cfg, event) => {
+    bindPhysicalChange(nodes.physicalMode, (_cfg, event) => ({ mode: String(event.target.value || "atlas_and_contours") }), "physical-mode");
+    bindPhysicalInput(nodes.physicalOpacity, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 1);
-      if (nodes.physicalOpacityValue) nodes.physicalOpacityValue.textContent = `${Math.round(cfg.opacity * 100)}%`;
+      const opacity = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 1);
+      if (nodes.physicalOpacityValue) nodes.physicalOpacityValue.textContent = `${Math.round(opacity * 100)}%`;
+      return { opacity };
     }, "physical-opacity");
-    bindPhysicalInput(nodes.physicalAtlasIntensity, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalAtlasIntensity, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.atlasIntensity = clamp(Number.isFinite(value) ? value / 100 : 0.9, 0.2, 1.4);
-      if (nodes.physicalAtlasIntensityValue) nodes.physicalAtlasIntensityValue.textContent = `${Math.round(cfg.atlasIntensity * 100)}%`;
+      const atlasIntensity = clamp(Number.isFinite(value) ? value / 100 : 0.9, 0.2, 1.4);
+      if (nodes.physicalAtlasIntensityValue) nodes.physicalAtlasIntensityValue.textContent = `${Math.round(atlasIntensity * 100)}%`;
+      return { atlasIntensity };
     }, "physical-atlas-intensity");
-    bindPhysicalInput(nodes.physicalRainforestEmphasis, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalRainforestEmphasis, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.rainforestEmphasis = clamp(Number.isFinite(value) ? value / 100 : 0.72, 0, 1);
-      if (nodes.physicalRainforestEmphasisValue) nodes.physicalRainforestEmphasisValue.textContent = `${Math.round(cfg.rainforestEmphasis * 100)}%`;
+      const rainforestEmphasis = clamp(Number.isFinite(value) ? value / 100 : 0.72, 0, 1);
+      if (nodes.physicalRainforestEmphasisValue) nodes.physicalRainforestEmphasisValue.textContent = `${Math.round(rainforestEmphasis * 100)}%`;
+      return { rainforestEmphasis };
     }, "physical-rainforest-emphasis");
-    bindPhysicalInput(nodes.physicalContourColor, (cfg, event) => { cfg.contourColor = normalizeOceanFillColor(event.target.value); }, "physical-contour-color");
-    bindPhysicalInput(nodes.physicalContourOpacity, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalContourColor, (_cfg, event) => ({ contourColor: normalizeOceanFillColor(event.target.value) }), "physical-contour-color");
+    bindPhysicalInput(nodes.physicalContourOpacity, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.contourOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.34, 0, 1);
-      if (nodes.physicalContourOpacityValue) nodes.physicalContourOpacityValue.textContent = `${Math.round(cfg.contourOpacity * 100)}%`;
+      const contourOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.34, 0, 1);
+      if (nodes.physicalContourOpacityValue) nodes.physicalContourOpacityValue.textContent = `${Math.round(contourOpacity * 100)}%`;
+      return { contourOpacity };
     }, "physical-contour-opacity");
-    bindPhysicalChange(nodes.physicalMinorContours, (cfg, event) => { cfg.contourMinorVisible = !!event.target.checked; }, "physical-contour-minor-toggle");
-    bindPhysicalInput(nodes.physicalContourMajorWidth, (cfg, event) => {
+    bindPhysicalChange(nodes.physicalMinorContours, (_cfg, event) => ({ contourMinorVisible: !!event.target.checked }), "physical-contour-minor-toggle");
+    bindPhysicalInput(nodes.physicalContourMajorWidth, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.contourMajorWidth = clamp(Number.isFinite(value) ? value : 0.8, 0.2, 3);
-      if (nodes.physicalContourMajorWidthValue) nodes.physicalContourMajorWidthValue.textContent = Number(cfg.contourMajorWidth).toFixed(2);
+      const contourMajorWidth = clamp(Number.isFinite(value) ? value : 0.8, 0.2, 3);
+      if (nodes.physicalContourMajorWidthValue) nodes.physicalContourMajorWidthValue.textContent = Number(contourMajorWidth).toFixed(2);
+      return { contourMajorWidth };
     }, "physical-contour-major-width");
-    bindPhysicalInput(nodes.physicalContourMinorWidth, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalContourMinorWidth, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.contourMinorWidth = clamp(Number.isFinite(value) ? value : 0.45, 0.1, 2);
-      if (nodes.physicalContourMinorWidthValue) nodes.physicalContourMinorWidthValue.textContent = Number(cfg.contourMinorWidth).toFixed(2);
+      const contourMinorWidth = clamp(Number.isFinite(value) ? value : 0.45, 0.1, 2);
+      if (nodes.physicalContourMinorWidthValue) nodes.physicalContourMinorWidthValue.textContent = Number(contourMinorWidth).toFixed(2);
+      return { contourMinorWidth };
     }, "physical-contour-minor-width");
-    bindPhysicalInput(nodes.physicalContourMajorInterval, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalContourMajorInterval, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.contourMajorIntervalM = clamp(Number.isFinite(value) ? Math.round(value / 500) * 500 : 500, 500, 2000);
-      if (nodes.physicalContourMajorIntervalValue) nodes.physicalContourMajorIntervalValue.textContent = `${Math.round(cfg.contourMajorIntervalM)}`;
+      const contourMajorIntervalM = clamp(Number.isFinite(value) ? Math.round(value / 500) * 500 : 500, 500, 2000);
+      if (nodes.physicalContourMajorIntervalValue) nodes.physicalContourMajorIntervalValue.textContent = `${Math.round(contourMajorIntervalM)}`;
+      return { contourMajorIntervalM };
     }, "physical-contour-major-interval");
-    bindPhysicalInput(nodes.physicalContourMinorInterval, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalContourMinorInterval, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.contourMinorIntervalM = clamp(Number.isFinite(value) ? Math.round(value / 100) * 100 : 100, 100, 1000);
-      if (nodes.physicalContourMinorIntervalValue) nodes.physicalContourMinorIntervalValue.textContent = `${Math.round(cfg.contourMinorIntervalM)}`;
+      const contourMinorIntervalM = clamp(Number.isFinite(value) ? Math.round(value / 100) * 100 : 100, 100, 1000);
+      if (nodes.physicalContourMinorIntervalValue) nodes.physicalContourMinorIntervalValue.textContent = `${Math.round(contourMinorIntervalM)}`;
+      return { contourMinorIntervalM };
     }, "physical-contour-minor-interval");
-    bindPhysicalInput(nodes.physicalContourMajorLowReliefCutoff, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalContourMajorLowReliefCutoff, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.contourMajorLowReliefCutoffM = clamp(Number.isFinite(value) ? Math.round(value) : 200, 0, 2000);
-      if (nodes.physicalContourMajorLowReliefCutoffValue) nodes.physicalContourMajorLowReliefCutoffValue.textContent = `${Math.round(cfg.contourMajorLowReliefCutoffM)}`;
+      const contourMajorLowReliefCutoffM = clamp(Number.isFinite(value) ? Math.round(value) : 200, 0, 2000);
+      if (nodes.physicalContourMajorLowReliefCutoffValue) nodes.physicalContourMajorLowReliefCutoffValue.textContent = `${Math.round(contourMajorLowReliefCutoffM)}`;
+      return { contourMajorLowReliefCutoffM };
     }, "physical-contour-major-low-relief-cutoff");
-    bindPhysicalInput(nodes.physicalContourMinorLowReliefCutoff, (cfg, event) => {
+    bindPhysicalInput(nodes.physicalContourMinorLowReliefCutoff, (_cfg, event) => {
       const value = Number(event.target.value);
-      cfg.contourMinorLowReliefCutoffM = clamp(Number.isFinite(value) ? Math.round(value) : 280, 0, 2000);
-      if (nodes.physicalContourMinorLowReliefCutoffValue) nodes.physicalContourMinorLowReliefCutoffValue.textContent = `${Math.round(cfg.contourMinorLowReliefCutoffM)}`;
+      const contourMinorLowReliefCutoffM = clamp(Number.isFinite(value) ? Math.round(value) : 280, 0, 2000);
+      if (nodes.physicalContourMinorLowReliefCutoffValue) nodes.physicalContourMinorLowReliefCutoffValue.textContent = `${Math.round(contourMinorLowReliefCutoffM)}`;
+      return { contourMinorLowReliefCutoffM };
     }, "physical-contour-minor-low-relief-cutoff");
-    bindPhysicalChange(nodes.physicalBlendMode, (cfg, event) => { cfg.blendMode = String(event.target.value || "source-over"); }, "physical-blend");
+    bindPhysicalChange(nodes.physicalBlendMode, (_cfg, event) => ({ blendMode: String(event.target.value || "source-over") }), "physical-blend");
 
     intensityFieldEditor.bindEvents();
 
@@ -296,10 +316,12 @@ export function createAppearancePhysicalOwner({
       if (!element || element.dataset.bound === "true") return;
       element.addEventListener("change", (event) => {
         const cfg = syncPhysicalConfig();
-        cfg.atlasClassVisibility = {
-          ...(cfg.atlasClassVisibility || {}),
-          [key]: !!event.target.checked,
-        };
+        patchAppearanceStyleGroupState(runtimeState, "physical", {
+          atlasClassVisibility: {
+            ...(cfg.atlasClassVisibility || {}),
+            [key]: !!event.target.checked,
+          },
+        });
         renderDirty(`physical-class-${key}`);
       });
       element.dataset.bound = "true";

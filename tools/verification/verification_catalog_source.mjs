@@ -446,6 +446,8 @@ const P4_4_SOURCE_REFS = Object.freeze([
   "js/core/state/actions/ui_dirty_actions.js",
   "js/core/state/actions/ui_visibility_actions.js",
   "js/core/state/appearance_preset_state.js",
+  "js/core/state/config.js",
+  "js/core/state/index.js",
   "js/core/state/ui_state.js",
   "js/ui/shortcuts.js",
   "js/ui/sidebar/strategic_overlay_controller.js",
@@ -481,6 +483,8 @@ const P4_4_SOURCE_REFS = Object.freeze([
   "tests/appearance_visibility_actions_behavior.test.mjs",
   "tests/export_workbench_actions_behavior.test.mjs",
   "tests/intensity_field_actions_behavior.test.mjs",
+  "tests/p4_nightly_exact_repair_behavior.test.mjs",
+  "tests/p4_nightly_parallel_authorities_behavior.test.mjs",
   "tests/special_zone_actions_behavior.test.mjs",
   "tests/special_zones_workbench_controller_behavior.test.mjs",
   "tests/strategic_overlay_actions_behavior.test.mjs",
@@ -491,6 +495,61 @@ const P4_4_SOURCE_REFS = Object.freeze([
   "tests/ui_dirty_actions_behavior.test.mjs",
   "tests/ui_state_action_callers_behavior.test.mjs",
   "tests/ui_visibility_actions_behavior.test.mjs",
+]);
+
+const P4_4_NODE_ROUTE_SOURCE_REFS = Object.freeze([
+  "tests/p4_phase_verification_runner_behavior.test.mjs",
+  "tests/state_action_delegation_edges_behavior.test.mjs",
+  "tests/state_writer_policy_batch_scan_behavior.test.mjs",
+  "tests/appearance_actions_behavior.test.mjs",
+  "tests/appearance_preset_actions_behavior.test.mjs",
+  "tests/appearance_preset_history.node.test.mjs",
+  "tests/appearance_preset_state.node.test.mjs",
+  "tests/appearance_reference_actions_behavior.test.mjs",
+  "tests/appearance_selection_actions_behavior.test.mjs",
+  "tests/appearance_state_action_callers_behavior.test.mjs",
+  "tests/appearance_visibility_actions_behavior.test.mjs",
+  "tests/intensity_field_actions_behavior.test.mjs",
+  "tests/export_workbench_actions_behavior.test.mjs",
+  "tests/transport_actions_behavior.test.mjs",
+  "tests/transport_workbench_state_owner_behavior.test.mjs",
+  "tests/ui_chrome_actions_behavior.test.mjs",
+  "tests/ui_dirty_actions_behavior.test.mjs",
+  "tests/ui_visibility_actions_behavior.test.mjs",
+  "tests/ui_state_action_callers_behavior.test.mjs",
+  "tests/strategic_overlay_actions_behavior.test.mjs",
+  "tests/special_zone_actions_behavior.test.mjs",
+  "tests/special_zones_workbench_controller_behavior.test.mjs",
+  "tests/strategic_overlay_runtime_owner_behavior.test.mjs",
+  "tools/run_p4_phase_verification.mjs",
+  "tools/build_state_writer_policy.mjs",
+  "tools/state_action_delegation_contract.mjs",
+  "tools/state_writer_inventory.mjs",
+  "js/core/map_renderer/exact_after_settle_scheduler.js",
+  "js/core/state/actions/appearance_actions.js",
+  "js/core/state.js",
+  "js/core/state/actions/appearance_preset_actions.js",
+  "js/core/history_manager.js",
+  "js/core/special_zone_layers.js",
+  "js/core/state/ui_state.js",
+  "js/core/state/actions/appearance_reference_actions.js",
+  "js/core/state/actions/appearance_selection_actions.js",
+  "js/core/state/actions/appearance_visibility_actions.js",
+  "js/core/intensity_field.js",
+  "js/core/state/actions/intensity_field_actions.js",
+  "js/core/state/actions/export_workbench_actions.js",
+  "js/core/state/actions/transport_actions.js",
+  "js/core/transport_pack_resolver.js",
+  "js/ui/toolbar/transport_workbench_state_owner.js",
+  "js/core/state/actions/ui_chrome_actions.js",
+  "js/core/state/actions/ui_dirty_actions.js",
+  "js/core/state/actions/ui_visibility_actions.js",
+  "js/core/state/actions/strategic_overlay_actions.js",
+  "tools/state_writer_policy.mjs",
+  "js/core/state/actions/special_zone_actions.js",
+  "js/core/state/index.js",
+  "js/ui/toolbar/special_zones_workbench_controller.js",
+  "js/core/renderer/strategic_overlay_runtime_owner.js",
 ]);
 
 // This is the only manually maintained verification metadata surface.
@@ -4286,6 +4345,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "verify:test-timeout-guardrails",
       "sourceRefs": [
         "tools/check_test_timeout_guardrails.mjs",
+        "tools/test-timeout-guardrail-allowlist.json",
         "tests/e2e/test-layer-manifest.json",
         ".github/workflows/pr-verify.yml",
         ".github/workflows/verify-shared.yml"
@@ -5251,8 +5311,10 @@ const AUTHORED_VERIFICATION_METADATA = {
         "tests/appearance_presets_owner_behavior.test.mjs",
         "tests/appearance_preset_history.node.test.mjs",
         "js/core/state.js",
+        "js/core/state/actions/appearance_preset_actions.js",
         "js/ui/toolbar/appearance_presets_owner.js",
         "js/core/history_manager.js",
+        "js/core/special_zone_layers.js",
         "js/core/state/ui_state.js"
       ],
       "ownerHints": [
@@ -15890,6 +15952,7 @@ const AUTHORED_VERIFICATION_METADATA = {
       "commandRef": "verify:test-timeout-guardrails",
       "sourceRefs": [
         "tools/check_test_timeout_guardrails.mjs",
+        "tools/test-timeout-guardrail-allowlist.json",
         "tests/e2e/test-layer-manifest.json"
       ],
       "ownerHints": [
@@ -18845,6 +18908,26 @@ const AUTHORED_VERIFICATION_METADATA = {
         "supervisorDomain": "state-ownership",
         "routeRegistry": true
       },
+      "selector": {}
+    },
+    {
+      "id": "node:test:node:p4:p4-4",
+      "commandRef": "test:node:p4:p4-4",
+      "sourceRefs": [
+        ...P4_4_NODE_ROUTE_SOURCE_REFS
+      ],
+      "ownerHints": ["state-ownership"],
+      "domains": ["state-ownership"],
+      "tiers": ["contract"],
+      "cost": "fast",
+      "resourceLocks": [],
+      "executionOwners": ["child-safe"],
+      "profiles": ["pr-fast"],
+      "platforms": ["all"],
+      "entrypointPolicyIndex": 0,
+      "verificationOrder": null,
+      "selectorOrder": 398,
+      "verification": null,
       "selector": {}
     }
   ]

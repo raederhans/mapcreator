@@ -14,9 +14,9 @@ const APP_URL = getAppUrl();
 const SCENARIO_ID = "tno_1962";
 const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
-// 这条回归会串行切 10+ 组 zoom/subset 组合并抓多张真实截图。
-// 当前主线程渲染与截图链路在本机稳定需要 2 分钟以上，所以把预算放宽到 4 分钟，
-// 继续让断言负责功能正确性，避免测试在完成前被统一超时截断。
+// 每条河流回归按一个语义边界串行执行，最多覆盖 6 组 zoom/subset 组合。
+// 当前主线程渲染与像素采样在本机稳定需要 2 分钟以上，因此每条保留 4 分钟预算，
+// 继续让断言负责功能正确性，避免聚合工作量在完成前耗尽统一预算。
 test.setTimeout(240000);
 
 function countChangedPixels(left, right, threshold = 12) {
@@ -143,12 +143,12 @@ async function setRiversVisibleForRegression(page, checked) {
   await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
 }
 
-async function setZoomPercent(page, percent) {
+async function setZoomPercent(page, percent, { renderIdleTimeout = 30_000 } = {}) {
   await page.evaluate(async (targetPercent) => {
     const { setZoomPercent } = await import('/js/core/map_renderer.js');
     setZoomPercent(targetPercent);
   }, percent);
-  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
+  await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: renderIdleTimeout });
 }
 
 async function readZoomState(page) {
@@ -272,9 +272,10 @@ async function measureRiverInk(page, {
   subsetName,
   label,
   captureScreenshot = false,
+  zoomRenderIdleTimeout = 30_000,
 }) {
   await setRiversVisibleForRegression(page, false);
-  await setZoomPercent(page, zoomPercent);
+  await setZoomPercent(page, zoomPercent, { renderIdleTimeout: zoomRenderIdleTimeout });
   const zoomState = await readZoomState(page);
   const subsetState = await setRiverSubset(page, subsetName);
   await waitForRenderIdle(page, { scenarioId: SCENARIO_ID, timeout: 30_000 });
@@ -461,7 +462,7 @@ function expectNoRiverRuntimeIssues(trackers) {
   expect(trackers.networkFailures).toEqual([]);
 }
 
-test('river layer major and mid-tier zoom gating regression', async ({ page }) => {
+test('river layer major zoom gating regression', async ({ page }) => {
   const trackers = await beginRiverRegression(page);
 
   const riverMajorLow = await measureRiverInk(page, {
@@ -495,23 +496,8 @@ test('river layer major and mid-tier zoom gating regression', async ({ page }) =
     subsetName: 'river-major',
     label: 'river_layer_regression_high',
     captureScreenshot: true,
+    zoomRenderIdleTimeout: 45_000,
   });
-  const riverMidTierLow = await measureRiverInk(page, {
-    zoomPercent: 100,
-    subsetName: 'river-mid-tier',
-    label: 'river_layer_regression_mid_tier_low',
-  });
-  const riverMidTierMid = await measureRiverInk(page, {
-    zoomPercent: 150,
-    subsetName: 'river-mid-tier',
-    label: 'river_layer_regression_mid_tier_mid',
-  });
-  const riverMidTierHigh = await measureRiverInk(page, {
-    zoomPercent: 260,
-    subsetName: 'river-mid-tier',
-    label: 'river_layer_regression_mid_tier_high',
-  });
-
   expect(riverMajorLow.zoomState.scale).toBeCloseTo(1.0, 2);
   expect(riverMajorMid.zoomState.scale).toBeCloseTo(1.5, 2);
   expect(riverMajorHigh.zoomState.scale).toBeCloseTo(2.6, 2);
@@ -538,13 +524,6 @@ test('river layer major and mid-tier zoom gating regression', async ({ page }) =
   expect(riverMajorMid.renderMetric.outlineAlphaFactor).toBeCloseTo(0.7, 4);
   expect(riverMajorHigh.renderMetric.outlineAlphaFactor).toBeCloseTo(0.45, 4);
 
-  expect(riverMidTierLow.renderMetric.visibleFeatureCount).toBe(0);
-  expect(riverMidTierLow.renderMetric.featureCount).toBeGreaterThan(0);
-  expect(riverMidTierMid.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
-  expect(riverMidTierHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
-  expect(riverMidTierMid.changedPixels).toBeGreaterThan(20);
-  expect(riverMidTierHigh.changedPixels).toBeGreaterThan(10);
-
   const { finalRiverState } = await restoreRiverRegressionState(page);
   expectNoRiverRuntimeIssues(trackers);
 
@@ -570,6 +549,40 @@ test('river layer major and mid-tier zoom gating regression', async ({ page }) =
       luminanceDelta: riverMajorHigh.luminanceDelta,
       screenshot: riverMajorHigh.screenshot,
     },
+    finalRiverState,
+  }, null, 2));
+});
+
+test('river layer mid-tier zoom gating regression', async ({ page }) => {
+  const trackers = await beginRiverRegression(page);
+
+  const riverMidTierLow = await measureRiverInk(page, {
+    zoomPercent: 100,
+    subsetName: 'river-mid-tier',
+    label: 'river_layer_regression_mid_tier_low',
+  });
+  const riverMidTierMid = await measureRiverInk(page, {
+    zoomPercent: 150,
+    subsetName: 'river-mid-tier',
+    label: 'river_layer_regression_mid_tier_mid',
+  });
+  const riverMidTierHigh = await measureRiverInk(page, {
+    zoomPercent: 260,
+    subsetName: 'river-mid-tier',
+    label: 'river_layer_regression_mid_tier_high',
+  });
+
+  expect(riverMidTierLow.renderMetric.visibleFeatureCount).toBe(0);
+  expect(riverMidTierLow.renderMetric.featureCount).toBeGreaterThan(0);
+  expect(riverMidTierMid.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
+  expect(riverMidTierHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
+  expect(riverMidTierMid.changedPixels).toBeGreaterThan(20);
+  expect(riverMidTierHigh.changedPixels).toBeGreaterThan(10);
+
+  const { finalRiverState } = await restoreRiverRegressionState(page);
+  expectNoRiverRuntimeIssues(trackers);
+
+  console.log(JSON.stringify({
     riverMidTierLow: {
       renderMetric: riverMidTierLow.renderMetric,
       changedPixels: riverMidTierLow.changedPixels,
@@ -589,7 +602,7 @@ test('river layer major and mid-tier zoom gating regression', async ({ page }) =
   }, null, 2));
 });
 
-test('river layer lake and intermittent zoom gating regression', async ({ page }) => {
+test('river layer lake zoom gating regression', async ({ page }) => {
   const trackers = await beginRiverRegression(page);
 
   const lakeLow = await measureRiverInk(page, {
@@ -608,45 +621,9 @@ test('river layer lake and intermittent zoom gating regression', async ({ page }
     label: 'river_layer_regression_lake_high',
   });
 
-  const intermittentLow = await measureRiverInk(page, {
-    zoomPercent: 100,
-    subsetName: 'river-intermittent',
-    label: 'river_layer_regression_intermittent_low',
-  });
-  const intermittentMid = await measureRiverInk(page, {
-    zoomPercent: 150,
-    subsetName: 'river-intermittent',
-    label: 'river_layer_regression_intermittent_mid',
-  });
-  const intermittentHigh = await measureRiverInk(page, {
-    zoomPercent: 260,
-    subsetName: 'river-intermittent',
-    label: 'river_layer_regression_intermittent_high',
-  });
-
-  const canalLow = await measureRiverInk(page, {
-    zoomPercent: 100,
-    subsetName: 'canal',
-    label: 'river_layer_regression_canal_low',
-  });
-  const canalMid = await measureRiverInk(page, {
-    zoomPercent: 150,
-    subsetName: 'canal',
-    label: 'river_layer_regression_canal_mid',
-  });
-  const canalHigh = await measureRiverInk(page, {
-    zoomPercent: 260,
-    subsetName: 'canal',
-    label: 'river_layer_regression_canal_high',
-  });
-
   expect(lakeLow.renderMetric.visibleFeatureCount).toBe(0);
   expect(lakeMid.renderMetric.visibleFeatureCount).toBe(0);
   expect(lakeHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
-
-  expect(intermittentLow.renderMetric.visibleFeatureCount).toBe(0);
-  expect(intermittentMid.renderMetric.visibleFeatureCount).toBe(0);
-  expect(intermittentHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
 
   const { finalRiverState } = await restoreRiverRegressionState(page);
   expectNoRiverRuntimeIssues(trackers);
@@ -667,6 +644,37 @@ test('river layer lake and intermittent zoom gating regression', async ({ page }
       changedPixels: lakeHigh.changedPixels,
       luminanceDelta: lakeHigh.luminanceDelta,
     },
+    finalRiverState,
+  }, null, 2));
+});
+
+test('river layer intermittent zoom gating regression', async ({ page }) => {
+  const trackers = await beginRiverRegression(page);
+
+  const intermittentLow = await measureRiverInk(page, {
+    zoomPercent: 100,
+    subsetName: 'river-intermittent',
+    label: 'river_layer_regression_intermittent_low',
+  });
+  const intermittentMid = await measureRiverInk(page, {
+    zoomPercent: 150,
+    subsetName: 'river-intermittent',
+    label: 'river_layer_regression_intermittent_mid',
+  });
+  const intermittentHigh = await measureRiverInk(page, {
+    zoomPercent: 260,
+    subsetName: 'river-intermittent',
+    label: 'river_layer_regression_intermittent_high',
+  });
+
+  expect(intermittentLow.renderMetric.visibleFeatureCount).toBe(0);
+  expect(intermittentMid.renderMetric.visibleFeatureCount).toBe(0);
+  expect(intermittentHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
+
+  const { finalRiverState } = await restoreRiverRegressionState(page);
+  expectNoRiverRuntimeIssues(trackers);
+
+  console.log(JSON.stringify({
     intermittentLow: {
       renderMetric: intermittentLow.renderMetric,
       changedPixels: intermittentLow.changedPixels,

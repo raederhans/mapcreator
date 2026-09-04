@@ -21,7 +21,7 @@ export function createStrategicOverlayRenderOwner({
     renderOperationalLinesOverlay = () => {},
     renderSpecialZones = () => {},
     renderUnitCountersOverlay = () => {},
-    syncUnitCounterScalesDuringZoom = () => {},
+    syncUnitCounterScalesDuringZoom: syncUnitCounterScalesDuringZoomRaw = () => {},
   } = renderers;
 
   let lastSpecialZonesOverlaySignature = "";
@@ -193,6 +193,12 @@ export function createStrategicOverlayRenderOwner({
     setStrategicOverlayDirtyState(state, "unitCountersDirty", false);
     lastUnitCountersOverlaySignature = nextSignature;
     return true;
+  }
+
+  function syncUnitCounterScalesDuringZoom() {
+    const needsMaterialization = syncUnitCounterScalesDuringZoomRaw() === true;
+    if (!needsMaterialization) return false;
+    return renderUnitCountersIfNeeded({ force: true });
   }
 
   return {

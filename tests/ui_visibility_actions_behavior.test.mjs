@@ -60,6 +60,24 @@ test("visibility capture and restore produce a detached finite snapshot", () => 
   assert.equal(target.privateFlag, true);
 });
 
+test("visibility commits can preserve exact rollback snapshot values", () => {
+  const sentinel = { version: "before" };
+  const metric = { mode: "before" };
+  const target = {};
+
+  commitUiVisibilityState(
+    target,
+    {
+      showCityPoints: sentinel,
+      strategicChoroplethMetric: metric,
+    },
+    { normalize: false },
+  );
+
+  assert.equal(target.showCityPoints, sentinel);
+  assert.equal(target.strategicChoroplethMetric, metric);
+});
+
 test("visibility actions keep non-target parameters read-only", async () => {
   const modulePath = "js/core/state/actions/ui_visibility_actions.js";
   const source = await readFile(new URL(`../${modulePath}`, import.meta.url), "utf8");

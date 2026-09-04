@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const MODULE_PATH = "../js/core/state/actions/renderer_interaction_actions.js";
@@ -225,4 +226,11 @@ test("click selection actions preserve normalization deletion and paired color w
   assert.equal(removeClickWaterRegionOverrideState(target, ""), false);
   assert.equal(removeClickCountryColorsState(target, ""), false);
   assert.equal(setClickCountryColorsState(target, "", "#000000"), false);
+});
+
+test("click selected color delegates to the canonical appearance selection action", async () => {
+  const source = await readFile(new URL(MODULE_PATH, import.meta.url), "utf8");
+  assert.match(source, /import \{ setSelectedColorState \} from "\.\/appearance_selection_actions\.js";/);
+  assert.match(source, /return setSelectedColorState\(target, color\);/);
+  assert.doesNotMatch(source, /target\.selectedColor\s*=/);
 });

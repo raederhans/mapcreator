@@ -3274,7 +3274,7 @@ function analyzeBindingMutations(
       const importedTargetIndex = importedDelegation.targetArgumentIndex;
       const targetClassification =
         argumentClassifications[importedTargetIndex];
-      const sanctionedTarget = importedDelegation.pureNormalizerContract
+      const initiallySanctionedTarget = importedDelegation.pureNormalizerContract
         ? isSanctionedImportedPureNormalizerTargetArgument(
           node.arguments[importedTargetIndex],
           targetClassification,
@@ -3291,9 +3291,47 @@ function analyzeBindingMutations(
           targetClassification,
           aliasRecords,
         );
+      const callerActionContract = currentActionDelegationContract();
+      const exactCurrentActionTarget = isExactCurrentActionTargetArgument(
+        node.arguments[importedTargetIndex],
+      );
+      const sanctionedTarget = Boolean(
+        initiallySanctionedTarget
+        && (!callerActionContract || exactCurrentActionTarget),
+      );
+      const sanctionedReferenceIdentityTarget = Boolean(
+        importedDelegation.actionContract
+        && exactCurrentActionTarget
+        && (
+          importedDelegation.actionContract
+            .referenceIdentityArgumentIndexes || []
+        ).some((argumentIndex) => {
+          const argument = node.arguments[argumentIndex];
+          const payload = unwrapChain(argument);
+          return argumentIndex < node.arguments.length
+            && (
+              isSanctionedImportedStateActionReferenceIdentityArgument(
+                argument,
+                argumentIndex,
+                importedDelegation.actionContract,
+                aliasRecords,
+              )
+              || (
+                (
+                  payload?.type === "ObjectExpression"
+                  || payload?.type === "ArrayExpression"
+                )
+                && isSafeRegisteredActionPayloadContainer(
+                  payload,
+                  aliasRecords,
+                )
+              )
+            );
+        }),
+      );
       if (
         importedTargetIndex < node.arguments.length
-        && sanctionedTarget
+        && (sanctionedTarget || sanctionedReferenceIdentityTarget)
       ) {
         delegatedArgumentIndexes.add(importedTargetIndex);
         if (importedDelegation.actionContract) {
@@ -3326,6 +3364,23 @@ function analyzeBindingMutations(
                 node.arguments[argumentIndex],
                 argumentIndex,
                 argumentClassifications[argumentIndex],
+                importedDelegation.actionContract,
+                aliasRecords,
+              )
+            ) {
+              delegatedArgumentIndexes.add(argumentIndex);
+            }
+          }
+          for (
+            const argumentIndex of
+              importedDelegation.actionContract
+                .referenceIdentityArgumentIndexes || []
+          ) {
+            if (
+              argumentIndex < node.arguments.length
+              && isSanctionedImportedStateActionReferenceIdentityArgument(
+                node.arguments[argumentIndex],
+                argumentIndex,
                 importedDelegation.actionContract,
                 aliasRecords,
               )
@@ -3774,6 +3829,83 @@ function analyzeBindingMutations(
       segmentCount > 0
       && isImmutableStateRootUnionArgument(node, aliasRecords),
     );
+  }
+
+  function isSanctionedImportedStateActionReferenceIdentityArgument(
+    argument,
+    argumentIndex,
+    actionContract,
+    aliasRecords,
+  ) {
+    if (
+      binding?.kind !== "function-parameter"
+      || binding.parameterPath !== "$"
+      || !actionContract?.referenceIdentityArgumentIndexes?.includes(
+        argumentIndex,
+      )
+    ) {
+      return false;
+    }
+    let node = unwrapChain(argument);
+    const classification = referenceClassification(node, aliasRecords);
+    if (
+      classification.status !== "exact"
+      || (classification.reference?.segments || []).some(
+        (segment) => segment.dynamic,
+      )
+    ) {
+      return false;
+    }
+    while (node?.type === "MemberExpression") {
+      if (
+        node.computed
+        && !(
+          node.property?.type === "Literal"
+          && ["string", "number"].includes(typeof node.property.value)
+        )
+        && !(
+          node.property?.type === "TemplateLiteral"
+          && (node.property.expressions || []).length === 0
+        )
+      ) {
+        return false;
+      }
+      node = unwrapChain(node.object);
+    }
+    if (node?.type !== "Identifier") return false;
+    return true;
+  }
+
+  function isExactCurrentActionTargetArgument(argument) {
+    const node = unwrapChain(argument);
+    if (node?.type !== "Identifier") return false;
+    const executionRecord = functionRecordForNode(
+      currentExecutionFunction(),
+    );
+    if (!executionRecord) return false;
+    const callerContract = currentActionDelegationContract();
+    if (!callerContract) return false;
+    const targetRecord = executionRecord.parameterRecords.find(
+      (record) =>
+        record.parameterIndex === callerContract.targetArgumentIndex
+        && record.parameterPath === "$",
+    );
+    return Boolean(
+      targetRecord
+      && analysis.resolveIdentifier(node) === targetRecord,
+    );
+  }
+
+  function currentActionDelegationContract() {
+    const executionRecord = functionRecordForNode(
+      currentExecutionFunction(),
+    );
+    return executionRecord
+      ? findStateActionDelegationContractEntry(
+        filePath,
+        executionRecord.name,
+      )
+      : null;
   }
 
   function isExplicitTargetArgument(argument) {
@@ -4291,12 +4423,24 @@ function analyzeBindingMutations(
           importedDelegation?.actionContract
           && argumentIndex === importedDelegation.targetArgumentIndex
         ) {
-          sanctionedImportedActionTarget =
-            isSanctionedImportedStateActionTargetArgument(
-              argument,
-              classification,
-              aliasRecords,
-            );
+          const callerActionContract = currentActionDelegationContract();
+          const exactCurrentActionTarget =
+            isExactCurrentActionTargetArgument(argument);
+          sanctionedImportedActionTarget = Boolean(
+            (
+              isSanctionedImportedStateActionTargetArgument(
+                argument,
+                classification,
+                aliasRecords,
+              )
+              && (!callerActionContract || exactCurrentActionTarget)
+            )
+            || (
+              importedDelegation.actionContract
+                .referenceIdentityArgumentIndexes?.length
+              && exactCurrentActionTarget
+            )
+          );
         }
       }
       const delegatedArgumentIndexes = processSafeTargetDelegation(

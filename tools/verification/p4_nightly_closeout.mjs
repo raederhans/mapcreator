@@ -129,7 +129,7 @@ export function validateP4NightlyCloseout({
   const boundaryEvidence = checker.checker?.boundaryEvidence;
   if (
     !sameArray(checker.commands.map((entry) => entry.commandRef), [
-      "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.3",
+      "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.4",
       ...P4_NIGHTLY_PYTHON_BOUNDARY_COMMANDS,
     ])
     || checker.checker?.producerRole !== STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE
@@ -143,7 +143,7 @@ export function validateP4NightlyCloseout({
     || evidenceDigest(evidence) !== evidence?.evidenceId
     || evidence?.schemaVersion !== STATE_WRITER_POLICY_EVIDENCE_SCHEMA_VERSION
     || evidence?.kind !== STATE_WRITER_POLICY_EVIDENCE_KIND
-    || evidence?.phase !== "P4.3"
+    || evidence?.phase !== "P4.4"
     || evidence?.producer?.role !== STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE
     || evidence?.verificationIdentity?.verificationSha !== expectedSha
     || evidence?.verificationIdentity?.verificationTreeSha !== expectedTree
@@ -182,7 +182,7 @@ export function validateP4NightlyCloseout({
     !sameArray(fast.commands.map((entry) => entry.commandRef), P4_NIGHTLY_FAST_COMMANDS)
     || fast.fast?.contracts !== "pass"
     || fast.fast?.routes !== "pass"
-  ) fail("p4-nightly-fast-authority-invalid", "Fast P4.3 contracts/routes authority did not pass exactly once.");
+  ) fail("p4-nightly-fast-authority-invalid", "Fast P4.4 contracts/routes authority did not pass exactly once.");
 
   const result = {
     schemaVersion: P4_NIGHTLY_CLOSEOUT_SCHEMA_VERSION,

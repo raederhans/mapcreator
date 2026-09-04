@@ -1128,6 +1128,7 @@ function createScenarioChunkRuntimeController({
       if (applyResult?.externalEffect?.type === "scenario-city-overrides") {
         syncScenarioLocalizationState({ cityOverridesPayload: applyResult.externalEffect.payload });
       }
+      if (applyResult?.changed === false && !applyResult?.externalEffect) return;
       changed = true;
       changedLayerKeys.push(layerKey);
       if (isScenarioOptionalLayerRequestedForVisibility(normalizedLayerKey, config)) {

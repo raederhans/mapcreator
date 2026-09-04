@@ -2,6 +2,13 @@ import { createOperationGraphicsRuntimeDomain } from "./strategic_overlay_runtim
 import { createSpecialZonesRuntimeDomain } from "./strategic_overlay_runtime/special_zones_runtime_domain.js";
 import { createUnitCounterRuntimeDomain } from "./strategic_overlay_runtime/unit_counter_runtime_domain.js";
 import { createUnitCounterRuntimeHelpers } from "./strategic_overlay_runtime/unit_counter_runtime_helpers.js";
+import {
+  commitStrategicOverlayCollectionsState,
+  patchStrategicOverlayEntityState,
+  patchStrategicOverlayEditorState,
+  setStrategicOverlayDirtyState,
+} from "../state/actions/strategic_overlay_actions.js";
+import { commitSpecialZoneLayersState } from "../state/actions/special_zone_actions.js";
 
 // Strategic overlay runtime owner for Batch 5.
 // It owns editor-side mutations, history commits, and UI refresh ordering for
@@ -89,7 +96,6 @@ export function createStrategicOverlayRuntimeOwner({
   } = helpers;
 
   let specialZoneMembershipDragSession = null;
-
   const specialZonesDomain = createSpecialZonesRuntimeDomain({
     state,
     defaultSpecialZoneType,
@@ -183,8 +189,8 @@ export function createStrategicOverlayRuntimeOwner({
     if (!state.operationalLineEditor.active) return false;
     const coord = getMapLonLatFromEvent(event);
     if (!coord) return false;
-    state.operationalLineEditor.points.push(coord);
-    state.operationalLinesDirty = true;
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", { points: [...state.operationalLineEditor.points, coord] });
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     updateStrategicOverlayUi();
     renderNow();
     return true;
@@ -200,25 +206,26 @@ export function createStrategicOverlayRuntimeOwner({
   } = {}) {
     ensureOperationalLineEditorState();
     ensureOperationGraphicsEditorState();
-    state.operationGraphicsEditor.selectedId = null;
-    state.operationalLineEditor.active = true;
-    state.operationalLineEditor.mode = "draw";
-    state.operationalLineEditor.points = [];
-    state.operationalLineEditor.kind = String(kind || defaultOperationalLineKind).trim().toLowerCase();
-    state.operationalLineEditor.label = String(label || "");
-    state.operationalLineEditor.stylePreset = normalizeOperationalLineStylePreset(stylePreset, kind);
-    state.operationalLineEditor.stroke = normalizeOperationGraphicStroke(stroke);
-    state.operationalLineEditor.width = normalizeOperationGraphicWidth(width);
-    state.operationalLineEditor.opacity = normalizeOperationGraphicOpacity(opacity);
-    state.operationalLineEditor.selectedId = null;
-    state.operationalLineEditor.selectedVertexIndex = -1;
-    state.strategicOverlayUi = {
-      ...(state.strategicOverlayUi || {}),
+    patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { selectedId: null });
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", {
+      active: true,
+      mode: "draw",
+      points: [],
+      kind: String(kind || defaultOperationalLineKind).trim().toLowerCase(),
+      label: String(label || ""),
+      stylePreset: normalizeOperationalLineStylePreset(stylePreset, kind),
+      stroke: normalizeOperationGraphicStroke(stroke),
+      width: normalizeOperationGraphicWidth(width),
+      opacity: normalizeOperationGraphicOpacity(opacity),
+      selectedId: null,
+      selectedVertexIndex: -1,
+    });
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
       activeMode: state.operationalLineEditor.kind,
       modalEntityType: "operational-line",
       modalSection: "line",
-    };
-    state.operationalLinesDirty = true;
+    });
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -226,23 +233,22 @@ export function createStrategicOverlayRuntimeOwner({
   function undoOperationalLineVertex() {
     ensureOperationalLineEditorState();
     if (!state.operationalLineEditor.active || !state.operationalLineEditor.points.length) return;
-    state.operationalLineEditor.points.pop();
-    state.operationalLinesDirty = true;
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", { points: Array.from(state.operationalLineEditor.points).slice(0, -1) });
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     updateStrategicOverlayUi();
     renderNow();
   }
 
   function cancelOperationalLineDraw() {
     ensureOperationalLineEditorState();
-    state.operationalLineEditor.active = false;
-    state.operationalLineEditor.mode = state.operationalLineEditor.selectedId ? "edit" : "idle";
-    state.operationalLineEditor.points = [];
-    state.operationalLineEditor.selectedVertexIndex = -1;
-    state.strategicOverlayUi = {
-      ...(state.strategicOverlayUi || {}),
-      activeMode: "idle",
-    };
-    state.operationalLinesDirty = true;
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", {
+      active: false,
+      mode: state.operationalLineEditor.selectedId ? "edit" : "idle",
+      points: [],
+      selectedVertexIndex: -1,
+    });
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", { activeMode: "idle" });
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -250,38 +256,40 @@ export function createStrategicOverlayRuntimeOwner({
   function finishOperationalLineDraw() {
     ensureOperationalLineEditorState();
     const kind = String(state.operationalLineEditor.kind || defaultOperationalLineKind);
-    const points = Array.isArray(state.operationalLineEditor.points) ? state.operationalLineEditor.points : [];
+    const points = Array.isArray(state.operationalLineEditor.points) ? Array.from(state.operationalLineEditor.points) : [];
     if (!state.operationalLineEditor.active || points.length < getOperationalLineMinPoints(kind)) {
       return false;
     }
     ensureOperationalLineCounter();
     const before = captureHistoryState({ strategicOverlay: true });
     const id = `opl_${state.operationalLineEditor.counter}`;
-    state.operationalLines.push({
-      id,
-      kind,
-      label: String(state.operationalLineEditor.label || "").trim(),
-      points: [...points],
-      stylePreset: normalizeOperationalLineStylePreset(state.operationalLineEditor.stylePreset, kind),
-      stroke: normalizeOperationGraphicStroke(state.operationalLineEditor.stroke) || null,
-      width: normalizeOperationGraphicWidth(state.operationalLineEditor.width),
-      opacity: normalizeOperationGraphicOpacity(state.operationalLineEditor.opacity),
-      attachedCounterIds: [],
+    commitStrategicOverlayCollectionsState(state, {
+      operationalLines: [...Array.from(state.operationalLines), {
+        id,
+        kind,
+        label: String(state.operationalLineEditor.label || "").trim(),
+        points: [...points],
+        stylePreset: normalizeOperationalLineStylePreset(state.operationalLineEditor.stylePreset, kind),
+        stroke: normalizeOperationGraphicStroke(state.operationalLineEditor.stroke) || null,
+        width: normalizeOperationGraphicWidth(state.operationalLineEditor.width),
+        opacity: normalizeOperationGraphicOpacity(state.operationalLineEditor.opacity),
+        attachedCounterIds: [],
+      }],
     });
-    state.operationalLineEditor.counter += 1;
-    state.operationalLineEditor.selectedId = id;
-    state.operationalLineEditor.active = false;
-    state.operationalLineEditor.mode = "edit";
-    state.operationalLineEditor.points = [...points];
-    state.operationalLineEditor.selectedVertexIndex = -1;
-    state.strategicOverlayUi = {
-      ...(state.strategicOverlayUi || {}),
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", {
+      counter: state.operationalLineEditor.counter + 1,
+      selectedId: id,
+      active: false,
+      mode: "edit",
+      points: [...points],
+      selectedVertexIndex: -1,
+    });
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
       activeMode: "idle",
       modalEntityId: id,
       modalEntityType: "operational-line",
       modalSection: "line",
-    };
-    state.operationalLinesDirty = true;
+    });
     commitHistoryEntry({
       kind: "create-operational-line",
       before,
@@ -296,30 +304,31 @@ export function createStrategicOverlayRuntimeOwner({
   function selectOperationalLineById(id) {
     ensureOperationalLineEditorState();
     ensureOperationGraphicsEditorState();
-    state.operationGraphicsEditor.selectedId = null;
+    patchStrategicOverlayEditorState(state, "operationGraphicsEditor", { selectedId: null });
     const selectedId = String(id || "").trim();
     const line = getOperationalLineById(selectedId);
-    state.operationalLineEditor.selectedId = selectedId || null;
+    const editorPatch = { selectedId: selectedId || null };
     if (line) {
-      state.operationalLineEditor.kind = String(line.kind || defaultOperationalLineKind);
-      state.operationalLineEditor.label = String(line.label || "");
-      state.operationalLineEditor.stylePreset = normalizeOperationalLineStylePreset(line.stylePreset, line.kind);
-      state.operationalLineEditor.stroke = normalizeOperationGraphicStroke(line.stroke);
-      state.operationalLineEditor.width = normalizeOperationGraphicWidth(line.width);
-      state.operationalLineEditor.opacity = normalizeOperationGraphicOpacity(line.opacity);
-      state.operationalLineEditor.points = Array.isArray(line.points) ? [...line.points] : [];
-      state.operationalLineEditor.mode = "edit";
+      Object.assign(editorPatch, {
+        kind: String(line.kind || defaultOperationalLineKind),
+        label: String(line.label || ""),
+        stylePreset: normalizeOperationalLineStylePreset(line.stylePreset, line.kind),
+        stroke: normalizeOperationGraphicStroke(line.stroke),
+        width: normalizeOperationGraphicWidth(line.width),
+        opacity: normalizeOperationGraphicOpacity(line.opacity),
+        points: Array.isArray(line.points) ? [...line.points] : [],
+        mode: "edit",
+      });
     } else {
-      state.operationalLineEditor.points = [];
-      state.operationalLineEditor.mode = "idle";
+      Object.assign(editorPatch, { points: [], mode: "idle" });
     }
-    state.strategicOverlayUi = {
-      ...(state.strategicOverlayUi || {}),
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", editorPatch);
+    patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
       modalEntityId: selectedId,
       modalEntityType: line ? "operational-line" : "",
       modalSection: "line",
-    };
-    state.operationalLinesDirty = true;
+    });
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     updateStrategicOverlayUi();
     renderNow();
   }
@@ -334,17 +343,19 @@ export function createStrategicOverlayRuntimeOwner({
     const nextKind = partial.kind
       ? String(partial.kind || defaultOperationalLineKind).trim().toLowerCase()
       : String(line.kind || defaultOperationalLineKind);
-    if (partial.kind !== undefined) line.kind = nextKind;
-    if (partial.label !== undefined) line.label = String(partial.label || "");
-    if (partial.stylePreset !== undefined) line.stylePreset = normalizeOperationalLineStylePreset(partial.stylePreset, nextKind);
-    if (partial.stroke !== undefined) line.stroke = normalizeOperationGraphicStroke(partial.stroke) || null;
-    if (partial.width !== undefined) line.width = normalizeOperationGraphicWidth(partial.width);
-    if (partial.opacity !== undefined) line.opacity = normalizeOperationGraphicOpacity(partial.opacity);
+    const entityPatch = {};
+    if (partial.kind !== undefined) entityPatch.kind = nextKind;
+    if (partial.label !== undefined) entityPatch.label = String(partial.label || "");
+    if (partial.stylePreset !== undefined) entityPatch.stylePreset = normalizeOperationalLineStylePreset(partial.stylePreset, nextKind);
+    if (partial.stroke !== undefined) entityPatch.stroke = normalizeOperationGraphicStroke(partial.stroke) || null;
+    if (partial.width !== undefined) entityPatch.width = normalizeOperationGraphicWidth(partial.width);
+    if (partial.opacity !== undefined) entityPatch.opacity = normalizeOperationGraphicOpacity(partial.opacity);
     if (Array.isArray(partial.attachedCounterIds)) {
-      line.attachedCounterIds = partial.attachedCounterIds.map((value) => String(value || "").trim()).filter(Boolean);
+      entityPatch.attachedCounterIds = partial.attachedCounterIds.map((value) => String(value || "").trim()).filter(Boolean);
     }
+    patchStrategicOverlayEntityState(state, "operationalLines", selectedId, entityPatch);
     selectOperationalLineById(selectedId);
-    state.operationalLinesDirty = true;
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
     commitHistoryEntry({
       kind: "update-operational-line",
       before,
@@ -363,8 +374,7 @@ export function createStrategicOverlayRuntimeOwner({
     const before = captureHistoryState({ strategicOverlay: true });
     const nextLines = (state.operationalLines || []).filter((entry) => String(entry?.id || "") !== selectedId);
     if (nextLines.length === (state.operationalLines || []).length) return false;
-    state.operationalLines = nextLines;
-    state.unitCounters = (state.unitCounters || []).map((counter) => {
+    const nextCounters = (state.unitCounters || []).map((counter) => {
       if (String(counter?.attachment?.lineId || "") !== selectedId) return counter;
       return {
         ...counter,
@@ -376,12 +386,14 @@ export function createStrategicOverlayRuntimeOwner({
         },
       };
     });
+    commitStrategicOverlayCollectionsState(state, {
+      operationalLines: nextLines,
+      unitCounters: nextCounters,
+    });
     unitCounterDomain.syncOperationalLineAttachedCounterIds();
-    state.operationalLineEditor.selectedId = null;
-    state.operationalLineEditor.points = [];
-    state.operationalLineEditor.mode = "idle";
-    state.operationalLinesDirty = true;
-    state.unitCountersDirty = true;
+    patchStrategicOverlayEditorState(state, "operationalLineEditor", { selectedId: null, points: [], mode: "idle" });
+    setStrategicOverlayDirtyState(state, "operationalLinesDirty", true);
+    setStrategicOverlayDirtyState(state, "unitCountersDirty", true);
     commitHistoryEntry({
       kind: "delete-operational-line",
       before,
@@ -394,8 +406,8 @@ export function createStrategicOverlayRuntimeOwner({
   }
 
   function getActiveSpecialZoneMembershipLayerId() {
-    state.specialZoneLayers = normalizeSpecialZoneLayersState(state.specialZoneLayers);
-    return String(state.specialZoneLayers?.activeLayerId || "").trim();
+    const normalized = normalizeSpecialZoneLayersState(state.specialZoneLayers);
+    return String(normalized?.activeLayerId || "").trim();
   }
 
   function resolveSpecialZoneMembershipClickMode({
@@ -423,14 +435,14 @@ export function createStrategicOverlayRuntimeOwner({
     const normalizedLayerId = String(layerId || "").trim();
     const normalizedMode = String(mode || "toggle").trim().toLowerCase();
     if (!normalizedFeatureId || !normalizedLayerId) return false;
-    state.specialZoneLayers = normalizeSpecialZoneLayersState(state.specialZoneLayers);
-    state.specialZoneLayers = updateSpecialZoneLayerMembership(
-      state.specialZoneLayers,
+    const normalizedLayers = normalizeSpecialZoneLayersState(state.specialZoneLayers);
+    const nextLayers = updateSpecialZoneLayerMembership(
+      normalizedLayers,
       normalizedLayerId,
       [normalizedFeatureId],
       normalizedMode,
     );
-    state.specialZonesOverlayDirty = true;
+    commitSpecialZoneLayersState(state, nextLayers);
     markDirty(`special-zone-membership-${normalizedMode}`);
     return true;
   }
