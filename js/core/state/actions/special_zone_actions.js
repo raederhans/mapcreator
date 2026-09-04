@@ -36,6 +36,10 @@ const SPECIAL_ZONE_LAYER_OPTION_KEYS = Object.freeze([
   "defaultSource",
 ]);
 
+const SPECIAL_ZONE_COMMIT_CONTROL_KEYS = Object.freeze([
+  "markDirty",
+]);
+
 function assertStateTarget(target) {
   if (!target || typeof target !== "object" || Array.isArray(target)) {
     throw new TypeError("[special_zone_actions] target must be an object");
@@ -147,15 +151,19 @@ export function commitSpecialZoneLayersState(
   target,
   nextState,
   options = {},
+  control = {},
 ) {
   assertStateTarget(target);
   const inputs = detachActionInputs({
     nextState: projectFields({ nextState }, "nextState", SPECIAL_ZONE_LAYER_STATE_FIELD_KEYS),
     options: projectFields({ options }, "options", SPECIAL_ZONE_LAYER_OPTION_KEYS) || {},
+    control: projectFields({ control }, "control", SPECIAL_ZONE_COMMIT_CONTROL_KEYS) || {},
   });
   const normalized = normalizeSpecialZoneLayersState(inputs.nextState, inputs.options);
   target.specialZoneLayers = normalized;
-  target.specialZonesOverlayDirty = true;
+  if (inputs.control.markDirty !== false) {
+    target.specialZonesOverlayDirty = true;
+  }
   return normalized;
 }
 

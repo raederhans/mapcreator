@@ -162,6 +162,10 @@ test("special zone layer commit uses canonical normalization and owns dirty stat
   assert.equal(next.layers[0].style.fill, "#aabbcc");
   assert.deepEqual(next.layers[0].memberFeatureIds, ["a", "b"]);
   assert.equal(target.specialZonesOverlayDirty, true);
+
+  target.specialZonesOverlayDirty = false;
+  commitSpecialZoneLayersState(target, next, {}, { markDirty: false });
+  assert.equal(target.specialZonesOverlayDirty, false);
 });
 
 test("special zone snapshot restore preserves absent properties and normalizes present properties", () => {

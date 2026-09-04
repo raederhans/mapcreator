@@ -268,7 +268,7 @@ function serializeSpecialZoneLayersState(rawState, options = {}) {
 function ensureSpecialZoneLayersState(target) {
   const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || target || null);
   if (target && Object.prototype.hasOwnProperty.call(target, "specialZoneLayers")) {
-    return commitSpecialZoneLayersState(target, normalized);
+    return commitSpecialZoneLayersState(target, normalized, {}, { markDirty: false });
   }
   return normalized;
 }
@@ -276,7 +276,7 @@ function ensureSpecialZoneLayersState(target) {
 function normalizeRuntimeSpecialZoneLayersState(target, options = {}) {
   const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || null, options);
   if (target && typeof target === "object") {
-    return commitSpecialZoneLayersState(target, normalized, options);
+    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
   }
   return normalized;
 }
@@ -284,7 +284,7 @@ function normalizeRuntimeSpecialZoneLayersState(target, options = {}) {
 function setRuntimeSpecialZoneLayersState(target, nextState, options = {}) {
   const normalized = normalizeSpecialZoneLayersState(nextState, options);
   if (target && typeof target === "object") {
-    return commitSpecialZoneLayersState(target, normalized, options);
+    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
   }
   return normalized;
 }

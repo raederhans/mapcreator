@@ -6,13 +6,17 @@ import {
   buildSpecialZoneRenderFeatures,
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,
+  ensureSpecialZoneLayersState,
   getSpecialZoneLayerMemberSetOperationIds,
   getSpecialZoneStoryPreviewSteps,
+  mutateRuntimeSpecialZoneLayersState,
   mutateSpecialZoneLayersState,
+  normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
   parseSpecialZoneMemberImportText,
   resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
+  setRuntimeSpecialZoneLayersState,
   updateSpecialZoneLayerMembership,
 } from "../js/core/special_zone_layers.js";
 
@@ -27,6 +31,36 @@ test("special zone layer defaults and preset registry are stable", () => {
   assert.equal(SPECIAL_ZONE_PRESETS.length, 18);
   const layer = createLayerFromPreset("custom", { id: "legend-default" });
   assert.equal(layer.legendVisible, true);
+});
+
+test("runtime layer normalization preserves dirty state while mutations mark it", () => {
+  const initialLayers = createEmptySpecialZoneLayersState();
+  const nonMutatingCalls = [
+    (target) => ensureSpecialZoneLayersState(target),
+    (target) => normalizeRuntimeSpecialZoneLayersState(target),
+    (target) => setRuntimeSpecialZoneLayersState(target, initialLayers),
+  ];
+
+  for (const initialDirty of [false, true]) {
+    for (const call of nonMutatingCalls) {
+      const target = {
+        specialZoneLayers: initialLayers,
+        specialZonesOverlayDirty: initialDirty,
+      };
+      call(target);
+      assert.equal(target.specialZonesOverlayDirty, initialDirty);
+    }
+  }
+
+  const mutatedTarget = {
+    specialZoneLayers: initialLayers,
+    specialZonesOverlayDirty: false,
+  };
+  mutateRuntimeSpecialZoneLayersState(mutatedTarget, {
+    action: "addLayer",
+    layer: createLayerFromPreset("custom", { id: "dirty-layer" }),
+  });
+  assert.equal(mutatedTarget.specialZonesOverlayDirty, true);
 });
 
 test("normalizes schema, diagnostics, legacy drops, and sorted member arrays", () => {

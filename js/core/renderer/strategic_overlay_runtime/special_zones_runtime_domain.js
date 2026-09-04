@@ -20,7 +20,9 @@ export function createSpecialZonesRuntimeDomain({
     // Legacy freehand special zones have exited the main editing path.
     // Layer membership editing is now handled by the special zones workbench.
     if (event?.preventDefault) event.preventDefault();
-    patchSpecialZoneEditorState(state, { active: false, vertices: [] });
+    patchSpecialZoneEditorState(state, { active: false, vertices: [] }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
     setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
@@ -29,7 +31,9 @@ export function createSpecialZonesRuntimeDomain({
 
   function retireLegacyDrawState() {
     ensureSpecialZoneEditorState();
-    patchSpecialZoneEditorState(state, { active: false, vertices: [] });
+    patchSpecialZoneEditorState(state, { active: false, vertices: [] }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
     setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
@@ -43,6 +47,8 @@ export function createSpecialZonesRuntimeDomain({
       vertices: [],
       zoneType: String(zoneType || defaultSpecialZoneType),
       label: String(label || ""),
+    }, {
+      defaultZoneType: defaultSpecialZoneType,
     });
     setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
@@ -65,7 +71,9 @@ export function createSpecialZonesRuntimeDomain({
 
   function selectSpecialZoneById(id) {
     ensureSpecialZoneEditorState();
-    patchSpecialZoneEditorState(state, { selectedId: String(id || "").trim() || null });
+    patchSpecialZoneEditorState(state, { selectedId: String(id || "").trim() || null }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
     setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
@@ -73,7 +81,9 @@ export function createSpecialZonesRuntimeDomain({
 
   function deleteSelectedManualSpecialZone() {
     ensureSpecialZoneEditorState();
-    patchSpecialZoneEditorState(state, { selectedId: null });
+    patchSpecialZoneEditorState(state, { selectedId: null }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
     return false;
   }
 

@@ -339,6 +339,35 @@ test("special zone runtime owner retires legacy manual feature creation", () => 
   assert.equal(renderCount, 2);
 });
 
+test("special zone runtime owner preserves its configured editor default", () => {
+  const runtimeState = {
+    specialZoneEditor: {
+      active: false,
+      counter: 1,
+      label: "",
+      selectedId: null,
+      vertices: [],
+    },
+    specialZonesOverlayDirty: false,
+  };
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    constants: {
+      defaultSpecialZoneType: "buffer",
+    },
+    helpers: {
+      ensureSpecialZoneEditorState: () => {},
+      renderNow: () => {},
+      updateSpecialZoneEditorUI: () => {},
+    },
+  });
+
+  owner.selectSpecialZoneById("zone-1");
+
+  assert.equal(runtimeState.specialZoneEditor.zoneType, "buffer");
+  assert.equal(runtimeState.specialZoneEditor.selectedId, "zone-1");
+});
+
 test("special zone membership runtime owner commits click and drag transactions", () => {
   const historyEntries = [];
   const dirtyReasons = [];
