@@ -29,7 +29,10 @@ test("appearance preset defaults stay pure while the action owns runtime commits
   assert.match(actionsSource, /patchAppearanceVisibilityState\(target,/);
   assert.match(actionsSource, /setIntensityFieldsState\(\s*target,/);
   assert.match(historySource, /state\/actions\/appearance_preset_actions\.js/);
-  assert.match(historySource, /applyAppearanceStylePathPatchState\(runtimeState, stylePatch\)/);
+  assert.match(
+    historySource,
+    /Object\.entries\(stylePatch\)[\s\S]*?\.forEach\(\(\[path, value\]\) => \{[\s\S]*?applyAppearanceStylePathPatchState\(runtimeState, \{ \[path\]: value \}\)/,
+  );
   assert.match(historySource, /setIntensityFieldsState\(runtimeState, current\)/);
   assert.match(historySource, /setAppearancePresetsState\(/);
   assert.doesNotMatch(historySource, /runtimeState\.intensityFields\s*=(?!=)/);

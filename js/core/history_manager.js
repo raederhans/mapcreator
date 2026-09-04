@@ -168,7 +168,18 @@ function applyEntries(target, patch) {
 }
 
 function applyStyleSnapshot(stylePatch) {
-  return applyAppearanceStylePathPatchState(runtimeState, stylePatch);
+  if (!stylePatch || typeof stylePatch !== "object" || Array.isArray(stylePatch)) {
+    return applyAppearanceStylePathPatchState(runtimeState, stylePatch);
+  }
+  const entries = Object.entries(stylePatch);
+  if (!entries.length) {
+    return applyAppearanceStylePathPatchState(runtimeState, stylePatch);
+  }
+  let styleConfig = runtimeState.styleConfig;
+  entries.forEach(([path, value]) => {
+    styleConfig = applyAppearanceStylePathPatchState(runtimeState, { [path]: value });
+  });
+  return styleConfig;
 }
 
 function hasHistoryDelta(before, after) {
