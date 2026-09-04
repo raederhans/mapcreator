@@ -4868,7 +4868,13 @@ export async function discoverScannedCandidateBindings(
       } of bindingInventories
     ) {
       actionDelegations.push(...bindingActionDelegations);
-      if (!findings.length) {
+      if (!shouldRetainScannedWriterCandidate({
+        relativePath,
+        surface,
+        binding,
+        findings,
+        actionDelegations: bindingActionDelegations,
+      })) {
         continue;
       }
       candidates.push({
@@ -4889,6 +4895,21 @@ export async function discoverScannedCandidateBindings(
       normalizeStateActionDelegations(actionDelegations),
     derivedAliasTaintModeManifest,
   };
+}
+
+export function shouldRetainScannedWriterCandidate({
+  relativePath = "",
+  surface = "",
+  binding = null,
+  findings = [],
+  actionDelegations = [],
+} = {}) {
+  if (Array.isArray(findings) && findings.length) return true;
+  return surface === "production"
+    && isActionPath(relativePath)
+    && binding?.kind === "function-parameter"
+    && Array.isArray(actionDelegations)
+    && actionDelegations.length > 0;
 }
 
 export async function resolveCachedStateWriterRepositoryScan({

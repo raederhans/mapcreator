@@ -65,6 +65,7 @@ import {
   resolveCachedStateWriterRepositoryScan,
   resolveAcceptedStateWriterPolicyCheckpoint,
   resolveGitCommitSha,
+  shouldRetainScannedWriterCandidate,
   composeLegacySemanticBaseline,
   validateStateWriterDerivedAliasTaintModeManifest,
   scanStateWriterPolicySnapshot,
@@ -5497,10 +5498,20 @@ test("P4.4 action modules admit without target-binding diagnostics", async () =>
     const contractEntries = STATE_ACTION_DELEGATION_CONTRACT.filter(
       ({ modulePath: entryModulePath }) => entryModulePath === modulePath,
     );
+    const retainedBindingInventories = bindingInventories.filter(
+      ({ binding, findings, actionDelegations }) =>
+        shouldRetainScannedWriterCandidate({
+          relativePath: modulePath,
+          surface: "production",
+          binding,
+          findings,
+          actionDelegations,
+        }),
+    );
     const writer = {
       path: modulePath,
       authority: "domain-action",
-      bindings: bindingInventories.map(({ binding, findings }) => ({
+      bindings: retainedBindingInventories.map(({ binding, findings }) => ({
         ...binding,
         authority: "domain-action",
         grants: buildStateWriterBindingGrants(
