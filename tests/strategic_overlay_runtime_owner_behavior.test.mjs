@@ -271,7 +271,7 @@ test("operation graphic ordinary updates replace the selected entity and preserv
     width: 2,
     opacity: 1,
   };
-  const runtimeState = {
+  const fixtureState = {
     operationGraphics: [neighbor, selected],
     operationGraphicsDirty: false,
     operationGraphicsEditor: {
@@ -283,7 +283,7 @@ test("operation graphic ordinary updates replace the selected entity and preserv
     },
   };
   const owner = createStrategicOverlayRuntimeOwner({
-    state: runtimeState,
+    state: fixtureState,
     helpers: {
       captureHistoryState: () => {
         callOrder.push(`capture-${callOrder.filter((entry) => entry.startsWith("capture")).length + 1}`);
@@ -310,13 +310,13 @@ test("operation graphic ordinary updates replace the selected entity and preserv
   });
 
   assert.equal(owner.updateSelectedOperationGraphic({ label: "After", width: 4 }), true);
-  assert.equal(runtimeState.operationGraphics[0], neighbor);
-  assert.notEqual(runtimeState.operationGraphics[1], selected);
-  assert.equal(runtimeState.operationGraphics[1].label, "After");
-  assert.equal(runtimeState.operationGraphics[1].width, 4);
-  assert.deepEqual(runtimeState.operationGraphicsEditor.points, [[0, 0], [1, 1]]);
-  assert.notEqual(runtimeState.operationGraphicsEditor.points, selected.points);
-  assert.equal(runtimeState.operationGraphicsDirty, true);
+  assert.equal(fixtureState.operationGraphics[0], neighbor);
+  assert.notEqual(fixtureState.operationGraphics[1], selected);
+  assert.equal(fixtureState.operationGraphics[1].label, "After");
+  assert.equal(fixtureState.operationGraphics[1].width, 4);
+  assert.deepEqual(fixtureState.operationGraphicsEditor.points, [[0, 0], [1, 1]]);
+  assert.notEqual(fixtureState.operationGraphicsEditor.points, selected.points);
+  assert.equal(fixtureState.operationGraphicsDirty, true);
   assert.equal(getByIdCalls, 0);
   assert.deepEqual(historyEntries.map((entry) => entry.kind), ["update-operation-graphic"]);
   assert.deepEqual(callOrder, [
@@ -369,7 +369,7 @@ test("special zone runtime owner retires legacy manual feature creation", () => 
 });
 
 test("special zone runtime owner preserves its configured editor default", () => {
-  const runtimeState = {
+  const fixtureState = {
     specialZoneEditor: {
       active: false,
       counter: 1,
@@ -380,7 +380,7 @@ test("special zone runtime owner preserves its configured editor default", () =>
     specialZonesOverlayDirty: false,
   };
   const owner = createStrategicOverlayRuntimeOwner({
-    state: runtimeState,
+    state: fixtureState,
     constants: {
       defaultSpecialZoneType: "buffer",
     },
@@ -393,8 +393,8 @@ test("special zone runtime owner preserves its configured editor default", () =>
 
   owner.selectSpecialZoneById("zone-1");
 
-  assert.equal(runtimeState.specialZoneEditor.zoneType, "buffer");
-  assert.equal(runtimeState.specialZoneEditor.selectedId, "zone-1");
+  assert.equal(fixtureState.specialZoneEditor.zoneType, "buffer");
+  assert.equal(fixtureState.specialZoneEditor.selectedId, "zone-1");
 });
 
 test("special zone membership runtime owner commits click and drag transactions", () => {
@@ -557,7 +557,7 @@ test("operational line ordinary updates replace the selected entity and preserve
     points: [[0, 0], [1, 1]],
     attachedCounterIds: [],
   };
-  const runtimeState = {
+  const fixtureState = {
     operationGraphicsEditor: {},
     operationalLines: [neighbor, selected],
     operationalLinesDirty: false,
@@ -565,12 +565,12 @@ test("operational line ordinary updates replace the selected entity and preserve
     strategicOverlayUi: {},
   };
   const owner = createStrategicOverlayRuntimeOwner({
-    state: runtimeState,
+    state: fixtureState,
     helpers: {
       captureHistoryState: () => ({}),
       ensureOperationGraphicsEditorState: () => {},
       ensureOperationalLineEditorState: () => {},
-      getOperationalLineById: (id) => runtimeState.operationalLines.find((entry) => entry.id === id) || null,
+      getOperationalLineById: (id) => fixtureState.operationalLines.find((entry) => entry.id === id) || null,
       normalizeOperationGraphicOpacity: Number,
       normalizeOperationGraphicStroke: String,
       normalizeOperationGraphicWidth: Number,
@@ -579,10 +579,10 @@ test("operational line ordinary updates replace the selected entity and preserve
   });
 
   assert.equal(owner.updateSelectedOperationalLine({ label: "After", width: 5 }), true);
-  assert.equal(runtimeState.operationalLines[0], neighbor);
-  assert.notEqual(runtimeState.operationalLines[1], selected);
-  assert.equal(runtimeState.operationalLines[1].label, "After");
-  assert.equal(runtimeState.operationalLines[1].width, 5);
+  assert.equal(fixtureState.operationalLines[0], neighbor);
+  assert.notEqual(fixtureState.operationalLines[1], selected);
+  assert.equal(fixtureState.operationalLines[1].label, "After");
+  assert.equal(fixtureState.operationalLines[1].width, 5);
 });
 
 test("unit counter nation resolution maps retired controller source to ownership", () => {
@@ -769,14 +769,14 @@ test("unit counter ordinary updates replace the selected entity and preserve nei
     layoutAnchor: { kind: "feature", key: "GER", slotIndex: null },
     attachment: null,
   };
-  const runtimeState = {
+  const fixtureState = {
     operationalLines: [],
     unitCounters: [neighbor, selected],
     unitCountersDirty: false,
     unitCounterEditor: { selectedId: "unit_1" },
   };
   const owner = createStrategicOverlayRuntimeOwner({
-    state: runtimeState,
+    state: fixtureState,
     helpers: {
       assignUnitCounterEditorFromCounter: () => {},
       captureHistoryState: () => ({}),
@@ -786,10 +786,10 @@ test("unit counter ordinary updates replace the selected entity and preserve nei
   });
 
   assert.equal(owner.updateSelectedUnitCounter({ label: "After", size: "large" }), true);
-  assert.equal(runtimeState.unitCounters[0], neighbor);
-  assert.notEqual(runtimeState.unitCounters[1], selected);
-  assert.equal(runtimeState.unitCounters[1].label, "After");
-  assert.equal(runtimeState.unitCounters[1].size, "large");
+  assert.equal(fixtureState.unitCounters[0], neighbor);
+  assert.notEqual(fixtureState.unitCounters[1], selected);
+  assert.equal(fixtureState.unitCounters[1].label, "After");
+  assert.equal(fixtureState.unitCounters[1].size, "large");
 });
 
 test("unit counter runtime owner commits drag moves and detaches line attachments", () => {

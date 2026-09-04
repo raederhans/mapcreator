@@ -13,7 +13,7 @@ import {
   getTransportOverviewVisibilityField,
   listTransportOverviewCapabilityFamilyIds,
 } from "../js/core/transport_capability_registry.js";
-import { state } from "../js/core/state.js";
+import { state, state as fixtureState } from "../js/core/state.js";
 import {
   createIntensityFieldsState,
   sampleIntensityField,
@@ -263,7 +263,7 @@ async function importProjectThroughFunnelPayload(
   const previousDocument = globalThis.document;
   const previousFileReader = globalThis.FileReader;
   const previousEnsureContextLayerDataHook = readRegisteredRuntimeHookSource(state, "ensureContextLayerDataFn");
-  const previousClearExportBakeCacheHook = readRegisteredRuntimeHookSource(state, "clearExportBakeCacheFn");
+  const previousClearExportBakeCacheHook = readRegisteredRuntimeHookSource(fixtureState, "clearExportBakeCacheFn");
   const previousTransportVisibilityState = {
     showTransport: state.showTransport,
     showAirports: state.showAirports,
@@ -291,7 +291,7 @@ async function importProjectThroughFunnelPayload(
       options: { ...options },
     });
   });
-  registerRuntimeHook(state, "clearExportBakeCacheFn", () => {
+  registerRuntimeHook(fixtureState, "clearExportBakeCacheFn", () => {
     exportBakeCacheClearCount += 1;
   });
 
@@ -331,7 +331,7 @@ async function importProjectThroughFunnelPayload(
     Object.assign(state, previousTransportVisibilityState);
     state.intensityFields = previousIntensityFields;
     registerRuntimeHook(state, "ensureContextLayerDataFn", previousEnsureContextLayerDataHook);
-    registerRuntimeHook(state, "clearExportBakeCacheFn", previousClearExportBakeCacheHook);
+    registerRuntimeHook(fixtureState, "clearExportBakeCacheFn", previousClearExportBakeCacheHook);
     globalThis.document = previousDocument;
     globalThis.FileReader = previousFileReader;
   }
