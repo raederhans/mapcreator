@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.3 implementation present / acceptance blocked` — the curated recovery branch contains the nine-commit P4.3 renderer/performance window through `acc8de2d` plus the 2026-08-05 cache-isolation audit repair. Main integration remains blocked until a schema-3 canonical performance baseline and a checked-in P4.3 state-writer policy checkpoint exist, followed by fresh exact-phase, Pages/dist, main-thread, browser and standard performance evidence.
+`P4.3 admitted / P4.4 unblocked` — exact source candidate `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`（tree `ba969a24a4730072245c60efeefba66409f2c88d`）已完成 P4.3 exact phase、zero-gap routes、Pages/dist、core 93/93、browser quick、standard perf 与 independent review；`A_ADMITTED_SHA` 固定为该 source SHA。P4.4 尚未开始，P4.5 与 closeout 仍 pending。
 
 ## Checklist
 
@@ -21,7 +21,8 @@
 - [x] Publish the P4.0–P4.2a milestone to `origin/main` and synchronize the P4 continuation branch.
 - [x] Complete P4.2b Scenario chunk/promotion/generation/error action ownership and exact checkpoint evidence.
 - [x] Complete P4.2c Scenario health, hydration-gate and presentation-hint action ownership and exact checkpoint evidence.
-- [ ] Execute P4.3–P4.5 in order; P4.3 renderer phase/interaction/cache/diagnostics actions are next.
+- [x] Complete and formally admit P4.3 renderer phase/interaction/cache/diagnostics actions at `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`.
+- [ ] Execute P4.4 and P4.5 in order; P4.4 B1/B2/B3 semantic replay is unblocked but not started.
 - [ ] Complete the remaining phase reviews, UltraQA, full P4 acceptance, final integration and safe cleanup.
 
 ## Validation evidence
@@ -217,16 +218,23 @@
   - verify-core report: `4043fee1167b6841fc258973d0da27c851c83083b3e7a8a8bba43e42abcd8dc8`
   - Pages dist manifest: `9c0888caa6641e5a0d984d14ca5db9f1a67ea9be1699ebad7a5984c819cad581`
   - Playwright last-run status: `91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903`
-- Explicitly deferred from this Scenario-focused phase: `verify:core:main-thread`, the wider browser matrix, standard perf, scenario-data and heavy-geo lanes. P4.3 directly changes renderer state ownership and must acquire fresh renderer browser/main-thread/perf evidence.
+- At the P4.2c closeout, `verify:core:main-thread`, the wider browser matrix, standard perf, scenario-data and heavy-geo lanes were explicitly deferred；the P4.3-specific renderer browser/main-thread/perf evidence is recorded in the following 2026-09-04 admission section.
+
+### 2026-09-04 P4.3 admission evidence
+
+- Exact identity: SHA `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`, tree `ba969a24a4730072245c60efeefba66409f2c88d`, start/end clean.
+- Exact phase and routing: P4.3 5/5 PASS；owned production paths fully covered，unmatched 0，route gaps 0。
+- Serialized acceptance: core 93/93、Pages/dist、browser quick and final independent review PASS；standard `npm run -s perf:gate` exit 0，environment admitted，generation fence stable，enforced failures 0。
+- Admission marker: `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`；后续 docs-only descendant 不替代该 source identity。
 
 ## Open risks and remaining work
 
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - Action-proof helper traversal remains the dominant local policy-tooling cost: `map_renderer.js` measures about 60.75 seconds and `scenario/chunk_runtime.js` about 7.4 seconds. Exact-context memoization requires a dedicated follow-up because helper output depends on alias state, parameter classifications, reachability and enclosing identity.
-- P4.2c is complete; the active task directory remains the control surface for P4.3 and later P4 phases.
-- P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
-- Main-thread, wider browser, performance, scenario-data and heavy-geo lanes outside the three focused P4.2c browser suites remain deferred to their owning phases.
+- P4.3 is complete and admitted; the active task directory remains the control surface for P4.4 and later P4 phases.
+- P4.4 B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone require semantic replay from the exact A source；shared UI files remain main-thread-only.
+- P4.4 still requires fresh exact-phase, browser, performance, scenario-data/heavy-geo, Pages/dist, core and independent review evidence before `B_ADMITTED_SHA` can be written.
 
 ### 2026-08-05 P4.3 audit repair evidence
 

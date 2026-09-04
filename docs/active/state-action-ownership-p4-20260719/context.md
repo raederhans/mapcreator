@@ -2,13 +2,12 @@
 
 ## Current truth
 
-- Execution worktree: `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719`
-- Branch: `codex/state-action-ownership-p4-20260719`
-- Initial base: `origin/main@68a62e540104025e1b3e976f77589f8b3eff2f36`; P4.2a integration point: exact-A `662d3dffa7982b1938617e0ea41ac9c012a05946`; P4.2b functional checkpoint: `2e4808127030823169875059d7d649dc1a782788`; P4.2c functional checkpoint: `784885f68ad7ba1c71fc31aaf00ba29403498265`, tree `d6dbbdf245809079619a64c7223e0b845dc006d2`.
-- Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
-- Parent status recaptured on 2026-07-30: local `main@68a62e54` remains pinned with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; remote integration and every P4 edit stay in the isolated worktree.
+- Current integration worktree: `C:\Users\raede\Desktop\dev\mapcreator`
+- Branch: `codex/runtime-architecture-reset-r1-integration-20260831`
+- Admission source: `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`, tree `ba969a24a4730072245c60efeefba66409f2c88d`; P4.2a/P4.2b/P4.2c checkpoints remain historical ancestry evidence.
+- Other registered worktrees and user-owned changes remain untouched; the docs-only marker descendant records status and does not replace the A source identity.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.2c is implementation- and acceptance-complete. Scenario health, hydration-gate and presentation-hint writes now use canonical state actions; the exact clean checkpoint, Pages/dist parity, full non-browser core lane and three focused browser suites are green. P4.3 begins after this closeout is published and integrated and fresh renderer browser, `verify:core:main-thread` and standard perf admission are green.
+- Current phase: P4.3 is implementation- and admission-complete at `5fff7388`; exact phase 5/5、zero-gap route、Pages/dist、core 93/93、browser quick、standard perf and independent review are green. P4.4 is unblocked but B1/B2/B3 semantic replay has not started；`B_ADMITTED_SHA` pending。
 
 ## Decisions and deviations
 
@@ -79,6 +78,9 @@
 | P4.2b non-browser core | `/root` main integration owner | `.runtime/reports/generated/verify-core.json` | complete; 84/84 commands pass; dist lane released |
 | P4.2c exact phase verification | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2c/phase-verification.json` | complete at exact SHA `784885f6`; 5/5 commands pass; lane released |
 | P4.2c non-browser core | `/root` main integration owner | `.runtime/reports/generated/verify-core.json` | complete; 86/86 commands pass; dist lane released |
+| P4.3 exact phase and route | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.3/` | complete at `5fff7388`; phase 5/5、unmatched 0、route gaps 0；lane released |
+| P4.3 core / Pages / browser | `/root` main integration owner | `.runtime/reports/generated/verify-core.json` and `.runtime/reports/generated/browser/ai-browser-mcp-smoketest.md` | complete; core 93/93、Pages/dist and browser quick PASS；lanes released |
+| P4.3 standard perf | `/root` main integration owner | `.runtime/output/perf/baseline_2026-07-30/gate/` | complete; exit 0、environment admitted、generation fence stable、enforced failures 0；lane released |
 
 ## Handoff
 
@@ -86,7 +88,7 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Publish and integrate the P4.2c acceptance record, retain both the active continuation worktree and the independent audit/recovery worktree, obtain fresh renderer browser, `verify:core:main-thread` and standard perf admission, then begin P4.3 renderer action ownership.
+Create clean B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone semantic-replay worktrees from exact `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`；workers own disjoint product files and focused tests，while `/root` retains shared UI、policy/routes、live gates、integration and the final B marker。
 
 ## 2026-08-05 audit handoff
 

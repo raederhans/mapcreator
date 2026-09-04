@@ -31,8 +31,8 @@
 - [x] P4.2a Scenario readiness and atomic activation actions
 - [x] P4.2b Scenario chunk and promotion actions
 - [x] P4.2c Scenario health and presentation-hint actions
-- [ ] P4.3 Renderer actions
-- [ ] P4.4 UI/appearance/transport/strategic actions
+- [x] P4.3 Renderer actions — admitted at `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`。
+- [ ] P4.4 UI/appearance/transport/strategic actions — A dependency released；B1/B2/B3 not started。
 - [ ] P4.5 Hook semantics
 - [ ] Closeout, integration, push, and cleanup
 
@@ -48,6 +48,7 @@
 - `RendererRuntimeContext` 始终保持 read-only。
 - `index.html`、`css/style.css`、`js/ui/toolbar.js` 只允许主线程串行修改。
 - 每阶段通过 named verification、adaptive zero-gap、exact-SHA checkpoint/attestation 和 registry/task truth。
+- P4.4 只从 `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66` 建立 clean replay；docs-only marker commit 不作为 source baseline。
 
 ## Non-goals
 

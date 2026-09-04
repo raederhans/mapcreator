@@ -53,7 +53,7 @@
   - Pages/dist artifact 具备 100% reachability 或显式产品归属；正式体积上限由 Gate 0 inventory 固定。
   - 性能 gate 与 Pages/dist gate 绑定同一 frozen SHA。
 - [ ] Gate 5 — Appearance / Transport platformization admission
-  - P4.3 按现有 contract 有界收口并写入正式 `A_ADMITTED_SHA`。
+  - [x] P4.3 按现有 contract 有界收口；`A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`。
   - P4.4 从正式 A baseline 重放、验证并写入 `B_ADMITTED_SHA`；P4.5 保持独立。
   - Appearance / Transport change-set 覆盖 Preview / Compare / Apply / Undo。
   - 用户操作生命周期为 `Preparing → Applying → Rendering → Ready / Recoverable error`。
@@ -143,15 +143,16 @@
 1. **Gate 4 static startup graph**
    - 独立新增 startup module/resource graph 与聚焦合同；分类 `critical`、`deferred`、`scenario-specific`、`export-only`、`dev-only`。
    - 不运行真实 perf、Pages/dist、browser 或 shared `.runtime`；不修改共享 Pages builder、canonical routes 或 UI composition roots。
+   - 2026-09-04：隔离审计 commit `a1f0885c6617622d260bc633c257b3f67b941686` ready/not integrated；graph 仍 rejected（46 issues），故该 work package 与 Gate 4 均未完成。
 2. **Gate 3 Export vertical seam**
    - 收口 Export lifecycle、required dependency、artifact/download transaction 与 error taxonomy 的窄接口。
    - worker 只修改 Export 专属模块和 focused tests；`js/ui/toolbar.js` 的任何最终 wiring 由主监督单 owner 串行完成。
 3. **Gate 5A P4.3 candidate**
-   - 先核对 P4.3 current-main drift 并提交聚焦 source fixes；不得写 `A_ADMITTED_SHA`。
-   - checkpoint generator、Pages/dist、browser、core main-thread、standard perf 与最终 admission 由主监督在 R1 source integration 后的 frozen SHA 上串行执行。
+   - 2026-09-04 complete：P4.3 current-main drift、聚焦 source fixes 与 canonical route 已在 frozen source `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66` 收口。
+   - checkpoint、Pages/dist、browser、core main-thread、standard perf 与 final independent verdict 已由主监督串行完成；该 SHA 是唯一 A admission identity。
 
 ### Dependency and admission order
 
-`R1 source candidates → supervisor integration/review → frozen SHA → P4.3 exact admission/A_ADMITTED_SHA → P4.4 semantic replay/exact admission/B_ADMITTED_SHA → Appearance/Transport live lifecycle → recoverable Demo → final release verdict`。
+`A_ADMITTED_SHA=5fff7388 → B1/B2/B3 semantic replay（not started）→ supervisor serial integration/control-plane work → P4.4 exact admission/B_ADMITTED_SHA → Appearance/Transport live lifecycle → recoverable Demo → final release verdict`。
 
 P4.4、live ChangeSet、tracked-dist retirement、共享 cache 与 P4.5 runtime-hook 退休都不得越过各自前置准入或授权。性能实测只在结构切片落定且 frozen SHA 可比较后运行一次，不在 R1 早期重复模拟。

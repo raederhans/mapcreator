@@ -18,8 +18,8 @@
 
 ## Stages
 
-- [ ] A — P4.3 Admission Pack：review fixes 与 exact checkpoint 由当前 Gate A candidate 承载；final live gates pending；`A_ADMITTED_SHA` pending。
-- [ ] B — P4.4 Replay and Admission Pack：blocked on `A_ADMITTED_SHA`，recovery source `65335370c50279c19c9074362567f9d2284e0c39`。
+- [x] A — P4.3 Admission Pack：`A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`（source candidate；tree `ba969a24a4730072245c60efeefba66409f2c88d`）。
+- [ ] B — P4.4 Replay and Admission Pack：A dependency released；B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 均 not started；`B_ADMITTED_SHA` pending。
 - [ ] C — Appearance / Transport user-visible milestone：blocked on `B_ADMITTED_SHA`。
 
 ## Acceptance criteria
@@ -28,6 +28,7 @@
 - B：只重放 P4.4 职责提交；共享 UI 文件由主监督串行处理；exact P4.4、Appearance/Transport browser、heavy-geo/data、Pages/dist、core main-thread、standard perf 与独立 review 绑定正式候选 SHA。
 - C：用户操作阶段为 `Preparing → Applying → Rendering → Ready / Recoverable error`；预置 contract 在 B actions、history、render 与 UI owners 上完成正式 wiring；首个 change-set 覆盖 Appearance 与 Transport 的 Preview / Compare / Apply / Undo；Demo 任务链覆盖 `sample → Guide → edit → export → restore`。
 - 每个里程碑只有主监督可以写入对应 `*_ADMITTED_SHA`，并在写入前核对 Git、门禁产物和集成状态。
+- A 的准入身份固定为 source candidate `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`；任何后续 docs-only 状态提交都不替代该 source identity。
 
 ## Non-goals
 

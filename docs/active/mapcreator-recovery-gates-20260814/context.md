@@ -2,8 +2,8 @@
 
 ## Current truth
 
-- 2026-08-14 frozen origin baseline：`origin/main == 7ddcee0d613b0210a37e287c77e49c90443bd415`；当前 `main` 已串行集成 Gate 1 与 Gate 2，保持本地 ahead、remote 未改。
-- 当前 checkout：`C:\Users\raede\Desktop\dev\mapcreator`，`main`；另有 Gate 2/3/4 三个 detached candidate worktree，均从 `7ddcee0d` 创建。
+- 2026-09-04 current integration checkout：`C:\Users\raede\Desktop\dev\mapcreator`，branch `codex/runtime-architecture-reset-r1-integration-20260831`；Stage A source candidate `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66` 已正式准入。
+- 2026-08-14 frozen-origin 与 Gate 1/2 topology 记录保留为历史快照，不再代表当前 branch/worktree 状态。
 - 用户已授权依次执行 Gate 0 至 Gate 5，并要求多个独立协作子代理与主线程总监督。
 - 当前项目优先级仍为 Appearance + Transport 平台化；Gate 0–4 是其产品准入、反馈经济性、架构和性能前置条件。
 - 主线程拥有 index、refs、branch/worktree topology、remote、共享文件、integration、live tests 和最终 verdict。
@@ -125,29 +125,29 @@ Stage C 无剩余执行项。tracked dist、legacy catalog projection 与可信�
 | --- | --- | --- | --- | --- | --- |
 | Pages/dist regeneration | `/root` | `npm run -s verify:pages-dist`；cwd `C:\Users\raede\Desktop\dev\mapcreator`；共享 `dist/` 与 `.runtime/` | `.runtime/tests/stage-c-pages-dist.log`；stderr `.runtime/tests/stage-c-pages-dist.stderr.log` | builder 913.73 MiB、startup shell 62/62、landing assets 10/10、showcase view 20/20；source/dist no-index diff clean | released / PASS |
 
-## Post-Stage-C R1 current truth (2026-08-31)
+## Post-Stage-C R1 current truth (updated 2026-09-04)
 
-- Reconciliation baseline：`main == origin/main == 45fbb58e70a2a212552a89f835422146bcaaed0b`，初始工作树干净且只有主 checkout。
+- Reconciliation baseline `45fbb58e70a2a212552a89f835422146bcaaed0b` 保留为 R1 起点；当前 A admission source 为 `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`（tree `ba969a24a4730072245c60efeefba66409f2c88d`）。
 - 原始六 Epic 路线仍有 Gate 3→5 未完成；Stage A–C 是三个基础设施 amendment，不是整条原计划的最终阶段替代。
-- 当前 checked-in policy 为 schema 2、`progress.latestPhase=P4.3`；技术 source `2ee6653f` 已在 main ancestry，P4.4 recovery source `65335370` 不在 main ancestry；两个 admission marker 均未写入。
-- R1 只同时启动三个文件面不重叠的候选：P4.3 current-main drift、静态 startup graph、Export vertical seam。P4.4 保持 blocked，直到主监督写入正式 `A_ADMITTED_SHA`。
+- checked-in policy 为 schema 2、`progress.latestPhase=P4.3`；`A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`，`B_ADMITTED_SHA` pending。
+- P4.4 的 A 依赖已解除；B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 尚未开始。Gate 4 graph 隔离候选 `a1f0885c` ready/not integrated，当前 graph rejected 46，Gate 4 仍未完成。
 
 ### R1 task ownership
 
 | Lane | Owner | Scope | State |
 | --- | --- | --- | --- |
 | R1 integration / task records / live gates | `/root` | Git/index/refs、共享 files/routes、review、frozen SHA、long gates、admission markers | active |
-| P4.3 candidate | `client-new-thread:c1c90d1a-bace-48a3-b3d2-ecfd60f15fbb` | P4.3 drift、聚焦 source/policy/route fixes；不写 A marker | queued / worktree setup |
-| Startup resource graph | `client-new-thread:ca61daef-6921-4702-aee0-082c280758fd` | 新 static graph/contract 与 focused tests | queued / worktree setup |
+| P4.3 candidate/admission | `/root` + independent verifier | exact source/policy/route fixes、live gates 与 A marker | complete / PASS at `5fff7388` |
+| Startup resource graph | isolated audit branch `codex/gate4-startup-graph-audit-20260901` | deterministic issue summary 与 focused tests | ready / not integrated；graph rejected 46 |
 | Export vertical seam | `client-new-thread:d06e7b78-4f86-4c04-beac-944522d00bee` | Export 专属模块与 focused tests | queued / worktree setup |
 
 ### R1 live-process ownership
 
 | Process | Owner | Command / cwd / shared outputs | Success / failure / stop | State |
 | --- | --- | --- | --- | --- |
-| P4.3 canonical checkpoint builder | `/root` | exact command在 source integration 后固定；目标 `tools/state_writer_policy.json` 与 supervisor-owned `.runtime` log | 同一 frozen SHA、clean identity、单 writer；相同失败三次停止重跑 | reserved / inactive |
-| Pages/dist | `/root` | `verify:pages-dist` / `verify:dist-drift`；共享 `dist/`、`.runtime` | source/dist identity 与完整 gate；只在最终 candidate 运行 | reserved / inactive |
-| Browser / Playwright | `/root` | localhost profile；`.runtime/browser/`、`.runtime/tests/playwright/` | exact admission journeys；端口与进程完全释放 | reserved / inactive |
-| Standard performance | `/root` | `npm run -s perf:gate`；supervisor-owned log/artifact | frozen SHA、environment admitted；结构切片落定前不运行 | reserved / inactive |
+| P4.3 canonical checkpoint/exact | `/root` | `.runtime/reports/generated/p4-state-actions/P4.3/phase-verification.json` | 5/5、zero route gaps、exact clean identity | released / PASS |
+| Pages/dist and core | `/root` | `.runtime/reports/generated/verify-core.json` | 93/93、Pages/dist and drift green at `5fff7388` | released / PASS |
+| Browser / Playwright | `/root` | `.runtime/reports/generated/browser/ai-browser-mcp-smoketest.md` | required UI sections and pan/zoom covered；console/network failures 0 | released / PASS |
+| Standard performance | `/root` | `npm run -s perf:gate`；`.runtime/output/perf/baseline_2026-07-30/gate/` | exit 0、environment admitted、generation fence stable、enforced failures 0 | released / PASS |
 
 Non-owner tasks 只能运行无共享输出的 focused child-safe tests。它们不得启动、轮询、重试、停止或解释以上 live process；交接时必须报告精确 commit、changed files、聚焦证据和未运行门禁。
