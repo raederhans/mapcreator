@@ -8,7 +8,7 @@ import {
   deleteAppearancePresetState,
   mergeAppearancePresetImportPayloadState,
   normalizeAppearancePresetsIntoState,
-  setAppearancePresetsState,
+  selectAppearancePresetState,
   upsertAppearancePresetState,
 } from "../../core/state/actions/appearance_preset_actions.js";
 
@@ -151,12 +151,7 @@ export function createAppearancePresetsOwner({
 
   const selectAppearancePreset = (presetId = "") => {
     const before = captureHistoryState({ appearancePresets: true });
-    const nextState = ensurePresetState();
-    const normalizedId = String(presetId || "").trim();
-    if (nextState.byId[normalizedId]) {
-      nextState.selectedPresetId = normalizedId;
-      setAppearancePresetsState(runtimeState, nextState);
-    }
+    selectAppearancePresetState(runtimeState, presetId);
     const after = captureHistoryState({ appearancePresets: true });
     pushAppearancePresetHistory(before, after, "appearance-preset-select");
     renderAppearancePresetsUi();

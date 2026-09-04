@@ -1,5 +1,9 @@
 import { normalizeReferenceImageState } from "../../core/state.js";
-import { setReferenceImageState, setReferenceImageUrlState } from "../../core/state/actions/appearance_reference_actions.js";
+import {
+  patchReferenceImageState,
+  setReferenceImageState,
+  setReferenceImageUrlState,
+} from "../../core/state/actions/appearance_reference_actions.js";
 
 function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -133,7 +137,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.opacity,
       (element) => {
-        syncReferenceState().opacity = clamp(readNumber(element, 60) / 100, 0, 1);
+        patchReferenceImageState(runtimeState, {
+          opacity: clamp(readNumber(element, 60) / 100, 0, 1),
+        }, { clamp });
       },
       (element) => {
         if (nodes.opacityValue) nodes.opacityValue.textContent = `${element.value}%`;
@@ -143,7 +149,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.scale,
       (element) => {
-        syncReferenceState().scale = clamp(readNumber(element, 1), 0.2, 3);
+        patchReferenceImageState(runtimeState, {
+          scale: clamp(readNumber(element, 1), 0.2, 3),
+        }, { clamp });
       },
       () => {
         if (nodes.scaleValue) nodes.scaleValue.textContent = `${syncReferenceState().scale.toFixed(2)}x`;
@@ -153,7 +161,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.offsetX,
       (element) => {
-        syncReferenceState().offsetX = clamp(readNumber(element, 0), -1000, 1000);
+        patchReferenceImageState(runtimeState, {
+          offsetX: clamp(readNumber(element, 0), -1000, 1000),
+        }, { clamp });
       },
       () => {
         if (nodes.offsetXValue) nodes.offsetXValue.textContent = `${syncReferenceState().offsetX}px`;
@@ -163,7 +173,9 @@ export function createAppearanceReferenceOwner({
     bindReferenceInput(
       nodes.offsetY,
       (element) => {
-        syncReferenceState().offsetY = clamp(readNumber(element, 0), -1000, 1000);
+        patchReferenceImageState(runtimeState, {
+          offsetY: clamp(readNumber(element, 0), -1000, 1000),
+        }, { clamp });
       },
       () => {
         if (nodes.offsetYValue) nodes.offsetYValue.textContent = `${syncReferenceState().offsetY}px`;

@@ -77,3 +77,15 @@ test("parent-border owner delegates country enablement writes", async () => {
   assert.doesNotMatch(source, /runtimeState\.parentBorderEnabledByCountry\s*=(?!=)/);
   assert.doesNotMatch(source, /runtimeState\.parentBorderEnabledByCountry\[[^\]]+\]\s*=(?!=)/);
 });
+
+test("reference and preset owners delegate nested state commits to actions", async () => {
+  const [referenceSource, presetsSource] = await Promise.all([
+    readSource("js/ui/toolbar/appearance_reference_owner.js"),
+    readSource("js/ui/toolbar/appearance_presets_owner.js"),
+  ]);
+
+  assert.match(referenceSource, /patchReferenceImageState\(runtimeState, \{/);
+  assert.doesNotMatch(referenceSource, /syncReferenceState\(\)\.(?:opacity|scale|offsetX|offsetY)\s*=/);
+  assert.match(presetsSource, /selectAppearancePresetState\(runtimeState, presetId\)/);
+  assert.doesNotMatch(presetsSource, /nextState\.selectedPresetId\s*=/);
+});

@@ -18,6 +18,13 @@ export function normalizeAppearancePresetsIntoState(target) { assertTarget(targe
 export function upsertAppearancePresetState(target, preset) { assertTarget(target); return setAppearancePresetsState(target, upsertAppearancePreset(target.appearancePresets, preset)); }
 export function deleteAppearancePresetState(target, presetId) { assertTarget(target); return setAppearancePresetsState(target, deleteAppearancePreset(target.appearancePresets, presetId)); }
 export function mergeAppearancePresetImportPayloadState(target, payload) { assertTarget(target); return setAppearancePresetsState(target, mergeAppearancePresetImportPayload(target.appearancePresets, payload)); }
+export function selectAppearancePresetState(target, presetId) {
+  assertTarget(target);
+  const next = normalizeAppearancePresetsState(target.appearancePresets);
+  const selectedPresetId = String(presetId || "").trim();
+  if (next.byId[selectedPresetId]) next.selectedPresetId = selectedPresetId;
+  return setAppearancePresetsState(target, next);
+}
 // The canonical helper owns the restore order: style, visibility, then intensity fields.
 export function applyAppearancePresetState(target, presetOrSnapshot) {
   assertTarget(target);
