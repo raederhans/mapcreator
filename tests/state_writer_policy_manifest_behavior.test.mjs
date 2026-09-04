@@ -2316,7 +2316,11 @@ test("P4.2b optional-layer actions explicitly replace the retired wildcard membe
     [],
   );
   assert.deepEqual(
-    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.map(({
+    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.filter(
+      (entry) =>
+        entry.modulePath === modulePath
+        && entry.retiredMembership === retiredMembership,
+    ).map(({
       contractIdentity: _contractIdentity,
       ...entry
     }) => entry),
@@ -2383,37 +2387,350 @@ test("P4.2b optional-layer actions explicitly replace the retired wildcard membe
   );
 });
 
-test("legacy wildcard replacement contract rejects malformed coverage", () => {
+test("legacy membership replacement contract rejects malformed coverage", () => {
   const valid = structuredClone(
     STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT[0],
   );
+  const refreshIdentity = (entry) => ({
+    ...entry,
+    contractIdentity:
+      buildStateActionLegacyMembershipReplacementContractIdentity(entry),
+  });
   const malformed = [
-    {
-      ...valid,
-      requiredConcreteMemberships:
-        valid.requiredConcreteMemberships.slice(1),
-    },
-    {
+    refreshIdentity({
       ...valid,
       requiredConcreteMemberships: [
         ...valid.requiredConcreteMemberships,
         valid.requiredConcreteMemberships[0],
       ],
-    },
-    {
+    }),
+    refreshIdentity({
       ...valid,
       requiredConcreteMemberships:
         [...valid.requiredConcreteMemberships].reverse(),
-    },
+    }),
+    refreshIdentity({
+      ...valid,
+      retiredMembership: "scenario|P4.2|unsupported|*",
+    }),
+    refreshIdentity({
+      ...valid,
+      exportName: "unregisteredReplacement",
+    }),
     {
       ...valid,
-      retiredMembership: "scenario|P4.2|assign|concrete",
+      contractIdentity: "f".repeat(64),
     },
   ];
   assert.ok(malformed.every((entry) =>
     validateStateActionLegacyMembershipReplacementContract([entry])
       .length > 0
   ));
+});
+
+test("P4.4 operation replacements require exact action memberships", async () => {
+  const entries =
+    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.filter(
+      ({ modulePath }) =>
+        modulePath !==
+          "js/core/state/actions/scenario_activation_actions.js",
+    );
+  assert.equal(entries.length, 18);
+  assert.deepEqual(
+    entries.map(({
+      modulePath,
+      exportName,
+      retiredMembership,
+      requiredConcreteMemberships,
+    }) => ({
+      modulePath,
+      exportName,
+      retiredMembership,
+      requiredConcreteMemberships,
+    })),
+    [
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "commitStrategicOverlayCollectionsState",
+        retiredMembership:
+          "ui|P4.4|collection-mutate|operationalLines",
+        requiredConcreteMemberships: [
+          "ui|P4.4|assign|operationalLines",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "commitStrategicOverlayCollectionsState",
+        retiredMembership:
+          "ui|P4.4|collection-mutate|operationGraphics",
+        requiredConcreteMemberships: [
+          "ui|P4.4|assign|operationGraphics",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "commitStrategicOverlayCollectionsState",
+        retiredMembership: "ui|P4.4|collection-mutate|unitCounters",
+        requiredConcreteMemberships: [
+          "ui|P4.4|assign|unitCounters",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "patchStrategicOverlayEditorState",
+        retiredMembership:
+          "strategic-overlay|P4.4|collection-mutate|operationalLineEditor",
+        requiredConcreteMemberships: [
+          "strategic-overlay|P4.4|assign|operationalLineEditor",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "patchStrategicOverlayEditorState",
+        retiredMembership:
+          "strategic-overlay|P4.4|collection-mutate|operationGraphicsEditor",
+        requiredConcreteMemberships: [
+          "strategic-overlay|P4.4|assign|operationGraphicsEditor",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "patchStrategicOverlayEditorState",
+        retiredMembership:
+          "strategic-overlay|P4.4|compound-assign|operationalLineEditor",
+        requiredConcreteMemberships: [
+          "strategic-overlay|P4.4|assign|operationalLineEditor",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "patchStrategicOverlayEditorState",
+        retiredMembership:
+          "strategic-overlay|P4.4|compound-assign|operationGraphicsEditor",
+        requiredConcreteMemberships: [
+          "strategic-overlay|P4.4|assign|operationGraphicsEditor",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/strategic_overlay_actions.js",
+        exportName: "patchStrategicOverlayEditorState",
+        retiredMembership:
+          "strategic-overlay|P4.4|compound-assign|unitCounterEditor",
+        requiredConcreteMemberships: [
+          "strategic-overlay|P4.4|assign|unitCounterEditor",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "applyTransportWorkbenchOverviewState",
+        retiredMembership: "cross-domain|multi-phase|assign|*",
+        requiredConcreteMemberships: [
+          "ui|P4.4|assign|styleConfig",
+          "ui|P4.4|define-property|showAirports",
+          "ui|P4.4|define-property|showPorts",
+          "ui|P4.4|define-property|showRail",
+          "ui|P4.4|define-property|showRoad",
+          "ui|P4.4|define-property|showTransport",
+          "ui|P4.4|define-property|styleConfig",
+          "ui|P4.4|define-property|transportWorkbenchPointDeltas",
+          "ui|P4.4|define-property|transportWorkbenchUi",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "applyTransportWorkbenchOverviewState",
+        retiredMembership: "ui|P4.4|assign|showTransport",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|showTransport",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "commitTransportWorkbenchPointDeltasState",
+        retiredMembership:
+          "ui|P4.4|assign|transportWorkbenchPointDeltas",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|transportWorkbenchPointDeltas",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "commitTransportWorkbenchUiState",
+        retiredMembership:
+          "ui|P4.4|object-assign|transportWorkbenchUi",
+        requiredConcreteMemberships: [
+          "ui|P4.4|assign|transportWorkbenchUi",
+          "ui|P4.4|define-property|transportWorkbenchUi",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "setTransportFamilyVisibilityState",
+        retiredMembership: "ui|P4.4|assign|showAirports",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|showAirports",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "setTransportFamilyVisibilityState",
+        retiredMembership: "ui|P4.4|assign|showPorts",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|showPorts",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "setTransportFamilyVisibilityState",
+        retiredMembership: "ui|P4.4|assign|showRail",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|showRail",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "setTransportFamilyVisibilityState",
+        retiredMembership: "ui|P4.4|assign|showRoad",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|showRoad",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "setTransportFamilyVisibilityState",
+        retiredMembership: "ui|P4.4|assign|showTransport",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|showTransport",
+        ],
+      },
+      {
+        modulePath: "js/core/state/actions/transport_actions.js",
+        exportName: "setTransportMasterVisibilityState",
+        retiredMembership: "ui|P4.4|assign|showTransport",
+        requiredConcreteMemberships: [
+          "ui|P4.4|define-property|showTransport",
+        ],
+      },
+    ],
+  );
+  assert.deepEqual(
+    validateStateActionLegacyMembershipReplacementContract(entries),
+    [],
+  );
+  const membershipsByAction = new Map();
+  const canonicalAuthorityIndex =
+    buildCanonicalStateKeyAuthorityIndex();
+  for (const modulePath of new Set(
+    entries.map(({ modulePath }) => modulePath),
+  )) {
+    const source = fs.readFileSync(modulePath, "utf8");
+    const { bindingInventories } =
+      await discoverStateWriterBindingsForSource(
+        modulePath,
+        source,
+        "production",
+        {
+          scanAllParameters: true,
+          includeInventories: true,
+        },
+      );
+    for (const { binding, findings } of bindingInventories) {
+      if (!entries.some(
+        (entry) => entry.exportName === binding.functionName,
+      )) {
+        continue;
+      }
+      const memberships = buildStateWriterBindingGrants(
+        findings,
+        modulePath,
+        canonicalAuthorityIndex,
+        "production",
+      ).flatMap((grant) =>
+        grant.memberships.map((membership) =>
+          [
+            grant.domain,
+            grant.migrationPhase,
+            membership.operation,
+            membership.key,
+          ].join("|")
+        )
+      );
+      membershipsByAction.set(
+        `${modulePath}#${binding.functionName}`,
+        [...new Set(memberships)].sort(),
+      );
+    }
+  }
+  for (const entry of entries) {
+    const actualMemberships = membershipsByAction.get(
+      `${entry.modulePath}#${entry.exportName}`,
+    );
+    assert.ok(actualMemberships, entry.exportName);
+    assert.equal(
+      expandStateActionMembershipsWithLegacyReplacements({
+        modulePath: entry.modulePath,
+        exportName: entry.exportName,
+        memberships: actualMemberships,
+        contractEntries: [entry],
+      }).has(entry.retiredMembership),
+      true,
+      `${entry.exportName} ${entry.retiredMembership}`,
+    );
+    const expanded = expandStateActionMembershipsWithLegacyReplacements({
+      modulePath: entry.modulePath,
+      exportName: entry.exportName,
+      memberships: entry.requiredConcreteMemberships,
+      contractEntries: [entry],
+    });
+    assert.equal(expanded.has(entry.retiredMembership), true);
+    assert.equal(
+      expandStateActionMembershipsWithLegacyReplacements({
+        modulePath: entry.modulePath,
+        exportName: entry.exportName,
+        memberships: entry.requiredConcreteMemberships.slice(1),
+        contractEntries: [entry],
+      }).has(entry.retiredMembership),
+      false,
+    );
+    const [, , , retiredKey] =
+      entry.retiredMembership.split("|");
+    const extraMembership = retiredKey === "*"
+      ? "ui|P4.4|assign|unexpectedFutureKey"
+      : "";
+    if (extraMembership) {
+      assert.equal(
+        expandStateActionMembershipsWithLegacyReplacements({
+          modulePath: entry.modulePath,
+          exportName: entry.exportName,
+          memberships: [
+            ...entry.requiredConcreteMemberships,
+            extraMembership,
+          ],
+          contractEntries: [entry],
+        }).has(entry.retiredMembership),
+        false,
+      );
+    }
+  }
+
+  const [collectionReplacement] = entries.filter(
+    ({ retiredMembership }) =>
+      retiredMembership.includes("|collection-mutate|"),
+  );
+  const wrongOperation = structuredClone(collectionReplacement);
+  wrongOperation.requiredConcreteMemberships =
+    wrongOperation.requiredConcreteMemberships.map((membership) =>
+      membership.replace("|assign|", "|define-property|")
+    );
+  wrongOperation.contractIdentity =
+    buildStateActionLegacyMembershipReplacementContractIdentity(
+      wrongOperation,
+    );
+  assert.ok(
+    validateStateActionLegacyMembershipReplacementContract([
+      wrongOperation,
+    ]).length > 0,
+  );
 });
 
 test("state action delegation contract rejects invalid and duplicate entries", () => {
@@ -7062,6 +7379,172 @@ test("cross-file migration contract is deterministic and rejects forged or dupli
         === "state-action-cross-file-migration-entry-duplicate",
     ),
   );
+});
+
+test("P4.4 cross-file migrations exactly match frozen callers and current action edges", async () => {
+  const frozenPolicy = JSON.parse(
+    fs.readFileSync("tools/state_writer_policy.json", "utf8"),
+  );
+  const expectedRetiredPaths = new Set([
+    "js/core/renderer/strategic_overlay_runtime_owner.js",
+    "js/core/special_zone_layers.js",
+    "js/core/state/appearance_preset_state.js",
+    "js/ui/toolbar/special_zones_workbench_controller.js",
+    "js/ui/toolbar/transport_workbench_state_owner.js",
+  ]);
+  const entries = STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT.filter(
+    (entry) =>
+      entry.migrationPhase === "P4.4"
+      && expectedRetiredPaths.has(entry.retiredCallerPath),
+  );
+  assert.equal(entries.length, 7);
+  assert.deepEqual(
+    entries.map(({
+      retiredMembershipIdentity,
+      replacementCallerPath,
+      actionModulePath,
+      actionExportName,
+    }) => ({
+      retiredMembershipIdentity,
+      replacementCallerPath,
+      actionModulePath,
+      actionExportName,
+    })),
+    [
+      {
+        retiredMembershipIdentity:
+          "js/core/renderer/strategic_overlay_runtime_owner.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createStrategicOverlayRuntimeOwner\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|assign|specialZoneLayers",
+        replacementCallerPath:
+          "js/core/renderer/strategic_overlay_runtime_owner.js",
+        actionModulePath:
+          "js/core/state/actions/special_zone_actions.js",
+        actionExportName: "commitSpecialZoneLayersState",
+      },
+      {
+        retiredMembershipIdentity:
+          "js/core/special_zone_layers.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"mutateRuntimeSpecialZoneLayersState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|assign|specialZoneLayers",
+        replacementCallerPath: "js/core/special_zone_layers.js",
+        actionModulePath:
+          "js/core/state/actions/special_zone_actions.js",
+        actionExportName: "commitSpecialZoneLayersState",
+      },
+      {
+        retiredMembershipIdentity:
+          "js/core/special_zone_layers.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setSpecialZoneMembershipBrushModeState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|assign|specialZoneMembershipBrushMode",
+        replacementCallerPath:
+          "js/ui/toolbar/special_zones_workbench_controller.js",
+        actionModulePath:
+          "js/core/state/actions/special_zone_actions.js",
+        actionExportName: "setSpecialZoneMembershipBrushModeState",
+      },
+      {
+        retiredMembershipIdentity:
+          "js/core/special_zone_layers.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setSpecialZonePresetCategoryState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|assign|specialZonePresetCategory",
+        replacementCallerPath:
+          "js/ui/toolbar/special_zones_workbench_controller.js",
+        actionModulePath:
+          "js/core/state/actions/special_zone_actions.js",
+        actionExportName: "setSpecialZonePresetCategoryState",
+      },
+      {
+        retiredMembershipIdentity:
+          "js/core/state/appearance_preset_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"applyAppearancePresetToRuntimeState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|appearance|P4.4|assign|intensityFields",
+        replacementCallerPath:
+          "js/core/state/actions/appearance_preset_actions.js",
+        actionModulePath:
+          "js/core/state/actions/intensity_field_actions.js",
+        actionExportName: "setIntensityFieldsState",
+      },
+      {
+        retiredMembershipIdentity:
+          "js/ui/toolbar/special_zones_workbench_controller.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createSpecialZonesWorkbenchController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|assign|specialZonePresetOpenCategories",
+        replacementCallerPath:
+          "js/ui/toolbar/special_zones_workbench_controller.js",
+        actionModulePath:
+          "js/core/state/actions/special_zone_actions.js",
+        actionExportName: "setSpecialZonePresetCategoryOpenState",
+      },
+      {
+        retiredMembershipIdentity:
+          "js/ui/toolbar/transport_workbench_state_owner.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createTransportWorkbenchStateOwner\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|ui|P4.4|assign|transportWorkbenchUi",
+        replacementCallerPath:
+          "js/ui/toolbar/transport_workbench_state_owner.js",
+        actionModulePath: "js/core/state/actions/transport_actions.js",
+        actionExportName: "commitTransportWorkbenchUiState",
+      },
+    ],
+  );
+  assert.deepEqual(
+    validateStateActionCrossFileMigrationContract(entries),
+    [],
+  );
+
+  const actionEdgesByPath = new Map();
+  for (const replacementCallerPath of new Set(
+    entries.map(({ replacementCallerPath }) => replacementCallerPath),
+  )) {
+    const source = fs.readFileSync(replacementCallerPath, "utf8");
+    const { bindingInventories } =
+      await discoverStateWriterBindingsForSource(
+        replacementCallerPath,
+        source,
+        "production",
+        {
+          scanAllParameters: true,
+          includeInventories: true,
+        },
+      );
+    actionEdgesByPath.set(
+      replacementCallerPath,
+      normalizeStateActionDelegations(
+        bindingInventories.flatMap(
+          ({ actionDelegations = [] }) => actionDelegations,
+        ),
+      ),
+    );
+  }
+
+  for (const entry of entries) {
+    const retiredWriter = frozenPolicy.writers.find(
+      ({ path: writerPath }) => writerPath === entry.retiredCallerPath,
+    );
+    const retiredBinding = retiredWriter?.bindings.find(
+      (binding) =>
+        buildStableStateBindingIdentity(binding)
+          === entry.retiredCallerBindingIdentity,
+    );
+    const retiredMembership = retiredBinding?.grants.flatMap(
+      (grant) => grant.memberships.map((membership) => ({
+        domain: grant.domain,
+        migrationPhase: grant.migrationPhase,
+        ...membership,
+      })),
+    ).find((membership) =>
+      membership.domain === entry.domain
+      && membership.migrationPhase === entry.migrationPhase
+      && membership.operation === entry.operation
+      && membership.key === entry.key
+    );
+    assert.deepEqual(
+      retiredMembership?.mutationSites,
+      entry.retiredMutationSites,
+      entry.retiredMembershipIdentity,
+    );
+    assert.ok(
+      actionEdgesByPath.get(entry.replacementCallerPath).some((edge) =>
+        edge.callerBindingIdentity
+          === entry.replacementCallerBindingIdentity
+        && edge.enclosingFunctionIdentity
+          === entry.replacementEnclosingFunctionIdentity
+        && edge.actionModulePath === entry.actionModulePath
+        && edge.actionExportName === entry.actionExportName
+        && edge.targetArgumentIndex === entry.targetArgumentIndex
+        && edge.sourceFingerprint
+          === entry.replacementActionSourceFingerprint
+      ),
+      entry.retiredMembershipIdentity,
+    );
+  }
 });
 
 test("caller-to-action ledger accepts only an exact explicit cross-file migration proof", () => {
