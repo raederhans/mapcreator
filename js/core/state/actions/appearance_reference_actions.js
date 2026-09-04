@@ -17,12 +17,19 @@ function detachActionInputs(inputs) { return cloneStateValue({ ...inputs }); }
 export function setReferenceImageState(target, value, { clamp } = {}) {
   assertTarget(target);
   const inputs = detachActionInputs({ value });
-  target.referenceImageState = normalizeReferenceImageState(inputs.value, { clamp });
-  return target.referenceImageState;
+  const next = normalizeReferenceImageState(inputs.value, { clamp });
+  target.referenceImageState = next;
+  return next;
 }
 export function patchReferenceImageState(target, patch, { clamp } = {}) {
   assertTarget(target);
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new TypeError("[appearance_reference_actions] patch must be an object");
-  return setReferenceImageState(target, { ...(target.referenceImageState || {}), ...patch }, { clamp });
+  const current = structuredClone(target.referenceImageState);
+  const inputs = detachActionInputs({
+    patch,
+  });
+  const next = normalizeReferenceImageState({ ...(current || {}), ...inputs.patch }, { clamp });
+  target.referenceImageState = next;
+  return next;
 }
 export function setReferenceImageUrlState(target, value = null) { assertTarget(target); target.referenceImageUrl = value; return value; }

@@ -58,6 +58,7 @@ function createExportWorkbenchControllerDependencies(overrides = {}) {
     triggerCanvasDownload() {},
     triggerBlobDownload() {},
     bakeLayer: async () => ({}),
+    clearBakeCache() {},
     ...overrides,
   };
 }
@@ -163,6 +164,25 @@ test("export workbench controller validates required notification dependencies a
 
   assert.equal(typeof controller.bindExportWorkbenchEvents, "function");
   assert.equal(typeof controller.renderExportWorkbenchUi, "function");
+  assert.equal(typeof controller.setExportBakeArtifacts, "function");
+});
+
+test("export workbench controller commits detached bake artifact metadata through its state action", () => {
+  const runtimeState = {};
+  const artifacts = [{
+    layerId: "color",
+    dependencies: ["color-revision:1"],
+    canvasSize: { width: 800, height: 600 },
+    dirtyFlag: true,
+  }];
+  const controller = createExportWorkbenchController(
+    createExportWorkbenchControllerDependencies({ state: runtimeState }),
+  );
+
+  controller.setExportBakeArtifacts(artifacts);
+  artifacts[0].dependencies.push("caller-mutation");
+
+  assert.deepEqual(runtimeState.exportWorkbenchUi.bakeArtifacts[0].dependencies, ["color-revision:1"]);
 });
 
 test("export artifact download transaction records the artifact and download lifecycle", async () => {
@@ -497,7 +517,7 @@ test("export pass sequence follows normalized order and visibility", () => {
   assert.deepEqual(sequence, ["labels", "physicalBase", "political"]);
 });
 
-test("export workbench runtime state keeps bake cache runtime-only", () => {
+test("export workbench state strips legacy runtime-only bake cache", () => {
   const existingCache = new Map([["color", { hash: "abc" }]]);
   const state = {
     exportWorkbenchUi: {
@@ -508,7 +528,8 @@ test("export workbench runtime state keeps bake cache runtime-only", () => {
 
   const normalized = ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState);
 
-  assert.equal(normalized.bakeCache, existingCache);
+  assert.equal(Object.hasOwn(normalized, "bakeCache"), false);
+  assert.equal(Object.hasOwn(state.exportWorkbenchUi, "bakeCache"), false);
   assert.deepEqual(normalized.bakeArtifacts, [{
     layerId: "text",
     updatedAt: 0,
@@ -517,8 +538,11 @@ test("export workbench runtime state keeps bake cache runtime-only", () => {
     dirtyFlag: true,
   }]);
 
-  const fromJson = ensureExportWorkbenchUiState({ exportWorkbenchUi: { bakeCache: {} } }, normalizeExportWorkbenchUiState);
-  assert.ok(fromJson.bakeCache instanceof Map);
+  const fromJson = ensureExportWorkbenchUiState(
+    { exportWorkbenchUi: { bakeCache: {} } },
+    normalizeExportWorkbenchUiState,
+  );
+  assert.equal(Object.hasOwn(fromJson, "bakeCache"), false);
 });
 
 test("export artifact package writes a zip manifest and payload files", async () => {

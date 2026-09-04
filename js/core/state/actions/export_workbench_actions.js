@@ -6,22 +6,26 @@ function isStateTarget(target) {
   return !!target && typeof target === "object" && !Array.isArray(target);
 }
 
+function detachExportWorkbenchUiDraft(draft) {
+  if (!isStateTarget(draft)) return null;
+  const { bakeCache: _runtimeOnlyBakeCache, ...serializableDraft } = draft;
+  return structuredClone(serializableDraft);
+}
+
 function normalizeAndCommit(
   target,
   draft,
-  { preserveBakeCache = true, normalizeState = normalizeExportWorkbenchUiState } = {},
+  { normalizeState = normalizeExportWorkbenchUiState } = {},
 ) {
   const normalize = typeof normalizeState === "function"
     ? normalizeState
     : normalizeExportWorkbenchUiState;
-  if (!isStateTarget(target)) return normalize(null);
-  const existingCache = preserveBakeCache && target.exportWorkbenchUi?.bakeCache instanceof Map
-    ? target.exportWorkbenchUi.bakeCache
-    : null;
-  const normalized = normalize(draft);
-  if (preserveBakeCache) normalized.bakeCache = existingCache || new Map();
-  target.exportWorkbenchUi = normalized;
-  return normalized;
+  const normalized = normalize(detachExportWorkbenchUiDraft(draft));
+  const committed = detachExportWorkbenchUiDraft(normalized)
+    || normalizeExportWorkbenchUiState(null);
+  if (!isStateTarget(target)) return structuredClone(committed);
+  target.exportWorkbenchUi = committed;
+  return structuredClone(committed);
 }
 
 function mergeUiDraft(target, patch = {}) {
@@ -57,13 +61,9 @@ export function commitExportWorkbenchUiState(
   { normalizeState } = {},
 ) {
   if (!isStateTarget(target)) {
-    return normalizeAndCommit(target, null, { preserveBakeCache: false, normalizeState });
+    return normalizeAndCommit(target, null, { normalizeState });
   }
-  const detachedUiState = isStateTarget(nextUiState)
-    ? structuredClone({ ...nextUiState })
-    : null;
-  return normalizeAndCommit(target, detachedUiState, {
-    preserveBakeCache: false,
+  return normalizeAndCommit(target, nextUiState, {
     normalizeState,
   });
 }
@@ -114,14 +114,10 @@ export function setExportAdjustmentsState(target, adjustments = {}) {
 
 export function setExportBakeState(
   target,
-  { bakeCache, bakeArtifacts } = {},
+  { bakeArtifacts } = {},
 ) {
-  const currentCache = target?.exportWorkbenchUi?.bakeCache instanceof Map
-    ? target.exportWorkbenchUi.bakeCache
-    : null;
   const patch = {};
   if (bakeArtifacts !== undefined) patch.bakeArtifacts = bakeArtifacts;
   const ui = normalizeAndCommit(target, mergeUiDraft(target, patch));
-  ui.bakeCache = bakeCache instanceof Map ? bakeCache : (currentCache || new Map());
-  return { bakeCache: ui.bakeCache, bakeArtifacts: ui.bakeArtifacts };
+  return { bakeArtifacts: ui.bakeArtifacts };
 }

@@ -41,14 +41,63 @@ function getInheritedDataValue(target, fieldName) {
   return undefined;
 }
 
-function setOwnDataValue(target, fieldName, value) {
+function assertOwnDataValueWritable(target, fieldName) {
   const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
+  if (
+    descriptor
+    && Object.hasOwn(descriptor, "value")
+    && !descriptor.writable
+    && !descriptor.configurable
+  ) {
+    throw new TypeError(`[appearance_actions] ${fieldName} must be writable owner state`);
+  }
+  if (descriptor && !Object.hasOwn(descriptor, "value") && !descriptor.configurable) {
+    throw new TypeError(`[appearance_actions] ${fieldName} must be writable owner state`);
+  }
+  if (!descriptor && !Object.isExtensible(target)) {
+    throw new TypeError(`[appearance_actions] ${fieldName} target must be extensible`);
+  }
+  return descriptor;
+}
+
+function writeStyleConfigOwnDataValue(target, value) {
+  const descriptor = assertOwnDataValueWritable(target, "styleConfig");
+  if (descriptor && Object.hasOwn(descriptor, "value") && descriptor.writable) {
+    target.styleConfig = value;
+    return value;
+  }
+  Object.defineProperty(target, "styleConfig", {
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
+    value,
+    writable: true,
+  });
+  return value;
+}
+
+function writeParentBorderEnabledMapOwnDataValue(target, value) {
+  const descriptor = assertOwnDataValueWritable(
+    target,
+    "parentBorderEnabledByCountry",
+  );
+  if (descriptor && Object.hasOwn(descriptor, "value") && descriptor.writable) {
+    target.parentBorderEnabledByCountry = value;
+    return value;
+  }
+  Object.defineProperty(target, "parentBorderEnabledByCountry", {
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
+    value,
+    writable: true,
+  });
+  return value;
+}
+
+function setStylePathOwnDataValue(target, fieldName, value) {
+  const descriptor = assertOwnDataValueWritable(target, fieldName);
   if (descriptor && Object.hasOwn(descriptor, "value") && descriptor.writable) {
     target[fieldName] = value;
     return value;
-  }
-  if (descriptor && !descriptor.configurable) {
-    throw new TypeError(`[appearance_actions] ${fieldName} must be writable owner state`);
   }
   Object.defineProperty(target, fieldName, {
     configurable: descriptor?.configurable ?? true,
@@ -59,7 +108,7 @@ function setOwnDataValue(target, fieldName, value) {
   return value;
 }
 
-function ensureOwnPlainRecord(target, fieldName) {
+function ensureOwnStylePathRecord(target, fieldName) {
   const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
   if (
     descriptor
@@ -70,7 +119,7 @@ function ensureOwnPlainRecord(target, fieldName) {
     ? descriptor.value
     : getInheritedDataValue(target, fieldName);
   const next = isPlainRecord(source) ? cloneDetached(source) : {};
-  return setOwnDataValue(target, fieldName, next);
+  return setStylePathOwnDataValue(target, fieldName, next);
 }
 
 function normalizeBooleanRecord(value, label) {
@@ -84,7 +133,17 @@ function normalizeBooleanRecord(value, label) {
 
 export function ensureAppearanceStyleConfigState(target) {
   assertTarget(target);
-  return ensureOwnPlainRecord(target, "styleConfig");
+  const descriptor = Object.getOwnPropertyDescriptor(target, "styleConfig");
+  if (
+    descriptor
+    && Object.hasOwn(descriptor, "value")
+    && isPlainRecord(descriptor.value)
+  ) return descriptor.value;
+  const source = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : getInheritedDataValue(target, "styleConfig");
+  const next = isPlainRecord(source) ? cloneDetached(source) : {};
+  return writeStyleConfigOwnDataValue(target, next);
 }
 
 export function setAppearanceStyleConfigState(target, value) {
@@ -92,14 +151,14 @@ export function setAppearanceStyleConfigState(target, value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError("[appearance_actions] style config must be an object");
   }
-  return setOwnDataValue(target, "styleConfig", value);
+  return writeStyleConfigOwnDataValue(target, value);
 }
 
 export function setAppearanceStyleGroupState(target, group, value) {
   assertTarget(target);
   const normalizedGroup = normalizeGroup(group);
   const styleConfig = ensureAppearanceStyleConfigState(target);
-  return setOwnDataValue(styleConfig, normalizedGroup, value);
+  return setStylePathOwnDataValue(styleConfig, normalizedGroup, value);
 }
 
 export function patchAppearanceStyleGroupState(target, group, patch) {
@@ -115,7 +174,7 @@ export function patchAppearanceStyleGroupState(target, group, patch) {
     && isPlainRecord(descriptor.value)
     ? descriptor.value
     : {};
-  return setOwnDataValue(styleConfig, normalizedGroup, { ...current, ...patch });
+  return setStylePathOwnDataValue(styleConfig, normalizedGroup, { ...current, ...patch });
 }
 
 export function applyAppearanceStylePathPatchState(target, stylePatch) {
@@ -130,13 +189,13 @@ export function applyAppearanceStylePathPatchState(target, stylePatch) {
     let cursor = styleConfig;
     for (let index = 0; index < segments.length - 1; index += 1) {
       const segment = segments[index];
-      cursor = ensureOwnPlainRecord(cursor, segment);
+      cursor = ensureOwnStylePathRecord(cursor, segment);
     }
     const last = segments[segments.length - 1];
     if (value === null || value === undefined) {
       delete cursor[last];
     } else {
-      setOwnDataValue(cursor, last, value);
+      setStylePathOwnDataValue(cursor, last, value);
     }
   });
   return styleConfig;
@@ -145,7 +204,7 @@ export function applyAppearanceStylePathPatchState(target, stylePatch) {
 export function setAppearanceParentBorderEnabledMapState(target, value) {
   assertTarget(target);
   const next = normalizeBooleanRecord(value, "enabled map");
-  return setOwnDataValue(target, "parentBorderEnabledByCountry", next);
+  return writeParentBorderEnabledMapOwnDataValue(target, next);
 }
 
 export function patchAppearanceParentBorderEnabledMapState(target, patch) {

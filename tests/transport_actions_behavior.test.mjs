@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { validateStateActionNonTargetParameterMutations } from "../tools/build_state_writer_policy.mjs";
+import {
+  discoverStateWriterBindingsForSource,
+  validateStateActionNonTargetParameterMutations,
+} from "../tools/build_state_writer_policy.mjs";
 
 import {
   applyTransportWorkbenchOverviewState,
@@ -14,13 +17,18 @@ import {
   setTransportMasterVisibilityState,
 } from "../js/core/state/actions/transport_actions.js";
 
-test("transport workbench commits preserve the existing ui root and detach drafts", () => {
+test("transport workbench commits preserve the existing ui root and return detached state", () => {
   const root = { open: false, familyConfigs: { road: { width: 1 } } };
   const target = { transportWorkbenchUi: root };
   const draft = { open: true, activeFamily: "rail", familyConfigs: { rail: { width: 2 } } };
 
-  assert.equal(commitTransportWorkbenchUiState(target, draft), root);
-  assert.equal(ensureTransportWorkbenchUiState(target), root);
+  const committed = commitTransportWorkbenchUiState(target, draft);
+  assert.equal(target.transportWorkbenchUi, root);
+  assert.notEqual(committed, root);
+  assert.deepEqual(committed, root);
+  const ensured = ensureTransportWorkbenchUiState(target);
+  assert.notEqual(ensured, root);
+  assert.deepEqual(ensured, root);
   assert.equal(root.open, true);
   assert.equal(root.activeFamily, "rail");
   draft.familyConfigs.rail.width = 9;
@@ -163,6 +171,25 @@ test("transport actions keep non-target parameters read-only", async () => {
   const source = await readFile(new URL(`../${modulePath}`, import.meta.url), "utf8");
   assert.deepEqual(
     await validateStateActionNonTargetParameterMutations(modulePath, source),
+    [],
+  );
+  const { bindingInventories } = await discoverStateWriterBindingsForSource(
+    modulePath,
+    source,
+    "production",
+    {
+      scanAllParameters: true,
+      enforceCurrentContracts: true,
+      includeInventories: true,
+      derivedAliasTaintMode: "strict",
+    },
+  );
+  assert.deepEqual(
+    bindingInventories.flatMap(({ binding, findings }) => (
+      binding.kind === "function-parameter" && binding.parameterIndex === 0
+        ? findings.filter(({ dynamic, unsupported }) => dynamic || unsupported)
+        : []
+    )),
     [],
   );
 });

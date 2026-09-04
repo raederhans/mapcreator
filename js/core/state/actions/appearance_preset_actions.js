@@ -25,21 +25,26 @@ function cloneStateValue(value) {
 }
 function detachActionInputs(inputs) { return cloneStateValue({ ...inputs }); }
 export function setAppearancePresetsState(target, value) { assertTarget(target); target.appearancePresets = value; return value; }
-export function normalizeAppearancePresetsIntoState(target) { assertTarget(target); return setAppearancePresetsState(target, normalizeAppearancePresetsState(target.appearancePresets)); }
-export function upsertAppearancePresetState(target, preset) { assertTarget(target); const inputs = detachActionInputs({ preset }); return setAppearancePresetsState(target, upsertAppearancePreset(target.appearancePresets, inputs.preset)); }
-export function deleteAppearancePresetState(target, presetId) { assertTarget(target); const normalizedPresetId = String(presetId || ""); return setAppearancePresetsState(target, deleteAppearancePreset(target.appearancePresets, normalizedPresetId)); }
-export function mergeAppearancePresetImportPayloadState(target, payload) { assertTarget(target); const inputs = detachActionInputs({ payload }); return setAppearancePresetsState(target, mergeAppearancePresetImportPayload(target.appearancePresets, inputs.payload)); }
+export function normalizeAppearancePresetsIntoState(target) { assertTarget(target); const current = structuredClone(target.appearancePresets); return setAppearancePresetsState(target, normalizeAppearancePresetsState(current)); }
+export function upsertAppearancePresetState(target, preset) { assertTarget(target); const current = structuredClone(target.appearancePresets); const inputs = detachActionInputs({ preset }); return setAppearancePresetsState(target, upsertAppearancePreset(current, inputs.preset)); }
+export function deleteAppearancePresetState(target, presetId) { assertTarget(target); const current = structuredClone(target.appearancePresets); const inputs = detachActionInputs({ presetId }); const normalizedPresetId = String(inputs.presetId || ""); return setAppearancePresetsState(target, deleteAppearancePreset(current, normalizedPresetId)); }
+export function mergeAppearancePresetImportPayloadState(target, payload) { assertTarget(target); const current = structuredClone(target.appearancePresets); const inputs = detachActionInputs({ payload }); return setAppearancePresetsState(target, mergeAppearancePresetImportPayload(current, inputs.payload)); }
 export function selectAppearancePresetState(target, presetId) {
   assertTarget(target);
-  const next = normalizeAppearancePresetsState(target.appearancePresets);
-  const selectedPresetId = String(presetId || "").trim();
+  const current = structuredClone(target.appearancePresets);
+  const inputs = detachActionInputs({ presetId });
+  const next = normalizeAppearancePresetsState(current);
+  const selectedPresetId = String(inputs.presetId || "").trim();
   if (next.byId[selectedPresetId]) next.selectedPresetId = selectedPresetId;
   return setAppearancePresetsState(target, next);
 }
 // The canonical helper owns the restore order: style, visibility, then intensity fields.
 export function applyAppearancePresetState(target, presetOrSnapshot) {
   assertTarget(target);
-  const inputs = detachActionInputs({ presetOrSnapshot });
+  const currentIntensityFields = structuredClone(target.intensityFields);
+  const inputs = detachActionInputs({
+    presetOrSnapshot,
+  });
   const snapshot = normalizeAppearancePresetSnapshot(inputs.presetOrSnapshot);
   setAppearanceStyleConfigState(target, snapshot.styleConfig);
   patchAppearanceVisibilityState(target, {
@@ -49,7 +54,7 @@ export function applyAppearancePresetState(target, presetOrSnapshot) {
   setIntensityFieldsState(
     target,
     buildRestoredAppearancePresetIntensityFields(
-      target.intensityFields,
+      currentIntensityFields,
       snapshot.intensityFields,
     ),
   );

@@ -256,10 +256,14 @@ test("file and text project imports share normalized callback payloads", async (
   }
 });
 
-async function importProjectThroughFunnelPayload(payload, { captureIntensityFields = false } = {}) {
+async function importProjectThroughFunnelPayload(
+  payload,
+  { captureIntensityFields = false, captureExportBakeCacheClear = false } = {},
+) {
   const previousDocument = globalThis.document;
   const previousFileReader = globalThis.FileReader;
   const previousEnsureContextLayerDataHook = readRegisteredRuntimeHookSource(state, "ensureContextLayerDataFn");
+  const previousClearExportBakeCacheHook = readRegisteredRuntimeHookSource(state, "clearExportBakeCacheFn");
   const previousTransportVisibilityState = {
     showTransport: state.showTransport,
     showAirports: state.showAirports,
@@ -270,6 +274,7 @@ async function importProjectThroughFunnelPayload(payload, { captureIntensityFiel
   const previousIntensityFields = state.intensityFields;
   const requests = [];
   let importedIntensityFields = null;
+  let exportBakeCacheClearCount = 0;
 
   globalThis.document = {
     getElementById: () => null,
@@ -285,6 +290,9 @@ async function importProjectThroughFunnelPayload(payload, { captureIntensityFiel
       layerRequest: Array.isArray(layerRequest) ? [...layerRequest] : layerRequest,
       options: { ...options },
     });
+  });
+  registerRuntimeHook(state, "clearExportBakeCacheFn", () => {
+    exportBakeCacheClearCount += 1;
   });
 
   try {
@@ -311,17 +319,32 @@ async function importProjectThroughFunnelPayload(payload, { captureIntensityFiel
     if (captureIntensityFields) {
       importedIntensityFields = state.intensityFields;
     }
-    return captureIntensityFields
-      ? { requests, intensityFields: importedIntensityFields }
-      : requests;
+    if (captureIntensityFields || captureExportBakeCacheClear) {
+      return {
+        requests,
+        ...(captureIntensityFields ? { intensityFields: importedIntensityFields } : {}),
+        ...(captureExportBakeCacheClear ? { exportBakeCacheClearCount } : {}),
+      };
+    }
+    return requests;
   } finally {
     Object.assign(state, previousTransportVisibilityState);
     state.intensityFields = previousIntensityFields;
     registerRuntimeHook(state, "ensureContextLayerDataFn", previousEnsureContextLayerDataHook);
+    registerRuntimeHook(state, "clearExportBakeCacheFn", previousClearExportBakeCacheHook);
     globalThis.document = previousDocument;
     globalThis.FileReader = previousFileReader;
   }
 }
+
+test("project import through funnel clears toolbar-owned export bake cache once", async () => {
+  const result = await importProjectThroughFunnelPayload(
+    createTransportOverviewImportPayload(),
+    { captureExportBakeCacheClear: true },
+  );
+
+  assert.equal(result.exportBakeCacheClearCount, 1);
+});
 
 function getTransportOverviewVisibilityFields() {
   return listTransportOverviewCapabilityFamilyIds()

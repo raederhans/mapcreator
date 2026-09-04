@@ -267,6 +267,7 @@ async function applyImportedProjectState(data, { ui, hooks }) {
   restoreImportedWorkbenchUiState(state, data, {
     cloneValue: cloneImportedProjectValue,
   });
+  callRuntimeHook(state, "clearExportBakeCacheFn");
   state.specialZones = data.specialZones || {};
   state.specialZoneLayers = normalizeSpecialZoneLayersState(data.specialZoneLayers, {
     defaultSource: "project",

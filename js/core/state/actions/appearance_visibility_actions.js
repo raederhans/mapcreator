@@ -24,13 +24,36 @@ export function setAppearanceVisibilityState(target, key, value) {
   }
   if (!admitted) throw new RangeError(`[appearance_visibility_actions] unknown key: ${key}`);
   const next = key === "strategicChoroplethMetric" ? String(value || "") : Boolean(value);
-  target[key] = next;
+  switch (key) {
+    case "showWaterRegions": target.showWaterRegions = next; break;
+    case "showOpenOceanRegions": target.showOpenOceanRegions = next; break;
+    case "allowOpenOceanSelect": target.allowOpenOceanSelect = next; break;
+    case "allowOpenOceanPaint": target.allowOpenOceanPaint = next; break;
+    case "showScenarioSpecialRegions": target.showScenarioSpecialRegions = next; break;
+    case "showScenarioAtlantropa": target.showScenarioAtlantropa = next; break;
+    case "showScenarioReliefOverlays": target.showScenarioReliefOverlays = next; break;
+    case "showCityPoints": target.showCityPoints = next; break;
+    case "showStrategicResourceMarkers": target.showStrategicResourceMarkers = next; break;
+    case "strategicChoroplethMetric": target.strategicChoroplethMetric = next; break;
+    case "showUrban": target.showUrban = next; break;
+    case "showPhysical": target.showPhysical = next; break;
+    case "showRivers": target.showRivers = next; break;
+    case "showTransport": target.showTransport = next; break;
+    case "showSpecialZones": target.showSpecialZones = next; break;
+    case "showRoad": target.showRoad = next; break;
+    case "showRail": target.showRail = next; break;
+    case "showAirports": target.showAirports = next; break;
+    case "showPorts": target.showPorts = next; break;
+    case "showBlankFeatureLabels": target.showBlankFeatureLabels = next; break;
+    case "parentBordersVisible": target.parentBordersVisible = next; break;
+    default: break;
+  }
   return next;
 }
 export function patchAppearanceVisibilityState(target, patch) {
   assertTarget(target); if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new TypeError("[appearance_visibility_actions] patch must be an object");
   const entries = Object.entries(patch);
   entries.forEach(([key]) => assertKey(key));
-  for (const [key, value] of entries) target[key] = normalizeValue(key, value);
-  return target;
+  for (const [key, value] of entries) setAppearanceVisibilityState(target, key, value);
+  return true;
 }

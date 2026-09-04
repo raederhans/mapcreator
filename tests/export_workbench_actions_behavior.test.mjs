@@ -40,6 +40,22 @@ test("export workbench commit normalizes and detaches caller drafts", () => {
   assert.deepEqual(committed.bakeArtifacts[0].dependencies, ["a"]);
 });
 
+test("export workbench commit strips uncloneable legacy bake cache entries", () => {
+  const target = {};
+  const draft = {
+    target: "bake-pack",
+    bakeCache: new Map([["color", { canvas: () => {} }]]),
+    bakeArtifacts: [{ layerId: "color" }],
+  };
+
+  const committed = commitExportWorkbenchUiState(target, draft);
+
+  assert.equal(committed.target, "bake-pack");
+  assert.equal(Object.hasOwn(committed, "bakeCache"), false);
+  assert.equal(Object.hasOwn(target.exportWorkbenchUi, "bakeCache"), false);
+  assert.deepEqual(committed.bakeArtifacts.map(({ layerId }) => layerId), ["color"]);
+});
+
 test("export workbench detaches custom normalizer input and skips drafts for invalid targets", () => {
   const draft = {
     adjustments: { brightness: 140 },
@@ -81,7 +97,8 @@ test("export workbench field actions retain normalized domain semantics", () => 
   const cache = new Map([["color", { canvas: true }]]);
   const target = { exportWorkbenchUi: { bakeCache: cache } };
 
-  assert.equal(ensureExportWorkbenchUiState(target).bakeCache, cache);
+  assert.equal(Object.hasOwn(ensureExportWorkbenchUiState(target), "bakeCache"), false);
+  assert.equal(Object.hasOwn(target.exportWorkbenchUi, "bakeCache"), false);
   setExportLayerOrderState(target, ["labels", "paint"]);
   setExportVisibilityState(target, "paint", false);
   setExportTextVisibilityState(target, "annotations", false);
@@ -107,7 +124,7 @@ test("export workbench field actions retain normalized domain semantics", () => 
   });
   assert.equal(ui.adjustments.contrast, 0);
   assert.equal(ui.adjustments.clarity, 124);
-  assert.equal(ui.bakeCache, cache);
+  assert.equal(Object.hasOwn(ui, "bakeCache"), false);
   assert.deepEqual(ui.bakeArtifacts, [{
     layerId: "text",
     updatedAt: 0,

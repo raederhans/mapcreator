@@ -87,14 +87,22 @@ function cloneEditorVertices(vertices) {
 export function ensureSpecialZoneEditorState(target, { defaultZoneType = "custom" } = {}) {
   assertStateTarget(target);
   const inputs = detachActionInputs({ defaultZoneType });
-  const current = target.specialZoneEditor;
+  const descriptor = Object.getOwnPropertyDescriptor(target, "specialZoneEditor");
+  const descriptorValue = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : null;
+  const current = descriptorValue && typeof descriptorValue === "object" && !Array.isArray(descriptorValue)
+    ? descriptorValue
+    : null;
   const next = normalizeEditorState(current, inputs.defaultZoneType);
-  if (current && typeof current === "object" && !Array.isArray(current)) {
+  if (current) {
     Object.assign(current, next);
+    target.specialZoneEditor = current;
+    return current;
   } else {
     target.specialZoneEditor = next;
+    return next;
   }
-  return target.specialZoneEditor;
 }
 
 export function patchSpecialZoneEditorState(
@@ -116,7 +124,11 @@ export function patchSpecialZoneEditorState(
     patch: Object.fromEntries(patchKeys.map((key) => [key, patch[key]])),
     defaultZoneType,
   });
-  const current = ensureSpecialZoneEditorState(target, { defaultZoneType: inputs.defaultZoneType });
+  ensureSpecialZoneEditorState(target, { defaultZoneType: inputs.defaultZoneType });
+  const editorDescriptor = Object.getOwnPropertyDescriptor(target, "specialZoneEditor");
+  const current = editorDescriptor && Object.hasOwn(editorDescriptor, "value")
+    ? editorDescriptor.value
+    : createDefaultSpecialZoneEditorState();
   const assignments = {};
   if (Object.hasOwn(inputs.patch, "active")) assignments.active = Boolean(inputs.patch.active);
   if (Object.hasOwn(inputs.patch, "vertices")) assignments.vertices = Array.isArray(inputs.patch.vertices)
@@ -127,6 +139,7 @@ export function patchSpecialZoneEditorState(
   if (Object.hasOwn(inputs.patch, "selectedId")) assignments.selectedId = String(inputs.patch.selectedId || "").trim() || null;
   if (Object.hasOwn(inputs.patch, "counter")) assignments.counter = Math.max(1, Number(inputs.patch.counter) || 1);
   Object.assign(current, assignments);
+  target.specialZoneEditor = current;
   return current;
 }
 
@@ -141,10 +154,8 @@ export function commitSpecialZoneLayersState(
     options: projectFields({ options }, "options", SPECIAL_ZONE_LAYER_OPTION_KEYS) || {},
   });
   const normalized = normalizeSpecialZoneLayersState(inputs.nextState, inputs.options);
-  Object.assign(target, {
-    specialZoneLayers: normalized,
-    specialZonesOverlayDirty: true,
-  });
+  target.specialZoneLayers = normalized;
+  target.specialZonesOverlayDirty = true;
   return normalized;
 }
 
@@ -208,21 +219,32 @@ export function restoreSpecialZoneSnapshotState(
     };
     updatedKeys.push("specialZoneEditor");
   }
-  Object.assign(target, assignments);
+  if (Object.hasOwn(assignments, "specialZoneLayers")) {
+    target.specialZoneLayers = assignments.specialZoneLayers;
+    target.specialZonesOverlayDirty = true;
+  }
+  if (Object.hasOwn(assignments, "specialZoneMembershipBrushMode")) {
+    target.specialZoneMembershipBrushMode = assignments.specialZoneMembershipBrushMode;
+  }
+  if (Object.hasOwn(assignments, "specialZoneEditor")) {
+    target.specialZoneEditor = assignments.specialZoneEditor;
+  }
   return Object.freeze({ updatedKeys: Object.freeze(updatedKeys) });
 }
 
 export function setSpecialZoneMembershipBrushModeState(target, mode = "add") {
   assertStateTarget(target);
   const inputs = detachActionInputs({ mode });
-  target.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(inputs.mode);
-  return target.specialZoneMembershipBrushMode;
+  const nextMode = normalizeSpecialZoneMembershipBrushModeState(inputs.mode);
+  target.specialZoneMembershipBrushMode = nextMode;
+  return nextMode;
 }
 
 export function setSpecialZonePresetCategoryState(target, category = "all") {
   assertStateTarget(target);
-  target.specialZonePresetCategory = String(category || "all").trim() || "all";
-  return target.specialZonePresetCategory;
+  const nextCategory = String(category || "all").trim() || "all";
+  target.specialZonePresetCategory = nextCategory;
+  return nextCategory;
 }
 
 export function setSpecialZonePresetCategoryOpenState(
@@ -232,48 +254,67 @@ export function setSpecialZonePresetCategoryOpenState(
 ) {
   assertStateTarget(target);
   const normalizedCategory = String(category || "").trim();
-  if (!normalizedCategory) return Array.isArray(target.specialZonePresetOpenCategories)
-    ? target.specialZonePresetOpenCategories
+  const categoryDescriptor = Object.getOwnPropertyDescriptor(
+    target,
+    "specialZonePresetOpenCategories",
+  );
+  const descriptorValue = categoryDescriptor && Object.hasOwn(categoryDescriptor, "value")
+    ? categoryDescriptor.value
+    : null;
+  if (!normalizedCategory) return Array.isArray(descriptorValue)
+    ? descriptorValue
     : [];
   const openCategories = new Set(
-    Array.isArray(target.specialZonePresetOpenCategories)
-      ? target.specialZonePresetOpenCategories
-      : target.specialZonePresetOpenCategories instanceof Set
-        ? target.specialZonePresetOpenCategories
+    Array.isArray(descriptorValue)
+      ? descriptorValue
+      : descriptorValue instanceof Set
+        ? descriptorValue
         : [],
   );
   if (isOpen) openCategories.add(normalizedCategory);
   else openCategories.delete(normalizedCategory);
-  target.specialZonePresetOpenCategories = [...openCategories];
-  return target.specialZonePresetOpenCategories;
+  const nextOpenCategories = [...openCategories];
+  target.specialZonePresetOpenCategories = nextOpenCategories;
+  return nextOpenCategories;
 }
 
 export function ensureManualSpecialZonesState(target) {
   assertStateTarget(target);
+  const descriptor = Object.getOwnPropertyDescriptor(target, "manualSpecialZones");
+  const current = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : null;
   if (
-    !target.manualSpecialZones
-    || typeof target.manualSpecialZones !== "object"
-    || Array.isArray(target.manualSpecialZones)
-    || target.manualSpecialZones.type !== "FeatureCollection"
+    !current
+    || typeof current !== "object"
+    || Array.isArray(current)
+    || current.type !== "FeatureCollection"
   ) {
-    target.manualSpecialZones = { type: "FeatureCollection", features: [] };
-  } else if (!Array.isArray(target.manualSpecialZones.features)) {
-    target.manualSpecialZones = {
-      ...target.manualSpecialZones,
+    const next = { type: "FeatureCollection", features: [] };
+    target.manualSpecialZones = next;
+    return next;
+  } else if (!Array.isArray(current.features)) {
+    const next = {
+      ...current,
       features: [],
     };
+    target.manualSpecialZones = next;
+    return next;
   }
-  return target.manualSpecialZones;
+  target.manualSpecialZones = current;
+  return current;
 }
 
 export function setSpecialZonesVisibilityState(target, value = true) {
   assertStateTarget(target);
-  target.showSpecialZones = Boolean(value);
-  return target.showSpecialZones;
+  const nextVisible = Boolean(value);
+  target.showSpecialZones = nextVisible;
+  return nextVisible;
 }
 
 export function setSpecialZonesOverlayDirtyState(target, value = true) {
   assertStateTarget(target);
-  target.specialZonesOverlayDirty = Boolean(value);
-  return target.specialZonesOverlayDirty;
+  const nextDirty = Boolean(value);
+  target.specialZonesOverlayDirty = nextDirty;
+  return nextDirty;
 }

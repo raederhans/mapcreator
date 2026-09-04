@@ -12,7 +12,7 @@ function createOwner(initialUi = {}) {
   };
 }
 
-test("transport workbench state owner preserves the UI object while normalizing shape", () => {
+test("transport workbench state owner preserves the UI root and returns detached normalized state", () => {
   const existingUi = {
     activeFamily: "road",
     activePackId: "",
@@ -24,7 +24,8 @@ test("transport workbench state owner preserves the UI object while normalizing 
 
   const normalized = owner.ensureUiState();
 
-  assert.equal(normalized, existingUi);
+  assert.notEqual(normalized, existingUi);
+  assert.deepEqual(normalized, existingUi);
   assert.equal(runtimeState.transportWorkbenchUi, existingUi);
   assert.equal(normalized.activePackIdByFamily.road, getDefaultTransportWorkbenchPackIdForFamily("road"));
   assert.equal(normalized.previewCamera.scale, 2);
@@ -32,6 +33,8 @@ test("transport workbench state owner preserves the UI object while normalizing 
   assert.equal(normalized.previewCamera.translateY, -4);
   assert.equal(typeof normalized.displayConfigs.port, "object");
   assert.equal(typeof normalized.sectionOpen.road, "object");
+  normalized.previewCamera.scale = 9;
+  assert.equal(runtimeState.transportWorkbenchUi.previewCamera.scale, 2);
 });
 
 test("transport workbench state owner initializes through an accessor-free canonical record", () => {

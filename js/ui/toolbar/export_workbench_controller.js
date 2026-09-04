@@ -211,6 +211,7 @@ function createExportWorkbenchController({
   triggerCanvasDownload,
   triggerBlobDownload,
   bakeLayer,
+  clearBakeCache,
   exportMaxConcurrentJobs = 1,
 } = {}) {
   assertRequiredObjectDependency(state, "state");
@@ -223,6 +224,7 @@ function createExportWorkbenchController({
   assertRequiredCallableDependency(buildSingleExportSourceCanvas, "buildSingleExportSourceCanvas");
   assertRequiredCallableDependency(applyExportAdjustmentsToCanvas, "applyExportAdjustmentsToCanvas");
   assertRequiredCallableDependency(bakeLayer, "bakeLayer");
+  assertRequiredCallableDependency(clearBakeCache, "clearBakeCache");
 
   let exportWorkbenchDraggedLayerId = "";
   let exportWorkbenchPreviewRenderToken = 0;
@@ -790,7 +792,8 @@ function createExportWorkbenchController({
 
     if (exportWorkbenchClearBakeBtn && !exportWorkbenchClearBakeBtn.dataset.bound) {
       exportWorkbenchClearBakeBtn.addEventListener("click", () => {
-        setExportBakeState(state, { bakeCache: new Map(), bakeArtifacts: [] });
+        clearBakeCache();
+        setExportBakeState(state, { bakeArtifacts: [] });
         renderExportWorkbenchUi(true);
         showToast(t("Cleared baked cache.", "ui"), {
           title: t("Bake cache cleared", "ui"),
@@ -818,6 +821,7 @@ function createExportWorkbenchController({
     renderExportWorkbenchTextElementList,
     renderExportWorkbenchUi,
     resolveExportPassSequence: (exportWorkbenchUi) => resolveExportPassSequence(exportWorkbenchUi, renderPassNames),
+    setExportBakeArtifacts: (bakeArtifacts) => setExportBakeState(state, { bakeArtifacts }),
     syncExportPreviewSourceOptions,
     syncExportWorkbenchControlsFromState,
   };

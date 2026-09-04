@@ -152,7 +152,24 @@ export function commitStrategicOverlayCollectionsState(
     inputs.cloneValue,
     { markDirty: inputs.markDirty !== false },
   );
-  Object.assign(target, prepared.assignments);
+  if (Object.hasOwn(prepared.assignments, "operationalLines")) {
+    target.operationalLines = prepared.assignments.operationalLines;
+  }
+  if (Object.hasOwn(prepared.assignments, "operationalLinesDirty")) {
+    target.operationalLinesDirty = prepared.assignments.operationalLinesDirty;
+  }
+  if (Object.hasOwn(prepared.assignments, "operationGraphics")) {
+    target.operationGraphics = prepared.assignments.operationGraphics;
+  }
+  if (Object.hasOwn(prepared.assignments, "operationGraphicsDirty")) {
+    target.operationGraphicsDirty = prepared.assignments.operationGraphicsDirty;
+  }
+  if (Object.hasOwn(prepared.assignments, "unitCounters")) {
+    target.unitCounters = prepared.assignments.unitCounters;
+  }
+  if (Object.hasOwn(prepared.assignments, "unitCountersDirty")) {
+    target.unitCountersDirty = prepared.assignments.unitCountersDirty;
+  }
   return Object.freeze({ updatedKeys: Object.freeze([...prepared.updatedKeys]) });
 }
 
@@ -187,7 +204,12 @@ export function patchStrategicOverlayEntityGroupState(
     throw new Error(`[strategic_overlay_actions] unknown entity collection key: ${collectionKey}`);
   }
   const normalizedCollectionKey = detachActionInputs({ collectionKey }).collectionKey;
-  if (!Array.isArray(target[normalizedCollectionKey])) {
+  const sourceCollection = normalizedCollectionKey === "operationalLines"
+    ? target.operationalLines
+    : normalizedCollectionKey === "operationGraphics"
+      ? target.operationGraphics
+      : target.unitCounters;
+  if (!Array.isArray(sourceCollection)) {
     throw new TypeError(`[strategic_overlay_actions] ${normalizedCollectionKey} must be an array`);
   }
   if (!Array.isArray(entityPatches)) {
@@ -240,7 +262,7 @@ export function patchStrategicOverlayEntityGroupState(
   }
 
   const changedEntityIds = [];
-  const nextCollection = target[inputs.collectionKey].map((entity) => {
+  const nextCollection = Array.from(sourceCollection, (entity) => {
     const entityId = String(entity?.id || "").trim();
     const assignments = patchById.get(entityId);
     if (!assignments) return entity;
@@ -248,8 +270,16 @@ export function patchStrategicOverlayEntityGroupState(
     return { ...entity, ...assignments };
   });
   if (changedEntityIds.length) {
-    target[inputs.collectionKey] = nextCollection;
-    if (inputs.markDirty !== false) target[COLLECTION_DIRTY_KEY[inputs.collectionKey]] = true;
+    if (inputs.collectionKey === "operationalLines") {
+      target.operationalLines = nextCollection;
+      if (inputs.markDirty !== false) target.operationalLinesDirty = true;
+    } else if (inputs.collectionKey === "operationGraphics") {
+      target.operationGraphics = nextCollection;
+      if (inputs.markDirty !== false) target.operationGraphicsDirty = true;
+    } else {
+      target.unitCounters = nextCollection;
+      if (inputs.markDirty !== false) target.unitCountersDirty = true;
+    }
   }
   return Object.freeze({
     changedEntityIds: Object.freeze(changedEntityIds),
@@ -328,8 +358,12 @@ export function patchStrategicOverlayEditorState(
     patch: Object.fromEntries(patchKeys.map((key) => [key, patch[key]])),
     cloneValue,
   });
-  const current = target[inputs.editorKey] && typeof target[inputs.editorKey] === "object" && !Array.isArray(target[inputs.editorKey])
-    ? target[inputs.editorKey]
+  const descriptor = Object.getOwnPropertyDescriptor(target, inputs.editorKey);
+  const descriptorValue = descriptor && Object.hasOwn(descriptor, "value")
+    ? descriptor.value
+    : null;
+  const current = descriptorValue && typeof descriptorValue === "object" && !Array.isArray(descriptorValue)
+    ? descriptorValue
     : {};
   const assignments = {};
   for (const key of Object.keys(inputs.patch)) {
@@ -339,7 +373,15 @@ export function patchStrategicOverlayEditorState(
     assignments[key] = inputs.cloneValue(inputs.patch[key]);
   }
   Object.assign(current, assignments);
-  if (target[inputs.editorKey] !== current) target[inputs.editorKey] = current;
+  if (inputs.editorKey === "operationalLineEditor") {
+    target.operationalLineEditor = current;
+  } else if (inputs.editorKey === "operationGraphicsEditor") {
+    target.operationGraphicsEditor = current;
+  } else if (inputs.editorKey === "unitCounterEditor") {
+    target.unitCounterEditor = current;
+  } else {
+    target.strategicOverlayUi = current;
+  }
   return current;
 }
 
@@ -354,6 +396,15 @@ export function setStrategicOverlayDirtyState(target, dirtyKey, value = true) {
     throw new Error(`[strategic_overlay_actions] unknown dirty key: ${dirtyKey}`);
   }
   const inputs = detachActionInputs({ dirtyKey, value });
-  target[inputs.dirtyKey] = Boolean(inputs.value);
-  return target[inputs.dirtyKey];
+  const nextValue = Boolean(inputs.value);
+  if (inputs.dirtyKey === "frontlineOverlayDirty") {
+    target.frontlineOverlayDirty = nextValue;
+  } else if (inputs.dirtyKey === "operationalLinesDirty") {
+    target.operationalLinesDirty = nextValue;
+  } else if (inputs.dirtyKey === "operationGraphicsDirty") {
+    target.operationGraphicsDirty = nextValue;
+  } else {
+    target.unitCountersDirty = nextValue;
+  }
+  return nextValue;
 }

@@ -41,19 +41,29 @@ function getInheritedDataValue(target, fieldName) {
 
 function setOwnDataValue(target, fieldName, value) {
   const descriptor = Object.getOwnPropertyDescriptor(target, fieldName);
-  if (descriptor && Object.hasOwn(descriptor, "value") && descriptor.writable) {
-    target[fieldName] = value;
-    return value;
-  }
-  if (descriptor && !descriptor.configurable) {
+  if (
+    descriptor
+    && !descriptor.configurable
+    && (!Object.hasOwn(descriptor, "value") || !descriptor.writable)
+  ) {
     throw new TypeError(`[transport_actions] ${fieldName} must be writable owner state`);
   }
-  Object.defineProperty(target, fieldName, {
+  const attributes = {
     configurable: descriptor?.configurable ?? true,
     enumerable: descriptor?.enumerable ?? true,
-    value,
     writable: true,
-  });
+  };
+  switch (fieldName) {
+    case "transportWorkbenchUi": Object.defineProperty(target, "transportWorkbenchUi", { ...attributes, value }); break;
+    case "transportWorkbenchPointDeltas": Object.defineProperty(target, "transportWorkbenchPointDeltas", { ...attributes, value }); break;
+    case "styleConfig": Object.defineProperty(target, "styleConfig", { ...attributes, value }); break;
+    case "showTransport": Object.defineProperty(target, "showTransport", { ...attributes, value }); break;
+    case "showAirports": Object.defineProperty(target, "showAirports", { ...attributes, value }); break;
+    case "showPorts": Object.defineProperty(target, "showPorts", { ...attributes, value }); break;
+    case "showRail": Object.defineProperty(target, "showRail", { ...attributes, value }); break;
+    case "showRoad": Object.defineProperty(target, "showRoad", { ...attributes, value }); break;
+    default: throw new RangeError(`[transport_actions] unsupported owner field: ${fieldName}`);
+  }
   return value;
 }
 
@@ -102,12 +112,27 @@ export function commitTransportWorkbenchUiState(target, nextUiState = null) {
   normalized.layerOrder = admittedLayerOrder.concat(
     TRANSPORT_WORKBENCH_FAMILY_IDS.filter((familyId) => !admittedLayerOrder.includes(familyId)),
   );
-  const current = getOwnPlainRecord(target, "transportWorkbenchUi")
-    ? target.transportWorkbenchUi
-    : normalized;
-  if (current !== normalized) Object.assign(current, normalized);
-  delete current.compareHeld;
-  return setOwnDataValue(target, "transportWorkbenchUi", current);
+  ensureOwnPlainRecord(target, "transportWorkbenchUi");
+  target.transportWorkbenchUi.open = normalized.open;
+  target.transportWorkbenchUi.activeFamily = normalized.activeFamily;
+  target.transportWorkbenchUi.activePackId = normalized.activePackId;
+  target.transportWorkbenchUi.activePackIdByFamily = normalized.activePackIdByFamily;
+  target.transportWorkbenchUi.activeInspectorTab = normalized.activeInspectorTab;
+  target.transportWorkbenchUi.sampleCountry = normalized.sampleCountry;
+  target.transportWorkbenchUi.previewCarrierId = normalized.previewCarrierId;
+  target.transportWorkbenchUi.previewMode = normalized.previewMode;
+  target.transportWorkbenchUi.previewAssetId = normalized.previewAssetId;
+  target.transportWorkbenchUi.previewInteractionMode = normalized.previewInteractionMode;
+  target.transportWorkbenchUi.previewCamera = normalized.previewCamera;
+  target.transportWorkbenchUi.layerOrder = normalized.layerOrder;
+  target.transportWorkbenchUi.familyConfigs = normalized.familyConfigs;
+  target.transportWorkbenchUi.displayConfigs = normalized.displayConfigs;
+  target.transportWorkbenchUi.sectionOpen = normalized.sectionOpen;
+  target.transportWorkbenchUi.shellPhase = normalized.shellPhase;
+  target.transportWorkbenchUi.restoreLeftDrawer = normalized.restoreLeftDrawer;
+  target.transportWorkbenchUi.restoreRightDrawer = normalized.restoreRightDrawer;
+  delete target.transportWorkbenchUi.compareHeld;
+  return structuredClone(target.transportWorkbenchUi);
 }
 
 export function commitTransportWorkbenchPointDeltasState(target, nextDeltas = null) {
@@ -121,7 +146,9 @@ export function commitTransportWorkbenchPointDeltasState(target, nextDeltas = nu
 
 export function applyTransportWorkbenchOverviewState(target, patch = {}) {
   if (!isStateTarget(target) || !isStateTarget(patch)) return null;
-  const currentOverview = ensureTransportOverviewStyleConfigState(target);
+  const currentOverview = structuredClone(
+    ensureTransportOverviewStyleConfigState(target),
+  );
   const familyId = String(patch.familyId || "").trim().toLowerCase();
   const nextOverview = {
     ...currentOverview,
@@ -139,17 +166,14 @@ export function applyTransportWorkbenchOverviewState(target, patch = {}) {
       };
     }
   }
-  setOwnDataValue(
-    target.styleConfig,
-    "transportOverview",
-    normalizeTransportOverviewStyleConfig(nextOverview),
-  );
+  const normalizedOverview = normalizeTransportOverviewStyleConfig(nextOverview);
+  target.styleConfig.transportOverview = normalizedOverview;
   setTransportMasterVisibilityState(target, true);
   const visibilityField = String(patch.visibilityField || "");
   if (TRANSPORT_VISIBILITY_FIELDS.has(visibilityField)) {
     setOwnDataValue(target, visibilityField, true);
   }
-  return target.styleConfig.transportOverview;
+  return normalizedOverview;
 }
 
 export function ensureTransportOverviewStyleConfigState(target) {
@@ -159,10 +183,11 @@ export function ensureTransportOverviewStyleConfigState(target) {
   const normalized = normalizeTransportOverviewStyleConfig(current);
   if (current) {
     Object.assign(current, normalized);
-    setOwnDataValue(styleConfig, "transportOverview", current);
+    target.styleConfig.transportOverview = current;
     return current;
   }
-  return setOwnDataValue(styleConfig, "transportOverview", normalized);
+  target.styleConfig.transportOverview = normalized;
+  return normalized;
 }
 
 export function setTransportMasterVisibilityState(target, visible) {

@@ -573,12 +573,13 @@ function initToolbar({ render } = {}) {
   };
 
   let exportWorkbenchController = null;
+  const exportBakeCache = new Map();
+  const clearExportBakeCache = () => exportBakeCache.clear();
   let ensureExportWorkbenchUiState = () => {
     throw new Error("Export workbench controller is not initialized.");
   };
   const renderExportWorkbenchLayerList = () => exportWorkbenchController?.renderExportWorkbenchLayerList();
   const renderExportWorkbenchTextElementList = () => exportWorkbenchController?.renderExportWorkbenchTextElementList();
-
   let transportWorkbenchController = null;
   transportWorkbenchController = createTransportWorkbenchController({
     scenarioTransportWorkbenchBtn,
@@ -1945,10 +1946,11 @@ function initToolbar({ render } = {}) {
     triggerCanvasDownload: (...args) => triggerCanvasDownload(...args),
     triggerBlobDownload: (...args) => triggerBlobDownload(...args),
     bakeLayer: (...args) => bakeLayer(...args),
+    clearBakeCache: clearExportBakeCache,
     exportMaxConcurrentJobs: EXPORT_MAX_CONCURRENT_JOBS,
   });
   ensureExportWorkbenchUiState = exportWorkbenchController.ensureExportWorkbenchUiState;
-
+  registerRuntimeHook(state, "clearExportBakeCacheFn", clearExportBakeCache);
   function updateHistoryUi() {
     if (undoBtn) undoBtn.disabled = !canUndoHistory();
     if (redoBtn) redoBtn.disabled = !canRedoHistory();
@@ -2455,7 +2457,7 @@ function initToolbar({ render } = {}) {
     } else {
       nextArtifacts.push(entry);
     }
-    exportUi.bakeArtifacts = nextArtifacts;
+    exportWorkbenchController.setExportBakeArtifacts(nextArtifacts);
     return entry;
   };
 
@@ -2514,7 +2516,7 @@ function initToolbar({ render } = {}) {
     const height = runtimeState.colorCanvas?.height || runtimeState.lineCanvas?.height || 0;
     const dependencies = getLayerDependencyRevision(normalizedLayerId, exportUi);
     const hash = computeBakeHash([normalizedLayerId, `${width}x${height}`, ...dependencies]);
-    const cacheEntry = exportUi.bakeCache.get(normalizedLayerId);
+    const cacheEntry = exportBakeCache.get(normalizedLayerId);
     if (
       cacheEntry
       && cacheEntry.hash === hash
@@ -2556,7 +2558,7 @@ function initToolbar({ render } = {}) {
       }
     }
     const version = cacheEntry ? Number(cacheEntry.version || 0) + 1 : 1;
-    exportUi.bakeCache.set(normalizedLayerId, {
+    exportBakeCache.set(normalizedLayerId, {
       hash,
       version,
       canvas: bakeCanvas,

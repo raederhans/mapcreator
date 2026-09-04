@@ -5478,6 +5478,51 @@ test("P4.3 exact refresh and cache actions admit without binding diagnostics", a
   }
 });
 
+test("P4.4 action modules admit without target-binding diagnostics", async () => {
+  const modulePaths = Array.from(new Set(
+    STATE_ACTION_DELEGATION_CONTRACT
+      .filter(({ introducedInPhase }) => introducedInPhase === "P4.4")
+      .map(({ modulePath }) => modulePath),
+  ));
+  const stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex();
+
+  for (const modulePath of modulePaths) {
+    const source = fs.readFileSync(modulePath, "utf8");
+    const { bindingInventories } = await discoverStateWriterBindingsForSource(
+      modulePath,
+      source,
+      "production",
+      { includeInventories: true },
+    );
+    const contractEntries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+      ({ modulePath: entryModulePath }) => entryModulePath === modulePath,
+    );
+    const writer = {
+      path: modulePath,
+      authority: "domain-action",
+      bindings: bindingInventories.map(({ binding, findings }) => ({
+        ...binding,
+        authority: "domain-action",
+        grants: buildStateWriterBindingGrants(
+          findings,
+          modulePath,
+          stateKeyAuthorityIndex,
+          "production",
+        ),
+      })),
+    };
+
+    assert.deepEqual(
+      validateStateActionPolicyBindings([writer], {
+        contractEntries,
+        modulePaths: [modulePath],
+      }),
+      [],
+      `${modulePath} has no unregistered binding diagnostics`,
+    );
+  }
+});
+
 test("P4.3 renderer action calls stay within the frozen runtime-state escape budget", async () => {
   const modulePath = "js/core/map_renderer.js";
   const source = fs.readFileSync(modulePath, "utf8");

@@ -6,10 +6,11 @@ function isStateTarget(target) {
 
 export function markDirtyState(target, reason = "") {
   if (!isStateTarget(target)) return 0;
+  const nextRevision = Number(target.dirtyRevision || 0) + 1;
   target.isDirty = true;
-  target.dirtyRevision = Number(target.dirtyRevision || 0) + 1;
+  target.dirtyRevision = nextRevision;
   if (reason) target.lastDirtyReason = String(reason);
-  return target.dirtyRevision;
+  return nextRevision;
 }
 
 export function clearDirtyState(target, reason = "") {
