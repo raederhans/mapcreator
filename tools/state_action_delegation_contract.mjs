@@ -977,6 +977,10 @@ const SPECIAL_ZONE_DETACHED_CLONE_HELPERS = Object.freeze({
   normalizeSpecialZoneLayersState:
     "b9ed5eb75af3d1cc9f573429472ec8fc289de74a3d0b10af9e6d6a5698ff3092",
 });
+const SPECIAL_ZONE_SAVE_REQUEST_DETACHED_CLONE_HELPERS = Object.freeze({
+  serializeSpecialZoneLayersState:
+    "d66a2b978f9e70f1b4c7d00d7b7ecdd51419688c84a9acbec55e020ecb31f7a3",
+});
 
 export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
   ["captureRenderPerfMetricsState", "799cda208851e5ae938cc1904aeb0d6ee17d5e7eb4872015f8d269e9581a894a"],
@@ -1010,6 +1014,15 @@ export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
     sourceFingerprint:
       "d66a2b978f9e70f1b4c7d00d7b7ecdd51419688c84a9acbec55e020ecb31f7a3",
     cloneHelperFingerprints: SPECIAL_ZONE_DETACHED_CLONE_HELPERS,
+  }),
+  freezeStateDetachedCaptureEntry({
+    modulePath: "js/core/special_zone_layers.js",
+    exportName: "captureScenarioLayerSaveRequestState",
+    targetArgumentIndex: 0,
+    sourceFingerprint:
+      "1fdcf4a1df2f1bc9ce9da6e8d2d5d5d19eeb28dcc2daf58031454503ad8fa983",
+    cloneHelperFingerprints:
+      SPECIAL_ZONE_SAVE_REQUEST_DETACHED_CLONE_HELPERS,
   }),
 ]));
 

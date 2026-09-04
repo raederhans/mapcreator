@@ -72,6 +72,7 @@ test("source-bound detached captures return fresh values and fail closed on alia
       ["captureRenderSnapshotState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureExactAfterSettleControllerState", "js/core/state/actions/renderer_exact_refresh_actions.js"],
       ["serializeSpecialZoneLayersState", "js/core/special_zone_layers.js"],
+      ["captureScenarioLayerSaveRequestState", "js/core/special_zone_layers.js"],
     ].map(([exportName, modulePath]) => ({ modulePath, exportName, targetArgumentIndex: 0 })),
   );
 

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   SPECIAL_ZONE_PRESETS,
   buildSpecialZoneRenderFeatures,
+  captureScenarioLayerSaveRequestState,
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,
   ensureSpecialZoneLayersState,
@@ -225,6 +226,47 @@ test("serialization detaches diagnostic entries from the input state", () => {
 
   fixtureState.diagnostics[0].detail = "mutated-input";
   assert.equal(serialized.diagnostics[0].detail, "serialized");
+});
+
+test("scenario layer save capture detaches the queued request from runtime state", () => {
+  const saveSource = {
+    activeScenarioId: " tno_1962 ",
+    currentScenarioApplyRequestId: 7,
+    activeScenarioManifest: {
+      special_zone_layers_url: "data/scenarios/tno_1962/special_zone_layers.json",
+      source: { runtime_topology_sha256: "topology-a" },
+    },
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", {
+        id: "layer-a",
+        memberFeatureIds: ["b", "a"],
+      })],
+      activeLayerId: "layer-a",
+      diagnostics: [{ code: "fixture", detail: "runtime" }],
+    },
+  };
+
+  const request = captureScenarioLayerSaveRequestState(saveSource, 12);
+
+  assert.equal(request.scenarioId, "tno_1962");
+  assert.equal(request.saveRequestId, 12);
+  assert.deepEqual(request.loadContext, {
+    scenarioId: "tno_1962",
+    scenarioApplyRequestId: 7,
+    declaresLayerAsset: true,
+  });
+  assert.deepEqual(request.requestedState.layers[0].memberFeatureIds, ["a", "b"]);
+  assert.equal(request.requestedState.topologyFingerprint, "topology-a");
+
+  request.requestedState.layers[0].memberFeatureIds.push("captured-only");
+  request.requestedState.diagnostics[0].detail = "captured";
+  assert.deepEqual(saveSource.specialZoneLayers.layers[0].memberFeatureIds, ["a", "b"]);
+  assert.equal(saveSource.specialZoneLayers.diagnostics[0].detail, "runtime");
+
+  saveSource.specialZoneLayers.layers[0].name = "runtime-only";
+  saveSource.specialZoneLayers.diagnostics[0].detail = "mutated-runtime";
+  assert.notEqual(request.requestedState.layers[0].name, "runtime-only");
+  assert.equal(request.requestedState.diagnostics[0].detail, "captured");
 });
 
 test("style preset updates preserve members and replace mode keeps one explicit set", () => {

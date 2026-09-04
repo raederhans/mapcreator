@@ -266,6 +266,36 @@ function serializeSpecialZoneLayersState(rawState, options = {}) {
   };
 }
 
+function captureScenarioLayerSaveRequestState(target, saveRequestId = 0) {
+  const scenarioId = String(target?.activeScenarioId || "").trim();
+  const scenarioApplyRequestId = Number(
+    target?.currentScenarioApplyRequestId || 0,
+  );
+  return {
+    loadContext: {
+      scenarioId,
+      scenarioApplyRequestId: scenarioApplyRequestId >= 0
+        ? scenarioApplyRequestId
+        : 0,
+      declaresLayerAsset: Boolean(
+        String(
+          target?.activeScenarioManifest?.special_zone_layers_url || "",
+        ).trim(),
+      ),
+    },
+    scenarioId,
+    saveRequestId: Math.max(0, Number(saveRequestId || 0)),
+    requestedState: serializeSpecialZoneLayersState(target?.specialZoneLayers, {
+      defaultSource: scenarioId ? "scenario" : "project",
+      topologyFingerprint: String(
+        target?.scenarioBaselineHash
+        || target?.activeScenarioManifest?.source?.runtime_topology_sha256
+        || "",
+      ).trim(),
+    }),
+  };
+}
+
 function ensureSpecialZoneLayersState(target) {
   const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || target || null);
   if (target && Object.prototype.hasOwnProperty.call(target, "specialZoneLayers")) {
@@ -614,6 +644,7 @@ export {
   SPECIAL_ZONE_PATTERN_IDS,
   SPECIAL_ZONE_PRESETS,
   buildSpecialZoneRenderFeatures,
+  captureScenarioLayerSaveRequestState,
   createSpecialZonePatternPreviewStyle,
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,

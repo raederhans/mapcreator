@@ -6,6 +6,7 @@ import {
   SPECIAL_ZONE_PATTERN_IDS,
   SPECIAL_ZONE_PRESETS,
   activateSpecialZoneMembershipToolState,
+  captureScenarioLayerSaveRequestState,
   createLayerFromPreset,
   createSpecialZonePatternPreviewStyle,
   exitSpecialZoneMembershipToolState,
@@ -26,6 +27,7 @@ import {
   setSpecialZonesVisibilityState,
 } from "../../core/state/actions/special_zone_actions.js";
 import { callRuntimeHook } from "../../core/state/index.js";
+import { createLatestRequestQueue } from "./latest_request_queue.js";
 
 function createButton(label, className = "secondary-btn") {
   const button = document.createElement("button");
@@ -159,8 +161,6 @@ function createSpecialZonesWorkbenchController({
   let scenarioLayerLoadScenarioId = "";
   let scenarioLayerLoadRequestId = 0;
   let saveRequestSequence = 0;
-  let activeScenarioLayerSaveJob = null;
-  let pendingScenarioLayerSaveJob = null;
 
   const translate = (value) => (typeof t === "function" ? t(value, "ui") : value);
 
@@ -222,14 +222,10 @@ function createSpecialZonesWorkbenchController({
     && isScenarioLayerLoadContextCurrent(job?.loadContext)
   );
 
-  const settleScenarioLayerSaveJob = (job) => {
-    for (const waiter of job?.waiters || []) {
-      waiter.saveButton.classList.remove("is-loading");
-      waiter.saveButton.removeAttribute("aria-busy");
-      waiter.syncButtonState();
-      waiter.resolve();
-    }
-    if (job?.waiters) job.waiters.length = 0;
+  const settleScenarioLayerSaveWaiter = (waiter) => {
+    waiter.saveButton.classList.remove("is-loading");
+    waiter.saveButton.removeAttribute("aria-busy");
+    waiter.syncButtonState();
   };
 
   const executeScenarioLayerSaveJob = async (job) => {
@@ -283,35 +279,12 @@ function createSpecialZonesWorkbenchController({
     }
   };
 
-  const pumpScenarioLayerSaveQueue = () => {
-    if (activeScenarioLayerSaveJob || !pendingScenarioLayerSaveJob) return;
-    const job = pendingScenarioLayerSaveJob;
-    pendingScenarioLayerSaveJob = null;
-    activeScenarioLayerSaveJob = job;
-    void executeScenarioLayerSaveJob(job).then(() => {
-      settleScenarioLayerSaveJob(job);
-      if (activeScenarioLayerSaveJob === job) activeScenarioLayerSaveJob = null;
-      pumpScenarioLayerSaveQueue();
-    });
-  };
-
-  const enqueueScenarioLayerSave = (request, waiter) => new Promise((resolve) => {
-    const nextWaiter = { ...waiter, resolve };
-    if (
-      pendingScenarioLayerSaveJob
-      && isSameScenarioLayerSaveContext(pendingScenarioLayerSaveJob.loadContext, request.loadContext)
-    ) {
-      pendingScenarioLayerSaveJob.saveRequestId = request.saveRequestId;
-      pendingScenarioLayerSaveJob.requestedState = request.requestedState;
-      pendingScenarioLayerSaveJob.waiters.push(nextWaiter);
-    } else {
-      if (pendingScenarioLayerSaveJob) settleScenarioLayerSaveJob(pendingScenarioLayerSaveJob);
-      pendingScenarioLayerSaveJob = {
-        ...request,
-        waiters: [nextWaiter],
-      };
-    }
-    pumpScenarioLayerSaveQueue();
+  const scenarioLayerSaveQueue = createLatestRequestQueue({
+    isSameRequest: (left, right) => (
+      isSameScenarioLayerSaveContext(left.loadContext, right.loadContext)
+    ),
+    execute: executeScenarioLayerSaveJob,
+    settle: settleScenarioLayerSaveWaiter,
   });
 
   const isScenarioLayerCacheFailedForContext = (context = {}) => {
@@ -1078,28 +1051,18 @@ function createSpecialZonesWorkbenchController({
     };
     syncScenarioSaveButtonState();
     saveBtn.addEventListener("click", async () => {
-      const loadContext = createScenarioLayerLoadContext();
-      const scenarioId = loadContext.scenarioId;
-      if (!scenarioId) return;
-      const saveRequestId = ++saveRequestSequence;
-      const requestedState = serializeSpecialZoneLayersState(runtimeState.specialZoneLayers, {
-        defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
-        topologyFingerprint: String(
-          runtimeState.scenarioBaselineHash
-          || runtimeState.activeScenarioManifest?.source?.runtime_topology_sha256
-          || "",
-        ).trim(),
-      });
+      const saveRequestId = saveRequestSequence + 1;
+      const request = captureScenarioLayerSaveRequestState(
+        runtimeState,
+        saveRequestId,
+      );
+      if (!request.scenarioId) return;
+      saveRequestSequence = saveRequestId;
       saveBtn.disabled = true;
       saveBtn.classList.add("is-loading");
       saveBtn.setAttribute("aria-busy", "true");
       if (statusNode) statusNode.textContent = translate("Saving scenario special zone layers…");
-      await enqueueScenarioLayerSave({
-        loadContext,
-        scenarioId,
-        saveRequestId,
-        requestedState,
-      }, {
+      await scenarioLayerSaveQueue.enqueue(request, {
         saveButton: saveBtn,
         syncButtonState: syncScenarioSaveButtonState,
       });
