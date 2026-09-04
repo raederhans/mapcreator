@@ -48,13 +48,13 @@ const REPO_ROOT = process.cwd();
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 343);
-  assert.equal(summary.contributorRecords, 445);
-  assert.equal(summary.verificationRecordProjectionCount, 144);
-  assert.equal(summary.routeProjectionCount, 404);
-  assert.equal(summary.commandCount, 360);
+  assert.equal(summary.packageScriptCount, 346);
+  assert.equal(summary.contributorRecords, 448);
+  assert.equal(summary.verificationRecordProjectionCount, 147);
+  assert.equal(summary.routeProjectionCount, 407);
+  assert.equal(summary.commandCount, 363);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 445);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 448);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -74,9 +74,9 @@ test("authored catalog source covers command authority, policies, and every proj
     assert.ok(VERIFICATION_METADATA_SOURCE.entrypointPolicies[entry.entrypointPolicyIndex]);
   }
   assert.equal(VERIFICATION_METADATA_SOURCE.estimatePolicy.kind, "verification-estimate-policy");
-  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 15);
+  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.supersession).length, 16);
   assert.equal(summary.heavyDependencyGroupCount, 1);
-  assert.equal(summary.packageAliasCount, 16);
+  assert.equal(summary.packageAliasCount, 17);
   assert.equal(summary.prProfileCount, 4);
   assert.equal(summary.nightlyRoleCount, 12);
   assert.equal(summary.documentationProjectionCount, 50);
@@ -688,6 +688,43 @@ test("P4.3 routes include renderer runtime owners and their contracts", () => {
       "tests/exact_after_settle_scheduler_state_actions_behavior.test.mjs",
     ),
   );
+});
+
+test("P4.4 routes include every replay lane and the exact admission gate", () => {
+  const routeIds = [
+    "verify-core:p4:p4-4-ui-actions",
+    "verify-core:p4:p4-4-writer-guardrail",
+    "p4:p4-4-exact-phase",
+  ];
+  for (const routeId of routeIds) {
+    const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === routeId);
+    assert.ok(entry, routeId);
+    for (const sourceRef of [
+      "js/core/state/actions/appearance_actions.js",
+      "js/core/state/actions/transport_actions.js",
+      "js/core/state/actions/strategic_overlay_actions.js",
+      "js/core/state/actions/special_zone_actions.js",
+      "tests/transport_workbench_state_owner_behavior.test.mjs",
+    ]) {
+      assert.ok(entry.sourceRefs.includes(sourceRef), `${routeId}:${sourceRef}`);
+    }
+  }
+
+  const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-4-ui-actions"
+  ));
+  const boundaryEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-4-writer-guardrail"
+  ));
+  const exactEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "p4:p4-4-exact-phase"
+  ));
+  assert.deepEqual(actionEntry.resourceLocks, P4_SHARED_NODE_LOCKS);
+  assert.equal(boundaryEntry.commandRef, "test:python:p4:p4-4-boundary");
+  assert.deepEqual(boundaryEntry.resourceLocks, [".runtime-output"]);
+  assert.equal(exactEntry.commandRef, "verify:p4:p4-4");
+  assert.ok(exactEntry.sourceRefs.includes("tools/run_p4_phase_verification.mjs"));
+  assert.ok(exactEntry.sourceRefs.includes("tools/state_action_delegation_contract.mjs"));
 });
 
 test("shared P4 control files select only the policy current exact phase gate", () => {
@@ -1310,8 +1347,8 @@ test("verify-core default plan preserves metadata closure before command superse
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 95);
-  assert.equal(plan.commandsToRun.length, 89);
+  assert.equal(metadataDefaultRefs.length, 97);
+  assert.equal(plan.commandsToRun.length, 91);
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [

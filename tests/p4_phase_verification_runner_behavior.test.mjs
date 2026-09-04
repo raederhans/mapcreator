@@ -13,12 +13,12 @@ import {
   runVerificationPlan as runP4VerificationPlan,
 } from "../tools/run_p4_phase_verification.mjs";
 
-function fakeStateWriterEvidenceResult(commandRef) {
+function fakeStateWriterEvidenceResult(commandRef, phase = "P4.3") {
   return {
     status: "reusable-exact",
     disposition: "reused-exact",
     evidenceId: "a".repeat(64),
-    evidencePath: ".runtime/reports/generated/p4-state-actions/P4.3/state-writer-policy-evidence.json",
+    evidencePath: `.runtime/reports/generated/p4-state-actions/${phase}/state-writer-policy-evidence.json`,
     sourceVerificationSha: "b".repeat(40),
     sourceVerificationTreeSha: "c".repeat(40),
     producer: {
@@ -29,7 +29,7 @@ function fakeStateWriterEvidenceResult(commandRef) {
       producedAt: "2026-08-13T00:00:00.000Z",
       disposition: "produced-live",
     },
-    evidence: { phase: "P4.3" },
+    evidence: { phase },
   };
 }
 
@@ -115,10 +115,25 @@ test("P4.3 plan keeps renderer actions, complete policy suite, and route command
   );
 });
 
-test("unsupported future phase plans fail closed", () => {
+test("P4.4 plan keeps UI actions, strict policy evidence, and route commands exact", () => {
+  const plan = buildP4PhaseVerificationPlan({ phase: "P4.4" });
+  assert.deepEqual(plan.commands, [
+    "npm run test:node:p4:p4-4",
+    "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.4",
+    "npm run test:python:p4:p4-4-boundary",
+    "npm run test:node:p4:state-writer-policy",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.4 --history-base HEAD^",
+  ]);
+  assert.equal(
+    plan.reportPath.replaceAll("\\", "/"),
+    ".runtime/reports/generated/p4-state-actions/P4.4/phase-verification.json",
+  );
+});
+
+test("P4.0 has no implementation phase plan", () => {
   assert.throws(
-    () => buildP4PhaseVerificationPlan({ phase: "P4.4" }),
-    /Unknown P4 state-action phase|no executable plan/,
+    () => buildP4PhaseVerificationPlan({ phase: "P4.0" }),
+    /no executable plan/,
   );
 });
 
@@ -428,6 +443,64 @@ test("P4.3 runs one explicit checker producer and binds every boundary to its ev
   assert.equal(
     boundaryExecution.options.env.STATE_WRITER_POLICY_LIVE_FALLBACK,
     "forbid",
+  );
+  assert.equal(
+    boundaryExecution.options.env.STATE_WRITER_POLICY_EVIDENCE_ID,
+    evidenceId,
+  );
+});
+
+test("P4.4 also binds its boundary to one explicit checker producer", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "p4-phase-p4-4-producer-"));
+  const phase = "P4.4";
+  const producerCommand =
+    `node tools/verification/state_writer_policy_evidence.mjs produce --phase ${phase}`;
+  const boundaryCommand = "npm run test:python:p4:p4-4-boundary";
+  const evidenceId = "f".repeat(64);
+  const ensured = [];
+  const executions = [];
+  const identity = {
+    verificationSha: "b".repeat(40),
+    verificationTreeSha: "c".repeat(40),
+    trackedClean: true,
+    trackedStatus: "",
+  };
+  const evidenceResult = {
+    ...fakeStateWriterEvidenceResult(producerCommand, phase),
+    evidenceId,
+  };
+  const result = runP4VerificationPlan(
+    buildP4PhaseVerificationPlan({ phase }),
+    {
+      cwd: root,
+      jsonOut: "report.json",
+      platform: "linux",
+      identity,
+      identityReader: () => identity,
+      stateWriterEvidenceEnsurer(options) {
+        ensured.push(options);
+        return evidenceResult;
+      },
+      runner(command, args, options) {
+        executions.push({ command, args, options });
+        return { status: 0 };
+      },
+    },
+  );
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(executions.length, 5);
+  assert.equal(ensured.length, 2);
+  assert.equal(ensured[0].expectedProducerRole, "checker-producer");
+  assert.equal(ensured[1].expectedEvidenceId, evidenceId);
+  assert.equal(ensured[1].liveFallbackPolicy, "forbid");
+  assert.equal(
+    result.report.commands.find(({ commandRef }) => commandRef === producerCommand)
+      .externalEvidence.evidenceId,
+    evidenceId,
+  );
+  const boundaryExecution = executions.find(
+    ({ args }) => args.includes(boundaryCommand.split(" ").at(-1)),
   );
   assert.equal(
     boundaryExecution.options.env.STATE_WRITER_POLICY_EVIDENCE_ID,

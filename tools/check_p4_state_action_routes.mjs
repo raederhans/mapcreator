@@ -32,6 +32,8 @@ const P4_SHARED_TOOLING_PATHS = new Set([
   "tools/eslint-rules/state-writer-allowlist.json",
   "tools/select_verification_targets.mjs",
   "tools/test_route_registry.mjs",
+  "tools/verification/command_supersession.mjs",
+  "tools/verification/verification_catalog_source.mjs",
   "tools/verification/verification_domains.mjs",
   "tools/verification/verification_metadata_helpers.mjs",
 ]);

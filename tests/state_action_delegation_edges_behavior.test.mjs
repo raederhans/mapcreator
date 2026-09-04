@@ -500,6 +500,43 @@ test("P4.2b optional and city action exports have one canonical owner", () => {
   }).some(({ code }) => code === "state-action-module-phase-not-admitted"));
 });
 
+test("P4.4 action modules admit every direct export only at the P4.4 boundary", () => {
+  const modulePaths = [
+    "js/core/state/actions/appearance_actions.js",
+    "js/core/state/actions/appearance_preset_actions.js",
+    "js/core/state/actions/appearance_reference_actions.js",
+    "js/core/state/actions/appearance_selection_actions.js",
+    "js/core/state/actions/appearance_visibility_actions.js",
+    "js/core/state/actions/export_workbench_actions.js",
+    "js/core/state/actions/intensity_field_actions.js",
+    "js/core/state/actions/special_zone_actions.js",
+    "js/core/state/actions/strategic_overlay_actions.js",
+    "js/core/state/actions/transport_actions.js",
+    "js/core/state/actions/ui_chrome_actions.js",
+    "js/core/state/actions/ui_dirty_actions.js",
+    "js/core/state/actions/ui_visibility_actions.js",
+  ];
+  for (const modulePath of modulePaths) {
+    assert.deepEqual(
+      validateStateActionModuleSource(fs.readFileSync(modulePath, "utf8"), {
+        filePath: modulePath,
+      }),
+      [],
+      modulePath,
+    );
+  }
+  assert.deepEqual(
+    validateStateActionModulePhaseAdmissions({ modulePaths, phase: "P4.4" }),
+    [],
+  );
+  assert.equal(
+    validateStateActionModulePhaseAdmissions({ modulePaths, phase: "P4.3" })
+      .filter(({ code }) => code === "state-action-module-phase-not-admitted")
+      .length,
+    modulePaths.length,
+  );
+});
+
 test("P4.2c scenario health actions have canonical owners and cross-file retirement proofs", () => {
   const expectedOwners = new Map([
     ["setScenarioHydrationHealthGateState", "js/core/state/actions/scenario_health_actions.js"],

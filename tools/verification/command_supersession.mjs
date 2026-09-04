@@ -37,6 +37,13 @@ export const LEGACY_VERIFICATION_COMMAND_SUPERSESSION = Object.freeze({
     "test:node:p4:state-writer-policy",
     "test:node:p4:state-writer-policy:quick",
   ]),
+  "verify:p4:p4-4": Object.freeze([
+    "test:node:p4:p4-4",
+    "test:python:p4:p4-4-boundary",
+    "verify:p4:state-writer-policy",
+    "test:node:p4:state-writer-policy",
+    "test:node:p4:state-writer-policy:quick",
+  ]),
   "verify:p4:state-writer-policy": Object.freeze([
     "test:node:p4:state-writer-policy",
     "test:node:p4:state-writer-policy:quick",

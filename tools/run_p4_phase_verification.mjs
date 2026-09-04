@@ -28,8 +28,14 @@ import {
 } from "./verification/state_writer_policy_evidence.mjs";
 
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND =
-  "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.3";
+const P4_EXPLICIT_STATE_WRITER_EVIDENCE_PHASES = new Set([
+  "P4.3",
+  "P4.4",
+]);
+
+function stateWriterEvidenceProducerCommand(phase) {
+  return `node tools/verification/state_writer_policy_evidence.mjs produce --phase ${normalizeP4StateActionPhase(phase)}`;
+}
 
 const P4_PHASE_COMMANDS = Object.freeze({
   "P4.1": Object.freeze([
@@ -60,10 +66,17 @@ const P4_PHASE_COMMANDS = Object.freeze({
   ]),
   "P4.3": Object.freeze([
     "npm run test:node:p4:p4-3",
-    P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND,
+    stateWriterEvidenceProducerCommand("P4.3"),
     "npm run test:python:p4:p4-3-boundary",
     "npm run test:node:p4:state-writer-policy",
     "node tools/check_p4_state_action_routes.mjs --phase P4.3 --history-base HEAD^",
+  ]),
+  "P4.4": Object.freeze([
+    "npm run test:node:p4:p4-4",
+    stateWriterEvidenceProducerCommand("P4.4"),
+    "npm run test:python:p4:p4-4-boundary",
+    "npm run test:node:p4:state-writer-policy",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.4 --history-base HEAD^",
   ]),
 });
 
@@ -253,8 +266,14 @@ export function runVerificationPlan(plan, {
     summary: null,
     verdict: execute ? resumeDecision.mode === "blocked" ? "blocked" : "running" : "listed",
   };
+  const requiresExplicitStateWriterEvidence =
+    P4_EXPLICIT_STATE_WRITER_EVIDENCE_PHASES.has(plan.phase);
+  const p4StateWriterEvidenceProducerCommand =
+    requiresExplicitStateWriterEvidence
+      ? stateWriterEvidenceProducerCommand(plan.phase)
+      : null;
   let p4StateWriterProducerEvidenceId = report.commands.find(
-    (entry) => entry.commandRef === P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND,
+    (entry) => entry.commandRef === p4StateWriterEvidenceProducerCommand,
   )?.externalEvidence?.evidenceId || null;
   const checkpoint = () => {
     report.updatedAt = now().toISOString();
@@ -287,13 +306,16 @@ export function runVerificationPlan(plan, {
       const resolved = commandToProcess(commandResult.commandRef, platform);
       let env = baseEnv;
       if (isStateWriterPythonBoundaryCommandRef(commandResult.commandRef)) {
-        if (plan.phase === "P4.3" && !p4StateWriterProducerEvidenceId) {
+        if (
+          requiresExplicitStateWriterEvidence
+          && !p4StateWriterProducerEvidenceId
+        ) {
           commandResult.externalEvidence = {
             kind: "state-writer-policy-checker-evidence",
             status: "blocked",
             code: "state-writer-evidence-producer-identity-missing",
             disposition: "blocked",
-            message: "P4.3 boundary requires the explicit checker producer identity.",
+            message: `${plan.phase} boundary requires the explicit checker producer identity.`,
           };
           return {
             status: 2,
@@ -311,7 +333,7 @@ export function runVerificationPlan(plan, {
               unmatchedChangedFiles: resumeDecision.unmatchedChangedFiles,
             },
             liveFallbackSession,
-            ...(plan.phase === "P4.3"
+            ...(requiresExplicitStateWriterEvidence
               ? {
                 expectedEvidenceId: p4StateWriterProducerEvidenceId,
                 expectedProducerRole: STATE_WRITER_POLICY_CHECKER_PRODUCER_ROLE,
@@ -352,8 +374,8 @@ export function runVerificationPlan(plan, {
         env,
       });
       if (
-        plan.phase !== "P4.3"
-        || commandResult.commandRef !== P4_STATE_WRITER_EVIDENCE_PRODUCER_COMMAND
+        !requiresExplicitStateWriterEvidence
+        || commandResult.commandRef !== p4StateWriterEvidenceProducerCommand
         || result?.error
         || result?.signal
         || result?.status !== 0

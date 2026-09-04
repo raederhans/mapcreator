@@ -158,6 +158,10 @@ test("P4 ownership includes production JS and explicit P4 policy surfaces", () =
   assert.equal(isP4OwnedChangedFile("js/core/state/actions/boot_actions.js"), true);
   assert.equal(isP4OwnedChangedFile("tools/check_p4_state_action_routes.mjs"), true);
   assert.equal(isP4OwnedChangedFile("tools/run_p4_phase_verification.mjs"), true);
+  assert.equal(
+    isP4OwnedChangedFile("tools/verification/verification_catalog_source.mjs"),
+    true,
+  );
   assert.equal(isP4OwnedChangedFile("tools/state_action_delegation_contract.mjs"), true);
   assert.equal(isP4OwnedChangedFile("tests/p4_state_action_routes_behavior.test.mjs"), true);
   assert.equal(isP4OwnedChangedFile("tests/boot_actions_behavior.test.mjs"), true);
@@ -209,6 +213,23 @@ test("historical owner routes stay direct while the selector upgrades execution 
     )),
     false,
   );
+});
+
+test("P4.4 replay owners expose both leaf contracts and their exact phase route", () => {
+  const routes = buildRouteIndex();
+  for (const changedFile of [
+    "js/core/state/actions/appearance_actions.js",
+    "js/core/state/actions/transport_actions.js",
+    "js/core/state/actions/strategic_overlay_actions.js",
+    "js/core/state/actions/special_zone_actions.js",
+  ]) {
+    const commandRefs = routes
+      .filter(({ sourceRef }) => String(sourceRef).split(",").includes(changedFile))
+      .map(({ commandRef }) => commandRef);
+    assert.ok(commandRefs.includes("test:node:p4:p4-4"), changedFile);
+    assert.ok(commandRefs.includes("test:python:p4:p4-4-boundary"), changedFile);
+    assert.ok(commandRefs.includes("verify:p4:p4-4"), changedFile);
+  }
 });
 
 test("the current selector control plane has zero P4.3 route gaps", () => {

@@ -14,6 +14,11 @@ import {
   setAppearancePresetsState,
 } from "./state/actions/appearance_preset_actions.js";
 import { setIntensityFieldsState } from "./state/actions/intensity_field_actions.js";
+import {
+  restoreStrategicOverlaySnapshotState,
+  setStrategicOverlayDirtyState,
+} from "./state/actions/strategic_overlay_actions.js";
+import { restoreSpecialZoneSnapshotState } from "./state/actions/special_zone_actions.js";
 import { markDirty } from "./dirty_state.js";
 import { markLegacyColorStateDirty, rebuildOwnerIndex } from "./sovereignty_manager.js";
 import { flushRenderBoundary } from "./render_boundary.js";
@@ -259,25 +264,8 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   if (hasAnnotationView) {
     runtimeState.annotationView = cloneStructuredValue(snapshot.annotationView);
   }
-  if (Array.isArray(snapshot.operationalLines)) {
-    runtimeState.operationalLines = cloneStructuredValue(snapshot.operationalLines);
-    runtimeState.operationalLinesDirty = true;
-  }
-  if (Array.isArray(snapshot.operationGraphics)) {
-    runtimeState.operationGraphics = cloneStructuredValue(snapshot.operationGraphics);
-    runtimeState.operationGraphicsDirty = true;
-  }
-  if (Array.isArray(snapshot.unitCounters)) {
-    runtimeState.unitCounters = cloneStructuredValue(snapshot.unitCounters);
-    runtimeState.unitCountersDirty = true;
-  }
-  if (snapshot.specialZoneLayers && typeof snapshot.specialZoneLayers === "object") {
-    runtimeState.specialZoneLayers = cloneStructuredValue(snapshot.specialZoneLayers);
-    runtimeState.specialZonesOverlayDirty = true;
-  }
-  if (typeof snapshot.specialZoneMembershipBrushMode === "string") {
-    runtimeState.specialZoneMembershipBrushMode = snapshot.specialZoneMembershipBrushMode || "add";
-  }
+  restoreStrategicOverlaySnapshotState(runtimeState, snapshot);
+  restoreSpecialZoneSnapshotState(runtimeState, snapshot);
   if (snapshot.intensityFields && typeof snapshot.intensityFields === "object") {
     const current = normalizeIntensityFieldsState(runtimeState.intensityFields);
     const incoming = normalizeIntensityFieldsState(snapshot.intensityFields);
@@ -303,10 +291,14 @@ function applyHistorySnapshot(snapshot, direction, entry) {
     markDirty("appearance-state-history");
   }
   if (hasAnnotationView) {
-    runtimeState.frontlineOverlayDirty = true;
-    runtimeState.operationalLinesDirty = true;
-    runtimeState.operationGraphicsDirty = true;
-    runtimeState.unitCountersDirty = true;
+    for (const dirtyKey of [
+      "frontlineOverlayDirty",
+      "operationalLinesDirty",
+      "operationGraphicsDirty",
+      "unitCountersDirty",
+    ]) {
+      setStrategicOverlayDirtyState(runtimeState, dirtyKey);
+    }
   }
   if (appliesStrategicOverlay) {
     markDirty(`history-${direction}`);

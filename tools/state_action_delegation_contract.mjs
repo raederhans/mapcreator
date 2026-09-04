@@ -38,6 +38,32 @@ const RENDERER_CACHE_ACTION_MODULE_PATH =
   "js/core/state/actions/renderer_cache_actions.js";
 const RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH =
   "js/core/state/actions/renderer_diagnostics_actions.js";
+const APPEARANCE_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_actions.js";
+const APPEARANCE_PRESET_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_preset_actions.js";
+const APPEARANCE_REFERENCE_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_reference_actions.js";
+const APPEARANCE_SELECTION_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_selection_actions.js";
+const APPEARANCE_VISIBILITY_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_visibility_actions.js";
+const INTENSITY_FIELD_ACTION_MODULE_PATH =
+  "js/core/state/actions/intensity_field_actions.js";
+const EXPORT_WORKBENCH_ACTION_MODULE_PATH =
+  "js/core/state/actions/export_workbench_actions.js";
+const TRANSPORT_ACTION_MODULE_PATH =
+  "js/core/state/actions/transport_actions.js";
+const UI_CHROME_ACTION_MODULE_PATH =
+  "js/core/state/actions/ui_chrome_actions.js";
+const UI_DIRTY_ACTION_MODULE_PATH =
+  "js/core/state/actions/ui_dirty_actions.js";
+const UI_VISIBILITY_ACTION_MODULE_PATH =
+  "js/core/state/actions/ui_visibility_actions.js";
+const STRATEGIC_OVERLAY_ACTION_MODULE_PATH =
+  "js/core/state/actions/strategic_overlay_actions.js";
+const SPECIAL_ZONE_ACTION_MODULE_PATH =
+  "js/core/state/actions/special_zone_actions.js";
 
 const BOOT_ACTION_EXPORT_NAMES = Object.freeze([
   "setStartupInteractionMode",
@@ -218,6 +244,110 @@ const RENDERER_DIAGNOSTICS_ACTION_EXPORT_NAMES = Object.freeze([
   "setDebugCountryCoverageState",
 ]);
 
+const APPEARANCE_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureAppearanceStyleConfigState",
+  "setAppearanceStyleConfigState",
+  "setAppearanceStyleGroupState",
+  "patchAppearanceStyleGroupState",
+  "applyAppearanceStylePathPatchState",
+  "setAppearanceParentBorderEnabledMapState",
+  "patchAppearanceParentBorderEnabledMapState",
+]);
+
+const APPEARANCE_PRESET_ACTION_EXPORT_NAMES = Object.freeze([
+  "setAppearancePresetsState",
+  "normalizeAppearancePresetsIntoState",
+  "upsertAppearancePresetState",
+  "deleteAppearancePresetState",
+  "mergeAppearancePresetImportPayloadState",
+  "selectAppearancePresetState",
+  "applyAppearancePresetState",
+]);
+
+const APPEARANCE_REFERENCE_ACTION_EXPORT_NAMES = Object.freeze([
+  "setReferenceImageState",
+  "patchReferenceImageState",
+  "setReferenceImageUrlState",
+]);
+
+const APPEARANCE_SELECTION_ACTION_EXPORT_NAMES = Object.freeze([
+  "setSelectedColorState",
+]);
+
+const APPEARANCE_VISIBILITY_ACTION_EXPORT_NAMES = Object.freeze([
+  "setAppearanceVisibilityState",
+  "patchAppearanceVisibilityState",
+]);
+
+const INTENSITY_FIELD_ACTION_EXPORT_NAMES = Object.freeze([
+  "setIntensityFieldsState",
+  "normalizeIntensityFieldsIntoState",
+  "updateIntensityFieldChannelState",
+  "setIntensityFieldToolState",
+]);
+
+const EXPORT_WORKBENCH_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureExportWorkbenchUiState",
+  "commitExportWorkbenchUiState",
+  "setExportLayerOrderState",
+  "setExportVisibilityState",
+  "setExportTextVisibilityState",
+  "setExportPreviewState",
+  "setExportOutputState",
+  "setExportAdjustmentsState",
+  "setExportBakeState",
+]);
+
+const TRANSPORT_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureTransportWorkbenchUiState",
+  "commitTransportWorkbenchUiState",
+  "commitTransportWorkbenchPointDeltasState",
+  "applyTransportWorkbenchOverviewState",
+  "ensureTransportOverviewStyleConfigState",
+  "setTransportMasterVisibilityState",
+  "setTransportFamilyVisibilityState",
+]);
+
+const UI_CHROME_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureUiChromeState",
+  "patchUiChromeState",
+  "setActiveDockPopoverState",
+  "setRestoredSupportSurfaceViewState",
+]);
+
+const UI_DIRTY_ACTION_EXPORT_NAMES = Object.freeze([
+  "markDirtyState",
+  "clearDirtyState",
+]);
+
+const UI_VISIBILITY_ACTION_EXPORT_NAMES = Object.freeze([
+  "commitUiVisibilityState",
+  "restoreUiVisibilityState",
+  "restoreImportedLayerVisibilityState",
+]);
+
+const STRATEGIC_OVERLAY_ACTION_EXPORT_NAMES = Object.freeze([
+  "commitStrategicOverlayCollectionsState",
+  "restoreStrategicOverlaySnapshotState",
+  "patchStrategicOverlayEntityGroupState",
+  "patchStrategicOverlayEntityState",
+  "patchStrategicOverlayEditorState",
+  "setStrategicOverlayDirtyState",
+]);
+
+const SPECIAL_ZONE_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureSpecialZoneEditorState",
+  "patchSpecialZoneEditorState",
+  "commitSpecialZoneLayersState",
+  "restoreSpecialZoneSnapshotState",
+  "setSpecialZoneMembershipBrushModeState",
+  "setSpecialZonePresetCategoryState",
+  "setSpecialZonePresetCategoryOpenState",
+  "ensureManualSpecialZonesState",
+  "setSpecialZonesVisibilityState",
+  "setSpecialZonesOverlayDirtyState",
+]);
+
 const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
   Object.freeze({
     modulePath: BOOT_ACTION_MODULE_PATH,
@@ -324,9 +454,107 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
     exportNames: RENDERER_DIAGNOSTICS_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.3",
   }),
+  Object.freeze({
+    modulePath: APPEARANCE_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_PRESET_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_PRESET_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_REFERENCE_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_REFERENCE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_SELECTION_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_SELECTION_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_VISIBILITY_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_VISIBILITY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: INTENSITY_FIELD_ACTION_MODULE_PATH,
+    exportNames: INTENSITY_FIELD_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: EXPORT_WORKBENCH_ACTION_MODULE_PATH,
+    exportNames: EXPORT_WORKBENCH_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: TRANSPORT_ACTION_MODULE_PATH,
+    exportNames: TRANSPORT_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: UI_CHROME_ACTION_MODULE_PATH,
+    exportNames: UI_CHROME_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: UI_DIRTY_ACTION_MODULE_PATH,
+    exportNames: UI_DIRTY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: UI_VISIBILITY_ACTION_MODULE_PATH,
+    exportNames: UI_VISIBILITY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+    exportNames: STRATEGIC_OVERLAY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    exportNames: SPECIAL_ZONE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
 ]);
 
 const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
+  [
+    APPEARANCE_ACTION_MODULE_PATH,
+    new Set([
+      "APPEARANCE_STYLE_GROUP_KEYS",
+    ]),
+  ],
+  [
+    APPEARANCE_VISIBILITY_ACTION_MODULE_PATH,
+    new Set([
+      "APPEARANCE_VISIBILITY_KEYS",
+    ]),
+  ],
+  [
+    UI_VISIBILITY_ACTION_MODULE_PATH,
+    new Set([
+      "captureUiVisibilityState",
+    ]),
+  ],
+  [
+    STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+    new Set([
+      "STRATEGIC_OVERLAY_COLLECTION_KEYS",
+      "STRATEGIC_OVERLAY_DIRTY_KEYS",
+      "STRATEGIC_OVERLAY_ENTITY_FIELD_KEYS",
+      "STRATEGIC_OVERLAY_EDITOR_FIELD_KEYS",
+    ]),
+  ],
+  [
+    SPECIAL_ZONE_ACTION_MODULE_PATH,
+    new Set([
+      "SPECIAL_ZONE_EDITOR_FIELD_KEYS",
+    ]),
+  ],
   [
     RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
     new Set([
