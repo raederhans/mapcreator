@@ -7,6 +7,10 @@ export function setIntensityFieldsState(target, value) { assertTarget(target); t
 export function normalizeIntensityFieldsIntoState(target) { assertTarget(target); return setIntensityFieldsState(target, normalizeIntensityFieldsState(target.intensityFields)); }
 export function updateIntensityFieldChannelState(target, channelId, mutate) {
   assertTarget(target);
-  return setIntensityFieldsState(target, updateIntensityFieldChannel(target.intensityFields, channelId, mutate));
+  const normalizedChannelId = String(channelId || "");
+  const detachedMutate = typeof mutate === "function"
+    ? (channel, fields) => mutate(channel, fields)
+    : null;
+  return setIntensityFieldsState(target, updateIntensityFieldChannel(target.intensityFields, normalizedChannelId, detachedMutate));
 }
 export function setIntensityFieldToolState(target, value) { assertTarget(target); target.intensityFieldTool = value; return value; }

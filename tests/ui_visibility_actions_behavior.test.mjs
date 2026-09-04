@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+
+import { validateStateActionNonTargetParameterMutations } from "../tools/build_state_writer_policy.mjs";
 
 import {
   captureUiVisibilityState,
@@ -52,4 +55,13 @@ test("visibility capture and restore produce a detached finite snapshot", () => 
   assert.equal(target.showOpenOceanRegions, true);
   assert.equal(target.strategicChoroplethMetric, "resources");
   assert.equal(target.privateFlag, true);
+});
+
+test("visibility actions keep non-target parameters read-only", async () => {
+  const modulePath = "js/core/state/actions/ui_visibility_actions.js";
+  const source = await readFile(new URL(`../${modulePath}`, import.meta.url), "utf8");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(modulePath, source),
+    [],
+  );
 });

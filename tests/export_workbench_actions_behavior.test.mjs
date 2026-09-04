@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+
+import { validateStateActionNonTargetParameterMutations } from "../tools/build_state_writer_policy.mjs";
 
 import {
   commitExportWorkbenchUiState,
@@ -35,6 +38,43 @@ test("export workbench commit normalizes and detaches caller drafts", () => {
   assert.equal(committed.visibility.political, false);
   assert.equal(committed.adjustments.brightness, 200);
   assert.deepEqual(committed.bakeArtifacts[0].dependencies, ["a"]);
+});
+
+test("export workbench detaches custom normalizer input and skips drafts for invalid targets", () => {
+  const draft = {
+    adjustments: { brightness: 140 },
+    metadata: new Map([["nested", { value: 1 }]]),
+  };
+  const committed = commitExportWorkbenchUiState({}, draft, {
+    normalizeState(value) {
+      value.adjustments.brightness = 25;
+      value.metadata.get("nested").value = 2;
+      return value;
+    },
+  });
+
+  assert.equal(committed.adjustments.brightness, 25);
+  assert.equal(committed.metadata.get("nested").value, 2);
+  assert.equal(draft.adjustments.brightness, 140);
+  assert.equal(draft.metadata.get("nested").value, 1);
+
+  let getterCalls = 0;
+  const guardedDraft = {};
+  Object.defineProperty(guardedDraft, "adjustments", {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      throw new Error("draft must not be read");
+    },
+  });
+  const fallback = commitExportWorkbenchUiState(null, guardedDraft, {
+    normalizeState(value) {
+      assert.equal(value, null);
+      return { fallback: true };
+    },
+  });
+  assert.deepEqual(fallback, { fallback: true });
+  assert.equal(getterCalls, 0);
 });
 
 test("export workbench field actions retain normalized domain semantics", () => {
@@ -75,4 +115,13 @@ test("export workbench field actions retain normalized domain semantics", () => 
     canvasSize: { width: 0, height: 0 },
     dirtyFlag: false,
   }]);
+});
+
+test("export workbench actions keep non-target parameters read-only", async () => {
+  const modulePath = "js/core/state/actions/export_workbench_actions.js";
+  const source = await readFile(new URL(`../${modulePath}`, import.meta.url), "utf8");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(modulePath, source),
+    [],
+  );
 });

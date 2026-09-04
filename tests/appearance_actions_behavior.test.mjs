@@ -16,6 +16,10 @@ test("appearance actions restrict groups and preserve unrelated style groups", (
   setAppearanceStyleGroupState(target, "physical", { opacity: 1 });
   assert.equal(target.styleConfig.lakes.enabled, true);
   assert.throws(() => setAppearanceStyleGroupState(target, "unknown", {}), /unknown style group/);
+  assert.throws(
+    () => setAppearanceStyleGroupState(target, new String("ocean"), {}),
+    /unknown style group/,
+  );
 });
 
 test("appearance actions own parent-border country enablement without mutating caller patches", () => {

@@ -11,10 +11,14 @@ function assertTarget(target) {
     throw new TypeError("[appearance_actions] target must be an object");
   }
 }
-function assertGroup(group) {
-  if (!APPEARANCE_STYLE_GROUP_KEYS.includes(group)) {
+function normalizeGroup(group) {
+  const normalizedGroup = APPEARANCE_STYLE_GROUP_KEYS.find(
+    (candidate) => candidate === group,
+  );
+  if (!normalizedGroup) {
     throw new RangeError(`[appearance_actions] unknown style group: ${group}`);
   }
+  return normalizedGroup;
 }
 
 function isPlainRecord(value) {
@@ -92,24 +96,26 @@ export function setAppearanceStyleConfigState(target, value) {
 }
 
 export function setAppearanceStyleGroupState(target, group, value) {
-  assertTarget(target); assertGroup(group);
+  assertTarget(target);
+  const normalizedGroup = normalizeGroup(group);
   const styleConfig = ensureAppearanceStyleConfigState(target);
-  return setOwnDataValue(styleConfig, group, value);
+  return setOwnDataValue(styleConfig, normalizedGroup, value);
 }
 
 export function patchAppearanceStyleGroupState(target, group, patch) {
-  assertTarget(target); assertGroup(group);
+  assertTarget(target);
+  const normalizedGroup = normalizeGroup(group);
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new TypeError("[appearance_actions] patch must be an object");
   }
   const styleConfig = ensureAppearanceStyleConfigState(target);
-  const descriptor = Object.getOwnPropertyDescriptor(styleConfig, group);
+  const descriptor = Object.getOwnPropertyDescriptor(styleConfig, normalizedGroup);
   const current = descriptor
     && Object.hasOwn(descriptor, "value")
     && isPlainRecord(descriptor.value)
     ? descriptor.value
     : {};
-  return setOwnDataValue(styleConfig, group, { ...current, ...patch });
+  return setOwnDataValue(styleConfig, normalizedGroup, { ...current, ...patch });
 }
 
 export function applyAppearanceStylePathPatchState(target, stylePatch) {

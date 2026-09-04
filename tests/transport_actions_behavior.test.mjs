@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+
+import { validateStateActionNonTargetParameterMutations } from "../tools/build_state_writer_policy.mjs";
 
 import {
   applyTransportWorkbenchOverviewState,
@@ -153,4 +156,13 @@ test("transport workbench initialization bypasses state accessors", () => {
   assert.equal(Object.hasOwn(ownTarget, "transportWorkbenchUi"), true);
   assert.equal(inheritedUi.open, false);
   assert.equal(ownUi.open, false);
+});
+
+test("transport actions keep non-target parameters read-only", async () => {
+  const modulePath = "js/core/state/actions/transport_actions.js";
+  const source = await readFile(new URL(`../${modulePath}`, import.meta.url), "utf8");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(modulePath, source),
+    [],
+  );
 });

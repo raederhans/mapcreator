@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import * as strategicOverlayActions from "../js/core/state/actions/strategic_overlay_actions.js";
+import { validateStateActionNonTargetParameterMutations } from "../tools/build_state_writer_policy.mjs";
 
 const {
   commitStrategicOverlayCollectionsState,
@@ -15,6 +16,15 @@ const {
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "..");
+
+test("strategic overlay actions detach non-target inputs before helper boundaries", async () => {
+  const relativePath = "js/core/state/actions/strategic_overlay_actions.js";
+  const source = fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(relativePath, source),
+    [],
+  );
+});
 
 function getFunctionSource(source, functionName) {
   const startToken = `function ${functionName}`;
@@ -68,6 +78,58 @@ test("strategic collection commit is finite, cloned, and marks matching dirty fi
   assert.equal(target.operationalLinesDirty, true);
   assert.equal(target.operationGraphicsDirty, false);
   assert.equal(target.unitCountersDirty, true);
+});
+
+test("strategic default cloning preserves circular references without retaining caller aliases", () => {
+  const attachment = { kind: "anchor" };
+  attachment.self = attachment;
+  const target = {
+    unitCounters: [{ id: "counter-1", attachment: null }],
+    unitCountersDirty: false,
+  };
+
+  strategicOverlayActions.patchStrategicOverlayEntityState(
+    target,
+    "unitCounters",
+    "counter-1",
+    { attachment },
+  );
+
+  const restored = target.unitCounters[0].attachment;
+  assert.notEqual(restored, attachment);
+  assert.equal(restored.self, restored);
+  assert.equal(attachment.self, attachment);
+});
+
+test("strategic custom cloneValue receives the original prototype-bearing value", () => {
+  class AttachmentPayload {
+    constructor(kind) {
+      this.kind = kind;
+    }
+  }
+  const attachment = new AttachmentPayload("formation");
+  const target = {
+    unitCounters: [{ id: "counter-1", attachment: null }],
+    unitCountersDirty: false,
+  };
+  let received = null;
+
+  strategicOverlayActions.patchStrategicOverlayEntityState(
+    target,
+    "unitCounters",
+    "counter-1",
+    { attachment },
+    {
+      cloneValue(value) {
+        received = value;
+        return Object.assign(Object.create(Object.getPrototypeOf(value)), value);
+      },
+    },
+  );
+
+  assert.equal(received, attachment);
+  assert.equal(target.unitCounters[0].attachment instanceof AttachmentPayload, true);
+  assert.notEqual(target.unitCounters[0].attachment, attachment);
 });
 
 test("strategic snapshot restore prepares every clone before one atomic commit", () => {

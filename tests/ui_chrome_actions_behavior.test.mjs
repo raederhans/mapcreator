@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+
+import { validateStateActionNonTargetParameterMutations } from "../tools/build_state_writer_policy.mjs";
 
 import {
   ensureUiChromeState,
@@ -91,4 +94,13 @@ test("ui chrome actions bypass inherited ui and field setters", () => {
   assert.equal(Object.hasOwn(target, "ui"), true);
   assert.equal(Object.hasOwn(target.ui, "dockCollapsed"), true);
   assert.equal(target.ui.dockCollapsed, true);
+});
+
+test("ui chrome actions keep non-target parameters read-only", async () => {
+  const modulePath = "js/core/state/actions/ui_chrome_actions.js";
+  const source = await readFile(new URL(`../${modulePath}`, import.meta.url), "utf8");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(modulePath, source),
+    [],
+  );
 });

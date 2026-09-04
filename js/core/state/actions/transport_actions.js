@@ -87,10 +87,13 @@ export function ensureTransportWorkbenchUiState(target) {
 
 export function commitTransportWorkbenchUiState(target, nextUiState = null) {
   if (!isStateTarget(target)) return normalizeTransportWorkbenchUiState(null);
-  const requestedLayerOrder = Array.isArray(nextUiState?.layerOrder)
-    ? nextUiState.layerOrder
+  const detachedUiState = isStateTarget(nextUiState)
+    ? { ...nextUiState }
+    : null;
+  const requestedLayerOrder = Array.isArray(detachedUiState?.layerOrder)
+    ? detachedUiState.layerOrder
     : [];
-  const normalized = normalizeTransportWorkbenchUiState(cloneDetached(nextUiState));
+  const normalized = normalizeTransportWorkbenchUiState(cloneDetached(detachedUiState));
   const admittedLayerOrder = Array.from(new Set(
     requestedLayerOrder
       .map((familyId) => String(familyId || "").trim())
@@ -108,7 +111,10 @@ export function commitTransportWorkbenchUiState(target, nextUiState = null) {
 }
 
 export function commitTransportWorkbenchPointDeltasState(target, nextDeltas = null) {
-  const normalized = normalizeTransportWorkbenchPointDeltas(nextDeltas);
+  const detachedDeltas = isStateTarget(nextDeltas)
+    ? { ...nextDeltas }
+    : null;
+  const normalized = normalizeTransportWorkbenchPointDeltas(detachedDeltas);
   if (!isStateTarget(target)) return normalized;
   return setOwnDataValue(target, "transportWorkbenchPointDeltas", normalized);
 }

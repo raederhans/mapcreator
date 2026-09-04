@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   commitSpecialZoneLayersState,
@@ -13,6 +16,19 @@ import {
   setSpecialZonesVisibilityState,
   setSpecialZonesOverlayDirtyState,
 } from "../js/core/state/actions/special_zone_actions.js";
+import { validateStateActionNonTargetParameterMutations } from "../tools/build_state_writer_policy.mjs";
+
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(TEST_DIR, "..");
+
+test("special zone actions detach non-target inputs before helper boundaries", async () => {
+  const relativePath = "js/core/state/actions/special_zone_actions.js";
+  const source = fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(relativePath, source),
+    [],
+  );
+});
 
 test("special zone editor compatibility preserves valid legacy fields and fills missing fields", () => {
   const vertices = [[1, 2]];
@@ -65,6 +81,24 @@ test("special zone editor patch preserves absent fields and normalizes explicit 
     () => patchSpecialZoneEditorState(target, { unknown: true }),
     /unknown specialZoneEditor field: unknown/,
   );
+});
+
+test("special zone editor rejects unknown accessor keys without evaluating them", () => {
+  let getterCalls = 0;
+  const patch = {};
+  Object.defineProperty(patch, "unknown", {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return true;
+    },
+  });
+
+  assert.throws(
+    () => patchSpecialZoneEditorState({}, patch),
+    /unknown specialZoneEditor field: unknown/,
+  );
+  assert.equal(getterCalls, 0);
 });
 
 test("special zone layer commit uses canonical normalization and owns dirty state", () => {

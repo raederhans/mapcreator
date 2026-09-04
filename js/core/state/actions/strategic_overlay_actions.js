@@ -71,6 +71,9 @@ function assertPatch(patch, label) {
 }
 
 function cloneStateValue(value) {
+  if (typeof globalThis.structuredClone === "function") {
+    return globalThis.structuredClone(value);
+  }
   if (Array.isArray(value)) return value.map(cloneStateValue);
   if (value instanceof Date) return new Date(value.getTime());
   if (value instanceof Map) return new Map(Array.from(value, ([key, entry]) => [cloneStateValue(key), cloneStateValue(entry)]));
@@ -79,6 +82,10 @@ function cloneStateValue(value) {
     return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, cloneStateValue(entry)]));
   }
   return value;
+}
+
+function detachActionInputs(inputs) {
+  return { ...inputs };
 }
 
 function prepareCollectionPatch(patch, cloneValue, { markDirty }) {
@@ -121,24 +128,51 @@ export function commitStrategicOverlayCollectionsState(
   { cloneValue = cloneStateValue, markDirty = true } = {},
 ) {
   assertStateTarget(target);
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new TypeError("[strategic_overlay_actions] collection patch must be an object");
+  }
+  const patchKeys = Object.keys(patch);
+  for (const key of patchKeys) {
+    if (!STRATEGIC_OVERLAY_COLLECTION_KEYS.includes(key)) {
+      throw new Error(`[strategic_overlay_actions] unknown collection key: ${key}`);
+    }
+  }
+  for (const key of patchKeys) {
+    if (!Array.isArray(patch[key])) {
+      throw new TypeError(`[strategic_overlay_actions] ${key} must be an array`);
+    }
+  }
   if (typeof cloneValue !== "function") {
     throw new TypeError("[strategic_overlay_actions] cloneValue must be a function");
   }
-  const prepared = prepareCollectionPatch(patch, cloneValue, { markDirty: markDirty !== false });
+  const detachedPatch = Object.fromEntries(patchKeys.map((key) => [key, patch[key]]));
+  const inputs = detachActionInputs({ patch: detachedPatch, cloneValue, markDirty });
+  const prepared = prepareCollectionPatch(
+    inputs.patch,
+    inputs.cloneValue,
+    { markDirty: inputs.markDirty !== false },
+  );
   Object.assign(target, prepared.assignments);
   return Object.freeze({ updatedKeys: Object.freeze([...prepared.updatedKeys]) });
 }
 
-export function restoreStrategicOverlaySnapshotState(target, snapshot, options = {}) {
+export function restoreStrategicOverlaySnapshotState(
+  target,
+  snapshot,
+  { cloneValue = cloneStateValue, markDirty = true } = {},
+) {
   assertStateTarget(target);
-  assertPatch(snapshot, "snapshot");
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    throw new TypeError("[strategic_overlay_actions] snapshot must be an object");
+  }
   const collectionPatch = {};
   for (const key of STRATEGIC_OVERLAY_COLLECTION_KEYS) {
     if (Object.hasOwn(snapshot, key) && Array.isArray(snapshot[key])) {
       collectionPatch[key] = snapshot[key];
     }
   }
-  return commitStrategicOverlayCollectionsState(target, collectionPatch, options);
+  const inputs = detachActionInputs({ collectionPatch, options: { cloneValue, markDirty } });
+  return commitStrategicOverlayCollectionsState(target, inputs.collectionPatch, inputs.options);
 }
 
 export function patchStrategicOverlayEntityGroupState(
@@ -148,17 +182,45 @@ export function patchStrategicOverlayEntityGroupState(
   { cloneValue = cloneStateValue, markDirty = true } = {},
 ) {
   assertStateTarget(target);
-  if (!Array.isArray(target[collectionKey])) {
-    throw new TypeError(`[strategic_overlay_actions] ${collectionKey} must be an array`);
+  const allowedFields = STRATEGIC_OVERLAY_ENTITY_FIELD_KEYS[collectionKey];
+  if (!allowedFields) {
+    throw new Error(`[strategic_overlay_actions] unknown entity collection key: ${collectionKey}`);
+  }
+  const normalizedCollectionKey = detachActionInputs({ collectionKey }).collectionKey;
+  if (!Array.isArray(target[normalizedCollectionKey])) {
+    throw new TypeError(`[strategic_overlay_actions] ${normalizedCollectionKey} must be an array`);
   }
   if (!Array.isArray(entityPatches)) {
     throw new TypeError("[strategic_overlay_actions] entity patches must be an array");
   }
+  for (const entry of entityPatches) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new TypeError("[strategic_overlay_actions] entity patch entry must be an object");
+    }
+    if (!entry.patch || typeof entry.patch !== "object" || Array.isArray(entry.patch)) {
+      throw new TypeError(`[strategic_overlay_actions] ${normalizedCollectionKey} entity patch must be an object`);
+    }
+    for (const key of Object.keys(entry.patch)) {
+      if (!allowedFields.includes(key)) {
+        throw new Error(`[strategic_overlay_actions] unknown ${normalizedCollectionKey} entity field: ${key}`);
+      }
+    }
+  }
   if (typeof cloneValue !== "function") {
     throw new TypeError("[strategic_overlay_actions] cloneValue must be a function");
   }
+  const detachedEntityPatches = Array.from(entityPatches, (entry) => ({
+    entityId: entry.entityId,
+    patch: { ...entry.patch },
+  }));
+  const inputs = detachActionInputs({
+    collectionKey: normalizedCollectionKey,
+    entityPatches: detachedEntityPatches,
+    cloneValue,
+    markDirty,
+  });
   const patchById = new Map();
-  for (const entry of entityPatches) {
+  for (const entry of inputs.entityPatches) {
     assertPatch(entry, "entity patch entry");
     const entityId = String(entry.entityId || "").trim();
     if (!entityId) {
@@ -167,18 +229,18 @@ export function patchStrategicOverlayEntityGroupState(
     if (patchById.has(entityId)) {
       throw new Error(`[strategic_overlay_actions] duplicate entityId: ${entityId}`);
     }
-    const assignments = prepareEntityPatch(collectionKey, entry.patch, cloneValue);
+    const assignments = prepareEntityPatch(inputs.collectionKey, entry.patch, inputs.cloneValue);
     if (Object.keys(assignments).length) patchById.set(entityId, assignments);
   }
   if (!patchById.size) {
     return Object.freeze({
       changedEntityIds: Object.freeze([]),
-      collectionKey,
+      collectionKey: inputs.collectionKey,
     });
   }
 
   const changedEntityIds = [];
-  const nextCollection = target[collectionKey].map((entity) => {
+  const nextCollection = target[inputs.collectionKey].map((entity) => {
     const entityId = String(entity?.id || "").trim();
     const assignments = patchById.get(entityId);
     if (!assignments) return entity;
@@ -186,30 +248,55 @@ export function patchStrategicOverlayEntityGroupState(
     return { ...entity, ...assignments };
   });
   if (changedEntityIds.length) {
-    target[collectionKey] = nextCollection;
-    if (markDirty !== false) target[COLLECTION_DIRTY_KEY[collectionKey]] = true;
+    target[inputs.collectionKey] = nextCollection;
+    if (inputs.markDirty !== false) target[COLLECTION_DIRTY_KEY[inputs.collectionKey]] = true;
   }
   return Object.freeze({
     changedEntityIds: Object.freeze(changedEntityIds),
-    collectionKey,
+    collectionKey: inputs.collectionKey,
   });
 }
 
-export function patchStrategicOverlayEntityState(target, collectionKey, entityId, patch, options = {}) {
-  const normalizedEntityId = String(entityId || "").trim();
+export function patchStrategicOverlayEntityState(
+  target,
+  collectionKey,
+  entityId,
+  patch,
+  { cloneValue = cloneStateValue, markDirty = true } = {},
+) {
+  assertStateTarget(target);
+  const allowedFields = STRATEGIC_OVERLAY_ENTITY_FIELD_KEYS[collectionKey];
+  if (!allowedFields) {
+    throw new Error(`[strategic_overlay_actions] unknown entity collection key: ${collectionKey}`);
+  }
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new TypeError(`[strategic_overlay_actions] ${collectionKey} entity patch must be an object`);
+  }
+  const patchKeys = Object.keys(patch);
+  for (const key of patchKeys) {
+    if (!allowedFields.includes(key)) {
+      throw new Error(`[strategic_overlay_actions] unknown ${collectionKey} entity field: ${key}`);
+    }
+  }
+  const normalizedEntityId = String(detachActionInputs({ entityId }).entityId || "").trim();
   if (!normalizedEntityId) {
     throw new Error("[strategic_overlay_actions] entityId is required");
   }
+  const inputs = detachActionInputs({
+    collectionKey,
+    patch: Object.fromEntries(patchKeys.map((key) => [key, patch[key]])),
+    options: { cloneValue, markDirty },
+  });
   const result = patchStrategicOverlayEntityGroupState(
     target,
-    collectionKey,
-    [{ entityId: normalizedEntityId, patch }],
-    options,
+    inputs.collectionKey,
+    [{ entityId: normalizedEntityId, patch: inputs.patch }],
+    inputs.options,
   );
   return Object.freeze({
     changed: result.changedEntityIds.length === 1,
     entityId: normalizedEntityId,
-    collectionKey,
+    collectionKey: inputs.collectionKey,
   });
 }
 
@@ -224,30 +311,49 @@ export function patchStrategicOverlayEditorState(
   if (!allowedFields) {
     throw new Error(`[strategic_overlay_actions] unknown editor key: ${editorKey}`);
   }
-  assertPatch(patch, `${editorKey} patch`);
-  if (typeof cloneValue !== "function") {
-    throw new TypeError("[strategic_overlay_actions] cloneValue must be a function");
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new TypeError(`[strategic_overlay_actions] ${editorKey} patch must be an object`);
   }
-  const current = target[editorKey] && typeof target[editorKey] === "object" && !Array.isArray(target[editorKey])
-    ? target[editorKey]
-    : {};
-  const assignments = {};
-  for (const key of Object.keys(patch)) {
+  const patchKeys = Object.keys(patch);
+  for (const key of patchKeys) {
     if (!allowedFields.includes(key)) {
       throw new Error(`[strategic_overlay_actions] unknown ${editorKey} field: ${key}`);
     }
-    assignments[key] = cloneValue(patch[key]);
+  }
+  if (typeof cloneValue !== "function") {
+    throw new TypeError("[strategic_overlay_actions] cloneValue must be a function");
+  }
+  const inputs = detachActionInputs({
+    editorKey,
+    patch: Object.fromEntries(patchKeys.map((key) => [key, patch[key]])),
+    cloneValue,
+  });
+  const current = target[inputs.editorKey] && typeof target[inputs.editorKey] === "object" && !Array.isArray(target[inputs.editorKey])
+    ? target[inputs.editorKey]
+    : {};
+  const assignments = {};
+  for (const key of Object.keys(inputs.patch)) {
+    if (!allowedFields.includes(key)) {
+      throw new Error(`[strategic_overlay_actions] unknown ${inputs.editorKey} field: ${key}`);
+    }
+    assignments[key] = inputs.cloneValue(inputs.patch[key]);
   }
   Object.assign(current, assignments);
-  if (target[editorKey] !== current) target[editorKey] = current;
+  if (target[inputs.editorKey] !== current) target[inputs.editorKey] = current;
   return current;
 }
 
 export function setStrategicOverlayDirtyState(target, dirtyKey, value = true) {
   assertStateTarget(target);
-  if (!STRATEGIC_OVERLAY_DIRTY_KEYS.includes(dirtyKey)) {
+  if (
+    dirtyKey !== "frontlineOverlayDirty"
+    && dirtyKey !== "operationalLinesDirty"
+    && dirtyKey !== "operationGraphicsDirty"
+    && dirtyKey !== "unitCountersDirty"
+  ) {
     throw new Error(`[strategic_overlay_actions] unknown dirty key: ${dirtyKey}`);
   }
-  target[dirtyKey] = Boolean(value);
-  return target[dirtyKey];
+  const inputs = detachActionInputs({ dirtyKey, value });
+  target[inputs.dirtyKey] = Boolean(inputs.value);
+  return target[inputs.dirtyKey];
 }

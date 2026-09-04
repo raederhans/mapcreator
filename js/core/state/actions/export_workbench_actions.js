@@ -56,7 +56,13 @@ export function commitExportWorkbenchUiState(
   nextUiState = null,
   { normalizeState } = {},
 ) {
-  return normalizeAndCommit(target, nextUiState, {
+  if (!isStateTarget(target)) {
+    return normalizeAndCommit(target, null, { preserveBakeCache: false, normalizeState });
+  }
+  const detachedUiState = isStateTarget(nextUiState)
+    ? structuredClone({ ...nextUiState })
+    : null;
+  return normalizeAndCommit(target, detachedUiState, {
     preserveBakeCache: false,
     normalizeState,
   });

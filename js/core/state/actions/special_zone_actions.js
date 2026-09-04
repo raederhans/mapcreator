@@ -16,6 +16,26 @@ export const SPECIAL_ZONE_EDITOR_FIELD_KEYS = Object.freeze([
   "counter",
 ]);
 
+const SPECIAL_ZONE_LAYER_STATE_FIELD_KEYS = Object.freeze([
+  "version",
+  "layers",
+  "activeLayerId",
+  "storySteps",
+  "activeStoryStepId",
+  "topologyFingerprint",
+  "diagnostics",
+  "manualSpecialZones",
+  "specialRegionOverrides",
+  "special_regions_url",
+  "specialRegionsPayload",
+]);
+
+const SPECIAL_ZONE_LAYER_OPTION_KEYS = Object.freeze([
+  "validFeatureIds",
+  "topologyFingerprint",
+  "defaultSource",
+]);
+
 function assertStateTarget(target) {
   if (!target || typeof target !== "object" || Array.isArray(target)) {
     throw new TypeError("[special_zone_actions] target must be an object");
@@ -26,6 +46,22 @@ function assertPatch(patch, label) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new TypeError(`[special_zone_actions] ${label} must be an object`);
   }
+}
+
+function detachActionInputs(inputs) {
+  return { ...inputs };
+}
+
+function projectFields(container, sourceKey, fieldKeys, ownOnly = false) {
+  const source = container[sourceKey];
+  if (!source || typeof source !== "object" || Array.isArray(source)) return null;
+  const projected = {};
+  for (const key of fieldKeys) {
+    if ((ownOnly && Object.hasOwn(source, key)) || (!ownOnly && key in source)) {
+      projected[key] = source[key];
+    }
+  }
+  return projected;
 }
 
 function normalizeEditorState(editor, defaultZoneType = "custom") {
@@ -50,8 +86,9 @@ function cloneEditorVertices(vertices) {
 
 export function ensureSpecialZoneEditorState(target, { defaultZoneType = "custom" } = {}) {
   assertStateTarget(target);
+  const inputs = detachActionInputs({ defaultZoneType });
   const current = target.specialZoneEditor;
-  const next = normalizeEditorState(current, defaultZoneType);
+  const next = normalizeEditorState(current, inputs.defaultZoneType);
   if (current && typeof current === "object" && !Array.isArray(current)) {
     Object.assign(current, next);
   } else {
@@ -66,22 +103,29 @@ export function patchSpecialZoneEditorState(
   { defaultZoneType = "custom" } = {},
 ) {
   assertStateTarget(target);
-  assertPatch(patch, "specialZoneEditor patch");
-  for (const key of Object.keys(patch)) {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new TypeError("[special_zone_actions] specialZoneEditor patch must be an object");
+  }
+  const patchKeys = Object.keys(patch);
+  for (const key of patchKeys) {
     if (!SPECIAL_ZONE_EDITOR_FIELD_KEYS.includes(key)) {
       throw new Error(`[special_zone_actions] unknown specialZoneEditor field: ${key}`);
     }
   }
-  const current = ensureSpecialZoneEditorState(target, { defaultZoneType });
+  const inputs = detachActionInputs({
+    patch: Object.fromEntries(patchKeys.map((key) => [key, patch[key]])),
+    defaultZoneType,
+  });
+  const current = ensureSpecialZoneEditorState(target, { defaultZoneType: inputs.defaultZoneType });
   const assignments = {};
-  if (Object.hasOwn(patch, "active")) assignments.active = Boolean(patch.active);
-  if (Object.hasOwn(patch, "vertices")) assignments.vertices = Array.isArray(patch.vertices)
-    ? patch.vertices.map((vertex) => Array.isArray(vertex) ? [...vertex] : vertex)
+  if (Object.hasOwn(inputs.patch, "active")) assignments.active = Boolean(inputs.patch.active);
+  if (Object.hasOwn(inputs.patch, "vertices")) assignments.vertices = Array.isArray(inputs.patch.vertices)
+    ? inputs.patch.vertices.map((vertex) => Array.isArray(vertex) ? [...vertex] : vertex)
     : [];
-  if (Object.hasOwn(patch, "zoneType")) assignments.zoneType = String(patch.zoneType || defaultZoneType || "custom");
-  if (Object.hasOwn(patch, "label")) assignments.label = String(patch.label || "");
-  if (Object.hasOwn(patch, "selectedId")) assignments.selectedId = String(patch.selectedId || "").trim() || null;
-  if (Object.hasOwn(patch, "counter")) assignments.counter = Math.max(1, Number(patch.counter) || 1);
+  if (Object.hasOwn(inputs.patch, "zoneType")) assignments.zoneType = String(inputs.patch.zoneType || inputs.defaultZoneType || "custom");
+  if (Object.hasOwn(inputs.patch, "label")) assignments.label = String(inputs.patch.label || "");
+  if (Object.hasOwn(inputs.patch, "selectedId")) assignments.selectedId = String(inputs.patch.selectedId || "").trim() || null;
+  if (Object.hasOwn(inputs.patch, "counter")) assignments.counter = Math.max(1, Number(inputs.patch.counter) || 1);
   Object.assign(current, assignments);
   return current;
 }
@@ -92,7 +136,11 @@ export function commitSpecialZoneLayersState(
   options = {},
 ) {
   assertStateTarget(target);
-  const normalized = normalizeSpecialZoneLayersState(nextState, options);
+  const inputs = detachActionInputs({
+    nextState: projectFields({ nextState }, "nextState", SPECIAL_ZONE_LAYER_STATE_FIELD_KEYS),
+    options: projectFields({ options }, "options", SPECIAL_ZONE_LAYER_OPTION_KEYS) || {},
+  });
+  const normalized = normalizeSpecialZoneLayersState(inputs.nextState, inputs.options);
   Object.assign(target, {
     specialZoneLayers: normalized,
     specialZonesOverlayDirty: true,
@@ -106,34 +154,53 @@ export function restoreSpecialZoneSnapshotState(
   { layerOptions = {}, defaultZoneType = "custom" } = {},
 ) {
   assertStateTarget(target);
-  assertPatch(snapshot, "snapshot");
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    throw new TypeError("[special_zone_actions] snapshot must be an object");
+  }
+  const inputs = detachActionInputs({
+    snapshot: projectFields(
+      { snapshot },
+      "snapshot",
+      ["specialZoneLayers", "specialZoneMembershipBrushMode", "specialZoneEditor"],
+      true,
+    ),
+    layerOptions: projectFields(
+      { layerOptions },
+      "layerOptions",
+      SPECIAL_ZONE_LAYER_OPTION_KEYS,
+    ) || {},
+    defaultZoneType,
+  });
   const assignments = {};
   const updatedKeys = [];
   if (
-    Object.hasOwn(snapshot, "specialZoneLayers")
-    && snapshot.specialZoneLayers
-    && typeof snapshot.specialZoneLayers === "object"
-    && !Array.isArray(snapshot.specialZoneLayers)
+    Object.hasOwn(inputs.snapshot, "specialZoneLayers")
+    && inputs.snapshot.specialZoneLayers
+    && typeof inputs.snapshot.specialZoneLayers === "object"
+    && !Array.isArray(inputs.snapshot.specialZoneLayers)
   ) {
-    assignments.specialZoneLayers = normalizeSpecialZoneLayersState(snapshot.specialZoneLayers, layerOptions);
+    assignments.specialZoneLayers = normalizeSpecialZoneLayersState(
+      inputs.snapshot.specialZoneLayers,
+      inputs.layerOptions,
+    );
     assignments.specialZonesOverlayDirty = true;
     updatedKeys.push("specialZoneLayers");
   }
-  if (Object.hasOwn(snapshot, "specialZoneMembershipBrushMode") && typeof snapshot.specialZoneMembershipBrushMode === "string") {
+  if (Object.hasOwn(inputs.snapshot, "specialZoneMembershipBrushMode") && typeof inputs.snapshot.specialZoneMembershipBrushMode === "string") {
     assignments.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(
-      snapshot.specialZoneMembershipBrushMode,
+      inputs.snapshot.specialZoneMembershipBrushMode,
     );
     updatedKeys.push("specialZoneMembershipBrushMode");
   }
   if (
-    Object.hasOwn(snapshot, "specialZoneEditor")
-    && snapshot.specialZoneEditor
-    && typeof snapshot.specialZoneEditor === "object"
-    && !Array.isArray(snapshot.specialZoneEditor)
+    Object.hasOwn(inputs.snapshot, "specialZoneEditor")
+    && inputs.snapshot.specialZoneEditor
+    && typeof inputs.snapshot.specialZoneEditor === "object"
+    && !Array.isArray(inputs.snapshot.specialZoneEditor)
   ) {
     const normalizedEditor = normalizeEditorState(
-      snapshot.specialZoneEditor,
-      defaultZoneType,
+      inputs.snapshot.specialZoneEditor,
+      inputs.defaultZoneType,
     );
     assignments.specialZoneEditor = {
       ...normalizedEditor,
@@ -147,7 +214,8 @@ export function restoreSpecialZoneSnapshotState(
 
 export function setSpecialZoneMembershipBrushModeState(target, mode = "add") {
   assertStateTarget(target);
-  target.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(mode);
+  const inputs = detachActionInputs({ mode });
+  target.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(inputs.mode);
   return target.specialZoneMembershipBrushMode;
 }
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createDefaultAppearancePresetsState } from "../js/core/state.js";
-import { applyAppearancePresetState, setAppearancePresetsState, normalizeAppearancePresetsIntoState, upsertAppearancePresetState, deleteAppearancePresetState, selectAppearancePresetState } from "../js/core/state/actions/appearance_preset_actions.js";
+import { applyAppearancePresetState, setAppearancePresetsState, normalizeAppearancePresetsIntoState, upsertAppearancePresetState, deleteAppearancePresetState, mergeAppearancePresetImportPayloadState, selectAppearancePresetState } from "../js/core/state/actions/appearance_preset_actions.js";
 
 test("appearance preset actions use canonical pure helpers", () => {
   const target = { appearancePresets: createDefaultAppearancePresetsState() };
@@ -55,4 +55,20 @@ test("preset apply action owns detached style, visibility, and intensity commits
   assert.equal(target.showUrban, false);
   assert.equal(target.showPhysical, true);
   assert.notEqual(target.intensityFields, intensityFields);
+});
+
+test("preset actions reject an invalid target before reading caller input", () => {
+  let reads = 0;
+  const input = Object.defineProperty({}, "snapshot", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return {};
+    },
+  });
+
+  assert.throws(() => upsertAppearancePresetState(null, input), /target must be an object/);
+  assert.throws(() => mergeAppearancePresetImportPayloadState(null, input), /target must be an object/);
+  assert.throws(() => applyAppearancePresetState(null, input), /target must be an object/);
+  assert.equal(reads, 0);
 });

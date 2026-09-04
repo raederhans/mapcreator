@@ -28,6 +28,7 @@ import {
   discoverStateWriterBindingsForSource,
   normalizeStateActionDelegations,
   scanStateWriterBindingInventoriesBatch,
+  validateStateActionNonTargetParameterMutations,
 } from "../tools/build_state_writer_policy.mjs";
 import {
   scanStateMutationInventory,
@@ -500,7 +501,7 @@ test("P4.2b optional and city action exports have one canonical owner", () => {
   }).some(({ code }) => code === "state-action-module-phase-not-admitted"));
 });
 
-test("P4.4 action modules admit every direct export only at the P4.4 boundary", () => {
+test("P4.4 action modules admit every direct export only at the P4.4 boundary", async () => {
   const modulePaths = [
     "js/core/state/actions/appearance_actions.js",
     "js/core/state/actions/appearance_preset_actions.js",
@@ -517,10 +518,16 @@ test("P4.4 action modules admit every direct export only at the P4.4 boundary", 
     "js/core/state/actions/ui_visibility_actions.js",
   ];
   for (const modulePath of modulePaths) {
+    const source = fs.readFileSync(modulePath, "utf8");
     assert.deepEqual(
-      validateStateActionModuleSource(fs.readFileSync(modulePath, "utf8"), {
+      validateStateActionModuleSource(source, {
         filePath: modulePath,
       }),
+      [],
+      modulePath,
+    );
+    assert.deepEqual(
+      await validateStateActionNonTargetParameterMutations(modulePath, source),
       [],
       modulePath,
     );

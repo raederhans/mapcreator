@@ -52,10 +52,13 @@ export function commitUiVisibilityState(target, patch = {}) {
 }
 
 export function restoreUiVisibilityState(target, snapshot = {}) {
-  return commitUiVisibilityState(target, snapshot);
+  if (!isStateTarget(target) || !isStateTarget(snapshot)) return null;
+  const detachedSnapshot = { ...snapshot };
+  return commitUiVisibilityState(target, detachedSnapshot);
 }
 
 export function restoreImportedLayerVisibilityState(target, layerVisibility = null) {
-  if (!isStateTarget(layerVisibility)) return null;
-  return commitUiVisibilityState(target, layerVisibility);
+  if (!isStateTarget(target) || !isStateTarget(layerVisibility)) return null;
+  const detachedVisibility = { ...layerVisibility };
+  return commitUiVisibilityState(target, detachedVisibility);
 }

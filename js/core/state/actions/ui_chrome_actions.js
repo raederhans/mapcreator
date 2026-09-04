@@ -124,19 +124,26 @@ export function ensureUiChromeState(target) {
 export function patchUiChromeState(target, patch = {}) {
   const ui = ensureUiChromeState(target);
   if (!isStateTarget(target) || !isStateTarget(patch)) return ui;
+  const detachedPatch = { ...patch };
   BOOLEAN_UI_CHROME_FIELDS.forEach((field) => {
-    if (Object.hasOwn(patch, field)) setOwnDataValue(ui, field, !!patch[field]);
-  });
-  STRING_UI_CHROME_FIELDS.forEach((field) => {
-    if (Object.hasOwn(patch, field)) {
-      setOwnDataValue(ui, field, String(patch[field] || "").trim());
+    if (Object.hasOwn(detachedPatch, field)) {
+      setOwnDataValue(ui, field, !!detachedPatch[field]);
     }
   });
-  if (Object.hasOwn(patch, "paletteLibrarySections")) {
-    setOwnDataValue(ui, "paletteLibrarySections", cloneRecord(patch.paletteLibrarySections));
+  STRING_UI_CHROME_FIELDS.forEach((field) => {
+    if (Object.hasOwn(detachedPatch, field)) {
+      setOwnDataValue(ui, field, String(detachedPatch[field] || "").trim());
+    }
+  });
+  if (Object.hasOwn(detachedPatch, "paletteLibrarySections")) {
+    const sections = cloneRecord(detachedPatch.paletteLibrarySections);
+    setOwnDataValue(ui, "paletteLibrarySections", sections);
   }
-  if (Object.hasOwn(patch, "restoredSupportSurfaceViewFromUrl")) {
-    setRestoredSupportSurfaceViewState(target, patch.restoredSupportSurfaceViewFromUrl);
+  if (Object.hasOwn(detachedPatch, "restoredSupportSurfaceViewFromUrl")) {
+    const restoredView = String(
+      detachedPatch.restoredSupportSurfaceViewFromUrl || "",
+    ).trim();
+    setRestoredSupportSurfaceViewState(target, restoredView);
   }
   return ui;
 }
