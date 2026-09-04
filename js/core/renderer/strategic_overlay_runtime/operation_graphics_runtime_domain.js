@@ -223,7 +223,9 @@ export function createOperationGraphicsRuntimeDomain({
     if (partial.width !== undefined) entityPatch.width = normalizeOperationGraphicWidth(partial.width);
     if (partial.opacity !== undefined) entityPatch.opacity = normalizeOperationGraphicOpacity(partial.opacity);
     patchStrategicOverlayEntityState(state, "operationGraphics", selectedId, entityPatch);
-    selectOperationGraphicById(selectedId);
+    patchStrategicOverlayEditorState(state, "operationGraphicsEditor", {
+      points: Array.isArray(target.points) ? [...target.points] : [],
+    });
     setStrategicOverlayDirtyState(state, "operationGraphicsDirty", true);
     commitHistoryEntry({
       kind: "update-operation-graphic",

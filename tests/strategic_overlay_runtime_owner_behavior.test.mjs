@@ -257,6 +257,9 @@ test("operation graphic runtime owner commits midpoint insertion", () => {
 });
 
 test("operation graphic ordinary updates replace the selected entity and preserve neighbors", () => {
+  const callOrder = [];
+  const historyEntries = [];
+  let getByIdCalls = 0;
   const neighbor = { id: "opg_neighbor", kind: "offensive", label: "Neighbor", points: [[5, 5], [6, 6]] };
   const selected = {
     id: "opg_1",
@@ -274,7 +277,7 @@ test("operation graphic ordinary updates replace the selected entity and preserv
     operationGraphicsEditor: {
       active: false,
       mode: "edit",
-      points: [[0, 0], [1, 1]],
+      points: [[99, 99]],
       selectedId: "opg_1",
       selectedVertexIndex: -1,
     },
@@ -282,14 +285,27 @@ test("operation graphic ordinary updates replace the selected entity and preserv
   const owner = createStrategicOverlayRuntimeOwner({
     state: runtimeState,
     helpers: {
-      captureHistoryState: () => ({}),
+      captureHistoryState: () => {
+        callOrder.push(`capture-${callOrder.filter((entry) => entry.startsWith("capture")).length + 1}`);
+        return {};
+      },
+      commitHistoryEntry: (entry) => {
+        historyEntries.push(entry);
+        callOrder.push("history");
+      },
       ensureOperationGraphicsEditorState: () => {},
-      getOperationGraphicById: (id) => runtimeState.operationGraphics.find((entry) => entry.id === id) || null,
+      getOperationGraphicById: () => {
+        getByIdCalls += 1;
+        return null;
+      },
       getOperationGraphicMinPoints: () => 2,
+      markDirty: () => callOrder.push("mark-dirty"),
       normalizeOperationGraphicOpacity: Number,
       normalizeOperationGraphicStroke: String,
       normalizeOperationGraphicStylePreset: String,
       normalizeOperationGraphicWidth: Number,
+      renderNow: () => callOrder.push("render"),
+      updateStrategicOverlayUi: () => callOrder.push("ui"),
     },
   });
 
@@ -298,6 +314,19 @@ test("operation graphic ordinary updates replace the selected entity and preserv
   assert.notEqual(runtimeState.operationGraphics[1], selected);
   assert.equal(runtimeState.operationGraphics[1].label, "After");
   assert.equal(runtimeState.operationGraphics[1].width, 4);
+  assert.deepEqual(runtimeState.operationGraphicsEditor.points, [[0, 0], [1, 1]]);
+  assert.notEqual(runtimeState.operationGraphicsEditor.points, selected.points);
+  assert.equal(runtimeState.operationGraphicsDirty, true);
+  assert.equal(getByIdCalls, 0);
+  assert.deepEqual(historyEntries.map((entry) => entry.kind), ["update-operation-graphic"]);
+  assert.deepEqual(callOrder, [
+    "capture-1",
+    "capture-2",
+    "history",
+    "mark-dirty",
+    "ui",
+    "render",
+  ]);
 });
 
 test("special zone runtime owner retires legacy manual feature creation", () => {
