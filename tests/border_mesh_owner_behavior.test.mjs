@@ -20,6 +20,93 @@ function createTestOwner(state = {}) {
   return { owner, invalidations, perfMetrics };
 }
 
+function createLifecycleOwner() {
+  const state = { cachedDetailAdmBorders: [], dynamicBordersEnabled: true };
+  const timers = new Map();
+  const events = [];
+  let nextTimerId = 0;
+  let buildState = { signature: "", status: "idle" };
+  const owner = createBorderMeshOwner({
+    state,
+    helpers: {
+      isDynamicBordersEnabled: () => state.dynamicBordersEnabled,
+      setTimeoutFn: (callback, delay) => {
+        timers.set(++nextTimerId, { callback, delay });
+        return nextTimerId;
+      },
+      clearTimeoutFn: (id) => timers.delete(id),
+      renderDynamicBorders: () => events.push(["render", state.pendingDynamicBorderTimerId]),
+      getDetailAdmMeshBuildState: () => buildState,
+      setDetailAdmMeshBuildState: (value) => { buildState = value; },
+      syncStaticMeshSnapshot: () => events.push(["snapshot", [...state.cachedDetailAdmBorders], buildState.status]),
+      scheduleDeferredHeavyBorderMeshes: () => events.push(["schedule", buildState.signature]),
+    },
+  });
+  return { owner, state, timers, events, getBuildState: () => buildState };
+}
+
+test("border debounce replaces stale work and clears the timer before rendering", () => {
+  const { owner, state, timers, events } = createLifecycleOwner();
+  owner.scheduleDynamicBorderRecompute("first", 150);
+  const oldId = state.pendingDynamicBorderTimerId;
+  owner.scheduleDynamicBorderRecompute("second", 25);
+  assert.equal(timers.has(oldId), false);
+  assert.equal(state.dynamicBordersDirtyReason, "second");
+  const timer = timers.get(state.pendingDynamicBorderTimerId);
+  assert.equal(timer.delay, 25);
+  timers.delete(state.pendingDynamicBorderTimerId);
+  timer.callback();
+  assert.equal(state.dynamicBordersDirty, false);
+  assert.deepEqual(events, [["render", null]]);
+});
+
+test("transaction cancellation and disabled immediate recompute leave no delayed render", () => {
+  const { owner, state, timers, events } = createLifecycleOwner();
+  owner.scheduleDynamicBorderRecompute("edit");
+  owner.clearPendingDynamicBorderTimer();
+  assert.equal(timers.size, 0);
+  assert.equal(state.pendingDynamicBorderTimerId, null);
+  owner.scheduleDynamicBorderRecompute("next");
+  state.dynamicBordersEnabled = false;
+  assert.equal(owner.recomputeDynamicBordersNow(), false);
+  assert.equal(timers.size, 0);
+  assert.equal(state.dynamicBordersDirty, false);
+  assert.equal(state.dynamicBordersDirtyReason, "");
+  assert.deepEqual(events, []);
+});
+
+test("immediate border rebuild can update its cache without requesting a render", () => {
+  const { owner, state, timers, events } = createLifecycleOwner();
+  owner.scheduleDynamicBorderRecompute("edit");
+  assert.equal(owner.recomputeDynamicBordersNow({ renderNow: false }), true);
+  assert.equal(timers.size, 0);
+  assert.equal(state.dynamicBordersDirty, false);
+  assert.deepEqual(events, []);
+});
+
+test("detail viewport change retires old meshes in the snapshot before scheduling once", () => {
+  const { owner, state, events, getBuildState } = createLifecycleOwner();
+  owner.replaceDetailAdmBorders([{ coordinates: ["old"] }]);
+  const meta = { signature: "viewport-2", detailCountries: ["AAA"] };
+  owner.reconcileDetailAdmBorders(meta);
+  assert.deepEqual(state.cachedDetailAdmBorders, []);
+  assert.deepEqual(events, [["snapshot", [], "building"], ["schedule", "viewport-2"]]);
+  owner.reconcileDetailAdmBorders(meta);
+  assert.equal(events.length, 2);
+  owner.replaceDetailAdmBorders([{ coordinates: ["new"] }]);
+  owner.reconcileDetailAdmBorders({ signature: "viewport-empty", detailCountries: [] });
+  assert.deepEqual(getBuildState(), { signature: "viewport-empty", status: "empty" });
+  assert.deepEqual(events.at(-1), ["snapshot", [], "empty"]);
+  assert.equal(events.filter(([event]) => event === "schedule").length, 1);
+});
+
+test("an idle detail cache schedules its initial build even when the signature is unchanged", () => {
+  const { owner, events, getBuildState } = createLifecycleOwner();
+  owner.reconcileDetailAdmBorders({ signature: "", detailCountries: ["AAA"] });
+  assert.equal(getBuildState().status, "building");
+  assert.deepEqual(events, [["schedule", ""]]);
+});
+
 test("refreshScenarioOpeningOwnerBorders reuses mesh pack opening-owner mesh when available", () => {
   const meshPackMesh = {
     type: "MultiLineString",

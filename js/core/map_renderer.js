@@ -246,90 +246,6 @@ import { createRendererFitProjectionOwner } from "./renderer/renderer_fit_projec
 import { createVisibleFrameDiagnosticsOwner } from "./renderer/visible_frame_diagnostics_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
-import {
-  buildFacilityInfoCardBody,
-  buildFacilityInfoCardFieldSections,
-  buildFacilityInfoCardTitle,
-  buildFacilityTooltipText,
-  buildInteractiveLandData,
-  canPreferUrbanDetailCollection,
-  canRenderUrbanCollection,
-  collectCountryCoverageStats,
-  composePoliticalFeatureCollections,
-  composePoliticalFeatures,
-  computeLayerCoverageScore,
-  configureDataRuntimeFacade,
-  createUrbanLayerCapability,
-  ensureLayerDataFromTopology,
-  getDesiredBathymetryTopologyUrl,
-  getLayerFeatureCollection,
-  getPoliticalFeatureCollection,
-  getScenarioBathymetryTopologyUrl,
-  getUrbanFeatureGeoBounds,
-  getUrbanLayerCapability,
-  mergeOverrideFeatures,
-  normalizeFeatureGeometry,
-  pickBestLayerSource,
-  resolveContextLayerData,
-} from "./map_renderer/facade_data_runtime.js";
-import {
-  buildCountryParentBorderMeshes,
-  buildDetailAdmBorderMesh,
-  buildDynamicOwnerBorderMesh,
-  buildGlobalCoastlineMesh,
-  buildGlobalCountryBorderMesh,
-  buildOwnerBorderMesh,
-  buildSourceBorderMeshes,
-  configureBorderRuntimeFacade,
-  countUnresolvedOwnerBorderEntities,
-  getSourceCountrySets,
-  resolveCoastlineTopologySource,
-  simplifyCoastlineMesh,
-} from "./map_renderer/facade_border_runtime.js";
-import {
-  buildIndex,
-  buildIndexChunked,
-  buildSpatialIndex,
-  buildSpatialIndexChunked,
-  configureSpatialRuntimeFacade,
-} from "./map_renderer/facade_spatial_runtime.js";
-import {
-  appendOperationGraphicVertexFromEvent,
-  appendOperationalLineVertexFromEvent,
-  appendSpecialZoneVertexFromEvent,
-  cancelActiveStrategicInteractionModes,
-  cancelOperationGraphicDraw,
-  cancelOperationalLineDraw,
-  cancelSpecialZoneDraw,
-  cancelUnitCounterPlacement,
-  configureOverlayRuntimeFacade,
-  deleteSelectedManualSpecialZone,
-  deleteSelectedOperationGraphic,
-  deleteSelectedOperationGraphicVertex,
-  deleteSelectedOperationalLine,
-  deleteSelectedUnitCounter,
-  finishOperationGraphicDraw,
-  finishOperationalLineDraw,
-  finishSpecialZoneDraw,
-  getUnitCounterPreviewData,
-  placeUnitCounterFromEvent,
-  resolveUnitCounterNationForPlacement,
-  selectOperationGraphicById,
-  selectOperationalLineById,
-  selectSpecialZoneById,
-  selectUnitCounterById,
-  startOperationGraphicDraw,
-  startOperationalLineDraw,
-  startSpecialZoneDraw,
-  startUnitCounterPlacement,
-  syncOperationalLineAttachedCounterIds,
-  undoOperationGraphicVertex,
-  undoOperationalLineVertex,
-  undoSpecialZoneVertex,
-  updateSelectedOperationGraphic,
-  updateSelectedOperationalLine,
-  updateSelectedUnitCounter,
-} from "./map_renderer/facade_overlay_runtime.js";
 const state = runtimeState;
 
 function showToast(message, options = {}) {
@@ -2447,7 +2363,15 @@ function getBorderMeshOwner() {
     helpers: {
       asFeatureLike,
       canonicalCountryCode,
-      clearPendingDynamicBorderTimer,
+      renderDynamicBorders: () => {
+        if (rendererSurfaceHost.getContext()) render();
+      },
+      getDetailAdmMeshBuildState: () => detailAdmMeshBuildState,
+      setDetailAdmMeshBuildState: (nextState) => {
+        detailAdmMeshBuildState = nextState;
+      },
+      scheduleDeferredHeavyBorderMeshes,
+      syncStaticMeshSnapshot,
       ensureSovereigntyState,
       getAdmin1Group,
       getEntityCountryCode,
@@ -2523,7 +2447,6 @@ function getBorderDrawOwner() {
       getContext: () => rendererSurfaceHost.getContext(),
       getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
       getProjection: () => rendererSurfaceHost.getProjection(),
-      getDetailAdmMeshBuildState: () => detailAdmMeshBuildState,
       getScenarioOwnerOnlyCanonicalFallbackWarnings: () => scenarioOwnerOnlyCanonicalFallbackWarnings,
       getVisibleInternalBorderMeshSignature: () => visibleInternalBorderMeshSignature,
     },
@@ -2540,13 +2463,10 @@ function getBorderDrawOwner() {
       isDynamicBordersEnabled,
       sanitizePolyline,
       scheduleDeferredHeavyBorderMeshes,
-      setDetailAdmMeshBuildState: (nextState) => {
-        detailAdmMeshBuildState = nextState;
-      },
+      reconcileDetailAdmBorders: (meta) => getBorderMeshOwner().reconcileDetailAdmBorders(meta),
       setVisibleInternalBorderMeshSignature: (signature) => {
         visibleInternalBorderMeshSignature = signature;
       },
-      syncStaticMeshSnapshot,
     },
   });
   return borderDrawOwner;
@@ -3848,24 +3768,68 @@ function getStrategicOverlayRuntimeOwner() {
   return strategicOverlayRuntimeOwner;
 }
 
-configureDataRuntimeFacade({
-  getPoliticalCollectionOwner,
-  getContextLayerResolverOwner,
-  getRendererAssetUrlPolicyOwner,
-  getFacilitySurfaceOwner,
-});
+function getUrbanLayerCapability(...args) {
+  return getContextLayerResolverOwner().getUrbanLayerCapability(...args);
+}
 
-configureBorderRuntimeFacade({
-  getBorderMeshOwner,
-});
+function getPoliticalFeatureCollection(...args) { return getPoliticalCollectionOwner().getPoliticalFeatureCollection(...args); }
+function composePoliticalFeatures(...args) { return getPoliticalCollectionOwner().composePoliticalFeatures(...args); }
+function composePoliticalFeatureCollections(...args) { return getPoliticalCollectionOwner().composePoliticalFeatureCollections(...args); }
+function collectCountryCoverageStats(...args) { return getPoliticalCollectionOwner().collectCountryCoverageStats(...args); }
+function buildInteractiveLandData(...args) { return getPoliticalCollectionOwner().buildInteractiveLandData(...args); }
+function getLayerFeatureCollection(...args) { return getContextLayerResolverOwner().getLayerFeatureCollection(...args); }
+function ensureLayerDataFromTopology(...args) { return getContextLayerResolverOwner().ensureLayerDataFromTopology(...args); }
+function getScenarioBathymetryTopologyUrl(...args) { return getRendererAssetUrlPolicyOwner().getScenarioBathymetryTopologyUrl(...args); }
+function getDesiredBathymetryTopologyUrl(...args) { return getRendererAssetUrlPolicyOwner().getDesiredBathymetryTopologyUrl(...args); }
+function buildFacilityTooltipText(...args) { return getFacilitySurfaceOwner().buildFacilityTooltipText(...args); }
 
-configureSpatialRuntimeFacade({
-  getSpatialIndexRuntimeOwner,
-});
+function buildCountryParentBorderMeshes(...args) { return getBorderMeshOwner().buildCountryParentBorderMeshes(...args); }
+function buildDetailAdmBorderMesh(...args) { return getBorderMeshOwner().buildDetailAdmBorderMesh(...args); }
+function buildGlobalCoastlineMesh(...args) { return getBorderMeshOwner().buildGlobalCoastlineMesh(...args); }
+function buildGlobalCountryBorderMesh(...args) { return getBorderMeshOwner().buildGlobalCountryBorderMesh(...args); }
+function buildSourceBorderMeshes(...args) { return getBorderMeshOwner().buildSourceBorderMeshes(...args); }
+function getSourceCountrySets(...args) { return getBorderMeshOwner().getSourceCountrySets(...args); }
+function resolveCoastlineTopologySource(...args) { return getBorderMeshOwner().resolveCoastlineTopologySource(...args); }
+function simplifyCoastlineMesh(...args) { return getBorderMeshOwner().simplifyCoastlineMesh(...args); }
 
-configureOverlayRuntimeFacade({
-  getStrategicOverlayRuntimeOwner,
-});
+function buildIndex(...args) { return getSpatialIndexRuntimeOwner().buildIndex(...args); }
+function buildIndexChunked(...args) { return getSpatialIndexRuntimeOwner().buildIndexChunked(...args); }
+function buildSpatialIndex(...args) { return getSpatialIndexRuntimeOwner().buildSpatialIndex(...args); }
+function buildSpatialIndexChunked(...args) { return getSpatialIndexRuntimeOwner().buildSpatialIndexChunked(...args); }
+
+function appendOperationalLineVertexFromEvent(...args) { return getStrategicOverlayRuntimeOwner().appendOperationalLineVertexFromEvent(...args); }
+function appendOperationGraphicVertexFromEvent(...args) { return getStrategicOverlayRuntimeOwner().appendOperationGraphicVertexFromEvent(...args); }
+function appendSpecialZoneVertexFromEvent(...args) { return getStrategicOverlayRuntimeOwner().appendSpecialZoneVertexFromEvent(...args); }
+function placeUnitCounterFromEvent(...args) { return getStrategicOverlayRuntimeOwner().placeUnitCounterFromEvent(...args); }
+function startOperationalLineDraw(...args) { return getStrategicOverlayRuntimeOwner().startOperationalLineDraw(...args); }
+function undoOperationalLineVertex(...args) { return getStrategicOverlayRuntimeOwner().undoOperationalLineVertex(...args); }
+function finishOperationalLineDraw(...args) { return getStrategicOverlayRuntimeOwner().finishOperationalLineDraw(...args); }
+function cancelOperationalLineDraw(...args) { return getStrategicOverlayRuntimeOwner().cancelOperationalLineDraw(...args); }
+function selectOperationalLineById(...args) { return getStrategicOverlayRuntimeOwner().selectOperationalLineById(...args); }
+function deleteSelectedOperationalLine(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedOperationalLine(...args); }
+function updateSelectedOperationalLine(...args) { return getStrategicOverlayRuntimeOwner().updateSelectedOperationalLine(...args); }
+function startOperationGraphicDraw(...args) { return getStrategicOverlayRuntimeOwner().startOperationGraphicDraw(...args); }
+function undoOperationGraphicVertex(...args) { return getStrategicOverlayRuntimeOwner().undoOperationGraphicVertex(...args); }
+function finishOperationGraphicDraw(...args) { return getStrategicOverlayRuntimeOwner().finishOperationGraphicDraw(...args); }
+function cancelOperationGraphicDraw(...args) { return getStrategicOverlayRuntimeOwner().cancelOperationGraphicDraw(...args); }
+function selectOperationGraphicById(...args) { return getStrategicOverlayRuntimeOwner().selectOperationGraphicById(...args); }
+function deleteSelectedOperationGraphic(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedOperationGraphic(...args); }
+function deleteSelectedOperationGraphicVertex(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedOperationGraphicVertex(...args); }
+function updateSelectedOperationGraphic(...args) { return getStrategicOverlayRuntimeOwner().updateSelectedOperationGraphic(...args); }
+function startUnitCounterPlacement(...args) { return getStrategicOverlayRuntimeOwner().startUnitCounterPlacement(...args); }
+function cancelUnitCounterPlacement(...args) { return getStrategicOverlayRuntimeOwner().cancelUnitCounterPlacement(...args); }
+function cancelActiveStrategicInteractionModes(...args) { return getStrategicOverlayRuntimeOwner().cancelActiveStrategicInteractionModes(...args); }
+function selectUnitCounterById(...args) { return getStrategicOverlayRuntimeOwner().selectUnitCounterById(...args); }
+function deleteSelectedUnitCounter(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedUnitCounter(...args); }
+function updateSelectedUnitCounter(...args) { return getStrategicOverlayRuntimeOwner().updateSelectedUnitCounter(...args); }
+function getUnitCounterPreviewData(...args) { return getStrategicOverlayRuntimeOwner().getUnitCounterPreviewData(...args); }
+function resolveUnitCounterNationForPlacement(...args) { return getStrategicOverlayRuntimeOwner().resolveUnitCounterNationForPlacement(...args); }
+function startSpecialZoneDraw(...args) { return getStrategicOverlayRuntimeOwner().startSpecialZoneDraw(...args); }
+function undoSpecialZoneVertex(...args) { return getStrategicOverlayRuntimeOwner().undoSpecialZoneVertex(...args); }
+function finishSpecialZoneDraw(...args) { return getStrategicOverlayRuntimeOwner().finishSpecialZoneDraw(...args); }
+function cancelSpecialZoneDraw(...args) { return getStrategicOverlayRuntimeOwner().cancelSpecialZoneDraw(...args); }
+function deleteSelectedManualSpecialZone(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedManualSpecialZone(...args); }
+function selectSpecialZoneById(...args) { return getStrategicOverlayRuntimeOwner().selectSpecialZoneById(...args); }
 
 function getSidebarPerfState() {
   return ensureSidebarPerfState(state);
@@ -5482,10 +5446,7 @@ function isSovereigntyModeActive() {
 }
 
 function clearPendingDynamicBorderTimer() {
-  if (runtimeState.pendingDynamicBorderTimerId) {
-    globalThis.clearTimeout(runtimeState.pendingDynamicBorderTimerId);
-    runtimeState.pendingDynamicBorderTimerId = null;
-  }
+  return getBorderMeshOwner().clearPendingDynamicBorderTimer();
 }
 
 function updateDynamicBorderStatusUI() {
@@ -5495,15 +5456,7 @@ function updateDynamicBorderStatusUI() {
 }
 
 function markDynamicBordersDirty(reason = "") {
-  if (!isDynamicBordersEnabled()) {
-    runtimeState.dynamicBordersDirty = false;
-    runtimeState.dynamicBordersDirtyReason = "";
-    updateDynamicBorderStatusUI();
-    return;
-  }
-  runtimeState.dynamicBordersDirty = true;
-  runtimeState.dynamicBordersDirtyReason = String(reason || "").trim();
-  updateDynamicBorderStatusUI();
+  return getBorderMeshOwner().markDynamicBordersDirty(reason);
 }
 
 function resetRenderDiagnostics() {
@@ -8673,21 +8626,7 @@ function rebuildDynamicBorders() {
 }
 
 function recomputeDynamicBordersNow({ renderNow = true, reason = "" } = {}) {
-  clearPendingDynamicBorderTimer();
-  if (!isDynamicBordersEnabled()) {
-    runtimeState.dynamicBordersDirty = false;
-    runtimeState.dynamicBordersDirtyReason = "";
-    updateDynamicBorderStatusUI();
-    return false;
-  }
-  if (reason) {
-    runtimeState.dynamicBordersDirtyReason = String(reason);
-  }
-  rebuildDynamicBorders();
-  if (renderNow && rendererSurfaceHost.getContext()) {
-    render();
-  }
-  return true;
+  return getBorderMeshOwner().recomputeDynamicBordersNow({ renderNow, reason });
 }
 
 function refreshScenarioOpeningOwnerBorders({ renderNow = false, reason = "" } = {}) {
@@ -8699,12 +8638,7 @@ function refreshScenarioOpeningOwnerBorders({ renderNow = false, reason = "" } =
 }
 
 function scheduleDynamicBorderRecompute(reason = "", delayMs = 150) {
-  markDynamicBordersDirty(reason);
-  clearPendingDynamicBorderTimer();
-  runtimeState.pendingDynamicBorderTimerId = globalThis.setTimeout(() => {
-    runtimeState.pendingDynamicBorderTimerId = null;
-    recomputeDynamicBordersNow({ renderNow: true, reason });
-  }, Math.max(0, Number(delayMs) || 0));
+  return getBorderMeshOwner().scheduleDynamicBorderRecompute(reason, delayMs);
 }
 
 function isUsableMesh(mesh) {
@@ -9203,7 +9137,7 @@ function clearDeferredInternalBorderMeshCaches({ syncSnapshot = true } = {}) {
   runtimeState.cachedProvinceBordersByCountry = new Map();
   runtimeState.cachedLocalBorders = [];
   runtimeState.cachedLocalBordersByCountry = new Map();
-  runtimeState.cachedDetailAdmBorders = [];
+  getBorderMeshOwner().replaceDetailAdmBorders();
   runtimeState.cachedGridLines = [];
   resetVisibleInternalBorderMeshSignature();
   resetDetailAdmMeshBuildState();
@@ -9369,7 +9303,7 @@ function scheduleDeferredHeavyBorderMeshes() {
         const previousDetailAdmStatus = String(detailAdmMeshBuildState.status || "idle");
         const detailAdmMesh = buildDetailAdmBorderMesh(runtimeState.topologyDetail, new Set(detailAdmMeta.detailCountries));
         if (isUsableMesh(detailAdmMesh)) {
-          runtimeState.cachedDetailAdmBorders = [detailAdmMesh];
+          getBorderMeshOwner().replaceDetailAdmBorders([detailAdmMesh]);
           detailAdmMeshBuildState = {
             signature: detailAdmMeta.signature,
             status: "ready",
@@ -9472,7 +9406,7 @@ function restoreStaticMeshSnapshot(snapshot) {
   runtimeState.cachedProvinceBordersByCountry = new Map(snapshot.cachedProvinceBordersByCountry || []);
   runtimeState.cachedLocalBorders = [...(snapshot.cachedLocalBorders || [])];
   runtimeState.cachedLocalBordersByCountry = new Map(snapshot.cachedLocalBordersByCountry || []);
-  runtimeState.cachedDetailAdmBorders = [...(snapshot.cachedDetailAdmBorders || [])];
+  getBorderMeshOwner().replaceDetailAdmBorders([...(snapshot.cachedDetailAdmBorders || [])]);
   runtimeState.cachedCoastlines = [...(snapshot.cachedCoastlines || [])];
   runtimeState.cachedCoastlinesHigh = [...(snapshot.cachedCoastlinesHigh || [])];
   runtimeState.cachedCoastlinesMid = [...(snapshot.cachedCoastlinesMid || [])];
@@ -9531,7 +9465,7 @@ function rebuildStaticMeshes({
     runtimeState.cachedProvinceBordersByCountry = new Map();
     runtimeState.cachedLocalBorders = [];
     runtimeState.cachedLocalBordersByCountry = new Map();
-    runtimeState.cachedDetailAdmBorders = [];
+    getBorderMeshOwner().replaceDetailAdmBorders();
     runtimeState.cachedCoastlines = [];
     runtimeState.cachedCoastlinesHigh = [];
     runtimeState.cachedCoastlinesMid = [];
@@ -9610,7 +9544,7 @@ function rebuildStaticMeshes({
   runtimeState.cachedProvinceBordersByCountry = new Map();
   runtimeState.cachedLocalBorders = [];
   runtimeState.cachedLocalBordersByCountry = new Map();
-  runtimeState.cachedDetailAdmBorders = [];
+  getBorderMeshOwner().replaceDetailAdmBorders();
   runtimeState.cachedCoastlines = [];
   runtimeState.cachedCoastlinesHigh = [];
   runtimeState.cachedCoastlinesMid = [];
@@ -9629,7 +9563,7 @@ function rebuildStaticMeshes({
     );
     const detailAdmMesh = buildDetailAdmBorderMesh(runtimeState.topologyDetail, detailCountries);
     if (isUsableMesh(detailAdmMesh)) {
-      runtimeState.cachedDetailAdmBorders.push(detailAdmMesh);
+      getBorderMeshOwner().replaceDetailAdmBorders([detailAdmMesh]);
       detailAdmMeshBuildState = {
         signature: buildDetailAdmMeshSignature(visibleCountryCodes, runtimeState.zoomTransform?.k || 1).signature,
         status: "ready",
@@ -16354,75 +16288,6 @@ function getMultiLineLabelAnchor(geometry, placementMode = "midpoint") {
   return getLineMidpointFromCoordinates(bestLine);
 }
 
-function getFrontlineLabelAnchors() {
-  if (
-    !runtimeState.activeScenarioId
-    || !runtimeState.annotationView?.frontlineEnabled
-    || !runtimeState.annotationView?.showFrontlineLabels
-    || !globalThis.topojson
-  ) {
-    runtimeState.cachedFrontlineLabelAnchors = [];
-    runtimeState.cachedFrontlineLabelAnchorsHash = "";
-    return [];
-  }
-  const nextHash = [
-    `scenario:${String(runtimeState.activeScenarioId || "")}`,
-    `ctrl:${0}`,
-    `shell:${Number(runtimeState.scenarioShellOverlayRevision || 0)}`,
-    `sov:${Number(runtimeState.sovereigntyRevision || 0)}`,
-    `placement:${String(runtimeState.annotationView?.labelPlacementMode || "midpoint")}`,
-    `lang:${String(runtimeState.currentLanguage || "")}`,
-  ].join("|");
-  if (
-    Array.isArray(runtimeState.cachedFrontlineLabelAnchors)
-    && runtimeState.cachedFrontlineLabelAnchorsHash === nextHash
-  ) {
-    return runtimeState.cachedFrontlineLabelAnchors;
-  }
-  const topology = runtimeState.runtimePoliticalTopology;
-  const object = topology?.objects?.political;
-  const geometries = Array.isArray(object?.geometries) ? object.geometries : [];
-  const neighbors = Array.isArray(runtimeState.runtimeNeighborGraph) ? runtimeState.runtimeNeighborGraph : [];
-  const ownershipContext = getBorderMeshOwner().getFrontlineOwnershipContext();
-  const anchors = [];
-  const seenPairs = new Set();
-
-  geometries.forEach((geometry, index) => {
-    const featureId = getEntityFeatureId(geometry);
-    if (!featureId || shouldExcludeOwnerBorderEntity(geometry, { excludeSea: true })) return;
-    const ownerA = resolveOwnerBorderCode(geometry, ownershipContext);
-    if (!ownerA) return;
-    const neighborIndexes = Array.isArray(neighbors[index]) ? neighbors[index] : [];
-    neighborIndexes.forEach((neighborIndex) => {
-      if (neighborIndex <= index) return;
-      const neighbor = geometries[neighborIndex];
-      if (!neighbor || shouldExcludeOwnerBorderEntity(neighbor, { excludeSea: true })) return;
-      const ownerB = resolveOwnerBorderCode(neighbor, ownershipContext);
-      if (!ownerB || ownerA === ownerB) return;
-      const pairKey = [ownerA, ownerB].sort().join("::");
-      if (seenPairs.has(pairKey)) return;
-      const pairMesh = globalThis.topojson.mesh(topology, object, (a, b) => (
-        (a === geometry && b === neighbor) || (a === neighbor && b === geometry)
-      ));
-      const anchor = getMultiLineLabelAnchor(pairMesh, runtimeState.annotationView?.labelPlacementMode || "midpoint");
-      if (!anchor) return;
-      const projected = getProjectedPoint(anchor);
-      if (!projected) return;
-      seenPairs.add(pairKey);
-      anchors.push({
-        key: pairKey,
-        coord: anchor,
-        projected,
-        label: `${getScenarioCountryDisplayName(ownerA) || ownerA} / ${getScenarioCountryDisplayName(ownerB) || ownerB}`,
-      });
-    });
-  });
-
-  runtimeState.cachedFrontlineLabelAnchorsHash = nextHash;
-  runtimeState.cachedFrontlineLabelAnchors = anchors;
-  return anchors;
-}
-
 function renderStrategicDefs() {
   if (!rendererSurfaceHost.getStrategicDefs()) return;
   const defs = [
@@ -16755,106 +16620,17 @@ function renderFrontlineOverlay() {
   if (!runtimeState.annotationView?.frontlineEnabled) {
     runtimeState.cachedFrontlineMesh = null;
     runtimeState.cachedFrontlineMeshHash = "";
-    runtimeState.cachedFrontlineLabelAnchors = [];
-    runtimeState.cachedFrontlineLabelAnchorsHash = "";
-    rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
-    rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
-    return;
+  } else {
+    // Derived frontlines were retired with the control layer; the mesh owner
+    // clears legacy mesh state and always returns null, including old saves.
+    getBorderMeshOwner().getFrontlineMesh();
   }
-  const mesh = getBorderMeshOwner().getFrontlineMesh();
-  const hasMesh = !!mesh && Array.isArray(mesh.coordinates) && mesh.coordinates.length > 0;
-  if (!hasMesh) {
-    rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
-    rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
-    return;
-  }
-
-  const style = String(runtimeState.annotationView?.frontlineStyle || "clean");
-  const zoomK = Math.max(0.1, Number(runtimeState.zoomTransform?.k || 1));
-  const widthScale = zoomK >= 5 ? 1.18 : zoomK >= 2.4 ? 1.04 : zoomK >= 1.2 ? 0.92 : 0.82;
-  const pathValue = rendererSurfaceHost.getPathSvg()(mesh);
-  const layers = style === "dual-rail"
-    ? [
-      { key: "base", stroke: "rgba(17, 24, 39, 0.78)", width: 4.2 * widthScale, dasharray: null },
-      { key: "inner-a", stroke: "rgba(127, 29, 29, 0.46)", width: 1.5 * widthScale, dasharray: null },
-      { key: "inner-b", stroke: "rgba(30, 58, 138, 0.42)", width: 0.8 * widthScale, dasharray: "10 7" },
-    ]
-      : style === "teeth"
-      ? [
-        { key: "base", stroke: "rgba(24, 32, 45, 0.82)", width: 4.1 * widthScale, dasharray: null },
-        { key: "teeth", stroke: "rgba(231, 229, 221, 0.84)", width: 1.3 * widthScale, dasharray: "1.5 5.8" },
-      ]
-      : [
-        { key: "base", stroke: "rgba(20, 29, 43, 0.78)", width: 4.3 * widthScale, dasharray: null },
-        { key: "inner", stroke: "rgba(236, 232, 223, 0.9)", width: 1.7 * widthScale, dasharray: null },
-      ];
-
-  const selection = rendererSurfaceHost.getFrontlineOverlayGroup()
-    .selectAll("path.frontline-path")
-    .data(layers, (d) => d.key);
-
-  selection
-    .enter()
-    .append("path")
-    .attr("class", "frontline-path")
-    .attr("role", "presentation")
-    .attr("aria-hidden", "true")
-    .attr("vector-effect", "non-scaling-stroke")
-    .merge(selection)
-    .attr("d", pathValue)
-    .attr("fill", "none")
-    .attr("stroke", (d) => d.stroke)
-    .attr("stroke-width", (d) => d.width)
-    .attr("stroke-linecap", "round")
-    .attr("stroke-linejoin", "round")
-    .attr("stroke-dasharray", (d) => d.dasharray || null);
-
-  selection.exit().remove();
-  rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "false");
-
-  const labels = runtimeState.annotationView?.showFrontlineLabels ? getFrontlineLabelAnchors() : [];
-  const labelSelection = rendererSurfaceHost.getFrontlineLabelsGroup()
-    .selectAll("g.frontline-label")
-    .data(labels, (d) => d.key);
-
-  const labelEnter = labelSelection.enter().append("g").attr("class", "frontline-label");
-  labelEnter.append("rect").attr("rx", 4).attr("ry", 4);
-  labelEnter.append("text");
-
-  labelEnter.merge(labelSelection)
-    .attr("transform", (d) => `translate(${d.projected[0]},${d.projected[1]})`);
-
-  labelEnter.merge(labelSelection).select("text")
-    .attr("text-anchor", "middle")
-    .attr("dominant-baseline", "central")
-    .attr("font-family", STRATEGIC_LINE_LABEL_FONT)
-    .attr("font-size", 10)
-    .attr("font-weight", 600)
-    .attr("fill", "#f8fafc")
-    .text((d) => d.label);
-
-  labelEnter.merge(labelSelection).select("rect")
-    .each(function eachLabelRect(d) {
-      const textNode = globalThis.d3.select(this.parentNode).select("text").node();
-      const bbox = textNode?.getBBox?.();
-      const width = bbox ? bbox.width + 10 : 64;
-      const height = bbox ? bbox.height + 6 : 18;
-      globalThis.d3.select(this)
-        .attr("x", -width / 2)
-        .attr("y", -height / 2)
-        .attr("width", width)
-        .attr("height", height)
-        .attr("fill", "rgba(15, 23, 42, 0.78)")
-        .attr("stroke", "rgba(248, 250, 252, 0.18)")
-        .attr("stroke-width", 0.8);
-    });
-
-  labelSelection.exit().remove();
-  rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", labels.length ? "false" : "true");
+  runtimeState.cachedFrontlineLabelAnchors = [];
+  runtimeState.cachedFrontlineLabelAnchorsHash = "";
+  rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
+  rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
+  rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
+  rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
 }
 
 function syncInteractionLayerPointerEvents() {

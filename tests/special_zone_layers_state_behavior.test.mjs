@@ -7,19 +7,22 @@ import {
   captureScenarioLayerSaveRequestState,
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,
-  ensureSpecialZoneLayersState,
   getSpecialZoneLayerMemberSetOperationIds,
   getSpecialZoneStoryPreviewSteps,
-  mutateRuntimeSpecialZoneLayersState,
   mutateSpecialZoneLayersState,
-  normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
   parseSpecialZoneMemberImportText,
   resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
-  setRuntimeSpecialZoneLayersState,
   updateSpecialZoneLayerMembership,
 } from "../js/core/special_zone_layers.js";
+
+import {
+  ensureSpecialZoneLayersState,
+  normalizeRuntimeSpecialZoneLayersState,
+  setRuntimeSpecialZoneLayersState,
+  mutateRuntimeSpecialZoneLayersState,
+} from "../js/core/state/actions/special_zone_actions.js";
 
 test("special zone layer defaults and preset registry are stable", () => {
   const state = createEmptySpecialZoneLayersState({ topologyFingerprint: "topo-a" });

@@ -46,7 +46,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         )
 
 
-    def test_spatial_owner_pass_through_uses_module_level_bindings(self):
+    def test_spatial_owner_pass_through_calls_owner_directly(self):
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+resetSecondarySpatialIndexState\s*=")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+resetSecondarySpatialIndexState\s*\(")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+buildSecondarySpatialIndexes\s*=")
@@ -54,14 +54,11 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         combined_runtime_content = f"{self.renderer_content}\n{self.refresh_runtime_content}"
         self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({"), 3)
         self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
-        self.assertIn(
-            "buildIndexChunked,\n  buildSpatialIndex,\n  buildSpatialIndexChunked,\n  configureSpatialRuntimeFacade,\n} from \"./map_renderer/facade_spatial_runtime.js\";",
-            self.renderer_content,
-        )
-        self.assertIn(
-            "configureSpatialRuntimeFacade({\n  getSpatialIndexRuntimeOwner,\n});",
-            self.renderer_content,
-        )
+        self.assertNotIn("facade_spatial_runtime.js", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildIndex(...args);", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildIndexChunked(...args);", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildSpatialIndex(...args);", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildSpatialIndexChunked(...args);", self.renderer_content)
 
     def test_chunk_promotion_visual_stage_reuses_primary_derived_state_rebuild(self):
         self.assertIn("function rebuildPrimaryPoliticalDerivedState({", self.renderer_content)

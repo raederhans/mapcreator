@@ -34,7 +34,13 @@ export function createBorderMeshOwner({
   const {
     asFeatureLike,
     canonicalCountryCode,
-    clearPendingDynamicBorderTimer = () => {},
+    setTimeoutFn = (callback, delay) => globalThis.setTimeout(callback, delay),
+    clearTimeoutFn = (timerId) => globalThis.clearTimeout(timerId),
+    renderDynamicBorders = () => {},
+    getDetailAdmMeshBuildState = () => ({ signature: "", status: "idle" }),
+    setDetailAdmMeshBuildState = () => {},
+    scheduleDeferredHeavyBorderMeshes = () => {},
+    syncStaticMeshSnapshot = () => {},
     ensureSovereigntyState = () => {},
     getAdmin1Group,
     getEntityCountryCode,
@@ -110,6 +116,65 @@ export function createBorderMeshOwner({
       shouldExcludeOwnerBorderEntity,
       resolveOwnerBorderCode,
     });
+
+  function clearPendingDynamicBorderTimer() {
+    if (state.pendingDynamicBorderTimerId) {
+      clearTimeoutFn(state.pendingDynamicBorderTimerId);
+      state.pendingDynamicBorderTimerId = null;
+    }
+  }
+
+  function markDynamicBordersDirty(reason = "") {
+    state.dynamicBordersDirty = isDynamicBordersEnabled();
+    state.dynamicBordersDirtyReason = state.dynamicBordersDirty ? String(reason || "").trim() : "";
+    updateDynamicBorderStatusUI();
+  }
+
+  function recomputeDynamicBordersNow({ renderNow = true, reason = "" } = {}) {
+    clearPendingDynamicBorderTimer();
+    if (!isDynamicBordersEnabled()) {
+      state.dynamicBordersDirty = false;
+      state.dynamicBordersDirtyReason = "";
+      updateDynamicBorderStatusUI();
+      return false;
+    }
+    if (reason) state.dynamicBordersDirtyReason = String(reason);
+    rebuildDynamicBorders();
+    if (renderNow) renderDynamicBorders();
+    return true;
+  }
+
+  function scheduleDynamicBorderRecompute(reason = "", delayMs = 150) {
+    markDynamicBordersDirty(reason);
+    clearPendingDynamicBorderTimer();
+    state.pendingDynamicBorderTimerId = setTimeoutFn(() => {
+      state.pendingDynamicBorderTimerId = null;
+      recomputeDynamicBordersNow({ renderNow: true, reason });
+    }, Math.max(0, Number(delayMs) || 0));
+  }
+
+  function replaceDetailAdmBorders(meshes = []) {
+    state.cachedDetailAdmBorders = meshes;
+  }
+
+  // The draw pass requests detail meshes; this owner retires stale cache entries
+  // before scheduling their replacement so a snapshot cannot revive old borders.
+  function reconcileDetailAdmBorders({ signature, detailCountries }) {
+    const buildState = getDetailAdmMeshBuildState();
+    if (signature !== buildState.signature) {
+      const hadMeshes = state.cachedDetailAdmBorders.length > 0;
+      replaceDetailAdmBorders();
+      setDetailAdmMeshBuildState({
+        signature,
+        status: detailCountries.length ? "building" : "empty",
+      });
+      if (hadMeshes) syncStaticMeshSnapshot();
+      if (detailCountries.length) scheduleDeferredHeavyBorderMeshes();
+    } else if (!state.cachedDetailAdmBorders.length && buildState.status === "idle" && detailCountries.length) {
+      setDetailAdmMeshBuildState({ signature, status: "building" });
+      scheduleDeferredHeavyBorderMeshes();
+    }
+  }
 
   function rebuildDynamicBorders() {
     const startedAt = nowMs();
@@ -361,6 +426,12 @@ export function createBorderMeshOwner({
     });
 
   return {
+    clearPendingDynamicBorderTimer,
+    markDynamicBordersDirty,
+    recomputeDynamicBordersNow,
+    scheduleDynamicBorderRecompute,
+    replaceDetailAdmBorders,
+    reconcileDetailAdmBorders,
     buildOwnerBorderMesh,
     buildDynamicOwnerBorderMesh,
     countUnresolvedOwnerBorderEntities,

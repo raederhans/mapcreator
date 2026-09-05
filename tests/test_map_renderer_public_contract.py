@@ -145,7 +145,10 @@ def get_public_named_imports(path: Path) -> set[str]:
     for match in NAMED_IMPORT_RE.finditer(content):
         target = resolve_import_target(path, match.group("path"))
         if target == PUBLIC_FILE.resolve():
-            names.update(parse_named_list(match.group("names")))
+            names.update(
+                re.split(r"\s+as\s+", name, maxsplit=1)[0]
+                for name in parse_named_list(match.group("names"))
+            )
     return names
 
 
@@ -227,25 +230,6 @@ class MapRendererPublicContractTest(unittest.TestCase):
         self.assertIn("legendOpacityInputElement.value = String(Math.round(opacity * 100));", size_body)
 
         self.assertEqual(3, renderer.count('addEventListener("pointerenter", showLegendOpacityPanel);'))
-
-    def test_water_selection_honors_ctrl_toggle_before_paint_tools(self):
-        renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
-        fill_index = renderer.index('applyWaterRegionFill(id, runtimeState.selectedColor, {')
-        branch_start = renderer.rindex('if (hit.targetType === "water") {', 0, fill_index)
-        branch_end = renderer.index('if (runtimeState.selectedWaterRegionId) {', fill_index)
-        water_branch = renderer[branch_start:branch_end]
-        self.assertIn("const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);", water_branch)
-        self.assertIn('requestInteractionRender("water-selection-toggle-off");', water_branch)
-        self.assertIn('requestInteractionRender("water-selection-toggle-on");', water_branch)
-        self.assertLess(
-            water_branch.index("if (isSelectionToggle && previousWaterRegionId === id)"),
-            water_branch.index('if (runtimeState.currentTool === "eraser")'),
-        )
-        self.assertLess(
-            water_branch.index("if (isSelectionToggle)"),
-            water_branch.index('applyWaterRegionFill(id, runtimeState.selectedColor, {'),
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,7 +9,6 @@ FACILITY_SURFACE_JS = REPO_ROOT / "js" / "core" / "renderer" / "facility_surface
 TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_overview_render_owner.js"
 TRANSPORT_FACILITY_DISPLAY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_display_policy.js"
 TRANSPORT_FACILITY_ICONS_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icons.js"
-FACILITY_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
 CITY_POINTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_points_render_owner.js"
 MAP_HOVER_INTERACTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "map_hover_interaction_owner.js"
 
@@ -52,7 +51,6 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         city_owner_content = CITY_POINTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
         owner_content = FACILITY_SURFACE_JS.read_text(encoding="utf-8")
         transport_owner_content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
-        facade_content = FACILITY_FACADE_JS.read_text(encoding="utf-8")
         required_tokens = [
             "function getHoveredFacilityEntryFromEvent",
             'recordInteractionDurationMetric("interactionHoverFacilityProbeDuration"',
@@ -84,7 +82,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         for token in hover_owner_required_tokens:
             self.assertIn(token, hover_owner_content)
         self.assertIn('recordInteractionDurationMetric("interactionHoverCityProbeDuration"', city_owner_content)
-        self.assertIn("readFacadeGetter('getFacilitySurfaceOwner')().buildFacilityTooltipText(entry);", facade_content)
+        self.assertIn("return getFacilitySurfaceOwner().buildFacilityTooltipText(...args);", content)
         self.assertIn("getFacilitySurfaceOwner().applyFacilityInfoCardState(entry, {", content)
         self.assertIn("setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries, {", transport_owner_content)
         self.assertIn("const nextEntriesByKey = new Map(", content)

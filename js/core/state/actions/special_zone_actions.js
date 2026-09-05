@@ -1,5 +1,5 @@
-// Canonical special-zone layer, compatibility-editor, brush-mode, and dirty-state authority.
-// Persistence, rendering, UI feedback, metrics, and runtime hooks stay in callers.
+// Canonical special-zone layer, editor, membership-tool, hook-registration, and dirty-state authority.
+// Persistence, rendering, UI feedback, metrics, and runtime hook invocation stay in callers.
 
 import {
   mutateSpecialZoneLayersState,
@@ -374,4 +374,65 @@ export function setSpecialZonesOverlayDirtyState(target, value = true) {
   const nextDirty = Boolean(value);
   target.specialZonesOverlayDirty = nextDirty;
   return nextDirty;
+}
+
+export function ensureSpecialZoneLayersState(target) {
+  const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || target || null);
+  if (target && Object.prototype.hasOwnProperty.call(target, "specialZoneLayers")) {
+    return commitSpecialZoneLayersState(target, normalized, {}, { markDirty: false });
+  }
+  return normalized;
+}
+
+export function normalizeRuntimeSpecialZoneLayersState(target, options = {}) {
+  const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || null, options);
+  if (target && typeof target === "object") {
+    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
+  }
+  return normalized;
+}
+
+export function setRuntimeSpecialZoneLayersState(target, nextState, options = {}) {
+  const normalized = normalizeSpecialZoneLayersState(nextState, options);
+  if (target && typeof target === "object") {
+    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
+  }
+  return normalized;
+}
+
+export function mutateRuntimeSpecialZoneLayersState(target, mutation, options = {}) {
+  if (!target || typeof target !== "object") return undefined;
+  mutateSpecialZoneLayersStateAction(target, mutation, options);
+  return undefined;
+}
+
+export function activateSpecialZoneMembershipToolState(target, tool = "multi") {
+  if (!target || typeof target !== "object") return null;
+  const normalizedTool = String(tool || "multi").trim() || "multi";
+  target.specialZoneMembershipTool = normalizedTool;
+  if (target.currentTool !== "special-zone-membership") {
+    target.specialZonePreviousTool = target.currentTool || "fill";
+  }
+  target.currentTool = "special-zone-membership";
+  target.brushModeEnabled = false;
+  patchSpecialZoneEditorState(target, { active: false });
+  return normalizedTool;
+}
+
+export function exitSpecialZoneMembershipToolState(target) {
+  if (!target || typeof target !== "object") return "";
+  const previousTool = target.specialZonePreviousTool || "fill";
+  target.currentTool = previousTool;
+  target.specialZonePreviousTool = "";
+  return previousTool;
+}
+
+export function registerSpecialZonesWorkbenchRuntimeHooks(target, hooks = {}) {
+  if (!target || typeof target !== "object") return;
+  if (typeof hooks.renderWorkbench === "function") {
+    target.updateSpecialZonesWorkbenchUIFn = hooks.renderWorkbench;
+  }
+  if (typeof hooks.renderCurrentTarget === "function") {
+    target.updateSpecialZonesWorkbenchCurrentTargetUIFn = hooks.renderCurrentTarget;
+  }
 }
