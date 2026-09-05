@@ -150,26 +150,29 @@ class StrategicOverlaySidebarBoundaryContractTest(unittest.TestCase):
         helper_content = UNIT_COUNTER_BIND_EVENTS_HELPER_JS.read_text(encoding="utf-8")
         catalog_helper_content = UNIT_COUNTER_CATALOG_HELPER_JS.read_text(encoding="utf-8")
 
-        self.assertIn("getHoi4CatalogFilterOptions,", sidebar_content)
+        self.assertNotIn("getHoi4CatalogFilterOptions", sidebar_content)
         self.assertIn('import { bindUnitCounterSidebarEvents } from "./strategic_overlay/unit_counter_bind_events_helper.js";', controller_content)
         self.assertIn("bindUnitCounterSidebarEvents({", controller_content)
         self.assertIn("helpers: {", controller_content)
         self.assertIn("export function bindUnitCounterSidebarEvents({", helper_content)
         self.assertIn("const syncUnitCounterCombatStateToSelection = (partial = {}, { commitSelected = true } = {}) => {", helper_content)
         self.assertIn('scheduleStrategicOverlayRefresh(["counterCombat", "counterPreview"]);', helper_content)
-        self.assertIn('import {\n  applyUnitCounterCatalogReviewAction,', helper_content)
+        self.assertIn('unitCounterCatalog.applyReviewAction({', helper_content)
         self.assertIn('import { getCounterEditorModalFocusableElements } from "./unit_counter_modal_helper.js";', helper_content)
-        self.assertIn("getHoi4CatalogFilterOptions,", catalog_helper_content)
         self.assertIn("getHoi4CatalogFilterOptions(effectivePresetId)", catalog_helper_content)
         self.assertIsNone(re.search(r"const\s+syncUnitCounterCombatStateToSelection\s*=\s*\(partial = \{\}, \{ commitSelected = true \} = \{\}\)\s*=>", controller_content))
         self.assertIsNone(re.search(r"const\s+applyUnitCounterCombatPreset\s*=\s*\(presetId, \{ source = \"preset\" \} = \{\}\)\s*=>", controller_content))
 
-    def test_sidebar_keeps_hoi4_manifest_refresh_callback_bridge(self):
-        content = SIDEBAR_JS.read_text(encoding="utf-8")
-
-        self.assertIn("const requestStrategicOverlayCatalogRefresh = () => {", content)
-        self.assertIn('callRuntimeHook(state, "updateStrategicOverlayUIFn", { scopes: ["counterCatalog"] });', content)
-        self.assertIn("requestStrategicOverlayCatalogRefresh();", content)
+    def test_catalog_lifecycle_is_owned_inside_the_strategic_controller(self):
+        sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")
+        controller_content = STRATEGIC_OVERLAY_CONTROLLER_JS.read_text(encoding="utf-8")
+        catalog_content = UNIT_COUNTER_CATALOG_HELPER_JS.read_text(encoding="utf-8")
+        self.assertNotIn("requestStrategicOverlayCatalogRefresh", sidebar_content)
+        self.assertNotIn("hoi4UnitIconManifestStatus", sidebar_content)
+        self.assertNotIn("hoi4UnitIconReviewDraft", sidebar_content)
+        self.assertIn("createUnitCounterCatalog({", controller_content)
+        self.assertIn('refreshStrategicOverlayUI({ scopes: ["counterCatalog"] })', controller_content)
+        self.assertNotIn("callRuntimeHook", catalog_content)
 
     def test_renderer_and_import_funnel_keep_state_callback_contract(self):
         map_renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

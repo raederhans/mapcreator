@@ -287,13 +287,14 @@ function createHarness({
       return note;
     },
     getDynamicCountryEntries: () => countryEntries,
-    createCountryInspectorState: (entry, entryIndex) => ({ ...entry, entryIndex }),
-    buildInspectorTopLevelCountryEntries: (entries) => entries,
-    getPriorityCountryOrderMap: () => new Map(),
-    compareInspectorCountries: () => 0,
-    buildCountryColorTree: () => countryTree,
-    ensureInitialInspectorExpansion: () => {},
-    getInspectorGroupExpansionKey: (value) => String(value || ""),
+    createCountryInspectorState: (entry, entryIndex) => {
+      const group = countryTree.find((node) => node.countries.some((country) => country.code === entry.code));
+      return {
+        ...entry,
+        entryIndex,
+        ...(group ? { topLevelGroupId: group.id, topLevelGroupLabel: group.displayLabel } : {}),
+      };
+    },
     getCountryChildSectionsForParent: (code) => childSectionsByParent.get(String(code || "").trim().toUpperCase()) || [],
     buildCountryRowMetaText,
     getResolvedCountryColor: () => "#000000",
@@ -561,7 +562,7 @@ test("related country child rows hide releasable parent lists", () => {
         return parts.join(" · ");
       },
     });
-    harness.runtimeState.expandedInspectorContinents.add("continent_europe");
+    harness.runtimeState.expandedInspectorContinents.add("group::continent_europe");
     harness.runtimeState.expandedInspectorReleaseParents.add("GER");
 
     harness.controller.renderList();

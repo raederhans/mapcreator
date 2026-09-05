@@ -1,3 +1,5 @@
+import { createCountryInspectorModel } from "./country_inspector_model.js";
+
 /**
  * Owns the country inspector explorer panel:
  * - country list rendering
@@ -79,12 +81,6 @@ export function createCountryInspectorController({
   createEmptyNote,
   getDynamicCountryEntries,
   createCountryInspectorState,
-  buildInspectorTopLevelCountryEntries,
-  getPriorityCountryOrderMap,
-  compareInspectorCountries,
-  buildCountryColorTree,
-  ensureInitialInspectorExpansion,
-  getInspectorGroupExpansionKey,
   getCountryChildSectionsForParent,
   buildCountryRowMetaText,
   getResolvedCountryColor,
@@ -102,6 +98,15 @@ export function createCountryInspectorController({
   onHgoIdentityRetry = null,
   onHgoIdentitySettingsChange = null,
 }) {
+  const {
+    buildInspectorTopLevelCountryEntries,
+    getPriorityCountryOrderMap,
+    compareInspectorCountries,
+    buildCountryColorTree,
+    ensureInitialInspectorExpansion,
+    getInspectorGroupExpansionKey,
+  } = createCountryInspectorModel(runtimeState, t);
+
   const getSearchTerm = () => (searchInput?.value || "").trim().toLowerCase();
 
   const ensureHgoIdentitySettings = () => {
