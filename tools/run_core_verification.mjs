@@ -42,6 +42,7 @@ import {
   prepareRepositoryVerificationCatalog,
 } from "./verification/script_portfolio.mjs";
 import { buildRouteIndex } from "./test_route_registry.mjs";
+import { VERIFICATION_DOMAINS } from "./verification/verification_domains.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
@@ -79,6 +80,7 @@ export function parseArgs(argv) {
   const args = {
     list: false,
     includeMainThread: false,
+    includeReserved: false,
     resume: false,
     resumeFrom: null,
     nightlyLinuxCore: false,
@@ -93,6 +95,7 @@ export function parseArgs(argv) {
     const token = argv[index];
     if (token === "--list") args.list = true;
     else if (token === "--include-main-thread") args.includeMainThread = true;
+    else if (token === "--include-reserved") args.includeReserved = true;
     else if (token === "--resume") args.resume = true;
     else if (token === "--nightly-linux-core") args.nightlyLinuxCore = true;
     else if (token === "--nightly-scenario-heavy") args.nightlyScenarioHeavy = true;
@@ -168,17 +171,25 @@ function makeCommandEntry(commandRef, group, packageScripts) {
 
 export function buildCoreVerificationPlan({
   includeMainThread = false,
+  includeReserved = includeMainThread,
   applySupersession = true,
   packageScripts = readPackageScripts(),
   groups = DEFAULT_GROUPS,
   mainThreadGroup = MAIN_THREAD_GROUP,
   optionalMainThreadCommands = OPTIONAL_MAIN_THREAD_COMMANDS,
+  metadata = VERIFICATION_DOMAINS,
 } = {}) {
   const planGroups = [];
   const omittedCommands = [];
   const duplicateCommands = [];
   const skippedMainThreadCommands = [];
   const seenConcreteCommands = new Map();
+  const metadataByCommand = new Map();
+  for (const record of metadata) {
+    const records = metadataByCommand.get(record.commandRef) || [];
+    records.push(record);
+    metadataByCommand.set(record.commandRef, records);
+  }
 
   function addGroup(group) {
     const entries = [];
@@ -194,6 +205,18 @@ export function buildCoreVerificationPlan({
       }
       if (isSelfRecursive(commandRef, command)) {
         omittedCommands.push({ group: group.id, commandRef, reason: "self recursion" });
+        continue;
+      }
+      const records = metadataByCommand.get(commandRef) || [];
+      if (!includeReserved && !includeMainThread && (records.length === 0 || records.some((record) => (
+        record.executionOwner !== "child-safe"
+        || record.resourceLocks?.length !== 0
+        || record.cost === "heavy"
+      )))) {
+        skippedMainThreadCommands.push({
+          commandRef,
+          reason: "reserved or unclassified command; use an explicit main-thread/nightly lane",
+        });
         continue;
       }
       if (seenConcreteCommands.has(command)) {
@@ -243,8 +266,9 @@ export function buildCoreVerificationPlan({
     schemaVersion: 1,
     lane: includeMainThread
       ? "non-browser deterministic core lane plus main-thread E2E"
-      : "non-browser deterministic core lane",
+      : includeReserved ? "explicit reserved deterministic core lane" : "child-safe core lane without resource locks",
     includeMainThread,
+    includeReserved: includeReserved || includeMainThread,
     startsBrowserDevServerOrPlaywright: includeMainThread,
     requiresDistLaneOwner: defaultIncludesPagesGroup,
     groups: planGroups,
@@ -305,7 +329,7 @@ export function partitionNightlyLinuxCoreCommands(commands, {
 }
 
 export function buildNightlyLinuxCoreShardPlan({
-  basePlan = buildCoreVerificationPlan(),
+  basePlan = buildCoreVerificationPlan({ includeReserved: true }),
   shardIndex = 1,
   shardCount = 3,
   repoRoot = REPO_ROOT,
@@ -711,6 +735,7 @@ export function runCoreVerification({
   const liveFallbackSession = createStateWriterPolicyEvidenceSession();
   const basePlan = buildCoreVerificationPlan({
     includeMainThread: args.includeMainThread,
+    includeReserved: args.includeReserved || args.includeMainThread || args.nightlyLinuxCore,
     packageScripts,
   });
   const plan = args.nightlyScenarioHeavy

@@ -1,12 +1,13 @@
 # verify:core
 
-`verify:core` 是 Scenario Forge 的 non-browser deterministic core lane。它会按顺序运行一组 package script，并在遇到第一个失败项时停止。
+`verify:core` 默认运行明确归属为 child-safe、无资源锁且非 heavy 的核心检查。它按顺序执行，并在遇到第一个失败项时停止。日常局部修改优先使用已有目标测试或 `verify:edit`；核心计划用于验证框架或相应跨模块改动。
 
 ## 命令
 
 - `npm run verify:core:list`：只生成 JSON 和 Markdown 报告，不实际执行命令。
-- `npm run verify:core`：运行默认的确定性核心验证计划。
-- `npm run verify:core:main-thread`：在默认计划上追加显式的 main-thread E2E 组。
+- `npm run verify:core`：运行默认的 child-safe 核心验证计划。
+- `npm run verify:core -- --include-reserved`：恢复完整非浏览器计划，包含有资源锁或主线程归属的保留命令。
+- `npm run verify:core:main-thread`：运行完整保留计划，并追加显式的 main-thread E2E 组。
 - `npm run verify:core -- --resume`：从默认 JSON checkpoint 恢复同计划的连续已通过前缀。
 - `npm run verify:core -- --resume-from <path>`：从指定 checkpoint 恢复。
 - `npm run test:node:verify-core-runner`：验证 runner 自身行为。
@@ -19,7 +20,7 @@
 
 ## 默认范围
 
-默认计划覆盖这些分组：
+计划从以下候选分组生成；默认只保留其中满足 child-safe、无资源锁且非 heavy 条件的命令，空分组不进入执行计划：
 
 - `infra`
 - `python-quick`
@@ -28,9 +29,9 @@
 - `scenario-project-chunk`
 - `pages`
 
-这些分组由 `tools/verification/verification_domains.mjs` 生成，`tools/run_core_verification.mjs` 只负责执行、报告和失败即停。修改命令归属时先更新 metadata，再运行 `npm run test:node:verification-metadata`。
+这些分组由 canonical metadata 投影生成，`tools/run_core_verification.mjs` 负责入口范围筛选、执行、报告和失败即停。修改命令归属时按[编辑导航](verification-metadata.md)更新对应 records 文件，并运行相关目标检查。
 
-Core plan 在保留 metadata 顺序和分组归属的前提下应用 `tools/verification/command_supersession.mjs`。当前默认 metadata 先生成 87 个顶层命令，再折叠 7 个由更大 Node suite 完整覆盖的命令，最终执行 80 个顶层命令。静态 package-script closure 从 103 个叶命令收敛为 95 个，Node test 进程从 70 个收敛为 62 个，Python wrapper 保持 20 个；前后 Node test-file closure 完全相同。
+Core plan 在保留 metadata 顺序和分组归属的前提下应用 `tools/verification/command_supersession.mjs`，折叠被已选 suite 完整覆盖的命令。具体命令数以当前 `verify:core:list` 报告为准；检查保留计划时使用 `npm run verify:core:list -- --include-reserved`。Nightly Linux core 分片与 `verify:nightly` 使用保留计划。
 
 当前 Core command-closure 映射：
 
@@ -43,17 +44,17 @@ SF-ATS adaptive/supervisor 计划同时使用 supervisor aggregate 映射：`ver
 
 Command supersession 在生成任何折叠结果前检查 selected command graph。Self-cycle 或 multi-node cycle 会以稳定的 `command-supersession-cycle` code 和排序节点列表终止计划；每条 provenance 必须解析到 retained root，无法解析时以 `command-supersession-unresolved:<command>` 终止计划。Core、adaptive runner 和 supervisor plan 共用这一 fail-closed 合同。
 
-默认范围是确定性的，不会启动 browser、dev server 或 Playwright。它覆盖 CLI/build 合同，并默认保留 `pages` 分组：
+默认范围不会启动 browser、dev server 或 Playwright，也不选择带 dist / runtime-output 锁的 Pages 构建。显式保留计划包含 `pages` 分组：
 
 - `verify:pages-dist-and-drift`
 
 `verify:pages-dist` 保留 Pages mirror 生成、startup shell、landing assets 和 landing view contracts。Sample runtime/import contracts 由独立 `test:node:sample-project-contracts` route 与 P4.1 承接，避免 Pages 与 P4.1 用不同资源锁重复认领同一 leaf。`verify:pages-dist-and-drift` 只构建一次，随后运行同一组 Pages contracts 和 dist drift 检查。`verify:dist-drift` 保留为独立诊断命令；adaptive/supervisor 同时选中这些命令时，command supersession 会保留覆盖完整 admission 合同的 `verify:pages-dist-and-drift`。
 
-`pages` 分组会写入或检查 Pages mirror、dist manifest 和 `.runtime` 报告，所以运行 `verify:core` 时，integration owner 需要持有 dist lane。这个默认范围适合做 non-browser 核心安全线；它具备 dist / runtime-output 资源语义。
+`pages` 分组会写入或检查 Pages mirror、dist manifest 和 `.runtime` 报告。执行包含该分组的保留计划或 main-thread 计划时，由 integration owner 协调 dist lane；普通默认计划不因此要求占用 dist lane。
 
 ## Main-thread 通道
 
-`verify:core:main-thread` 会追加这些显式 E2E 命令：
+`verify:core:main-thread` 在完整保留计划上追加这些显式 E2E 命令：
 
 - `test:e2e:smoke`
 - `test:e2e:scenario-apply-concurrency`
@@ -101,7 +102,7 @@ runner 会在每条命令开始前和结束后原子写入 JSON checkpoint，并
 
 quick/focused 入口服务开发回归，完整 suite 继续承担 frozen candidate admission。三种模式使用不同 TAP 文件，避免快速检查覆盖完整 admission evidence。
 
-P0.1.1 后验收要求 full `npm run verify:core` 实际运行，并把通过结果或失败分类记录到 worktree registry。
+历史 P0.1.1 验收中的 full core 指完整非浏览器集合；当前等价入口为 `npm run verify:core -- --include-reserved`。只有执行该历史验收时才按其要求记录通过结果或失败分类，不把它作为普通局部修改的前置检查。
 
 ## 有意跳过的项
 

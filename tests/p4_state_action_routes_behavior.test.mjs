@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { buildRecommendation } from "../tools/select_verification_targets.mjs";
 import { buildRouteIndex } from "../tools/test_route_registry.mjs";
+import { VERIFICATION_CATALOG_SOURCE_FILES } from "../tools/verification/catalog/source_files.mjs";
 import {
   P4_PHASE_EXPECTED_COMMANDS,
   buildP4StateActionRouteReport,
@@ -175,6 +176,31 @@ test("P4 ownership includes production JS and explicit P4 policy surfaces", () =
   assert.equal(isP4OwnedChangedFile("tools/p4_state_action_phases.mjs"), true);
   assert.equal(isP4OwnedChangedFile("dist/app/js/core/state/actions/boot_actions.js"), false);
   assert.equal(isP4OwnedChangedFile("docs/archive/unrelated.md"), false);
+});
+
+test("split catalog modules retain exact P4 ownership and current phase routes", () => {
+  const routes = buildRouteIndex();
+  const changedFiles = [...VERIFICATION_CATALOG_SOURCE_FILES];
+  for (const file of changedFiles) assert.equal(isP4OwnedChangedFile(file), true, file);
+  for (const file of [
+    "tools/verification/catalog/unregistered.mjs",
+    "tools/verification/catalog/source_files.mjs.bak",
+    "tools/verification/catalog-other/policies.mjs",
+  ]) assert.equal(isP4OwnedChangedFile(file), false, file);
+  const report = buildP4StateActionRouteReport({
+    phase: "P4.4",
+    changedFiles,
+    recommendation: buildRecommendation(changedFiles, routes),
+    routes,
+  });
+  assert.equal(report.verdict, "pass");
+  assert.deepEqual(report.routeGaps, []);
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.equal(report.files.length, changedFiles.length);
+  for (const file of report.files) {
+    assert.deepEqual(file.matchedExpectedPhaseCommands, ["verify:p4:p4-4"]);
+    assert.ok(file.directStateOwnershipRecommendations.some(({ commandRef }) => commandRef === "verify:p4:p4-4"));
+  }
 });
 
 test("direct state-ownership route with the expected phase command passes", () => {

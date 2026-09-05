@@ -14,7 +14,6 @@ import {
   assertPreparedVerificationCatalog,
   buildScriptPortfolio,
   CANONICAL_VERIFICATION_ENTRYPOINTS,
-  compareVerificationMetadataShadow,
   VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS,
   VERIFICATION_TIER_ENTRYPOINTS,
   checkVerificationCatalogConsistency,
@@ -32,10 +31,10 @@ import {
 import {
   buildRouteIndex,
   ROUTE_REGISTRY_SOURCE_IDENTITY,
+  validateDiscoveredRouteCoverage,
 } from "../tools/test_route_registry.mjs";
 import { COMMAND_SUPERSESSION_SOURCE_IDENTITY } from "../tools/verification/command_supersession.mjs";
 import {
-  LEGACY_VERIFICATION_ESTIMATE_POLICY,
   VERIFICATION_DOMAINS,
   VERIFICATION_ESTIMATE_POLICY,
 } from "../tools/verification/verification_domains.mjs";
@@ -43,61 +42,51 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CLI_PATH = path.join(REPO_ROOT, "tools", "verification", "script_portfolio.mjs");
 
-test("canonical metadata source owns every projection and shadows the retained legacy surfaces", () => {
+test("canonical metadata owns runtime projections and checks actual package scripts", () => {
   const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
-  const report = compareVerificationMetadataShadow({ packageScripts });
-  assert.equal(report.equal, true);
-  assert.equal(report.zeroSpawn, true);
-  assert.deepEqual(report.mismatches, []);
-  assert.equal(report.authoredSurfacesBefore, 5);
-  assert.equal(report.authoredSurfacesAfter, 1);
-  assert.deepEqual(report.projections, {
-    verificationRecords: 147,
-    routes: 408,
-    commands: 363,
-    catalogEntries: 469,
-    leaves: 438,
-    suites: 31,
-    portfolioScripts: 346,
-    superseders: 16,
-    supersessionEdges: 46,
-  });
   assert.deepEqual(ROUTE_REGISTRY_SOURCE_IDENTITY, VERIFICATION_METADATA_SOURCE_IDENTITY);
   assert.deepEqual(COMMAND_SUPERSESSION_SOURCE_IDENTITY, VERIFICATION_METADATA_SOURCE_IDENTITY);
   const prepared = prepareRepositoryVerificationCatalog({ packageScripts });
   assert.deepEqual(prepared.sourceIdentity.metadataSourceIdentity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  const driftedScripts = { ...packageScripts, "verify:commit": "node forged-commit.mjs" };
   assert.throws(
-    () => prepareRepositoryVerificationCatalog({ packageScripts: driftedScripts }),
+    () => prepareRepositoryVerificationCatalog({ packageScripts: { ...packageScripts, "verify:commit": "node forged-commit.mjs" } }),
     /verification-catalog-package-shadow-drift/,
   );
 });
 
-test("shadow comparison reports deterministic metadata drift and exits two before spawning", () => {
-  const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
-  const driftedRoutes = buildRouteIndex();
-  const driftedRoute = driftedRoutes.find((entry) => entry.id.startsWith("e2e:"));
-  driftedRoute.cost = driftedRoute.cost === "fast" ? "contract" : "fast";
-  const drifted = compareVerificationMetadataShadow({
-    packageScripts,
-    canonicalSelectorRoutes: driftedRoutes,
-  });
-  assert.equal(drifted.equal, false);
-  assert.equal(drifted.zeroSpawn, true);
-  assert.deepEqual(drifted.mismatches.map((entry) => entry.field), ["authority", "catalog"]);
+test("retired metadata shadow CLI is rejected rather than reporting fabricated equality", () => {
+  assert.throws(() => parseScriptPortfolioArgs(["shadow-check"]), /unknown-action/);
+});
 
-  const output = [];
-  let comparatorCalls = 0;
-  const exitCode = runScriptPortfolioCli(["shadow-check", "--format", "json"], {
-    stdout: { write: (value) => output.push(value) },
-    shadowComparator() {
-      comparatorCalls += 1;
-      return drifted;
-    },
-  });
-  assert.equal(comparatorCalls, 1);
-  assert.equal(exitCode, 2);
-  assert.equal(JSON.parse(output.join("")).equal, false);
+test("actual package and manifest entries detect missing routes without a legacy table", () => {
+  const fixture = {
+    packageJson: { scripts: { "test:node:new-behavior": "node --test tests/new.test.mjs" } },
+    e2eRoutes: [{ commandRef: "node tools/e2e_layering.mjs run-spec tests/e2e/new.spec.js" }],
+    heavyGroups: {},
+  };
+  const routes = [{ commandRef: "test:node:new-behavior" }, ...fixture.e2eRoutes];
+  assert.deepEqual(validateDiscoveredRouteCoverage(routes, fixture), { discoveredCommands: 2 });
+  assert.throws(() => validateDiscoveredRouteCoverage(routes.slice(1), fixture), /coverage-missing:test:node:new-behavior/);
+  assert.throws(() => validateDiscoveredRouteCoverage(routes.slice(0, 1), fixture), /coverage-missing:node tools\/e2e_layering/);
+});
+
+test("Python discovery requires coverage and accepts only covered aliases and aggregates", () => {
+  const scripts = {
+    "test:py:new-contract": "npm run python -- -m unittest tests.test_new_contract -q",
+    "test:python:alias": "npm run test:py:new-contract",
+    "test:python:aggregate": "npm run test:py:new-contract && npm run test:python:alias",
+  };
+  const fixture = { packageJson: { scripts }, e2eRoutes: [], heavyGroups: {} };
+  assert.throws(() => validateDiscoveredRouteCoverage([], fixture), /coverage-missing:.*test:py:new-contract/);
+  assert.deepEqual(validateDiscoveredRouteCoverage([
+    { commandRef: "python -m unittest tests.test_new_contract -q" },
+  ], fixture), { discoveredCommands: 3 });
+  assert.throws(() => validateDiscoveredRouteCoverage([], {
+    ...fixture, packageJson: { scripts: { "test:python:standalone": "python -m unittest tests.test_other -q" } },
+  }), /coverage-missing:test:python:standalone/);
+  assert.throws(() => validateDiscoveredRouteCoverage([{ commandRef: "test:py:new-contract" }], {
+    ...fixture, packageJson: { scripts: { ...scripts, "test:python:mixed": "npm run test:py:new-contract && python extra.py" } },
+  }), /coverage-missing:test:python:mixed/);
 });
 
 test("repository builders reject every caller-owned authority surface before planning", () => {
@@ -218,52 +207,6 @@ test("production planning rejects self-consistent forged repository authority be
     /verification-plan-source-authority-drift/,
   );
   assert.equal(executions, 0);
-  assert.equal(runnerSpawns, 0);
-});
-
-test("shadow estimate comparison covers aggregation and every cost-class field", () => {
-  const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
-  const mutations = [{
-    label: "aggregation",
-    mutate(policy) {
-      policy.aggregation = "forged-aggregation";
-    },
-  }];
-  for (const costClass of ["fast", "contract", "heavy"]) {
-    for (const field of [
-      "groupBaseRuntimeSeconds",
-      "perLeafRuntimeSeconds",
-      "groupBaseCostUnits",
-      "perLeafCostUnits",
-    ]) {
-      mutations.push({
-        label: `${costClass}.${field}`,
-        mutate(policy) {
-          policy.costClasses[costClass][field] += 1;
-        },
-      });
-    }
-  }
-
-  let runnerSpawns = 0;
-  for (const mutation of mutations) {
-    const legacyEstimatePolicy = structuredClone(LEGACY_VERIFICATION_ESTIMATE_POLICY);
-    mutation.mutate(legacyEstimatePolicy);
-    const report = compareVerificationMetadataShadow({ packageScripts, legacyEstimatePolicy });
-    assert.equal(report.equal, false, mutation.label);
-    assert.equal(report.zeroSpawn, true, mutation.label);
-    assert.deepEqual(report.mismatches.map((entry) => entry.field), ["estimatePolicy"], mutation.label);
-    const exitCode = runScriptPortfolioCli(["shadow-check", "--format", "json"], {
-      stdout: { write() {} },
-      shadowComparator() {
-        return report;
-      },
-      spawn() {
-        runnerSpawns += 1;
-      },
-    });
-    assert.equal(exitCode, 2, mutation.label);
-  }
   assert.equal(runnerSpawns, 0);
 });
 

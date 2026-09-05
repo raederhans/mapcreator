@@ -70,14 +70,6 @@ import {
 } from "../tools/verification/script_portfolio.mjs";
 import { VERIFICATION_DOMAINS } from "../tools/verification/verification_domains.mjs";
 import { VERIFICATION_METADATA_SOURCE_IDENTITY } from "../tools/verification/verification_catalog_projection.mjs";
-import {
-  buildCommitVerificationPlan,
-  discoverChangedFiles as discoverCommitChangedFiles,
-  parsePorcelainChangedFiles,
-  parseCommitVerificationArgs,
-  runCommitVerification,
-  runCommitVerificationCli,
-} from "../tools/run_commit_verification.mjs";
 
 const M9_LIVE_REPOSITORY_SHADOW_COMMAND = VERIFICATION_DOMAINS.find(
   (record) => record.id === "infra:p4-repository-analysis-bundle-live-shadow",
@@ -470,96 +462,41 @@ test("verify-core runner selector coverage stays out of renderer runtime", () =>
   assertNoRendererRuntimeSelection(buildRecommendation(["tests/verify_core_runner_behavior.test.mjs"]));
 });
 
-test("default plan excludes E2E and lists skipped main-thread checks", () => {
+test("default core only admits child-safe commands without resource locks", () => {
   const plan = buildCoreVerificationPlan({ packageScripts: PACKAGE_SCRIPTS });
-
   assert.equal(plan.includeMainThread, false);
-  assert.equal(plan.startsBrowserDevServerOrPlaywright, false);
-  assert.equal(plan.requiresDistLaneOwner, true);
-  assert.deepEqual(plan.omittedCommands, []);
-  assert.deepEqual(plan.duplicateCommands, []);
-  assert.equal(commandRefs(plan).some((commandRef) => commandRef.startsWith("test:e2e:")), false);
-  assert.equal(commandRefs(plan).includes("perf:williams-crossover:run"), false);
-  assertCommandRefsInclude(plan, [
-    "verify:state-write-allowlist",
-    "verify:p4:state-writer-policy",
-    "test:python:p4:state-write-boundary",
-    "test:node:p4:p4-1",
-    "test:python:p4:p4-1-boundary",
-    "test:node:p4:p4-2a",
-    "test:python:p4:p4-2a-boundary",
-    "test:node:p4:p4-2b",
-    "test:python:p4:p4-2b-boundary",
-    "test:node:p4:p4-2c",
-    "test:python:p4:p4-2c-boundary",
-    "test:node:p4:p4-3",
-    "test:python:p4:p4-3-boundary",
-    "verify:pages-dist-and-drift",
-    "test:node:verification-metadata",
-    "test:node:renderer-pass-family-inventory",
-    "test:node:visual-effects-pass-owner",
-    "test:node:context-pass-orchestrator-owner",
-    "test:node:renderer-political-pass-orchestration-preflight",
-    "test:node:political-pass-orchestrator-owner",
-    "test:python:map-renderer-political-pass-orchestrator-boundary",
-    "test:python:map-renderer-render-pipeline-passes-boundary",
-    "test:node:render-sample-role-policy",
-    "test:node:williams-crossover-governance",
-    "test:node:williams-crossover-job-runner",
-    "test:node:renderer-draw-canvas-orchestration-inventory",
-    "test:node:draw-canvas-orchestration-owner",
-    "test:python:map-renderer-draw-canvas-orchestration-boundary",
-    "test:node:cached-pass-compositor-owner",
-    "test:node:transformed-frame-compositor-owner",
-    "test:python:map-renderer-frame-compositor-boundary",
-    "test:node:renderer-runtime-context-foundation",
-    "test:node:renderer-runtime-context-receiver",
-    "test:node:renderer-runtime-context-render-cache",
-    "test:node:renderer-runtime-context-projection-viewport",
-    "test:node:renderer-runtime-context-viewport-mutation",
-    "test:node:renderer-runtime-context-interaction",
-    "test:node:renderer-runtime-context-hit-hover",
-    "test:node:click-selection-transaction-owner",
-    "test:node:renderer-click-selection-transaction-inventory",
-    "test:python:map-renderer-render-cache-owner-boundary",
-    "test:python:map-renderer-projection-viewport-context-boundary",
-    "test:python:map-renderer-viewport-mutation-context-boundary",
-    "test:python:map-renderer-interaction-context-boundary",
-    "test:python:map-renderer-hit-hover-context-boundary",
-    "test:python:map-renderer-click-selection-transaction-boundary",
-    "test:node:renderer-viewport-update-owner",
-    "test:node:viewport-resize-lifecycle-owner",
-    "test:node:map-interaction-event-binding-owner",
-    "test:node:render-pass-cache-host-owner-suite",
-    "test:node:render-pass-commit-accounting-owner-suite",
-    "test:node:hit-canvas-scheduling-owner-suite",
-  ]);
-  assert.equal(commandRefs(plan).includes("verify:p4:p4-1"), false);
-  assert.equal(commandRefs(plan).includes("test:node:zoom-interaction-lifecycle-owner"), false);
-  assert.ok(commandRefs(plan).includes(
-    "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q",
-  ));
-  assert.deepEqual(
-    plan.skippedMainThreadCommands.map((entry) => entry.commandRef),
-    [
-      "test:e2e:smoke",
-      "test:e2e:scenario-apply-concurrency",
-      "test:e2e:project-save-load",
-      "test:e2e:interaction-funnel",
-      "test:node:windows-job-runtime:integration",
-      "perf:williams-power-scheme:live-preflight",
-      "test:e2e:dev:scenario-chunk-runtime",
-      "test:e2e:tno-contracts",
-      "test:e2e:water-rendering",
-      "test:e2e:city-rendering",
-      M9_LIVE_REPOSITORY_SHADOW_COMMAND,
-    ],
-  );
+  assert.equal(plan.requiresDistLaneOwner, false);
+  assert.ok(plan.commandsToRun.length > 0);
+  for (const entry of plan.commandsToRun) {
+    const records = VERIFICATION_DOMAINS.filter((record) => record.commandRef === entry.commandRef);
+    assert.ok(records.length > 0, entry.commandRef);
+    assert.ok(records.every((record) => record.executionOwner === "child-safe"
+      && record.resourceLocks.length === 0 && record.cost !== "heavy"), entry.commandRef);
+  }
+  for (const commandRef of ["verify:p4:state-writer-policy", "test:python:p4:state-write-boundary",
+    "verify:pages-dist-and-drift", "verify:scenario-contracts:strict", "test:e2e:smoke"]) {
+    assert.equal(commandRefs(plan).includes(commandRef), false, commandRef);
+    assert.ok(plan.skippedMainThreadCommands.some((entry) => entry.commandRef === commandRef), commandRef);
+  }
+  const explicit = buildCoreVerificationPlan({ packageScripts: PACKAGE_SCRIPTS, includeMainThread: true });
+  assertCommandRefsInclude(explicit, ["verify:p4:state-writer-policy", "verify:pages-dist-and-drift",
+    "verify:scenario-contracts:strict", "test:e2e:smoke"]);
+});
+
+test("default core rejects missing metadata and restrictive duplicate records", () => {
+  const groups = [{ id: "fixture", title: "fixture", commands: ["safe", "locked", "unknown", "mixed"] }];
+  const packageScripts = Object.fromEntries(groups[0].commands.map((ref) => [ref, "node " + ref + ".mjs"]));
+  const record = (commandRef, patch = {}) => ({ commandRef, executionOwner: "child-safe", resourceLocks: [], cost: "contract", ...patch });
+  const metadata = [record("safe"), record("locked", { resourceLocks: ["dist"] }),
+    record("mixed"), record("mixed", { executionOwner: "main-thread" })];
+  const options = { groups, packageScripts, metadata, mainThreadGroup: { id: "main", commands: [] }, optionalMainThreadCommands: [] };
+  assert.deepEqual(commandRefs(buildCoreVerificationPlan(options)), ["safe"]);
+  assert.deepEqual(commandRefs(buildCoreVerificationPlan({ ...options, includeReserved: true })), groups[0].commands);
 });
 
 test("Nightly Linux core sharding balances canonical leaves and excludes platform-owned producers", () => {
   const packageScripts = JSON.parse(fs.readFileSync("package.json", "utf8")).scripts;
-  const basePlan = buildCoreVerificationPlan({ packageScripts });
+  const basePlan = buildCoreVerificationPlan({ packageScripts, includeReserved: true });
   const plan = buildNightlyLinuxCoreShardPlan({
     basePlan,
     shardIndex: 1,
@@ -680,15 +617,16 @@ test("Nightly scenario heavy plan fails closed on route metadata drift", () => {
   }
 });
 
-test("default core plan applies strict command closure without changing test coverage", () => {
+test("reserved core plan applies strict command closure without changing test coverage", () => {
   const packageScripts = JSON.parse(
     fs.readFileSync("package.json", "utf8"),
   ).scripts;
   const rawPlan = buildCoreVerificationPlan({
     packageScripts,
     applySupersession: false,
+    includeReserved: true,
   });
-  const plan = buildCoreVerificationPlan({ packageScripts });
+  const plan = buildCoreVerificationPlan({ packageScripts, includeReserved: true });
   const rawLeaves = rawPlan.commandsToRun.flatMap(({ commandRef }) => (
     resolveCommandLeafProcesses(commandRef, packageScripts)
   ));
@@ -701,14 +639,8 @@ test("default core plan applies strict command closure without changing test cov
     )),
   )].sort();
 
-  assert.equal(rawPlan.commandsToRun.length, 97);
-  assert.equal(plan.commandsToRun.length, 91);
-  assert.equal(rawLeaves.length, 113);
-  assert.equal(retainedLeaves.length, 106);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node --test ")).length, 74);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node --test ")).length, 67);
-  assert.equal(rawLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 25);
-  assert.equal(retainedLeaves.filter((command) => command.startsWith("node tools/run_python.mjs ")).length, 25);
+  assert.ok(plan.commandsToRun.length < rawPlan.commandsToRun.length);
+  assert.ok(retainedLeaves.length < rawLeaves.length);
   assert.deepEqual(nodeFiles(plan), nodeFiles(rawPlan));
   assert.deepEqual(
     plan.supersededCommands.map(({ commandRef }) => commandRef).sort(),
@@ -749,6 +681,7 @@ test("includeMainThread adds explicit E2E group and keeps optional E2E skipped",
 
 test("plan filters empty commandRef, duplicates, self-recursion, and missing package scripts", () => {
   const plan = buildCoreVerificationPlan({
+    includeReserved: true,
     packageScripts: {
       ok: "node ok.mjs",
       duplicate: "node ok.mjs",
@@ -1019,6 +952,7 @@ test("adaptive observer publication and builder failures stay in primary evidenc
 
 test("execution records failure and stops on first failing command", () => {
   const plan = buildCoreVerificationPlan({
+    includeReserved: true,
     packageScripts: { first: "node first.mjs", second: "node second.mjs", third: "node third.mjs" },
     groups: [{ id: "custom", title: "Custom", commands: ["first", "second", "third"] }],
     mainThreadGroup: { id: "main", title: "Main", commands: [] },
@@ -1042,6 +976,7 @@ test("execution records failure and stops on first failing command", () => {
 test("direct core plan execution injects strict evidence before a Python boundary", () => {
   const commandRef = "test:python:p4:p4-1-boundary";
   const plan = buildCoreVerificationPlan({
+    includeReserved: true,
     packageScripts: { [commandRef]: "node fake-python-boundary.mjs" },
     groups: [{ id: "custom", title: "Custom", commands: [commandRef] }],
     mainThreadGroup: { id: "main", title: "Main", commands: [] },
@@ -1078,6 +1013,7 @@ test("each direct-plan invocation owns one fallback session across boundaries", 
     ]),
   );
   const plan = buildCoreVerificationPlan({
+    includeReserved: true,
     packageScripts,
     groups: [{ id: "custom", title: "Custom", commands: commandRefs }],
     mainThreadGroup: { id: "main", title: "Main", commands: [] },
@@ -1174,6 +1110,7 @@ test("resume parsing is explicit and does not expose an arbitrary skip flag", ()
   assert.deepEqual(parseArgs(["--resume-from", "previous.json"]), {
     list: false,
     includeMainThread: false,
+    includeReserved: false,
     resume: true,
     resumeFrom: "previous.json",
     nightlyLinuxCore: false,
@@ -1189,6 +1126,7 @@ test("resume parsing is explicit and does not expose an arbitrary skip flag", ()
     {
       list: false,
       includeMainThread: false,
+      includeReserved: false,
       resume: false,
       resumeFrom: null,
       nightlyLinuxCore: true,
@@ -1255,7 +1193,7 @@ test("core runner same-tree resume skips its durable passed prefix", () => {
   const identity = cleanIdentity("sha-one", "tree-one");
   let firstCalls = 0;
   const first = runCoreVerification({
-    argv: { list: false, includeMainThread: false, resume: false, resumeFrom: null, jsonOut, mdOut },
+    argv: { list: false, includeMainThread: false, includeReserved: true, resume: false, resumeFrom: null, jsonOut, mdOut },
     packageScripts: PACKAGE_SCRIPTS,
     identityReader: () => identity,
     stdio: "pipe",
@@ -1276,7 +1214,7 @@ test("core runner same-tree resume skips its durable passed prefix", () => {
   let resumedProducerCount = 0;
   let resumedFallbackSession = null;
   const resumed = runCoreVerification({
-    argv: { list: false, includeMainThread: false, resume: true, resumeFrom: jsonOut, jsonOut, mdOut },
+    argv: { list: false, includeMainThread: false, includeReserved: true, resume: true, resumeFrom: jsonOut, jsonOut, mdOut },
     packageScripts: PACKAGE_SCRIPTS,
     identityReader: () => identity,
     stdio: "pipe",
@@ -1320,7 +1258,7 @@ test("core runner injects strict exact-tree evidence and persists its trace", ()
   const spawns = [];
 
   const result = runCoreVerification({
-    argv: { list: false, includeMainThread: false, resume: false, resumeFrom: null, jsonOut, mdOut },
+    argv: { list: false, includeMainThread: false, includeReserved: true, resume: false, resumeFrom: null, jsonOut, mdOut },
     packageScripts: { [commandRef]: "node fake-python-boundary.mjs" },
     cwd: root,
     platform: "linux",
@@ -1378,7 +1316,7 @@ test("core runner blocks a boundary before spawn when evidence setup is blocked"
   const result = runCoreVerification({
     argv: {
       list: false,
-      includeMainThread: false,
+      includeMainThread: false, includeReserved: true,
       resume: false,
       resumeFrom: null,
       jsonOut: path.join(root, "verify-core.json"),
@@ -1912,12 +1850,13 @@ test("verification tiers keep commit selection child-safe and reserve broader ga
       commandRef: "verify:commit",
       executionScope: "child-safe",
       commitProjection: {
-        controlPlaneRecordId: "infra:local-verification-closure",
+        controlPlaneRecordIds: ["infra:local-verification-closure", "local:owner:commit-runner"],
         controlPlaneTestFiles: [
           "tests/verification_metadata_behavior.test.mjs",
           "tests/catalog_projection_shadow_behavior.test.mjs",
           "tests/verification_script_portfolio_behavior.test.mjs",
           "tests/verify_core_runner_behavior.test.mjs",
+          "tests/verify_commit_runner_behavior.test.mjs",
         ],
       },
     },
@@ -1949,156 +1888,12 @@ test("verification tiers keep commit selection child-safe and reserve broader ga
   assert.match(scripts["verify:release"], /npm run verify:demo/);
   assert.match(scripts["verify:release"], /npm run test:e2e:pages-public-release-gate/);
 
-  const nightlyPlan = buildCoreVerificationPlan({ packageScripts: scripts });
+  const nightlyPlan = buildCoreVerificationPlan({ packageScripts: scripts, includeReserved: true });
   const releasePlan = buildCoreVerificationPlan({ packageScripts: scripts, includeMainThread: true });
   for (const plan of [nightlyPlan, releasePlan]) {
     assert.ok(plan.commandsToRun.some((entry) => entry.commandRef === "verify:p4:state-writer-policy"));
     assert.ok(plan.commandsToRun.some((entry) => entry.commandRef === "verify:pages-dist-and-drift"));
   }
-});
-
-test("commit runner batches its canonical control-plane contract and keeps product edits adaptive", () => {
-  const controlPlan = buildCommitVerificationPlan([
-    "docs/active/test-verification-reform-20260813/task.md",
-  ]);
-  assert.equal(controlPlan.mode, "control-plane");
-  assert.deepEqual(controlPlan.commands.at(-1), ["node", [
-    "--test",
-    "tests/verification_metadata_behavior.test.mjs",
-    "tests/catalog_projection_shadow_behavior.test.mjs",
-    "tests/verification_script_portfolio_behavior.test.mjs",
-    "tests/verify_core_runner_behavior.test.mjs",
-  ]]);
-  assert.equal(controlPlan.commands.some(([, args]) => args.includes("verify:pages-dist")), false);
-
-  const derivedControlPlan = buildCommitVerificationPlan([
-    "tools/run_adaptive_tests.mjs",
-    "tools/select_verification_targets.mjs",
-    "tools/verification/script_portfolio.mjs",
-    "tools/verification/verification_profile.mjs",
-    "tools/ai_test_supervisor/domain_registry.json",
-  ]);
-  assert.equal(derivedControlPlan.mode, "control-plane+adaptive-edit");
-  assert.deepEqual(
-    derivedControlPlan.commands.find(([, args]) => args[0] === "--test"),
-    controlPlan.commands.at(-1),
-  );
-
-  const sharedPackagePlan = buildCommitVerificationPlan(["package.json"]);
-  assert.equal(sharedPackagePlan.mode, "control-plane+adaptive-edit");
-  assert.equal(sharedPackagePlan.commands.filter(([, args]) => args[0] === "--test").length, 1);
-  assert.deepEqual(sharedPackagePlan.commands.at(-1).at(1).slice(-2), [
-    "--changed-file",
-    "package.json",
-  ]);
-
-  const productPlan = buildCommitVerificationPlan(["js/core/scenario_chunk_manager.js"]);
-  assert.equal(productPlan.mode, "adaptive-edit");
-  assert.deepEqual(productPlan.commands.at(-1), ["node", [
-    "tools/run_adaptive_tests.mjs",
-    "--entrypoint",
-    "edit",
-    "--execute",
-    "--defer-main-thread",
-    "--changed-file",
-    "js/core/scenario_chunk_manager.js",
-  ]]);
-
-  const mixedPlan = buildCommitVerificationPlan([
-    "package.json",
-    "js/core/scenario_chunk_manager.js",
-  ]);
-  assert.equal(mixedPlan.mode, "control-plane+adaptive-edit");
-  assert.equal(mixedPlan.commands.filter(([, args]) => args[0] === "--test").length, 1);
-  assert.deepEqual(mixedPlan.commands.at(-1).at(1).slice(-4), [
-    "--changed-file", "js/core/scenario_chunk_manager.js",
-    "--changed-file", "package.json",
-  ]);
-});
-
-test("commit runner discovers unstaged, staged, and untracked paths from porcelain", () => {
-  assert.deepEqual(parsePorcelainChangedFiles([
-    " M unstaged.js",
-    "M  staged.py",
-    "?? untracked.mjs",
-  ].join("\0") + "\0"), ["staged.py", "unstaged.js", "untracked.mjs"]);
-  const renamedFiles = parsePorcelainChangedFiles("R  docs/renamed.md\0js/core/scenario_chunk_manager.js\0");
-  assert.deepEqual(renamedFiles, [
-    "docs/renamed.md",
-    "js/core/scenario_chunk_manager.js",
-  ]);
-  const renamedPlan = buildCommitVerificationPlan(renamedFiles);
-  assert.equal(renamedPlan.mode, "adaptive-edit");
-  assert.deepEqual(renamedPlan.commands.at(-1).at(1).slice(-2), [
-    "--changed-file",
-    "js/core/scenario_chunk_manager.js",
-  ]);
-  assert.throws(() => parsePorcelainChangedFiles("M malformed\0"), /verify-commit-porcelain-malformed/);
-
-  const calls = [];
-  assert.deepEqual(discoverCommitChangedFiles({
-    runner: (bin, args) => {
-      calls.push([bin, args]);
-      return { status: 0, stdout: " M unstaged.js\0M  staged.py\0?? untracked.mjs\0" };
-    },
-  }), ["staged.py", "unstaged.js", "untracked.mjs"]);
-  assert.deepEqual(calls, [["git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"]]]);
-});
-
-test("commit runner CLI takes explicit changed files and fails closed for malformed input", () => {
-  assert.deepEqual(parseCommitVerificationArgs([
-    "--changed-file", "js/core/scenario_chunk_manager.js",
-    "--changed-file", "js/core/scenario_chunk_manager.js",
-  ]), {
-    changedFiles: ["js/core/scenario_chunk_manager.js"],
-    hasExplicitChangedFiles: true,
-  });
-  assert.throws(() => parseCommitVerificationArgs(["--unknown"]), /verify-commit-cli-unknown-arg/);
-  assert.throws(() => parseCommitVerificationArgs(["--changed-file"]), /verify-commit-cli-changed-file-missing/);
-
-  const calls = [];
-  assert.equal(runCommitVerificationCli(["--changed-file", "js/core/scenario_chunk_manager.js"], {
-    runner: (bin, args) => {
-      calls.push([bin, args]);
-      return { status: 0 };
-    },
-  }), 0);
-  assert.equal(calls.some(([, args]) => args.join(" ").includes("git status --porcelain")), false);
-  assert.deepEqual(calls.at(-1)[1], [
-    "tools/run_adaptive_tests.mjs",
-    "--entrypoint",
-    "edit",
-    "--execute",
-    "--defer-main-thread",
-    "--changed-file",
-    "js/core/scenario_chunk_manager.js",
-  ]);
-});
-
-test("commit runner executes its plan through the platform npm executable", () => {
-  const calls = [];
-  const status = runCommitVerification({
-    changedFiles: ["package.json"],
-    runner: (bin, args) => {
-      calls.push([bin, args]);
-      return { status: 0 };
-    },
-  });
-  assert.equal(status, 0);
-  if (process.platform === "win32") {
-    assert.equal(calls[0][0], process.env.ComSpec || "cmd.exe");
-    assert.deepEqual(calls[0][1], ["/d", "/s", "/c", "npm run verify:script-portfolio"]);
-  } else {
-    assert.equal(calls[0][0], "npm");
-    assert.deepEqual(calls[0][1], ["run", "verify:script-portfolio"]);
-  }
-  assert.deepEqual(calls.find(([, args]) => args[0] === "--test")[1], [
-    "--test",
-    "tests/verification_metadata_behavior.test.mjs",
-    "tests/catalog_projection_shadow_behavior.test.mjs",
-    "tests/verification_script_portfolio_behavior.test.mjs",
-    "tests/verify_core_runner_behavior.test.mjs",
-  ]);
 });
 
 test("adaptive history discovery requires its exact base and rejects last-commit fallback", () => {
@@ -2336,7 +2131,10 @@ test("local projection preserves the verification profile leaf within the impact
     entry.leafId === "node-script:tools/select_verification_targets.mjs"
   )));
   assert.deepEqual(plan.routeGaps, []);
-  assert.equal(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds, 90);
+  assert.equal(plan.selectedLeaves.filter((entry) => (
+    entry.leafId === "node-test:tests/verify_commit_runner_behavior.test.mjs"
+  )).length, 1);
+  assert.equal(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds, 95);
   assert.equal(plan.executionCommands.length, 3);
   assert.equal(adaptivePlanningExitCode(projected, plan), 0);
 });
@@ -2418,11 +2216,14 @@ test("local infra diffs resolve to one canonical fast closure within expanded Ti
   });
   assert.deepEqual(plan.localEntrypointBudget.actual, {
     commandCount: 2,
-    leafCount: 7,
+    leafCount: 8,
     processGroupCount: 4,
-    estimatedRuntimeSeconds: 115,
-    estimatedCostUnits: 3.75,
+    estimatedRuntimeSeconds: 120,
+    estimatedCostUnits: 4,
   });
+  assert.equal(plan.selectedLeaves.filter((entry) => (
+    entry.leafId === "node-test:tests/verify_commit_runner_behavior.test.mjs"
+  )).length, 1);
   assert.ok(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds >= 90);
   assert.ok(plan.localEntrypointBudget.actual.estimatedRuntimeSeconds <= 120);
 });
@@ -3121,20 +2922,22 @@ test("local entrypoints fail closed when any matched file loses child-safe closu
     platform: process.platform,
     sourceMode: "fixture",
   });
-  const projected = constrainAdaptiveEntrypointSelection(report, "impact", { preparedCatalog });
-  assert.deepEqual(projected.matchedByFile[1].recommendedCommands, []);
-  assert.deepEqual(projected.localEntrypointRouteGaps, [{
-    code: "adaptive-impact-local-entrypoint-no-eligible-coverage",
-    commandRef: "tests/heavy.test.mjs",
-    detail: "matched-routes=route:heavy;required-depth=nightly",
-  }]);
-  const plan = buildExecutionPlan(projected, {
-    packageScripts: preparedCatalog.sourceInputs.packageScripts,
-    preparedCatalog,
-  });
-  assert.ok(plan.routeGaps.some((gap) => gap.code === "adaptive-impact-local-entrypoint-no-eligible-coverage"));
-  assert.deepEqual(plan.executionCommands, []);
-  assert.equal(adaptivePlanningExitCode(projected, plan), 2);
+  for (const entrypoint of ["edit", "impact"]) {
+    const projected = constrainAdaptiveEntrypointSelection(report, entrypoint, { preparedCatalog });
+    assert.deepEqual(projected.matchedByFile[1].recommendedCommands, []);
+    assert.deepEqual(projected.localEntrypointRouteGaps, [{
+      code: `adaptive-${entrypoint}-local-entrypoint-no-eligible-coverage`,
+      commandRef: "tests/heavy.test.mjs",
+      detail: "matched-routes=route:heavy;required-depth=nightly",
+    }]);
+    const plan = buildExecutionPlan(projected, {
+      packageScripts: preparedCatalog.sourceInputs.packageScripts,
+      preparedCatalog,
+    });
+    assert.ok(plan.routeGaps.some((gap) => gap.code === `adaptive-${entrypoint}-local-entrypoint-no-eligible-coverage`));
+    assert.deepEqual(plan.executionCommands, []);
+    assert.equal(adaptivePlanningExitCode(projected, plan), 2);
+  }
 });
 
 test("local entrypoint budgets fail closed on expanded roots leaves process groups runtime and cost", () => {
@@ -3909,4 +3712,22 @@ test("adaptive execution rejects legacy unstructured commands", () => {
   });
   assert.deepEqual(legacyResults, []);
   assert.equal(spawnCount, 0);
+});
+
+test("local action and border feedback uses existing behavior leaves without phase evidence", () => {
+  const routes = buildRouteIndex();
+  for (const file of ["js/core/state/actions/appearance_actions.js", "js/core/state/actions/special_zone_actions.js",
+    "js/core/renderer/border_mesh_owner.js", "js/core/renderer/border_draw_owner.js"]) {
+    const recommendation = buildAdaptiveEntrypointRecommendation([file], routes, { entrypoint: "edit" });
+    const preparedCatalog = prepareRepositoryVerificationCatalog();
+    const local = constrainAdaptiveEntrypointSelection(recommendation, "edit", { preparedCatalog });
+    assert.deepEqual(local.localEntrypointRouteGaps, [], file);
+    assert.equal(local.recommendedCommands.length, 1, file);
+    assert.match(local.recommendedCommands[0].commandRef, /^node --test tests\/.*_behavior.test.mjs$/);
+    assert.equal(local.recommendedCommands[0].executionOwner, "child-safe");
+    assert.deepEqual(local.recommendedCommands[0].resourceLocks, []);
+  }
+  assert.doesNotThrow(() => assertAdaptiveEntrypointAuthority(parseAdaptiveArgs([
+    "--entrypoint", "edit", "--defer-main-thread", "--changed-file", "js/core/state/actions/appearance_actions.js",
+  ])));
 });

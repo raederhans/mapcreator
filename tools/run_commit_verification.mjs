@@ -19,18 +19,29 @@ function commitTier(metadataSource = VERIFICATION_METADATA_SOURCE) {
   return entry;
 }
 
-function controlPlaneSourceRefs(metadataSource = VERIFICATION_METADATA_SOURCE) {
+function controlPlaneRecords(metadataSource = VERIFICATION_METADATA_SOURCE) {
   const entry = commitTier(metadataSource);
-  const record = metadataSource?.records?.find((candidate) => candidate.id === entry.commitProjection.controlPlaneRecordId);
-  if (!record?.sourceRefs) throw new Error("verify-commit-control-plane-record-missing");
-  return record.sourceRefs;
+  const ids = entry.commitProjection.controlPlaneRecordIds;
+  if (!Array.isArray(ids) || ids.length === 0
+    || ids.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new Error("verify-commit-control-plane-record-ids-invalid");
+  }
+  if (new Set(ids).size !== ids.length) throw new Error("verify-commit-control-plane-record-ids-duplicate");
+  if (!Array.isArray(metadataSource?.records)) throw new Error("verify-commit-canonical-records-missing");
+  return ids.map((id) => {
+    const matches = metadataSource.records.filter((record) => record.id === id);
+    if (matches.length > 1) throw new Error(`verify-commit-control-plane-record-duplicate:${id}`);
+    if (matches.length === 0 || !Array.isArray(matches[0].sourceRefs)) {
+      throw new Error(`verify-commit-control-plane-record-missing:${id}`);
+    }
+    return matches[0];
+  });
 }
 
-function nonControlPlaneSourceRefs(metadataSource = VERIFICATION_METADATA_SOURCE) {
-  const entry = commitTier(metadataSource);
-  if (!Array.isArray(metadataSource?.records)) throw new Error("verify-commit-canonical-records-missing");
+function nonControlPlaneSourceRefs(metadataSource, controlRecords) {
+  const controlIds = new Set(controlRecords.map((record) => record.id));
   return new Set(metadataSource.records
-    .filter((record) => record.id !== entry.commitProjection.controlPlaneRecordId)
+    .filter((record) => !controlIds.has(record.id))
     .flatMap((record) => record.sourceRefs || []));
 }
 
@@ -39,17 +50,32 @@ export function buildCommitVerificationPlan(changedFiles, {
 } = {}) {
   const entry = commitTier(metadataSource);
   const normalizedFiles = [...new Set((changedFiles || []).map(String))].sort();
-  const controlPlaneSources = new Set(controlPlaneSourceRefs(metadataSource));
-  const nonControlPlaneSources = nonControlPlaneSourceRefs(metadataSource);
+  const controlRecords = controlPlaneRecords(metadataSource);
+  const controlPlaneSources = new Set(controlRecords.flatMap((record) => record.sourceRefs));
+  const nonControlPlaneSources = nonControlPlaneSourceRefs(metadataSource, controlRecords);
   const controlPlaneFiles = normalizedFiles.filter((file) => controlPlaneSources.has(file));
   const productFiles = normalizedFiles.filter((file) => (
     !controlPlaneSources.has(file) || nonControlPlaneSources.has(file)
   ));
-  const commands = [
-    ["npm", ["run", "verify:script-portfolio"]],
-    ["npm", ["run", "verify:test-import-graph"]],
-    ["node", ["tools/select_verification_targets.mjs", "--check"]],
-  ];
+  // Registered product edits cannot change the verification metadata. The adaptive
+  // runner still validates its selected catalog and rejects missing local coverage.
+  // Unknown files and tooling/configuration changes retain the global checks.
+  const registeredProductOnly = normalizedFiles.length > 0 && normalizedFiles.every((file) => (
+    file.startsWith("js/")
+      && /\.(?:js|mjs)$/.test(file)
+      && !controlPlaneSources.has(file)
+      && nonControlPlaneSources.has(file)
+  ));
+  const commands = [];
+  if (!registeredProductOnly) {
+    commands.push(["npm", ["run", "verify:script-portfolio"]]);
+  }
+  // Keep this even for product edits: deleting a product module can break an
+  // existing test import without modifying the test itself.
+  commands.push(["npm", ["run", "verify:test-import-graph"]]);
+  if (!registeredProductOnly) {
+    commands.push(["node", ["tools/select_verification_targets.mjs", "--check"]]);
+  }
   if (controlPlaneFiles.length > 0) {
     commands.push(["node", ["--test", ...entry.commitProjection.controlPlaneTestFiles]]);
   }

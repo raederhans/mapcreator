@@ -293,7 +293,7 @@ export function assertAdaptiveEntrypointAuthority(args, { runner = spawnSync } =
   if (!new Set(["edit", "impact"]).has(entrypoint)) {
     throw adaptiveEntrypointError("adaptive-entrypoint-unknown", entrypoint);
   }
-  if (args.dryRun || !args.deferMainThread || args.includeMainThread) {
+  if (!args.deferMainThread || args.includeMainThread) {
     throw adaptiveEntrypointError(`adaptive-${entrypoint}-main-thread-forbidden`);
   }
   if (entrypoint === "edit") {

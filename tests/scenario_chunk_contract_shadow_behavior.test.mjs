@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { VERIFICATION_CATALOG_SOURCE_FILES } from "../tools/verification/catalog/source_files.mjs";
 
 import { scenarioChunkContractRegistrationManifest } from "./scenario_chunk_contracts.test.mjs";
 import {
@@ -205,4 +206,24 @@ test("catalog evidence binds independent inputs, leaf policy, and P4/TNO closure
   });
   assert.ok(evidence.supersessionClosure.p4_2b.includes("test:node:scenario-chunk-contracts"));
   assert.ok(evidence.supersessionClosure.tno.includes("test:node:scenario-chunk-contracts"));
+});
+
+test("catalog evidence includes every split source input and observes module changes", () => {
+  const blobIdentity = (relativePath) => ({ path: relativePath, algorithm: "git-sha1", blob: "1".repeat(40) });
+  const evidence = collectScenarioChunkCatalogEvidence({ blobIdentity });
+  const paths = evidence.inputs.map(({ path: relativePath }) => relativePath);
+  assert.equal(new Set(paths).size, paths.length);
+  for (const file of VERIFICATION_CATALOG_SOURCE_FILES) assert.ok(paths.includes(file), file);
+  const manifest = "tools/verification/catalog/source_files.mjs";
+  assert.ok(paths.includes(manifest));
+  const changed = collectScenarioChunkCatalogEvidence({
+    blobIdentity: (relativePath) => ({
+      ...blobIdentity(relativePath),
+      blob: relativePath === manifest ? "2".repeat(40) : "1".repeat(40),
+    }),
+  });
+  assert.notDeepEqual(changed.inputs, evidence.inputs);
+  assert.deepEqual(changed.inputs.filter(({ path: relativePath }) => relativePath !== manifest),
+    evidence.inputs.filter(({ path: relativePath }) => relativePath !== manifest));
+  assert.deepEqual(changed.inputSets, evidence.inputSets);
 });

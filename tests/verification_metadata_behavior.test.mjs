@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { VERIFICATION_CATALOG_SOURCE_FILES } from "../tools/verification/catalog/source_files.mjs";
+import {
+  buildAdaptiveEntrypointRecommendation,
+  constrainAdaptiveEntrypointSelection,
+} from "../tools/run_adaptive_tests.mjs";
+import { prepareRepositoryVerificationCatalog } from "../tools/verification/script_portfolio.mjs";
 import {
   buildCoreVerificationPlan,
 } from "../tools/run_core_verification.mjs";
@@ -45,16 +51,114 @@ import {
 
 const REPO_ROOT = process.cwd();
 
+test("split catalog sources preserve explicit local edit and impact control-plane routes", () => {
+  assert.ok(Object.isFrozen(VERIFICATION_CATALOG_SOURCE_FILES));
+  assert.equal(new Set(VERIFICATION_CATALOG_SOURCE_FILES).size, VERIFICATION_CATALOG_SOURCE_FILES.length);
+  assert.ok(VERIFICATION_CATALOG_SOURCE_FILES.includes("tools/verification/verification_catalog_source.mjs"));
+  assert.ok(VERIFICATION_CATALOG_SOURCE_FILES.includes("tools/verification/catalog/source_files.mjs"));
+  const catalogFiles = fs.readdirSync(path.join(REPO_ROOT, "tools/verification/catalog"), { recursive: true })
+    .filter((file) => file.endsWith(".mjs"))
+    .map((file) => `tools/verification/catalog/${file.replaceAll("\\", "/")}`);
+  assert.deepEqual([...VERIFICATION_CATALOG_SOURCE_FILES].sort(), [
+    "tools/verification/verification_catalog_source.mjs", ...catalogFiles,
+  ].sort());
+  const routes = buildRouteIndex();
+  const preparedCatalog = prepareRepositoryVerificationCatalog();
+  for (const entrypoint of ["edit", "impact"]) {
+    for (const file of VERIFICATION_CATALOG_SOURCE_FILES) {
+      assert.ok(fs.statSync(path.join(REPO_ROOT, file)).isFile(), file);
+      const selection = constrainAdaptiveEntrypointSelection(
+        buildAdaptiveEntrypointRecommendation([file], routes, { entrypoint }), entrypoint, { preparedCatalog },
+      );
+      assert.deepEqual(selection.unmatchedChangedFiles, [], file);
+      assert.deepEqual(selection.localEntrypointRouteGaps, [], file);
+      assert.ok(selection.recommendedCommands.some(({ commandRef }) => commandRef === "verify:local-infra"), file);
+    }
+    const unknown = "tools/verification/catalog/unregistered.mjs";
+    const selection = constrainAdaptiveEntrypointSelection(
+      buildAdaptiveEntrypointRecommendation([unknown], routes, { entrypoint }), entrypoint, { preparedCatalog },
+    );
+    assert.ok(selection.unmatchedChangedFiles.length > 0 || selection.localEntrypointRouteGaps.length > 0);
+  }
+});
+
+test("core runner edits use declared aggregate coverage without unrelated domain leaves", () => {
+  const routes = buildRouteIndex();
+  const preparedCatalog = prepareRepositoryVerificationCatalog();
+  const file = "tools/run_core_verification.mjs";
+  for (const entrypoint of ["edit", "impact"]) {
+    const selection = constrainAdaptiveEntrypointSelection(
+      buildAdaptiveEntrypointRecommendation([file], routes, { entrypoint }), entrypoint, { preparedCatalog },
+    );
+    assert.deepEqual(selection.unmatchedChangedFiles, [], file);
+    assert.deepEqual(selection.localEntrypointRouteGaps, [], file);
+    assert.deepEqual(selection.recommendedCommands.map(({ commandRef }) => commandRef), ["verify:local-infra"]);
+    for (const command of selection.rawCanonicalRoots) {
+      assert.notEqual(command.commandRef, "test:node:verification-profile", file);
+      assert.notEqual(command.commandRef, "node tools/select_verification_targets.mjs --check", file);
+    }
+  }
+});
+
+test("local owner feedback selects existing behavior without admitting broader roots", () => {
+  const cases = [
+    ["js/core/renderer/ocean_render_owner.js", "tests/ocean_render_owner_behavior.test.mjs"],
+    ["js/core/renderer/renderer_viewport_update_owner.js", "tests/renderer_viewport_update_owner_behavior.test.mjs"],
+    ["js/core/map_renderer/map_hover_interaction_owner.js", "tests/map_hover_interaction_owner_behavior.test.mjs"],
+    ["js/core/renderer/city_lights_render_owner.js", "tests/city_lights_render_owner_behavior.test.mjs"],
+    ["js/ui/sidebar/project_support_diagnostics_controller.js", "tests/project_support_diagnostics_controller_behavior.test.mjs"],
+    ["tools/run_commit_verification.mjs", "tests/verify_commit_runner_behavior.test.mjs"],
+    ["js/ui/sidebar/strategic_overlay/unit_counter_catalog_helper.js", "tests/unit_counter_catalog_behavior.test.mjs"],
+  ];
+  const routes = buildRouteIndex();
+  const preparedCatalog = prepareRepositoryVerificationCatalog();
+  const select = (files, entrypoint) => constrainAdaptiveEntrypointSelection(
+    buildAdaptiveEntrypointRecommendation(files, routes, { entrypoint }), entrypoint, { preparedCatalog },
+  );
+  for (const entrypoint of ["edit", "impact"]) {
+    for (const [source, testFile] of cases) {
+      const local = select([source, testFile], entrypoint);
+      assert.deepEqual(local.unmatchedChangedFiles, [], source);
+      assert.deepEqual(local.localEntrypointRouteGaps, [], source);
+      assert.deepEqual(local.recommendedCommands.map((entry) => entry.commandRef), ["node --test " + testFile], source);
+      assert.equal(local.recommendedCommands[0].executionOwner, "child-safe");
+      assert.deepEqual(local.recommendedCommands[0].resourceLocks, []);
+      if (source.startsWith("js/") && !source.includes("unit_counter_catalog_helper")) {
+        assert.ok(local.matchedByFile[0].deferredByTier.length > 0, source);
+      }
+    }
+    for (const broadOrUnknown of ["data/scenarios/tno_1962/manifest.json", "unregistered/unsupported-source.xyz"]) {
+      const mixed = select([cases[0][0], broadOrUnknown], entrypoint);
+      assert.ok(mixed.unmatchedChangedFiles.length > 0 || mixed.localEntrypointRouteGaps.length > 0, broadOrUnknown);
+    }
+    for (const broadRoot of ["js/core/map_renderer.js", "js/ui/sidebar.js"]) {
+      const broad = select([broadRoot], entrypoint);
+      assert.ok(broad.recommendedCommands.every((command) => !cases.some(([, testFile]) => command.commandRef === "node --test " + testFile)));
+    }
+    for (const shared of ["package.json", "tools/run_core_verification.mjs", "tools/verification/verification_catalog_source.mjs"]) {
+      const sharedSelection = select([shared], entrypoint);
+      assert.ok(sharedSelection.recommendedCommands.some((command) => command.commandRef === "verify:local-infra"), shared);
+      assert.ok(!sharedSelection.rawCanonicalRoots.some((command) => command.commandRef === "node --test tests/verify_commit_runner_behavior.test.mjs"), shared);
+    }
+  }
+  const scripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
+  assert.match(scripts["test:node:verify-core-runner"], /tests\/verify_commit_runner_behavior\.test\.mjs/);
+  assert.match(scripts["verify:local-infra"], /tests\/verify_commit_runner_behavior\.test\.mjs/);
+  const commitFiles = VERIFICATION_METADATA_SOURCE.canonicalEntrypoints.tier.find((entry) => entry.id === "commit")
+    .commitProjection.controlPlaneTestFiles;
+  assert.equal(commitFiles.filter((file) => file === "tests/verify_commit_runner_behavior.test.mjs").length, 1);
+});
+
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
   assert.equal(summary.packageScriptCount, 346);
-  assert.equal(summary.contributorRecords, 449);
+  assert.equal(summary.contributorRecords, VERIFICATION_METADATA_SOURCE.records.length);
   assert.equal(summary.verificationRecordProjectionCount, 147);
-  assert.equal(summary.routeProjectionCount, 408);
-  assert.equal(summary.commandCount, 363);
+  assert.equal(summary.routeProjectionCount, VERIFICATION_METADATA_SOURCE.records.filter((record) => record.selector !== null).length);
+  assert.equal(summary.commandCount, new Set(VERIFICATION_METADATA_SOURCE.records.map((record) => record.commandRef)).size);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
-  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, 449);
+  assert.equal(new Set(VERIFICATION_METADATA_SOURCE.records.map((entry) => entry.id)).size, VERIFICATION_METADATA_SOURCE.records.length);
   for (const entry of VERIFICATION_METADATA_SOURCE.records) {
     assert.equal(typeof entry.commandRef, "string");
     assert.ok(entry.commandRef.length > 0);
@@ -1356,14 +1460,15 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
   );
 });
 
-test("verify-core default plan preserves metadata closure before command supersession", () => {
+test("verify-core reserved plan preserves metadata closure before command supersession", () => {
   const packageJson = readJson("package.json");
   const metadataDefaultRefs = commandRefsFromGroups(buildVerifyCoreDefaultGroups());
   const metadataPlan = buildCoreVerificationPlan({
     packageScripts: packageJson.scripts,
     applySupersession: false,
+    includeReserved: true,
   });
-  const plan = buildCoreVerificationPlan({ packageScripts: packageJson.scripts });
+  const plan = buildCoreVerificationPlan({ packageScripts: packageJson.scripts, includeReserved: true });
 
   assert.deepEqual(
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),

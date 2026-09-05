@@ -2,12 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { LEGACY_VERIFICATION_COMMAND_SUPERSESSION } from "./command_supersession.mjs";
 import { compareCatalogProjections } from "./catalog_projection_shadow.mjs";
 import { buildCanonicalCatalogProjectionBundle } from "./verification_catalog_projection.mjs";
-import { LEGACY_VERIFICATION_DOMAINS } from "./verification_domains.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+// Historical receipt support only. This snapshot is never synchronized with current metadata.
+const HISTORICAL_BASELINE = JSON.parse(fs.readFileSync(
+  new URL("./catalog_projection_historical_baseline.json", import.meta.url), "utf8",
+));
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -106,8 +108,8 @@ export function buildLegacyCatalogProjections({
   repoRoot = REPO_ROOT,
   packageScripts = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")).scripts,
   heavyDependencyGroups = JSON.parse(fs.readFileSync(path.join(repoRoot, "tests", "heavy_dependency_groups.json"), "utf8")),
-  verificationRecords = LEGACY_VERIFICATION_DOMAINS,
-  supersession = LEGACY_VERIFICATION_COMMAND_SUPERSESSION,
+  verificationRecords = [{ sourceRefs: HISTORICAL_BASELINE.documentation }],
+  supersession = HISTORICAL_BASELINE.supersession,
   prWorkflow = fs.readFileSync(path.join(repoRoot, ".github", "workflows", "pr-verify.yml"), "utf8"),
   perfPrGateWorkflow = fs.readFileSync(path.join(repoRoot, ".github", "workflows", "perf-pr-gate.yml"), "utf8"),
   nightlyWorkflow = fs.readFileSync(path.join(repoRoot, ".github", "workflows", "nightly-verification.yml"), "utf8"),

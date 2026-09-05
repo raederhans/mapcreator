@@ -1,12 +1,5 @@
-{
-  "name": "scenario-forge-browser-tooling",
-  "private": true,
-  "version": "0.1.0",
-  "description": "Local Playwright tooling for Scenario Forge browser inspection and e2e regression tests.",
-  "engines": {
-    "node": ">=18"
-  },
-  "scripts": {
+// Internal catalog definitions. Consumers use verification_catalog_source.mjs.
+export const PACKAGE_SCRIPTS = {
     "test:node:city-lights-assets": "node --test tests/city_lights_asset_contract.test.mjs",
     "test:node:city-lights-render-owner": "node --test tests/city_lights_render_owner_behavior.test.mjs",
     "test:node:modern-city-lights-owner": "npm run test:node:city-lights-render-owner",
@@ -353,11 +346,4 @@
     "bench:special-zones-members": "node tools/perf/special_zone_members_benchmark.mjs --members 240 --iterations 40 --out .runtime/output/perf/special-zone-members-benchmark.json",
     "bench:polyline-simplification": "node tools/perf/polyline_simplification_benchmark.mjs --iterations 40 --out .runtime/reports/generated/geometry-simplification-benchmark.json",
     "test:node:polyline-simplification-benchmark": "node --test tests/polyline_simplification_benchmark_contract.test.mjs"
-  },
-  "devDependencies": {
-    "@playwright/test": "1.58.2",
-    "acorn": "8.17.0",
-    "acorn-walk": "8.3.5",
-    "playwright": "1.58.2"
-  }
-}
+  };

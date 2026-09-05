@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { scenarioChunkContractRegistrationManifest } from "../../tests/scenario_chunk_contracts.test.mjs";
 import { prepareRepositoryVerificationCatalog } from "./script_portfolio.mjs";
 import { VERIFICATION_COMMAND_SUPERSESSION } from "./command_supersession.mjs";
+import { VERIFICATION_CATALOG_SOURCE_FILES } from "./catalog/source_files.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPORT_ROOT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "pr7-shadow");
@@ -29,7 +30,7 @@ const INPUT_PATHS = Object.freeze([
   "tests/helpers/scenario_chunk_contract_support.mjs",
   "tests/scenario_chunk_contract_shadow_behavior.test.mjs",
   "tools/verification/test_shadow_equivalence.mjs",
-  "tools/verification/verification_catalog_source.mjs",
+  ...VERIFICATION_CATALOG_SOURCE_FILES,
   "package.json",
 ]);
 const EXPECTED_POLICY = Object.freeze({
