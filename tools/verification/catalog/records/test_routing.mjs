@@ -381,6 +381,8 @@ export const TEST_ROUTING_RECORDS = [
       "tools/verification/verification_metadata_helpers.mjs",
       "tests/verification_metadata_behavior.test.mjs",
       "docs/testing/verification-metadata.md",
+      "docs/active/development-loop-simplification-20260905",
+      "docs/archive/worktree-registry-history-through-20260831.md",
       "package.json"
     ],
     "ownerHints": [

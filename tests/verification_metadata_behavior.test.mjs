@@ -198,7 +198,22 @@ test("authored catalog source covers command authority, policies, and every proj
   assert.equal(summary.packageAliasCount, 17);
   assert.equal(summary.prProfileCount, 4);
   assert.equal(summary.nightlyRoleCount, 12);
-  assert.equal(summary.documentationProjectionCount, 48);
+  assert.equal(summary.documentationProjectionCount, 50);
+});
+
+test("development closeout records have metadata verification ownership", () => {
+  for (const sourceRef of [
+    "docs/active/development-loop-simplification-20260905/context.md",
+    "docs/active/development-loop-simplification-20260905/plan.md",
+    "docs/active/development-loop-simplification-20260905/task.md",
+    "docs/archive/worktree-registry-history-through-20260831.md",
+  ]) {
+    const report = buildRecommendation([sourceRef]);
+    assert.deepEqual(report.unmatchedChangedFiles, [], sourceRef);
+    assert.ok(report.recommendedCommands.some(
+      (command) => command.commandRef === "test:node:verification-metadata",
+    ), sourceRef);
+  }
 });
 
 test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
