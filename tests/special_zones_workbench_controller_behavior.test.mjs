@@ -212,6 +212,275 @@ test("first scenario save loads the optional layer asset and posts canonical pay
   }
 });
 
+test("scenario save ignores a response after the scenario apply context changes", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: 1,
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", { id: "local-layer", memberFeatureIds: ["a"] })],
+      activeLayerId: "local-layer",
+    },
+  };
+  let resolveJson;
+  let fetchCount = 0;
+  let renderCount = 0;
+  const toasts = [];
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    return {
+      ok: true,
+      json: () => new Promise((resolve) => { resolveJson = resolve; }),
+    };
+  };
+
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty() {},
+    render: () => { renderCount += 1; },
+    updateToolUI() {},
+    ensureActiveScenarioOptionalLayerLoaded: async () => runtimeState.specialZoneLayers,
+    showToast: (...args) => toasts.push(args),
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const saveBtn = findButtonByText(container, "Save scenario layer asset");
+    const savePromise = saveBtn.click();
+    while (!resolveJson) await Promise.resolve();
+    controller.renderSpecialZonesWorkbenchUi();
+    const pendingSave = findButtonByText(container, "Save scenario layer asset").click();
+
+    runtimeState.activeScenarioId = "hoi4_1936";
+    runtimeState.currentScenarioApplyRequestId = 2;
+    resolveJson({
+      ok: true,
+      specialZoneLayers: {
+        layers: [createLayerFromPreset("custom", { id: "stale-server-layer" })],
+        activeLayerId: "stale-server-layer",
+      },
+    });
+    await savePromise;
+    await pendingSave;
+
+    assert.equal(fetchCount, 1);
+    assert.equal(runtimeState.specialZoneLayers.layers[0].id, "local-layer");
+    assert.equal(renderCount, 0);
+    assert.deepEqual(toasts, []);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("scenario save coalesces three same-context clicks into active and newest pending snapshots", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: 1,
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", { id: "local-layer", memberFeatureIds: ["a"] })],
+      activeLayerId: "local-layer",
+    },
+  };
+  const requests = [];
+  const responseResolvers = [];
+  let persistedState = null;
+  let inFlightRequests = 0;
+  let maxInFlightRequests = 0;
+  let renderCount = 0;
+  const toasts = [];
+  globalThis.fetch = async (_url, options) => {
+    const request = JSON.parse(options.body);
+    requests.push(request);
+    inFlightRequests += 1;
+    maxInFlightRequests = Math.max(maxInFlightRequests, inFlightRequests);
+    return new Promise((resolve) => {
+      responseResolvers.push(() => {
+        persistedState = request.specialZoneLayers;
+        inFlightRequests -= 1;
+        resolve({
+          ok: true,
+          json: async () => ({
+            ok: true,
+            specialZoneLayers: request.specialZoneLayers,
+          }),
+        });
+      });
+    });
+  };
+
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty() {},
+    render: () => { renderCount += 1; },
+    updateToolUI() {},
+    ensureActiveScenarioOptionalLayerLoaded: async () => runtimeState.specialZoneLayers,
+    showToast: (...args) => toasts.push(args),
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const firstSaveButton = findButtonByText(container, "Save scenario layer asset");
+    const firstSave = firstSaveButton.click();
+    while (responseResolvers.length < 1) await Promise.resolve();
+
+    runtimeState.specialZoneLayers = {
+      layers: [createLayerFromPreset("custom", { id: "newest-local-layer", memberFeatureIds: ["b"] })],
+      activeLayerId: "newest-local-layer",
+    };
+    controller.renderSpecialZonesWorkbenchUi();
+    const secondSaveButton = findButtonByText(container, "Save scenario layer asset");
+    const secondSave = secondSaveButton.click();
+    await Promise.resolve();
+    assert.equal(requests.length, 1);
+    assert.equal(maxInFlightRequests, 1);
+
+    runtimeState.specialZoneLayers = {
+      layers: [createLayerFromPreset("custom", { id: "final-local-layer", memberFeatureIds: ["c"] })],
+      activeLayerId: "final-local-layer",
+    };
+    controller.renderSpecialZonesWorkbenchUi();
+    const thirdSaveButton = findButtonByText(container, "Save scenario layer asset");
+    const thirdSave = thirdSaveButton.click();
+    await Promise.resolve();
+    assert.equal(requests.length, 1);
+    assert.equal(firstSaveButton.getAttribute("aria-busy"), "true");
+    assert.equal(secondSaveButton.getAttribute("aria-busy"), "true");
+    assert.equal(thirdSaveButton.getAttribute("aria-busy"), "true");
+
+    responseResolvers[0]();
+    await firstSave;
+    while (responseResolvers.length < 2) await Promise.resolve();
+    assert.equal(requests.length, 2);
+    assert.equal(maxInFlightRequests, 1);
+    assert.equal(renderCount, 0);
+    assert.deepEqual(toasts, []);
+    responseResolvers[1]();
+    await Promise.all([secondSave, thirdSave]);
+
+    assert.equal(requests[0].specialZoneLayers.layers[0].id, "local-layer");
+    assert.equal(requests[1].specialZoneLayers.layers[0].id, "final-local-layer");
+    assert.equal(persistedState.layers[0].id, "final-local-layer");
+    assert.equal(runtimeState.specialZoneLayers.layers[0].id, "final-local-layer");
+    assert.equal(renderCount, 1);
+    assert.equal(toasts.length, 1);
+    assert.equal(firstSaveButton.getAttribute("aria-busy"), null);
+    assert.equal(secondSaveButton.getAttribute("aria-busy"), null);
+    assert.equal(thirdSaveButton.getAttribute("aria-busy"), null);
+    assert.equal(firstSaveButton.classList.contains("is-loading"), false);
+    assert.equal(secondSaveButton.classList.contains("is-loading"), false);
+    assert.equal(thirdSaveButton.classList.contains("is-loading"), false);
+    assert.equal(container.querySelector(".special-zone-workbench-status").textContent, "Scenario special zone layers saved.");
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("stale save failure stays silent while the queued current context continues", async () => {
+  const previousDocument = globalThis.document;
+  const previousFetch = globalThis.fetch;
+  const previousWarn = console.warn;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: 1,
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", { id: "tno-layer", memberFeatureIds: ["a"] })],
+      activeLayerId: "tno-layer",
+    },
+  };
+  const requests = [];
+  const requestSettlers = [];
+  const warnings = [];
+  const toasts = [];
+  let renderCount = 0;
+  console.warn = (...args) => warnings.push(args);
+  globalThis.fetch = async (_url, options) => {
+    const request = JSON.parse(options.body);
+    requests.push(request);
+    return new Promise((resolve, reject) => {
+      requestSettlers.push({
+        reject,
+        succeed() {
+          resolve({
+            ok: true,
+            json: async () => ({ ok: true, specialZoneLayers: request.specialZoneLayers }),
+          });
+        },
+      });
+    });
+  };
+
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty() {},
+    render: () => { renderCount += 1; },
+    updateToolUI() {},
+    ensureActiveScenarioOptionalLayerLoaded: async () => runtimeState.specialZoneLayers,
+    showToast: (...args) => toasts.push(args),
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const staleButton = findButtonByText(container, "Save scenario layer asset");
+    const staleSave = staleButton.click();
+    while (requestSettlers.length < 1) await Promise.resolve();
+
+    runtimeState.activeScenarioId = "hoi4_1936";
+    runtimeState.currentScenarioApplyRequestId = 2;
+    runtimeState.specialZoneLayers = {
+      layers: [createLayerFromPreset("custom", { id: "hoi4-layer", memberFeatureIds: ["b"] })],
+      activeLayerId: "hoi4-layer",
+    };
+    controller.renderSpecialZonesWorkbenchUi();
+    const currentButton = findButtonByText(container, "Save scenario layer asset");
+    const currentSave = currentButton.click();
+
+    requestSettlers[0].reject(new Error("stale request failed"));
+    await staleSave;
+    while (requestSettlers.length < 2) await Promise.resolve();
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1].scenarioId, "hoi4_1936");
+    assert.equal(requests[1].specialZoneLayers.layers[0].id, "hoi4-layer");
+    assert.deepEqual(warnings, []);
+    assert.deepEqual(toasts, []);
+    assert.equal(renderCount, 0);
+
+    requestSettlers[1].succeed();
+    await currentSave;
+
+    assert.deepEqual(warnings, []);
+    assert.equal(toasts.length, 1);
+    assert.equal(renderCount, 1);
+    assert.equal(runtimeState.specialZoneLayers.layers[0].id, "hoi4-layer");
+    assert.equal(staleButton.getAttribute("aria-busy"), null);
+    assert.equal(currentButton.getAttribute("aria-busy"), null);
+    assert.equal(container.querySelector(".special-zone-workbench-status").textContent, "Scenario special zone layers saved.");
+  } finally {
+    console.warn = previousWarn;
+    globalThis.document = previousDocument;
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("project-scoped special zones keep status hidden and expose disabled scenario asset reason", () => {
   const previousDocument = globalThis.document;
   globalThis.document = createTestDocument();

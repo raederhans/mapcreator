@@ -9,6 +9,7 @@ import {
 } from "./select_verification_targets.mjs";
 import { discoverChangedFiles } from "./run_adaptive_tests.mjs";
 import { buildRouteIndex } from "./test_route_registry.mjs";
+import { VERIFICATION_CATALOG_SOURCE_FILES } from "./verification/catalog/source_files.mjs";
 
 export const P4_PHASE_EXPECTED_COMMANDS = Object.freeze({
   "P4.0": Object.freeze(["verify:p4:state-writer-policy"]),
@@ -32,6 +33,8 @@ const P4_SHARED_TOOLING_PATHS = new Set([
   "tools/eslint-rules/state-writer-allowlist.json",
   "tools/select_verification_targets.mjs",
   "tools/test_route_registry.mjs",
+  "tools/verification/command_supersession.mjs",
+  ...VERIFICATION_CATALOG_SOURCE_FILES,
   "tools/verification/verification_domains.mjs",
   "tools/verification/verification_metadata_helpers.mjs",
 ]);

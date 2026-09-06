@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createDeferredDetailPromotionOwner } from "../js/bootstrap/deferred_detail_promotion.js";
+import {
+  commitStartupReadonlyStateFields,
+  setBootStateFields,
+} from "../js/core/state/actions/boot_actions.js";
 
 async function drainMicrotasks() {
   await Promise.resolve();
@@ -9,7 +13,7 @@ async function drainMicrotasks() {
 }
 
 test("forced readonly unlock schedules a ready sample exactly once when UI is ready", async () => {
-  const runtimeState = {
+  const runtimeFixture = {
     activeScenarioId: "tno_1962",
     bootPhase: "detail-promotion",
     detailDeferred: false,
@@ -24,7 +28,7 @@ test("forced readonly unlock schedules a ready sample exactly once when UI is re
   let sampleScheduleCount = 0;
   const bootPhases = [];
   const owner = createDeferredDetailPromotionOwner({
-    runtimeState,
+    runtimeState: runtimeFixture,
     helpers: {
       buildInteractionInfrastructureAfterStartup: async (options) => {
         assert.deepEqual(options, {
@@ -40,16 +44,20 @@ test("forced readonly unlock schedules a ready sample exactly once when UI is re
         timerCallback = callback;
       },
       setBootState: (phase) => {
-        runtimeState.bootPhase = phase;
+        setBootStateFields(runtimeFixture, { phase });
         bootPhases.push(phase);
       },
       setStartupReadonlyState: (active, options = {}) => {
-        runtimeState.startupReadonly = !!active;
-        runtimeState.startupReadonlyUnlockInFlight = !!options.unlockInFlight;
+        commitStartupReadonlyStateFields(runtimeFixture, {
+          active,
+          reason: options.reason,
+          unlockInFlight: options.unlockInFlight,
+          since: options.since,
+        });
       },
       tryScheduleStartupSampleProjectDeeplink: () => {
-        assert.equal(runtimeState.bootPhase, "ready");
-        assert.equal(runtimeState.uiHydrationStatus, "ready");
+        assert.equal(runtimeFixture.bootPhase, "ready");
+        assert.equal(runtimeFixture.uiHydrationStatus, "ready");
         sampleScheduleCount += 1;
         return sampleScheduleCount === 1;
       },
@@ -67,6 +75,6 @@ test("forced readonly unlock schedules a ready sample exactly once when UI is re
   await drainMicrotasks();
 
   assert.deepEqual(bootPhases, ["interaction-infra", "ready"]);
-  assert.equal(runtimeState.startupReadonly, false);
+  assert.equal(runtimeFixture.startupReadonly, false);
   assert.equal(sampleScheduleCount, 1);
 });

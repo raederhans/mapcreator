@@ -57,23 +57,28 @@ test("startup ready handoff owner owns all post-ready task keys", () => {
   assert.equal(ownerSource.includes("schedulePostReadyCityWarmup"), false);
 });
 
-test("startup ready handoff owner uses target-first actions without importing global state", () => {
+test("startup ready handoff owner receives hydration mutation as an explicit effect", () => {
   const ownerSource = readRepoFile("js", "bootstrap", "startup_ready_handoff.js");
+  const mainSource = readRepoFile("js", "main.js");
   const coreStateImports = [...ownerSource.matchAll(
     /from\s+["']([^"']*core\/state(?:\.js|\/[^"']+))["']/g,
   )].map((match) => match[1]);
 
   assert.deepEqual(coreStateImports, [
     "../core/state/actions/scenario_chunk_runtime_actions.js",
-    "../core/state/actions/boot_actions.js",
   ]);
   assert.ok(ownerSource.includes("patchScenarioChunkLoadState(targetRuntime,"));
-  assert.ok(ownerSource.includes("setUiHydrationState(targetRuntime,"));
+  assert.ok(ownerSource.includes("commitUiHydrationState({"));
+  assert.equal(ownerSource.includes("setUiHydrationState(targetRuntime,"), false);
+  assert.ok(mainSource.includes("effects: {"));
+  assert.ok(mainSource.includes("commitUiHydrationState: (patch) => setUiHydrationState(runtimeState, patch)"));
   assert.equal(/from\s+["'][^"']*map_renderer\/public\.js["']/.test(ownerSource), false);
   assert.equal(/from\s+["'][^"']*startup_data_pipeline\.js["']/.test(ownerSource), false);
   assert.ok(ownerSource.includes("runtimeState,"));
   assert.ok(ownerSource.includes("postReadyScheduler,"));
+  assert.ok(ownerSource.includes("effects = {},"));
   assert.ok(ownerSource.includes("helpers = {},"));
+  assert.ok(ownerSource.includes("return Object.freeze({"));
 });
 
 test("package exposes the startup ready handoff node test script", () => {

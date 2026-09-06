@@ -1,6 +1,21 @@
 // Canonical scenario presentation state authority.
 // UI publication, DOM work, rendering, and persistence remain in composition roots.
 
+import {
+  patchAppearanceStyleGroupState,
+  setAppearanceParentBorderEnabledMapState,
+  setAppearanceStyleConfigState,
+  setAppearanceStyleGroupState,
+} from "./appearance_actions.js";
+import {
+  setAppearanceVisibilitySnapshotState,
+} from "./appearance_visibility_actions.js";
+import {
+  patchUiChromeState,
+  setUiChromeState,
+} from "./ui_chrome_actions.js";
+import { commitUiVisibilityState } from "./ui_visibility_actions.js";
+
 export const SCENARIO_PRESENTATION_STATE_KEYS = Object.freeze([
   "scenarioParentBorderEnabledBeforeActivate",
   "scenarioDisplaySettingsBeforeActivate",
@@ -45,9 +60,126 @@ export const SCENARIO_PRESENTATION_STATE_KEYS = Object.freeze([
 const hasOwn = (target, key) =>
   Object.hasOwn(target, key);
 
+const SCENARIO_STYLE_DEFAULTS_KEYS_BY_GROUP = Object.freeze({
+  ocean: Object.freeze([
+    "preset",
+    "fillColor",
+    "opacity",
+    "scale",
+    "contourStrength",
+    "experimentalAdvancedStyles",
+    "coastalAccentEnabled",
+    "shallowBandFadeEndZoom",
+    "midBandFadeEndZoom",
+    "deepBandFadeEndZoom",
+    "scenarioSyntheticContourFadeEndZoom",
+    "scenarioShallowContourFadeEndZoom",
+  ]),
+  internalBorders: Object.freeze(["color", "colorMode", "opacity", "width"]),
+  empireBorders: Object.freeze(["color", "opacity", "width"]),
+  coastlines: Object.freeze(["color", "opacity", "width"]),
+});
+
+function readScenarioStyleDefaultsGroupPatch(styleOverride, groupKey) {
+  if (!hasOwn(styleOverride, groupKey)) {
+    return null;
+  }
+  const patch = styleOverride[groupKey];
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new TypeError(
+      `[scenario_presentation_actions] styleOverride.${groupKey} must be an object`,
+    );
+  }
+  const allowedKeys = SCENARIO_STYLE_DEFAULTS_KEYS_BY_GROUP[groupKey];
+  for (const key of Object.keys(patch)) {
+    if (!allowedKeys.includes(key)) {
+      throw new Error(
+        `[scenario_presentation_actions] styleOverride.${groupKey} contains unknown key: ${key}`,
+      );
+    }
+  }
+  return patch;
+}
+
+function validateScenarioStyleDefaultsPatch(styleOverride) {
+  if (!styleOverride || typeof styleOverride !== "object" || Array.isArray(styleOverride)) {
+    throw new TypeError("[scenario_presentation_actions] styleOverride must be an object");
+  }
+  for (const groupKey of Object.keys(styleOverride)) {
+    if (!hasOwn(SCENARIO_STYLE_DEFAULTS_KEYS_BY_GROUP, groupKey)) {
+      throw new Error(
+        `[scenario_presentation_actions] styleOverride contains unknown group: ${groupKey}`,
+      );
+    }
+  }
+  return {
+    ocean: readScenarioStyleDefaultsGroupPatch(styleOverride, "ocean"),
+    internalBorders: readScenarioStyleDefaultsGroupPatch(
+      styleOverride,
+      "internalBorders",
+    ),
+    empireBorders: readScenarioStyleDefaultsGroupPatch(
+      styleOverride,
+      "empireBorders",
+    ),
+    coastlines: readScenarioStyleDefaultsGroupPatch(styleOverride, "coastlines"),
+  };
+}
+
 function assertStateTarget(target) {
   if (!target || typeof target !== "object" || Array.isArray(target)) {
     throw new TypeError("[scenario_presentation_actions] target must be an object");
+  }
+}
+
+export function ensureInspectorExpansionState(target) {
+  assertStateTarget(target);
+  if (!(target.expandedInspectorContinents instanceof Set)) {
+    target.expandedInspectorContinents = new Set();
+    return true;
+  }
+  return false;
+}
+
+export function markInspectorExpansionInitializedState(target) {
+  assertStateTarget(target);
+  target.inspectorExpansionInitialized = true;
+}
+
+export function setInspectorContinentExpandedState(target, groupKey, expanded) {
+  if (!(target.expandedInspectorContinents instanceof Set)) {
+    target.expandedInspectorContinents = new Set();
+  }
+  const key = String(groupKey || "");
+  if (!key) return false;
+  const shouldExpand = expanded === true;
+  const previousSize = target.expandedInspectorContinents.size;
+  if (shouldExpand) {
+    target.expandedInspectorContinents.add(key);
+  } else {
+    target.expandedInspectorContinents.delete(key);
+  }
+  return target.expandedInspectorContinents.size !== previousSize;
+}
+
+export function setBatchFillScopeState(target, scope) {
+  assertStateTarget(target);
+  const nextScope = scope === "country" ? "country" : "parent";
+  if (target.batchFillScope === nextScope) return false;
+  target.batchFillScope = nextScope;
+  return true;
+}
+
+export function setHgoIdentityVariantSelectionState(
+  target,
+  countryCode,
+  variantKey,
+) {
+  assertStateTarget(target);
+  if (variantKey) {
+    target.hgoIdentity.variantSelections[countryCode] = variantKey;
+  } else {
+    delete target.hgoIdentity.variantSelections[countryCode];
   }
 }
 
@@ -73,6 +205,15 @@ export function clearClickScenarioHoverIdsState(target) {
   target.hoveredSpecialRegionId = null;
 }
 
+export function setScenarioHoverRegionIdsState(
+  target,
+  { waterId = null, specialId = null } = {},
+) {
+  assertStateTarget(target);
+  target.hoveredWaterRegionId = waterId;
+  target.hoveredSpecialRegionId = specialId;
+}
+
 export function setClickSelectedWaterRegionIdState(target, regionId = "") {
   assertStateTarget(target);
   const normalizedId = String(regionId || "").trim();
@@ -96,11 +237,44 @@ export function setClickActiveSovereignCodeState(target, ownerCode = "") {
 
 export function setDayNightStyleConfigState(target, config) {
   assertStateTarget(target);
-  if (!target.styleConfig || typeof target.styleConfig !== "object") {
-    target.styleConfig = {};
+  return setAppearanceStyleGroupState(
+    target,
+    "dayNight",
+    config,
+  );
+}
+
+export function mergeScenarioStyleDefaultsState(target, styleOverride) {
+  assertStateTarget(target);
+  const {
+    ocean: oceanPatch,
+    internalBorders: internalBordersPatch,
+    empireBorders: empireBordersPatch,
+    coastlines: coastlinesPatch,
+  } = validateScenarioStyleDefaultsPatch(styleOverride);
+  if (
+    !oceanPatch
+    && !internalBordersPatch
+    && !empireBordersPatch
+    && !coastlinesPatch
+  ) {
+    return true;
   }
-  target.styleConfig.dayNight = config;
-  return config;
+  for (const [group, patch] of [
+    ["ocean", oceanPatch],
+    ["internalBorders", internalBordersPatch],
+    ["empireBorders", empireBordersPatch],
+    ["coastlines", coastlinesPatch],
+  ]) {
+    if (!patch) continue;
+    patchAppearanceStyleGroupState(
+      target,
+      group,
+      { ...patch },
+      { preserveGroupIdentity: true },
+    );
+  }
+  return true;
 }
 
 function validateCompletePatch(patch) {
@@ -193,16 +367,33 @@ export function commitScenarioPresentationState(target, patch) {
     patch.expandedInspectorContinents;
   target.expandedInspectorReleaseParents =
     patch.expandedInspectorReleaseParents;
-  target.parentBordersVisible = patch.parentBordersVisible;
-  target.parentBorderEnabledByCountry =
-    patch.parentBorderEnabledByCountry;
+  setAppearanceVisibilitySnapshotState(
+    target,
+    "parentBordersVisible",
+    patch.parentBordersVisible,
+  );
+  if (target.parentBorderEnabledByCountry !== patch.parentBorderEnabledByCountry) {
+    setAppearanceParentBorderEnabledMapState(
+      target,
+      patch.parentBorderEnabledByCountry,
+      { normalize: false },
+    );
+  }
   target.scenarioPaintModeBeforeActivate =
     patch.scenarioPaintModeBeforeActivate;
   target.paintMode = patch.paintMode;
   target.interactionGranularity = patch.interactionGranularity;
   target.batchFillScope = patch.batchFillScope;
-  target.ui = patch.ui;
-  target.styleConfig = patch.styleConfig;
+  if (target.ui !== patch.ui) {
+    setUiChromeState(target, patch.ui);
+  }
+  if (target.styleConfig !== patch.styleConfig) {
+    setAppearanceStyleConfigState(
+      target,
+      patch.styleConfig,
+      { validate: false },
+    );
+  }
   target.locales = patch.locales;
   target.geoAliasToStableKey = patch.geoAliasToStableKey;
   target.scenarioGeoLocalePatchData =
@@ -213,16 +404,24 @@ export function commitScenarioPresentationState(target, patch) {
   target.scenarioAuditUi = patch.scenarioAuditUi;
   target.renderProfile = patch.renderProfile;
   target.dynamicBordersEnabled = patch.dynamicBordersEnabled;
-  target.showCityPoints = patch.showCityPoints;
-  target.showWaterRegions = patch.showWaterRegions;
-  target.showScenarioSpecialRegions = patch.showScenarioSpecialRegions;
-  target.showScenarioAtlantropa = patch.showScenarioAtlantropa;
-  target.showScenarioReliefOverlays =
-    patch.showScenarioReliefOverlays;
-  target.showStrategicResourceMarkers =
-    patch.showStrategicResourceMarkers;
-  target.strategicChoroplethMetric =
-    patch.strategicChoroplethMetric;
+  commitUiVisibilityState(
+    target,
+    {
+      showCityPoints: patch.showCityPoints,
+      showWaterRegions: patch.showWaterRegions,
+      showScenarioSpecialRegions:
+        patch.showScenarioSpecialRegions,
+      showScenarioAtlantropa:
+        patch.showScenarioAtlantropa,
+      showScenarioReliefOverlays:
+        patch.showScenarioReliefOverlays,
+      showStrategicResourceMarkers:
+        patch.showStrategicResourceMarkers,
+      strategicChoroplethMetric:
+        patch.strategicChoroplethMetric,
+    },
+    { normalize: false },
+  );
   return true;
 }
 
@@ -340,13 +539,22 @@ function restoreScenarioPresentationStateFromValidated(
     delete target.expandedInspectorReleaseParents;
   }
   if (presentKeys.has("parentBordersVisible")) {
-    target.parentBordersVisible = values.parentBordersVisible;
+    setAppearanceVisibilitySnapshotState(
+      target,
+      "parentBordersVisible",
+      values.parentBordersVisible,
+    );
   } else {
     delete target.parentBordersVisible;
   }
   if (presentKeys.has("parentBorderEnabledByCountry")) {
-    target.parentBorderEnabledByCountry =
-      values.parentBorderEnabledByCountry;
+    if (target.parentBorderEnabledByCountry !== values.parentBorderEnabledByCountry) {
+      setAppearanceParentBorderEnabledMapState(
+        target,
+        values.parentBorderEnabledByCountry,
+        { normalize: false },
+      );
+    }
   } else {
     delete target.parentBorderEnabledByCountry;
   }
@@ -373,27 +581,39 @@ function restoreScenarioPresentationStateFromValidated(
   }
   if (presentKeys.has("ui")) {
     if (preserveTransactionNestedState) {
-      if (!target.ui || typeof target.ui !== "object") {
-        target.ui = {};
-      }
-      target.ui.politicalEditingExpanded =
-        values.ui.politicalEditingExpanded;
-      target.ui.scenarioVisualAdjustmentsOpen =
-        values.ui.scenarioVisualAdjustmentsOpen;
+      patchUiChromeState(
+        target,
+        {
+          politicalEditingExpanded:
+            structuredClone(values.ui.politicalEditingExpanded),
+          scenarioVisualAdjustmentsOpen:
+            structuredClone(values.ui.scenarioVisualAdjustmentsOpen),
+        },
+        { normalizeExisting: false },
+      );
     } else {
-      target.ui = values.ui;
+      if (target.ui !== values.ui) {
+        setUiChromeState(target, values.ui);
+      }
     }
   } else {
     delete target.ui;
   }
   if (presentKeys.has("styleConfig")) {
     if (preserveTransactionNestedState) {
-      if (!target.styleConfig || typeof target.styleConfig !== "object") {
-        target.styleConfig = {};
-      }
-      target.styleConfig.ocean = values.styleConfig.ocean;
+      setAppearanceStyleGroupState(
+        target,
+        "ocean",
+        values.styleConfig.ocean,
+      );
     } else {
-      target.styleConfig = values.styleConfig;
+      if (target.styleConfig !== values.styleConfig) {
+        setAppearanceStyleConfigState(
+          target,
+          values.styleConfig,
+          { validate: false },
+        );
+      }
     }
   } else {
     delete target.styleConfig;
@@ -430,41 +650,80 @@ function restoreScenarioPresentationStateFromValidated(
     delete target.dynamicBordersEnabled;
   }
   if (presentKeys.has("showCityPoints")) {
-    target.showCityPoints = values.showCityPoints;
+    commitUiVisibilityState(
+      target,
+      { showCityPoints: values.showCityPoints },
+      { normalize: false },
+    );
   } else {
     delete target.showCityPoints;
   }
   if (presentKeys.has("showWaterRegions")) {
-    target.showWaterRegions = values.showWaterRegions;
+    commitUiVisibilityState(
+      target,
+      { showWaterRegions: values.showWaterRegions },
+      { normalize: false },
+    );
   } else {
     delete target.showWaterRegions;
   }
   if (presentKeys.has("showScenarioSpecialRegions")) {
-    target.showScenarioSpecialRegions =
-      values.showScenarioSpecialRegions;
+    commitUiVisibilityState(
+      target,
+      {
+        showScenarioSpecialRegions:
+          values.showScenarioSpecialRegions,
+      },
+      { normalize: false },
+    );
   } else {
     delete target.showScenarioSpecialRegions;
   }
   if (presentKeys.has("showScenarioAtlantropa")) {
-    target.showScenarioAtlantropa = values.showScenarioAtlantropa;
+    commitUiVisibilityState(
+      target,
+      {
+        showScenarioAtlantropa:
+          values.showScenarioAtlantropa,
+      },
+      { normalize: false },
+    );
   } else {
     delete target.showScenarioAtlantropa;
   }
   if (presentKeys.has("showScenarioReliefOverlays")) {
-    target.showScenarioReliefOverlays =
-      values.showScenarioReliefOverlays;
+    commitUiVisibilityState(
+      target,
+      {
+        showScenarioReliefOverlays:
+          values.showScenarioReliefOverlays,
+      },
+      { normalize: false },
+    );
   } else {
     delete target.showScenarioReliefOverlays;
   }
   if (presentKeys.has("showStrategicResourceMarkers")) {
-    target.showStrategicResourceMarkers =
-      values.showStrategicResourceMarkers;
+    commitUiVisibilityState(
+      target,
+      {
+        showStrategicResourceMarkers:
+          values.showStrategicResourceMarkers,
+      },
+      { normalize: false },
+    );
   } else {
     delete target.showStrategicResourceMarkers;
   }
   if (presentKeys.has("strategicChoroplethMetric")) {
-    target.strategicChoroplethMetric =
-      values.strategicChoroplethMetric;
+    commitUiVisibilityState(
+      target,
+      {
+        strategicChoroplethMetric:
+          values.strategicChoroplethMetric,
+      },
+      { normalize: false },
+    );
   } else {
     delete target.strategicChoroplethMetric;
   }

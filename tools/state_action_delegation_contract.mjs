@@ -38,10 +38,37 @@ const RENDERER_CACHE_ACTION_MODULE_PATH =
   "js/core/state/actions/renderer_cache_actions.js";
 const RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH =
   "js/core/state/actions/renderer_diagnostics_actions.js";
+const APPEARANCE_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_actions.js";
+const APPEARANCE_PRESET_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_preset_actions.js";
+const APPEARANCE_REFERENCE_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_reference_actions.js";
+const APPEARANCE_SELECTION_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_selection_actions.js";
+const APPEARANCE_VISIBILITY_ACTION_MODULE_PATH =
+  "js/core/state/actions/appearance_visibility_actions.js";
+const INTENSITY_FIELD_ACTION_MODULE_PATH =
+  "js/core/state/actions/intensity_field_actions.js";
+const EXPORT_WORKBENCH_ACTION_MODULE_PATH =
+  "js/core/state/actions/export_workbench_actions.js";
+const TRANSPORT_ACTION_MODULE_PATH =
+  "js/core/state/actions/transport_actions.js";
+const UI_CHROME_ACTION_MODULE_PATH =
+  "js/core/state/actions/ui_chrome_actions.js";
+const UI_DIRTY_ACTION_MODULE_PATH =
+  "js/core/state/actions/ui_dirty_actions.js";
+const UI_VISIBILITY_ACTION_MODULE_PATH =
+  "js/core/state/actions/ui_visibility_actions.js";
+const STRATEGIC_OVERLAY_ACTION_MODULE_PATH =
+  "js/core/state/actions/strategic_overlay_actions.js";
+const SPECIAL_ZONE_ACTION_MODULE_PATH =
+  "js/core/state/actions/special_zone_actions.js";
 
 const BOOT_ACTION_EXPORT_NAMES = Object.freeze([
   "setStartupInteractionMode",
   "setBootPreviewVisibleState",
+  "setUiHydrationState",
   "commitStartupReadonlyStateFields",
   "clearStartupReadonlyStateFields",
   "clearStartupReadonlyStateForReason",
@@ -77,10 +104,19 @@ const SCENARIO_ACTIVATION_CHUNK_OPTIONAL_ACTION_EXPORT_NAMES = Object.freeze([
 ]);
 
 const SCENARIO_PRESENTATION_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureInspectorExpansionState",
+  "markInspectorExpansionInitializedState",
+  "setInspectorContinentExpandedState",
+  "setHgoIdentityVariantSelectionState",
+  "setBatchFillScopeState",
   "commitScenarioPresentationState",
   "restoreScenarioTransactionPresentationBeforeAuditState",
   "restoreScenarioPresentationState",
   "restoreScenarioTransactionPresentationState",
+]);
+
+const SCENARIO_PRESENTATION_STYLE_DEFAULTS_ACTION_EXPORT_NAMES = Object.freeze([
+  "mergeScenarioStyleDefaultsState",
 ]);
 
 const SCENARIO_PRESENTATION_DAY_NIGHT_ACTION_EXPORT_NAMES = Object.freeze([
@@ -94,6 +130,7 @@ const SCENARIO_ACTIVATION_CLICK_ACTION_EXPORT_NAMES = Object.freeze([
 
 const SCENARIO_PRESENTATION_CLICK_ACTION_EXPORT_NAMES = Object.freeze([
   "clearClickScenarioHoverIdsState",
+  "setScenarioHoverRegionIdsState",
   "setClickActiveSovereignCodeState",
   "setClickSelectedSpecialRegionIdState",
   "setClickSelectedWaterRegionIdState",
@@ -166,6 +203,10 @@ const RENDERER_PHASE_ACTION_EXPORT_NAMES = Object.freeze([
 ]);
 
 const RENDERER_INTERACTION_ACTION_EXPORT_NAMES = Object.freeze([
+  "setHoveredFeatureIdsState",
+  "setLastMouseMoveTimeState",
+  "setTooltipPendingState",
+  "setTooltipRafHandleState",
   "clearClickHoveredIdState",
   "removeClickWaterRegionOverrideState",
   "setClickHoverOverlayDirtyState",
@@ -173,6 +214,9 @@ const RENDERER_INTERACTION_ACTION_EXPORT_NAMES = Object.freeze([
   "setZoomGestureStartTransformState",
   "setZoomGestureScaleDeltaState",
   "setPendingZoomTransformState",
+  "setZoomTransformState",
+  "setHitCanvasDirtyState",
+  "setHitCanvasBuildScheduledState",
   "setZoomRenderScheduledState",
   "setZoomGestureEndedAtState",
   "beginInteractionRecoveryTaskState",
@@ -195,6 +239,9 @@ const RENDERER_EXACT_REFRESH_ACTION_EXPORT_NAMES = Object.freeze([
 ]);
 
 const RENDERER_CACHE_ACTION_EXPORT_NAMES = Object.freeze([
+  "setDynamicBordersDirtyState",
+  "setPendingDynamicBorderTimerState",
+  "replaceCachedDetailAdmBordersState",
   "commitRenderPassCacheState",
   "commitProjectedBoundsCacheState",
   "clearSphericalFeatureDiagnosticsCacheState",
@@ -211,6 +258,116 @@ const RENDERER_DIAGNOSTICS_ACTION_EXPORT_NAMES = Object.freeze([
   "resetProjectedBoundsDiagnosticsState",
   "setProjectedBoundsDiagnosticsState",
   "setDebugCountryCoverageState",
+]);
+
+const APPEARANCE_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureAppearanceStyleConfigState",
+  "setAppearanceStyleConfigState",
+  "setAppearanceStyleGroupState",
+  "patchAppearanceStyleGroupState",
+  "applyAppearanceStylePathPatchState",
+  "setAppearanceParentBorderEnabledMapState",
+  "patchAppearanceParentBorderEnabledMapState",
+]);
+
+const APPEARANCE_PRESET_ACTION_EXPORT_NAMES = Object.freeze([
+  "setAppearancePresetsState",
+  "normalizeAppearancePresetsIntoState",
+  "upsertAppearancePresetState",
+  "deleteAppearancePresetState",
+  "mergeAppearancePresetImportPayloadState",
+  "selectAppearancePresetState",
+  "applyAppearancePresetState",
+]);
+
+const APPEARANCE_REFERENCE_ACTION_EXPORT_NAMES = Object.freeze([
+  "setReferenceImageState",
+  "patchReferenceImageState",
+  "setReferenceImageUrlState",
+]);
+
+const APPEARANCE_SELECTION_ACTION_EXPORT_NAMES = Object.freeze([
+  "setSelectedColorState",
+]);
+
+const APPEARANCE_VISIBILITY_ACTION_EXPORT_NAMES = Object.freeze([
+  "setAppearanceVisibilityState",
+  "setAppearanceVisibilitySnapshotState",
+  "patchAppearanceVisibilityState",
+]);
+
+const INTENSITY_FIELD_ACTION_EXPORT_NAMES = Object.freeze([
+  "setIntensityFieldsState",
+  "normalizeIntensityFieldsIntoState",
+  "updateIntensityFieldChannelState",
+  "setIntensityFieldToolState",
+]);
+
+const EXPORT_WORKBENCH_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureExportWorkbenchUiState",
+  "commitExportWorkbenchUiState",
+  "setExportLayerOrderState",
+  "setExportVisibilityState",
+  "setExportTextVisibilityState",
+  "setExportPreviewState",
+  "setExportOutputState",
+  "setExportAdjustmentsState",
+  "setExportBakeState",
+]);
+
+const TRANSPORT_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureTransportWorkbenchUiState",
+  "commitTransportWorkbenchUiState",
+  "commitTransportWorkbenchPointDeltasState",
+  "applyTransportWorkbenchOverviewState",
+  "ensureTransportOverviewStyleConfigState",
+  "setTransportMasterVisibilityState",
+  "setTransportFamilyVisibilityState",
+]);
+
+const UI_CHROME_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureUiChromeState",
+  "setUiChromeState",
+  "patchUiChromeState",
+  "setActiveDockPopoverState",
+  "setRestoredSupportSurfaceViewState",
+]);
+
+const UI_DIRTY_ACTION_EXPORT_NAMES = Object.freeze([
+  "markDirtyState",
+  "clearDirtyState",
+]);
+
+const UI_VISIBILITY_ACTION_EXPORT_NAMES = Object.freeze([
+  "commitUiVisibilityState",
+  "restoreUiVisibilityState",
+  "restoreImportedLayerVisibilityState",
+]);
+
+const STRATEGIC_OVERLAY_ACTION_EXPORT_NAMES = Object.freeze([
+  "commitStrategicOverlayCollectionsState",
+  "restoreStrategicOverlaySnapshotState",
+  "patchStrategicOverlayEntityGroupState",
+  "patchStrategicOverlayEntityState",
+  "patchStrategicOverlayEditorState",
+  "setStrategicOverlayDirtyState",
+]);
+
+const SPECIAL_ZONE_ACTION_EXPORT_NAMES = Object.freeze([
+  "ensureSpecialZoneEditorState",
+  "patchSpecialZoneEditorState",
+  "commitSpecialZoneLayersState",
+  "mutateSpecialZoneLayersStateAction",
+  "restoreSpecialZoneSnapshotState",
+  "setSpecialZoneMembershipBrushModeState",
+  "setSpecialZonePresetCategoryState",
+  "setSpecialZonePresetCategoryOpenState",
+  "ensureManualSpecialZonesState",
+  "setSpecialZonesVisibilityState",
+  "setSpecialZonesOverlayDirtyState",
+  "activateSpecialZoneMembershipToolState",
+  "exitSpecialZoneMembershipToolState",
+  "registerSpecialZonesWorkbenchRuntimeHooks",
 ]);
 
 const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
@@ -281,6 +438,11 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
   }),
   Object.freeze({
     modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportNames: SCENARIO_PRESENTATION_STYLE_DEFAULTS_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.3",
+  }),
+  Object.freeze({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
     exportNames: SCENARIO_PRESENTATION_DAY_NIGHT_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.3",
   }),
@@ -314,9 +476,107 @@ const STATE_ACTION_EXPORT_GROUPS = Object.freeze([
     exportNames: RENDERER_DIAGNOSTICS_ACTION_EXPORT_NAMES,
     introducedInPhase: "P4.3",
   }),
+  Object.freeze({
+    modulePath: APPEARANCE_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_PRESET_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_PRESET_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_REFERENCE_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_REFERENCE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_SELECTION_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_SELECTION_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: APPEARANCE_VISIBILITY_ACTION_MODULE_PATH,
+    exportNames: APPEARANCE_VISIBILITY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: INTENSITY_FIELD_ACTION_MODULE_PATH,
+    exportNames: INTENSITY_FIELD_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: EXPORT_WORKBENCH_ACTION_MODULE_PATH,
+    exportNames: EXPORT_WORKBENCH_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: TRANSPORT_ACTION_MODULE_PATH,
+    exportNames: TRANSPORT_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: UI_CHROME_ACTION_MODULE_PATH,
+    exportNames: UI_CHROME_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: UI_DIRTY_ACTION_MODULE_PATH,
+    exportNames: UI_DIRTY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: UI_VISIBILITY_ACTION_MODULE_PATH,
+    exportNames: UI_VISIBILITY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+    exportNames: STRATEGIC_OVERLAY_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
+  Object.freeze({
+    modulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    exportNames: SPECIAL_ZONE_ACTION_EXPORT_NAMES,
+    introducedInPhase: "P4.4",
+  }),
 ]);
 
 const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
+  [
+    APPEARANCE_ACTION_MODULE_PATH,
+    new Set([
+      "APPEARANCE_STYLE_GROUP_KEYS",
+    ]),
+  ],
+  [
+    APPEARANCE_VISIBILITY_ACTION_MODULE_PATH,
+    new Set([
+      "APPEARANCE_VISIBILITY_KEYS",
+    ]),
+  ],
+  [
+    UI_VISIBILITY_ACTION_MODULE_PATH,
+    new Set([
+      "captureUiVisibilityState",
+    ]),
+  ],
+  [
+    STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+    new Set([
+      "STRATEGIC_OVERLAY_COLLECTION_KEYS",
+      "STRATEGIC_OVERLAY_DIRTY_KEYS",
+      "STRATEGIC_OVERLAY_ENTITY_FIELD_KEYS",
+      "STRATEGIC_OVERLAY_EDITOR_FIELD_KEYS",
+    ]),
+  ],
+  [
+    SPECIAL_ZONE_ACTION_MODULE_PATH,
+    new Set([
+      "SPECIAL_ZONE_EDITOR_FIELD_KEYS",
+    ]),
+  ],
   [
     RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH,
     new Set([
@@ -324,6 +584,7 @@ const STATE_ACTION_READ_ONLY_EXPORT_NAMES_BY_MODULE = new Map([
       "captureRenderPerfMetricEntryState",
       "captureRenderPerfMetricsState",
       "captureProjectedBoundsDiagnosticsState",
+      "captureRenderSnapshotState",
     ]),
   ],
   [
@@ -446,6 +707,7 @@ function freezeStateTargetPureReaderEntry({
   targetParameterIndex = 0,
   targetParameterPath = "$",
   sourceFingerprint,
+  importedArgumentCount = 0,
   acceptedEscapes = [],
   conservativeFindings = [],
 } = {}) {
@@ -456,6 +718,7 @@ function freezeStateTargetPureReaderEntry({
     targetParameterIndex: Number(targetParameterIndex),
     targetParameterPath: String(targetParameterPath || ""),
     sourceFingerprint: String(sourceFingerprint || ""),
+    importedArgumentCount: Number(importedArgumentCount),
     acceptedEscapes: Object.freeze(
       acceptedEscapes.map(freezePureReaderEscape),
     ),
@@ -491,6 +754,55 @@ function scenarioDetailConservativeFinding(
 }
 
 export const STATE_TARGET_PURE_READER_CONTRACT = Object.freeze([
+  // Preset UI reads its target; existing injected transactions receive detached IDs/strings.
+  freezeStateTargetPureReaderEntry({
+    modulePath: "js/ui/sidebar/regional_preset_controller.js",
+    functionName: "createRegionalPresetController",
+    importedArgumentCount: 2,
+    targetParameterName: "runtimeState",
+    targetParameterIndex: 0,
+    targetParameterPath: "$",
+    sourceFingerprint: "4abc2b6fd9d5c5a818fc6bd88e4e5125f63092d359140e725124022f62304677",
+    // The indexed adapter returns the detached application result; it returns no target reference.
+    conservativeFindings: [
+      {
+        "enclosingFunctionIdentity": "{\"kind\":\"function\",\"ancestry\":[{\"name\":\"createRegionalPresetController\",\"ordinal\":0},{\"name\":\"applyPresetWithMode\",\"ordinal\":0}]}",
+        "reason": "state-alias-escape",
+        "operation": "unsupported",
+        "key": "*",
+        "sourceFingerprint": "0b63087c37f3465c3a7e584136408fc72ae39a39b6ced22cd98120f30389ec74",
+        "count": 1
+      },
+    ],
+  }),
+  // Query-only model: these two returns deliberately preserve borrowed metadata identity.
+  freezeStateTargetPureReaderEntry({
+    modulePath: "js/ui/sidebar/country_inspector_model.js",
+    functionName: "createCountryInspectorModel",
+    importedArgumentCount: 2,
+    targetParameterName: "runtimeState",
+    targetParameterIndex: 0,
+    targetParameterPath: "$",
+    sourceFingerprint: "5025268bdaa447224e575677424628ca5614ebb6bf9deb3ea949a2fb39aaab04",
+    conservativeFindings: [
+      {
+        enclosingFunctionIdentity: "{\"kind\":\"function\",\"ancestry\":[{\"name\":\"createCountryInspectorModel\",\"ordinal\":0},{\"name\":\"getScenarioCountryMeta\",\"ordinal\":0}]}",
+        reason: "state-alias-escape",
+        operation: "unsupported",
+        key: "scenarioCountriesByTag",
+        sourceFingerprint: "923fe53966c6cd9343e11af776cd4b05be315ea4b200b02e4d5dfb0f929b73bf",
+        count: 1
+      },
+      {
+        enclosingFunctionIdentity: "{\"kind\":\"function\",\"ancestry\":[{\"name\":\"createCountryInspectorModel\",\"ordinal\":0},{\"name\":\"getCountryGroupingMeta\",\"ordinal\":0}]}",
+        reason: "state-alias-escape",
+        operation: "unsupported",
+        key: "countryGroupMetaByCode",
+        sourceFingerprint: "c8d46c08ad3b4f2b23b4e8531c98f48910ee89396ac3abf11b1bf096c3631691",
+        count: 1
+      }
+    ]
+  }),
   freezeStateTargetPureReaderEntry({
     modulePath: "js/core/scenario_manager.js",
     functionName: "prepareScenarioDetailTopologyState",
@@ -697,10 +1009,79 @@ export function validateStateImportedPureNormalizerContract(
   return violations;
 }
 
+// This projection copies layer metadata but retains land-feature references.
+// The reviewed array reads below are bound to the complete import-free module.
+export const STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT = Object.freeze([
+  Object.freeze({
+    modulePath: "js/core/special_zone_layers.js",
+    exportName: "buildSpecialZoneRenderFeatures",
+    copiedArgumentIndex: 0,
+    copiedArgumentStaticPath: "specialZoneLayers",
+    borrowedArgumentIndex: 1,
+    borrowedArgumentStaticPath: "landIndex",
+    argumentCount: 2,
+    sourceFingerprint: "81673f03c47f8a6d170556f77c46751fa57be76127db595f7c5060b014d6e82f",
+    reviewedReadCallFingerprints: Object.freeze([
+      "9d62a2b7dca715130713cf46489d48e7e16f6becc75c6de122cd96cfd2d0913a",
+      "aff4d257027d21f7914af6ce20680d07adc77a6f91b233e70c2961a22e5afd81",
+      "a24026f928ff0ea718538d86e9a7fb4b76ee3fe647db65bc361583b6705baa4a",
+      "ca4b21de6fbbe1959898efd6d45a62779dbc2d20494d89d7afe7ffb94b525f0e",
+      "970d4885184c911328b86350bd4a4a08851f643923888d8929c29d69f630ce5d",
+    ]),
+  }),
+]);
+
+export function findStateImportedBorrowedProjectionContractEntry(modulePath, exportName) {
+  return STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT.find((entry) => (
+    entry.modulePath === normalizeModulePath(modulePath) && entry.exportName === exportName
+  )) || null;
+}
+
+export function inspectStateImportedBorrowedProjectionSource(source, entry) {
+  const violations = [];
+  const fail = (reason, details = {}) => violations.push({ code: "state-imported-borrowed-projection-" + reason, ...details });
+  if (!entry || entry.argumentCount !== 2 || entry.copiedArgumentIndex !== 0
+    || entry.borrowedArgumentIndex !== 1
+    || !/^[a-f0-9]{64}$/.test(entry.sourceFingerprint || "")
+    || !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(entry.copiedArgumentStaticPath || "")
+    || !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(entry.borrowedArgumentStaticPath || "")
+    || !Array.isArray(entry.reviewedReadCallFingerprints)
+    || new Set(entry.reviewedReadCallFingerprints).size !== entry.reviewedReadCallFingerprints.length
+    || entry.reviewedReadCallFingerprints.some((value) => !/^[a-f0-9]{64}$/.test(value))) {
+    fail("contract-invalid");
+    return { violations };
+  }
+  const normalized = String(source).replaceAll("\r\n", "\n");
+  if (createHash("sha256").update(normalized).digest("hex") !== entry.sourceFingerprint) fail("source-drift");
+  let ast;
+  try { ast = parseModuleSource(normalized); } catch { fail("parse-failed"); return { violations }; }
+  walkSyntaxTree(ast, (node) => {
+    if (node.type === "ImportDeclaration" || node.type === "ImportExpression" || node.source) fail("import-forbidden");
+  });
+  const fn = topLevelFunctionDeclarations(ast).get(entry.exportName);
+  const exported = ast.body.some((node) => node.type === "ExportNamedDeclaration" && (
+    node.declaration?.id?.name === entry.exportName
+    || node.specifiers?.some((spec) => spec.exported?.name === entry.exportName && spec.local?.name === entry.exportName)
+  ));
+  if (!exported || !fn || fn.params?.[entry.copiedArgumentIndex]?.type !== "Identifier") {
+    fail("export-invalid"); return { violations };
+  }
+  const reads = new Set(entry.reviewedReadCallFingerprints);
+  const seen = new Set();
+  for (const node of collectReachableTaintedHazardSites({ ast, rootFunction: fn, taintedParameterIndexes: [entry.copiedArgumentIndex] })) {
+    const fingerprint = fingerprintFunctionSource(normalized, node);
+    if (node.type !== "CallExpression" || !reads.has(fingerprint)) fail("input-hazard", { line: node.loc?.start.line, fingerprint });
+    else seen.add(fingerprint);
+  }
+  if (seen.size !== reads.size) fail("reviewed-read-drift");
+  return { violations };
+}
+
 function freezeStateDetachedCaptureEntry({
   modulePath,
   exportName,
   targetArgumentIndex = 0,
+  targetArgumentStaticPath = "",
   sourceFingerprint,
   cloneHelperFingerprints = {},
   readHelperFingerprints = {},
@@ -709,6 +1090,7 @@ function freezeStateDetachedCaptureEntry({
     modulePath: normalizeModulePath(modulePath),
     exportName: String(exportName || ""),
     targetArgumentIndex: Number(targetArgumentIndex),
+    targetArgumentStaticPath: String(targetArgumentStaticPath || ""),
     sourceFingerprint: String(sourceFingerprint || ""),
     cloneHelperFingerprints: Object.freeze({ ...cloneHelperFingerprints }),
     readHelperFingerprints: Object.freeze({ ...readHelperFingerprints }),
@@ -718,6 +1100,8 @@ function freezeStateDetachedCaptureEntry({
 const RENDERER_DIAGNOSTICS_DETACHED_CLONE_HELPERS = Object.freeze({
   cloneDiagnosticValue:
     "07c39f1ebbb3d2328aae5713dc6e3e8c43d74c500d8bb18aea9797f5c1e25a24",
+  cloneRenderSnapshotState:
+    "42fde0ba77866db20458a91410bbae52441beb5e05ec5dbb3868c73add2e52bf",
 });
 const RENDERER_DIAGNOSTICS_DETACHED_READ_HELPERS = Object.freeze({
   getOwnDataPropertyValue:
@@ -729,12 +1113,21 @@ const RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS = Object.freeze({
   cloneExactAfterSettleValue:
     "ca872828fa16a380cef3eee73cc1c3bc1dbe6c645f69c07be08b37a0de097c0f",
 });
+const SPECIAL_ZONE_DETACHED_CLONE_HELPERS = Object.freeze({
+  normalizeSpecialZoneLayersState:
+    "b9ed5eb75af3d1cc9f573429472ec8fc289de74a3d0b10af9e6d6a5698ff3092",
+});
+const SPECIAL_ZONE_SAVE_REQUEST_DETACHED_CLONE_HELPERS = Object.freeze({
+  serializeSpecialZoneLayersState:
+    "d66a2b978f9e70f1b4c7d00d7b7ecdd51419688c84a9acbec55e020ecb31f7a3",
+});
 
 export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
   ["captureRenderPerfMetricsState", "799cda208851e5ae938cc1904aeb0d6ee17d5e7eb4872015f8d269e9581a894a"],
   ["captureRenderPerfContextBreakdownState", "32ae271183ee8222ed3530bad2e1485d2d080ff78e017122b5be3ab9da35b5bb"],
   ["captureRenderPerfMetricEntryState", "8d057da5caba32bb63f40cd8d8f09753ac38ff455260151504a1a4de408b4a7c"],
   ["captureProjectedBoundsDiagnosticsState", "4352b61b815a7393990db64f2c3e0e355a620f5abaea8d9a8ff78445010e05ea"],
+  ["captureRenderSnapshotState", "3dca9a11ba57c7f36de5f7b72171ab7b5e04fe2d69f334ba57ea1e9cee09b62e"],
 ].map(([exportName, sourceFingerprint]) =>
   freezeStateDetachedCaptureEntry({
     modulePath: "js/core/state/actions/renderer_diagnostics_actions.js",
@@ -752,6 +1145,24 @@ export const STATE_DETACHED_CAPTURE_CONTRACT = Object.freeze([
     sourceFingerprint:
       "fa0f35be1303057d2afb495edb0d96aece6e3eceba195f1b77dc52d8eca5d438",
     cloneHelperFingerprints: RENDERER_EXACT_REFRESH_DETACHED_CLONE_HELPERS,
+  }),
+  freezeStateDetachedCaptureEntry({
+    modulePath: "js/core/special_zone_layers.js",
+    exportName: "serializeSpecialZoneLayersState",
+    targetArgumentIndex: 0,
+    targetArgumentStaticPath: "specialZoneLayers",
+    sourceFingerprint:
+      "d66a2b978f9e70f1b4c7d00d7b7ecdd51419688c84a9acbec55e020ecb31f7a3",
+    cloneHelperFingerprints: SPECIAL_ZONE_DETACHED_CLONE_HELPERS,
+  }),
+  freezeStateDetachedCaptureEntry({
+    modulePath: "js/core/special_zone_layers.js",
+    exportName: "captureScenarioLayerSaveRequestState",
+    targetArgumentIndex: 0,
+    sourceFingerprint:
+      "1fdcf4a1df2f1bc9ce9da6e8d2d5d5d19eeb28dcc2daf58031454503ad8fa983",
+    cloneHelperFingerprints:
+      SPECIAL_ZONE_SAVE_REQUEST_DETACHED_CLONE_HELPERS,
   }),
 ]));
 
@@ -786,6 +1197,12 @@ export function validateStateDetachedCaptureContract(
       || !isValidExportName(entry.exportName)
       || !Number.isInteger(entry.targetArgumentIndex)
       || entry.targetArgumentIndex < 0
+      || (
+        entry.targetArgumentStaticPath
+        && !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(
+          String(entry.targetArgumentStaticPath),
+        )
+      )
       || !/^[a-f0-9]{64}$/.test(String(entry.sourceFingerprint || ""))
       || !Object.entries(entry.cloneHelperFingerprints || {}).every(
         ([name, fingerprint]) => isValidExportName(name) && /^[a-f0-9]{64}$/.test(fingerprint),
@@ -821,6 +1238,226 @@ function freezeMutationDelegatingOwnerEntry(entry = {}) {
 }
 
 export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getSelectionOverlayOwner",
+    compositionSourceFingerprint: "16d01f47e724dcba2985bf46216bbe9966a730f9d6413217c3f69c2a2a49ff7f",
+    factoryModulePath: "js/core/renderer/selection_overlay_owner.js",
+    factoryExportName: "createSelectionOverlayOwner",
+    factorySourceFingerprint: "e8df4a168e3a9479cc988f8f852e3427cf5196c0b785dc02ceffe7526d78b742",
+    ownerBindingName: "selectionOverlayOwner",
+    methods: ["renderDevSelectionOverlay", "renderDevSelectionOverlayIfNeeded",
+      "renderInspectorHighlightOverlay", "renderInspectorHighlightOverlayIfNeeded"],
+    actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getViewportReadModelOwner",
+    compositionSourceFingerprint: "3cc3cd9f9c84a89e117603c3bf5f3f4d2f4242837f4b00d90377f98d0aadd75c",
+    factoryModulePath: "js/core/renderer/viewport_read_model_owner.js",
+    factoryExportName: "createViewportReadModelOwner",
+    factorySourceFingerprint: "27777745dacb10e02e3636df153a92f8b95aecaad6ed99e9a640676a64617755",
+    ownerBindingName: "viewportReadModelOwner",
+    methods: ["getViewportRenderSignature", "getProjectionRenderSignature", "getViewportGeoBounds",
+      "calculatePanExtent", "getProjectedRenderableContentBounds", "getCenteredFitZoomTransform", "getZoomPercent"],
+    actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    "compositionModulePath": "js/core/map_renderer.js",
+    "compositionExportName": "getRenderCacheOwner",
+    "compositionSourceFingerprint": "62355119aed9f311ba402b53011869f3a0ffb927522e4726a5a14a2777a0c4ee",
+    "factoryModulePath": "js/core/renderer/render_cache_owner.js",
+    "factoryExportName": "createRenderCacheOwner",
+    "factorySourceFingerprint": "d8431061e463243d32f66ec5f67d5f016d5ec4d50937265ef1f4f39e5ecdea8c",
+    "ownerBindingName": "renderCacheOwner",
+    "methods": [
+      "canDrawInteractionComposite",
+      "clearLastGoodFrame",
+      "clearPassFullReferenceTransforms",
+      "clearRenderPassReferenceTransforms",
+      "ensureCompositeBufferCanvas",
+      "ensureInteractionCompositeCanvas",
+      "ensureLastGoodFrameCanvas",
+      "ensureRenderPassCanvas",
+      "getInteractionCompositeSignature",
+      "getInteractionCompositeReuseDecision",
+      "getPassFullReferenceTransform",
+      "getPassReferenceTransform",
+      "getRenderPassCacheState",
+      "getRenderPassLayout",
+      "hasPassFullReferenceTransform",
+      "invalidateAllRenderPasses",
+      "invalidateInteractionComposite",
+      "invalidateRenderPasses",
+      "resizeRenderPassCanvases",
+      "setPassFullReferenceTransform",
+      "setPassReferenceTransform"
+    ],
+    "actionExports": []
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    "compositionModulePath": "js/core/map_renderer.js",
+    "compositionExportName": "getViewportCommandOwner",
+    "compositionSourceFingerprint": "9fd48adfda556034b5a42283ef88e988f8da94cd01afe5b13818c5e1e015b8f9",
+    "factoryModulePath": "js/core/renderer/viewport_command_owner.js",
+    "factoryExportName": "createViewportCommandOwner",
+    "factorySourceFingerprint": "e616dc8d793563d8267a856254c0f9ec9c0d8256329fcda657207495f0e25f47",
+    "ownerBindingName": "viewportCommandOwner",
+    "methods": [
+      "updateZoomTranslateExtent",
+      "resetZoomToFit",
+      "zoomByStep",
+      "setZoomPercent",
+      "enforceZoomConstraints"
+    ],
+    "actionExports": [
+      "setZoomTransformState"
+    ],
+    "actionModulePath": "js/core/state/actions/renderer_interaction_actions.js"
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    "compositionModulePath": "js/core/map_renderer.js",
+    "compositionExportName": "getViewportResizeLifecycleOwner",
+    "compositionSourceFingerprint": "0344ad081f0a18865fc8e16215b9f757f6ae93c6f3ef0615ec623230df03c4aa",
+    "factoryModulePath": "js/core/renderer/viewport_resize_lifecycle_owner.js",
+    "factoryExportName": "createViewportResizeLifecycleOwner",
+    "factorySourceFingerprint": "8715b48893089aeac645b8753eec9ce8593701cb7d1f357a666ddf897cd25ffe",
+    "ownerBindingName": "viewportResizeLifecycleOwner",
+    "methods": [
+      "getResizeReason",
+      "isInteractiveLayoutResize",
+      "scheduleResizeSpatialRefresh",
+      "shouldPreferFullResizeReason",
+      "requestMapContainerResizeSync",
+      "bindMapContainerResizeObserver",
+      "getDevicePixelRatioMediaQuery",
+      "unbindBrowserPixelRatioObserver",
+      "bindBrowserPixelRatioObserver",
+      "bindVisualViewportResizeObserver",
+      "bindBrowserZoomObservers",
+      "handleBrowserPixelRatioRefresh",
+      "handleResize",
+      "handleSidebarLayoutStart",
+      "dispose"
+    ],
+    "actionExports": [
+      "setHitCanvasDirtyState"
+    ],
+    "actionModulePath": "js/core/state/actions/renderer_interaction_actions.js"
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    "compositionModulePath": "js/core/map_renderer.js",
+    "compositionExportName": "getZoomInteractionLifecycleOwner",
+    "compositionSourceFingerprint": "77be4039f6d5b8af80f9dca408b5e108fab0fe0545cc86471a497c06cc5e2565",
+    "factoryModulePath": "js/core/renderer/zoom_interaction_lifecycle_owner.js",
+    "factoryExportName": "createZoomInteractionLifecycleOwner",
+    "factorySourceFingerprint": "337b824fcb4b596f898745ed9f98fdad3b2ae339badcdfebec852cd5963c2c47",
+    "ownerBindingName": "zoomInteractionLifecycleOwner",
+    "methods": [
+      "initZoom",
+      "flushLatestZoomTransform",
+      "getZoomBehavior",
+      "dispose"
+    ],
+    "actionExports": [
+      "setZoomGestureStartTransformState",
+      "setZoomGestureScaleDeltaState",
+      "setPendingZoomTransformState",
+      "setZoomRenderScheduledState",
+      "setZoomGestureEndedAtState",
+      "setPendingExactPoliticalFastFrameState"
+    ],
+    "actionModulePath": "js/core/state/actions/renderer_interaction_actions.js",
+    "actionModulePathsByExport": {
+      "setPendingExactPoliticalFastFrameState": "js/core/state/actions/renderer_exact_refresh_actions.js"
+    }
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    "compositionModulePath": "js/core/map_renderer.js",
+    "compositionExportName": "getMapInteractionEventBindingOwner",
+    "compositionSourceFingerprint": "5ac9a0e746c7544f65fc77329ccf6ccd91a428779235613b9f7eb9a0e176befd",
+    "factoryModulePath": "js/core/renderer/map_interaction_event_binding_owner.js",
+    "factoryExportName": "createMapInteractionEventBindingOwner",
+    "factorySourceFingerprint": "5b63e64411390e23a1be4a401cf9040034a845966ef35e4977d6f0a3c8497233",
+    "ownerBindingName": "mapInteractionEventBindingOwner",
+    "methods": [
+      "bindEvents"
+    ],
+    "actionExports": []
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getHitCanvasSchedulingOwner",
+    compositionSourceFingerprint: "3ca23379a1769264010b923a73022c87445917c6ee6dc50fc29b6cf26cf95414",
+    factoryModulePath: "js/core/map_renderer/hit_canvas_scheduling_owner.js",
+    factoryExportName: "createHitCanvasSchedulingOwner",
+    factorySourceFingerprint: "3663a2a133d1764c86f0c190bd92165f72f19ad17d774a56afd08817c42aaf02",
+    ownerBindingName: "hitCanvasSchedulingOwner",
+    methods: ["scheduleHitCanvasBuildIfNeeded", "cancelScheduledHitCanvasBuild"],
+    actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    actionExports: ["setHitCanvasBuildScheduledState"],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getRendererProjectionPathOwner",
+    compositionSourceFingerprint: "49d45b45f2da5052fdba6a4407f58228e5ea9c09ca7153b8798c387cbebfe6c5",
+    factoryModulePath: "js/core/renderer/renderer_projection_path_owner.js",
+    factoryExportName: "createRendererProjectionPathOwner",
+    factorySourceFingerprint: "39f59ce161e106be30d24421b20a854c23a7018bc063b6e536fce80588bb933c",
+    ownerBindingName: "rendererProjectionPathOwner",
+    methods: ["initializeProjectionPaths"], actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getRendererFitProjectionOwner",
+    compositionSourceFingerprint: "90d49709571b02a5cde1cd7c4d690059dccdb82ab840d6cdfea442030c466329",
+    factoryModulePath: "js/core/renderer/renderer_fit_projection_owner.js",
+    factoryExportName: "createRendererFitProjectionOwner",
+    factorySourceFingerprint: "42ac70173a1359fe057348f81559d8381bff62e8c5c31b3d39d626c8fadd0415",
+    ownerBindingName: "rendererFitProjectionOwner", methods: ["fitProjection"],
+    actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    actionExports: ["setHitCanvasDirtyState"],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getMapHoverInteractionOwner",
+    compositionSourceFingerprint: "42a7b223db4cf7aea6be2737e9dce4bfb5fe201f68eb87b5cad02735029bcc90",
+    factoryModulePath: "js/core/map_renderer/map_hover_interaction_owner.js",
+    factoryExportName: "createMapHoverInteractionOwner",
+    factorySourceFingerprint: "74c9802dbc4ef697bdba765346940b91d41040c4b57c6d0ddeebcaf8488e6635",
+    ownerBindingName: "mapHoverInteractionOwner",
+    methods: ["handleMouseMove", "handleMapMouseLeave", "getHoveredFacilityEntry", "setHoveredFacilityEntry", "setHoverOverlayDirty", "renderHoverOverlayIfNeeded", "cancelScheduledHoverOverlayRender", "cancelPendingHoverWork", "queueTooltipUpdate", "resetTooltipState", "setMapInteractionCursor"],
+    actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getRenderPassCacheHostOwner",
+    compositionSourceFingerprint: "6fa23f55aec2ed44e486fae9dd6b1848f129714e5c1bfc0433d8ef1481a4bc03",
+    factoryModulePath: "js/core/map_renderer/render_pass_cache_host_owner.js",
+    factoryExportName: "createRenderPassCacheHostOwner",
+    factorySourceFingerprint: "84a9b709939aa9aa4ad8646d9c9d183d70c996500a49255c25f7eb8cd5256e8d",
+    ownerBindingName: "renderPassCacheHostOwner", methods: ["prepareRenderPassHost"], actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getRenderPassCommitAccountingOwner",
+    compositionSourceFingerprint: "97d4d3887dc9e225b68d24302f5ddac34b1a7b9cd9ac62c4bacd0f12aa8d8123",
+    factoryModulePath: "js/core/map_renderer/render_pass_commit_accounting_owner.js",
+    factoryExportName: "createRenderPassCommitAccountingOwner",
+    factorySourceFingerprint: "da61e1d3f93ab2081febc40f631bb532a309c5abc494d41a00048fba71d8e1b4",
+    ownerBindingName: "renderPassCommitAccountingOwner", methods: ["commitRenderPass"], actionExports: [],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/core/map_renderer.js",
+    compositionExportName: "getRendererViewportUpdateOwner",
+    compositionSourceFingerprint: "d3ff5e5ac3975279ab35dd50148aa4cbfaf016811aaa0f46aa18026ab5621aa4",
+    factoryModulePath: "js/core/renderer/renderer_viewport_update_owner.js",
+    factoryExportName: "createRendererViewportUpdateOwner",
+    factorySourceFingerprint: "aab9925647bba714aaf6ebd7daafb415d9d5c7892827fce9beb54e2b9d9b3abc",
+    ownerBindingName: "rendererViewportUpdateOwner", methods: ["updateMap"],
+    actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    actionExports: ["setZoomTransformState", "setHitCanvasDirtyState"],
+  }),
   freezeMutationDelegatingOwnerEntry({
     compositionModulePath: "js/core/map_renderer.js",
     compositionExportName: "getRenderPerfMetricsRuntimeOwner",
@@ -946,7 +1583,7 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
     compositionModulePath: "js/core/map_renderer.js",
     compositionExportName: "getClickSelectionTransactionOwner",
     compositionSourceFingerprint:
-      "23d06b6d8176a619f21f960eb4355b67432d0ad90befda18fc7ce798da3f622c",
+      "7350227e1b3f93d2b850189e536c04df594007f7a7e86e0b7ba689be00112590",
     factoryModulePath: "js/core/map_renderer/click_selection_transaction_owner.js",
     factoryExportName: "createClickSelectionTransactionOwner",
     factorySourceFingerprint:
@@ -979,6 +1616,34 @@ export const STATE_MUTATION_DELEGATING_OWNER_CONTRACT = Object.freeze([
       "setClickSelectedColorState",
       "setClickSelectedSpecialRegionIdState",
       "setClickSelectedWaterRegionIdState",
+    ],
+  }),
+  freezeMutationDelegatingOwnerEntry({
+    compositionModulePath: "js/main.js",
+    compositionExportName: "getStartupReadyHandoffOwner",
+    compositionSourceFingerprint:
+      "d95f89b89a45a0334a8f227572f5ee3dabb39415aadb9929961de3e3eff1c709",
+    factoryModulePath: "js/bootstrap/startup_ready_handoff.js",
+    factoryExportName: "createStartupReadyHandoffOwner",
+    factorySourceFingerprint:
+      "9600bd838ce894c18e28f715ac2b66dbd2317135b3bea78fe546b36b3b1bd6d2",
+    ownerBindingName: "startupReadyHandoffOwner",
+    methods: [
+      "beginUiHydration",
+      "reset",
+      "flushPendingScenarioChunkRefreshAfterReady",
+      "observePostReadyUiBootstrap",
+      "markUiHydrationReady",
+      "scheduleReadyPostBootWork",
+      "startDeferredFullInteractionInfrastructureBuild",
+      "schedulePostReadyHydration",
+      "schedulePostReadyPoliticalReconcile",
+      "schedulePostReadyDeferredContextWarmup",
+      "schedulePostReadyVisualWarmup",
+    ],
+    actionModulePath: BOOT_ACTION_MODULE_PATH,
+    actionExports: [
+      "setUiHydrationState",
     ],
   }),
 ]);
@@ -1929,10 +2594,20 @@ export function inspectStateDetachedCaptureSource(source, entry) {
   }
   const functions = topLevelFunctionDeclarations(ast);
   const capture = functions.get(entry.exportName);
-  if (!capture || !((ast.body || []).some((statement) => (
+  const directlyExported = (ast.body || []).some((statement) => (
     statement.type === "ExportNamedDeclaration"
-    && statement.declaration === capture
-  )))) {
+    && (
+      statement.declaration === capture
+      || (
+        !statement.source
+        && (statement.specifiers || []).some((specifier) => (
+          specifier.local?.name === entry.exportName
+          && specifier.exported?.name === entry.exportName
+        ))
+      )
+    )
+  ));
+  if (!capture || !directlyExported) {
     violations.push(createViolation("state-detached-capture-direct-export-invalid", {
       modulePath: entry.modulePath,
       exportName: entry.exportName,
@@ -2008,7 +2683,7 @@ export function inspectStateDetachedCaptureSource(source, entry) {
         && expressionContainsDetachedCaptureAlias(
           node.init,
           aliases,
-          new Set(),
+          safeCloneHelperNames,
         )
         && !aliases.has(node.id.name)
       ) {
@@ -2252,6 +2927,17 @@ const STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID = new Map([
   ],
 ]);
 
+const STATE_ACTION_REFERENCE_IDENTITY_ARGUMENT_INDEXES_BY_ID = new Map([
+  [`${APPEARANCE_ACTION_MODULE_PATH}#setAppearanceStyleConfigState`, Object.freeze([1])],
+  [`${APPEARANCE_ACTION_MODULE_PATH}#setAppearanceStyleGroupState`, Object.freeze([2])],
+  [`${APPEARANCE_ACTION_MODULE_PATH}#setAppearanceParentBorderEnabledMapState`, Object.freeze([1])],
+  [`${APPEARANCE_SELECTION_ACTION_MODULE_PATH}#setSelectedColorState`, Object.freeze([1])],
+  [`${APPEARANCE_VISIBILITY_ACTION_MODULE_PATH}#setAppearanceVisibilitySnapshotState`, Object.freeze([2])],
+  [`${SPECIAL_ZONE_ACTION_MODULE_PATH}#commitSpecialZoneLayersState`, Object.freeze([1])],
+  [`${UI_CHROME_ACTION_MODULE_PATH}#setUiChromeState`, Object.freeze([1])],
+  [`${UI_VISIBILITY_ACTION_MODULE_PATH}#commitUiVisibilityState`, Object.freeze([1])],
+]);
+
 function freezeAllowedDynamicSite({
   operation,
   key,
@@ -2279,6 +2965,17 @@ const RENDER_PERF_METRIC_DYNAMIC_SITES = Object.freeze([
 
 const STATE_ACTION_ALLOWED_DYNAMIC_SITES_BY_ID = new Map([
   [
+    `${SCENARIO_PRESENTATION_ACTION_MODULE_PATH}#setHgoIdentityVariantSelectionState`,
+    Object.freeze([
+      freezeAllowedDynamicSite({
+        operation: "assign", key: "hgoIdentity", pathPattern: "hgoIdentity.variantSelections.*",
+      }),
+      freezeAllowedDynamicSite({
+        operation: "delete", key: "hgoIdentity", pathPattern: "hgoIdentity.variantSelections.*",
+      }),
+    ]),
+  ],
+  [
     `${RENDERER_DIAGNOSTICS_ACTION_MODULE_PATH}#setRenderPerfMetricEntryState`,
     RENDER_PERF_METRIC_DYNAMIC_SITES,
   ],
@@ -2302,6 +2999,10 @@ function freezeDelegationEntry({
     targetArgumentIndex: Number(targetArgumentIndex),
     readOnlyArgumentIndexes:
       STATE_ACTION_READ_ONLY_ARGUMENT_INDEXES_BY_ID.get(
+        `${normalizedModulePath}#${normalizedExportName}`,
+      ) || Object.freeze([]),
+    referenceIdentityArgumentIndexes:
+      STATE_ACTION_REFERENCE_IDENTITY_ARGUMENT_INDEXES_BY_ID.get(
         `${normalizedModulePath}#${normalizedExportName}`,
       ) || Object.freeze([]),
     allowedDynamicSites:
@@ -2328,6 +3029,242 @@ export const STATE_ACTION_DELEGATION_CONTRACT = Object.freeze(
     )
   ),
 );
+
+function freezeActionSuccessorEdge({
+  enclosingFunctionIdentity,
+  actionModulePath,
+  actionExportName,
+  targetArgumentIndex = 0,
+  sourceFingerprint,
+  occurrenceIndex = 0,
+  terminalMembership = "",
+}) {
+  return Object.freeze({
+    enclosingFunctionIdentity: String(enclosingFunctionIdentity || ""),
+    actionModulePath: normalizeModulePath(actionModulePath),
+    actionExportName: String(actionExportName || ""),
+    targetArgumentIndex: Number(targetArgumentIndex),
+    sourceFingerprint: String(sourceFingerprint || ""),
+    occurrenceIndex: Number(occurrenceIndex),
+    terminalMembership: normalizeStateActionMembership(
+      terminalMembership,
+    ),
+  });
+}
+
+function freezeActionSuccessorProofEntry({
+  modulePath,
+  exportName,
+  replacementMembership,
+  carrierFunctions,
+  successorEdges,
+  requiredDirectMemberships = [],
+}) {
+  const replacement = normalizeStateActionMembership(
+    replacementMembership,
+  );
+  const normalized = {
+    modulePath: normalizeModulePath(modulePath),
+    exportName: String(exportName || ""),
+    replacementMembership: replacement,
+    requiredDirectMemberships: Object.freeze(
+      requiredDirectMemberships.map(normalizeStateActionMembership),
+    ),
+    carrierFunctions: Object.freeze(carrierFunctions.map((entry) =>
+      Object.freeze({
+        functionName: String(entry.functionName || ""),
+        sourceFingerprint: String(entry.sourceFingerprint || ""),
+      })
+    )),
+    successorEdges: Object.freeze(successorEdges.map((edge) =>
+      freezeActionSuccessorEdge({
+        ...edge,
+        terminalMembership:
+          edge.terminalMembership || replacement,
+      })
+    )),
+  };
+  return Object.freeze({
+    ...normalized,
+    contractIdentity: createHash("sha256")
+      .update(JSON.stringify(normalized))
+      .digest("hex"),
+  });
+}
+
+const SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY =
+  '{"kind":"function","ancestry":[{"name":"restoreScenarioPresentationStateFromValidated","ordinal":0}]}';
+const APPEARANCE_VISIBILITY_RELAY_FUNCTION_IDENTITY =
+  '{"kind":"function","ancestry":[{"name":"setAppearanceVisibilityState","ordinal":0}]}';
+
+function successorEdge(actionModulePath, actionExportName, sourceFingerprint,
+  occurrenceIndex = 0, enclosingFunctionIdentity = APPEARANCE_VISIBILITY_RELAY_FUNCTION_IDENTITY) {
+  return {
+    enclosingFunctionIdentity,
+    actionModulePath,
+    actionExportName,
+    targetArgumentIndex: 0,
+    sourceFingerprint,
+    occurrenceIndex,
+  };
+}
+
+const SCENARIO_RESTORE_SUCCESSORS = Object.freeze({
+  parentBordersVisible: [successorEdge(APPEARANCE_VISIBILITY_ACTION_MODULE_PATH, "setAppearanceVisibilitySnapshotState", "2e0f5953f63502a06e1886b79c66b6b12c1b25f054a5f5b2d8a0885a928b9b18", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  parentBorderEnabledByCountry: [successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceParentBorderEnabledMapState", "a03126d95a092f78f2fdc19413b7f4af87cf2525760277b6e379fec7e56a3f72", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  styleConfig: [
+    successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceStyleGroupState", "f77bdee999a5f11a70dc7cb1421d0a872fd317fe9e79df7f4bb3ca88b4f65109", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+    successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceStyleConfigState", "320b6b090abe4f7aafcba4703b78857873a06c08b21f2d61abe85e87df0e6008", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+  ],
+  ui: [
+    successorEdge(UI_CHROME_ACTION_MODULE_PATH, "patchUiChromeState", "8bf9a22cf562f52d1e986ca50368d27b05be1510a973f0bbdfb66820a79481af", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+    {
+      ...successorEdge(UI_CHROME_ACTION_MODULE_PATH, "setUiChromeState", "6c92df76d0808f166c2e8b3789796f889ae67016a8cdf1d16da6ddef513db898", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY),
+      terminalMembership: "ui|P4.4|define-property|ui",
+    },
+  ],
+  showCityPoints: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "3917a3be2b5885e6055e813bd69e21da9694ea8a0c653e0711d80e32cff9a988", 0, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showWaterRegions: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "d31f2ebd3b9efad7a2b4f8a89183f23e155f7f3274b7e17fe27aee4a3d0f2f7e", 1, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showScenarioSpecialRegions: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "49209ea256d0776f46911ed6428baacbc5f289e43caf83ab79e3f800546884bf", 2, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showScenarioReliefOverlays: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "99e1e0763e4aa603ceb87e87aeb2b0ea9773b402fe06b42fe8c34f7b92e8060f", 4, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  showStrategicResourceMarkers: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "6df3f099c8df42610c49e445079fd2d6567c0fba872c1b0f3d0599949fde99af", 5, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+  strategicChoroplethMetric: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "fe5f72f21cf3631b11f97bf04b3d6861d9e0292bb7ba321fcae75ebc1698d207", 6, SCENARIO_PRESENTATION_RESTORE_FUNCTION_IDENTITY)],
+});
+
+const VISIBILITY_SUCCESSOR_FINGERPRINTS = Object.freeze({
+  showCityPoints: ["ef137e6d95996769aadc088639caf87eb0b1d56f1b5139fdf00c29437d578816", 7],
+  showStrategicResourceMarkers: ["9b31391661f92a53741d415258171bfdfd54ae1627f554202da9310fdd83f41a", 8],
+  strategicChoroplethMetric: ["057504ca5226f31d7cde94089a62f645945a5dfceedccd37135c37e38d8c370b", 9],
+  showUrban: ["1c23f6c2f846f28d5861b0f3da57d590cd6a81022c6d8389e5f3a70bbdcb3281", 10],
+  showPhysical: ["d5128fe29925d25a4bb6ccd39b757cd92139765005a3ef50f39c7c09086b3782", 11],
+  showRivers: ["fdf6a5b996b1a92309f924b0d88c9b10fe75a560718d0df24da115f8e8773b6e", 12],
+});
+const SCENARIO_CHUNK_HYBRID_DIRECT_MEMBERSHIPS = Object.freeze([
+  "scenario|P4.2|assign|scenarioAtlantropaData",
+  "scenario|P4.2|assign|scenarioAtlantropaRevision",
+  "scenario|P4.2|assign|scenarioReliefOverlayRevision",
+  "scenario|P4.2|assign|scenarioReliefOverlaysData",
+  "scenario|P4.2|assign|scenarioSpecialRegionsData",
+  "scenario|P4.2|assign|scenarioStrategicValuesData",
+  "scenario|P4.2|assign|scenarioStrategicValuesRevision",
+  "scenario|P4.2|assign|scenarioWaterRegionsData",
+]);
+
+const successorEntries = [];
+for (const [key, edges] of Object.entries(SCENARIO_RESTORE_SUCCESSORS)) {
+  const replacementMembership = key === "parentBordersVisible"
+    ? "content|P4.2|assign|parentBordersVisible"
+    : key === "parentBorderEnabledByCountry"
+      ? "renderer|P4.3|assign|parentBorderEnabledByCountry"
+      : `ui|P4.4|assign|${key}`;
+  successorEntries.push(freezeActionSuccessorProofEntry({
+    modulePath: SCENARIO_PRESENTATION_ACTION_MODULE_PATH,
+    exportName: "restoreScenarioTransactionPresentationState",
+    replacementMembership,
+    carrierFunctions: [
+      { functionName: "restoreScenarioTransactionPresentationState", sourceFingerprint: "9133d927670747ac2aba6c59442afdeb347ddfb396f821b0e893a2515bfee8d9" },
+      { functionName: "restoreScenarioPresentationStateFromValidated", sourceFingerprint: "12dff0f3f892f7b45c6b34aa01d94717364958fd7790d9e0ff11cea41965aa61" },
+    ],
+    successorEdges: edges,
+  }));
+}
+for (const [key, [fingerprint, occurrenceIndex]] of Object.entries(VISIBILITY_SUCCESSOR_FINGERPRINTS)) {
+  successorEntries.push(freezeActionSuccessorProofEntry({
+    modulePath: APPEARANCE_VISIBILITY_ACTION_MODULE_PATH,
+    exportName: "setAppearanceVisibilityState",
+    replacementMembership: `ui|P4.4|assign|${key}`,
+    carrierFunctions: [{ functionName: "setAppearanceVisibilityState", sourceFingerprint: "8d4a1032dfc1f9d4eb7f20337fe6269332d809d639543fe117cea6eee5a29c41" }],
+    successorEdges: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", fingerprint, occurrenceIndex)],
+  }));
+}
+successorEntries.push(
+  freezeActionSuccessorProofEntry({
+    modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+    exportName: "applyScenarioChunkOptionalLayerState",
+    replacementMembership: "scenario|P4.2|assign|*",
+    requiredDirectMemberships:
+      SCENARIO_CHUNK_HYBRID_DIRECT_MEMBERSHIPS,
+    carrierFunctions: [{ functionName: "applyScenarioChunkOptionalLayerState", sourceFingerprint: "e57211283e41e92a4a68f016950b7215be74563a6e58860a36e42db20e8f6866" }],
+    successorEdges: [{
+      ...successorEdge(SPECIAL_ZONE_ACTION_MODULE_PATH, "commitSpecialZoneLayersState", "9c5e9b6f5722f2eb0461db89f615e90f1e0bb892a2a4cb843287b90221783bb4", 0, '{"kind":"function","ancestry":[{"name":"applyScenarioChunkOptionalLayerState","ordinal":0}]}'),
+      terminalMembership: "ui|P4.4|assign|specialZoneLayers",
+    }],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+    exportName: "restoreScenarioChunkPromotionState",
+    replacementMembership: "scenario|P4.2|assign|*",
+    requiredDirectMemberships:
+      SCENARIO_CHUNK_HYBRID_DIRECT_MEMBERSHIPS,
+    carrierFunctions: [{ functionName: "restoreScenarioChunkPromotionState", sourceFingerprint: "ef7f68540902b9f5a2b5916311ff4f9b33813f122c3b9431b90a1079ab297f3a" }],
+    successorEdges: [
+      {
+        ...successorEdge(SPECIAL_ZONE_ACTION_MODULE_PATH, "commitSpecialZoneLayersState", "39fa88ef1fdc10d6f07b01feb0f9a80c087c3f7a318b9ab80eb7ed578e9c4e75", 0, '{"kind":"function","ancestry":[{"name":"restoreScenarioChunkPromotionState","ordinal":0}]}'),
+        terminalMembership: "ui|P4.4|assign|specialZoneLayers",
+      },
+      {
+        ...successorEdge(SPECIAL_ZONE_ACTION_MODULE_PATH, "commitSpecialZoneLayersState", "ae8a608f6851731064dabf89ac7615738e83aebdd1e276e87d8385dadd3073d0", 1, '{"kind":"function","ancestry":[{"name":"restoreScenarioChunkPromotionState","ordinal":0}]}'),
+        terminalMembership: "ui|P4.4|assign|specialZoneLayers",
+      },
+    ],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    exportName: "setSpecialZonesVisibilityState",
+    replacementMembership: "ui|P4.4|assign|showSpecialZones",
+    carrierFunctions: [{ functionName: "setSpecialZonesVisibilityState", sourceFingerprint: "c95dff5b54150378af045b1a43dca529fed47c934000eacb944eac5296ccbe51" }],
+    successorEdges: [successorEdge(UI_VISIBILITY_ACTION_MODULE_PATH, "commitUiVisibilityState", "1cc43eb500139f636aa2cb1e16f5deddc26fe7bf752daed23c682a612c74a288", 0, '{"kind":"function","ancestry":[{"name":"setSpecialZonesVisibilityState","ordinal":0}]}')],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: TRANSPORT_ACTION_MODULE_PATH,
+    exportName: "applyTransportWorkbenchOverviewState",
+    replacementMembership: "ui|P4.4|assign|styleConfig",
+    carrierFunctions: [{ functionName: "applyTransportWorkbenchOverviewState", sourceFingerprint: "46056c49e4fd86246219b1c9f719ee643893a819ff81938b2c1f346c69d3d587" }],
+    successorEdges: [successorEdge(APPEARANCE_ACTION_MODULE_PATH, "setAppearanceStyleGroupState", "eaea368a81306342fb11279d196cef0fdb600b4793c9853662655a3770a87266", 0, '{"kind":"function","ancestry":[{"name":"applyTransportWorkbenchOverviewState","ordinal":0}]}')],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    exportName: "setClickSelectedColorState",
+    replacementMembership: "color|P4.4|assign|selectedColor",
+    carrierFunctions: [{ functionName: "setClickSelectedColorState", sourceFingerprint: "29ad3281276fd64baaffcb0fe4c9f3a19ddc2cd554a1825d8ed54506f882e62e" }],
+    successorEdges: [successorEdge(APPEARANCE_SELECTION_ACTION_MODULE_PATH, "setSelectedColorState", "4e3b5bf002f14c1caf299322dceae4409ad330194cbcc86669f51775ebd18a33", 0, '{"kind":"function","ancestry":[{"name":"setClickSelectedColorState","ordinal":0}]}')],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    exportName: "setHoveredFeatureIdsState",
+    replacementMembership: "ui|P4.4|assign|hoveredSpecialRegionId",
+    carrierFunctions: [{ functionName: "setHoveredFeatureIdsState", sourceFingerprint: "f8a2836a2bd862986f8178c0158e7d11d39f82e119623d68525d59f1d984c0a4" }],
+    successorEdges: [successorEdge(SCENARIO_PRESENTATION_ACTION_MODULE_PATH, "setScenarioHoverRegionIdsState", "e3463a5e9d61e6396d301ed94bee7a39a9d6b9637ab2d9bc9acb0a805a76dbc5", 0, '{"kind":"function","ancestry":[{"name":"setHoveredFeatureIdsState","ordinal":0}]}')],
+  }),
+  freezeActionSuccessorProofEntry({
+    modulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH,
+    exportName: "setHoveredFeatureIdsState",
+    replacementMembership: "ui|P4.4|assign|hoveredWaterRegionId",
+    carrierFunctions: [{ functionName: "setHoveredFeatureIdsState", sourceFingerprint: "f8a2836a2bd862986f8178c0158e7d11d39f82e119623d68525d59f1d984c0a4" }],
+    successorEdges: [successorEdge(SCENARIO_PRESENTATION_ACTION_MODULE_PATH, "setScenarioHoverRegionIdsState", "e3463a5e9d61e6396d301ed94bee7a39a9d6b9637ab2d9bc9acb0a805a76dbc5", 0, '{"kind":"function","ancestry":[{"name":"setHoveredFeatureIdsState","ordinal":0}]}')],
+  }),
+);
+
+export const STATE_ACTION_SUCCESSOR_PROOF_CONTRACT = Object.freeze(
+  successorEntries.sort((left, right) =>
+    `${left.modulePath}#${left.exportName}#${left.replacementMembership}`.localeCompare(
+      `${right.modulePath}#${right.exportName}#${right.replacementMembership}`,
+    )
+  ),
+);
+
+export function findStateActionSuccessorProofContractEntry(
+  modulePath,
+  exportName,
+  replacementMembership,
+) {
+  return STATE_ACTION_SUCCESSOR_PROOF_CONTRACT.find((entry) =>
+    entry.modulePath === normalizeModulePath(modulePath)
+    && entry.exportName === String(exportName || "")
+    && entry.replacementMembership
+      === normalizeStateActionMembership(replacementMembership)
+  ) || null;
+}
 
 const CONTRACT_ENTRY_BY_ID = new Map(
   STATE_ACTION_DELEGATION_CONTRACT.map((entry) => [
@@ -2397,16 +3334,148 @@ const SCENARIO_CHUNK_OPTIONAL_LAYER_ASSIGN_MEMBERSHIPS = Object.freeze([
 
 export const STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT =
   Object.freeze([
-    "applyScenarioChunkOptionalLayerState",
-    "restoreScenarioChunkPromotionState",
-  ].map((exportName) =>
-    freezeLegacyMembershipReplacementEntry({
+    {
+      modulePath: RENDERER_CACHE_ACTION_MODULE_PATH,
+      exportName: "replaceCachedDetailAdmBordersState",
+      retiredMembership: "renderer|P4.3|collection-mutate|cachedDetailAdmBorders",
+      requiredConcreteMemberships: ["renderer|P4.3|assign|cachedDetailAdmBorders"],
+    },
+    ...[
+      "applyScenarioChunkOptionalLayerState",
+      "restoreScenarioChunkPromotionState",
+    ].map((exportName) => ({
       modulePath: SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
       exportName,
       retiredMembership: "scenario|P4.2|assign|*",
       requiredConcreteMemberships:
         SCENARIO_CHUNK_OPTIONAL_LAYER_ASSIGN_MEMBERSHIPS,
-    })
+    })),
+    ...[
+      "collection-mutate",
+      "compound-assign",
+    ].map((operation) => ({
+      modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+      exportName: "patchStrategicOverlayEditorState",
+      retiredMembership:
+        `strategic-overlay|P4.4|${operation}|operationGraphicsEditor`,
+      requiredConcreteMemberships: [
+        "strategic-overlay|P4.4|assign|operationGraphicsEditor",
+      ],
+    })),
+    {
+      modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+      exportName: "commitStrategicOverlayCollectionsState",
+      retiredMembership:
+        "ui|P4.4|collection-mutate|operationGraphics",
+      requiredConcreteMemberships: [
+        "ui|P4.4|assign|operationGraphics",
+      ],
+    },
+    {
+      modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+      exportName: "patchStrategicOverlayEditorState",
+      retiredMembership:
+        "strategic-overlay|P4.4|compound-assign|unitCounterEditor",
+      requiredConcreteMemberships: [
+        "strategic-overlay|P4.4|assign|unitCounterEditor",
+      ],
+    },
+    {
+      modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+      exportName: "commitStrategicOverlayCollectionsState",
+      retiredMembership: "ui|P4.4|collection-mutate|unitCounters",
+      requiredConcreteMemberships: [
+        "ui|P4.4|assign|unitCounters",
+      ],
+    },
+    ...[
+      "collection-mutate",
+      "compound-assign",
+    ].map((operation) => ({
+      modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+      exportName: "patchStrategicOverlayEditorState",
+      retiredMembership:
+        `strategic-overlay|P4.4|${operation}|operationalLineEditor`,
+      requiredConcreteMemberships: [
+        "strategic-overlay|P4.4|assign|operationalLineEditor",
+      ],
+    })),
+    {
+      modulePath: STRATEGIC_OVERLAY_ACTION_MODULE_PATH,
+      exportName: "commitStrategicOverlayCollectionsState",
+      retiredMembership: "ui|P4.4|collection-mutate|operationalLines",
+      requiredConcreteMemberships: [
+        "ui|P4.4|assign|operationalLines",
+      ],
+    },
+    {
+      modulePath: TRANSPORT_ACTION_MODULE_PATH,
+      exportName: "applyTransportWorkbenchOverviewState",
+      retiredMembership: "cross-domain|multi-phase|assign|*",
+      requiredConcreteMemberships: [
+        "ui|P4.4|define-property|showAirports",
+        "ui|P4.4|define-property|showPorts",
+        "ui|P4.4|define-property|showRail",
+        "ui|P4.4|define-property|showRoad",
+        "ui|P4.4|define-property|showTransport",
+        "ui|P4.4|define-property|transportWorkbenchPointDeltas",
+        "ui|P4.4|define-property|transportWorkbenchUi",
+      ],
+    },
+    {
+      modulePath: TRANSPORT_ACTION_MODULE_PATH,
+      exportName: "applyTransportWorkbenchOverviewState",
+      retiredMembership: "ui|P4.4|assign|showTransport",
+      requiredConcreteMemberships: [
+        "ui|P4.4|define-property|showTransport",
+      ],
+    },
+    ...[
+      "showAirports",
+      "showPorts",
+      "showRail",
+      "showRoad",
+      "showTransport",
+    ].map((key) => ({
+      modulePath: TRANSPORT_ACTION_MODULE_PATH,
+      exportName: "setTransportFamilyVisibilityState",
+      retiredMembership: `ui|P4.4|assign|${key}`,
+      requiredConcreteMemberships: [
+        `ui|P4.4|define-property|${key}`,
+      ],
+    })),
+    {
+      modulePath: TRANSPORT_ACTION_MODULE_PATH,
+      exportName: "setTransportMasterVisibilityState",
+      retiredMembership: "ui|P4.4|assign|showTransport",
+      requiredConcreteMemberships: [
+        "ui|P4.4|define-property|showTransport",
+      ],
+    },
+    {
+      modulePath: TRANSPORT_ACTION_MODULE_PATH,
+      exportName: "commitTransportWorkbenchPointDeltasState",
+      retiredMembership:
+        "ui|P4.4|assign|transportWorkbenchPointDeltas",
+      requiredConcreteMemberships: [
+        "ui|P4.4|define-property|transportWorkbenchPointDeltas",
+      ],
+    },
+    {
+      modulePath: TRANSPORT_ACTION_MODULE_PATH,
+      exportName: "commitTransportWorkbenchUiState",
+      retiredMembership:
+        "ui|P4.4|object-assign|transportWorkbenchUi",
+      requiredConcreteMemberships: [
+        "ui|P4.4|assign|transportWorkbenchUi",
+        "ui|P4.4|define-property|transportWorkbenchUi",
+      ],
+    },
+  ].map(freezeLegacyMembershipReplacementEntry).sort(
+    (left, right) =>
+      legacyMembershipReplacementEntryId(left).localeCompare(
+        legacyMembershipReplacementEntryId(right),
+      ),
   ));
 
 const SCENARIO_MANAGER_RUNTIME_STATE_BINDING_IDENTITY =
@@ -3053,8 +4122,924 @@ function createRendererCrossBoundaryMigrationEntry({
   });
 }
 
+function createP44FunctionParameterBindingIdentity(
+  functionName,
+  parameterPath = "$",
+) {
+  return JSON.stringify({
+    kind: "function-parameter",
+    name: "",
+    functionName,
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath,
+    importSource: "",
+    importedName: "",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+}
+
+function createP44FunctionIdentity(...ancestryNames) {
+  return JSON.stringify({
+    kind: "function",
+    ancestry: ancestryNames.map((entry) =>
+      typeof entry === "string"
+        ? { name: entry, ordinal: 0 }
+        : { name: entry.name, ordinal: entry.ordinal }
+    ),
+  });
+}
+
+function createP44RetiredMutationSites(groups = []) {
+  return groups.flatMap(({ ancestryNames, sites }) =>
+    sites.map(([sourceFingerprint, occurrenceIndex = 0]) => ({
+      enclosingFunctionIdentity:
+        createP44FunctionIdentity(...ancestryNames),
+      sourceFingerprint,
+      occurrenceIndex,
+    }))
+  ).sort(
+    (left, right) =>
+      left.enclosingFunctionIdentity.localeCompare(
+        right.enclosingFunctionIdentity,
+      )
+      || left.sourceFingerprint.localeCompare(right.sourceFingerprint)
+      || left.occurrenceIndex - right.occurrenceIndex,
+  );
+}
+
+const SPECIAL_ZONE_LAYERS_RUNTIME_BINDING_IDENTITY =
+  createP44FunctionParameterBindingIdentity(
+    "mutateRuntimeSpecialZoneLayersState",
+  );
+const SPECIAL_ZONES_WORKBENCH_RUNTIME_BINDING_IDENTITY =
+  createP44FunctionParameterBindingIdentity(
+    "createSpecialZonesWorkbenchController",
+    "$/property:runtimeState",
+  );
+
+const P44_STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT = Object.freeze([
+  freezeCrossFileMigrationEntry({
+    retiredCallerPath:
+      "js/core/renderer/strategic_overlay_runtime_owner.js",
+    retiredCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "createStrategicOverlayRuntimeOwner",
+        "$/property:state",
+      ),
+    domain: "ui",
+    migrationPhase: "P4.4",
+    operation: "assign",
+    key: "specialZoneLayers",
+    retiredMutationSites: createP44RetiredMutationSites([
+      {
+        ancestryNames: [
+          "createStrategicOverlayRuntimeOwner",
+          "applySpecialZoneMembershipFeature",
+        ],
+        sites: [
+          ["1291a2798123fbefe1db45f2ffbe16ffcefc4553c0e30b311bc4eeae383e457c", 0],
+          ["1291a2798123fbefe1db45f2ffbe16ffcefc4553c0e30b311bc4eeae383e457c", 1],
+        ],
+      },
+      {
+        ancestryNames: [
+          "createStrategicOverlayRuntimeOwner",
+          "getActiveSpecialZoneMembershipLayerId",
+        ],
+        sites: [[
+          "1291a2798123fbefe1db45f2ffbe16ffcefc4553c0e30b311bc4eeae383e457c",
+          0,
+        ]],
+      },
+    ]),
+    replacementCallerPath:
+      "js/core/renderer/strategic_overlay_runtime_owner.js",
+    replacementCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "createStrategicOverlayRuntimeOwner",
+        "$/property:state",
+      ),
+    replacementEnclosingFunctionIdentity: createP44FunctionIdentity(
+      "createStrategicOverlayRuntimeOwner",
+      "applySpecialZoneMembershipFeature",
+    ),
+    actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    actionExportName: "commitSpecialZoneLayersState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint:
+      "3f14d5bf000c4e3f160bc97d261817e2bb7b02987a3945af45e8c9cef0d5d452",
+  }),
+  freezeCrossFileMigrationEntry({
+    retiredCallerPath: "js/core/special_zone_layers.js",
+    retiredCallerBindingIdentity:
+      SPECIAL_ZONE_LAYERS_RUNTIME_BINDING_IDENTITY,
+    domain: "ui",
+    migrationPhase: "P4.4",
+    operation: "assign",
+    key: "specialZoneLayers",
+    retiredMutationSites: createP44RetiredMutationSites([
+      {
+        ancestryNames: ["mutateRuntimeSpecialZoneLayersState"],
+        sites: [[
+          "fd5d59cac0c899e80a5991627c4cc1859c15fda0958a28b5951d709e90fff62d",
+          0,
+        ]],
+      },
+      {
+        ancestryNames: ["normalizeRuntimeSpecialZoneLayersState"],
+        sites: [[
+          "fd5d59cac0c899e80a5991627c4cc1859c15fda0958a28b5951d709e90fff62d",
+          0,
+        ]],
+      },
+    ]),
+    replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+    replacementCallerBindingIdentity:
+      SPECIAL_ZONES_WORKBENCH_RUNTIME_BINDING_IDENTITY,
+    replacementEnclosingFunctionIdentity: createP44FunctionIdentity(
+      "createSpecialZonesWorkbenchController",
+      "updateState",
+    ),
+    actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    actionExportName: "commitSpecialZoneLayersState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint:
+      "12c6ebda6b0b647f6b1c3377f0fd131880cd41f7d60493df600f4abc3401a48e",
+  }),
+  freezeCrossFileMigrationEntry({
+    retiredCallerPath: "js/core/special_zone_layers.js",
+    retiredCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "setSpecialZoneMembershipBrushModeState",
+      ),
+    domain: "ui",
+    migrationPhase: "P4.4",
+    operation: "assign",
+    key: "specialZoneMembershipBrushMode",
+    retiredMutationSites: createP44RetiredMutationSites([{
+      ancestryNames: ["setSpecialZoneMembershipBrushModeState"],
+      sites: [[
+        "5e5dd8b8a8bd0551d98e2873643108e5d78b1f270ef6226d12525e4e48014b2a",
+        0,
+      ]],
+    }]),
+    replacementCallerPath:
+      "js/ui/toolbar/special_zones_workbench_controller.js",
+    replacementCallerBindingIdentity:
+      SPECIAL_ZONES_WORKBENCH_RUNTIME_BINDING_IDENTITY,
+    replacementEnclosingFunctionIdentity: createP44FunctionIdentity(
+      "createSpecialZonesWorkbenchController",
+      "renderActions",
+      { name: "<anonymous>", ordinal: 1 },
+      "<anonymous>",
+    ),
+    actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    actionExportName: "setSpecialZoneMembershipBrushModeState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint:
+      "7189e7f4fb3f9e8ec59351b7d685080a793fc4427c8791b12bf31d0c90c39bdb",
+  }),
+  freezeCrossFileMigrationEntry({
+    retiredCallerPath: "js/core/special_zone_layers.js",
+    retiredCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "setSpecialZonePresetCategoryState",
+      ),
+    domain: "ui",
+    migrationPhase: "P4.4",
+    operation: "assign",
+    key: "specialZonePresetCategory",
+    retiredMutationSites: createP44RetiredMutationSites([{
+      ancestryNames: ["setSpecialZonePresetCategoryState"],
+      sites: [[
+        "8974b9efefc036debb37c12e45838cb20cf39ee932090ec5ce8e99893dfe3470",
+        0,
+      ]],
+    }]),
+    replacementCallerPath:
+      "js/ui/toolbar/special_zones_workbench_controller.js",
+    replacementCallerBindingIdentity:
+      SPECIAL_ZONES_WORKBENCH_RUNTIME_BINDING_IDENTITY,
+    replacementEnclosingFunctionIdentity: createP44FunctionIdentity(
+      "createSpecialZonesWorkbenchController",
+      "renderPresetList",
+    ),
+    actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    actionExportName: "setSpecialZonePresetCategoryState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint:
+      "8a0095351d0567c92a99e6983e8f089d0641480ddedea853e9a07bfb42b07f16",
+  }),
+  freezeCrossFileMigrationEntry({
+    retiredCallerPath: "js/core/state/appearance_preset_state.js",
+    retiredCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "applyAppearancePresetToRuntimeState",
+      ),
+    domain: "appearance",
+    migrationPhase: "P4.4",
+    operation: "assign",
+    key: "intensityFields",
+    retiredMutationSites: createP44RetiredMutationSites([{
+      ancestryNames: ["applyAppearancePresetToRuntimeState"],
+      sites: [[
+        "946f6a319281398d673ee3c036de665c727bd75b529be02f2a30a8fb8ab3e279",
+        0,
+      ]],
+    }]),
+    replacementCallerPath: APPEARANCE_PRESET_ACTION_MODULE_PATH,
+    replacementCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "applyAppearancePresetState",
+      ),
+    replacementEnclosingFunctionIdentity: createP44FunctionIdentity(
+      "applyAppearancePresetState",
+    ),
+    actionModulePath: INTENSITY_FIELD_ACTION_MODULE_PATH,
+    actionExportName: "setIntensityFieldsState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint:
+      "535fe9d6b0c542302e1ac6634777f399de33c1643b8afddc9196d5010b0d6116",
+  }),
+  freezeCrossFileMigrationEntry({
+    retiredCallerPath:
+      "js/ui/toolbar/special_zones_workbench_controller.js",
+    retiredCallerBindingIdentity:
+      SPECIAL_ZONES_WORKBENCH_RUNTIME_BINDING_IDENTITY,
+    domain: "ui",
+    migrationPhase: "P4.4",
+    operation: "assign",
+    key: "specialZonePresetOpenCategories",
+    retiredMutationSites: createP44RetiredMutationSites([{
+      ancestryNames: [
+        "createSpecialZonesWorkbenchController",
+        "setPresetCategoryOpen",
+      ],
+      sites: [[
+        "2cc6e6d94aebd8e6d313ca92316f7f5a2761b6d736787934e1a55f0e7f679696",
+        0,
+      ]],
+    }]),
+    replacementCallerPath:
+      "js/ui/toolbar/special_zones_workbench_controller.js",
+    replacementCallerBindingIdentity:
+      SPECIAL_ZONES_WORKBENCH_RUNTIME_BINDING_IDENTITY,
+    replacementEnclosingFunctionIdentity: createP44FunctionIdentity(
+      "createSpecialZonesWorkbenchController",
+      "renderPresetList",
+      { name: "<anonymous>", ordinal: 2 },
+      "<anonymous>",
+    ),
+    actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH,
+    actionExportName: "setSpecialZonePresetCategoryOpenState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint:
+      "6e12e5ca425b30af2198b5ba4340dc7bc23281ea37669cd0badea79c4011b208",
+  }),
+  freezeCrossFileMigrationEntry({
+    retiredCallerPath:
+      "js/ui/toolbar/transport_workbench_state_owner.js",
+    retiredCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "createTransportWorkbenchStateOwner",
+      ),
+    domain: "ui",
+    migrationPhase: "P4.4",
+    operation: "assign",
+    key: "transportWorkbenchUi",
+    retiredMutationSites: createP44RetiredMutationSites([
+      {
+        ancestryNames: [
+          "createTransportWorkbenchStateOwner",
+          "ensureUiState",
+          "<anonymous>",
+        ],
+        sites: [
+          ["15d8441f3ae119a9a623c79d045e4f0b545d0a96f22d75feda52ba7b30f719ba", 0],
+          ["1fea22062de58fa34759270e6e286c230ebf40fe44d78a0f6c4078980ebdc9b0", 0],
+        ],
+      },
+      {
+        ancestryNames: [
+          "createTransportWorkbenchStateOwner",
+          "ensureUiState",
+          { name: "<anonymous>", ordinal: 1 },
+        ],
+        sites: [[
+          "1141a006bbb8c9dd1dd5c5a6b00cd128729edfd5ef38f3ea063031901a5b0815",
+          0,
+        ]],
+      },
+      {
+        ancestryNames: [
+          "createTransportWorkbenchStateOwner",
+          "ensureUiState",
+        ],
+        sites: [
+          ["062287f59a14e3732527bbc7631733159e035c51eb8b77ccfaa2378f651f1816", 0],
+          ["0c5e5f272e9baedb3514f218de21996d2f92f57379b713171d2904bd430d8770", 0],
+          ["12034e88d2b675bbf84eaab74457eab7186a62b51aa6ea8299c23df111634d3a", 0],
+          ["1903e7bc551e989fcbef98135eb8ea68044f6ced6f99d41738fbd7bcae0b7f1d", 0],
+          ["2559b08f953884841c0e30559d17c1b264ad62af09ed8fd95b88f2cb674e8a53", 0],
+          ["3c0b5b723944efac5970332ac1665d085df36cb5feafb7c3697236831e8c0079", 0],
+          ["5c773ee9856917ecb86935be609a74a2ef0020ab87d1d7dcdfbc7747a0c87f52", 0],
+          ["6d829e5bc4ac2e1a134dbed22c116e9fb75a9f6e49194c0ae67dd311b7f91261", 0],
+          ["820c55211545e1649024cf5d666c6b56651f615120b14604fd69d473b56cadd7", 0],
+          ["89e502302c3ca280863d22d27c00376babca7f1ffac984178574fc4630e9a822", 0],
+          ["968cf382902794b700944ec584b623f0d4e16d68a36a52c777a751c81d7b0299", 0],
+          ["968cf382902794b700944ec584b623f0d4e16d68a36a52c777a751c81d7b0299", 1],
+          ["9ed05ee9265bc976779837292dc7309ec9e1d08b6de76bb6c69a8a2a0aef83d1", 0],
+          ["a3aeef74900b9ef783b6eec12933c7bbbfcad78e83bd62bfa31fe5e061f64d07", 0],
+          ["a3af889be4340e887f1baffad83a7e6e9cb6067405ea1a5691911cf00c31c65b", 0],
+          ["c9e4646252e01d2a46cea3ae25232bcb830b46cef055530e5670d70eafb48a4d", 0],
+          ["cb08e730ca2930414e9249868bf49776f9f5df1df13299289b8dfb2e511a7de3", 0],
+          ["cc9f012bf56e1b13d12fd87664bb9bc733125647c471c583e87f8dce1a250e83", 0],
+          ["cf50cc6b126f6e7dbe50858558a7191a94ccfce21826c5850e3dcaab8deb7e3e", 0],
+          ["fbe8a2df71c436aa38348eb40ab901599857534f0a11005ae47831a8d5d1babd", 0],
+        ],
+      },
+    ]),
+    replacementCallerPath:
+      "js/ui/toolbar/transport_workbench_state_owner.js",
+    replacementCallerBindingIdentity:
+      createP44FunctionParameterBindingIdentity(
+        "createTransportWorkbenchStateOwner",
+      ),
+    replacementEnclosingFunctionIdentity: createP44FunctionIdentity(
+      "createTransportWorkbenchStateOwner",
+      "ensureUiState",
+    ),
+    actionModulePath: TRANSPORT_ACTION_MODULE_PATH,
+    actionExportName: "commitTransportWorkbenchUiState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint:
+      "85d3ce37f43c75489f0a70fd113db7d32176444cd863d7f87eb10a84e8c88c73",
+  }),
+]);
+
+// Exact sites from the accepted legacy runtime binding. Other helper sites were
+// included in its historical alias inventory and remain attached to that identity.
+const SCENARIO_RUNTIME_ACTIVATION_RETIREMENT_SITES = Object.freeze([
+  ["content","P4.2","countryNames",[["commitScenarioActivationRuntimeState","2056cc09c73402372ce04124bc4b31407c04ae5c2e22570f7e61a748aeebe4cc",0]]],
+  ["content","P4.2","runtimePoliticalTopology",[["setHydratedScenarioRuntimeTopologyState","7c79ce87ed3afd70157aa6ec4b560f657e44eba02b320e8eac688f2624497d5a",0]]],
+  ["scenario","P4.2","activeScenarioId",[["commitScenarioActivationRuntimeState","bd369a1292cb1ede5f46d5d758d262e7fce395703e9ef4f3d1ff1267f1dce205",0]]],
+  ["scenario","P4.2","activeScenarioManifest",[["commitScenarioActivationRuntimeState","2d792f7a7fa349746ba09de6391105a90b1eb87c5a011803a029b48a773ae6c5",0]]],
+  ["scenario","P4.2","activeScenarioMeshPack",[["setScenarioRuntimeOptionalLayerState","5e2e66a53e0938d8f9e54df0c2938eed3a81cfd7697e0539b6101f675b866b4c",0]]],
+  ["scenario","P4.2","releasableCatalog",[["commitScenarioActivationRuntimeState","1ab4fc30e1e34c63672da79831952915a35b4ef0162b6fb5f5adda03fcd7a612",0]]],
+  ["scenario","P4.2","runtimePoliticalFeatureCollectionSeed",[["setHydratedScenarioRuntimeTopologyState","7729e20136497c1b5d2240d0d0e01aacb0555d60563d77ca9fa690dd0b1477c9",0]]],
+  ["scenario","P4.2","scenarioAtlantropaData",[["setHydratedScenarioRuntimeTopologyState","eb50d09e45215fb82384a4b1272ac8081c7d457a50546df8cfdbe88ee27fc5f5",0],["setScenarioRuntimeOptionalLayerState","eb50d09e45215fb82384a4b1272ac8081c7d457a50546df8cfdbe88ee27fc5f5",0]]],
+  ["scenario","P4.2","scenarioAudit",[["commitScenarioActivationRuntimeState","730ca51c52daa1adaa9212db4161f700763eddeaf732b8ddc608400eba336839",0]]],
+  ["scenario","P4.2","scenarioAutoShellOwnerByFeatureId",[["commitScenarioActivationRuntimeState","d4516f7259b5fcb7008a9e30aff8fc0e0e08fbd0ac7ac4328d189ab52bcc2c67",0]]],
+  ["scenario","P4.2","scenarioBaselineCoresByFeatureId",[["commitScenarioActivationRuntimeState","2151a7bd5878989590020be07564297f1041995a1793dde7eb8765acde9d3590",0]]],
+  ["scenario","P4.2","scenarioBaselineHash",[["commitScenarioActivationRuntimeState","3127f8e4844e24f90a688ea449776d197eb0d511043c6039b504eb9e6711f23a",0]]],
+  ["scenario","P4.2","scenarioBaselineOwnersByFeatureId",[["commitScenarioActivationRuntimeState","c7de762b3e9b391fabb3af810c302c8829a91ef23e86b020c5d562071565764e",0]]],
+  ["scenario","P4.2","scenarioBorderMode",[["commitScenarioActivationRuntimeState","72acb3c506c0b737708447c8948e46869da3bcffb08d28dfbc786658f3f95ea0",0]]],
+  ["scenario","P4.2","scenarioContextLandMaskData",[["setHydratedScenarioRuntimeTopologyState","45481e50b8dcfd44657b7ce76357255a62fa1e79a3315ba50ce8d7287112b617",0]]],
+  ["scenario","P4.2","scenarioContextLandMaskVersionTag",[["setHydratedScenarioRuntimeTopologyState","7693d4486623c499acfe17e8113f612322ee3fc0d1fc96aae7eadb3f6301cce6",0]]],
+  ["scenario","P4.2","scenarioCountriesByTag",[["commitScenarioActivationRuntimeState","b792fa5956fdbc7bcf77e4e6c0a500f35c3dffde2ac18796c30b4dc2c7c269e3",0]]],
+  ["scenario","P4.2","scenarioDisplaySettingsBeforeActivate",[["commitScenarioActivationRuntimeState","7959b2a5d48c4c3e4bb5c430ec641dff652e79f1d7e6fbf9f89943577f65f2e2",0]]],
+  ["scenario","P4.2","scenarioDistrictGroupByFeatureId",[["setScenarioRuntimeOptionalLayerState","7e2e7d3f266f8d480700a142c4549a79bd6d930405643e2b4d27d2fe5372568b",0]]],
+  ["scenario","P4.2","scenarioDistrictGroupsData",[["setScenarioRuntimeOptionalLayerState","0289b33b68d678600fcf56ca8e7c6f95542c21035cd0af7d68f82e5a4ac4cbc9",0]]],
+  ["scenario","P4.2","scenarioFixedOwnerColors",[["commitScenarioActivationRuntimeState","bf8ad4f8133f4fd8df6f295a83188b8dda05b693d2f15716ae8a509935d5a2a4",0]]],
+  ["scenario","P4.2","scenarioGeneratedColorTags",[["commitScenarioActivationRuntimeState","f6e4e4a3e444a2b9a5b9c4f64567ed4dc1fd69b037b2fab37481a11735a3f2c4",0]]],
+  ["scenario","P4.2","scenarioImportAudit",[["setScenarioImportAudit","fdf3c16fc76398268eb53d97344de62ee916cc40bd99fd6475fd0f23e1e3c62e",0]]],
+  ["scenario","P4.2","scenarioLandMaskData",[["setHydratedScenarioRuntimeTopologyState","bf1b21ae881142d7bdb6d9e2a17208e9d1a23028f20dc61c08ac8279442d70db",0]]],
+  ["scenario","P4.2","scenarioLandMaskVersionTag",[["setHydratedScenarioRuntimeTopologyState","5d061a13bd1dc5e4b01d673a85f04a79b6a7e2e0409fabf371bd2bd34d266c98",0]]],
+  ["scenario","P4.2","scenarioOceanFillBeforeActivate",[["commitScenarioActivationRuntimeState","9015d1a6e0aa545fe7fad7c15b55c62f21903c625eb91193400eca2481dce95d",0]]],
+  ["scenario","P4.2","scenarioParentBorderEnabledBeforeActivate",[["commitScenarioActivationRuntimeState","4c427a80189d1528b0b5f0abcd27c74ade0f221d487c8789e3972a29a1f1f477",0]]],
+  ["scenario","P4.2","scenarioReleasableIndex",[["commitScenarioActivationRuntimeState","f0ba3b0d2ea4bbfff441a11b39f78d65abd77dc2a4d4df77b428aa2d93a49b63",0]]],
+  ["scenario","P4.2","scenarioReliefOverlayRevision",[["commitScenarioActivationRuntimeState","7942e311ef88490009112a0e07967bff829383cf9c6619db5ce4ae029dc215f9",0]]],
+  ["scenario","P4.2","scenarioReliefOverlaysData",[["setScenarioRuntimeOptionalLayerState","ed4e5d804c1a516b7b0bd125f7741e3211534d3584bc23670071fcd8be63bb49",0]]],
+  ["scenario","P4.2","scenarioRuntimeTopologyData",[["setHydratedScenarioRuntimeTopologyState","44e387f873dc72f924626173fb722c9e21cf0a539f3ed8bcd30443229d48d58c",0]]],
+  ["scenario","P4.2","scenarioRuntimeTopologyVersionTag",[["setHydratedScenarioRuntimeTopologyState","05dd25f51044a513c43c7b9f1eb53e0da81a0804940fd58683be69086e699324",0]]],
+  ["scenario","P4.2","scenarioShellOverlayRevision",[["commitScenarioActivationRuntimeState","b1fe2753865bec05418547a1efe5222a8c4ca6c11b331b5fc961f7edc18fafb5",0]]],
+  ["scenario","P4.2","scenarioSpecialRegionsData",[["setHydratedScenarioRuntimeTopologyState","67ddb3688c7cbc3377a2753d60ba82848608238fe5b590eb8520a3384089164b",0]]],
+  ["scenario","P4.2","scenarioStrategicValuesData",[["setScenarioRuntimeOptionalLayerState","9ab060f3c649618f1bc9c756759b6000854554694575a6819e4d695d2eb5f3d0",0]]],
+  ["scenario","P4.2","scenarioStrategicValuesRevision",[["commitScenarioActivationRuntimeState","d368c71f3a740ff67781c3a114fe9a201b092e063ff2e23a292df33eff637a0e",0]]],
+  ["scenario","P4.2","scenarioWaterOverlayVersionTag",[["setHydratedScenarioRuntimeTopologyState","fab314be262e3032e9608d6e1b00fa29870023d8ccb139b7266c9f5b6f853d2a",0]]],
+  ["scenario","P4.2","scenarioWaterRegionsData",[["setHydratedScenarioRuntimeTopologyState","a9496855c3fa5928e180ecf5d6051d30353a331f33421d3654a8441528c72cda",0]]],
+  ["color","P4.4","activeSovereignCode",[["commitScenarioActivationRuntimeState","2ba937d8d87d527a5db51b5af8741ac0e6cc145af761d47a3907a64e0a65f45e",0]]],
+  ["color","P4.4","countryBaseColors",[["commitScenarioActivationRuntimeState","89a636795bd9ee6c0394b79bc47bf7112053abb38ab524e4a4c9e7c886167be3",0]]],
+  ["color","P4.4","featureOverrides",[["commitScenarioActivationRuntimeState","91797c98eda2738dad0538aa3e14d8d6d7aa3e13582adc29f7ac91467f51daa6",0]]],
+  ["color","P4.4","mapSemanticMode",[["commitScenarioActivationRuntimeState","020941e32826bea82b50c66c0b97fb8ad3dcb55698d0f95c3912b852fc468c66",0]]],
+  ["color","P4.4","runtimePoliticalMetaSeed",[["setHydratedScenarioRuntimeTopologyState","b228be7638d09476d251534b10049727719b073e3d532acadbe7aaa2b23abbc0",0]]],
+  ["color","P4.4","sovereignBaseColors",[["commitScenarioActivationRuntimeState","93cc53b07fcdcd5ab4b97f665261878b1116e2d11b2139ccdff185db2512f8ea",0]]],
+  ["color","P4.4","sovereigntyByFeatureId",[["commitScenarioActivationRuntimeState","044082ea4674883e56dc17db0d3c4cba046d3917a57843d3e8c698351e462912",0]]],
+  ["color","P4.4","sovereigntyInitialized",[["commitScenarioActivationRuntimeState","beb2fc734eb1ec5534a79cc94de89af242eb5bb0dba56ba717aca2d1c34d6f4b",0]]],
+  ["color","P4.4","visualOverrides",[["commitScenarioActivationRuntimeState","480611b47858cfa78e28a67a707381b5650bdb07cc4344ac8c8feb58c2889b88",0]]],
+  ["ui","P4.4","hoveredSpecialRegionId",[["commitScenarioActivationRuntimeState","3c7bc432868410f0b023a73221231d6d9ceb1bd5e9792c984c1fe9d796a8c780",0]]],
+  ["ui","P4.4","hoveredWaterRegionId",[["commitScenarioActivationRuntimeState","ca42ea3ab8820520e007314efcf5537fa3f399c8889e75e5970832234de7cdf3",0]]],
+  ["ui","P4.4","selectedSpecialRegionId",[["commitScenarioActivationRuntimeState","7e391a023e99cad9790eb33e9022ba91ac2740422a63f7ebd0d30f260ad4d426",0]]],
+  ["ui","P4.4","selectedWaterRegionId",[["commitScenarioActivationRuntimeState","09da3fc2a4b3b4028976afc8221998632f7b205c0b84511220be61452600c6fd",0]]],
+]);
+
+function createScenarioRuntimeActivationRetirementEntry([domain, migrationPhase, key, sites]) {
+  const presentation = [
+    "scenarioDisplaySettingsBeforeActivate", "scenarioOceanFillBeforeActivate",
+    "scenarioParentBorderEnabledBeforeActivate", "activeSovereignCode",
+    "selectedWaterRegionId", "selectedSpecialRegionId",
+    "hoveredWaterRegionId", "hoveredSpecialRegionId",
+  ].includes(key);
+  return freezeCrossFileMigrationEntry({
+    retiredCallerPath: "js/core/state/scenario_runtime_state.js",
+    retiredCallerBindingIdentity: JSON.stringify({
+      kind: "function-parameter", name: "", functionName: "commitScenarioActivationRuntimeState",
+      parameterName: "", parameterIndex: 0, parameterPath: "$",
+      importSource: "", importedName: "", aliasSources: [], aliasOperators: [],
+    }),
+    domain, migrationPhase, operation: "assign", key,
+    retiredMutationSites: sites.map(([name, sourceFingerprint, occurrenceIndex]) => ({
+      enclosingFunctionIdentity: JSON.stringify({kind: "function", ancestry: [{name, ordinal: 0}]}),
+      sourceFingerprint, occurrenceIndex,
+    })),
+    replacementCallerPath: "js/core/scenario_apply_pipeline.js",
+    replacementCallerBindingIdentity: SCENARIO_APPLY_PIPELINE_RUNTIME_STATE_BINDING_IDENTITY,
+    replacementEnclosingFunctionIdentity: SCENARIO_ACTIVATION_COMMIT_FUNCTION_IDENTITY,
+    actionModulePath: presentation ? SCENARIO_PRESENTATION_ACTION_MODULE_PATH : SCENARIO_ACTIVATION_ACTION_MODULE_PATH,
+    actionExportName: presentation ? "commitScenarioPresentationState" : "commitScenarioActivationState",
+    targetArgumentIndex: 0,
+    replacementActionSourceFingerprint: presentation
+      ? "437e733eec227b6984eeee13c06aa7338d6ee0c7543612e8d6338adb6965637d"
+      : "48de10ee32e9c2cb07dee776e315e5bf98c22ac658d90af9180f76712616a22a",
+  });
+}
+
 export const STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT =
   Object.freeze([
+    ...P44_STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
+    freezeCrossFileMigrationEntry({
+      "retiredCallerPath": "js/ui/sidebar/country_inspector_controller.js",
+      "retiredCallerBindingIdentity": "{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createCountryInspectorController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}",
+      "domain": "ui",
+      "migrationPhase": "P4.4",
+      "operation": "delete",
+      "key": "hgoIdentity",
+      "retiredMutationSites": [
+            {
+                  "enclosingFunctionIdentity": "{\"kind\":\"function\",\"ancestry\":[{\"name\":\"createCountryInspectorController\",\"ordinal\":0},{\"name\":\"renderHgoIdentityDetail\",\"ordinal\":0},{\"name\":\"<anonymous>\",\"ordinal\":4}]}",
+                  "sourceFingerprint": "3c39e299edce02621afe70eedfdfedb8dcab879b5059f0028efcb60aa28567a9",
+                  "occurrenceIndex": 0
+            }
+      ],
+      "replacementCallerPath": "js/ui/sidebar/country_inspector_controller.js",
+      "replacementCallerBindingIdentity": "{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createCountryInspectorController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}",
+      "replacementEnclosingFunctionIdentity": "{\"kind\":\"function\",\"ancestry\":[{\"name\":\"createCountryInspectorController\",\"ordinal\":0},{\"name\":\"renderHgoIdentityDetail\",\"ordinal\":0},{\"name\":\"handleHgoVariantChange\",\"ordinal\":0}]}",
+      "actionModulePath": "js/core/state/actions/scenario_presentation_actions.js",
+      "actionExportName": "setHgoIdentityVariantSelectionState",
+      "targetArgumentIndex": 0,
+      "replacementActionSourceFingerprint": "1b4d0f4dd691a10472e09aad7f31b73c8a06008082b38027811f9093efb51e58"
+}),
+    // UI owners delegate their migrated field writes to existing presentation actions.
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/ui/sidebar.js",
+      retiredCallerBindingIdentity: JSON.stringify({
+        kind: "module", name: "runtimeState", functionName: "", parameterName: "",
+        parameterIndex: 0, parameterPath: "", importSource: "../core/state.js",
+        importedName: "state", aliasSources: [], aliasOperators: [],
+      }),
+      domain: "color", migrationPhase: "P4.4", operation: "collection-mutate",
+      key: "expandedInspectorContinents",
+      retiredMutationSites: [{
+        enclosingFunctionIdentity: JSON.stringify({
+          kind: "function", ancestry: [{ name: "ensureInitialInspectorExpansion", ordinal: 0 }],
+        }),
+        sourceFingerprint: "cd3fee8bfca241d17cf57f2bebe9a4282934b33b077d4240cef2d0ebab263a02",
+        occurrenceIndex: 0,
+      }],
+      replacementCallerPath: "js/ui/sidebar/country_inspector_controller.js",
+      replacementCallerBindingIdentity: "{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createCountryInspectorController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:runtimeState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}",
+      replacementEnclosingFunctionIdentity: "{\"kind\":\"function\",\"ancestry\":[{\"name\":\"createCountryInspectorController\",\"ordinal\":0},{\"name\":\"ensureInitialInspectorExpansion\",\"ordinal\":0}]}",
+      actionModulePath: "js/core/state/actions/scenario_presentation_actions.js",
+      actionExportName: "setInspectorContinentExpandedState",
+      targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "33e90b8899a0fdcdad4ce1bc71fcd9516eab76832ae63930bf428e0f4af362fd",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/ui/toolbar.js",
+      retiredCallerBindingIdentity: JSON.stringify({
+        kind: "module", name: "runtimeState", functionName: "", parameterName: "",
+        parameterIndex: 0, parameterPath: "", importSource: "../core/state.js",
+        importedName: "state", aliasSources: [], aliasOperators: [],
+      }),
+      domain: "color", migrationPhase: "P4.4", operation: "assign", key: "batchFillScope",
+      retiredMutationSites: [
+        {
+          enclosingFunctionIdentity: JSON.stringify({
+            kind: "function", ancestry: [
+              { name: "initToolbar", ordinal: 0 }, { name: "<anonymous>", ordinal: 42 },
+            ],
+          }),
+          sourceFingerprint: "c4cf4cee341d6695166a50fcab4bcaa94ff2600c8aafc4006436564789054c3a",
+          occurrenceIndex: 0,
+        },
+        {
+          enclosingFunctionIdentity: JSON.stringify({
+            kind: "function", ancestry: [
+              { name: "initToolbar", ordinal: 0 }, { name: "<anonymous>", ordinal: 43 },
+            ],
+          }),
+          sourceFingerprint: "c4cf4cee341d6695166a50fcab4bcaa94ff2600c8aafc4006436564789054c3a",
+          occurrenceIndex: 0,
+        },
+      ],
+      replacementCallerPath: "js/ui/toolbar/workspace_chrome_support_surface_controller.js",
+      replacementCallerBindingIdentity: "{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createWorkspaceChromeSupportSurfaceController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}",
+      replacementEnclosingFunctionIdentity: "{\"kind\":\"function\",\"ancestry\":[{\"name\":\"createWorkspaceChromeSupportSurfaceController\",\"ordinal\":0},{\"name\":\"bindQuickFillControls\",\"ordinal\":0},{\"name\":\"<anonymous>\",\"ordinal\":1}]}",
+      actionModulePath: "js/core/state/actions/scenario_presentation_actions.js",
+      actionExportName: "setBatchFillScopeState",
+      targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "02ee0ee4f193dfb3b3b1f10ac29ca5104c0b6c3f9d6b12302b688f5dd6c85e76",
+    }),
+    // Removed special-zone wrappers retain their old sites and canonical write semantics.
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("activateSpecialZoneMembershipToolState", "$"),
+      domain: "color", migrationPhase: "P4.4", operation: "assign", key: "brushModeEnabled",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["activateSpecialZoneMembershipToolState"], sites: [["d103eeb8b941032cd5daf2a2c2e32ee459f8122d74323b5c03a46eff1fc4c665",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "activateMembershipTool"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "activateSpecialZoneMembershipToolState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "c4a3ead467985a41652fd268cbae8dc3003c299e78d4008a4e0364182dbce019",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("activateSpecialZoneMembershipToolState", "$"),
+      domain: "strategic-overlay", migrationPhase: "P4.4", operation: "assign", key: "specialZoneEditor",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["activateSpecialZoneMembershipToolState"], sites: [["327124a9df6870f614b505b79fff29d616f278a35eef7e5ba8e3a0d9d4d5a942",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "activateMembershipTool"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "activateSpecialZoneMembershipToolState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "c4a3ead467985a41652fd268cbae8dc3003c299e78d4008a4e0364182dbce019",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("activateSpecialZoneMembershipToolState", "$"),
+      domain: "color", migrationPhase: "P4.4", operation: "assign", key: "currentTool",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["activateSpecialZoneMembershipToolState"], sites: [["bd432c3dc0358f4ce26f5aad49036bce7ecbf8aecba9b8d5ec347c7e44e37103",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "activateMembershipTool"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "activateSpecialZoneMembershipToolState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "c4a3ead467985a41652fd268cbae8dc3003c299e78d4008a4e0364182dbce019",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("activateSpecialZoneMembershipToolState", "$"),
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "specialZoneMembershipTool",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["activateSpecialZoneMembershipToolState"], sites: [["0f0b54af0ee1099f07f4bb600afdd4898b8cab01fab1afbddfa552265f92e2f2",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "activateMembershipTool"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "activateSpecialZoneMembershipToolState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "c4a3ead467985a41652fd268cbae8dc3003c299e78d4008a4e0364182dbce019",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("activateSpecialZoneMembershipToolState", "$"),
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "specialZonePreviousTool",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["activateSpecialZoneMembershipToolState"], sites: [["5d2709539c2ddf70d14d351e15700120acd3fe6fa563c7bbf6b0e73fd1d5cdb8",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "activateMembershipTool"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "activateSpecialZoneMembershipToolState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "c4a3ead467985a41652fd268cbae8dc3003c299e78d4008a4e0364182dbce019",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("exitSpecialZoneMembershipToolState", "$"),
+      domain: "color", migrationPhase: "P4.4", operation: "assign", key: "currentTool",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["exitSpecialZoneMembershipToolState"], sites: [["bd432c3dc0358f4ce26f5aad49036bce7ecbf8aecba9b8d5ec347c7e44e37103",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "renderActions", {"name":"<anonymous>","ordinal":2}),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "exitSpecialZoneMembershipToolState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "6c2d698b5680004d946e5b0d41c4a21f96b7ff1b56ded450c3dcee9eb8346b25",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("exitSpecialZoneMembershipToolState", "$"),
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "specialZonePreviousTool",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["exitSpecialZoneMembershipToolState"], sites: [["5d2709539c2ddf70d14d351e15700120acd3fe6fa563c7bbf6b0e73fd1d5cdb8",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "renderActions", {"name":"<anonymous>","ordinal":2}),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "exitSpecialZoneMembershipToolState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "6c2d698b5680004d946e5b0d41c4a21f96b7ff1b56ded450c3dcee9eb8346b25",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("registerSpecialZonesWorkbenchRuntimeHooks", "$"),
+      domain: "runtime-hooks", migrationPhase: "P4.5", operation: "assign", key: "updateSpecialZonesWorkbenchUIFn",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["registerSpecialZonesWorkbenchRuntimeHooks"], sites: [["e9ff763f9df0624a4b8471ca3d366402d854a7fcb1ffd580fc94c4b0d8f2c5bc",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "renderSpecialZonesWorkbenchUi"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "registerSpecialZonesWorkbenchRuntimeHooks", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "0c3ff994507de0f9dd43bc55eec99626c62c4f394d9c87dae22edd58716bad05",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("registerSpecialZonesWorkbenchRuntimeHooks", "$"),
+      domain: "runtime-hooks", migrationPhase: "P4.5", operation: "assign", key: "updateSpecialZonesWorkbenchCurrentTargetUIFn",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["registerSpecialZonesWorkbenchRuntimeHooks"], sites: [["6b6f58f80de181a568d43ca8e068eceaebdbb6f29d968743011a4a4b99bd32e2",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "renderSpecialZonesWorkbenchUi"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "registerSpecialZonesWorkbenchRuntimeHooks", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "0c3ff994507de0f9dd43bc55eec99626c62c4f394d9c87dae22edd58716bad05",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("ensureSpecialZoneLayersState", "$"),
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "specialZoneLayers",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["ensureSpecialZoneLayersState"], sites: [["fd5d59cac0c899e80a5991627c4cc1859c15fda0958a28b5951d709e90fff62d",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "normalizeState"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "commitSpecialZoneLayersState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "7fcdc86b09f245b136b46d10a837790f73c3e96e47de0d1181b0e861cc8d9c38",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("mutateRuntimeSpecialZoneLayersState", "$"),
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "specialZonesOverlayDirty",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["mutateRuntimeSpecialZoneLayersState"], sites: [["c160a7fa65d90fd7d549d034a1dcf50b25fc802b2565af279fc26098438fd7ba",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "updateState"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "commitSpecialZoneLayersState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "12c6ebda6b0b647f6b1c3377f0fd131880cd41f7d60493df600f4abc3401a48e",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("normalizeRuntimeSpecialZoneLayersState", "$"),
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "specialZoneLayers",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["normalizeRuntimeSpecialZoneLayersState"], sites: [["fd5d59cac0c899e80a5991627c4cc1859c15fda0958a28b5951d709e90fff62d",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "normalizeState"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "commitSpecialZoneLayersState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "7fcdc86b09f245b136b46d10a837790f73c3e96e47de0d1181b0e861cc8d9c38",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/special_zone_layers.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("setRuntimeSpecialZoneLayersState", "$"),
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "specialZoneLayers",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["setRuntimeSpecialZoneLayersState"], sites: [["fd5d59cac0c899e80a5991627c4cc1859c15fda0958a28b5951d709e90fff62d",0]] },
+      ]),
+      replacementCallerPath: "js/ui/toolbar/special_zones_workbench_controller.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createSpecialZonesWorkbenchController", "$/property:runtimeState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createSpecialZonesWorkbenchController", "normalizeState"),
+      actionModulePath: SPECIAL_ZONE_ACTION_MODULE_PATH, actionExportName: "commitSpecialZoneLayersState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "7fcdc86b09f245b136b46d10a837790f73c3e96e47de0d1181b0e861cc8d9c38",
+    }),
+    // Owner moves keep their exact legacy sites and delegate final writes to actions.
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "color", migrationPhase: "P4.4", operation: "assign", key: "dynamicBordersDirty",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["markDynamicBordersDirty"], sites: [["c2382984fcb9ceaa0f2cbb1f04d9b9adf5129d4a866f707dc67c32c8b9019bea",0],["c2382984fcb9ceaa0f2cbb1f04d9b9adf5129d4a866f707dc67c32c8b9019bea",1]] },
+        { ancestryNames: ["recomputeDynamicBordersNow"], sites: [["c2382984fcb9ceaa0f2cbb1f04d9b9adf5129d4a866f707dc67c32c8b9019bea",0]] },
+      ]),
+      replacementCallerPath: "js/core/renderer/border_mesh_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createBorderMeshOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createBorderMeshOwner", "markDynamicBordersDirty"),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH, actionExportName: "setDynamicBordersDirtyState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "f73f1c89ae0b6dee86a58827a49400cfba80623233b930c0ced8f38875a26077",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "color", migrationPhase: "P4.4", operation: "assign", key: "dynamicBordersDirtyReason",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["markDynamicBordersDirty"], sites: [["54bedbda1f3b248635fabc4b055b6eb329fae901befa78bbda0d572a840ead09",0],["54bedbda1f3b248635fabc4b055b6eb329fae901befa78bbda0d572a840ead09",1]] },
+        { ancestryNames: ["recomputeDynamicBordersNow"], sites: [["54bedbda1f3b248635fabc4b055b6eb329fae901befa78bbda0d572a840ead09",0],["54bedbda1f3b248635fabc4b055b6eb329fae901befa78bbda0d572a840ead09",1]] },
+      ]),
+      replacementCallerPath: "js/core/renderer/border_mesh_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createBorderMeshOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createBorderMeshOwner", "markDynamicBordersDirty"),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH, actionExportName: "setDynamicBordersDirtyState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "f73f1c89ae0b6dee86a58827a49400cfba80623233b930c0ced8f38875a26077",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "color", migrationPhase: "P4.4", operation: "assign", key: "pendingDynamicBorderTimerId",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["clearPendingDynamicBorderTimer"], sites: [["e84845ee832443c8e453ef12bc5c5579ffe7a83b0c7086eac6087cf61ff6fad8",0]] },
+        { ancestryNames: ["scheduleDynamicBorderRecompute","<anonymous>"], sites: [["e84845ee832443c8e453ef12bc5c5579ffe7a83b0c7086eac6087cf61ff6fad8",0]] },
+        { ancestryNames: ["scheduleDynamicBorderRecompute"], sites: [["e84845ee832443c8e453ef12bc5c5579ffe7a83b0c7086eac6087cf61ff6fad8",0]] },
+      ]),
+      replacementCallerPath: "js/core/renderer/border_mesh_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createBorderMeshOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createBorderMeshOwner", "clearPendingDynamicBorderTimer"),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH, actionExportName: "setPendingDynamicBorderTimerState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "632dfb0287a64f874cecf11a8d746f8aee055785722a74d830727c66001b1d96",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "renderer", migrationPhase: "P4.3", operation: "assign", key: "cachedDetailAdmBorders",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["clearDeferredInternalBorderMeshCaches"], sites: [["b9fca13801d187e08ff5d99e86f5588a324d1215a68122d0e5104e8e5424fdc7",0]] },
+        { ancestryNames: ["rebuildStaticMeshes"], sites: [["b9fca13801d187e08ff5d99e86f5588a324d1215a68122d0e5104e8e5424fdc7",0],["b9fca13801d187e08ff5d99e86f5588a324d1215a68122d0e5104e8e5424fdc7",1]] },
+        { ancestryNames: ["restoreStaticMeshSnapshot"], sites: [["b9fca13801d187e08ff5d99e86f5588a324d1215a68122d0e5104e8e5424fdc7",0]] },
+        { ancestryNames: ["scheduleDeferredHeavyBorderMeshes","<anonymous>"], sites: [["b9fca13801d187e08ff5d99e86f5588a324d1215a68122d0e5104e8e5424fdc7",0]] },
+      ]),
+      replacementCallerPath: "js/core/renderer/border_mesh_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createBorderMeshOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createBorderMeshOwner", "replaceDetailAdmBorders"),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH, actionExportName: "replaceCachedDetailAdmBordersState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "13858ddc24bfd4790980720065a0e31215884cbe521f105d34f209950b4ff44c",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "renderer", migrationPhase: "P4.3", operation: "assign", key: "lastMouseMoveTime",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["getMapHoverInteractionOwner","setLastMouseMoveTime"], sites: [["a6b2dccabcb124b3b194389668d9e0014cf75fbfad482bf52ca47cc06711b8fd",0]] },
+      ]),
+      replacementCallerPath: "js/core/map_renderer/map_hover_interaction_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createMapHoverInteractionOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createMapHoverInteractionOwner", "handleMouseMove"),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH, actionExportName: "setLastMouseMoveTimeState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "a10359f10f6c0d80b5a8389d586f1f7043a5bc05c761153c90615fdfcf1fd884",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "renderer", migrationPhase: "P4.3", operation: "collection-mutate", key: "cachedDetailAdmBorders",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["rebuildStaticMeshes"], sites: [["666440010cdb7ee6178e34bda9d43a6875bd89b4d305df9176164c9b866d771b",0]] },
+      ]),
+      replacementCallerPath: "js/core/renderer/border_mesh_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createBorderMeshOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createBorderMeshOwner", "replaceDetailAdmBorders"),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH, actionExportName: "replaceCachedDetailAdmBordersState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "13858ddc24bfd4790980720065a0e31215884cbe521f105d34f209950b4ff44c",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "hoverOverlayDirty",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["clearFacilityHoverEntries"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0],["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",1]] },
+        { ancestryNames: ["clearUnderlyingHoverForFacilityEntry"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["getMapHoverInteractionOwner","markHoverOverlayDirty"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["getRenderPhaseLifecycleOwner","setHoverOverlayDirty"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["handleMapMouseLeave"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["initMap","<anonymous>"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["markAllOverlaysDirty"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["markOverlaysDirty"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["renderHoverOverlayIfNeeded"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+        { ancestryNames: ["setVisibleFacilityHoverEntries"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0],["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",1],["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",2],["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",3]] },
+        { ancestryNames: ["syncFacilityInfoCardVisibility"], sites: [["8f33ab5c3cc170baf4bb18aa95a6c5baf7b48ac07bed6e10d011612409429636",0]] },
+      ]),
+      replacementCallerPath: "js/core/map_renderer/map_hover_interaction_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createMapHoverInteractionOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createMapHoverInteractionOwner", "setHoverOverlayDirty"),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH, actionExportName: "setClickHoverOverlayDirtyState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "d3c5982a9456a99000c605f2516c1ef94ac89a12c2c07a56f5c3dbe16bdf2080",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "hoveredId",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["clearUnderlyingHoverForFacilityEntry"], sites: [["480716aca0ac4b1b6c73b8f237759ac1c82b9fc9896b9941a2eb15954bc31319",0]] },
+        { ancestryNames: ["getMapHoverInteractionOwner","setHoverIds"], sites: [["480716aca0ac4b1b6c73b8f237759ac1c82b9fc9896b9941a2eb15954bc31319",0]] },
+        { ancestryNames: ["handleMapMouseLeave"], sites: [["480716aca0ac4b1b6c73b8f237759ac1c82b9fc9896b9941a2eb15954bc31319",0]] },
+      ]),
+      replacementCallerPath: "js/core/map_renderer/map_hover_interaction_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createMapHoverInteractionOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createMapHoverInteractionOwner", "setHoverIds"),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH, actionExportName: "setHoveredFeatureIdsState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "fe643f1d784d04fdaad71a856bece9288bfe301d5f3394eecdc4fca887df04b2",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "hoveredSpecialRegionId",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["clearUnderlyingHoverForFacilityEntry"], sites: [["18e1ca5e9f601ffd560d54762bef40bc83540eb2c07dd451fd594d24c7790834",0]] },
+        { ancestryNames: ["getMapHoverInteractionOwner","setHoverIds"], sites: [["18e1ca5e9f601ffd560d54762bef40bc83540eb2c07dd451fd594d24c7790834",0]] },
+        { ancestryNames: ["handleMapMouseLeave"], sites: [["18e1ca5e9f601ffd560d54762bef40bc83540eb2c07dd451fd594d24c7790834",0]] },
+      ]),
+      replacementCallerPath: "js/core/map_renderer/map_hover_interaction_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createMapHoverInteractionOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createMapHoverInteractionOwner", "setHoverIds"),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH, actionExportName: "setHoveredFeatureIdsState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "fe643f1d784d04fdaad71a856bece9288bfe301d5f3394eecdc4fca887df04b2",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "hoveredWaterRegionId",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["clearUnderlyingHoverForFacilityEntry"], sites: [["92f477d4bd553d571a84078255db7d005f497f3806336f745eadbf0d31008e57",0]] },
+        { ancestryNames: ["getMapHoverInteractionOwner","setHoverIds"], sites: [["92f477d4bd553d571a84078255db7d005f497f3806336f745eadbf0d31008e57",0]] },
+        { ancestryNames: ["handleMapMouseLeave"], sites: [["92f477d4bd553d571a84078255db7d005f497f3806336f745eadbf0d31008e57",0]] },
+      ]),
+      replacementCallerPath: "js/core/map_renderer/map_hover_interaction_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createMapHoverInteractionOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createMapHoverInteractionOwner", "setHoverIds"),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH, actionExportName: "setHoveredFeatureIdsState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "fe643f1d784d04fdaad71a856bece9288bfe301d5f3394eecdc4fca887df04b2",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "tooltipPendingState",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["getRendererStartupTransactionOwner","resetTooltipState"], sites: [["0eb2b366382c01eb7d1b630cc05819a468c0470f2d1df087a07e2e7510ebaf10",0]] },
+        { ancestryNames: ["queueTooltipUpdate","<anonymous>"], sites: [["0eb2b366382c01eb7d1b630cc05819a468c0470f2d1df087a07e2e7510ebaf10",0]] },
+        { ancestryNames: ["queueTooltipUpdate"], sites: [["0eb2b366382c01eb7d1b630cc05819a468c0470f2d1df087a07e2e7510ebaf10",0]] },
+      ]),
+      replacementCallerPath: "js/core/map_renderer/map_hover_interaction_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createMapHoverInteractionOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createMapHoverInteractionOwner", "resetTooltipState"),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH, actionExportName: "setTooltipPendingState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "dd50ffa1b300fc489909c429f53d3dc04c4463fd00467eaf8ac4b7fe67e9884c",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/map_renderer.js",
+      retiredCallerBindingIdentity: MAP_RENDERER_RUNTIME_STATE_BINDING_IDENTITY,
+      domain: "ui", migrationPhase: "P4.4", operation: "assign", key: "tooltipRafHandle",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["getRendererStartupTransactionOwner","resetTooltipState"], sites: [["34020ee3bf3c2ba2ba3110ca210d7a556ae8134bfb59d2807c2a1a5112dd1a71",0]] },
+        { ancestryNames: ["queueTooltipUpdate","<anonymous>"], sites: [["34020ee3bf3c2ba2ba3110ca210d7a556ae8134bfb59d2807c2a1a5112dd1a71",0]] },
+        { ancestryNames: ["queueTooltipUpdate"], sites: [["34020ee3bf3c2ba2ba3110ca210d7a556ae8134bfb59d2807c2a1a5112dd1a71",0]] },
+      ]),
+      replacementCallerPath: "js/core/map_renderer/map_hover_interaction_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createMapHoverInteractionOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createMapHoverInteractionOwner", "resetTooltipState"),
+      actionModulePath: RENDERER_INTERACTION_ACTION_MODULE_PATH, actionExportName: "setTooltipRafHandleState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "d8bc90b434bf3f1511fdb2f0503cc8c762b64f6e884a387f66272f32d57a3c87",
+    }),
+    freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/renderer/border_draw_owner.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createBorderDrawOwner", "$/property:state"),
+      domain: "renderer", migrationPhase: "P4.3", operation: "assign", key: "cachedDetailAdmBorders",
+      retiredMutationSites: createP44RetiredMutationSites([
+        { ancestryNames: ["createBorderDrawOwner","drawHierarchicalBorders"], sites: [["f9a09e0ed92bffaefd4815181ad745170b32a19a5be357d01790fd56d23bf2a4",0]] },
+      ]),
+      replacementCallerPath: "js/core/renderer/border_mesh_owner.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("createBorderMeshOwner", "$/property:state"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("createBorderMeshOwner", "replaceDetailAdmBorders"),
+      actionModulePath: RENDERER_CACHE_ACTION_MODULE_PATH, actionExportName: "replaceCachedDetailAdmBordersState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "13858ddc24bfd4790980720065a0e31215884cbe521f105d34f209950b4ff44c",
+    }),
+    ...SCENARIO_RUNTIME_ACTIVATION_RETIREMENT_SITES.map(createScenarioRuntimeActivationRetirementEntry),
+    // These two historical sites belonged to the optional-layer helper, even
+    // though the frozen alias inventory attached them to the activation binding.
+    ...[
+      ["scenarioPoliticalChunkData", "6e1a9b4c807115a4fea48d77fd72cb08fc1bc84ce3e20ed997859948352a4986"],
+      ["scenarioPoliticalVisibleChunkData", "1f447d1cbf2d5f017fffc794f693ce9b25cca35961b9967dd41381dcff2a1915"],
+    ].map(([key, sourceFingerprint]) => freezeCrossFileMigrationEntry({
+      retiredCallerPath: "js/core/state/scenario_runtime_state.js",
+      retiredCallerBindingIdentity: createP44FunctionParameterBindingIdentity("commitScenarioActivationRuntimeState"),
+      domain: "scenario", migrationPhase: "P4.2", operation: "assign", key,
+      retiredMutationSites: [{
+        enclosingFunctionIdentity: createP44FunctionIdentity("setScenarioRuntimeOptionalLayerState"),
+        sourceFingerprint, occurrenceIndex: 0,
+      }],
+      replacementCallerPath: "js/core/state/scenario_runtime_state.js",
+      replacementCallerBindingIdentity: createP44FunctionParameterBindingIdentity("setScenarioRuntimeOptionalLayerState"),
+      replacementEnclosingFunctionIdentity: createP44FunctionIdentity("setScenarioRuntimeOptionalLayerState"),
+      actionModulePath: SCENARIO_CHUNK_PROMOTION_ACTION_MODULE_PATH,
+      actionExportName: "setScenarioPoliticalChunkPayloadState", targetArgumentIndex: 0,
+      replacementActionSourceFingerprint: "2aa7cb93c56d94e0f81ca38de3c9eddbc7759cb5014e9385c37317eb2a7b9991",
+    })),
     ...[
       "detailDeferred",
       "detailPromotionCompleted",
@@ -3758,7 +5743,10 @@ function parseStateActionMembership(value = "") {
   if (!domain || !migrationPhase || !operation || !key) {
     return null;
   }
-  if (!/^P4\.[1-4]$/.test(migrationPhase)) {
+  if (
+    migrationPhase !== "multi-phase"
+    && !/^P4\.[1-4]$/.test(migrationPhase)
+  ) {
     return null;
   }
   return {
@@ -3776,6 +5764,150 @@ function legacyMembershipReplacementEntryId(entry = {}) {
     String(entry.exportName || ""),
     normalizeStateActionMembership(entry.retiredMembership),
   ].join("#");
+}
+
+export function validateStateActionSuccessorProofContract(
+  entries = STATE_ACTION_SUCCESSOR_PROOF_CONTRACT,
+) {
+  if (!Array.isArray(entries)) {
+    return [createViolation(
+      "state-action-successor-proof-contract-invalid",
+      { reason: "entries-not-array" },
+    )];
+  }
+  const violations = [];
+  const seen = new Set();
+  const identities = [];
+  for (const [index, entry] of entries.entries()) {
+    const identity = [
+      normalizeModulePath(entry?.modulePath),
+      String(entry?.exportName || ""),
+      normalizeStateActionMembership(entry?.replacementMembership),
+    ].join("#");
+    identities.push(identity);
+    const carrierFunctions = entry?.carrierFunctions;
+    const successorEdges = entry?.successorEdges;
+    const normalizedForIdentity = {
+      modulePath: normalizeModulePath(entry?.modulePath),
+      exportName: String(entry?.exportName || ""),
+      replacementMembership:
+        normalizeStateActionMembership(entry?.replacementMembership),
+      requiredDirectMemberships: entry?.requiredDirectMemberships,
+      carrierFunctions,
+      successorEdges,
+    };
+    const valid = Boolean(
+      findStateActionDelegationContractEntry(
+        entry?.modulePath,
+        entry?.exportName,
+      )
+      && parseStateActionMembership(entry?.replacementMembership)
+      && Array.isArray(entry?.requiredDirectMemberships)
+      && entry.requiredDirectMemberships.every((membership) =>
+        parseStateActionMembership(membership)
+      )
+      && new Set(entry.requiredDirectMemberships).size
+        === entry.requiredDirectMemberships.length
+      && Array.isArray(carrierFunctions)
+      && carrierFunctions.length > 0
+      && carrierFunctions.some((carrier) =>
+        carrier?.functionName === entry?.exportName
+      )
+      && new Set(carrierFunctions.map(
+        (carrier) => carrier?.functionName,
+      )).size === carrierFunctions.length
+      && carrierFunctions.every((carrier) =>
+        isValidExportName(carrier?.functionName)
+        && /^[0-9a-f]{64}$/i.test(
+          String(carrier?.sourceFingerprint || ""),
+        )
+      )
+      && Array.isArray(successorEdges)
+      && successorEdges.length > 0
+      && new Set(successorEdges.map((edge) => JSON.stringify(edge)))
+        .size === successorEdges.length
+      && successorEdges.every((edge) =>
+        edge?.enclosingFunctionIdentity
+        && findStateActionDelegationContractEntry(
+          edge?.actionModulePath,
+          edge?.actionExportName,
+        )
+        && Number.isInteger(edge?.targetArgumentIndex)
+        && edge.targetArgumentIndex === 0
+        && Number.isInteger(edge?.occurrenceIndex)
+        && edge.occurrenceIndex >= 0
+        && parseStateActionMembership(edge?.terminalMembership)
+        && !(
+          normalizeModulePath(edge?.actionModulePath)
+            === normalizeModulePath(entry?.modulePath)
+          && String(edge?.actionExportName || "")
+            === String(entry?.exportName || "")
+        )
+        && /^[0-9a-f]{64}$/i.test(
+          String(edge?.sourceFingerprint || ""),
+        )
+      )
+      && /^[0-9a-f]{64}$/i.test(
+        String(entry?.contractIdentity || ""),
+      )
+      && entry.contractIdentity === createHash("sha256")
+        .update(JSON.stringify(normalizedForIdentity))
+        .digest("hex")
+    );
+    const legacyReplacement =
+      STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.find(
+        (candidate) =>
+          candidate.modulePath === normalizedForIdentity.modulePath
+          && candidate.exportName === normalizedForIdentity.exportName
+          && candidate.retiredMembership
+            === normalizedForIdentity.replacementMembership,
+      );
+    const hybridCoverage = [...new Set([
+      ...(entry?.requiredDirectMemberships || []),
+      ...(entry?.successorEdges || []).map(
+        (edge) => edge.terminalMembership,
+      ),
+    ])].sort();
+    const hybridCoverageValid = entry?.requiredDirectMemberships?.length
+      ? Boolean(
+        legacyReplacement
+        && JSON.stringify(hybridCoverage) === JSON.stringify(
+          [...legacyReplacement.requiredConcreteMemberships].sort(),
+        )
+      )
+      : true;
+    if (!valid || !hybridCoverageValid) {
+      violations.push(createViolation(
+        "state-action-successor-proof-entry-invalid",
+        { index, identity },
+      ));
+    }
+    if (seen.has(identity)) {
+      violations.push(createViolation(
+        "state-action-successor-proof-entry-duplicate",
+        { index, identity },
+      ));
+    }
+    seen.add(identity);
+  }
+  if (JSON.stringify(identities) !== JSON.stringify([...identities].sort())) {
+    violations.push(createViolation(
+      "state-action-successor-proof-order-invalid",
+    ));
+  }
+  return violations;
+}
+
+const LEGACY_MEMBERSHIP_REPLACEMENT_OPERATIONS = Object.freeze({
+  assign: Object.freeze(["assign", "define-property"]),
+  "collection-mutate": Object.freeze(["assign"]),
+  "compound-assign": Object.freeze(["assign"]),
+  delete: Object.freeze(["delete"]),
+  "object-assign": Object.freeze(["assign", "define-property"]),
+});
+
+function getLegacyMembershipReplacementOperations(operation = "") {
+  return LEGACY_MEMBERSHIP_REPLACEMENT_OPERATIONS[operation] || [];
 }
 
 export function validateStateActionLegacyMembershipReplacementContract(
@@ -3824,21 +5956,41 @@ export function validateStateActionLegacyMembershipReplacementContract(
       [...requiredMemberships].sort((left, right) =>
         left.localeCompare(right)
       );
+    const allowedReplacementOperations =
+      getLegacyMembershipReplacementOperations(
+        retiredMembership?.operation,
+      );
+    const requiredMembershipShapeValid =
+      retiredMembership?.key === "*"
+        ? parsedRequiredMemberships.every(
+          (membership) =>
+            membership
+            && membership.key !== "*"
+            && allowedReplacementOperations.includes(
+              membership.operation,
+            ),
+        )
+        : parsedRequiredMemberships.every(
+          (membership) =>
+            membership
+            && membership.domain === retiredMembership?.domain
+            && membership.migrationPhase
+              === retiredMembership?.migrationPhase
+            && membership.key === retiredMembership?.key
+            && allowedReplacementOperations.includes(
+              membership.operation,
+            ),
+        );
     const valid = Boolean(
       normalized.modulePath === String(entry.modulePath || "")
       && actionContract
-      && retiredMembership?.key === "*"
-      && ["assign", "delete"].includes(retiredMembership?.operation)
+      && retiredMembership
+      && allowedReplacementOperations.length > 0
       && requiredMemberships.length > 0
       && JSON.stringify(requiredMemberships)
         === JSON.stringify(requiredMembershipsSorted)
       && new Set(requiredMemberships).size === requiredMemberships.length
-      && parsedRequiredMemberships.every(
-        (membership) =>
-          membership
-          && membership.key !== "*"
-          && membership.operation === retiredMembership.operation,
-      )
+      && requiredMembershipShapeValid
       && String(entry.contractIdentity || "")
         === buildStateActionLegacyMembershipReplacementContractIdentity(
           entry,
@@ -3873,13 +6025,14 @@ export function expandStateActionMembershipsWithLegacyReplacements({
   contractEntries =
     STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT,
 } = {}) {
-  const effectiveMemberships = new Set(
+  const baseMemberships = new Set(
     [...(memberships instanceof Set
       ? memberships
       : (Array.isArray(memberships) ? memberships : []))]
       .map(normalizeStateActionMembership)
       .filter(Boolean),
   );
+  const effectiveMemberships = new Set(baseMemberships);
   if (
     validateStateActionLegacyMembershipReplacementContract(
       contractEntries,
@@ -3890,22 +6043,39 @@ export function expandStateActionMembershipsWithLegacyReplacements({
   const normalizedModulePath = normalizeModulePath(modulePath);
   const normalizedExportName = String(exportName || "");
   for (const entry of contractEntries) {
-    const retiredOperation = parseStateActionMembership(
+    const retiredMembership = parseStateActionMembership(
       entry.retiredMembership,
-    )?.operation;
-    const concreteMembershipsForOperation = [...effectiveMemberships].filter(
+    );
+    const allowedReplacementOperations =
+      getLegacyMembershipReplacementOperations(
+        retiredMembership?.operation,
+      );
+    const replacementMemberships = [...baseMemberships].filter(
       (membership) => {
         const parsed = parseStateActionMembership(membership);
-        return parsed?.operation === retiredOperation && parsed.key !== "*";
+        if (
+          !parsed
+          || parsed.key === "*"
+          || !allowedReplacementOperations.includes(parsed.operation)
+        ) {
+          return false;
+        }
+        return retiredMembership?.key === "*"
+          || (
+            parsed.domain === retiredMembership?.domain
+            && parsed.migrationPhase
+              === retiredMembership?.migrationPhase
+            && parsed.key === retiredMembership?.key
+          );
       },
     );
     if (
       entry.modulePath !== normalizedModulePath
       || entry.exportName !== normalizedExportName
-      || concreteMembershipsForOperation.length
+      || replacementMemberships.length
         !== entry.requiredConcreteMemberships.length
       || !entry.requiredConcreteMemberships.every(
-        (membership) => effectiveMemberships.has(membership),
+        (membership) => baseMemberships.has(membership),
       )
     ) {
       continue;
@@ -3974,6 +6144,15 @@ function stateTargetPureReaderContractEntryId(entry = {}) {
   ].join("#");
 }
 
+export function findStateImportedPureReaderContractEntry(modulePath, exportName) {
+  return STATE_TARGET_PURE_READER_CONTRACT.find((entry) => (
+    entry.modulePath === normalizeModulePath(modulePath)
+    && entry.functionName === exportName
+    && entry.targetParameterPath === "$"
+    && entry.importedArgumentCount > entry.targetParameterIndex
+  )) || null;
+}
+
 export function findStateTargetPureReaderContractEntry(
   modulePath,
   functionName,
@@ -4030,6 +6209,11 @@ export function validateStateTargetPureReaderContract(
       || !isValidExportName(entry.targetParameterName)
       || !Number.isInteger(entry.targetParameterIndex)
       || entry.targetParameterIndex < 0
+      || !Number.isInteger(entry.importedArgumentCount ?? 0)
+      || (entry.importedArgumentCount ?? 0) < 0
+      || ((entry.importedArgumentCount ?? 0) > 0 && (
+        entry.targetParameterPath !== "$" || entry.importedArgumentCount <= entry.targetParameterIndex
+      ))
       || !String(entry.targetParameterPath || "")
       || !/^[a-f0-9]{64}$/.test(String(entry.sourceFingerprint || ""))
     ) {
@@ -4296,6 +6480,15 @@ export function inspectStateTargetPureReaderFunctionSource(
       functionSourceFingerprint: "",
     };
   }
+  if (entry.importedArgumentCount > 0 && !ast.body.some((node) => (
+    node.type === "ExportNamedDeclaration"
+    && node.declaration?.type === "FunctionDeclaration"
+    && node.declaration.id?.name === entry.functionName
+  ))) {
+    violations.push(createViolation("state-target-pure-reader-direct-export-required", {
+      modulePath: entry.modulePath, functionName: entry.functionName,
+    }));
+  }
   const [functionNode] = functions;
   const parameter = functionNode.params?.[entry.targetParameterIndex];
   const targetBindings = collectParameterBindingPaths(parameter).filter(
@@ -4456,6 +6649,43 @@ export function validateStateActionDelegationContract(
           );
         }
         seenReadOnlyIndexes.add(readOnlyArgumentIndex);
+      }
+    }
+    if (
+      entry.referenceIdentityArgumentIndexes !== undefined
+      && !Array.isArray(entry.referenceIdentityArgumentIndexes)
+    ) {
+      violations.push(
+        createViolation(
+          "state-action-contract-reference-identity-argument-indexes-invalid",
+          { index, modulePath, exportName },
+        ),
+      );
+    } else {
+      const seenReferenceIdentityIndexes = new Set();
+      for (
+        const referenceIdentityArgumentIndex of
+        entry.referenceIdentityArgumentIndexes || []
+      ) {
+        if (
+          !Number.isInteger(referenceIdentityArgumentIndex)
+          || referenceIdentityArgumentIndex < 0
+          || referenceIdentityArgumentIndex === entry.targetArgumentIndex
+          || seenReferenceIdentityIndexes.has(referenceIdentityArgumentIndex)
+        ) {
+          violations.push(
+            createViolation(
+              "state-action-contract-reference-identity-argument-index-invalid",
+              {
+                index,
+                modulePath,
+                exportName,
+                referenceIdentityArgumentIndex,
+              },
+            ),
+          );
+        }
+        seenReferenceIdentityIndexes.add(referenceIdentityArgumentIndex);
       }
     }
     const entryId = contractEntryId(entry);
@@ -4677,6 +6907,7 @@ export function validateStateActionModuleSource(
     contractEntries = STATE_ACTION_DELEGATION_CONTRACT,
   } = {},
 ) {
+  const canonicalSource = String(source || "").replace(/\r\n?/g, "\n");
   const normalizedPath = normalizeModulePath(filePath);
   const entries = (Array.isArray(contractEntries) ? contractEntries : [])
     .filter(
@@ -4687,7 +6918,7 @@ export function validateStateActionModuleSource(
 
   let ast;
   try {
-    ast = parseModuleSource(source);
+    ast = parseModuleSource(canonicalSource);
   } catch (error) {
     return [
       ...violations,
@@ -4700,6 +6931,34 @@ export function validateStateActionModuleSource(
 
   const { directFunctions, nonDirectExports } =
     collectNamedExportShapes(ast);
+  const topLevelFunctions = topLevelFunctionDeclarations(ast);
+  for (const successorEntry of STATE_ACTION_SUCCESSOR_PROOF_CONTRACT.filter(
+    (entry) => entry.modulePath === normalizedPath
+  )) {
+    for (const carrier of successorEntry.carrierFunctions) {
+      const functionNode = topLevelFunctions.get(carrier.functionName);
+      const actualSourceFingerprint = functionNode
+        ? fingerprintFunctionSource(canonicalSource, functionNode)
+        : "";
+      if (
+        !functionNode
+        || actualSourceFingerprint !== carrier.sourceFingerprint
+      ) {
+        violations.push(createViolation(
+          "state-action-successor-carrier-source-drift",
+          {
+            modulePath: normalizedPath,
+            exportName: successorEntry.exportName,
+            replacementMembership:
+              successorEntry.replacementMembership,
+            functionName: carrier.functionName,
+            expectedSourceFingerprint: carrier.sourceFingerprint,
+            actualSourceFingerprint,
+          },
+        ));
+      }
+    }
+  }
   const registeredReadOnlyExportCount = [
     ...directFunctions.keys(),
     ...nonDirectExports.keys(),

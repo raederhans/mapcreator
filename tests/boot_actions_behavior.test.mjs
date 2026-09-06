@@ -85,7 +85,20 @@ test("boot phase action preserves the assigned phase value and return identity",
 
 test("UI hydration action keeps a fail-closed pending-ready-failed lifecycle", () => {
   const target = createDefaultBootState();
-  assert.equal(target.uiHydrationStatus, "pending");
+  assert.equal(target.uiHydrationStatus, undefined);
+  assert.equal(target.uiHydrationError, undefined);
+  assert.equal(target.uiHydrationUpdatedAt, undefined);
+
+  assert.equal(setUiHydrationState(target), "pending");
+  assert.deepEqual({
+    status: target.uiHydrationStatus,
+    error: target.uiHydrationError,
+    updatedAt: target.uiHydrationUpdatedAt,
+  }, {
+    status: "pending",
+    error: "",
+    updatedAt: 0,
+  });
 
   assert.equal(setUiHydrationState(target, { status: "ready", updatedAt: 10 }), "ready");
   assert.equal(target.uiHydrationStatus, "ready");

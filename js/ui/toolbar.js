@@ -26,6 +26,7 @@ import {
 } from "../core/map_renderer/public.js";
 import { captureHistoryState, canRedoHistory, canUndoHistory, pushHistoryEntry, redoHistory, undoHistory } from "../core/history_manager.js";
 import { callRuntimeHook, registerRuntimeHook } from "../core/state/index.js";
+import { setExportBakeState } from "../core/state/actions/export_workbench_actions.js";
 import {
   buildPaletteQuickSwatches,
   getPaletteSourceOptions,
@@ -573,12 +574,13 @@ function initToolbar({ render } = {}) {
   };
 
   let exportWorkbenchController = null;
+  const exportBakeCache = new Map();
+  const clearExportBakeCache = () => exportBakeCache.clear();
   let ensureExportWorkbenchUiState = () => {
     throw new Error("Export workbench controller is not initialized.");
   };
   const renderExportWorkbenchLayerList = () => exportWorkbenchController?.renderExportWorkbenchLayerList();
   const renderExportWorkbenchTextElementList = () => exportWorkbenchController?.renderExportWorkbenchTextElementList();
-
   let transportWorkbenchController = null;
   transportWorkbenchController = createTransportWorkbenchController({
     scenarioTransportWorkbenchBtn,
@@ -651,6 +653,13 @@ function initToolbar({ render } = {}) {
     dockReferencePopover,
     dockEditPopover,
     dockQuickFillRow,
+    quickFillParentBtn,
+    quickFillCountryBtn,
+    dockQuickFillHint,
+    refreshPaintModeUi: () => {
+      if (typeof runtimeState.updatePaintModeUIFn === "function") runtimeState.updatePaintModeUIFn();
+    },
+    t,
     exportWorkbenchOverlay,
     exportWorkbenchPanel,
     dockExportBtn,
@@ -677,6 +686,8 @@ function initToolbar({ render } = {}) {
     closeExportWorkbench: ({ restoreFocus = true } = {}) => runtimeState.closeExportWorkbenchFn?.({ restoreFocus }),
   });
   const {
+    bindQuickFillControls,
+    refreshQuickFillControls,
     bindDockPopoverDismiss,
     closeDockPopover,
     closeScenarioGuidePopover,
@@ -1090,81 +1101,6 @@ function initToolbar({ render } = {}) {
     triggerScenarioGuide,
   } = scenarioContextBarController;
   registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);
-
-  const getActiveQuickFillPolicy = () => {
-    const selectedCode = normalizeCountryCode(
-      runtimeState.selectedInspectorCountryCode || runtimeState.inspectorHighlightCountryCode
-    );
-    if (!selectedCode || !(runtimeState.countryInteractionPoliciesByCode instanceof Map)) {
-      return null;
-    }
-    return runtimeState.countryInteractionPoliciesByCode.get(selectedCode) || null;
-  };
-
-  const getQuickFillParentLabel = (policy) => {
-    if (policy?.parentScopeLabel === "Province") {
-      return t("By Province", "ui");
-    }
-    return t("By Parent", "ui");
-  };
-
-  const getQuickFillHint = (policy) => {
-    const requestedScope = String(runtimeState.batchFillScope || "parent") === "country" ? "country" : "parent";
-    if (requestedScope === "country") {
-      return t("Single-click: one subdivision | Double-click: country batch", "ui");
-    }
-    if (policy?.parentScopeLabel === "Province") {
-      return t("Single-click: one subdivision | Double-click: province batch", "ui");
-    }
-    return t("Single-click: one subdivision | Double-click: parent batch", "ui");
-  };
-
-  const refreshQuickFillControls = () => {
-    const isScenarioMode = !!runtimeState.activeScenarioId;
-    const isOwnershipMode = String(runtimeState.paintMode || "visual") === "sovereignty";
-    const isSubdivisionMode = String(runtimeState.interactionGranularity || "subdivision") !== "country";
-    const activePolicy = getActiveQuickFillPolicy();
-    const parentEnabled = !activePolicy
-      || !Array.isArray(activePolicy.quickFillScopes)
-      || activePolicy.quickFillScopes.includes("parent");
-    const countryEnabled = !activePolicy
-      || !Array.isArray(activePolicy.quickFillScopes)
-      || activePolicy.quickFillScopes.includes("country");
-    const isVisible = !isScenarioMode && !isOwnershipMode && isSubdivisionMode;
-
-    if (dockQuickFillBtn) {
-      dockQuickFillBtn.classList.toggle("hidden", !isVisible);
-      dockQuickFillBtn.setAttribute("aria-hidden", isVisible ? "false" : "true");
-      dockQuickFillBtn.setAttribute("aria-expanded", runtimeState.activeDockPopover === "quickfill" ? "true" : "false");
-    }
-    if (dockQuickFillRow) {
-      const shouldShowPopover = isVisible && runtimeState.activeDockPopover === "quickfill";
-      dockQuickFillRow.classList.toggle("hidden", !shouldShowPopover);
-      dockQuickFillRow.setAttribute("aria-hidden", shouldShowPopover ? "false" : "true");
-    }
-    if (!isVisible && runtimeState.activeDockPopover === "quickfill") {
-      closeDockPopover();
-    }
-    if (quickFillParentBtn) {
-      quickFillParentBtn.textContent = getQuickFillParentLabel(activePolicy);
-      quickFillParentBtn.disabled = !parentEnabled;
-      quickFillParentBtn.classList.toggle(
-        "is-active",
-        parentEnabled && String(runtimeState.batchFillScope || "parent") !== "country"
-      );
-    }
-    if (quickFillCountryBtn) {
-      quickFillCountryBtn.textContent = t("By Country", "ui");
-      quickFillCountryBtn.disabled = !countryEnabled;
-      quickFillCountryBtn.classList.toggle(
-        "is-active",
-        countryEnabled && String(runtimeState.batchFillScope || "parent") === "country"
-      );
-    }
-    if (dockQuickFillHint) {
-      dockQuickFillHint.textContent = getQuickFillHint(activePolicy);
-    }
-  };
 
   const refreshPaintControlsLayout = () => {
     const isScenarioMode = !!runtimeState.activeScenarioId;
@@ -1945,10 +1881,11 @@ function initToolbar({ render } = {}) {
     triggerCanvasDownload: (...args) => triggerCanvasDownload(...args),
     triggerBlobDownload: (...args) => triggerBlobDownload(...args),
     bakeLayer: (...args) => bakeLayer(...args),
+    clearBakeCache: clearExportBakeCache,
     exportMaxConcurrentJobs: EXPORT_MAX_CONCURRENT_JOBS,
   });
   ensureExportWorkbenchUiState = exportWorkbenchController.ensureExportWorkbenchUiState;
-
+  registerRuntimeHook(state, "clearExportBakeCacheFn", clearExportBakeCache);
   function updateHistoryUi() {
     if (undoBtn) undoBtn.disabled = !canUndoHistory();
     if (redoBtn) redoBtn.disabled = !canRedoHistory();
@@ -2264,15 +2201,7 @@ function initToolbar({ render } = {}) {
     dockEditPopoverBtn.dataset.bound = "true";
   }
 
-  if (dockQuickFillBtn && !dockQuickFillBtn.dataset.bound) {
-    dockQuickFillBtn.setAttribute("aria-haspopup", "dialog");
-    dockQuickFillBtn.setAttribute("aria-controls", "dockQuickFillRow");
-    dockQuickFillBtn.addEventListener("click", () => {
-      if (dockQuickFillBtn.classList.contains("hidden")) return;
-      openDockPopover("quickfill");
-    });
-    dockQuickFillBtn.dataset.bound = "true";
-  }
+  bindQuickFillControls();
 
   if (politicalEditingToggleBtn && !politicalEditingToggleBtn.dataset.bound) {
     politicalEditingToggleBtn.addEventListener("click", () => {
@@ -2455,7 +2384,7 @@ function initToolbar({ render } = {}) {
     } else {
       nextArtifacts.push(entry);
     }
-    exportUi.bakeArtifacts = nextArtifacts;
+    setExportBakeState(state, { bakeArtifacts: nextArtifacts });
     return entry;
   };
 
@@ -2514,7 +2443,7 @@ function initToolbar({ render } = {}) {
     const height = runtimeState.colorCanvas?.height || runtimeState.lineCanvas?.height || 0;
     const dependencies = getLayerDependencyRevision(normalizedLayerId, exportUi);
     const hash = computeBakeHash([normalizedLayerId, `${width}x${height}`, ...dependencies]);
-    const cacheEntry = exportUi.bakeCache.get(normalizedLayerId);
+    const cacheEntry = exportBakeCache.get(normalizedLayerId);
     if (
       cacheEntry
       && cacheEntry.hash === hash
@@ -2556,7 +2485,7 @@ function initToolbar({ render } = {}) {
       }
     }
     const version = cacheEntry ? Number(cacheEntry.version || 0) + 1 : 1;
-    exportUi.bakeCache.set(normalizedLayerId, {
+    exportBakeCache.set(normalizedLayerId, {
       hash,
       version,
       canvas: bakeCanvas,
@@ -2887,26 +2816,6 @@ function initToolbar({ render } = {}) {
       runtimeState.interactionGranularity =
         runtimeState.paintMode === "sovereignty" ? "subdivision" : requested;
       paintGranularitySelect.value = runtimeState.interactionGranularity;
-      if (typeof runtimeState.updatePaintModeUIFn === "function") {
-        runtimeState.updatePaintModeUIFn();
-      }
-    });
-  }
-
-  if (quickFillParentBtn) {
-    quickFillParentBtn.addEventListener("click", () => {
-      runtimeState.batchFillScope = "parent";
-      closeDockPopover();
-      if (typeof runtimeState.updatePaintModeUIFn === "function") {
-        runtimeState.updatePaintModeUIFn();
-      }
-    });
-  }
-
-  if (quickFillCountryBtn) {
-    quickFillCountryBtn.addEventListener("click", () => {
-      runtimeState.batchFillScope = "country";
-      closeDockPopover();
       if (typeof runtimeState.updatePaintModeUIFn === "function") {
         runtimeState.updatePaintModeUIFn();
       }

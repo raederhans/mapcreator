@@ -1,5 +1,4 @@
 import {
-  applyUnitCounterCatalogReviewAction,
   applyUnitCounterPresetSelection as applyUnitCounterPresetSelectionHelper,
   setUnitCounterCatalogCategory,
   setUnitCounterCatalogQuery,
@@ -7,6 +6,7 @@ import {
   setUnitCounterLibraryVariant,
 } from "./unit_counter_catalog_helper.js";
 import { getCounterEditorModalFocusableElements } from "./unit_counter_modal_helper.js";
+import { patchStrategicOverlayEditorState } from "../../../core/state/actions/strategic_overlay_actions.js";
 
 /**
  * Owns unit counter editor event binding so the controller can stay a facade.
@@ -60,7 +60,7 @@ export function bindUnitCounterSidebarEvents({
     clampUnitCounterFixedScaleMultiplier,
     clampUnitCounterStatValue,
     DEFAULT_UNIT_COUNTER_PRESET_ID,
-    exportHoi4UnitIconReviewDraft,
+    unitCounterCatalog,
     getRandomizedUnitCounterCombatState,
     getUnitCounterCombatPreset,
     getUnitCounterPresetMeta,
@@ -74,12 +74,9 @@ export function bindUnitCounterSidebarEvents({
     showAppDialog,
     refreshStrategicOverlayUI,
     t,
-    toggleHoi4EntryCurrentPresetMapping,
-    setHoi4CurrentPresetCandidate,
     unitCounterPresets,
     ensureStrategicOverlayUiState,
   } = helpers;
-
   const syncUnitCounterCombatStateToSelection = (partial = {}, { commitSelected = true } = {}) => {
     const nextCombatState = resolveUnitCounterCombatState({
       organizationPct: partial.organizationPct ?? state.unitCounterEditor.organizationPct,
@@ -88,11 +85,7 @@ export function bindUnitCounterSidebarEvents({
       statsPresetId: partial.statsPresetId ?? state.unitCounterEditor.statsPresetId,
       statsSource: partial.statsSource ?? state.unitCounterEditor.statsSource,
     });
-    state.unitCounterEditor.organizationPct = nextCombatState.organizationPct;
-    state.unitCounterEditor.equipmentPct = nextCombatState.equipmentPct;
-    state.unitCounterEditor.baseFillColor = nextCombatState.baseFillColor;
-    state.unitCounterEditor.statsPresetId = nextCombatState.statsPresetId;
-    state.unitCounterEditor.statsSource = nextCombatState.statsSource;
+    patchStrategicOverlayEditorState(state, "unitCounterEditor", nextCombatState);
     if (commitSelected && !state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
       mapRenderer.updateSelectedUnitCounter(nextCombatState);
     } else if (render) {
@@ -133,10 +126,10 @@ export function bindUnitCounterSidebarEvents({
   if (unitCounterNationModeSelect && !unitCounterNationModeSelect.dataset.bound) {
     unitCounterNationModeSelect.addEventListener("change", (event) => {
       const nextMode = String(event.target.value || "display").trim().toLowerCase();
-      state.unitCounterEditor.nationSource = nextMode === "manual" ? "manual" : "display";
-      if (nextMode !== "manual") {
-        state.unitCounterEditor.nationTag = "";
-      }
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", {
+        nationSource: nextMode === "manual" ? "manual" : "display",
+        ...(nextMode !== "manual" ? { nationTag: "" } : {}),
+      });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({
           nationSource: state.unitCounterEditor.nationSource,
@@ -150,8 +143,10 @@ export function bindUnitCounterSidebarEvents({
   if (unitCounterNationSelect && !unitCounterNationSelect.dataset.bound) {
     unitCounterNationSelect.addEventListener("change", (event) => {
       const nextNationTag = String(event.target.value || "").trim().toUpperCase();
-      state.unitCounterEditor.nationTag = nextNationTag;
-      state.unitCounterEditor.nationSource = nextNationTag ? "manual" : "display";
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", {
+        nationTag: nextNationTag,
+        nationSource: nextNationTag ? "manual" : "display",
+      });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({
           nationTag: nextNationTag,
@@ -165,9 +160,9 @@ export function bindUnitCounterSidebarEvents({
   if (unitCounterAttachmentSelect && !unitCounterAttachmentSelect.dataset.bound) {
     unitCounterAttachmentSelect.addEventListener("change", (event) => {
       const nextLineId = String(event.target.value || "").trim();
-      state.unitCounterEditor.attachment = nextLineId
-        ? { kind: "operational-line", lineId: nextLineId }
-        : null;
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", {
+        attachment: nextLineId ? { kind: "operational-line", lineId: nextLineId } : null,
+      });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({ attachment: state.unitCounterEditor.attachment });
       } else if (render) {
@@ -180,11 +175,12 @@ export function bindUnitCounterSidebarEvents({
   if (unitCounterRendererSelect && !unitCounterRendererSelect.dataset.bound) {
     unitCounterRendererSelect.addEventListener("change", (event) => {
       const nextRenderer = String(event.target.value || "game");
-      state.unitCounterEditor.renderer = nextRenderer;
+      const editorPatch = { renderer: nextRenderer };
       if (nextRenderer === "milstd" && !String(state.unitCounterEditor.sidc || state.unitCounterEditor.symbolCode || "").trim()) {
-        state.unitCounterEditor.sidc = "130310001412110000000000000000";
-        state.unitCounterEditor.symbolCode = state.unitCounterEditor.sidc;
+        editorPatch.sidc = "130310001412110000000000000000";
+        editorPatch.symbolCode = editorPatch.sidc;
       }
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", editorPatch);
       state.annotationView = {
         ...(state.annotationView || {}),
         unitRendererDefault: nextRenderer,
@@ -202,7 +198,7 @@ export function bindUnitCounterSidebarEvents({
   if (unitCounterSizeSelect && !unitCounterSizeSelect.dataset.bound) {
     unitCounterSizeSelect.addEventListener("change", (event) => {
       const nextSize = String(event.target.value || "medium");
-      state.unitCounterEditor.size = nextSize;
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { size: nextSize });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({ size: nextSize });
       } else if (render) {
@@ -214,7 +210,7 @@ export function bindUnitCounterSidebarEvents({
   }
   if (unitCounterEchelonSelect && !unitCounterEchelonSelect.dataset.bound) {
     unitCounterEchelonSelect.addEventListener("change", (event) => {
-      state.unitCounterEditor.echelon = String(event.target.value || "").trim().toUpperCase();
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { echelon: String(event.target.value || "").trim().toUpperCase() });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({ echelon: state.unitCounterEditor.echelon });
       }
@@ -224,12 +220,12 @@ export function bindUnitCounterSidebarEvents({
   }
   if (unitCounterLabelInput && !unitCounterLabelInput.dataset.bound) {
     unitCounterLabelInput.addEventListener("input", (event) => {
-      state.unitCounterEditor.label = String(event.target.value || "");
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { label: String(event.target.value || "") });
       scheduleStrategicOverlayRefresh("counterPreview");
     });
     unitCounterLabelInput.addEventListener("change", (event) => {
       const nextLabel = String(event.target.value || "");
-      state.unitCounterEditor.label = nextLabel;
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { label: nextLabel });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({ label: nextLabel });
       }
@@ -239,11 +235,11 @@ export function bindUnitCounterSidebarEvents({
   }
   if (unitCounterSubLabelInput && !unitCounterSubLabelInput.dataset.bound) {
     unitCounterSubLabelInput.addEventListener("input", (event) => {
-      state.unitCounterEditor.subLabel = String(event.target.value || "");
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { subLabel: String(event.target.value || "") });
       scheduleStrategicOverlayRefresh("counterPreview");
     });
     unitCounterSubLabelInput.addEventListener("change", (event) => {
-      state.unitCounterEditor.subLabel = String(event.target.value || "");
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { subLabel: String(event.target.value || "") });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({ subLabel: state.unitCounterEditor.subLabel });
       }
@@ -253,11 +249,11 @@ export function bindUnitCounterSidebarEvents({
   }
   if (unitCounterStrengthInput && !unitCounterStrengthInput.dataset.bound) {
     unitCounterStrengthInput.addEventListener("input", (event) => {
-      state.unitCounterEditor.strengthText = String(event.target.value || "");
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { strengthText: String(event.target.value || "") });
       scheduleStrategicOverlayRefresh("counterPreview");
     });
     unitCounterStrengthInput.addEventListener("change", (event) => {
-      state.unitCounterEditor.strengthText = String(event.target.value || "");
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { strengthText: String(event.target.value || "") });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({ strengthText: state.unitCounterEditor.strengthText });
       }
@@ -268,14 +264,12 @@ export function bindUnitCounterSidebarEvents({
   if (unitCounterSymbolInput && !unitCounterSymbolInput.dataset.bound) {
     unitCounterSymbolInput.addEventListener("input", (event) => {
       const nextToken = String(event.target.value || "").trim().toUpperCase();
-      state.unitCounterEditor.sidc = nextToken;
-      state.unitCounterEditor.symbolCode = nextToken;
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { sidc: nextToken, symbolCode: nextToken });
       scheduleStrategicOverlayRefresh("counterPreview");
     });
     unitCounterSymbolInput.addEventListener("change", (event) => {
       const nextSymbol = String(event.target.value || "").trim().toUpperCase();
-      state.unitCounterEditor.sidc = nextSymbol;
-      state.unitCounterEditor.symbolCode = nextSymbol;
+      patchStrategicOverlayEditorState(state, "unitCounterEditor", { sidc: nextSymbol, symbolCode: nextSymbol });
       if (!state.unitCounterEditor.active && state.unitCounterEditor.selectedId) {
         mapRenderer.updateSelectedUnitCounter({ sidc: nextSymbol });
       } else if (render) {
@@ -288,7 +282,7 @@ export function bindUnitCounterSidebarEvents({
   if (unitCounterDetailToggleBtn && !unitCounterDetailToggleBtn.dataset.bound) {
     unitCounterDetailToggleBtn.addEventListener("click", () => {
       ensureStrategicOverlayUiState();
-      state.strategicOverlayUi.counterEditorModalOpen = true;
+      patchStrategicOverlayEditorState(state, "strategicOverlayUi", { counterEditorModalOpen: true });
       refreshStrategicOverlayUI({
         scopes: ["workspaceChrome", "counterIdentity", "counterCombat", "counterPreview", "counterCatalog"],
       });
@@ -394,7 +388,7 @@ export function bindUnitCounterSidebarEvents({
   }
   if (unitCounterLibraryExportBtn && !unitCounterLibraryExportBtn.dataset.bound) {
     unitCounterLibraryExportBtn.addEventListener("click", () => {
-      exportHoi4UnitIconReviewDraft();
+      unitCounterCatalog.exportReviewDraft();
     });
     unitCounterLibraryExportBtn.dataset.bound = "true";
   }
@@ -405,12 +399,10 @@ export function bindUnitCounterSidebarEvents({
         const action = String(reviewButton.dataset.hoi4ReviewAction || "").trim();
         const entryId = String(reviewButton.dataset.hoi4EntryId || "").trim();
         const currentPresetId = String(state.unitCounterEditor?.presetId || DEFAULT_UNIT_COUNTER_PRESET_ID).trim();
-        const handled = applyUnitCounterCatalogReviewAction({
+        const handled = unitCounterCatalog.applyReviewAction({
           action,
           entryId,
           currentPresetId,
-          toggleHoi4EntryCurrentPresetMapping,
-          setHoi4CurrentPresetCandidate,
         });
         if (handled) {
           scheduleStrategicOverlayRefresh("counterCatalog");

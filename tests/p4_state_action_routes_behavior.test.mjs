@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { buildRecommendation } from "../tools/select_verification_targets.mjs";
 import { buildRouteIndex } from "../tools/test_route_registry.mjs";
+import { VERIFICATION_CATALOG_SOURCE_FILES } from "../tools/verification/catalog/source_files.mjs";
 import {
   P4_PHASE_EXPECTED_COMMANDS,
   buildP4StateActionRouteReport,
@@ -158,6 +159,10 @@ test("P4 ownership includes production JS and explicit P4 policy surfaces", () =
   assert.equal(isP4OwnedChangedFile("js/core/state/actions/boot_actions.js"), true);
   assert.equal(isP4OwnedChangedFile("tools/check_p4_state_action_routes.mjs"), true);
   assert.equal(isP4OwnedChangedFile("tools/run_p4_phase_verification.mjs"), true);
+  assert.equal(
+    isP4OwnedChangedFile("tools/verification/verification_catalog_source.mjs"),
+    true,
+  );
   assert.equal(isP4OwnedChangedFile("tools/state_action_delegation_contract.mjs"), true);
   assert.equal(isP4OwnedChangedFile("tests/p4_state_action_routes_behavior.test.mjs"), true);
   assert.equal(isP4OwnedChangedFile("tests/boot_actions_behavior.test.mjs"), true);
@@ -171,6 +176,31 @@ test("P4 ownership includes production JS and explicit P4 policy surfaces", () =
   assert.equal(isP4OwnedChangedFile("tools/p4_state_action_phases.mjs"), true);
   assert.equal(isP4OwnedChangedFile("dist/app/js/core/state/actions/boot_actions.js"), false);
   assert.equal(isP4OwnedChangedFile("docs/archive/unrelated.md"), false);
+});
+
+test("split catalog modules retain exact P4 ownership and current phase routes", () => {
+  const routes = buildRouteIndex();
+  const changedFiles = [...VERIFICATION_CATALOG_SOURCE_FILES];
+  for (const file of changedFiles) assert.equal(isP4OwnedChangedFile(file), true, file);
+  for (const file of [
+    "tools/verification/catalog/unregistered.mjs",
+    "tools/verification/catalog/source_files.mjs.bak",
+    "tools/verification/catalog-other/policies.mjs",
+  ]) assert.equal(isP4OwnedChangedFile(file), false, file);
+  const report = buildP4StateActionRouteReport({
+    phase: "P4.4",
+    changedFiles,
+    recommendation: buildRecommendation(changedFiles, routes),
+    routes,
+  });
+  assert.equal(report.verdict, "pass");
+  assert.deepEqual(report.routeGaps, []);
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.equal(report.files.length, changedFiles.length);
+  for (const file of report.files) {
+    assert.deepEqual(file.matchedExpectedPhaseCommands, ["verify:p4:p4-4"]);
+    assert.ok(file.directStateOwnershipRecommendations.some(({ commandRef }) => commandRef === "verify:p4:p4-4"));
+  }
 });
 
 test("direct state-ownership route with the expected phase command passes", () => {
@@ -194,7 +224,7 @@ test("historical owner routes stay direct while the selector upgrades execution 
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation([changedFile], routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: "P4.4",
     changedFiles: [changedFile],
     recommendation,
     routes,
@@ -202,16 +232,33 @@ test("historical owner routes stay direct while the selector upgrades execution 
 
   assert.equal(report.verdict, "pass");
   assert.ok(report.files[0].directStateOwnershipRecommendations.length > 0);
-  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-3"]);
+  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-4"]);
   assert.equal(
     report.files[0].directStateOwnershipRecommendations.some((route) => (
-      route.commandRef === "verify:p4:p4-3"
+      route.commandRef === "verify:p4:p4-4"
     )),
     false,
   );
 });
 
-test("the current selector control plane has zero P4.3 route gaps", () => {
+test("P4.4 replay owners expose both leaf contracts and their exact phase route", () => {
+  const routes = buildRouteIndex();
+  for (const changedFile of [
+    "js/core/state/actions/appearance_actions.js",
+    "js/core/state/actions/transport_actions.js",
+    "js/core/state/actions/strategic_overlay_actions.js",
+    "js/core/state/actions/special_zone_actions.js",
+  ]) {
+    const commandRefs = routes
+      .filter(({ sourceRef }) => String(sourceRef).split(",").includes(changedFile))
+      .map(({ commandRef }) => commandRef);
+    assert.ok(commandRefs.includes("test:node:p4:p4-4"), changedFile);
+    assert.ok(commandRefs.includes("test:python:p4:p4-4-boundary"), changedFile);
+    assert.ok(commandRefs.includes("verify:p4:p4-4"), changedFile);
+  }
+});
+
+test("the current selector control plane has zero P4.4 route gaps", () => {
   const changedFiles = [
     "tools/select_verification_targets.mjs",
     "tools/check_p4_state_action_routes.mjs",
@@ -227,7 +274,7 @@ test("the current selector control plane has zero P4.3 route gaps", () => {
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation(changedFiles, routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: "P4.4",
     changedFiles,
     recommendation,
     routes,
@@ -238,7 +285,7 @@ test("the current selector control plane has zero P4.3 route gaps", () => {
   assert.deepEqual(report.unmatchedChangedFiles, []);
 });
 
-test("Appearance and Transport milestone coordination stays on the exact P4.3 route", () => {
+test("Appearance and Transport milestone coordination stays on the exact P4.4 route", () => {
   const changedFiles = [
     "docs/active/appearance-transport-platformization-milestones-20260812/context.md",
     "docs/active/appearance-transport-platformization-milestones-20260812/plan.md",
@@ -247,7 +294,7 @@ test("Appearance and Transport milestone coordination stays on the exact P4.3 ro
   const routes = buildRouteIndex();
   const recommendation = buildRecommendation(changedFiles, routes);
   const report = buildP4StateActionRouteReport({
-    phase: "P4.3",
+    phase: "P4.4",
     changedFiles,
     recommendation,
     routes,
@@ -256,7 +303,7 @@ test("Appearance and Transport milestone coordination stays on the exact P4.3 ro
   assert.equal(report.verdict, "pass");
   assert.deepEqual(report.unmatchedChangedFiles, []);
   for (const matchedFile of recommendation.matchedByFile) {
-    assert.ok(matchedFile.matchedRouteIds.includes("p4:p4-3-exact-phase"));
+    assert.ok(matchedFile.matchedRouteIds.includes("p4:p4-4-exact-phase"));
   }
 });
 

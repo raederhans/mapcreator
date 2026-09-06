@@ -1,4 +1,9 @@
 // Special zone editor runtime mutations.
+import {
+  patchSpecialZoneEditorState,
+  setSpecialZonesOverlayDirtyState,
+} from "../../state/actions/special_zone_actions.js";
+
 export function createSpecialZonesRuntimeDomain({
   state,
   defaultSpecialZoneType,
@@ -15,9 +20,10 @@ export function createSpecialZonesRuntimeDomain({
     // Legacy freehand special zones have exited the main editing path.
     // Layer membership editing is now handled by the special zones workbench.
     if (event?.preventDefault) event.preventDefault();
-    state.specialZoneEditor.active = false;
-    state.specialZoneEditor.vertices = [];
-    state.specialZonesOverlayDirty = true;
+    patchSpecialZoneEditorState(state, { active: false, vertices: [] }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
     return false;
@@ -25,9 +31,10 @@ export function createSpecialZonesRuntimeDomain({
 
   function retireLegacyDrawState() {
     ensureSpecialZoneEditorState();
-    state.specialZoneEditor.active = false;
-    state.specialZoneEditor.vertices = [];
-    state.specialZonesOverlayDirty = true;
+    patchSpecialZoneEditorState(state, { active: false, vertices: [] }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
     return true;
@@ -35,11 +42,15 @@ export function createSpecialZonesRuntimeDomain({
 
   function startSpecialZoneDraw({ zoneType = defaultSpecialZoneType, label = "" } = {}) {
     ensureSpecialZoneEditorState();
-    state.specialZoneEditor.active = false;
-    state.specialZoneEditor.vertices = [];
-    state.specialZoneEditor.zoneType = String(zoneType || defaultSpecialZoneType);
-    state.specialZoneEditor.label = String(label || "");
-    state.specialZonesOverlayDirty = true;
+    patchSpecialZoneEditorState(state, {
+      active: false,
+      vertices: [],
+      zoneType: String(zoneType || defaultSpecialZoneType),
+      label: String(label || ""),
+    }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
     return false;
@@ -60,15 +71,19 @@ export function createSpecialZonesRuntimeDomain({
 
   function selectSpecialZoneById(id) {
     ensureSpecialZoneEditorState();
-    state.specialZoneEditor.selectedId = String(id || "").trim() || null;
-    state.specialZonesOverlayDirty = true;
+    patchSpecialZoneEditorState(state, { selectedId: String(id || "").trim() || null }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
+    setSpecialZonesOverlayDirtyState(state, true);
     updateSpecialZoneEditorUI();
     renderNow();
   }
 
   function deleteSelectedManualSpecialZone() {
     ensureSpecialZoneEditorState();
-    state.specialZoneEditor.selectedId = null;
+    patchSpecialZoneEditorState(state, { selectedId: null }, {
+      defaultZoneType: defaultSpecialZoneType,
+    });
     return false;
   }
 

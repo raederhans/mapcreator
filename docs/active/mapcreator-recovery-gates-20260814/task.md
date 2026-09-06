@@ -2,7 +2,7 @@
 
 ## Current status
 
-`RUNTIME_ARCHITECTURE_RESET_STAGE_C_COMPLETE` — 原 Recovery Gates 的 Gate 0、Gate 1、Gate 2，以及 Runtime Architecture Reset v1 的 Stage A、Stage B、Stage C 已完成。Stage C 的本地内容寻址 artifact cache、transport-road 成熟度投影、验证路由与 tracked Pages 镜像已由 PR #116 合并到 protected `main`。原 Gate 3→5 仍是历史路线图，不因本次 Stage C 自动宣称完成。
+`RUNTIME_ARCHITECTURE_RESET_STAGE_C_COMPLETE / P4.3_A_ADMITTED` — 原 Recovery Gates 的 Gate 0、Gate 1、Gate 2，以及 Runtime Architecture Reset v1 的 Stage A、Stage B、Stage C 已完成；P4.3 另在 exact source candidate `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66` 正式准入。原 Gate 3→5 整体仍未完成；Gate 4、P4.4/B、Appearance/Transport live lifecycle、release 与 deploy 均不得由本次 A admission 推导为完成。
 
 ## Checklist
 
@@ -47,7 +47,7 @@
 
 ### Gate 4
 
-- [ ] Perf-00：startup module/resource graph。
+- [ ] Perf-00：startup module/resource graph；隔离审计候选 `a1f0885c6617622d260bc633c257b3f67b941686` ready/not integrated，当前 graph 仍 rejected（46 issues），因此 Gate 4 未完成。
 - [ ] Perf-01：production bundle/code-split 有界实验。
 - [ ] Perf-02：first-visible data split 与 deferred features。
 - [ ] Artifact-01：Pages/dist reachability inventory。
@@ -55,7 +55,7 @@
 
 ### Gate 5
 
-- [ ] 完成 P4.3 admission 并写入 `A_ADMITTED_SHA`。
+- [x] 完成 P4.3 admission 并写入 `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`。
 - [ ] 完成 P4.4 replay/admission 并写入 `B_ADMITTED_SHA`。
 - [ ] 完成 Appearance / Transport versioned change-set。
 - [ ] 完成 `sample → Guide → edit → export → restore`。
@@ -164,15 +164,16 @@ Stage C closeout: 原始 C1/C2 候选分别保留在 `refs/archive/runtime-archi
 - [ ] CAS 目前只接入 TNO startup-support 三文件；base/scenario/optional/web 产品面、共享/远端 cache 与全 stage 覆盖尚未完成。
 - [ ] road maturity 目前只是首个只读 projection；其它 family、真实 consumers 与通用 feature maturity matrix 尚未完成。
 - [ ] tracked `dist` retirement、generated JS/perf trace 迁移均未授权或未完成。
-- [ ] `A_ADMITTED_SHA`、`B_ADMITTED_SHA`、Appearance/Transport live change-set、恢复型 Demo 与 final release verdict 均未完成。
+- [x] `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66` 已完成。
+- [ ] `B_ADMITTED_SHA`、Appearance/Transport live change-set、恢复型 Demo 与 final release verdict 仍未完成。
 
 ### Active R1 execution tasks
 
-- [~] Gate 5A P4.3 admission candidate：queued client task `client-new-thread:c1c90d1a-bace-48a3-b3d2-ecfd60f15fbb`；仅做当前主线 drift、聚焦修复与候选交付，不写 `A_ADMITTED_SHA`，不抢跑共享长门禁。
-- [~] Gate 4 startup resource graph / budget contract：queued client task `client-new-thread:ca61daef-6921-4702-aee0-082c280758fd`；只新增确定性静态 graph/contract，不运行 perf、Pages、browser 或 shared `.runtime`。
+- [x] Gate 5A P4.3 admission：exact source candidate `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`；exact phase、routes、Pages/dist、core、browser、standard perf 与 independent review 均通过，A marker 已写入。
+- [~] Gate 4 startup resource graph / budget contract：隔离 commit `a1f0885c6617622d260bc633c257b3f67b941686` 已完成 focused contract 与独立 review，但尚未集成；当前分类债务 46 项，Gate 4 仍 open。
 - [~] Gate 3 Export vertical seam：queued client task `client-new-thread:d06e7b78-4f86-4c04-beac-944522d00bee`；独占 Export 专属模块与聚焦测试，共享 `toolbar.js` wiring 需主监督另行串行处理。
-- [ ] 主监督逐个审查并整合 R1 候选，在最终 source candidate 上冻结 exact SHA。
-- [ ] 冻结后由唯一 live-test owner 执行 P4.3 checkpoint/exact/Pages/browser/core-main-thread/perf 组合并写入 `A_ADMITTED_SHA`。
-- [ ] A 正式准入后才创建 P4.4 replay/admission 执行任务；B 正式准入后才激活 Appearance/Transport live lifecycle。
+- [ ] 主监督继续审查并整合 A 之外的 R1 候选；Gate 4 graph 与 Gate 3 Export seam 各自保留原验收边界。
+- [x] 唯一 live-test owner 已在 frozen `5fff7388` 执行 P4.3 checkpoint/exact/Pages/browser/core-main-thread/perf 组合并写入 `A_ADMITTED_SHA`。
+- [ ] 从正式 A source 建立并完成 B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone semantic replay/admission；B 正式准入后才激活 Appearance/Transport live lifecycle。
 
-R1 的整合顺序为：静态 startup graph → Export seam → 其它必要 source fixes → frozen SHA → P4.3 formal admission。任何在 P4.3 exact checkpoint 之后落入 source tree 的代码都必须使 admission 重新绑定最终候选，不能复用旧结果。
+R1 已在 source `5fff7388` 完成 P4.3 formal admission。后续顺序为：B1/B2/B3 semantic replay → 主监督串行 control-plane/integration → frozen B candidate → P4.4 formal admission；Gate 3 Export seam 与 Gate 4 startup graph 继续按各自独立验收推进，不回写或替换 A identity。

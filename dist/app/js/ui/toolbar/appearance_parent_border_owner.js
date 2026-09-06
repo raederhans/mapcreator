@@ -1,6 +1,14 @@
 // Appearance parent-border owner.
 // 父国界列表可能随场景反复刷新；这里把列表模型和 DOM 复用从总 controller 中收拢出来。
 import { PARENT_BORDER_STYLE_DEFAULTS } from "../../core/state.js";
+import { setAppearanceVisibilityState } from "../../core/state/actions/appearance_visibility_actions.js";
+import {
+  ensureAppearanceStyleConfigState,
+  patchAppearanceParentBorderEnabledMapState,
+  patchAppearanceStyleGroupState,
+  setAppearanceParentBorderEnabledMapState,
+  setAppearanceStyleGroupState,
+} from "../../core/state/actions/appearance_actions.js";
 
 export function normalizeParentBorderEnabledMap(runtimeState) {
   const supported = Array.isArray(runtimeState.parentBorderSupportedCountries)
@@ -15,8 +23,7 @@ export function normalizeParentBorderEnabledMap(runtimeState) {
   });
   // enabled map 每次都裁到“当前支持的国家集合”，
   // 这样场景、数据包或 locale 切换后不会把陈旧 country code 留在 runtimeState 里继续影响渲染。
-  runtimeState.parentBorderEnabledByCountry = next;
-  return next;
+  return setAppearanceParentBorderEnabledMapState(runtimeState, next);
 }
 
 export function buildParentBorderCountryRows({
@@ -61,10 +68,10 @@ export function createAppearanceParentBorderOwner({
 
   const getParentBorderStyle = () => {
     if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
-      runtimeState.styleConfig = {};
+      ensureAppearanceStyleConfigState(runtimeState);
     }
     if (!runtimeState.styleConfig.parentBorders || typeof runtimeState.styleConfig.parentBorders !== "object") {
-      runtimeState.styleConfig.parentBorders = {};
+      setAppearanceStyleGroupState(runtimeState, "parentBorders", {});
     }
     return runtimeState.styleConfig.parentBorders;
   };
@@ -124,7 +131,9 @@ export function createAppearanceParentBorderOwner({
     checkbox.checked = !!runtimeState.parentBorderEnabledByCountry?.[code];
     checkbox.disabled = !enabled;
     checkbox.addEventListener("change", (event) => {
-      runtimeState.parentBorderEnabledByCountry[code] = !!event.target.checked;
+      patchAppearanceParentBorderEnabledMapState(runtimeState, {
+        [code]: event.target.checked,
+      });
       renderDirty("parent-border-country");
     });
     checkboxByCountryCode.set(code, checkbox);
@@ -180,7 +189,8 @@ export function createAppearanceParentBorderOwner({
 
     if (colorInput && colorInput.dataset.parentBorderBound !== "true") {
       colorInput.addEventListener("input", (event) => {
-        getParentBorderStyle().color = event.target.value;
+        getParentBorderStyle();
+        patchAppearanceStyleGroupState(runtimeState, "parentBorders", { color: event.target.value });
         renderDirty("parent-border-color");
       });
       colorInput.dataset.parentBorderBound = "true";
@@ -190,7 +200,8 @@ export function createAppearanceParentBorderOwner({
       opacityInput.addEventListener("input", (event) => {
         const value = Number(event.target.value);
         const opacity = clamp(Number.isFinite(value) ? value / 100 : PARENT_BORDER_STYLE_DEFAULTS.opacity, 0, 1);
-        getParentBorderStyle().opacity = opacity;
+        getParentBorderStyle();
+        patchAppearanceStyleGroupState(runtimeState, "parentBorders", { opacity });
         if (opacityValue) opacityValue.textContent = `${Math.round(opacity * 100)}%`;
         renderDirty("parent-border-opacity");
       });
@@ -201,7 +212,8 @@ export function createAppearanceParentBorderOwner({
       widthInput.addEventListener("input", (event) => {
         const value = Number(event.target.value);
         const width = clamp(Number.isFinite(value) ? value : PARENT_BORDER_STYLE_DEFAULTS.width, 0.2, 4);
-        getParentBorderStyle().width = width;
+        getParentBorderStyle();
+        patchAppearanceStyleGroupState(runtimeState, "parentBorders", { width });
         if (widthValue) widthValue.textContent = width.toFixed(2);
         renderDirty("parent-border-width");
       });
@@ -210,7 +222,7 @@ export function createAppearanceParentBorderOwner({
 
     if (visibleToggle && visibleToggle.dataset.parentBorderBound !== "true") {
       visibleToggle.addEventListener("change", (event) => {
-        runtimeState.parentBordersVisible = !!event.target.checked;
+        setAppearanceVisibilityState(runtimeState, "parentBordersVisible", event.target.checked);
         syncVisibilityUi();
         renderCountryList();
         renderDirty("parent-border-visibility");
@@ -221,9 +233,10 @@ export function createAppearanceParentBorderOwner({
     if (enableAllButton && enableAllButton.dataset.parentBorderBound !== "true") {
       enableAllButton.addEventListener("click", () => {
         const enabledMap = normalizeParentBorderEnabledMap(runtimeState);
-        Object.keys(enabledMap).forEach((countryCode) => {
-          enabledMap[countryCode] = true;
-        });
+        setAppearanceParentBorderEnabledMapState(
+          runtimeState,
+          Object.fromEntries(Object.keys(enabledMap).map((countryCode) => [countryCode, true])),
+        );
         renderCountryList();
         renderDirty("parent-border-enable-all");
       });
@@ -233,9 +246,10 @@ export function createAppearanceParentBorderOwner({
     if (disableAllButton && disableAllButton.dataset.parentBorderBound !== "true") {
       disableAllButton.addEventListener("click", () => {
         const enabledMap = normalizeParentBorderEnabledMap(runtimeState);
-        Object.keys(enabledMap).forEach((countryCode) => {
-          enabledMap[countryCode] = false;
-        });
+        setAppearanceParentBorderEnabledMapState(
+          runtimeState,
+          Object.fromEntries(Object.keys(enabledMap).map((countryCode) => [countryCode, false])),
+        );
         renderCountryList();
         renderDirty("parent-border-disable-all");
       });

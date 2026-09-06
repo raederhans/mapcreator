@@ -2,6 +2,7 @@ import { emit, off, on, once } from "./bus.js";
 import {
   STATE_BUS_EVENTS,
   STATE_HANDLER_HOOK_NAMES,
+  STATE_INTERNAL_HANDLER_HOOK_NAMES,
   STATE_NOTIFICATION_HOOK_NAMES,
 } from "./config.js";
 
@@ -15,7 +16,10 @@ export * from "./color_state.js";
 export * from "./ui_state.js";
 
 const notificationHookNames = new Set(STATE_NOTIFICATION_HOOK_NAMES);
-const handlerHookNames = new Set(STATE_HANDLER_HOOK_NAMES);
+const handlerHookNames = new Set([
+  ...STATE_HANDLER_HOOK_NAMES,
+  ...STATE_INTERNAL_HANDLER_HOOK_NAMES,
+]);
 const notificationListenersByHookName = new Map();
 const notificationDispatchersByHookName = new Map();
 const handlerFnsByHookName = new Map();

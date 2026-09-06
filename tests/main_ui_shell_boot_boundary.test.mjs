@@ -33,12 +33,11 @@ test("main wires UI shell hooks before returning from debug startup", () => {
   assert.ok(bootCallSource.includes("targetState: state,"));
   assert.ok(bootCallSource.includes("onRenderDispatcher: (nextRenderDispatcher) => {"));
   assert.ok(bootCallSource.includes("renderDispatcher = nextRenderDispatcher;"));
-  assert.ok(bootCallSource.includes("onStartupUiBootstrapPromise: (promise) => {"));
-  assert.ok(bootCallSource.includes("startupUiBootstrapPromise = promise;"));
+  assert.equal(bootCallSource.includes("onStartupUiBootstrapPromise:"), false);
   assert.equal(bootCallSource.includes("onStartupUiBootstrapAwaited"), false);
   assert.doesNotMatch(mainSource, /startupUiBootstrapAwaited\s*=/);
   assert.ok(mainSource.includes("renderDispatcher = uiShellBootResult.renderDispatcher;"));
-  assert.ok(mainSource.includes("startupUiBootstrapPromise = uiShellBootResult.startupUiBootstrapPromise;"));
+  assert.equal(mainSource.includes("startupUiBootstrapPromise = uiShellBootResult.startupUiBootstrapPromise;"), false);
 });
 
 test("main injects the complete UI shell helper surface", () => {

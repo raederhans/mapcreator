@@ -62,8 +62,10 @@ test("river layer contracts keep zoom gating, render metrics, and targeted regre
     deferredContextStillRecordsRiverMetric:
       /recordDeferredRiversLayerMetric\(\{ interactive: false, reason: "staged-apply" \}\)/.test(contextBaseSource),
     hasTargetedRiverRegressionSpec:
-      riverSpecSource.includes("river layer major and mid-tier zoom gating regression")
-      && riverSpecSource.includes("river layer lake and intermittent zoom gating regression")
+      riverSpecSource.includes("river layer major zoom gating regression")
+      && riverSpecSource.includes("river layer mid-tier zoom gating regression")
+      && riverSpecSource.includes("river layer lake zoom gating regression")
+      && riverSpecSource.includes("river layer intermittent zoom gating regression")
       && riverSpecSource.includes("river layer canal zoom gating regression")
       && riverSpecSource.includes("readRiverRenderMetric")
       && riverSpecSource.includes("drawRiversLayer")
@@ -81,6 +83,80 @@ test("river layer contracts keep zoom gating, render metrics, and targeted regre
   Object.entries(checks).forEach(([label, ok]) => {
     assert.equal(ok, true, label);
   });
+});
+
+test("river layer subset regressions keep isolated three-measure test budgets", () => {
+  const riverSpecSource = readRepoFile("tests", "e2e", "river_layer_regression.spec.js");
+  const measureHelperStart = riverSpecSource.indexOf("async function measureRiverInk");
+  const beginRegressionStart = riverSpecSource.indexOf("async function beginRiverRegression");
+  const majorStart = riverSpecSource.indexOf("test('river layer major zoom gating regression'");
+  const midTierStart = riverSpecSource.indexOf("test('river layer mid-tier zoom gating regression'");
+  const lakeStart = riverSpecSource.indexOf("test('river layer lake zoom gating regression'");
+  const intermittentStart = riverSpecSource.indexOf("test('river layer intermittent zoom gating regression'");
+  const canalStart = riverSpecSource.indexOf("test('river layer canal zoom gating regression'");
+
+  assert.ok(majorStart >= 0 && majorStart < midTierStart);
+  assert.ok(measureHelperStart >= 0 && measureHelperStart < beginRegressionStart);
+  assert.ok(midTierStart < lakeStart);
+  assert.ok(lakeStart < intermittentStart);
+  assert.ok(intermittentStart < canalStart);
+
+  const measureHelperSource = riverSpecSource.slice(measureHelperStart, beginRegressionStart);
+  const majorTestSource = riverSpecSource.slice(majorStart, midTierStart);
+  const midTierTestSource = riverSpecSource.slice(midTierStart, lakeStart);
+  const lakeTestSource = riverSpecSource.slice(lakeStart, intermittentStart);
+  const intermittentTestSource = riverSpecSource.slice(intermittentStart, canalStart);
+  const canalTestSource = riverSpecSource.slice(canalStart);
+  const measureCount = (source) => source.match(/measureRiverInk\(page, \{/g)?.length ?? 0;
+  const subsetCount = (source, subsetName) =>
+    source.match(new RegExp(`subsetName: '${subsetName}'`, "g"))?.length ?? 0;
+  const measureCalls = Array.from(
+    riverSpecSource.matchAll(/const (\w+) = await measureRiverInk\(page, \{([\s\S]*?)\n\s{2}\}\);/g),
+    ([, name, optionsSource]) => ({ name, optionsSource }),
+  );
+  const overriddenMeasureCalls = measureCalls.filter(({ optionsSource }) =>
+    optionsSource.includes("zoomRenderIdleTimeout:"));
+
+  assert.match(
+    riverSpecSource,
+    /async function setZoomPercent\(page, percent, \{ renderIdleTimeout = 30_000 \} = \{\}\)[\s\S]*?timeout: renderIdleTimeout/,
+  );
+  assert.match(measureHelperSource, /zoomRenderIdleTimeout = 30_000/);
+  assert.match(
+    measureHelperSource,
+    /setZoomPercent\(page, zoomPercent, \{ renderIdleTimeout: zoomRenderIdleTimeout \}\)/,
+  );
+  assert.equal(
+    measureHelperSource.match(/waitForRenderIdle\(page, \{ scenarioId: SCENARIO_ID, timeout: 30_000 \}\)/g)?.length ?? 0,
+    2,
+  );
+  assert.match(
+    majorTestSource,
+    /const riverMajorHigh = await measureRiverInk\(page, \{[\s\S]*?zoomRenderIdleTimeout: 45_000,[\s\S]*?\n\s{2}\}\);/,
+  );
+  assert.equal(measureCalls.length, 15);
+  assert.deepEqual(overriddenMeasureCalls.map(({ name }) => name), ["riverMajorHigh"]);
+  assert.equal(overriddenMeasureCalls[0]?.optionsSource.match(/zoomRenderIdleTimeout:/g)?.length, 1);
+  assert.match(overriddenMeasureCalls[0]?.optionsSource ?? "", /zoomRenderIdleTimeout: 45_000/);
+
+  assert.equal(measureCount(majorTestSource), 3);
+  assert.equal(measureCount(midTierTestSource), 3);
+  assert.equal(measureCount(lakeTestSource), 3);
+  assert.equal(measureCount(intermittentTestSource), 3);
+  assert.equal(measureCount(canalTestSource), 3);
+  assert.equal(subsetCount(majorTestSource, "river-major"), 3);
+  assert.equal(subsetCount(midTierTestSource, "river-mid-tier"), 3);
+  assert.equal(subsetCount(lakeTestSource, "lake-centerline"), 3);
+  assert.equal(subsetCount(intermittentTestSource, "river-intermittent"), 3);
+  assert.equal(subsetCount(canalTestSource, "canal"), 3);
+  assert.equal(majorTestSource.includes("subsetName: 'river-mid-tier'"), false);
+  assert.equal(midTierTestSource.includes("subsetName: 'river-major'"), false);
+  assert.equal(majorTestSource.match(/restoreRiverRegressionState\(page\)/g)?.length ?? 0, 1);
+  assert.equal(majorTestSource.match(/expectNoRiverRuntimeIssues\(trackers\)/g)?.length ?? 0, 1);
+  assert.equal(midTierTestSource.match(/restoreRiverRegressionState\(page\)/g)?.length ?? 0, 1);
+  assert.equal(midTierTestSource.match(/expectNoRiverRuntimeIssues\(trackers\)/g)?.length ?? 0, 1);
+  assert.equal(lakeTestSource.includes("subsetName: 'canal'"), false);
+  assert.equal(intermittentTestSource.includes("subsetName: 'canal'"), false);
 });
 
 test("river layer data remains wired from runtime registry to deferred context loader", () => {

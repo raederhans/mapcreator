@@ -2,14 +2,22 @@
 
 ## Current truth
 
-- 2026-08-12 remote read-only check：`refs/heads/main=5461c24aa5e40c3ea184dfee84db10630a199cbc`。
-- 当前独立 worktree：`C:\Users\raede\.codex\worktrees\ded1\mapcreator`，detached source review-fix commit `2ee6653f812febd69148f659b5baee7fe1e3edf8`，提交后 tracked/untracked 状态 clean。
-- `merge-base(HEAD, origin/main)=5461c24aa5e40c3ea184dfee84db10630a199cbc`；source candidate 相对 `origin/main` 为 `0 behind / 21 ahead`。
-- schema 3 baseline 已提交；checked-in policy 的 latestPhase 已为 P4.3。review-fix source 位于 checkpoint 之后，当前静态 blocker 为新的 exact generator checkpoint。
-- 主 checkout 位于 `68a62e540104025e1b3e976f77589f8b3eff2f36`；本任务保持隔离，不读取其未归属 WIP 作为候选输入。
-- 2026-08-15 主监督已将包含 Gate 1 Export correctness hotfix 的 Gate 0–4 integrated/pre-A functional baseline 固定为 `1e6ff40fa1f21f7dec9c6f68306adf6bb20dea08`；A-specific delta 从该 SHA 起算；`dac80102` policy checkpoint 已被结构修复取代，post-structural exact checkpoint 与当前 Gate A candidate 绑定。
+- 2026-09-05 起，B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 的实现与正式 admission 统一见 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status)；本文件不维护另一份“尚未开始”或“已准入”结论。
+- 当前局部治理的 writer、进度和交接由 [development-loop 记录](../development-loop-simplification-20260905/context.md) 维护。下方 A 准入、进程与 Git 清洁状态只证明对应历史候选，不代表当前工作区、远端或共享进程状态。
+
+## 2026-09-04 Stage A handoff snapshot (historical)
+
+以下保留当时的 A 交接摘要，其中 B 尚未开始的描述已被上述 P4 当前状态取代。
+
+- 2026-09-04 Stage A 已正式准入：`A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`，tree `ba969a24a4730072245c60efeefba66409f2c88d`；验收前后 tracked/index 均 clean。
+- 当前 integration checkout：`C:\Users\raede\Desktop\dev\mapcreator`，branch `codex/runtime-architecture-reset-r1-integration-20260831`；docs-only 状态提交只记录 marker，不替代 A source identity。
+- exact P4.3、zero-gap route、Pages/dist、core 93/93、browser quick、standard perf 与 independent review 均绑定 `5fff7388` 并通过；perf artifact 位于 `.runtime/output/perf/baseline_2026-07-30/gate/perf-gate-current.json`。
+- A-specific delta 的起点仍为包含 Gate 1 Export correctness hotfix 的 pre-A functional baseline `1e6ff40fa1f21f7dec9c6f68306adf6bb20dea08`；schema 3 baseline 与 P4.3 policy checkpoint 已纳入 admission evidence。
+- B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 已解除 A 依赖但尚未开始；`B_ADMITTED_SHA` pending，C 仍 blocked on B。
 
 ## Decisions and deviations
+
+以下为 2026-08-12 至 2026-08-15 的原始决策记录；日期内的“当前”“B 建立 actions”等措辞保留历史语境。
 
 | Time | Evidence or decision | Impact |
 | --- | --- | --- |
@@ -30,6 +38,8 @@
 
 ## Live process ownership
 
+以下为 2026-08-12 至 2026-09-04 的 A 阶段进程与验收记录，不是当前 live-process 清单。
+
 | Process | Owner | Command / cwd / outputs | State |
 | --- | --- | --- | --- |
 | A P4.3 policy checkpoint generator | 本 A task delegated owner | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；cwd `C:\Users\raede\.codex\worktrees\ded1\mapcreator`；PID `99112`，parent PID `211148`；目标输出 `tools/state_writer_policy.json` | released；start `2026-08-12 21:37:27 +08:00`；exit 1；observed elapsed约 `460.4s`；文件长度/mtime 保持 `10035935` bytes / `21:30:38`。失败为 `state-action-non-target-parameter-mutation`，三处 `diagnostics` alias escape。 |
@@ -42,17 +52,19 @@
 | A final review-fix P4.3 generator | `/root` main supervisor | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；输出 `tools/state_writer_policy.json` | completed，exit 0；写入 207 writers；checkpoint commit `dac80102a1c8bfbdf9a479e9a6866b6211afef90`。 |
 | A post-structural P4.3 generator | `/root` main supervisor | 同一 canonical generator；输入为 `1e6ff40f` pre-A functional baseline 与当前 clean Gate A candidate | completed，exit 0；207 writers；schema 2、latestPhase P4.3、唯一 P4.3 checkpoint；六项 P4.3 legacy metrics 与六组 retired authority counts 逐项不变；policy 与 coordination evidence 由当前 Gate A candidate 承载。 |
 | A canonical perf baseline generation | `/root` main supervisor | `npm run perf:baseline`；输入 `tno_1962,hoi4_1939`、runs `5`、warmups `3` | completed，exit 0；schema 3、admitted environment、stable generation fence、两场景各 5 个 canonical samples；commit `727108824362e373ee9cf6ba5abb04829aed4f04`。 |
-| A standard perf gate | `/root` main supervisor | baseline 提交后在 clean exact candidate 执行 `npm run perf:gate`；读取 `docs/perf/baseline_2026-07-30.json`；输出 `.runtime/output/perf/baseline_2026-07-30/perf-gate-current.json` 与 generation/admission evidence | requested；成功条件：exit 0、baseline schema/contract 可读、环境与 workload contract 一致、enforced regression gate pass。 |
-| A browser / Playwright | `/root` main supervisor | exact command、browser profile、output path 由主监督在取得唯一 lane 后落盘 | requested；成功条件：renderer ownership 路径无 page error、未处理 console error 与 network failure，具体 matrix 绑定 exact candidate SHA。 |
-| A Pages/dist and core main-thread | `/root` main supervisor | `npm run verify:pages-dist`；`npm run verify:dist-drift`；`npm run verify:core:main-thread`，cwd 为 clean exact candidate | requested；成功条件：全部 exit 0，结构化报告与 manifest 绑定 exact candidate SHA。 |
-| A independent review | B task read-only lane，主监督收口 | 首轮 review 与 final source review 均基于 exact Git objects | in progress；首轮 findings 已修复；final source review 的 summary binding、diagnostics atomicity、writer test-order 与 coordination drift 已在 `2ee6653f` 关闭，等待最终 verdict。 |
+| A standard perf gate | `/root` main supervisor | `npm run -s perf:gate`；cwd 为 clean `5fff7388`；输出 `.runtime/output/perf/baseline_2026-07-30/gate/` | completed / PASS；exit 0、environment admitted、generation fence stable、10 measured runs、enforced failures 0；`perf-gate-current.json` SHA-256 `2B9503D78DD45050DB7FB13392D29DA9593F00CD36F2C9E58CEDEC1BB0119DAD`。 |
+| A browser / Playwright | `/root` main supervisor | quick profile；report `.runtime/reports/generated/browser/ai-browser-mcp-smoketest.md` | completed / PASS；left/right sidebar、map container 与 pan/zoom 均覆盖，无 skip，console warning/error 0，network 4xx/5xx 0。 |
+| A Pages/dist and core main-thread | `/root` main supervisor | exact source candidate 的 Pages/dist 与 `.runtime/reports/generated/verify-core.json` | completed / PASS；core 93/93，source/dist 与 exact identity 契约通过。 |
+| A independent review | independent verifier，主监督收口 | exact Git range 与 A admission artifact | completed / PASS；原唯一 P1 canonical-route 缺口已在 `5fff7388` 关闭，无 material finding。 |
 
 ## Handoff
 
-- A execution owner 提交 `ready-for-supervisor-validation` 包；主监督负责 stage、commit、integrate、live gates、review 与 `A_ADMITTED_SHA`。
+以下保留 A 阶段的历史交接约束；已实现工作不会因这份记录被重新派发，后续正式准入仍由主监督确认候选和证据。
+
+- A execution owner 的 `ready-for-supervisor-validation` 包与主监督 live gates/review 已收口；正式 source marker 为 `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`。
 - B 只能从正式 `A_ADMITTED_SHA` 建立 clean replay worktree；P4.4 recovery lineage 只作为职责级补丁来源。
 - C 只能从正式 `B_ADMITTED_SHA` 建立产品里程碑 worktree。
 
 ## Next step
 
-以 baseline-ratification commit 形成新的 clean exact candidate；主监督随后执行 exact P4.3、routes、core、Pages、browser、standard perf 与最终 review verdict。
+按 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status) 和主任务当前分工继续工作，不再自动创建历史 B1/B2/B3 重放任务。正式 B admission 开始时，由主监督确认候选血缘及缺失 gate；C 仍以正式 B marker 为前置条件。

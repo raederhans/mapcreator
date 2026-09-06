@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
-  applyAppearancePresetToRuntimeState,
   createAppearancePresetFromRuntimeState,
   createDefaultAppearancePresetsState,
   createIntensityFieldsState,
   sampleIntensityField,
   state,
+  state as fixtureState,
   updateIntensityFieldChannel,
   upsertAppearancePreset,
 } from "../js/core/state.js";
+import { applyAppearancePresetState } from "../js/core/state/actions/appearance_preset_actions.js";
+import { normalizeSpecialZoneLayersState } from "../js/core/special_zone_layers.js";
 import {
   createDefaultStyleConfig,
 } from "../js/core/state/ui_state.js";
@@ -91,7 +94,7 @@ test("history undo and redo restore applied appearance style, visibility, and in
     now: Date.UTC(2026, 5, 12),
   });
   const before = captureHistoryState({ appearanceState: true });
-  applyAppearancePresetToRuntimeState(state, preset);
+  applyAppearancePresetState(state, preset);
   const after = captureHistoryState({ appearanceState: true });
 
   assert.equal(pushHistoryEntry({ before, after, meta: { kind: "appearance-preset-apply" } }), true);
@@ -114,4 +117,73 @@ test("history undo and redo restore applied appearance style, visibility, and in
   assert.equal(state.showStrategicResourceMarkers, true);
   assert.equal(state.strategicChoroplethMetric, "steel");
   assert.ok(sampleIntensityField(state.intensityFields, "urbanGlow", 139.7, 35.7) > 1.4);
+});
+
+test("history undo and redo restore strategic overlay and special-zone snapshot state through actions", () => {
+  resetRuntimeAppearance();
+  fixtureState.annotationView = { zoom: 2, center: [10, 20] };
+  fixtureState.operationalLines = [{ id: "line-before", points: [[1, 2], [3, 4]] }];
+  fixtureState.operationGraphics = [{ id: "graphic-before", points: [[5, 6]] }];
+  fixtureState.unitCounters = [{ id: "counter-before", anchor: [7, 8] }];
+  fixtureState.specialZoneLayers = normalizeSpecialZoneLayersState({ topologyFingerprint: "before" });
+  fixtureState.specialZoneMembershipBrushMode = "add";
+  const before = captureHistoryState({ strategicOverlay: true });
+
+  fixtureState.annotationView = { zoom: 5, center: [30, 40] };
+  fixtureState.operationalLines = [{ id: "line-after", points: [[11, 12], [13, 14]] }];
+  fixtureState.operationGraphics = [{ id: "graphic-after", points: [[15, 16]] }];
+  fixtureState.unitCounters = [{ id: "counter-after", anchor: [17, 18] }];
+  fixtureState.specialZoneLayers = normalizeSpecialZoneLayersState({ topologyFingerprint: "after" });
+  fixtureState.specialZoneMembershipBrushMode = "remove";
+  const after = captureHistoryState({ strategicOverlay: true });
+
+  assert.equal(pushHistoryEntry({ before, after, meta: { kind: "strategic-overlay-edit" } }), true);
+  Object.assign(fixtureState, {
+    frontlineOverlayDirty: false,
+    operationalLinesDirty: false,
+    operationGraphicsDirty: false,
+    unitCountersDirty: false,
+    specialZonesOverlayDirty: false,
+  });
+
+  assert.equal(undoHistory(), true);
+  assert.deepEqual(fixtureState.annotationView, before.annotationView);
+  assert.deepEqual(fixtureState.operationalLines, before.operationalLines);
+  assert.deepEqual(fixtureState.operationGraphics, before.operationGraphics);
+  assert.deepEqual(fixtureState.unitCounters, before.unitCounters);
+  assert.deepEqual(fixtureState.specialZoneLayers, before.specialZoneLayers);
+  assert.equal(fixtureState.specialZoneMembershipBrushMode, before.specialZoneMembershipBrushMode);
+  assert.equal(fixtureState.frontlineOverlayDirty, true);
+  assert.equal(fixtureState.operationalLinesDirty, true);
+  assert.equal(fixtureState.operationGraphicsDirty, true);
+  assert.equal(fixtureState.unitCountersDirty, true);
+  assert.equal(fixtureState.specialZonesOverlayDirty, true);
+
+  Object.assign(fixtureState, {
+    frontlineOverlayDirty: false,
+    operationalLinesDirty: false,
+    operationGraphicsDirty: false,
+    unitCountersDirty: false,
+    specialZonesOverlayDirty: false,
+  });
+  assert.equal(redoHistory(), true);
+  assert.deepEqual(fixtureState.annotationView, after.annotationView);
+  assert.deepEqual(fixtureState.operationalLines, after.operationalLines);
+  assert.deepEqual(fixtureState.operationGraphics, after.operationGraphics);
+  assert.deepEqual(fixtureState.unitCounters, after.unitCounters);
+  assert.deepEqual(fixtureState.specialZoneLayers, after.specialZoneLayers);
+  assert.equal(fixtureState.specialZoneMembershipBrushMode, after.specialZoneMembershipBrushMode);
+  assert.equal(fixtureState.frontlineOverlayDirty, true);
+  assert.equal(fixtureState.operationalLinesDirty, true);
+  assert.equal(fixtureState.operationGraphicsDirty, true);
+  assert.equal(fixtureState.unitCountersDirty, true);
+  assert.equal(fixtureState.specialZonesOverlayDirty, true);
+
+  const historySource = readFileSync(new URL("../js/core/history_manager.js", import.meta.url), "utf8");
+  assert.match(historySource, /restoreStrategicOverlaySnapshotState\(runtimeState, snapshot\)/);
+  assert.match(historySource, /restoreSpecialZoneSnapshotState\(runtimeState, snapshot\)/);
+  assert.doesNotMatch(
+    historySource,
+    /runtimeState\.(?:operationalLines|operationGraphics|unitCounters|specialZoneLayers|specialZoneMembershipBrushMode|frontlineOverlayDirty|operationalLinesDirty|operationGraphicsDirty|unitCountersDirty)\s*=/,
+  );
 });

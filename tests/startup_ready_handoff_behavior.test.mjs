@@ -6,6 +6,7 @@ import {
 } from "../js/bootstrap/startup_ready_handoff.js";
 import { POST_READY_IDLE_QUIET_MS } from "../js/bootstrap/post_ready_scheduler.js";
 import { attachDeferredUiBootstrapRejectionObserver } from "../js/bootstrap/deferred_ui_bootstrap.js";
+import { setUiHydrationState } from "../js/core/state/actions/boot_actions.js";
 
 function createSchedulerRecorder({ order = null } = {}) {
   const tasks = [];
@@ -77,19 +78,39 @@ function createOwnerHarness({
   targetRuntime = createTargetRuntime(),
   scheduler = createSchedulerRecorder(),
   helpers = createHelpers(),
+  startupUiBootstrapPromise = null,
 } = {}) {
+  const ownerHelpers = {
+    ...helpers,
+  };
   const owner = createStartupReadyHandoffOwner({
     runtimeState: targetRuntime,
     postReadyScheduler: scheduler,
-    helpers,
+    effects: {
+      commitUiHydrationState: helpers.commitUiHydrationState
+        || ((patch) => setUiHydrationState(targetRuntime, patch)),
+      getStartupUiBootstrapPromise: () => startupUiBootstrapPromise,
+    },
+    helpers: ownerHelpers,
   });
   return {
-    helpers,
+    helpers: ownerHelpers,
     owner,
     scheduler,
     targetRuntime,
   };
 }
+
+test("owner requires explicit hydration effects and freezes its public facade", () => {
+  assert.throws(() => createStartupReadyHandoffOwner({
+    runtimeState: createTargetRuntime(),
+    postReadyScheduler: createSchedulerRecorder(),
+    helpers: createHelpers(),
+  }), /requires effects\.commitUiHydrationState/);
+
+  const { owner } = createOwnerHarness();
+  assert.equal(Object.isFrozen(owner), true);
+});
 
 test("scheduleReadyPostBootWork preserves ready handoff order", () => {
   const order = [];
@@ -129,12 +150,12 @@ test("observePostReadyUiBootstrap replays the latest scenario only after UI is r
     activeScenarioId: "scenario-at-ready",
     currentScenarioApplyRequestId: 4,
   });
-  const { owner } = createOwnerHarness({ targetRuntime });
+  const { owner } = createOwnerHarness({ targetRuntime, startupUiBootstrapPromise: uiPromise });
   const replays = [];
   const readyCalls = [];
   const failures = [];
 
-  const observation = owner.observePostReadyUiBootstrap(uiPromise, {
+  const observation = owner.observePostReadyUiBootstrap({
     runPostScenarioUiReplay: (options) => replays.push(options),
     handleUiBootstrapReady: async () => readyCalls.push("ready"),
     handleUiBootstrapFailure: async (error) => failures.push(error),
@@ -161,10 +182,12 @@ test("observePostReadyUiBootstrap replays the latest scenario only after UI is r
 test("observePostReadyUiBootstrap routes rejection through explicit recovery", async () => {
   const failure = new Error("toolbar import failed");
   const recovered = [];
-  const { owner, targetRuntime } = createOwnerHarness();
+  const { owner, targetRuntime } = createOwnerHarness({
+    startupUiBootstrapPromise: Promise.reject(failure),
+  });
   assert.equal(owner.beginUiHydration(), "pending");
 
-  const result = await owner.observePostReadyUiBootstrap(Promise.reject(failure), {
+  const result = await owner.observePostReadyUiBootstrap({
     runPostScenarioUiReplay: () => assert.fail("failed UI must not replay"),
     handleUiBootstrapReady: async () => assert.fail("failed UI must not open interaction"),
     handleUiBootstrapFailure: async (error) => recovered.push(error),
@@ -181,11 +204,13 @@ test("observePostReadyUiBootstrap routes rejection through explicit recovery", a
 test("an immediately guarded UI rejection still reaches the failed lifecycle observer", async () => {
   const failure = new Error("fast toolbar import failure");
   const guardedPromise = attachDeferredUiBootstrapRejectionObserver(Promise.reject(failure));
-  const { owner, targetRuntime } = createOwnerHarness();
+  const { owner, targetRuntime } = createOwnerHarness({
+    startupUiBootstrapPromise: guardedPromise,
+  });
   owner.beginUiHydration();
 
   await Promise.resolve();
-  const result = await owner.observePostReadyUiBootstrap(guardedPromise, {
+  const result = await owner.observePostReadyUiBootstrap({
     runPostScenarioUiReplay: () => assert.fail("fast rejection must not replay"),
     handleUiBootstrapReady: async () => assert.fail("fast rejection must not open UI"),
     handleUiBootstrapFailure: async () => {},

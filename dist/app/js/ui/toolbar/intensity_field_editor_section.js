@@ -5,6 +5,11 @@ import {
   updateIntensityFieldChannel,
 } from "../../core/state.js";
 import { createDefaultIntensityFieldToolState } from "../../core/state/renderer_runtime_state.js";
+import {
+  normalizeIntensityFieldsIntoState,
+  setIntensityFieldToolState,
+  updateIntensityFieldChannelState,
+} from "../../core/state/actions/intensity_field_actions.js";
 
 const FIELD_SUBMODES = Object.freeze(["paint", "erase", "points"]);
 
@@ -55,8 +60,7 @@ export function createIntensityFieldEditorSection({
   const channelInputs = nodes.channelInputs && typeof nodes.channelInputs === "object" ? nodes.channelInputs : {};
 
   const syncIntensityFields = () => {
-    runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
-    return runtimeState.intensityFields;
+    return normalizeIntensityFieldsIntoState(runtimeState);
   };
 
   const normalizeTool = (next = {}) => {
@@ -86,13 +90,13 @@ export function createIntensityFieldEditorSection({
     if (typeof runtimeState.setIntensityFieldToolFn === "function") {
       runtimeState.setIntensityFieldToolFn(normalized);
     } else {
-      runtimeState.intensityFieldTool = normalized;
+      setIntensityFieldToolState(runtimeState, normalized);
     }
     return runtimeState.intensityFieldTool || normalized;
   };
 
   const getToolState = () => {
-    runtimeState.intensityFieldTool = normalizeTool();
+    setIntensityFieldToolState(runtimeState, normalizeTool());
     return runtimeState.intensityFieldTool;
   };
 
@@ -179,7 +183,7 @@ export function createIntensityFieldEditorSection({
 
   const commitChannel = (channelId, mutate, reason) => {
     const before = captureHistoryState({ intensityFieldChannels: [channelId] });
-    runtimeState.intensityFields = updateIntensityFieldChannel(runtimeState.intensityFields, channelId, mutate);
+    updateIntensityFieldChannelState(runtimeState, channelId, mutate);
     const after = captureHistoryState({ intensityFieldChannels: [channelId] });
     pushHistoryEntry({
       label: historyLabel,

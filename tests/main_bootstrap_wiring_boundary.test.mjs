@@ -67,13 +67,15 @@ test("main delegates phase8 ready handoff policy to the startup ready handoff ow
   const delegatedPolicyTokens = [
     "function getStartupReadyHandoffOwner()",
     "createStartupReadyHandoffOwner({",
-    "flushPendingScenarioChunkRefreshAfterReady: startupReadyHandoff.flushPendingScenarioChunkRefreshAfterReady",
+    "effects: {",
+    "commitUiHydrationState: (patch) => setUiHydrationState(runtimeState, patch)",
+    "getStartupReadyHandoffOwner().flushPendingScenarioChunkRefreshAfterReady",
     "getStartupReadyHandoffOwner().observePostReadyUiBootstrap(",
-    "schedulePostReadyDeferredContextWarmup: startupReadyHandoff.schedulePostReadyDeferredContextWarmup",
-    "schedulePostReadyHydration: startupReadyHandoff.schedulePostReadyHydration",
-    "schedulePostReadyPoliticalReconcile: startupReadyHandoff.schedulePostReadyPoliticalReconcile",
-    "schedulePostReadyVisualWarmup: startupReadyHandoff.schedulePostReadyVisualWarmup",
-    "startDeferredFullInteractionInfrastructureBuild: startupReadyHandoff.startDeferredFullInteractionInfrastructureBuild",
+    "getStartupReadyHandoffOwner().schedulePostReadyDeferredContextWarmup",
+    "getStartupReadyHandoffOwner().schedulePostReadyHydration",
+    "getStartupReadyHandoffOwner().schedulePostReadyPoliticalReconcile",
+    "getStartupReadyHandoffOwner().schedulePostReadyVisualWarmup",
+    "getStartupReadyHandoffOwner().startDeferredFullInteractionInfrastructureBuild",
     'getStartupReadyHandoffOwner().scheduleReadyPostBootWork(renderDispatcher, "ready-state")',
   ];
 
@@ -112,7 +114,7 @@ test("main keeps UI shell boot and startup failure recovery delegated", () => {
   const mainSource = readRepoFile("js", "main.js");
 
   assert.ok(mainSource.includes("const uiShellBootResult = await runUiShellDebugBoot({"));
-  assert.ok(mainSource.includes("const failureRecovery = await handleStartupFailure({"));
+  assert.ok(mainSource.includes("await handleStartupFailure({"));
 });
 
 test("main top-level wiring order remains composition-root shaped", () => {

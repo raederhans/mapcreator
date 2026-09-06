@@ -2,6 +2,8 @@ import { countryNames, defaultCountryPalette, state as runtimeState } from "./st
 import {
   patchScenarioChunkLoadState,
 } from "./state/actions/scenario_chunk_runtime_actions.js";
+import { getScenarioChunkOptionalLayerState } from "./state/actions/scenario_activation_actions.js";
+import { commitSpecialZoneLayersState } from "./state/actions/special_zone_actions.js";
 import { ensureSovereigntyState, markLegacyColorStateDirty } from "./sovereignty_manager.js";
 import { normalizeMapSemanticMode } from "./state.js";
 import {
@@ -906,7 +908,7 @@ function applyScenarioOptionalLayerState(
       const manifestHasLayerUrl = !!String(bundle?.manifest?.[config.urlField] || "").trim();
       if (manifestHasLayerUrl) {
         const topologyFingerprint = resolveSpecialZoneTopologyFingerprint(state);
-        state.specialZoneLayers = normalizeSpecialZoneLayersState({
+        commitSpecialZoneLayersState(state, {
           version: 1,
           layers: [],
           activeLayerId: "",
@@ -922,17 +924,15 @@ function applyScenarioOptionalLayerState(
           topologyFingerprint,
           validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
         });
-        state.specialZonesOverlayDirty = true;
       }
       syncScenarioUi();
       return false;
     }
-    state.specialZoneLayers = normalizeSpecialZoneLayersState(payload, {
+    commitSpecialZoneLayersState(state, payload, {
       defaultSource: "scenario",
       topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
       validFeatureIds: state.landIndex instanceof Map ? new Set(state.landIndex.keys()) : null,
     });
-    state.specialZonesOverlayDirty = true;
   } else {
     state[config.stateField] = payload || null;
   }
@@ -1118,7 +1118,7 @@ async function ensureActiveScenarioOptionalLayerLoaded(
       delayMs: 0,
       scenarioApplyRequestId,
     });
-    return state[getScenarioOptionalLayerConfig(normalizedKey)?.stateField] || null;
+    return getScenarioChunkOptionalLayerState(state, normalizedKey) || null;
   }
   const payload = await loadScenarioOptionalLayerPayload(bundle, normalizedKey, {
     d3Client,

@@ -8,6 +8,15 @@ import {
   buildExportArtifactManifest,
   buildExportArtifactPackage,
 } from "../js/core/export_artifact_package.js";
+import {
+  EXPORT_ARTIFACT_DOWNLOAD_PHASES,
+  createExportArtifactDownloadTransaction,
+} from "../js/ui/toolbar/export_artifact_download_transaction.js";
+import {
+  EXPORT_FAILURE_KINDS,
+  classifyExportFailure,
+  createExportFailureToastHandler,
+} from "../js/ui/toolbar/export_failure_handler.js";
 import { normalizeExportWorkbenchUiState } from "../js/core/state_defaults.js";
 import { replaceExportWorkbenchUiState } from "../js/core/state/ui_state.js";
 import {
@@ -30,6 +39,29 @@ import {
   getBakePassNamesForLayer,
   resolveExportBaseDimensions,
 } from "../js/ui/toolbar/export_artifact_model.js";
+
+function createExportWorkbenchControllerDependencies(overrides = {}) {
+  return {
+    state: {},
+    t: (key) => key,
+    showToast() {},
+    showExportFailureToast() {},
+    normalizeExportWorkbenchUiState,
+    renderPassNames: [],
+    buildCompositeSourceCanvas: async () => ({}),
+    buildSingleExportSourceCanvas: async () => ({}),
+    applyExportAdjustmentsToCanvas: (canvas) => canvas,
+    buildPerLayerExportPackage: async () => ({}),
+    buildBakePackPackage: async () => ({}),
+    buildCompositeExportCanvas: async () => ({}),
+    getSelectedExportScale: () => 2,
+    triggerCanvasDownload() {},
+    triggerBlobDownload() {},
+    bakeLayer: async () => ({}),
+    clearBakeCache() {},
+    ...overrides,
+  };
+}
 
 test("export artifact model projects deterministic canvas and pass inputs", () => {
   assert.deepEqual(resolveExportBaseDimensions(2, 0, 0, 2400, 1200), { width: 1200, height: 600 });
@@ -116,21 +148,231 @@ test("export artifact model builds defensive package projections", () => {
 
 test("export workbench controller validates required notification dependencies at construction", () => {
   assert.throws(
-    () => createExportWorkbenchController({ showExportFailureToast() {} }),
+    () => createExportWorkbenchController(createExportWorkbenchControllerDependencies({ showToast: undefined })),
     /createExportWorkbenchController requires showToast to be a function\./,
   );
   assert.throws(
-    () => createExportWorkbenchController({ showToast() {} }),
+    () => createExportWorkbenchController(createExportWorkbenchControllerDependencies({ showExportFailureToast: undefined })),
     /createExportWorkbenchController requires showExportFailureToast to be a function\./,
   );
+  assert.throws(
+    () => createExportWorkbenchController(createExportWorkbenchControllerDependencies({ buildCompositeSourceCanvas: undefined })),
+    /createExportWorkbenchController requires buildCompositeSourceCanvas to be a function\./,
+  );
 
-  const controller = createExportWorkbenchController({
-    showToast() {},
-    showExportFailureToast() {},
-  });
+  const controller = createExportWorkbenchController(createExportWorkbenchControllerDependencies());
 
   assert.equal(typeof controller.bindExportWorkbenchEvents, "function");
   assert.equal(typeof controller.renderExportWorkbenchUi, "function");
+  assert.equal(typeof controller.setExportBakeArtifacts, "function");
+});
+
+test("export workbench controller commits detached bake artifact metadata through its state action", () => {
+  const runtimeState = {};
+  const artifacts = [{
+    layerId: "color",
+    dependencies: ["color-revision:1"],
+    canvasSize: { width: 800, height: 600 },
+    dirtyFlag: true,
+  }];
+  const controller = createExportWorkbenchController(
+    createExportWorkbenchControllerDependencies({ state: runtimeState }),
+  );
+
+  controller.setExportBakeArtifacts(artifacts);
+  artifacts[0].dependencies.push("caller-mutation");
+
+  assert.deepEqual(runtimeState.exportWorkbenchUi.bakeArtifacts[0].dependencies, ["color-revision:1"]);
+});
+
+test("export artifact download transaction records the artifact and download lifecycle", async () => {
+  const lifecycle = [];
+  const downloads = [];
+  const toasts = [];
+  const exportUi = { target: "per-layer", format: "jpg" };
+  const transaction = createExportArtifactDownloadTransaction({
+    getExportUi: () => exportUi,
+    getSelectedExportScale: () => 2,
+    buildPerLayerExportPackage: async (ui, scale) => {
+      assert.equal(ui, exportUi);
+      assert.equal(scale, 2);
+      return { blob: { id: "layers" }, extension: "zip", fileStem: "map_layers" };
+    },
+    buildBakePackPackage: async () => assert.fail("unexpected bake package"),
+    buildCompositeExportCanvas: async () => assert.fail("unexpected composite canvas"),
+    triggerBlobDownload: async (...args) => downloads.push(args),
+    triggerCanvasDownload: async () => assert.fail("unexpected canvas download"),
+    showToast: (...args) => toasts.push(args),
+    showExportFailureToast: () => assert.fail("unexpected export failure"),
+    t: (key) => key,
+    onLifecycle: (entry) => lifecycle.push(entry),
+  });
+
+  const receipt = await transaction.run();
+
+  assert.deepEqual(receipt, {
+    status: "ready",
+    target: "per-layer",
+    scale: 2,
+    extension: "zip",
+    fileStem: "map_layers",
+  });
+  assert.equal(exportUi.scale, "2");
+  assert.deepEqual(downloads, [[{ id: "layers" }, "zip", "map_layers"]]);
+  assert.deepEqual(lifecycle.map((entry) => entry.phase), [
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING,
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.ARTIFACT_READY,
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.DOWNLOADING,
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.READY,
+  ]);
+  assert.equal(toasts.at(-1)[1].tone, "success");
+  assert.equal(transaction.getJobsInFlight(), 0);
+});
+
+test("export artifact download transaction fails with stage-aware taxonomy", async () => {
+  const lifecycle = [];
+  const failures = [];
+  const transaction = createExportArtifactDownloadTransaction({
+    getExportUi: () => ({ target: "composite", format: "png" }),
+    getSelectedExportScale: () => 1,
+    buildPerLayerExportPackage: async () => assert.fail("unexpected layer package"),
+    buildBakePackPackage: async () => assert.fail("unexpected bake package"),
+    buildCompositeExportCanvas: async () => ({ id: "canvas" }),
+    triggerBlobDownload: async () => assert.fail("unexpected blob download"),
+    triggerCanvasDownload: async () => { throw new Error("browser rejected the download"); },
+    showToast() {},
+    showExportFailureToast: (error) => failures.push(error),
+    t: (key) => key,
+    onLifecycle: (entry) => lifecycle.push(entry),
+  });
+
+  const receipt = await transaction.run();
+
+  assert.deepEqual(receipt, {
+    status: "failed",
+    target: "composite",
+    failureKind: EXPORT_FAILURE_KINDS.DOWNLOAD_FAILED,
+  });
+  assert.equal(failures[0].exportStage, "download");
+  assert.deepEqual(lifecycle.map((entry) => entry.phase), [
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING,
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.ARTIFACT_READY,
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.DOWNLOADING,
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.FAILED,
+  ]);
+  assert.equal(classifyExportFailure(failures[0]), EXPORT_FAILURE_KINDS.DOWNLOAD_FAILED);
+});
+
+test("export artifact download transaction preserves explicit failure kinds across stage wrapping", async () => {
+  const failures = [];
+  const invalidParameters = new Error("invalid export scale");
+  invalidParameters.exportKind = EXPORT_FAILURE_KINDS.INVALID_PARAMS;
+  Object.freeze(invalidParameters);
+  const transaction = createExportArtifactDownloadTransaction({
+    getExportUi: () => ({ target: "composite", format: "png" }),
+    getSelectedExportScale: () => 1,
+    buildPerLayerExportPackage: async () => assert.fail("unexpected layer package"),
+    buildBakePackPackage: async () => assert.fail("unexpected bake package"),
+    buildCompositeExportCanvas: async () => { throw invalidParameters; },
+    triggerBlobDownload: async () => assert.fail("unexpected blob download"),
+    triggerCanvasDownload: async () => assert.fail("download must not start"),
+    showToast() {},
+    showExportFailureToast: (error) => failures.push(error),
+    t: (key) => key,
+  });
+
+  const receipt = await transaction.run();
+
+  assert.equal(receipt.failureKind, EXPORT_FAILURE_KINDS.INVALID_PARAMS);
+  assert.equal(failures[0].exportKind, EXPORT_FAILURE_KINDS.INVALID_PARAMS);
+  assert.equal(failures[0].exportStage, "artifact");
+  assert.equal(failures[0].cause, invalidParameters);
+});
+
+test("concurrent export lifecycle events retain their originating transaction IDs", async () => {
+  const lifecycle = [];
+  const pendingArtifacts = [];
+  const transaction = createExportArtifactDownloadTransaction({
+    getExportUi: () => ({ target: "composite", format: "png" }),
+    getSelectedExportScale: () => 1,
+    buildPerLayerExportPackage: async () => assert.fail("unexpected layer package"),
+    buildBakePackPackage: async () => assert.fail("unexpected bake package"),
+    buildCompositeExportCanvas: () => new Promise((resolve) => pendingArtifacts.push(resolve)),
+    triggerBlobDownload: async () => assert.fail("unexpected blob download"),
+    triggerCanvasDownload: async () => {},
+    showToast() {},
+    showExportFailureToast: () => assert.fail("unexpected export failure"),
+    t: (key) => key,
+    onLifecycle: (entry) => lifecycle.push(entry),
+    maxConcurrentJobs: 2,
+  });
+
+  const first = transaction.run();
+  const second = transaction.run();
+  assert.deepEqual(lifecycle.map(({ phase, transactionId }) => [phase, transactionId]), [
+    [EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING, 1],
+    [EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING, 2],
+  ]);
+
+  pendingArtifacts[1]({ id: "second" });
+  await second;
+  pendingArtifacts[0]({ id: "first" });
+  await first;
+
+  for (const transactionId of [1, 2]) {
+    assert.deepEqual(
+      lifecycle.filter((entry) => entry.transactionId === transactionId).map((entry) => entry.phase),
+      [
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING,
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.ARTIFACT_READY,
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.DOWNLOADING,
+        EXPORT_ARTIFACT_DOWNLOAD_PHASES.READY,
+      ],
+    );
+  }
+});
+
+test("export artifact download transaction rejects incomplete package artifacts before download", async () => {
+  const lifecycle = [];
+  const failures = [];
+  const transaction = createExportArtifactDownloadTransaction({
+    getExportUi: () => ({ target: "bake-pack" }),
+    getSelectedExportScale: () => 1,
+    buildPerLayerExportPackage: async () => assert.fail("unexpected layer package"),
+    buildBakePackPackage: async () => ({}),
+    buildCompositeExportCanvas: async () => assert.fail("unexpected composite canvas"),
+    triggerBlobDownload: async () => assert.fail("download must not start"),
+    triggerCanvasDownload: async () => assert.fail("unexpected canvas download"),
+    showToast() {},
+    showExportFailureToast: (error) => failures.push(error),
+    t: (key) => key,
+    onLifecycle: (entry) => lifecycle.push(entry),
+  });
+
+  const receipt = await transaction.run();
+
+  assert.equal(receipt.failureKind, EXPORT_FAILURE_KINDS.ARTIFACT_FAILED);
+  assert.equal(failures[0].exportStage, "artifact");
+  assert.deepEqual(lifecycle.map((entry) => entry.phase), [
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.PREPARING,
+    EXPORT_ARTIFACT_DOWNLOAD_PHASES.FAILED,
+  ]);
+});
+
+test("export failure handler exposes a construction-validated taxonomy presenter", () => {
+  assert.throws(
+    () => createExportFailureToastHandler({ t: (key) => key }),
+    /createExportFailureToastHandler requires showToast to be a function\./,
+  );
+  const toasts = [];
+  const presentFailure = createExportFailureToastHandler({
+    t: (key) => key,
+    showToast: (...args) => toasts.push(args),
+  });
+
+  assert.equal(presentFailure({ exportStage: "artifact" }), EXPORT_FAILURE_KINDS.ARTIFACT_FAILED);
+  assert.equal(toasts[0][1].title, "Export failed · Artifact unavailable");
+  assert.equal(classifyExportFailure({ exportStage: "artifact", message: "out of memory" }), EXPORT_FAILURE_KINDS.OUT_OF_MEMORY);
 });
 
 test("export workbench state normalizes legacy visibility and text aliases", () => {
@@ -275,7 +517,7 @@ test("export pass sequence follows normalized order and visibility", () => {
   assert.deepEqual(sequence, ["labels", "physicalBase", "political"]);
 });
 
-test("export workbench runtime state keeps bake cache runtime-only", () => {
+test("export workbench state strips legacy runtime-only bake cache", () => {
   const existingCache = new Map([["color", { hash: "abc" }]]);
   const state = {
     exportWorkbenchUi: {
@@ -286,7 +528,8 @@ test("export workbench runtime state keeps bake cache runtime-only", () => {
 
   const normalized = ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState);
 
-  assert.equal(normalized.bakeCache, existingCache);
+  assert.equal(Object.hasOwn(normalized, "bakeCache"), false);
+  assert.equal(Object.hasOwn(state.exportWorkbenchUi, "bakeCache"), false);
   assert.deepEqual(normalized.bakeArtifacts, [{
     layerId: "text",
     updatedAt: 0,
@@ -295,8 +538,11 @@ test("export workbench runtime state keeps bake cache runtime-only", () => {
     dirtyFlag: true,
   }]);
 
-  const fromJson = ensureExportWorkbenchUiState({ exportWorkbenchUi: { bakeCache: {} } }, normalizeExportWorkbenchUiState);
-  assert.ok(fromJson.bakeCache instanceof Map);
+  const fromJson = ensureExportWorkbenchUiState(
+    { exportWorkbenchUi: { bakeCache: {} } },
+    normalizeExportWorkbenchUiState,
+  );
+  assert.equal(Object.hasOwn(fromJson, "bakeCache"), false);
 });
 
 test("export artifact package writes a zip manifest and payload files", async () => {

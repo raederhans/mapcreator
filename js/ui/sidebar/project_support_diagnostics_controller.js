@@ -45,6 +45,7 @@ function createBackendSessionProbe({
 
 /**
  * Owns the project support and diagnostics panels inside the sidebar:
+ * - idempotent panel mounting and element lookup
  * - scenario audit panel rendering and load/hide actions
  * - legend editor rendering
  * - project import/export and debug-mode event binding
@@ -56,40 +57,11 @@ function createBackendSessionProbe({
  */
 export function createProjectSupportDiagnosticsController({
   state,
-  elements,
+  hosts = {},
+  documentRef = globalThis.document,
   helpers,
 }) {
-  const {
-    scenarioAuditSection,
-    legendList,
-    downloadProjectBtn,
-    uploadProjectBtn,
-    projectDownloadFormat,
-    projectDownloadDestination,
-    projectPackageContents,
-    projectLoadSource,
-    projectFileInput,
-    projectFileName,
-    projectSaveStatus,
-    backendCloudSection,
-    backendCloudStatus,
-    backendAccountToggleBtn,
-    backendAccountPopover,
-    backendAccountBackdrop,
-    backendAccountCloseBtn,
-    backendCloudUsername,
-    backendCloudPassword,
-    backendCloudSaveTitle,
-    backendCloudRegisterBtn,
-    backendCloudLoginBtn,
-    backendCloudLogoutBtn,
-    backendCloudSaveBtn,
-    backendCloudPublishBtn,
-    backendCommunityRefreshBtn,
-    backendCommunityList,
-    debugModeSelect,
-  } = elements;
-
+  const document = documentRef;
   const {
     t,
     createEmptyNote,
@@ -105,6 +77,396 @@ export function createProjectSupportDiagnosticsController({
     importProjectThroughFunnel,
     invalidateFrontlineOverlayState,
   } = helpers;
+
+  const {
+    projectManagementStack,
+    legendEditorStack,
+    diagnosticStack,
+    rightSidebarContent,
+  } = hosts;
+
+  let projectSection = documentRef.getElementById("projectManagement");
+  if (!projectSection && projectManagementStack) {
+    projectSection = documentRef.createElement("div");
+    projectSection.id = "projectManagement";
+    projectSection.className = "inspector-tool-card project-management-card";
+
+    const actions = documentRef.createElement("div");
+    actions.className = "project-management-actions";
+
+    const buildProjectSelect = (id, labelText, options) => {
+      const field = documentRef.createElement("label");
+      field.className = "project-file-option";
+      field.htmlFor = id;
+      const label = documentRef.createElement("span");
+      label.className = "sidebar-field-label";
+      label.setAttribute("data-i18n", labelText);
+      label.textContent = t(labelText, "ui");
+      const select = documentRef.createElement("select");
+      select.id = id;
+      select.className = "select-input";
+      options.forEach(([value, text]) => {
+        const option = documentRef.createElement("option");
+        option.value = value;
+        option.setAttribute("data-i18n", text);
+        option.textContent = t(text, "ui");
+        select.appendChild(option);
+      });
+      field.append(label, select);
+      return { field, select };
+    };
+
+    const projectDownloadOptions = documentRef.createElement("div");
+    projectDownloadOptions.className = "project-file-options";
+    const projectDownloadFormat = buildProjectSelect("projectDownloadFormat", "File type", [
+      ["json", "Editable project JSON"],
+      ["zip", "Project ZIP package"],
+    ]);
+    const projectDownloadDestination = buildProjectSelect("projectDownloadDestination", "Download to", [
+      ["picker", "Save As dialog"],
+      ["browser", "Browser download"],
+    ]);
+    const projectPackageContents = buildProjectSelect("projectPackageContents", "Package contents", [
+      ["minimal", "Project only"],
+      ["recommended", "Project + metadata"],
+      ["diagnostic", "Project + diagnostics"],
+    ]);
+    const projectLoadSource = buildProjectSelect("projectLoadSource", "Load source", [
+      ["local", "Local project file"],
+      ["community", "Community save"],
+    ]);
+    projectDownloadOptions.append(
+      projectDownloadFormat.field,
+      projectPackageContents.field,
+      projectDownloadDestination.field,
+      projectLoadSource.field
+    );
+
+    const downloadBtn = documentRef.createElement("button");
+    downloadBtn.id = "downloadProjectBtn";
+    downloadBtn.type = "button";
+    downloadBtn.className = "btn-primary";
+    downloadBtn.setAttribute("data-i18n", "Download Project");
+    downloadBtn.textContent = t("Download Project", "ui");
+
+    const uploadBtn = documentRef.createElement("button");
+    uploadBtn.id = "uploadProjectBtn";
+    uploadBtn.type = "button";
+    uploadBtn.className = "btn-secondary";
+    uploadBtn.setAttribute("data-i18n", "Load Project");
+    uploadBtn.textContent = t("Load Project", "ui");
+
+    const fileInput = documentRef.createElement("input");
+    fileInput.id = "projectFileInput";
+    fileInput.type = "file";
+    fileInput.accept = ".json,.zip,application/json,application/zip,application/x-zip-compressed";
+    fileInput.className = "hidden";
+    fileInput.setAttribute("aria-label", t("Load Project", "ui"));
+    fileInput.setAttribute("data-i18n-aria-label", "Load Project");
+
+    const fileMeta = documentRef.createElement("div");
+    fileMeta.id = "projectFileMeta";
+    fileMeta.className = "project-file-meta";
+
+    const fileMetaLabel = documentRef.createElement("span");
+    fileMetaLabel.id = "lblProjectFile";
+    fileMetaLabel.className = "section-header";
+    fileMetaLabel.setAttribute("data-i18n", "Selected File");
+    fileMetaLabel.textContent = t("Selected File", "ui");
+
+    const fileName = documentRef.createElement("span");
+    fileName.id = "projectFileName";
+    fileName.className = "project-file-name u-truncate";
+    fileName.dataset.projectFileState = "empty";
+    fileName.textContent = t("No file selected", "ui");
+
+    fileMeta.appendChild(fileMetaLabel);
+    fileMeta.appendChild(fileName);
+
+    const projectSaveStatus = documentRef.createElement("p");
+    projectSaveStatus.id = "projectSaveStatus";
+    projectSaveStatus.className = "sidebar-tool-hint project-save-status";
+    projectSaveStatus.setAttribute("role", "status");
+    projectSaveStatus.setAttribute("aria-live", "polite");
+    projectSaveStatus.setAttribute("aria-atomic", "true");
+    projectSaveStatus.classList.add("hidden");
+    projectSaveStatus.textContent = "";
+
+    const accountDock = documentRef.createElement("div");
+    accountDock.className = "project-account-dock";
+
+    const accountHint = documentRef.createElement("span");
+    accountHint.className = "project-account-hint";
+    accountHint.textContent = t("Account", "ui");
+
+    const accountToggleBtn = documentRef.createElement("button");
+    accountToggleBtn.id = "backendAccountToggleBtn";
+    accountToggleBtn.type = "button";
+    accountToggleBtn.className = "project-account-toggle";
+    accountToggleBtn.setAttribute("aria-haspopup", "dialog");
+    accountToggleBtn.setAttribute("aria-expanded", "false");
+    accountToggleBtn.setAttribute("aria-controls", "backendAccountPopover");
+    accountToggleBtn.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
+    accountToggleBtn.title = t("Account and Cloud Saves", "ui");
+    accountToggleBtn.innerHTML = `
+      <svg class="project-account-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"></circle>
+        <path d="M5.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+      </svg>
+    `;
+    accountDock.append(accountHint, accountToggleBtn);
+
+    const accountPopover = documentRef.createElement("div");
+    accountPopover.id = "backendAccountPopover";
+    accountPopover.className = "project-account-popover hidden";
+    accountPopover.setAttribute("role", "dialog");
+    accountPopover.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
+    accountPopover.setAttribute("aria-modal", "true");
+
+    const accountBackdrop = documentRef.createElement("div");
+    accountBackdrop.id = "backendAccountBackdrop";
+    accountBackdrop.className = "project-account-backdrop hidden";
+    accountBackdrop.setAttribute("aria-hidden", "true");
+
+    const accountShelf = documentRef.createElement("div");
+    accountShelf.id = "rightSidebarAccountShelf";
+    accountShelf.className = "right-sidebar-account-shelf";
+    accountShelf.append(accountDock);
+
+    actions.appendChild(downloadBtn);
+    actions.appendChild(projectDownloadOptions);
+    actions.appendChild(uploadBtn);
+    actions.appendChild(projectSaveStatus);
+    actions.appendChild(fileMeta);
+    actions.appendChild(fileInput);
+
+    projectSection.appendChild(actions);
+    {
+      const cloudSection = documentRef.createElement("div");
+      cloudSection.id = "backendCloudSection";
+      cloudSection.className = "project-account-panel";
+      cloudSection.hidden = true;
+
+      const cloudHeader = documentRef.createElement("div");
+      cloudHeader.className = "project-account-panel-header";
+
+      const cloudHeaderCopy = documentRef.createElement("div");
+      cloudHeaderCopy.className = "project-account-panel-copy";
+
+      const cloudTitle = documentRef.createElement("h2");
+      cloudTitle.className = "project-account-panel-title";
+      cloudTitle.id = "backendAccountPopoverTitle";
+      cloudTitle.textContent = t("Cloud Saves", "ui");
+      accountPopover.setAttribute("aria-labelledby", "backendAccountPopoverTitle");
+
+      const cloudStatus = documentRef.createElement("p");
+      cloudStatus.id = "backendCloudStatus";
+      cloudStatus.className = "project-account-panel-status";
+      cloudStatus.setAttribute("role", "status");
+      cloudStatus.setAttribute("aria-live", "polite");
+      cloudStatus.setAttribute("aria-atomic", "true");
+      cloudStatus.textContent = t("Local backend cloud saves are available after login.", "ui");
+      cloudHeaderCopy.append(cloudTitle, cloudStatus);
+
+      const closeAccountBtn = documentRef.createElement("button");
+      closeAccountBtn.id = "backendAccountCloseBtn";
+      closeAccountBtn.type = "button";
+      closeAccountBtn.className = "project-account-close-btn";
+      closeAccountBtn.setAttribute("aria-label", t("Close", "ui"));
+      closeAccountBtn.textContent = "×";
+      cloudHeader.append(cloudHeaderCopy, closeAccountBtn);
+
+      const cloudCredentialGrid = documentRef.createElement("div");
+      cloudCredentialGrid.className = "project-account-field-grid";
+
+      const cloudUsername = documentRef.createElement("input");
+      cloudUsername.id = "backendCloudUsername";
+      cloudUsername.type = "text";
+      cloudUsername.autocomplete = "username";
+      cloudUsername.placeholder = t("Username", "ui");
+      cloudUsername.className = "input project-account-input";
+
+      const cloudPassword = documentRef.createElement("input");
+      cloudPassword.id = "backendCloudPassword";
+      cloudPassword.type = "password";
+      cloudPassword.autocomplete = "current-password";
+      cloudPassword.placeholder = t("Password", "ui");
+      cloudPassword.className = "input project-account-input";
+
+      const cloudTitleInput = documentRef.createElement("input");
+      cloudTitleInput.id = "backendCloudSaveTitle";
+      cloudTitleInput.type = "text";
+      cloudTitleInput.placeholder = t("Save title", "ui");
+      cloudTitleInput.className = "input project-account-input project-account-title-input";
+      cloudCredentialGrid.append(cloudUsername, cloudPassword, cloudTitleInput);
+
+      const cloudActions = documentRef.createElement("div");
+      cloudActions.className = "project-account-actions";
+
+      const registerCloudBtn = documentRef.createElement("button");
+      registerCloudBtn.id = "backendCloudRegisterBtn";
+      registerCloudBtn.type = "button";
+      registerCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+      registerCloudBtn.textContent = t("Register", "ui");
+
+      const loginCloudBtn = documentRef.createElement("button");
+      loginCloudBtn.id = "backendCloudLoginBtn";
+      loginCloudBtn.type = "button";
+      loginCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+      loginCloudBtn.textContent = t("Login", "ui");
+
+      const logoutCloudBtn = documentRef.createElement("button");
+      logoutCloudBtn.id = "backendCloudLogoutBtn";
+      logoutCloudBtn.type = "button";
+      logoutCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+      logoutCloudBtn.textContent = t("Logout", "ui");
+
+      const saveCloudBtn = documentRef.createElement("button");
+      saveCloudBtn.id = "backendCloudSaveBtn";
+      saveCloudBtn.type = "button";
+      saveCloudBtn.className = "btn-primary sidebar-support-entry-btn";
+      saveCloudBtn.textContent = t("Save Cloud Copy", "ui");
+
+      const publishCloudBtn = documentRef.createElement("button");
+      publishCloudBtn.id = "backendCloudPublishBtn";
+      publishCloudBtn.type = "button";
+      publishCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
+      publishCloudBtn.textContent = t("Publish Latest", "ui");
+
+      const refreshCommunityBtn = documentRef.createElement("button");
+      refreshCommunityBtn.id = "backendCommunityRefreshBtn";
+      refreshCommunityBtn.type = "button";
+      refreshCommunityBtn.className = "btn-secondary sidebar-support-entry-btn";
+      refreshCommunityBtn.textContent = t("Refresh Community", "ui");
+
+      cloudActions.append(
+        registerCloudBtn,
+        loginCloudBtn,
+        logoutCloudBtn,
+        saveCloudBtn,
+        publishCloudBtn,
+        refreshCommunityBtn
+      );
+
+      const communityList = documentRef.createElement("div");
+      communityList.id = "backendCommunityList";
+      communityList.className = "project-account-community-list";
+
+      cloudSection.append(cloudHeader, cloudCredentialGrid, cloudActions, communityList);
+      accountPopover.appendChild(cloudSection);
+    }
+    documentRef.body.append(accountBackdrop, accountPopover);
+    projectManagementStack.appendChild(projectSection);
+    rightSidebarContent?.appendChild(accountShelf);
+  }
+
+  let legendSection = documentRef.getElementById("legendEditor");
+  if (!legendSection && legendEditorStack) {
+    legendSection = documentRef.createElement("div");
+    legendSection.id = "legendEditor";
+    legendSection.className = "inspector-tool-card";
+
+    const list = documentRef.createElement("div");
+    list.id = "legendEditorList";
+    list.className = "mt-3";
+
+    legendSection.appendChild(list);
+    legendEditorStack.appendChild(legendSection);
+  }
+
+  let scenarioAuditSection = documentRef.getElementById("scenarioAuditPanel");
+  if (!scenarioAuditSection && diagnosticStack) {
+    scenarioAuditSection = documentRef.createElement("div");
+    scenarioAuditSection.id = "scenarioAuditPanel";
+    scenarioAuditSection.className = "inspector-tool-card scenario-audit-panel";
+    diagnosticStack.appendChild(scenarioAuditSection);
+  }
+
+  let debugViewSection = documentRef.getElementById("debugViewControl");
+  if (!debugViewSection && diagnosticStack) {
+    debugViewSection = documentRef.createElement("div");
+    debugViewSection.id = "debugViewControl";
+    debugViewSection.className = "inspector-tool-card sidebar-tool-card-debug";
+
+    const title = documentRef.createElement("div");
+    title.className = "section-header sidebar-tool-title";
+    title.textContent = t("Debug Mode", "ui");
+
+    const hint = documentRef.createElement("p");
+    hint.className = "sidebar-tool-hint";
+    hint.textContent = t("Use diagnostics to inspect geometry and artifact behavior.", "ui");
+
+    const group = documentRef.createElement("div");
+    group.className = "control-group mt-3";
+
+    const label = documentRef.createElement("label");
+    label.setAttribute("for", "debug-mode-select");
+    label.textContent = t("View", "ui");
+
+    const select = documentRef.createElement("select");
+    select.id = "debug-mode-select";
+    select.className = "select-input debug-select";
+
+    [
+      ["PROD", "Normal View"],
+      ["GEOMETRY", "1. Geometry Check (Pink/Green)"],
+      ["ARTIFACTS", "2. Artifact Hunter (Red Giants)"],
+      ["ISLANDS", "3. Island Detector (Orange)"],
+      ["ID_HASH", "4. ID Stability"],
+    ].forEach(([value, label]) => {
+      const option = documentRef.createElement("option");
+      option.value = value;
+      option.id = `debugOption${value}`;
+      option.textContent = t(label, "ui");
+      select.appendChild(option);
+    });
+
+    group.appendChild(label);
+    group.appendChild(select);
+    debugViewSection.appendChild(title);
+    debugViewSection.appendChild(hint);
+    debugViewSection.appendChild(group);
+    diagnosticStack.appendChild(debugViewSection);
+  }
+
+  const downloadProjectBtn = documentRef.getElementById("downloadProjectBtn");
+  const uploadProjectBtn = documentRef.getElementById("uploadProjectBtn");
+  const projectDownloadFormat = documentRef.getElementById("projectDownloadFormat");
+  const projectDownloadDestination = documentRef.getElementById("projectDownloadDestination");
+  const projectPackageContents = documentRef.getElementById("projectPackageContents");
+  const projectLoadSource = documentRef.getElementById("projectLoadSource");
+  const projectFileInput = documentRef.getElementById("projectFileInput");
+  const projectFileName = documentRef.getElementById("projectFileName");
+  const projectSaveStatus = documentRef.getElementById("projectSaveStatus");
+  const backendCloudSection = documentRef.getElementById("backendCloudSection");
+  const backendCloudStatus = documentRef.getElementById("backendCloudStatus");
+  const backendAccountToggleBtn = documentRef.getElementById("backendAccountToggleBtn");
+  const backendAccountPopover = documentRef.getElementById("backendAccountPopover");
+  const backendAccountBackdrop = documentRef.getElementById("backendAccountBackdrop");
+  const backendAccountCloseBtn = documentRef.getElementById("backendAccountCloseBtn");
+  const backendCloudUsername = documentRef.getElementById("backendCloudUsername");
+  const backendCloudPassword = documentRef.getElementById("backendCloudPassword");
+  const backendCloudSaveTitle = documentRef.getElementById("backendCloudSaveTitle");
+  const backendCloudRegisterBtn = documentRef.getElementById("backendCloudRegisterBtn");
+  const backendCloudLoginBtn = documentRef.getElementById("backendCloudLoginBtn");
+  const backendCloudLogoutBtn = documentRef.getElementById("backendCloudLogoutBtn");
+  const backendCloudSaveBtn = documentRef.getElementById("backendCloudSaveBtn");
+  const backendCloudPublishBtn = documentRef.getElementById("backendCloudPublishBtn");
+  const backendCommunityRefreshBtn = documentRef.getElementById("backendCommunityRefreshBtn");
+  const backendCommunityList = documentRef.getElementById("backendCommunityList");
+  const legendList = documentRef.getElementById("legendEditorList");
+  const debugModeSelect = documentRef.getElementById("debug-mode-select");
+  if (
+    projectFileName
+    && (
+      !projectFileName.textContent.trim()
+      || projectFileName.dataset?.projectFileState === "empty"
+    )
+  ) {
+    if (projectFileName.dataset) projectFileName.dataset.projectFileState = "empty";
+    projectFileName.textContent = t("No file selected", "ui");
+  }
+
 
   const getScenarioAuditSummary = (auditPayload) => (
     auditPayload?.summary && typeof auditPayload.summary === "object" ? auditPayload.summary : {}

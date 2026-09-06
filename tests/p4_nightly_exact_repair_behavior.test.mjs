@@ -56,7 +56,7 @@ function planInput({ failedRole = "checker-boundaries", rerunScope = "failed" } 
   const roles = [
     ["checker-boundaries", "Nightly P4 Checker and Python Boundaries", "nightly-p4-checker-boundaries"],
     ["full-policy-tap", "Nightly P4 Canonical Full Policy TAP", "nightly-p4-full-policy"],
-    ["fast-contracts-routes", "Nightly P4.3 Fast Contracts and Routes", "nightly-p4-fast"],
+    ["fast-contracts-routes", "Nightly P4.4 Fast Contracts and Routes", "nightly-p4-fast"],
   ];
   return {
     sourceRunId: SOURCE_RUN_ID,

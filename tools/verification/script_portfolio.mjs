@@ -8,14 +8,11 @@ import {
   VERIFICATION_COMMAND_SUPERSESSION,
 } from "./command_supersession.mjs";
 import {
-  LEGACY_VERIFICATION_DOMAINS,
-  LEGACY_VERIFICATION_ESTIMATE_POLICY,
   VERIFICATION_DOMAINS,
   VERIFICATION_ESTIMATE_POLICY,
 } from "./verification_domains.mjs";
 import {
   buildRouteIndex,
-  buildLegacyRouteIndex,
   reconcileVerificationRouteAuthority,
 } from "../test_route_registry.mjs";
 import {
@@ -25,7 +22,6 @@ import {
   verificationGatePolicySignalsDigest,
   verificationMetadataSourceSummary,
 } from "./verification_catalog_projection.mjs";
-import { LEGACY_VERIFICATION_COMMAND_SUPERSESSION } from "./command_supersession.mjs";
 import { buildP4PhaseVerificationPlan } from "../run_p4_phase_verification.mjs";
 import { resolveP4StateWriterPolicyRun } from "../run_p4_state_writer_policy_tests.mjs";
 import { buildStateWriterCheckerPlan } from "./state_writer_policy_evidence.mjs";
@@ -198,6 +194,18 @@ export function assertVerificationEstimatePolicy(policy) {
     }
     if (costClass.perLeafRuntimeSeconds === 0 || costClass.perLeafCostUnits === 0) {
       throw new Error(`verification-plan-estimate-policy-unscaled:${cost}`);
+    }
+  }
+  const calibration = policy.localRuntimeCalibration;
+  if (calibration !== undefined) {
+    if (!calibration || !["win32", "linux", "darwin"].includes(calibration.platform)
+      || !COST_ORDER.includes(calibration.cost)
+      || !Number.isFinite(calibration.groupBaseRuntimeSeconds) || calibration.groupBaseRuntimeSeconds < 0
+      || !Number.isFinite(calibration.perLeafRuntimeSeconds) || calibration.perLeafRuntimeSeconds <= 0
+      || !Array.isArray(calibration.leafIds) || calibration.leafIds.length === 0
+      || calibration.leafIds.some((id) => typeof id !== "string" || !id.startsWith("node-test:tests/"))
+      || new Set(calibration.leafIds).size !== calibration.leafIds.length) {
+      throw new Error("verification-plan-estimate-policy-invalid-calibration");
     }
   }
   return policy;
@@ -1242,151 +1250,6 @@ export function checkVerificationCatalogConsistency(catalog, {
   };
 }
 
-function shadowAuthorityProjection(authority) {
-  return authority.map((entry) => ({
-    commandRef: entry.commandRef,
-    routeIds: sortedUnique(entry.routeIds),
-    sourceRefs: sortedUnique(entry.sourceRefs),
-    ownerHints: sortedUnique(entry.ownerHints),
-    executionOwners: sortedUnique(entry.executionOwners),
-    executionOwner: entry.executionOwner,
-    cost: entry.cost,
-    resourceLocks: sortedUnique(entry.resourceLocks),
-    ciProfiles: sortedUnique(entry.ciProfiles),
-    tiers: sortedUnique(entry.tiers),
-    platforms: sortedUnique(entry.platforms),
-    entrypointPolicy: structuredClone(entry.entrypointPolicy),
-  })).sort((left, right) => compareText(left.commandRef, right.commandRef));
-}
-
-function shadowCatalogProjection(catalog) {
-  return catalog.entries.map((entry) => ({
-    id: entry.id,
-    kind: entry.kind,
-    command: entry.command,
-    executable: entry.executable,
-    argv: entry.argv,
-    runner: entry.runner,
-    files: entry.files,
-    modules: entry.modules,
-    specs: entry.specs,
-    refs: entry.refs,
-    domains: entry.domains,
-    cost: entry.cost,
-    executionOwner: entry.executionOwner,
-    platforms: entry.platforms,
-    resourceLocks: entry.resourceLocks,
-    tiers: entry.tiers,
-    ciProfiles: entry.ciProfiles,
-  })).sort((left, right) => compareText(left.id, right.id));
-}
-
-function shadowSupersessionProjection(supersession) {
-  return Object.fromEntries(Object.keys(supersession || {}).sort(compareText)
-    .map((superseder) => [superseder, sortedUnique(supersession[superseder])]));
-}
-
-function shadowMismatch(field, canonical, legacy) {
-  const canonicalPayload = JSON.stringify(canonical);
-  const legacyPayload = JSON.stringify(legacy);
-  return canonicalPayload === legacyPayload
-    ? null
-    : {
-      field,
-      canonicalDigest: createHash("sha256").update(canonicalPayload).digest("hex"),
-      legacyDigest: createHash("sha256").update(legacyPayload).digest("hex"),
-    };
-}
-
-function prepareShadowVerificationCatalog(options, fallbackEstimatePolicy) {
-  try {
-    return { prepared: prepareVerificationCatalogInternal(options), estimatePolicyError: null };
-  } catch (error) {
-    if (!String(error?.message || "").startsWith("verification-plan-estimate-policy-")) throw error;
-    return {
-      prepared: prepareVerificationCatalogInternal({ ...options, estimatePolicy: fallbackEstimatePolicy }),
-      estimatePolicyError: String(error.message),
-    };
-  }
-}
-
-export function compareVerificationMetadataShadow({
-  packageScripts = {},
-  canonicalVerificationRecords = VERIFICATION_DOMAINS,
-  canonicalSelectorRoutes = buildRouteIndex(),
-  canonicalSupersession = VERIFICATION_COMMAND_SUPERSESSION,
-  canonicalEstimatePolicy = VERIFICATION_ESTIMATE_POLICY,
-  legacyVerificationRecords = LEGACY_VERIFICATION_DOMAINS,
-  legacySelectorRoutes = buildLegacyRouteIndex(),
-  legacySupersession = LEGACY_VERIFICATION_COMMAND_SUPERSESSION,
-  legacyEstimatePolicy = LEGACY_VERIFICATION_ESTIMATE_POLICY,
-  repoRoot = process.cwd(),
-  platform = process.platform,
-} = {}) {
-  const canonicalShadow = prepareShadowVerificationCatalog({
-    packageScripts: VERIFICATION_METADATA_SOURCE.packageScripts,
-    verificationRecords: canonicalVerificationRecords,
-    selectorRoutes: canonicalSelectorRoutes,
-    repoRoot,
-    platform,
-    estimatePolicy: canonicalEstimatePolicy,
-    sourceMode: "shadow",
-  }, VERIFICATION_ESTIMATE_POLICY);
-  const legacyShadow = prepareShadowVerificationCatalog({
-    packageScripts,
-    verificationRecords: legacyVerificationRecords,
-    selectorRoutes: legacySelectorRoutes,
-    repoRoot,
-    platform,
-    estimatePolicy: legacyEstimatePolicy,
-    sourceMode: "shadow",
-  }, VERIFICATION_ESTIMATE_POLICY);
-  const canonicalPrepared = canonicalShadow.prepared;
-  const legacyPrepared = legacyShadow.prepared;
-  const canonicalPortfolio = buildScriptPortfolio(VERIFICATION_METADATA_SOURCE.packageScripts, { supersession: canonicalSupersession });
-  const legacyPortfolio = buildScriptPortfolio(packageScripts, { supersession: legacySupersession });
-  const comparisons = [
-    shadowMismatch("packageScripts", VERIFICATION_METADATA_SOURCE.packageScripts, packageScripts),
-    shadowMismatch("authority", shadowAuthorityProjection(canonicalPrepared.authority), shadowAuthorityProjection(legacyPrepared.authority)),
-    shadowMismatch("catalog", shadowCatalogProjection(canonicalPrepared.catalog), shadowCatalogProjection(legacyPrepared.catalog)),
-    shadowMismatch("selectorCommandRefs", canonicalPrepared.catalog.selectorCommandRefs, legacyPrepared.catalog.selectorCommandRefs),
-    shadowMismatch("portfolio", canonicalPortfolio.scripts, legacyPortfolio.scripts),
-    shadowMismatch(
-      "supersession",
-      shadowSupersessionProjection(canonicalSupersession),
-      shadowSupersessionProjection(legacySupersession),
-    ),
-    shadowMismatch("estimatePolicy", {
-      policy: canonicalEstimatePolicy,
-      validationError: canonicalShadow.estimatePolicyError,
-    }, {
-      policy: legacyEstimatePolicy,
-      validationError: legacyShadow.estimatePolicyError,
-    }),
-  ].filter(Boolean);
-  return {
-    schemaVersion: 1,
-    kind: "verification-metadata-shadow-comparison",
-    equal: comparisons.length === 0,
-    zeroSpawn: true,
-    metadataSourceIdentity: structuredClone(VERIFICATION_METADATA_SOURCE_IDENTITY),
-    authoredSurfacesBefore: 5,
-    authoredSurfacesAfter: 1,
-    projections: {
-      verificationRecords: canonicalVerificationRecords.length,
-      routes: canonicalSelectorRoutes.length,
-      commands: canonicalPrepared.authority.length,
-      catalogEntries: canonicalPrepared.catalog.entries.length,
-      leaves: canonicalPrepared.catalog.entries.filter((entry) => entry.kind === "leaf").length,
-      suites: canonicalPrepared.catalog.entries.filter((entry) => entry.kind === "suite").length,
-      portfolioScripts: canonicalPortfolio.scripts.length,
-      superseders: Object.keys(canonicalSupersession).length,
-      supersessionEdges: Object.values(canonicalSupersession).flat().length,
-    },
-    mismatches: comparisons,
-  };
-}
-
 function catalogEntries(catalog) {
   const entries = Array.isArray(catalog) ? catalog : catalog?.entries;
   if (!Array.isArray(entries)) throw new TypeError("verification-plan-invalid-catalog");
@@ -2349,7 +2212,7 @@ export function formatScriptPortfolioMarkdown(portfolio) {
 export function parseScriptPortfolioArgs(argv) {
   const args = [...argv];
   const action = args.shift() || "list";
-  if (!new Set(["list", "check", "shadow-check"]).has(action)) {
+  if (!new Set(["list", "check"]).has(action)) {
     throw new Error(`script-portfolio-unknown-action:${action}`);
   }
   let format = "summary";
@@ -2378,20 +2241,10 @@ export function runScriptPortfolioCli(argv, {
   stdout = process.stdout,
   verificationRecords = VERIFICATION_DOMAINS,
   selectorRoutes = buildRouteIndex(),
-  shadowComparator = compareVerificationMetadataShadow,
 } = {}) {
   const options = parseScriptPortfolioArgs(argv);
   const packageJson = JSON.parse(fs.readFileSync(options.packagePath, "utf8"));
   const packageScripts = packageJson.scripts || {};
-  if (options.action === "shadow-check") {
-    const report = shadowComparator({ packageScripts });
-    stdout.write(`${JSON.stringify(report, null, options.format === "json" ? 2 : 0)}\n`);
-    return report.equal ? 0 : 2;
-  }
-  if (options.action === "check" && options.packagePath === path.resolve("package.json")) {
-    const shadow = shadowComparator({ packageScripts });
-    if (!shadow.equal) return 2;
-  }
   const portfolio = readPackageScriptPortfolio(options.packagePath);
   const formatters = {
     json: formatScriptPortfolioJson,

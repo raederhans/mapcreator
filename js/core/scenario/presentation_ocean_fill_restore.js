@@ -5,6 +5,9 @@ import {
   STATE_BUS_EVENTS,
   emitStateBusEvent,
 } from "../state/index.js";
+import {
+  mergeScenarioStyleDefaultsState,
+} from "../state/actions/scenario_presentation_actions.js";
 
 function emitScenarioToolbarInputUpdate() {
   emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_TOOLBAR_INPUTS);
@@ -40,6 +43,108 @@ function normalizeScenarioBorderStyleOverride(rawDefaults, groupKey) {
     override.width = clampNumber(rawDefaults.width, 1, 0, 12);
   }
   return Object.keys(override).length ? override : null;
+}
+
+function projectScenarioOceanStyleDefaultsPatch(rawDefaults) {
+  if (!rawDefaults || typeof rawDefaults !== "object" || Array.isArray(rawDefaults)) {
+    return null;
+  }
+  const patch = {};
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "preset")) {
+    patch.preset = rawDefaults.preset;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "fillColor")) {
+    patch.fillColor = rawDefaults.fillColor;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "opacity")) {
+    patch.opacity = rawDefaults.opacity;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "scale")) {
+    patch.scale = rawDefaults.scale;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "contourStrength")) {
+    patch.contourStrength = rawDefaults.contourStrength;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "experimentalAdvancedStyles")) {
+    patch.experimentalAdvancedStyles = rawDefaults.experimentalAdvancedStyles;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "coastalAccentEnabled")) {
+    patch.coastalAccentEnabled = rawDefaults.coastalAccentEnabled;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "shallowBandFadeEndZoom")) {
+    patch.shallowBandFadeEndZoom = rawDefaults.shallowBandFadeEndZoom;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "midBandFadeEndZoom")) {
+    patch.midBandFadeEndZoom = rawDefaults.midBandFadeEndZoom;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "deepBandFadeEndZoom")) {
+    patch.deepBandFadeEndZoom = rawDefaults.deepBandFadeEndZoom;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "scenarioSyntheticContourFadeEndZoom")) {
+    patch.scenarioSyntheticContourFadeEndZoom =
+      rawDefaults.scenarioSyntheticContourFadeEndZoom;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "scenarioShallowContourFadeEndZoom")) {
+    patch.scenarioShallowContourFadeEndZoom =
+      rawDefaults.scenarioShallowContourFadeEndZoom;
+  }
+  return Object.keys(patch).length ? patch : null;
+}
+
+function projectScenarioBorderStyleDefaultsPatch(rawDefaults, groupKey) {
+  if (!rawDefaults || typeof rawDefaults !== "object" || Array.isArray(rawDefaults)) {
+    return null;
+  }
+  const patch = {};
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "color")) {
+    patch.color = rawDefaults.color;
+  }
+  if (
+    groupKey === "internalBorders"
+    && Object.prototype.hasOwnProperty.call(rawDefaults, "colorMode")
+  ) {
+    patch.colorMode = rawDefaults.colorMode;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "opacity")) {
+    patch.opacity = rawDefaults.opacity;
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "width")) {
+    patch.width = rawDefaults.width;
+  }
+  return Object.keys(patch).length ? patch : null;
+}
+
+function projectScenarioStyleDefaultsPatch(styleOverride) {
+  if (!styleOverride || typeof styleOverride !== "object" || Array.isArray(styleOverride)) {
+    return null;
+  }
+  const patch = {};
+  const oceanPatch = projectScenarioOceanStyleDefaultsPatch(styleOverride.ocean);
+  if (oceanPatch) {
+    patch.ocean = oceanPatch;
+  }
+  const internalBordersPatch = projectScenarioBorderStyleDefaultsPatch(
+    styleOverride.internalBorders,
+    "internalBorders",
+  );
+  if (internalBordersPatch) {
+    patch.internalBorders = internalBordersPatch;
+  }
+  const empireBordersPatch = projectScenarioBorderStyleDefaultsPatch(
+    styleOverride.empireBorders,
+    "empireBorders",
+  );
+  if (empireBordersPatch) {
+    patch.empireBorders = empireBordersPatch;
+  }
+  const coastlinesPatch = projectScenarioBorderStyleDefaultsPatch(
+    styleOverride.coastlines,
+    "coastlines",
+  );
+  if (coastlinesPatch) {
+    patch.coastlines = coastlinesPatch;
+  }
+  return Object.keys(patch).length ? patch : null;
 }
 
 function createScenarioOceanFillRestoreRuntime({
@@ -114,16 +219,6 @@ function createScenarioOceanFillRestoreRuntime({
     return Object.keys(scopedOverride).length ? scopedOverride : null;
   }
 
-  function ensureStyleConfigGroup(groupKey) {
-    if (!state.styleConfig || typeof state.styleConfig !== "object") {
-      state.styleConfig = {};
-    }
-    if (!state.styleConfig[groupKey] || typeof state.styleConfig[groupKey] !== "object") {
-      state.styleConfig[groupKey] = {};
-    }
-    return state.styleConfig[groupKey];
-  }
-
   function getStyleDefaultsSignature(styleOverride) {
     const payload = {};
     Object.keys(styleOverride || {}).sort().forEach((groupKey) => {
@@ -135,20 +230,15 @@ function createScenarioOceanFillRestoreRuntime({
   }
 
   function updateScenarioStyleDefaults(styleOverride, reason) {
-    if (!styleOverride || typeof styleOverride !== "object") {
+    const projectedOverride = projectScenarioStyleDefaultsPatch(styleOverride);
+    if (!projectedOverride) {
       return false;
     }
-    const previous = getStyleDefaultsSignature(styleOverride);
-    Object.entries(styleOverride).forEach(([groupKey, groupOverride]) => {
-      if (!groupOverride || typeof groupOverride !== "object") return;
-      const target = ensureStyleConfigGroup(groupKey);
-      Object.entries(groupOverride).forEach(([key, value]) => {
-        target[key] = value;
-      });
-    });
-    const next = getStyleDefaultsSignature(styleOverride);
+    const previous = getStyleDefaultsSignature(projectedOverride);
+    mergeScenarioStyleDefaultsState(state, projectedOverride);
+    const next = getStyleDefaultsSignature(projectedOverride);
     const changed = previous !== next;
-    if (changed && styleOverride.ocean && typeof invalidateOceanBackgroundVisualState === "function") {
+    if (changed && projectedOverride.ocean && typeof invalidateOceanBackgroundVisualState === "function") {
       invalidateOceanBackgroundVisualState(reason);
     }
     return changed;

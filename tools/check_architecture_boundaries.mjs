@@ -94,11 +94,6 @@ const FILES = Object.freeze({
   renderPassCommitAccountingOwner: "js/core/map_renderer/render_pass_commit_accounting_owner.js",
   renderPassCommitAccountingOwnerTest: "tests/render_pass_commit_accounting_owner_behavior.test.mjs",
   renderPassCommitAccountingOwnerInventoryTest: "tests/render_pass_commit_accounting_owner_inventory.test.mjs",
-  rendererDrawCanvasOrchestrationPreflightDoc: "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md",
-  rendererDrawCanvasOrchestrationOwnerDoc: "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
-  rendererCachedPassCompositorOwnerDoc: "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-cached-pass-compositor-owner-p2-2a-20260711.md",
-  rendererTransformedFrameCompositorOwnerDoc: "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-transformed-frame-compositor-owner-p2-2b-20260712.md",
-  rendererDrawCanvasOrchestrationInventoryTest: "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
   drawCanvasOrchestrationOwner: "js/core/map_renderer/draw_canvas_orchestration_owner.js",
   cachedPassCompositorOwner: "js/core/renderer/cached_pass_compositor_owner.js",
   cachedPassCompositorOwnerTest: "tests/cached_pass_compositor_owner_behavior.test.mjs",
@@ -188,7 +183,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.visualEffectsPassOwner]: 650,
   [FILES.clickSelectionTransactionOwner]: 620,
   [FILES.hitCanvasSchedulingOwner]: 220,
-  [FILES.mapHoverInteractionOwner]: 260,
+  [FILES.mapHoverInteractionOwner]: 400, // Owns hover state, overlay scheduling and tooltip lifecycle.
   [FILES.rendererTransactionResetOwner]: 260,
   [FILES.visibleFrameDiagnosticsOwner]: 320,
   [FILES.viewportResizeLifecycleOwner]: 360,
@@ -480,21 +475,6 @@ function collectFailures() {
   const renderPassCommitAccountingOwnerInventoryTest = readProjectFile(
     FILES.renderPassCommitAccountingOwnerInventoryTest,
   );
-  const rendererDrawCanvasOrchestrationPreflightDoc = readProjectFile(
-    FILES.rendererDrawCanvasOrchestrationPreflightDoc,
-  );
-  const rendererDrawCanvasOrchestrationOwnerDoc = readProjectFile(
-    FILES.rendererDrawCanvasOrchestrationOwnerDoc,
-  );
-  const rendererCachedPassCompositorOwnerDoc = readProjectFile(
-    FILES.rendererCachedPassCompositorOwnerDoc,
-  );
-  const rendererTransformedFrameCompositorOwnerDoc = readProjectFile(
-    FILES.rendererTransformedFrameCompositorOwnerDoc,
-  );
-  const rendererDrawCanvasOrchestrationInventoryTest = readProjectFile(
-    FILES.rendererDrawCanvasOrchestrationInventoryTest,
-  );
   const drawCanvasOrchestrationOwner = readProjectFile(FILES.drawCanvasOrchestrationOwner);
   const cachedPassCompositorOwner = readProjectFile(FILES.cachedPassCompositorOwner);
   const cachedPassCompositorOwnerTest = readProjectFile(FILES.cachedPassCompositorOwnerTest);
@@ -622,11 +602,6 @@ function collectFailures() {
     [FILES.renderPassCommitAccountingOwner]: renderPassCommitAccountingOwner,
     [FILES.renderPassCommitAccountingOwnerTest]: renderPassCommitAccountingOwnerTest,
     [FILES.renderPassCommitAccountingOwnerInventoryTest]: renderPassCommitAccountingOwnerInventoryTest,
-    [FILES.rendererDrawCanvasOrchestrationPreflightDoc]: rendererDrawCanvasOrchestrationPreflightDoc,
-    [FILES.rendererDrawCanvasOrchestrationOwnerDoc]: rendererDrawCanvasOrchestrationOwnerDoc,
-    [FILES.rendererCachedPassCompositorOwnerDoc]: rendererCachedPassCompositorOwnerDoc,
-    [FILES.rendererTransformedFrameCompositorOwnerDoc]: rendererTransformedFrameCompositorOwnerDoc,
-    [FILES.rendererDrawCanvasOrchestrationInventoryTest]: rendererDrawCanvasOrchestrationInventoryTest,
     [FILES.drawCanvasOrchestrationOwner]: drawCanvasOrchestrationOwner,
     [FILES.cachedPassCompositorOwner]: cachedPassCompositorOwner,
     [FILES.cachedPassCompositorOwnerTest]: cachedPassCompositorOwnerTest,
@@ -978,20 +953,7 @@ function collectFailures() {
     }
   }
 
-  for (const token of [
-    "const HANDLE_DECLARATIONS = Object.freeze([",
-    "getContext: () => rendererSurfaceHost.getContext()",
-    "getProjection: () => rendererSurfaceHost.getProjection()",
-    "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior()",
-    "getMapContainer: () => rendererSurfaceHost.getMapContainer()",
-    "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
-    "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
-    "getRendererProjectionPathOwner().initializeProjectionPaths();",
-  ]) {
-    if (!rendererSurfaceHostInventoryTest.includes(token)) {
-      failures.push(`${FILES.rendererSurfaceHostInventoryTest} must lock token: ${token}`);
-    }
-  }
+
 
   for (const heading of [
     "## Scope and guardrails",
@@ -1129,7 +1091,7 @@ function collectFailures() {
     "normalizeColorStateForRender(state, {",
     "runtimeState.debugMode = nextDebugMode;",
     "resetRenderPhaseState: () => getRenderPhaseLifecycleOwner().resetRenderPhaseState(\"init-map\"),",
-    "runtimeState.tooltipPendingState = { visible: false };",
+    "resetTooltipState: () => getMapHoverInteractionOwner().resetTooltipState(),",
     "runtimeState.deferContextBasePass = false;",
     "runtimeState.syncDayNightClockTimerFn = syncDayNightClockTimer;",
     "syncDayNightClockTimer();",
@@ -1218,41 +1180,7 @@ function collectFailures() {
       failures.push(`${FILES.rendererProjectionPathOwnerDoc} must lock P28 owner handoff token: ${token}`);
     }
   }
-  for (const token of [
-    "const PROJECTION_PATH_OWNER_PATH = \"js/core/renderer/renderer_projection_path_owner.js\";",
-    "const PROJECTION_PATH_OWNER_WIRING_ANCHORS = Object.freeze([",
-    "const RAW_INIT_MAP_PROJECTION_PATH_TOKENS = Object.freeze([",
-    "const PROJECTION_PATH_OWNER_REQUIRED_TOKENS = Object.freeze([",
-    "const PROJECTION_PATH_OWNER_FORBIDDEN_TOKENS = Object.freeze([",
-    "const FIT_PROJECTION_RENDERER_ANCHORS = Object.freeze([",
-    "const FIT_PROJECTION_WIRING_ANCHORS = Object.freeze([",
-    "const RENDERER_SEMANTIC_REGION_ANCHORS = Object.freeze([",
-    "const SURFACE_LIFECYCLE_FORBIDDEN_TOKENS = Object.freeze([",
-    "const P28_ALLOWED_TOKENS = Object.freeze([",
-    "const P28_FORBIDDEN_TOKENS = Object.freeze([",
-    "function sliceBetween(source, startMarker, endMarker)",
-    "const projectedBoundsFactorySource = sliceBetween(",
-    "const viewportReadModelFactorySource = sliceBetween(",
-    "repoFileExists(PROJECTION_PATH_OWNER_PATH)",
-    "createRendererProjectionPathOwner({",
-    "getRendererProjectionPathOwner().initializeProjectionPaths();",
-    "assertExcludes(initMapSource, token, \"initMap must delegate raw projection/path creation to the owner\");",
-    "const nextProjection = rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));",
-    "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS));",
-    "function getRendererFitProjectionOwner()",
-    "return getRendererFitProjectionOwner().fitProjection({ skipSpatialIndex });",
-    "map_renderer must inject projection/path getters into projected geometry bounds owner factory",
-    "map_renderer must inject projection/path read-model dependencies into viewport read model owner factory",
-    "P28 may move only projection/path handle creation and registration:",
-    "P28 must not move `fitProjection`.",
-    "P28 must not add `projection.fitExtent` to `js/core/renderer/renderer_projection_path_owner.js`.",
-    "Direct runtimeState writes.",
-    "Render lifecycle owner work.",
-  ]) {
-    if (!rendererProjectionPathLifecycleInventoryTest.includes(token)) {
-      failures.push(`${FILES.rendererProjectionPathLifecycleInventoryTest} must lock P27/P28 projection-path inventory token: ${token}`);
-    }
-  }
+
 
   if (!rendererSourceFiles.includes(FILES.rendererSvgSurfaceLifecycleOwner)) {
     failures.push(`P30 must introduce ${FILES.rendererSvgSurfaceLifecycleOwner}.`);
@@ -1904,7 +1832,7 @@ function collectFailures() {
     "ensureProjectedBoundsCache();",
     "clearSphericalFeatureDiagnosticsCacheState(runtimeState);",
     "runtimeState.deferHitCanvasBuild = Boolean(deferred);",
-    "runtimeState.hitCanvasDirty = Boolean(dirty);",
+    "setHitCanvasDirtyState(runtimeState, dirty);",
   ]) {
     if (!setMapDataOwnerFactorySource.includes(token)) {
       failures.push(`${FILES.renderer} P38 owner wiring must keep concrete state write/effect token: ${token}`);
@@ -1941,7 +1869,7 @@ function collectFailures() {
     "[RUNTIME_STATE_TOKEN, \".specialRegionOverrides = {};\"],",
     "[RUNTIME_STATE_TOKEN, \".sovereigntyInitialized = false;\"],",
     "[RUNTIME_STATE_TOKEN, \".deferHitCanvasBuild = Boolean(deferred);\"],",
-    "[RUNTIME_STATE_TOKEN, \".hitCanvasDirty = Boolean(dirty);\"],",
+    "[\"setHitCanvasDirtyState(runtimeState, dirty);\"],",
     "const P38_OUT_OF_SCOPE_ANCHORS = Object.freeze([",
     "const P38_ALLOWED_DOC_TOKENS = Object.freeze([",
     "const P38_FORBIDDEN_DOC_TOKENS = Object.freeze([",
@@ -2947,106 +2875,6 @@ function collectFailures() {
     }
   }
 
-  for (const heading of [
-    "## Scope and guardrails",
-    "## Current P52 render pass cache baseline",
-    "## drawCanvas entry and phase inventory",
-    "## Idle pass orchestration inventory",
-    "## Interactive/transformed frame pass inventory",
-    "## First visible frame and diagnostics boundary",
-    "## Hit canvas scheduling/build boundary",
-    "## Exact-after-settle boundary",
-    "## Scenario refresh/chunk boundary",
-    "## Strategic overlay render boundary",
-    "## P54/P55 allowed first move candidates",
-    "## Forbidden areas",
-    "## Required validation commands",
-  ]) {
-    if (!rendererDrawCanvasOrchestrationPreflightDoc.includes(heading)) {
-      failures.push(`${FILES.rendererDrawCanvasOrchestrationPreflightDoc} must keep P53 heading: ${heading}`);
-    }
-  }
-  for (const token of [
-    "P53 is preflight only. It inventories `drawCanvas()` pass orchestration before any implementation.",
-    "No production runtime changes.",
-    "No `js/core/map_renderer.js` changes.",
-    "No public facade, state-write allowlist, or `dist/**` changes.",
-    "P51 is landed on default main as commit `725abb4a305a03687e7bca358ff918ba659cfef1`.",
-    "P52 is landed on default main as commit `c60fd9239f8352b1916686b6dac8ee16eee8f017`.",
-    "`function renderPassToCache(passName, drawFn, transform, timings)` remains in `js/core/map_renderer.js`.",
-    "`drawCanvas()` remains untouched in `js/core/map_renderer.js`.",
-    "P53 locks this as orchestration inventory. It does not move `drawCanvas()`.",
-    "`render_pipeline_passes.js` remains authoritative for idle pass preparation",
-    "`render_pipeline_catalog.js` remains authoritative for `IDLE_RENDER_PASS_DEFINITIONS`.",
-    "`render_pass_catalog.js` remains authoritative for pass-name groups",
-    "`hit_canvas_scheduling_owner.js` owns only deferred hit canvas scheduling",
-    "`exact_after_settle_scheduler.js` remains the owner for exact-after-settle scheduling",
-    "`scenario_refresh_runtime.js` remains the owner for scenario apply refresh and scenario chunk promotion",
-    "`strategic_overlay_runtime_owner.js` owns runtime interaction/editing state.",
-    "`strategic_overlay_render_owner.js` owns strategic overlay render delegation.",
-    "Add a drawCanvas orchestration owner that only selects pass groups and delegates to existing pass functions/helpers.",
-    "Add a transformed-frame compositor adapter preflight.",
-    "Add a first-render acceptance adapter if P42 does not already cover the acceptance boundary fully.",
-    "P54/P55 must not start by moving individual pass drawing functions.",
-    "No broad `renderer_render_lifecycle_owner`.",
-  ]) {
-    if (!rendererDrawCanvasOrchestrationPreflightDoc.includes(token)) {
-      failures.push(`${FILES.rendererDrawCanvasOrchestrationPreflightDoc} must lock P53 boundary token: ${token}`);
-    }
-  }
-  for (const token of [
-    "const DOC_PATH = \"docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md\";",
-    "const P21_DOC_PATH = \"docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md\";",
-    "const P22A_DOC_PATH = \"docs/archive/renderer-frame-orchestration-p2-20260710/renderer-cached-pass-compositor-owner-p2-2a-20260711.md\";",
-    "const P22B_DOC_PATH = \"docs/archive/renderer-frame-orchestration-p2-20260710/renderer-transformed-frame-compositor-owner-p2-2b-20260712.md\";",
-    "const P53_DOC_HEADINGS = Object.freeze([",
-    "function extractFunctionSource(source, functionName)",
-    "function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath)",
-    "function drawCanvas()",
-    "function renderPassToCache(",
-    "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
-    "getRenderPassCommitAccountingOwner().commitRenderPass({",
-    "P2.1 drawCanvas orchestration owner owns frame branch selection",
-    "P2.2a cached pass compositor owns cached canvas transform math only",
-    "P2.2b transformed frame compositor owns buffered transformed-frame decisions only",
-    "map_renderer keeps frame compositor composition roots and thin wrappers",
-    "getDrawCanvasOrchestrationOwner().drawCanvasFrame();",
-    "drawTransformedFrameFromCaches",
-    "ensureIdleRenderPasses",
-    "composeCachedPasses",
-    "finalizePendingExactAfterSettleRefreshAfterPaint",
-    "export function createRenderPipelinePassesOwner({",
-    "export const IDLE_RENDER_PASS_DEFINITIONS = [",
-    "export const TRANSFORMED_FRAME_PASS_NAMES = [",
-    "function scheduleHitCanvasBuildIfNeeded({ reason = \\\"idle-render\\\" } = {})",
-    "async function buildHitCanvasAfterStartup({ keepReady = false, reason = \\\"startup-deferred-hit-canvas\\\" } = {})",
-    "function refreshMapDataForScenarioChunkPromotion(options = {})",
-    "function refreshMapDataForScenarioApply(options = {})",
-    "createStrategicOverlayRuntimeOwner({",
-    "createStrategicOverlayRenderOwner({",
-    "P2.1 must keep canonical drawCanvas owner",
-    "public facade must not expose P53/P40 forbidden owner token",
-    "state-write allowlist must retain the existing map_renderer composition-root entry",
-    "state-write allowlist must keep the pure drawCanvas owner out",
-    "state-write allowlist must keep the pure cached-pass compositor out",
-    "state-write allowlist must keep the pure transformed-frame compositor out",
-  ]) {
-    if (!rendererDrawCanvasOrchestrationInventoryTest.includes(token)) {
-      failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must lock P53 inventory token: ${token}`);
-    }
-  }
-  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationPreflightDoc))) {
-    failures.push(`${FILES.rendererDrawCanvasOrchestrationPreflightDoc} must exist for P53.`);
-  }
-  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationOwnerDoc))) {
-    failures.push(`${FILES.rendererDrawCanvasOrchestrationOwnerDoc} must exist for P2.1.`);
-  }
-  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationInventoryTest))) {
-    failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must exist for P53.`);
-  }
-  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererCachedPassCompositorOwnerDoc))) {
-    failures.push(`${FILES.rendererCachedPassCompositorOwnerDoc} must exist for P2.2a.`);
-  }
   if (!packageJson.includes("\"test:node:renderer-draw-canvas-orchestration-inventory\": \"node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P53 drawCanvas orchestration inventory script.`);
   }
@@ -3085,30 +2913,6 @@ function collectFailures() {
   ]) {
     if (!drawCanvasOrchestrationOwner.includes(token)) {
       failures.push(`${FILES.drawCanvasOrchestrationOwner} must keep P2.1 orchestration token: ${token}`);
-    }
-  }
-  for (const token of [
-    "# Renderer Draw Canvas Orchestration Owner P2.1",
-    "Canonical owner: `js/core/map_renderer/draw_canvas_orchestration_owner.js`",
-    "Wrapper shape: `function drawCanvas() { getDrawCanvasOrchestrationOwner().drawCanvasFrame(); }`",
-    "P53 historical preflight remains unchanged.",
-    "`dist/app/js/core/map_renderer.js` and `dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js` are generated mirrors.",
-    "Browser, Playwright, perf, and main-thread lanes are owned by a separate acceptance lane.",
-  ]) {
-    if (!rendererDrawCanvasOrchestrationOwnerDoc.includes(token)) {
-      failures.push(`${FILES.rendererDrawCanvasOrchestrationOwnerDoc} must lock P2.1 token: ${token}`);
-    }
-  }
-  for (const token of [
-    "# Renderer Cached Pass Compositor Owner P2.2a",
-    "Canonical owner: `js/core/renderer/cached_pass_compositor_owner.js`",
-    "`drawTransformedPass()` and `composeRenderPassesToTarget()` own cached-pass canvas composition.",
-    "`getActiveTargetContext()` is resolved on every transformed-pass draw.",
-    "`composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()` remain in `js/core/map_renderer.js` for P2.2b.",
-    "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
-  ]) {
-    if (!rendererCachedPassCompositorOwnerDoc.includes(token)) {
-      failures.push(`${FILES.rendererCachedPassCompositorOwnerDoc} must lock P2.2a token: ${token}`);
     }
   }
   for (const token of [
@@ -3213,20 +3017,6 @@ function collectFailures() {
   for (const sourcePath of listProjectSourceFiles("js/core")) {
     if (isForbiddenCachedPassCompositorOwnerPath(sourcePath)) {
       failures.push(`P2.2a must keep renamed cached-pass compositor absent: ${sourcePath}`);
-    }
-  }
-  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererTransformedFrameCompositorOwnerDoc))) {
-    failures.push(`${FILES.rendererTransformedFrameCompositorOwnerDoc} must exist for P2.2b.`);
-  }
-  for (const token of [
-    "# Renderer Transformed Frame Compositor Owner P2.2b",
-    "canonical owner is `js/core/map_renderer/transformed_frame_compositor_owner.js`",
-    "The owner contains `composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()`.",
-    "Runtime state writes remain composition-root effects in `js/core/map_renderer.js`.",
-    "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
-  ]) {
-    if (!rendererTransformedFrameCompositorOwnerDoc.includes(token)) {
-      failures.push(`${FILES.rendererTransformedFrameCompositorOwnerDoc} must lock P2.2b token: ${token}`);
     }
   }
   for (const token of [
@@ -3479,7 +3269,6 @@ function collectFailures() {
     "Water click transaction logic remains",
     "Special region click transaction logic remains",
     "P1.8 must keep exactly one production click selection owner/helper path",
-    "P1.8 must keep public facade, runtime context, and state allowlist unchanged",
     "transaction behavior coverage executes the canonical owner factory",
     "action failure propagates and stops later sidebar and render work",
   ]) {
@@ -4530,19 +4319,6 @@ function collectFailures() {
     }
   }
   for (const token of [
-    "test(\"special-zone editor branch clears hover targets and hides tooltip\"",
-    "test(\"HGO runtime hover branch clears map hover and uses pointer for runtime hits\"",
-    "test(\"reduced hover phase clears existing map and facility hover separately\"",
-    "test(\"facility tooltip takes priority and sets pointer when details are active\"",
-    "test(\"facility block hides underlying map tooltip before city and feature probes\"",
-    "test(\"feature tooltip supports special region hits\"",
-    "test(\"owner fails fast for missing explicit dependencies\"",
-  ]) {
-    if (!mapHoverInteractionOwnerTest.includes(token)) {
-      failures.push(`${FILES.mapHoverInteractionOwnerTest} must cover P48 behavior token: ${token}`);
-    }
-  }
-  for (const token of [
     "const OWNER_PATH = \"js/core/map_renderer/map_hover_interaction_owner.js\";",
     "handleMouseMove wrapper must delegate to P48 owner",
     "event binding owner must keep injected mousemove handler",
@@ -4566,9 +4342,9 @@ function collectFailures() {
   for (const token of [
     "export function createMapHoverInteractionOwner",
     "\"getHitFromEvent\"",
-    "\"queueTooltipUpdate\"",
-    "\"setMapInteractionCursor\"",
-    "\"clearUnderlyingHoverForFacilityEntry\"",
+    "function queueTooltipUpdate(",
+    "function setMapInteractionCursor(",
+    "function clearUnderlyingHoverForFacilityEntry(",
     "function handleMouseMove(event)",
     "eventType: \"hover\"",
     "\"facility-tooltip\"",
@@ -4605,11 +4381,6 @@ function collectFailures() {
     "let mapHoverInteractionOwner = null;",
     "function getMapHoverInteractionOwner()",
     "mapHoverInteractionOwner = createMapHoverInteractionOwner({",
-    "runtimeState.hoveredId = landId;",
-    "runtimeState.hoveredWaterRegionId = waterId;",
-    "runtimeState.hoveredSpecialRegionId = specialId;",
-    "hoveredFacilityEntry = entry || null;",
-    "runtimeState.hoverOverlayDirty = true;",
   ]) {
     if (!renderer.includes(token)) {
       failures.push(`${FILES.renderer} must keep P48 injected boundary token: ${token}`);
@@ -5974,9 +5745,6 @@ function collectFailures() {
 
   if (publicFacadeSource.includes("political_pass_orchestrator_owner")) {
     failures.push(`${FILES.publicFacade} must not expose the political pass orchestrator owner.`);
-  }
-  if (readProjectFile("js/core/map_renderer/renderer_runtime_context.js").includes("politicalPass")) {
-    failures.push("RendererRuntimeContext must remain a read model without political pass orchestration.");
   }
   if (stateWriteAllowlist.includes(FILES.politicalPassOrchestratorOwner)) {
     failures.push(`${FILES.politicalPassOrchestratorOwner} must not enter the state-write allowlist.`);

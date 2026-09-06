@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
-import { commandToProcess } from "../run_adaptive_tests.mjs";
+import { executeAdaptivePlan } from "../run_adaptive_tests.mjs";
 import { buildChangeDossier } from "./build_change_dossier.mjs";
 import { buildExecutionCommandList, commandKey } from "./command_lanes.mjs";
 import { renderSupervisorMarkdown } from "./render_supervisor_markdown.mjs";
@@ -165,92 +164,37 @@ export function buildSupervisorPlan({
   };
 }
 
-export function runCommand(commandRef, {
-  runner = spawnSync,
-  cwd = REPO_ROOT,
-  now = () => new Date(),
-  onStarted = () => {},
-} = {}) {
-  const startedAtDate = now();
-  const startedAt = startedAtDate.toISOString();
-  const startedMs = startedAtDate.getTime();
-  const runningResult = {
-    commandRef,
-    status: "running",
-    startedAt,
-    finishedAt: null,
-    durationMs: null,
-    exitCode: null,
-  };
-  onStarted(runningResult);
-  const command = commandToProcess(commandRef);
-  if (!command) {
-    const finishedAtDate = now();
-    return {
-      commandRef,
-      status: "failed",
-      startedAt,
-      finishedAt: finishedAtDate.toISOString(),
-      durationMs: Math.max(0, finishedAtDate.getTime() - startedMs),
-      exitCode: 1,
-      error: "Command could not be resolved.",
-    };
-  }
-  const result = runner(command.bin, command.args, {
-    cwd,
-    stdio: "inherit",
-    shell: false,
-    encoding: "utf8",
-  });
-  const finishedAtDate = now();
-  const exitCode = typeof result?.status === "number" ? result.status : 1;
-  return {
-    commandRef,
-    status: exitCode === 0 ? "passed" : "failed",
-    bin: command.bin,
-    args: command.args,
-    startedAt,
-    finishedAt: finishedAtDate.toISOString(),
-    durationMs: Math.max(0, finishedAtDate.getTime() - startedMs),
-    exitCode,
-  };
-}
-
 export function executeSupervisorPlan(plan, {
-  runner = spawnSync,
+  runner,
   cwd = REPO_ROOT,
   now = () => new Date(),
   onCheckpoint = () => {},
 } = {}) {
-  // route gap 是执行前合同缺口，保留空结果能让报告说明“未执行”而非误报全绿。
-  if ((plan.routeGaps || []).length > 0) {
-    return {
-      ...plan,
-      executionResults: [],
-    };
-  }
-
-  const executionResults = [];
-  for (const commandRef of plan.commandsToRun || []) {
-    const resultIndex = executionResults.length;
-    const result = runCommand(commandRef, {
-      runner,
-      cwd,
-      now,
-      onStarted(startedResult) {
-        executionResults.push(startedResult);
-        onCheckpoint({ ...plan, executionResults: structuredClone(executionResults) });
-      },
-    });
-    executionResults[resultIndex] = result;
-    onCheckpoint({ ...plan, executionResults: structuredClone(executionResults) });
-    if (result.exitCode !== 0 && !plan.executionPolicy?.continueOnFailure) {
-      break;
-    }
-  }
+  // Keep the supervisor's admitted command lanes and command-level checkpoints;
+  // the shared executor owns spawning, timing, failures and process evidence.
+  // This adapter has command lanes, not a catalog leaf plan. Do not advertise
+  // the executor's empty default leaf/lock fields as bound planning evidence.
+  const supervisorResults = (results) => results.map(({
+    groupId, leafIds, sourceCommandRefs, resourceLocks, actualFiles, ...entry
+  }) => ({
+    ...entry,
+    status: entry.status === "interrupted" ? "failed" : entry.status,
+  }));
+  const executionResults = executeAdaptivePlan({
+    routeGaps: plan.routeGaps || [],
+    executionCommands: (plan.commandsToRun || []).map((commandRef) => ({ commandRef })),
+  }, {
+    runner,
+    cwd,
+    now,
+    continueOnFailure: plan.executionPolicy?.continueOnFailure === true,
+    onCheckpoint(results) {
+      onCheckpoint({ ...plan, executionResults: structuredClone(supervisorResults(results)) });
+    },
+  });
   return {
     ...plan,
-    executionResults,
+    executionResults: supervisorResults(executionResults),
   };
 }
 

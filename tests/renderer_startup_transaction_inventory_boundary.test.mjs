@@ -339,7 +339,7 @@ test("map_renderer wires startup transaction owner effects at the composition ro
     "normalizeColorStateForRender(state, {",
     `${RUNTIME_STATE_TOKEN}.debugMode = nextDebugMode;`,
     "resetRenderPhaseState: () => getRenderPhaseLifecycleOwner().resetRenderPhaseState(\"init-map\"),",
-    `${RUNTIME_STATE_TOKEN}.tooltipPendingState = { visible: false };`,
+    "resetTooltipState: () => getMapHoverInteractionOwner().resetTooltipState(),",
     `${RUNTIME_STATE_TOKEN}.deferContextBasePass = false;`,
     `${RUNTIME_STATE_TOKEN}.syncDayNightClockTimerFn = syncDayNightClockTimer;`,
   ]) {

@@ -1,3 +1,9 @@
+import {
+  ensureAppearanceStyleConfigState,
+  patchAppearanceStyleGroupState,
+  setAppearanceStyleGroupState,
+} from "../../core/state/actions/appearance_actions.js";
+
 function normalizeBorderColor(value, fallbackColor) {
   const candidate = String(value || "").trim();
   if (/^#(?:[0-9a-f]{6})$/i.test(candidate)) return candidate;
@@ -9,7 +15,7 @@ function normalizeBorderColor(value, fallbackColor) {
 
 function ensureBorderStyleConfig(runtimeState, key, defaults, { clamp }) {
   if (!runtimeState.styleConfig || typeof runtimeState.styleConfig !== "object") {
-    runtimeState.styleConfig = {};
+    ensureAppearanceStyleConfigState(runtimeState);
   }
   // styleConfig 是项目保存和 renderer 读取的同一份真源；defaults 里的范围和
   // precision 只服务 UI clamp/display，可保存配置只保留真实绘制字段。
@@ -42,8 +48,7 @@ function ensureBorderStyleConfig(runtimeState, key, defaults, { clamp }) {
       ? "manual"
       : "auto";
   }
-  runtimeState.styleConfig[key] = next;
-  return next;
+  return setAppearanceStyleGroupState(runtimeState, key, next);
 }
 
 function setRangePercent(nodes, value) {
@@ -156,11 +161,14 @@ export function createAppearanceBorderOwner({
     renderCoastlineUi();
   };
 
-  const bindColorInput = (node, key, reason, afterChange = null) => {
+  const bindColorInput = (node, key, reason, extraPatch = null) => {
     if (!node || node.dataset.borderBound === "true") return;
     node.addEventListener("input", (event) => {
-      syncBorderConfig(key).color = normalizeBorderColor(event.target.value, borderConfigs[key].color);
-      if (typeof afterChange === "function") afterChange();
+      syncBorderConfig(key);
+      patchAppearanceStyleGroupState(runtimeState, key, {
+        color: normalizeBorderColor(event.target.value, borderConfigs[key].color),
+        ...(typeof extraPatch === "function" ? extraPatch() : {}),
+      });
       renderDirty(reason);
     });
     node.dataset.borderBound = "true";
@@ -171,7 +179,8 @@ export function createAppearanceBorderOwner({
     groupNodes.opacityInput.addEventListener("input", (event) => {
       const value = Number(event.target.value);
       const nextOpacity = clamp(Number.isFinite(value) ? value / 100 : borderConfigs[key].opacity, 0, 1);
-      syncBorderConfig(key).opacity = nextOpacity;
+      syncBorderConfig(key);
+      patchAppearanceStyleGroupState(runtimeState, key, { opacity: nextOpacity });
       setRangePercent(groupNodes, nextOpacity);
       renderDirty(reason);
     });
@@ -188,7 +197,8 @@ export function createAppearanceBorderOwner({
         defaults.minWidth,
         defaults.maxWidth
       );
-      syncBorderConfig(key).width = nextWidth;
+      syncBorderConfig(key);
+      patchAppearanceStyleGroupState(runtimeState, key, { width: nextWidth });
       setRangeNumber(groupNodes, nextWidth, defaults.widthPrecision);
       renderDirty(reason);
     });
@@ -198,8 +208,10 @@ export function createAppearanceBorderOwner({
   const bindEvents = () => {
     if (nodes.internal.autoColorInput && nodes.internal.autoColorInput.dataset.borderBound !== "true") {
       nodes.internal.autoColorInput.addEventListener("change", (event) => {
-        const config = syncBorderConfig("internalBorders");
-        config.colorMode = event.target.checked ? "auto" : "manual";
+        syncBorderConfig("internalBorders");
+        patchAppearanceStyleGroupState(runtimeState, "internalBorders", {
+          colorMode: event.target.checked ? "auto" : "manual",
+        });
         if (nodes.internal.colorInput) nodes.internal.colorInput.disabled = event.target.checked;
         renderDirty("internal-border-color-mode");
       });
@@ -208,9 +220,9 @@ export function createAppearanceBorderOwner({
     // 内部边界颜色有 auto/manual 两层语义：用户手动改色时立刻转为 manual，
     // 让 renderer 后续按保存值绘制，并停止国家色动态推导。
     bindColorInput(nodes.internal.colorInput, "internalBorders", "internal-border-color", () => {
-      syncBorderConfig("internalBorders").colorMode = "manual";
       if (nodes.internal.autoColorInput) nodes.internal.autoColorInput.checked = false;
       if (nodes.internal.colorInput) nodes.internal.colorInput.disabled = false;
+      return { colorMode: "manual" };
     });
     bindOpacityInput(nodes.internal, "internalBorders", "internal-border-opacity");
     bindWidthInput(nodes.internal, "internalBorders", "internal-border-width");

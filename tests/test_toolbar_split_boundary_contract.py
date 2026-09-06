@@ -229,6 +229,11 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
             'throw new Error("Export workbench controller is not initialized.");',
             toolbar_content,
         )
+        self.assertIn("setExportBakeArtifacts: (bakeArtifacts) => setExportBakeState(state, { bakeArtifacts }),", owner_content)
+        self.assertIn("exportWorkbenchController.setExportBakeArtifacts(nextArtifacts);", toolbar_content)
+        self.assertNotIn("exportUi.bakeArtifacts = nextArtifacts;", toolbar_content)
+        self.assertIn("clearBakeCache: clearExportBakeCache,", toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "clearExportBakeCacheFn", clearExportBakeCache);', toolbar_content)
         self.assertNotIn("ensureExportWorkbenchUiStateFromController", toolbar_content)
         controller_assignment = toolbar_content.index(
             "ensureExportWorkbenchUiState = exportWorkbenchController.ensureExportWorkbenchUiState;"
@@ -429,7 +434,10 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("updateToolUI,", toolbar_content)
         self.assertIn("showToast,", toolbar_content)
         self.assertIn('overlayToggleNode.dataset.specialZoneOverlayToggle = "true";', owner_content)
-        self.assertIn("runtimeState.showSpecialZones = !!overlayToggleNode.checked;", owner_content)
+        self.assertIn("setSpecialZonesVisibilityState,", owner_content)
+        self.assertIn('from "../../core/state/actions/special_zone_actions.js";', owner_content)
+        self.assertIn("setSpecialZonesVisibilityState(runtimeState, overlayToggleNode.checked);", owner_content)
+        self.assertNotIn("runtimeState.showSpecialZones = !!overlayToggleNode.checked;", owner_content)
         self.assertIn("await loadScenarioSpecialZoneLayers();", owner_content)
         self.assertIn('markDirty?.("toggle-special-zones");', owner_content)
         self.assertIn('let failedScenarioLayerAssetId = "";', owner_content)
@@ -669,9 +677,16 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("normalizeTransportWorkbenchUiState,", state_owner_content)
         self.assertIn("listTransportWorkbenchRuntimeFamilyIds", config_owner_content)
         self.assertIn("runtimeFamilyIds = TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS,", preview_lifecycle_owner_content)
-        self.assertIn("Object.assign(previousUiState, normalizedUiState);", state_owner_content)
+        self.assertIn("ensureTransportWorkbenchUiState,", state_owner_content)
+        self.assertIn("commitTransportWorkbenchUiState,", state_owner_content)
+        self.assertIn("commitTransportWorkbenchPointDeltasState,", state_owner_content)
+        self.assertIn('from "../../core/state/actions/transport_actions.js";', state_owner_content)
+        self.assertIn("const previousUiState = ensureTransportWorkbenchUiState(runtimeState);", state_owner_content)
+        self.assertIn("return commitTransportWorkbenchUiState(runtimeState, uiState);", state_owner_content)
+        self.assertNotIn("Object.assign(previousUiState, normalizedUiState);", state_owner_content)
         self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", owner_content)
         self.assertNotIn("runtimeState.transportWorkbenchUi = normalizeTransportWorkbenchUiState(runtimeState.transportWorkbenchUi);", state_owner_content)
+        self.assertNotIn("runtimeState.transportWorkbenchUi =", state_owner_content)
         for helper_name in [
             "setActivePackId",
             "setActiveFamily",
@@ -1033,8 +1048,18 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
             self.assertIn(field, transport_owner_content)
         for field in ("portLabelMode", "portScopeLinked", "portTier", "portImportanceThreshold"):
             self.assertIn(field, transport_owner_content)
-        self.assertIn("if (runtimeState.showAirports && runtimeState.showTransport === false) runtimeState.showTransport = true;", transport_owner_content)
-        self.assertIn("if (runtimeState.showPorts && runtimeState.showTransport === false) runtimeState.showTransport = true;", transport_owner_content)
+        self.assertIn("setTransportFamilyVisibilityState,", transport_owner_content)
+        self.assertIn("setTransportMasterVisibilityState,", transport_owner_content)
+        self.assertIn('from "../../core/state/actions/transport_actions.js";', transport_owner_content)
+        self.assertIn("setTransportMasterVisibilityState(runtimeState, normalized);", transport_owner_content)
+        for family_id in ("airport", "port", "rail", "road"):
+            self.assertIn(
+                f'setTransportFamilyVisibilityState(runtimeState, "{family_id}", event.target.checked);',
+                transport_owner_content,
+            )
+        self.assertNotIn("runtimeState.showAirports =", transport_owner_content)
+        self.assertNotIn("runtimeState.showPorts =", transport_owner_content)
+        self.assertNotIn("runtimeState.showTransport =", transport_owner_content)
         self.assertIn("[toggleAirports, togglePorts, toggleRail, toggleRoad].forEach((control) => {", transport_owner_content)
         self.assertIn("if (control) control.disabled = false;", transport_owner_content)
         self.assertIn("let transportAppearanceUiFrameId = 0;", transport_owner_content)
@@ -1501,6 +1526,19 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("restoreSupportSurfaceFromUrl();", content)
         self.assertIn("bindScenarioGuideEvents({", content)
         self.assertIn("toggleScenarioGuidePopover(trigger);", content)
+
+    def test_quick_fill_policy_and_events_belong_to_support_surface_controller(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        owner_content = WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS.read_text(encoding="utf-8")
+        for name in ["getActiveQuickFillPolicy", "getQuickFillParentLabel", "getQuickFillHint", "refreshQuickFillControls", "bindQuickFillControls"]:
+            self.assertIn(f"const {name} =", owner_content)
+            self.assertNotIn(f"const {name} =", toolbar_content)
+        self.assertIn("bindQuickFillControls();", toolbar_content)
+        self.assertIn("refreshQuickFillControls();", toolbar_content)
+        self.assertIn("state.batchFillScope = scope;", owner_content)
+        self.assertNotIn("runtimeState.batchFillScope =", toolbar_content)
+        self.assertIn("const refreshPaintControlsLayout = () => {", toolbar_content)
+        self.assertNotIn("refreshPaintControlsLayout", owner_content)
 
 
 if __name__ == "__main__":

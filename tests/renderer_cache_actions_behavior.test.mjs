@@ -7,6 +7,9 @@ import {
   commitProjectedBoundsCacheState,
   commitRenderPassCacheState,
   getSphericalFeatureDiagnosticsCacheEntryState,
+  replaceCachedDetailAdmBordersState,
+  setDynamicBordersDirtyState,
+  setPendingDynamicBorderTimerState,
   setSphericalFeatureDiagnosticsCacheEntryState,
 } from "../js/core/state/actions/renderer_cache_actions.js";
 import {
@@ -25,11 +28,34 @@ test("renderer cache actions stay import-free with target-first exports", async 
     "commitProjectedBoundsCacheState",
     "clearSphericalFeatureDiagnosticsCacheState",
     "getSphericalFeatureDiagnosticsCacheEntryState",
+    "replaceCachedDetailAdmBordersState",
+    "setDynamicBordersDirtyState",
+    "setPendingDynamicBorderTimerState",
     "setSphericalFeatureDiagnosticsCacheEntryState",
   ]) {
     assert.match(source, new RegExp(`export function ${name}\\(\\s*target[,)]`));
   }
   assert.doesNotMatch(source, /ensureRenderPassCacheState/);
+});
+
+test("border lifecycle actions preserve prepared values and cache identity", () => {
+  const target = {};
+  const meshes = [{ coordinates: [[0, 0], [1, 1]] }];
+
+  assert.equal(setDynamicBordersDirtyState(target, true, "owner-edit"), true);
+  assert.equal(target.dynamicBordersDirty, true);
+  assert.equal(target.dynamicBordersDirtyReason, "owner-edit");
+  assert.equal(setDynamicBordersDirtyState(target, false, ""), false);
+  assert.equal(target.dynamicBordersDirty, false);
+  assert.equal(target.dynamicBordersDirtyReason, "");
+
+  for (const handle of [0, null, undefined]) {
+    assert.equal(setPendingDynamicBorderTimerState(target, handle), handle);
+    assert.equal(target.pendingDynamicBorderTimerId, handle);
+  }
+
+  assert.equal(replaceCachedDetailAdmBordersState(target, meshes), meshes);
+  assert.equal(target.cachedDetailAdmBorders, meshes);
 });
 
 test("cache actions reject invalid targets", () => {
@@ -41,6 +67,9 @@ test("cache actions reject invalid targets", () => {
     }), /target must be an object/);
     assert.throws(() => clearSphericalFeatureDiagnosticsCacheState(target), /target must be an object/);
     assert.throws(() => getSphericalFeatureDiagnosticsCacheEntryState(target, "A"), /target must be an object/);
+    assert.throws(() => replaceCachedDetailAdmBordersState(target, []), /target must be an object/);
+    assert.throws(() => setDynamicBordersDirtyState(target, false, ""), /target must be an object/);
+    assert.throws(() => setPendingDynamicBorderTimerState(target, null), /target must be an object/);
     assert.throws(() => setSphericalFeatureDiagnosticsCacheEntryState(target, "A", {}), /target must be an object/);
   }
 });

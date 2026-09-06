@@ -2,13 +2,10 @@
 
 ## Current truth
 
-- Execution worktree: `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719`
-- Branch: `codex/state-action-ownership-p4-20260719`
-- Initial base: `origin/main@68a62e540104025e1b3e976f77589f8b3eff2f36`; P4.2a integration point: exact-A `662d3dffa7982b1938617e0ea41ac9c012a05946`; P4.2b functional checkpoint: `2e4808127030823169875059d7d649dc1a782788`; P4.2c functional checkpoint: `784885f68ad7ba1c71fc31aaf00ba29403498265`, tree `d6dbbdf245809079619a64c7223e0b845dc006d2`.
-- Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
-- Parent status recaptured on 2026-07-30: local `main@68a62e54` remains pinned with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; remote integration and every P4 edit stay in the isolated worktree.
-- Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.2c is implementation- and acceptance-complete. Scenario health, hydration-gate and presentation-hint writes now use canonical state actions; the exact clean checkpoint, Pages/dist parity, full non-browser core lane and three focused browser suites are green. P4.3 begins after this closeout is published and integrated and fresh renderer browser, `verify:core:main-thread` and standard perf admission are green.
+- 当前阶段统一读取 [task.md 的 Current status](task.md#current-status)，本文件保留决策、历史证据和交接边界，不再维护第二份阶段结论。
+- 2026-09-05 本地核对位置：`C:\Users\raede\Desktop\dev\mapcreator`，分支 `codex/runtime-architecture-reset-r1-integration-20260831`，已提交端点 `348a952e`；工作区还包含后续治理 WIP。当前工作所有权由 [development-loop 记录](../development-loop-simplification-20260905/context.md) 维护。
+- `12d967fc` 与 policy 的 `progress.latestPhase=P4.4`、P4.4 checkpoint 共同证明本地迁移已实现；没有把它提升为当前候选正式 admission。历史 A 身份和既有 Architect / Critic 记录保留，不替代 fresh B 验收。
+- 本次文档收口未启动项目进程、读取远端状态或改动其他 worktree；下方的进程释放、远端相等和旧工作路径都是当时的快照。
 
 ## Decisions and deviations
 
@@ -68,6 +65,8 @@
 
 ## Live process ownership
 
+以下为各历史验证轮次的进程交接记录，不是当前进程清单；当前任务的 live owner 以主任务协调记录为准。
+
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
 | Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/.last-run.json` plus root command evidence | P4.2c startup recovery 3/3, TNO ready-state 5/5 and Scenario resilience 3/3 pass; lane released and no task-owned live process remains |
@@ -79,14 +78,17 @@
 | P4.2b non-browser core | `/root` main integration owner | `.runtime/reports/generated/verify-core.json` | complete; 84/84 commands pass; dist lane released |
 | P4.2c exact phase verification | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2c/phase-verification.json` | complete at exact SHA `784885f6`; 5/5 commands pass; lane released |
 | P4.2c non-browser core | `/root` main integration owner | `.runtime/reports/generated/verify-core.json` | complete; 86/86 commands pass; dist lane released |
+| P4.3 exact phase and route | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.3/` | complete at `5fff7388`; phase 5/5、unmatched 0、route gaps 0；lane released |
+| P4.3 core / Pages / browser | `/root` main integration owner | `.runtime/reports/generated/verify-core.json` and `.runtime/reports/generated/browser/ai-browser-mcp-smoketest.md` | complete; core 93/93、Pages/dist and browser quick PASS；lanes released |
+| P4.3 standard perf | `/root` main integration owner | `.runtime/output/perf/baseline_2026-07-30/gate/` | complete; exit 0、environment admitted、generation fence stable、enforced failures 0；lane released |
 
 ## Handoff
 
-P4 uses one active task directory. Phase facts, validation exits, artifact paths, exact SHAs, route gaps, regression coverage and remaining risk are appended here and in `task.md`; parallel summary documents are not created.
+P4 uses one active task directory. `task.md` owns current phase and acceptance status; this file keeps dated decisions and handoff context, and `plan.md` keeps scope and acceptance criteria. Do not duplicate current status across all three files.
 
 ## Next step
 
-Publish and integrate the P4.2c acceptance record, retain both the active continuation worktree and the independent audit/recovery worktree, obtain fresh renderer browser, `verify:core:main-thread` and standard perf admission, then begin P4.3 renderer action ownership.
+先按当前主任务完成已授权的局部治理并保留已有 WIP；正式 P4.4 admission 开始时，由主任务确定候选、血缘和缺失证据，完成相应 gate 后才写 B marker。不再从本历史交接段自动重新创建已实现的 B1/B2/B3 迁移任务。
 
 ## 2026-08-05 audit handoff
 

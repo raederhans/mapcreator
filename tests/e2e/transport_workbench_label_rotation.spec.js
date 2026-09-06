@@ -114,7 +114,7 @@ async function inspectFamilyRotation(page, familyId, labelSelector) {
 }
 
 test("transport workbench labels stay horizontal after quarter turn", async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
 
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);

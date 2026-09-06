@@ -1,3 +1,5 @@
+import { patchStrategicOverlayEditorState } from "../../../core/state/actions/strategic_overlay_actions.js";
+
 function isFocusableElementVisible(element) {
   if (!(element instanceof HTMLElement)) {
     return false;
@@ -59,7 +61,9 @@ export function setUnitCounterEditorModalState({
   } = elements;
   ensureStrategicOverlayUiState();
   const isOpen = !!nextOpen;
-  state.strategicOverlayUi.counterEditorModalOpen = isOpen;
+  patchStrategicOverlayEditorState(state, "strategicOverlayUi", {
+    counterEditorModalOpen: isOpen,
+  });
   unitCounterEditorModalOverlay?.classList.toggle("hidden", !isOpen);
   unitCounterDetailDrawer?.classList.toggle("hidden", !isOpen);
   documentRef.body.classList.toggle("counter-editor-modal-open", isOpen);

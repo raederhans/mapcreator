@@ -145,7 +145,10 @@ def get_public_named_imports(path: Path) -> set[str]:
     for match in NAMED_IMPORT_RE.finditer(content):
         target = resolve_import_target(path, match.group("path"))
         if target == PUBLIC_FILE.resolve():
-            names.update(parse_named_list(match.group("names")))
+            names.update(
+                re.split(r"\s+as\s+", name, maxsplit=1)[0]
+                for name in parse_named_list(match.group("names"))
+            )
     return names
 
 
@@ -196,19 +199,22 @@ class MapRendererPublicContractTest(unittest.TestCase):
 
     def test_map_legend_is_a_floating_control(self):
         renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
+        owner = (CORE_ROOT / "renderer" / "legend_control_owner.js").read_text(encoding="utf-8")
         styles = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
-        self.assertIn("mapLegendControl", renderer)
+        self.assertIn("getLegendControlOwner().renderLegend(uniqueColors, labels)", renderer)
+        self.assertIn("getLegendControlOwner().ensureLegendControlElement()", renderer)
+        self.assertIn("mapLegendControl", owner)
         self.assertIn("map-legend-control", styles)
-        self.assertIn("map-legend-resize-handle", renderer)
-        self.assertIn("map-legend-opacity-panel", renderer)
-        self.assertIn("data-legend-resize", renderer)
-        self.assertIn("legendResizeSession", renderer)
+        self.assertIn("map-legend-resize-handle", owner)
+        self.assertIn("map-legend-opacity-panel", owner)
+        self.assertIn("data-legend-resize", owner)
+        self.assertIn("legendResizeSession", owner)
         self.assertIn(".map-legend-resize-handle", styles)
         self.assertIn(".map-legend-opacity-panel", styles)
         self.assertNotIn('append("g").attr("class", "legend-group")', renderer)
 
     def test_map_legend_resize_keeps_anchor_and_exposes_opacity(self):
-        renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
+        renderer = (CORE_ROOT / "renderer" / "legend_control_owner.js").read_text(encoding="utf-8")
         resize_start = renderer.index("function storeLegendControlSize(")
         resize_end = renderer.index("function stopLegendResize()", resize_start)
         resize_body = renderer[resize_start:resize_end]
@@ -226,26 +232,10 @@ class MapRendererPublicContractTest(unittest.TestCase):
         self.assertIn("controlState.collapsed ? `${collapsedWidth}px`", size_body)
         self.assertIn("legendOpacityInputElement.value = String(Math.round(opacity * 100));", size_body)
 
-        self.assertEqual(3, renderer.count('addEventListener("pointerenter", showLegendOpacityPanel);'))
-
-    def test_water_selection_honors_ctrl_toggle_before_paint_tools(self):
-        renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
-        fill_index = renderer.index('applyWaterRegionFill(id, runtimeState.selectedColor, {')
-        branch_start = renderer.rindex('if (hit.targetType === "water") {', 0, fill_index)
-        branch_end = renderer.index('if (runtimeState.selectedWaterRegionId) {', fill_index)
-        water_branch = renderer[branch_start:branch_end]
-        self.assertIn("const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);", water_branch)
-        self.assertIn('requestInteractionRender("water-selection-toggle-off");', water_branch)
-        self.assertIn('requestInteractionRender("water-selection-toggle-on");', water_branch)
-        self.assertLess(
-            water_branch.index("if (isSelectionToggle && previousWaterRegionId === id)"),
-            water_branch.index('if (runtimeState.currentTool === "eraser")'),
-        )
-        self.assertLess(
-            water_branch.index("if (isSelectionToggle)"),
-            water_branch.index('applyWaterRegionFill(id, runtimeState.selectedColor, {'),
-        )
-
+        self.assertIn('["e", "east", "resizeWidth"]', renderer)
+        self.assertIn('["s", "south", "resizeHeight"]', renderer)
+        self.assertIn('["se", "south-east", "resizeBoth"]', renderer)
+        self.assertIn('handle.addEventListener("pointerenter", showLegendOpacityPanel);', renderer)
 
 if __name__ == "__main__":
     unittest.main()

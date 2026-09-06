@@ -20,10 +20,6 @@ function pagesDistPath(...segments) {
   return path.relative(REPO_ROOT, path.join(PAGES_DIST_ROOT, ...segments)).replaceAll("\\", "/");
 }
 
-const DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md";
-const P21_DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md";
-const P22A_DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-cached-pass-compositor-owner-p2-2a-20260711.md";
-const P22B_DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-transformed-frame-compositor-owner-p2-2b-20260712.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "js/core/map_renderer/draw_canvas_orchestration_owner.js";
 const CACHED_PASS_COMPOSITOR_OWNER_PATH = "js/core/renderer/cached_pass_compositor_owner.js";
@@ -53,22 +49,6 @@ const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
 const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
 const STRATEGIC_OVERLAY_RUNTIME_OWNER_PATH = "js/core/renderer/strategic_overlay_runtime_owner.js";
 const STRATEGIC_OVERLAY_RENDER_OWNER_PATH = "js/core/renderer/strategic_overlay_render_owner.js";
-
-const P53_DOC_HEADINGS = Object.freeze([
-  "## Scope and guardrails",
-  "## Current P52 render pass cache baseline",
-  "## drawCanvas entry and phase inventory",
-  "## Idle pass orchestration inventory",
-  "## Interactive/transformed frame pass inventory",
-  "## First visible frame and diagnostics boundary",
-  "## Hit canvas scheduling/build boundary",
-  "## Exact-after-settle boundary",
-  "## Scenario refresh/chunk boundary",
-  "## Strategic overlay render boundary",
-  "## P54/P55 allowed first move candidates",
-  "## Forbidden areas",
-  "## Required validation commands",
-]);
 
 function readRepoFile(relativePath) {
   const absolutePath = path.join(REPO_ROOT, ...relativePath.split("/"));
@@ -177,84 +157,6 @@ function isForbiddenTransformedFrameCompositorOwnerPath(sourcePath) {
 function normalizeLineEndings(source) {
   return source.replace(/\r\n/g, "\n");
 }
-
-test("P53 doc exists and locks required drawCanvas orchestration inventory headings", () => {
-  const docSource = readRepoFile(DOC_PATH);
-
-  for (const heading of P53_DOC_HEADINGS) {
-    assertIncludes(docSource, heading, "P53 doc must keep required heading");
-  }
-  for (const token of [
-    "P53 is preflight only. It inventories `drawCanvas()` pass orchestration before any implementation.",
-    "No production runtime changes.",
-    "No `js/core/map_renderer.js` changes.",
-    "No public facade, state-write allowlist, or `dist/**` changes.",
-    "P51 is landed on default main as commit `725abb4a305a03687e7bca358ff918ba659cfef1`.",
-    "P52 is landed on default main as commit `c60fd9239f8352b1916686b6dac8ee16eee8f017`.",
-    "`function renderPassToCache(passName, drawFn, transform, timings)` remains in `js/core/map_renderer.js`.",
-    "`drawCanvas()` remains untouched in `js/core/map_renderer.js`.",
-    "P53 locks this as orchestration inventory. It does not move `drawCanvas()`.",
-    "`render_pipeline_passes.js` remains authoritative for idle pass preparation",
-    "`render_pipeline_catalog.js` remains authoritative for `IDLE_RENDER_PASS_DEFINITIONS`.",
-    "`render_pass_catalog.js` remains authoritative for pass-name groups",
-    "`hit_canvas_scheduling_owner.js` owns only deferred hit canvas scheduling",
-    "`exact_after_settle_scheduler.js` remains the owner for exact-after-settle scheduling",
-    "`scenario_refresh_runtime.js` remains the owner for scenario apply refresh and scenario chunk promotion",
-    "`strategic_overlay_runtime_owner.js` owns runtime interaction/editing state.",
-    "`strategic_overlay_render_owner.js` owns strategic overlay render delegation.",
-    "Add a drawCanvas orchestration owner that only selects pass groups and delegates to existing pass functions/helpers.",
-    "Add a transformed-frame compositor adapter preflight.",
-    "Add a first-render acceptance adapter if P42 does not already cover the acceptance boundary fully.",
-    "P54/P55 must not start by moving individual pass drawing functions.",
-    "No broad `renderer_render_lifecycle_owner`.",
-  ]) {
-    assertIncludes(docSource, token, "P53 doc must lock boundary token");
-  }
-});
-
-test("P2.1 implementation doc locks canonical owner and thin wrapper", () => {
-  const docSource = readRepoFile(P21_DOC_PATH);
-
-  for (const token of [
-    "# Renderer Draw Canvas Orchestration Owner P2.1",
-    "Canonical owner: `js/core/map_renderer/draw_canvas_orchestration_owner.js`",
-    "Wrapper shape: `function drawCanvas() { getDrawCanvasOrchestrationOwner().drawCanvasFrame(); }`",
-    "P53 historical preflight remains unchanged.",
-    "`dist/app/js/core/map_renderer.js` and `dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js` are generated mirrors.",
-    "Browser, Playwright, perf, and main-thread lanes are owned by a separate acceptance lane.",
-  ]) {
-    assertIncludes(docSource, token, "P2.1 doc must lock implementation token");
-  }
-});
-
-test("P2.2a implementation doc locks cached-pass ownership and protected adjacent algorithms", () => {
-  const docSource = readRepoFile(P22A_DOC_PATH);
-  for (const token of [
-    "# Renderer Cached Pass Compositor Owner P2.2a",
-    "Canonical owner: `js/core/renderer/cached_pass_compositor_owner.js`",
-    "`drawTransformedPass()` and `composeRenderPassesToTarget()` own cached-pass canvas composition.",
-    "`getActiveTargetContext()` is resolved on every transformed-pass draw.",
-    "`composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()` remain in `js/core/map_renderer.js` for P2.2b.",
-    "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
-    "Browser, Playwright, perf, and main-thread acceptance were assigned to the separate acceptance lane and are recorded below.",
-  ]) {
-    assertIncludes(docSource, token, "P2.2a doc must lock implementation token");
-  }
-});
-
-test("P2.2b implementation doc locks transformed-frame ownership and protected adjacent algorithms", () => {
-  const docSource = readRepoFile(P22B_DOC_PATH);
-  for (const token of [
-    "# Renderer Transformed Frame Compositor Owner P2.2b",
-    "canonical owner is `js/core/map_renderer/transformed_frame_compositor_owner.js`",
-    "The owner contains `composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()`.",
-    "Runtime state writes remain composition-root effects in `js/core/map_renderer.js`.",
-    "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
-    "P53 historical preflight remains retained as the architecture inventory.",
-  ]) {
-    assertIncludes(docSource, token, "P2.2b doc must lock implementation token");
-  }
-});
 
 test("map_renderer keeps drawCanvas entry and renderPassToCache P51/P52 wrapper", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);

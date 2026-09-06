@@ -61,18 +61,16 @@ test("render snapshot never retains palette ownership viewport or transform runt
   const owners = { feature_1: "US" };
   const transform = { x: 1, y: 2, k: 3, apply() {} };
   const geoBounds = [-1, -2, 3, 4];
-  const owner = createRenderSnapshotOwner({
-    getters: {
-      getSovereignBaseColors: () => colors,
-      getSovereigntyByFeatureId: () => owners,
-      getViewportTransform: () => transform,
-      getViewportRenderSignature: () => "100|200|1",
-      getProjectionRenderSignature: () => "projection:na",
-      getViewportGeoBounds: () => geoBounds,
-    },
-  });
+  const owner = createRenderSnapshotOwner();
 
-  const snapshot = owner.captureRenderSnapshot();
+  const snapshot = owner.captureRenderSnapshot({
+    sovereignBaseColors: colors,
+    sovereigntyByFeatureId: owners,
+    viewportTransform: transform,
+    viewportRenderSignature: "100|200|1",
+    projectionRenderSignature: "projection:na",
+    viewportGeoBounds: geoBounds,
+  });
   colors.US = "#abcdef";
   owners.feature_1 = "CA";
   transform.x = 999;

@@ -16,6 +16,9 @@ class SidebarSplitBoundaryContractTest(unittest.TestCase):
 
         self.assertIn('./sidebar/country_inspector_controller.js', content)
         self.assertIn("createCountryInspectorController", content)
+        owner_content = COUNTRY_INSPECTOR_CONTROLLER_JS.read_text(encoding="utf-8")
+        self.assertIn('from "./country_inspector_model.js"', owner_content)
+        self.assertNotIn('from "../sidebar.js"', owner_content)
 
     def test_country_inspector_owner_moves_to_controller(self):
         sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")
@@ -67,17 +70,6 @@ class SidebarSplitBoundaryContractTest(unittest.TestCase):
         sidebar_content = SIDEBAR_JS.read_text(encoding="utf-8")
         owner_content = COUNTRY_INSPECTOR_CONTROLLER_JS.read_text(encoding="utf-8")
         catalog_content = I18N_CATALOG_JS.read_text(encoding="utf-8")
-
-        for token in [
-            "function localizeInspectorGroupLabel(label) {",
-            "const INSPECTOR_GROUP_LABEL_CATALOG = Object.freeze({",
-            '"China Region": Object.freeze({ zh: "中国区域", en: "China Region" })',
-            '"Russia Region": Object.freeze({ zh: "俄罗斯区域", en: "Russia Region" })',
-            'return t(normalizedLabel, "ui") || geoLabel;',
-            'label: "China Region",',
-            'label: "Russia Region",',
-        ]:
-            self.assertIn(token, sidebar_content)
 
         for token in [
             '"China Region": {"zh": "中国区域", "en": "China Region"}',

@@ -13,10 +13,11 @@ import {
 } from "../tools/verification/migration_ledger_validator.mjs";
 import {
   advanceCatalogProjectionShadowReceipt,
+  compareCatalogProjections,
 } from "../tools/verification/catalog_projection_shadow.mjs";
 import {
-  buildRepositoryCatalogProjectionShadowComparison,
-} from "../tools/verification/catalog_projection_legacy.mjs";
+  buildCanonicalCatalogProjectionBundle,
+} from "../tools/verification/verification_catalog_projection.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LEDGER_PATH = path.join(REPO_ROOT, "tools", "verification", "migration_ledger.json");
@@ -40,7 +41,13 @@ function checkedInLedger() {
 }
 
 function catalogReceipt(count = 1) {
-  const comparison = buildRepositoryCatalogProjectionShadowComparison();
+  // Ledger behavior requires a green receipt fixture, independently of whether
+  // the repository's historical projection currently matches the live catalog.
+  const canonicalBundle = buildCanonicalCatalogProjectionBundle();
+  const comparison = compareCatalogProjections({
+    canonicalBundle,
+    legacy: structuredClone(canonicalBundle.projections),
+  });
   let receipt = null;
   for (let index = 1; index <= count; index += 1) {
     receipt = advanceCatalogProjectionShadowReceipt({
@@ -242,6 +249,25 @@ test("expired evidence and tampered receipts fail closed", () => {
   assert.throws(
     () => evaluateMigrationLedger({ ...tampered, now: NOW }),
     /migration-ledger-invalid-receipt:pages-tracked-dist/,
+  );
+});
+
+test("a correctly signed catalog receipt with projection drift still fails closed", () => {
+  const fixture = evaluationFixture();
+  const canonicalBundle = buildCanonicalCatalogProjectionBundle();
+  const legacy = structuredClone(canonicalBundle.projections);
+  legacy.documentation.push({ sourceRef: "docs/fixture-only-drift.md" });
+  const comparison = compareCatalogProjections({ canonicalBundle, legacy });
+  assert.equal(comparison.equal, false);
+  const receipt = advanceCatalogProjectionShadowReceipt({
+    comparison,
+    sourceIdentity: comparison.sourceIdentity,
+    runIdentity: fixture.receipts.get("catalog-projection").runIdentity,
+  });
+  fixture.receipts.set("catalog-projection", receipt);
+  assert.throws(
+    () => evaluateMigrationLedger({ ...fixture, now: NOW }),
+    /migration-ledger-invalid-receipt:catalog-projection/,
   );
 });
 

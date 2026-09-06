@@ -32,7 +32,7 @@ function createContextRecorder() {
   };
 }
 
-function createOwner({ hgoVectorScene = false, interactive = false } = {}) {
+function createOwner({ hgoVectorScene = false, interactive = false, helpers = {} } = {}) {
   const context = createContextRecorder();
   const coastalAccentCalls = [];
   const state = {
@@ -100,10 +100,25 @@ function createOwner({ hgoVectorScene = false, interactive = false } = {}) {
       isDynamicBordersEnabled: () => false,
       isUsableMesh: (candidate) => !!candidate?.coordinates?.length,
       sanitizePolyline: (line) => (Array.isArray(line) ? line : []),
+      ...helpers,
     },
   });
-  return { owner, context, coastalAccentCalls };
+  return { owner, context, coastalAccentCalls, state };
 }
+
+test("drawing requests detail cache reconciliation without writing renderer state", () => {
+  const requests = [];
+  const detailMeta = { signature: "zoom-5", detailCountries: ["AAA"] };
+  const { owner, state } = createOwner({
+    helpers: {
+      buildDetailAdmMeshSignature: () => detailMeta,
+      reconcileDetailAdmBorders: (meta) => requests.push(meta),
+    },
+  });
+  Object.freeze(state);
+  owner.drawHierarchicalBorders(5);
+  assert.deepEqual(requests, [detailMeta]);
+});
 
 test("drawHierarchicalBorders applies border opacity and width styles to normal pass", () => {
   const { owner, context } = createOwner();

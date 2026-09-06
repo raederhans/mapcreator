@@ -14,8 +14,11 @@ const MESSAGE_TYPES = Object.freeze({
   STARTUP_BUNDLE_READY: "STARTUP_BUNDLE_READY",
   SCENARIO_RUNTIME_BOOTSTRAP_READY: "SCENARIO_RUNTIME_BOOTSTRAP_READY",
   RUNTIME_CHUNK_READY: "RUNTIME_CHUNK_READY",
+  CANCEL_TASK: "CANCEL_TASK",
   ERROR: "ERROR",
 });
+
+const decodeTaskControllers = new Map();
 
 const COUNTRY_CODE_ALIASES = Object.freeze({
   UK: "GB",
@@ -67,7 +70,30 @@ function nowMs() {
     : Date.now();
 }
 
-async function fetchJsonResource(url, label) {
+function createWorkerAbortError(reason = null) {
+  if (reason instanceof Error && reason.name === "AbortError") {
+    return reason;
+  }
+  if (typeof DOMException === "function") {
+    return new DOMException("Startup worker task aborted.", "AbortError");
+  }
+  const error = new Error("Startup worker task aborted.");
+  error.name = "AbortError";
+  return error;
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    throw createWorkerAbortError(signal.reason);
+  }
+}
+
+function isAbortError(error) {
+  return error?.name === "AbortError";
+}
+
+async function fetchJsonResource(url, label, { signal = null } = {}) {
+  throwIfAborted(signal);
   if (!url) {
     throw new Error(`[startup_worker] Missing URL for ${label}.`);
   }
@@ -76,12 +102,14 @@ async function fetchJsonResource(url, label) {
   const response = await fetch(resolvedUrl, {
     cache: "default",
     credentials: "same-origin",
+    signal,
   });
   const headersReceivedAt = nowMs();
   if (!response.ok) {
     throw new Error(`[startup_worker] Failed to fetch ${label} at ${url} (${response.status} ${response.statusText}).`);
   }
   const rawText = await response.text();
+  throwIfAborted(signal);
   const fetchCompletedAt = nowMs();
   let payload = null;
   try {
@@ -121,7 +149,8 @@ function buildGzipCandidateUrl(url) {
   return `${normalized}.gz`;
 }
 
-async function fetchJsonResourceWithOptionalGzip(url, label) {
+async function fetchJsonResourceWithOptionalGzip(url, label, { signal = null } = {}) {
+  throwIfAborted(signal);
   const gzipUrl = buildGzipCandidateUrl(url);
   if (gzipUrl) {
     try {
@@ -130,10 +159,12 @@ async function fetchJsonResourceWithOptionalGzip(url, label) {
       const response = await fetch(resolvedUrl, {
         cache: "default",
         credentials: "same-origin",
+        signal,
       });
       const headersReceivedAt = nowMs();
       if (response.ok) {
         const compressedBytes = await response.arrayBuffer();
+        throwIfAborted(signal);
         const fetchCompletedAt = nowMs();
         const rawText = await decompressGzipBytes(compressedBytes);
         const decompressedAt = nowMs();
@@ -155,11 +186,17 @@ async function fetchJsonResourceWithOptionalGzip(url, label) {
           },
         };
       }
-    } catch (_error) {
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+      if (signal?.aborted) {
+        throw createWorkerAbortError(signal.reason);
+      }
       // Fall back to plain JSON below.
     }
   }
-  const plainResult = await fetchJsonResource(url, label);
+  const plainResult = await fetchJsonResource(url, label, { signal });
   return {
     ...plainResult,
     metrics: {
@@ -496,14 +533,15 @@ async function handleLoadScenarioRuntimeBootstrap(message) {
   });
 }
 
-async function handleDecodeRuntimeChunk(message) {
+async function handleDecodeRuntimeChunk(message, { signal = null } = {}) {
   const taskId = String(message?.taskId || "").trim();
   const runtimeTopologyUrl = String(message?.runtimeTopologyUrl || "").trim();
   const chunkUrl = String(message?.chunkUrl || "").trim();
   const chunkType = String(message?.chunkType || "").trim().toLowerCase();
   const startedAt = nowMs();
   if (chunkType && chunkType !== "runtime-topology") {
-    const chunkResult = await fetchJsonResource(chunkUrl, chunkType || "scenarioChunk");
+    const chunkResult = await fetchJsonResource(chunkUrl, chunkType || "scenarioChunk", { signal });
+    throwIfAborted(signal);
     postWorkerMessage(MESSAGE_TYPES.RUNTIME_CHUNK_READY, {
       taskId,
       chunkPayload: chunkResult.payload || null,
@@ -514,11 +552,12 @@ async function handleDecodeRuntimeChunk(message) {
     });
     return;
   }
-  const runtimeTopologyResult = await fetchJsonResource(runtimeTopologyUrl, "runtimePoliticalTopology");
+  const runtimeTopologyResult = await fetchJsonResource(runtimeTopologyUrl, "runtimePoliticalTopology", { signal });
   const metaStartedAt = nowMs();
   const runtimePoliticalMeta = buildRuntimePoliticalMeta(runtimeTopologyResult.payload);
   const metaCompletedAt = nowMs();
 
+  throwIfAborted(signal);
   postWorkerMessage(MESSAGE_TYPES.RUNTIME_CHUNK_READY, {
     taskId,
     runtimePoliticalTopology: runtimeTopologyResult.payload,
@@ -561,10 +600,39 @@ async function dispatchMessage(message) {
       await handleLoadScenarioRuntimeBootstrap(message);
       return;
     case MESSAGE_TYPES.DECODE_RUNTIME_CHUNK:
-      await handleDecodeRuntimeChunk(message);
+      await dispatchDecodeRuntimeChunk(message);
+      return;
+    case MESSAGE_TYPES.CANCEL_TASK:
+      cancelDecodeRuntimeChunk(message);
       return;
     default:
       throw new Error(`[startup_worker] Unsupported message type: ${String(message?.type || "") || "<empty>"}`);
+  }
+}
+
+async function dispatchDecodeRuntimeChunk(message) {
+  const taskId = String(message?.taskId || "").trim();
+  const controller = new AbortController();
+  decodeTaskControllers.set(taskId, controller);
+  try {
+    await handleDecodeRuntimeChunk(message, { signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      return;
+    }
+    throw error;
+  } finally {
+    if (decodeTaskControllers.get(taskId) === controller) {
+      decodeTaskControllers.delete(taskId);
+    }
+  }
+}
+
+function cancelDecodeRuntimeChunk(message) {
+  const taskId = String(message?.taskId || "").trim();
+  const controller = decodeTaskControllers.get(taskId);
+  if (controller && !controller.signal.aborted) {
+    controller.abort();
   }
 }
 
@@ -575,6 +643,7 @@ self.onmessage = (event) => {
       taskId: String(message?.taskId || "").trim(),
       stage: String(message?.type || "").trim() || "unknown",
       message: error?.message || String(error || "Unknown startup worker error."),
+      name: error?.name || "Error",
     });
   });
 };

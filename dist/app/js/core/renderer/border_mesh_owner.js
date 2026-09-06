@@ -18,6 +18,11 @@ import {
   getDynamicBorderOwnershipContext,
   simplifyCoastlineMesh as simplifyCoastlineMeshRuntime,
 } from "./border_mesh_dynamic_runtime.js";
+import {
+  replaceCachedDetailAdmBordersState,
+  setDynamicBordersDirtyState,
+  setPendingDynamicBorderTimerState,
+} from "../state/actions/renderer_cache_actions.js";
 
 export function createBorderMeshOwner({
   state,
@@ -34,7 +39,13 @@ export function createBorderMeshOwner({
   const {
     asFeatureLike,
     canonicalCountryCode,
-    clearPendingDynamicBorderTimer = () => {},
+    setTimeoutFn = (callback, delay) => globalThis.setTimeout(callback, delay),
+    clearTimeoutFn = (timerId) => globalThis.clearTimeout(timerId),
+    renderDynamicBorders = () => {},
+    getDetailAdmMeshBuildState = () => ({ signature: "", status: "idle" }),
+    setDetailAdmMeshBuildState = () => {},
+    scheduleDeferredHeavyBorderMeshes = () => {},
+    syncStaticMeshSnapshot = () => {},
     ensureSovereigntyState = () => {},
     getAdmin1Group,
     getEntityCountryCode,
@@ -85,6 +96,7 @@ export function createBorderMeshOwner({
     mesh: null,
   };
   const scenarioCoastlineDecisionWarnings = new Set();
+  const pendingDynamicBorderTimer = { handle: null };
 
   const buildOwnerBorderMesh = (runtimeTopology, ownershipContext = {}, { excludeSea = false } = {}) =>
     buildOwnerBorderMeshRuntime({
@@ -111,6 +123,69 @@ export function createBorderMeshOwner({
       resolveOwnerBorderCode,
     });
 
+  function clearPendingDynamicBorderTimer() {
+    if (pendingDynamicBorderTimer.handle) {
+      clearTimeoutFn(pendingDynamicBorderTimer.handle);
+      pendingDynamicBorderTimer.handle = null;
+      setPendingDynamicBorderTimerState(state, null);
+    }
+  }
+
+  function markDynamicBordersDirty(reason = "") {
+    const dirty = isDynamicBordersEnabled();
+    setDynamicBordersDirtyState(state, dirty, dirty ? String(reason || "").trim() : "");
+    updateDynamicBorderStatusUI();
+  }
+
+  function recomputeDynamicBordersNow({ renderNow = true, reason = "" } = {}) {
+    clearPendingDynamicBorderTimer();
+    const dynamicBordersEnabled = isDynamicBordersEnabled();
+    if (!dynamicBordersEnabled) {
+      setDynamicBordersDirtyState(state, false, "");
+      updateDynamicBorderStatusUI();
+      return false;
+    }
+    if (reason) setDynamicBordersDirtyState(state, dynamicBordersEnabled, String(reason));
+    rebuildDynamicBorders();
+    if (renderNow) renderDynamicBorders();
+    return true;
+  }
+
+  function scheduleDynamicBorderRecompute(reason = "", delayMs = 150) {
+    markDynamicBordersDirty(reason);
+    clearPendingDynamicBorderTimer();
+    const timerId = setTimeoutFn(() => {
+      pendingDynamicBorderTimer.handle = null;
+      setPendingDynamicBorderTimerState(state, null);
+      recomputeDynamicBordersNow({ renderNow: true, reason });
+    }, Math.max(0, Number(delayMs) || 0));
+    pendingDynamicBorderTimer.handle = timerId;
+    setPendingDynamicBorderTimerState(state, timerId);
+  }
+
+  function replaceDetailAdmBorders(meshes = []) {
+    replaceCachedDetailAdmBordersState(state, meshes);
+  }
+
+  // The draw pass requests detail meshes; this owner retires stale cache entries
+  // before scheduling their replacement so a snapshot cannot revive old borders.
+  function reconcileDetailAdmBorders({ signature, detailCountries }) {
+    const buildState = getDetailAdmMeshBuildState();
+    if (signature !== buildState.signature) {
+      const hadMeshes = state.cachedDetailAdmBorders.length > 0;
+      replaceDetailAdmBorders();
+      setDetailAdmMeshBuildState({
+        signature,
+        status: detailCountries.length ? "building" : "empty",
+      });
+      if (hadMeshes) syncStaticMeshSnapshot();
+      if (detailCountries.length) scheduleDeferredHeavyBorderMeshes();
+    } else if (!state.cachedDetailAdmBorders.length && buildState.status === "idle" && detailCountries.length) {
+      setDetailAdmMeshBuildState({ signature, status: "building" });
+      scheduleDeferredHeavyBorderMeshes();
+    }
+  }
+
   function rebuildDynamicBorders() {
     const startedAt = nowMs();
     incrementPerfCounter("dynamicBorderRebuilds");
@@ -118,8 +193,7 @@ export function createBorderMeshOwner({
     if (!isDynamicBordersEnabled()) {
       state.cachedDynamicOwnerBorders = null;
       state.cachedDynamicBordersHash = null;
-      state.dynamicBordersDirty = false;
-      state.dynamicBordersDirtyReason = "";
+      setDynamicBordersDirtyState(state, false, "");
       clearPendingDynamicBorderTimer();
       updateDynamicBorderStatusUI();
       recordRenderPerfMetric("rebuildDynamicBorders", nowMs() - startedAt, {
@@ -136,8 +210,7 @@ export function createBorderMeshOwner({
       scenarioShellOverlayRevision: state.scenarioShellOverlayRevision,
     });
     if (state.cachedDynamicBordersHash === nextHash && state.cachedDynamicOwnerBorders) {
-      state.dynamicBordersDirty = false;
-      state.dynamicBordersDirtyReason = "";
+      setDynamicBordersDirtyState(state, false, "");
       updateDynamicBorderStatusUI();
       recordRenderPerfMetric("rebuildDynamicBorders", nowMs() - startedAt, {
         enabled: true,
@@ -153,8 +226,7 @@ export function createBorderMeshOwner({
     state.cachedDynamicOwnerBorders = buildDynamicOwnerBorderMesh(state.runtimePoliticalTopology, ownershipContext);
     const unresolvedEntityCount = countUnresolvedOwnerBorderEntities(state.runtimePoliticalTopology, ownershipContext);
     state.cachedDynamicBordersHash = nextHash;
-    state.dynamicBordersDirty = false;
-    state.dynamicBordersDirtyReason = "";
+    setDynamicBordersDirtyState(state, false, "");
     updateDynamicBorderStatusUI();
     invalidateRenderPasses("borders", "dynamic-borders");
     recordRenderPerfMetric("rebuildDynamicBorders", nowMs() - startedAt, {
@@ -361,6 +433,12 @@ export function createBorderMeshOwner({
     });
 
   return {
+    clearPendingDynamicBorderTimer,
+    markDynamicBordersDirty,
+    recomputeDynamicBordersNow,
+    scheduleDynamicBorderRecompute,
+    replaceDetailAdmBorders,
+    reconcileDetailAdmBorders,
     buildOwnerBorderMesh,
     buildDynamicOwnerBorderMesh,
     countUnresolvedOwnerBorderEntities,

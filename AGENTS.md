@@ -24,6 +24,8 @@
 
 - 文档、注释和不参与执行或解析的文本变更无需运行项目测试。
 - 隔离的行为变更默认运行一个最相关的目标测试或检查。
+- 已有局部路由的 action/owner 修改，可用 `npm run verify:edit -- --changed-file <path>` 获得真实行为测试反馈；显式路径只代表本次选择的文件，不代表整个工作区已验收。
+- `verify:core` 默认只含无资源锁的 child-safe 检查；完整非浏览器组合使用 `--include-reserved`，浏览器/主线程组合使用既有 `verify:core:main-thread`。不要把完整策略历史证明作为每次未提交修改的前置条件。
 - UI 运行时行为在必要时运行一个聚焦的浏览器或 Playwright 检查。
 - 共享契约、跨模块、数据、性能、构建、dist 或发布路径发生变化时，再扩大到相应的项目标准检查。
 - `test:adaptive`、supervisor、`verify:core`、`verify:pr`、nightly、release 和全量浏览器检查只用于验证框架自身改动、相关高风险路径、CI / 发布任务，或用户明确要求的场景。

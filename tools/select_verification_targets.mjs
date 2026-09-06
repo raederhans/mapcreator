@@ -9,6 +9,7 @@ import {
   reconcileVerificationRouteAuthority,
   summarizeRoutes,
   validateRouteIndex,
+  validateDiscoveredRouteCoverage,
   toRepoPath,
 } from "./test_route_registry.mjs";
 import { VERIFICATION_DOMAINS } from "./verification/verification_domains.mjs";
@@ -233,6 +234,8 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   }
 
   if (isDirectRouteMatch(route, changedFile)) return true;
+  // Local projections cover their declared source scope, not domain fallbacks.
+  if (route.entrypointPolicy?.localProjection?.mode === "indivisible") return false;
   if (routeMatchesImportGraph(route, changedFile, importGraph)) return true;
 
   if (changedFile === "package.json" || changedFile === "package-lock.json") {
@@ -259,10 +262,6 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   }
 
   if (changedFile.startsWith("tools/verification/") || changedFile === "docs/testing/verification-metadata.md") {
-    return route.domain === "test-routing";
-  }
-
-  if (changedFile === "tools/run_core_verification.mjs" || changedFile === "docs/testing/verify-core.md") {
     return route.domain === "test-routing";
   }
 
@@ -835,6 +834,7 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.command === "check") {
     const summary = validateRouteIndex();
+    validateDiscoveredRouteCoverage();
     console.log(`Route schema check passed for ${summary.count} routes.`);
     return;
   }

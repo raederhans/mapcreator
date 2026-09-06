@@ -44,7 +44,6 @@ export function createBorderDrawOwner({
     getContext = () => null,
     getPathCanvas = () => null,
     getProjection = () => null,
-    getDetailAdmMeshBuildState = () => ({ signature: "", status: "idle" }),
     getScenarioOwnerOnlyCanonicalFallbackWarnings = () => new Set(),
     getVisibleInternalBorderMeshSignature = () => "",
   } = getters;
@@ -62,9 +61,8 @@ export function createBorderDrawOwner({
     isDynamicBordersEnabled = () => false,
     sanitizePolyline = (line) => (Array.isArray(line) ? line : []),
     scheduleDeferredHeavyBorderMeshes = () => {},
-    setDetailAdmMeshBuildState = () => {},
+    reconcileDetailAdmBorders = () => {},
     setVisibleInternalBorderMeshSignature = () => {},
-    syncStaticMeshSnapshot = () => {},
   } = helpers;
 
   function isHgoVectorSceneActive() {
@@ -547,40 +545,7 @@ export function createBorderDrawOwner({
 
     if (k >= detailAdmBordersMinZoom) {
       const detailAdmMeta = buildDetailAdmMeshSignature(visibleCountryCodes, k);
-      const detailAdmMeshBuildState = getDetailAdmMeshBuildState();
-      const signatureChanged = detailAdmMeta.signature !== detailAdmMeshBuildState.signature;
-      if (signatureChanged) {
-        const hadDetailAdmBorders = state.cachedDetailAdmBorders.length > 0;
-        state.cachedDetailAdmBorders = [];
-        if (detailAdmMeta.detailCountries.length > 0) {
-          setDetailAdmMeshBuildState({
-            signature: detailAdmMeta.signature,
-            status: "building",
-          });
-          if (hadDetailAdmBorders) {
-            syncStaticMeshSnapshot();
-          }
-          scheduleDeferredHeavyBorderMeshes();
-        } else {
-          setDetailAdmMeshBuildState({
-            signature: detailAdmMeta.signature,
-            status: "empty",
-          });
-          if (hadDetailAdmBorders) {
-            syncStaticMeshSnapshot();
-          }
-        }
-      } else if (
-        !state.cachedDetailAdmBorders.length
-        && detailAdmMeshBuildState.status === "idle"
-        && detailAdmMeta.detailCountries.length > 0
-      ) {
-        setDetailAdmMeshBuildState({
-          signature: detailAdmMeta.signature,
-          status: "building",
-        });
-        scheduleDeferredHeavyBorderMeshes();
-      }
+      reconcileDetailAdmBorders(detailAdmMeta);
     }
 
     if (k >= detailAdmBordersMinZoom) {

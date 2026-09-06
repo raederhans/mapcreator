@@ -110,6 +110,31 @@ function validatePassedEnvelope(envelope) {
   });
 }
 
+function validateFailedEnvelope(envelope) {
+  const error = envelope?.error;
+  if (
+    !envelope
+    || typeof envelope !== "object"
+    || Array.isArray(envelope)
+    || envelope.kind !== WORKER_KIND
+    || envelope.schemaVersion !== WORKER_SCHEMA_VERSION
+    || envelope.status !== "failed"
+    || !error
+    || typeof error !== "object"
+    || Array.isArray(error)
+    || typeof error.code !== "string"
+    || error.code.length === 0
+    || typeof error.message !== "string"
+    || error.message.length === 0
+  ) {
+    throw createWorkerError(
+      "p4-historical-proof-worker-envelope-invalid",
+      "P4 historical proof worker returned an invalid failed terminal envelope.",
+    );
+  }
+  return createWorkerError(error.code, error.message);
+}
+
 function buildWorkerProofRequest({ previousPolicy, policy } = {}) {
   const currentPolicy = policy || previousPolicy;
   const phase = currentPolicy.progress.latestPhase;
@@ -160,6 +185,7 @@ async function buildPassedEnvelope(request = null) {
   const defaultPolicy = request ? null : await readStateWriterPolicy();
   const {
     identity,
+    previousPolicy,
     policy,
   } = validateWorkerProofRequest(
     request || buildWorkerProofRequest({
@@ -178,6 +204,12 @@ async function buildPassedEnvelope(request = null) {
     legacySemanticBaseline: policy.baselines.legacySemanticAuthority,
     transitionCheckpoints:
       policy.baselines.derivedAliasTaint?.transitionCheckpoints || [],
+    ...(request?.previousPolicy
+      ? {
+        existingBaseline:
+          previousPolicy?.baselines?.derivedAliasTaint || null,
+      }
+      : {}),
     stateKeyAuthorityIndex: buildCanonicalStateKeyAuthorityIndex(),
   });
   assert.deepEqual(proof, policy.baselines.derivedAliasTaint);
@@ -277,7 +309,11 @@ export function startP4StateWriterHistoricalProofWorker(
       return;
     }
     try {
-      passedEnvelope = validatePassedEnvelope(value);
+      if (value?.status === "failed") {
+        terminalError = validateFailedEnvelope(value);
+      } else {
+        passedEnvelope = validatePassedEnvelope(value);
+      }
     } catch (error) {
       terminalError = error;
     }

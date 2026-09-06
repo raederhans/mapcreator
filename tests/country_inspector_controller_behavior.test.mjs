@@ -255,6 +255,7 @@ function createHarness({
   let latestStates = new Map(selectedCountry ? [[selectedCountry.code, selectedCountry]] : []);
   let settingsChangeCalls = 0;
   let coverageCalls = 0;
+  const observedVariantSelections = [];
 
   const controller = createCountryInspectorController({
     runtimeState,
@@ -287,13 +288,14 @@ function createHarness({
       return note;
     },
     getDynamicCountryEntries: () => countryEntries,
-    createCountryInspectorState: (entry, entryIndex) => ({ ...entry, entryIndex }),
-    buildInspectorTopLevelCountryEntries: (entries) => entries,
-    getPriorityCountryOrderMap: () => new Map(),
-    compareInspectorCountries: () => 0,
-    buildCountryColorTree: () => countryTree,
-    ensureInitialInspectorExpansion: () => {},
-    getInspectorGroupExpansionKey: (value) => String(value || ""),
+    createCountryInspectorState: (entry, entryIndex) => {
+      const group = countryTree.find((node) => node.countries.some((country) => country.code === entry.code));
+      return {
+        ...entry,
+        entryIndex,
+        ...(group ? { topLevelGroupId: group.id, topLevelGroupLabel: group.displayLabel } : {}),
+      };
+    },
     getCountryChildSectionsForParent: (code) => childSectionsByParent.get(String(code || "").trim().toUpperCase()) || [],
     buildCountryRowMetaText,
     getResolvedCountryColor: () => "#000000",
@@ -317,6 +319,7 @@ function createHarness({
     getSelectedLandInspectorCountryCode,
     onHgoIdentitySettingsChange: () => {
       settingsChangeCalls += 1;
+      observedVariantSelections.push({ ...runtimeState.hgoIdentity.variantSelections });
     },
   });
 
@@ -330,6 +333,9 @@ function createHarness({
     },
     get settingsChangeCalls() {
       return settingsChangeCalls;
+    },
+    get observedVariantSelections() {
+      return observedVariantSelections;
     },
   };
 }
@@ -561,7 +567,7 @@ test("related country child rows hide releasable parent lists", () => {
         return parts.join(" · ");
       },
     });
-    harness.runtimeState.expandedInspectorContinents.add("continent_europe");
+    harness.runtimeState.expandedInspectorContinents.add("group::continent_europe");
     harness.runtimeState.expandedInspectorReleaseParents.add("GER");
 
     harness.controller.renderList();
@@ -629,7 +635,13 @@ test("HGO identity detail replaces raw variant badges with a selectable flag opt
         };
       },
     });
-    harness.runtimeState.hgoIdentity = { enabled: true, nameMode: "hgo", showSuggestedAliases: true };
+    harness.runtimeState.hgoIdentity = {
+      enabled: true,
+      nameMode: "hgo",
+      showSuggestedAliases: true,
+      variantSelections: { USA: "democratic" },
+    };
+    const variantSelections = harness.runtimeState.hgoIdentity.variantSelections;
 
     harness.controller.renderCountryInspectorDetail();
 
@@ -643,7 +655,17 @@ test("HGO identity detail replaces raw variant badges with a selectable flag opt
     select.change();
 
     assert.equal(harness.runtimeState.hgoIdentity.variantSelections.ABK, "sov");
+    assert.equal(harness.runtimeState.hgoIdentity.variantSelections, variantSelections);
+    assert.equal(harness.runtimeState.hgoIdentity.variantSelections.USA, "democratic");
     assert.equal(harness.settingsChangeCalls, 1);
+    assert.deepEqual(harness.observedVariantSelections, [{ USA: "democratic", ABK: "sov" }]);
+    select.value = "";
+    select.change();
+    assert.equal(harness.runtimeState.hgoIdentity.variantSelections.ABK, undefined);
+    assert.equal(harness.runtimeState.hgoIdentity.variantSelections, variantSelections);
+    assert.equal(harness.runtimeState.hgoIdentity.variantSelections.USA, "democratic");
+    assert.equal(harness.settingsChangeCalls, 2);
+    assert.deepEqual(harness.observedVariantSelections.at(-1), { USA: "democratic" });
     assert.equal(harness.countryInspectorSelected.querySelector(".hgo-identity-variant-preview"), null);
   } finally {
     globalThis.document = previousDocument;

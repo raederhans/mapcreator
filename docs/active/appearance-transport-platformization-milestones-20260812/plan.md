@@ -18,8 +18,10 @@
 
 ## Stages
 
-- [ ] A — P4.3 Admission Pack：review fixes 与 exact checkpoint 由当前 Gate A candidate 承载；final live gates pending；`A_ADMITTED_SHA` pending。
-- [ ] B — P4.4 Replay and Admission Pack：blocked on `A_ADMITTED_SHA`，recovery source `65335370c50279c19c9074362567f9d2284e0c39`。
+2026-09-05 状态收口：B1/B2/B3 的实现进度与正式 admission 统一读取 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status)。下列复选框表示里程碑正式准入，不用于重复登记局部实现；Scope 中的 lineage 和重放顺序保留原计划含义。
+
+- [x] A — P4.3 Admission Pack：`A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`（source candidate；tree `ba969a24a4730072245c60efeefba66409f2c88d`）。
+- [ ] B — P4.4 Replay and Admission Pack：正式准入与 `B_ADMITTED_SHA` 确认以 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status) 为准，不再以历史的 B1/B2/B3 尚未开始描述当前实现。
 - [ ] C — Appearance / Transport user-visible milestone：blocked on `B_ADMITTED_SHA`。
 
 ## Acceptance criteria
@@ -28,6 +30,7 @@
 - B：只重放 P4.4 职责提交；共享 UI 文件由主监督串行处理；exact P4.4、Appearance/Transport browser、heavy-geo/data、Pages/dist、core main-thread、standard perf 与独立 review 绑定正式候选 SHA。
 - C：用户操作阶段为 `Preparing → Applying → Rendering → Ready / Recoverable error`；预置 contract 在 B actions、history、render 与 UI owners 上完成正式 wiring；首个 change-set 覆盖 Appearance 与 Transport 的 Preview / Compare / Apply / Undo；Demo 任务链覆盖 `sample → Guide → edit → export → restore`。
 - 每个里程碑只有主监督可以写入对应 `*_ADMITTED_SHA`，并在写入前核对 Git、门禁产物和集成状态。
+- A 的准入身份固定为 source candidate `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`；任何后续 docs-only 状态提交都不替代该 source identity。
 
 ## Non-goals
 

@@ -108,7 +108,7 @@ const MAP_RENDERER_STATE_WRITE_TOKEN_PARTS = Object.freeze([
   ["ensureProjectedBoundsCache();"],
   ["clearSphericalFeatureDiagnosticsCacheState(runtimeState);"],
   [RUNTIME_STATE_TOKEN, ".deferHitCanvasBuild = Boolean(deferred);"],
-  [RUNTIME_STATE_TOKEN, ".hitCanvasDirty = Boolean(dirty);"],
+  ["setHitCanvasDirtyState(runtimeState, dirty);"],
 ]);
 
 const OWNER_FORBIDDEN_TOKEN_PARTS = Object.freeze([

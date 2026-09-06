@@ -4,6 +4,7 @@ import {
   normalizeTextureStyleConfig,
 } from "../../core/state.js";
 import { captureHistoryState, pushHistoryEntry } from "../../core/history_manager.js";
+import { setAppearanceStyleGroupState } from "../../core/state/actions/appearance_actions.js";
 
 export const TEXTURE_STYLE_PATHS = Object.freeze([
   "styleConfig.texture.mode",
@@ -157,14 +158,32 @@ export function createAppearanceTextureOwner({
   let textureHistoryBefore = null;
   let textureHistoryKind = "";
 
+  const cloneStyleGroup = (value) => JSON.parse(JSON.stringify(value));
+
   const syncTextureConfig = () => {
-    runtimeState.styleConfig.texture = normalizeTextureStyleConfig(runtimeState.styleConfig.texture);
-    return runtimeState.styleConfig.texture;
+    return setAppearanceStyleGroupState(
+      runtimeState,
+      "texture",
+      normalizeTextureStyleConfig(runtimeState.styleConfig.texture),
+    );
   };
 
   const syncDayNightConfig = () => {
-    runtimeState.styleConfig.dayNight = normalizeDayNightStyleConfig(runtimeState.styleConfig.dayNight);
-    return runtimeState.styleConfig.dayNight;
+    return setAppearanceStyleGroupState(
+      runtimeState,
+      "dayNight",
+      normalizeDayNightStyleConfig(runtimeState.styleConfig.dayNight),
+    );
+  };
+
+  const updateDayNightConfig = (mutate) => {
+    const draft = cloneStyleGroup(syncDayNightConfig());
+    if (typeof mutate === "function") mutate(draft);
+    return setAppearanceStyleGroupState(
+      runtimeState,
+      "dayNight",
+      normalizeDayNightStyleConfig(draft),
+    );
   };
 
   const getComputerUtcMinutes = () => {
@@ -347,9 +366,13 @@ export function createAppearanceTextureOwner({
     // input/change 共用同一份 history capture：拖动滑杆期间持续改 working state，
     // 到 commit 边界再写入一条 undo 记录，避免一帧一个历史快照。
     beginTextureHistoryCapture(historyKind);
-    const texture = syncTextureConfig();
+    const texture = cloneStyleGroup(syncTextureConfig());
     if (typeof mutate === "function") mutate(texture);
-    syncTextureConfig();
+    setAppearanceStyleGroupState(
+      runtimeState,
+      "texture",
+      normalizeTextureStyleConfig(texture),
+    );
     renderTextureUI();
     renderDirty(renderReason);
     if (commitHistory) {
@@ -555,124 +578,141 @@ export function createAppearanceTextureOwner({
 
     if (nodes.dayNightEnabled && nodes.dayNightEnabled.dataset.bound !== "true") {
       nodes.dayNightEnabled.addEventListener("change", (event) => {
-        const dayNight = syncDayNightConfig();
-        dayNight.enabled = !!event.target.checked;
+        updateDayNightConfig((draft) => {
+          draft.enabled = !!event.target.checked;
+        });
         renderDayNightUI();
         renderDirty("day-night-enabled");
       });
       nodes.dayNightEnabled.dataset.bound = "true";
     }
     bindDayNightChange(nodes.dayNightMode, (event) => {
-      const dayNight = syncDayNightConfig();
       const mode = String(event.target.value || "manual").trim().toLowerCase();
-      dayNight.mode = mode === "utc" || mode === "cycle" ? mode : "manual";
+      updateDayNightConfig((draft) => {
+        draft.mode = mode === "utc" || mode === "cycle" ? mode : "manual";
+      });
     }, "day-night-mode");
     bindDayNightInput(nodes.dayNightManualTime, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.mode = "manual";
-      dayNight.manualUtcMinutes = clamp(Number.isFinite(value) ? value : 12 * 60, 0, 24 * 60 - 1);
+      updateDayNightConfig((draft) => {
+        draft.mode = "manual";
+        draft.manualUtcMinutes = clamp(Number.isFinite(value) ? value : 12 * 60, 0, 24 * 60 - 1);
+      });
     }, "day-night-time");
     bindDayNightInput(nodes.dayNightCycleSpeed, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.mode = "cycle";
-      dayNight.cycleSecondsPerDay = clamp(
-        Number.isFinite(value) ? value : defaultDayNight.cycleSecondsPerDay,
-        10,
-        600
-      );
+      updateDayNightConfig((draft) => {
+        draft.mode = "cycle";
+        draft.cycleSecondsPerDay = clamp(
+          Number.isFinite(value) ? value : defaultDayNight.cycleSecondsPerDay,
+          10,
+          600
+        );
+      });
     }, "day-night-cycle-speed");
     if (nodes.dayNightSyncComputerUtcBtn && nodes.dayNightSyncComputerUtcBtn.dataset.bound !== "true") {
       nodes.dayNightSyncComputerUtcBtn.addEventListener("click", () => {
-        const dayNight = syncDayNightConfig();
-        dayNight.mode = "manual";
-        dayNight.manualUtcMinutes = clamp(getComputerUtcMinutes(), 0, 24 * 60 - 1);
+        updateDayNightConfig((draft) => {
+          draft.mode = "manual";
+          draft.manualUtcMinutes = clamp(getComputerUtcMinutes(), 0, 24 * 60 - 1);
+        });
         renderDayNightUI();
         renderDirty("day-night-sync-computer-utc");
       });
       nodes.dayNightSyncComputerUtcBtn.dataset.bound = "true";
     }
     bindDayNightChange(nodes.dayNightCityLightsEnabled, (event) => {
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsEnabled = !!event.target.checked;
+      updateDayNightConfig((draft) => {
+        draft.cityLightsEnabled = !!event.target.checked;
+      });
     }, "day-night-city-lights-enabled");
     bindDayNightChange(nodes.dayNightCityLightsStyle, (event) => {
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsStyle = String(event.target.value || "modern");
+      updateDayNightConfig((draft) => {
+        draft.cityLightsStyle = String(event.target.value || "modern");
+      });
     }, "day-night-city-lights-style");
     bindDayNightInput(nodes.dayNightCityLightsIntensity, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsIntensity = clamp(
-        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsIntensity,
-        0,
-        1.8
-      );
+      updateDayNightConfig((draft) => {
+        draft.cityLightsIntensity = clamp(
+          Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsIntensity,
+          0,
+          1.8
+        );
+      });
     }, "day-night-city-lights-intensity");
     bindDayNightInput(nodes.dayNightCityLightsTextureOpacity, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsTextureOpacity = clamp(
-        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsTextureOpacity,
-        0,
-        1
-      );
+      updateDayNightConfig((draft) => {
+        draft.cityLightsTextureOpacity = clamp(
+          Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsTextureOpacity,
+          0,
+          1
+        );
+      });
     }, "day-night-city-lights-texture-opacity");
     bindDayNightInput(nodes.dayNightCityLightsCorridorStrength, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsCorridorStrength = clamp(
-        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsCorridorStrength,
-        0,
-        1
-      );
+      updateDayNightConfig((draft) => {
+        draft.cityLightsCorridorStrength = clamp(
+          Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsCorridorStrength,
+          0,
+          1
+        );
+      });
     }, "day-night-city-lights-corridor-strength");
     bindDayNightInput(nodes.dayNightCityLightsCoreSharpness, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsCoreSharpness = clamp(
-        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsCoreSharpness,
-        0,
-        1
-      );
+      updateDayNightConfig((draft) => {
+        draft.cityLightsCoreSharpness = clamp(
+          Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsCoreSharpness,
+          0,
+          1
+        );
+      });
     }, "day-night-city-lights-core-sharpness");
     bindDayNightChange(nodes.dayNightCityLightsPopulationBoostEnabled, (event) => {
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsPopulationBoostEnabled = !!event.target.checked;
+      updateDayNightConfig((draft) => {
+        draft.cityLightsPopulationBoostEnabled = !!event.target.checked;
+      });
     }, "day-night-city-lights-population-boost-enabled");
     bindDayNightInput(nodes.dayNightCityLightsPopulationBoostStrength, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.cityLightsPopulationBoostStrength = clamp(
-        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsPopulationBoostStrength,
-        0,
-        1.5
-      );
+      updateDayNightConfig((draft) => {
+        draft.cityLightsPopulationBoostStrength = clamp(
+          Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsPopulationBoostStrength,
+          0,
+          1.5
+        );
+      });
     }, "day-night-city-lights-population-boost-strength");
     bindDayNightInput(nodes.dayNightHistoricalCityLightsDensity, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.historicalCityLightsDensity = clamp(Number.isFinite(value) ? value / 100 : 1.25, 0.75, 2);
+      updateDayNightConfig((draft) => {
+        draft.historicalCityLightsDensity = clamp(Number.isFinite(value) ? value / 100 : 1.25, 0.75, 2);
+      });
     }, "day-night-historical-city-lights-density");
     bindDayNightInput(nodes.dayNightHistoricalCityLightsSecondaryRetention, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.historicalCityLightsSecondaryRetention = clamp(Number.isFinite(value) ? value / 100 : 0.55, 0, 1);
+      updateDayNightConfig((draft) => {
+        draft.historicalCityLightsSecondaryRetention = clamp(Number.isFinite(value) ? value / 100 : 0.55, 0, 1);
+      });
     }, "day-night-historical-city-lights-secondary-retention");
     bindDayNightInput(nodes.dayNightShadowOpacity, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.shadowOpacity = clamp(
-        Number.isFinite(value) ? value / 100 : defaultDayNight.shadowOpacity,
-        0,
-        0.85
-      );
+      updateDayNightConfig((draft) => {
+        draft.shadowOpacity = clamp(
+          Number.isFinite(value) ? value / 100 : defaultDayNight.shadowOpacity,
+          0,
+          0.85
+        );
+      });
     }, "day-night-shadow-opacity");
     bindDayNightInput(nodes.dayNightTwilightWidth, (event) => {
       const value = Number(event.target.value);
-      const dayNight = syncDayNightConfig();
-      dayNight.twilightWidthDeg = clamp(Number.isFinite(value) ? value : 10, 2, 28);
+      updateDayNightConfig((draft) => {
+        draft.twilightWidthDeg = clamp(Number.isFinite(value) ? value : 10, 2, 28);
+      });
     }, "day-night-twilight-width");
   };
 

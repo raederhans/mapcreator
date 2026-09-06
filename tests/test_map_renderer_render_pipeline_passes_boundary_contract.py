@@ -397,8 +397,13 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             render_pass_commit_body.index("cache.partialPoliticalDirtyIds.clear();"),
         )
         self.assertIn("function getProjectedRenderableContentBounds()", viewport_owner_content)
-        self.assertIn("getters.isHgoRuntimePreviewReady()", viewport_owner_content)
-        self.assertIn("return getters.getHgoRuntimePreviewBounds?.() || null;", viewport_owner_content)
+        viewport_factory = renderer_content.split("function getViewportReadModelOwner()", 1)[1].split(
+            "function getViewportCommandOwner()", 1,
+        )[0]
+        self.assertIn('readBoundsSnapshots("getProjectedRenderableContentBoundsSnapshots")', viewport_owner_content)
+        for getter in ["getPanContentBoundsSnapshots", "getProjectedRenderableContentBoundsSnapshots"]:
+            getter_body = viewport_factory.split(getter + ": () => {", 1)[1].split("const features", 1)[0]
+            self.assertIn("if (isHgoRuntimePreviewReady()) return [snapshotBounds(getProjectedHgoRuntimePreviewBounds())];", getter_body)
         self.assertIn("return getViewportReadModelOwner().getProjectedRenderableContentBounds();", renderer_content)
         viewport_command_owner_content = VIEWPORT_COMMAND_OWNER_JS.read_text(encoding="utf-8")
         pan_extent_body = renderer_content.split("function calculatePanExtent()", 1)[1].split(

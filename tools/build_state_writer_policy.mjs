@@ -17,6 +17,9 @@ import {
 import {
   expandStateActionMembershipsWithLegacyReplacements,
   findStateActionCrossFileMigrationContractEntry,
+  findStateActionSuccessorProofContractEntry,
+  STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT,
+  inspectStateImportedBorrowedProjectionSource,
   getStateTargetPureReaderContractEntriesForModule,
   getStateActionDelegationContractEntriesForModule,
   inspectStateDetachedCaptureSource,
@@ -31,6 +34,7 @@ import {
   validateStateActionModulePhaseAdmissions,
   validateStateActionModuleSource,
   validateStateActionPolicyBindings,
+  validateStateActionSuccessorProofContract,
   validateStateTargetPureReaderContract,
 } from "./state_action_delegation_contract.mjs";
 import {
@@ -1828,6 +1832,168 @@ function buildActionMembershipIndex(writers = []) {
   return index;
 }
 
+function findActionTargetBinding(writers, modulePath, exportName) {
+  const contract = STATE_ACTION_DELEGATION_CONTRACT.find(
+    (entry) =>
+      entry.modulePath === modulePath
+      && entry.exportName === exportName,
+  );
+  if (!contract) return null;
+  const matches = (Array.isArray(writers) ? writers : [])
+    .filter((writer) =>
+      writer?.surface === "production"
+      && writer?.authority === "domain-action"
+      && writer?.path === modulePath
+    )
+    .flatMap((writer) => writer.bindings || [])
+    .filter((binding) =>
+      binding?.authority === "domain-action"
+      && binding?.functionName === exportName
+      && binding?.kind === "function-parameter"
+      && Number(binding?.parameterIndex)
+        === Number(contract.targetArgumentIndex)
+    );
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function actionBindingOwnsExactMembership(binding, membership) {
+  return (binding?.grants || []).some((grant) =>
+    (grant?.memberships || []).some((candidate) =>
+      [
+        String(grant?.domain || ""),
+        String(grant?.migrationPhase || ""),
+        String(candidate?.operation || ""),
+        String(candidate?.key || ""),
+      ].join("|") === membership
+    )
+  );
+}
+
+function actionEdgeProof(edge) {
+  return {
+    callerPath: edge.callerPath,
+    callerBindingId: edge.callerBindingId,
+    callerBindingIdentity: edge.callerBindingIdentity,
+    enclosingFunctionIdentity: edge.enclosingFunctionIdentity,
+    actionModulePath: edge.actionModulePath,
+    actionExportName: edge.actionExportName,
+    targetArgumentIndex: edge.targetArgumentIndex,
+    actionCallEdgeIdentity: edge.actionCallEdgeIdentity,
+    occurrenceIndex: edge.occurrenceIndex,
+    start: edge.start,
+    end: edge.end,
+    line: edge.line,
+    column: edge.column,
+    sourceFingerprint: edge.sourceFingerprint,
+    terminalMembership: edge.terminalMembership,
+  };
+}
+
+function resolveActionSuccessorProofs({
+  edge,
+  retiredMembership,
+  writers,
+  normalizedEdges,
+  actionMembershipIndex,
+}) {
+  const firstActionIdentity =
+    `${edge.actionModulePath}#${edge.actionExportName}`;
+  const firstActionOwnsMembership = actionMembershipIndex
+    .get(firstActionIdentity)
+    ?.has(retiredMembership.replacementKey);
+  const successorContract =
+    findStateActionSuccessorProofContractEntry(
+      edge.actionModulePath,
+      edge.actionExportName,
+      retiredMembership.replacementKey,
+    );
+  if (successorContract && firstActionOwnsMembership) {
+    return { error: "caller-action-successor-membership-reacquired" };
+  }
+  if (!successorContract && firstActionOwnsMembership) {
+    return {
+      successorActionProofs: [],
+      successorProofContractIdentity: "",
+    };
+  }
+  if (!successorContract) {
+    return { error: "caller-action-successor-contract-missing" };
+  }
+  const targetBinding = findActionTargetBinding(
+    writers,
+    edge.actionModulePath,
+    edge.actionExportName,
+  );
+  if (!targetBinding) {
+    return { error: "caller-action-successor-owner-unresolved" };
+  }
+  if (successorContract.requiredDirectMemberships.some(
+    (membership) =>
+      !actionBindingOwnsExactMembership(targetBinding, membership),
+  )) {
+    return { error: "caller-action-successor-direct-membership-missing" };
+  }
+  const targetBindingIdentity =
+    buildStableStateBindingIdentity(targetBinding);
+  const outgoingEdges = normalizedEdges.filter((candidate) =>
+    candidate.callerPath === edge.actionModulePath
+    && candidate.callerBindingIdentity === targetBindingIdentity
+  );
+  const terminalEdges = [];
+  for (const expected of successorContract.successorEdges) {
+    const matches = outgoingEdges.filter((candidate) =>
+      candidate.enclosingFunctionIdentity
+        === expected.enclosingFunctionIdentity
+      && candidate.actionModulePath === expected.actionModulePath
+      && candidate.actionExportName === expected.actionExportName
+      && candidate.targetArgumentIndex
+        === expected.targetArgumentIndex
+      && candidate.sourceFingerprint === expected.sourceFingerprint
+      && candidate.occurrenceIndex === expected.occurrenceIndex
+    );
+    if (matches.length !== 1) {
+      return {
+        error: matches.length
+          ? "caller-action-successor-edge-ambiguous"
+          : "caller-action-successor-edge-missing",
+      };
+    }
+    const [candidate] = matches;
+    if (
+      candidate.actionModulePath === edge.actionModulePath
+      && candidate.actionExportName === edge.actionExportName
+    ) {
+      return { error: "caller-action-successor-cycle" };
+    }
+    const terminalBinding = findActionTargetBinding(
+      writers,
+      candidate.actionModulePath,
+      candidate.actionExportName,
+    );
+    if (!actionBindingOwnsExactMembership(
+      terminalBinding,
+      expected.terminalMembership,
+    )) {
+      return { error: "caller-action-successor-membership-missing" };
+    }
+    terminalEdges.push({
+      ...candidate,
+      terminalMembership: expected.terminalMembership,
+    });
+  }
+  return {
+    successorActionProofs: terminalEdges
+      .map(actionEdgeProof)
+      .sort((left, right) =>
+        left.actionCallEdgeIdentity.localeCompare(
+          right.actionCallEdgeIdentity,
+        )
+      ),
+    successorProofContractIdentity:
+      successorContract.contractIdentity,
+  };
+}
+
 function buildCallerToActionLedgerEntry({
   retiredMembership,
   retiredMutationEvidence,
@@ -1836,6 +2002,8 @@ function buildCallerToActionLedgerEntry({
   retiredInPhase,
   recordedInPhase,
   backfilled,
+  successorActionProofs = [],
+  successorProofContractIdentity = "",
 }) {
   return {
     retiredMembershipIdentity: retiredMembership.signature,
@@ -1886,6 +2054,12 @@ function buildCallerToActionLedgerEntry({
     line: edge.line,
     column: edge.column,
     sourceFingerprint: edge.sourceFingerprint,
+    ...(successorActionProofs.length
+      ? {
+        successorActionProofs,
+        successorProofContractIdentity,
+      }
+      : {}),
     retiredInPhase: normalizeP4StateActionPhase(retiredInPhase),
     recordedInPhase: normalizeP4StateActionPhase(recordedInPhase),
     backfilled: Boolean(backfilled),
@@ -1895,6 +2069,8 @@ function buildCallerToActionLedgerEntry({
 function buildCallerToActionFunctionProof({
   retiredMutationEvidence,
   edge,
+  successorActionProofs = [],
+  successorProofContractIdentity = "",
 }) {
   return {
     callerPath: edge.callerPath,
@@ -1918,6 +2094,12 @@ function buildCallerToActionFunctionProof({
     line: edge.line,
     column: edge.column,
     sourceFingerprint: edge.sourceFingerprint,
+    ...(successorActionProofs.length
+      ? {
+        successorActionProofs,
+        successorProofContractIdentity,
+      }
+      : {}),
   };
 }
 
@@ -2289,6 +2471,16 @@ export function buildCallerToActionLedger({
     error.violations = crossFileMigrationContractViolations;
     throw error;
   }
+  const successorProofContractViolations =
+    validateStateActionSuccessorProofContract();
+  if (successorProofContractViolations.length) {
+    const error = new Error(
+      "State action successor proof contract is invalid.",
+    );
+    error.code = "state-action-successor-proof-contract-invalid";
+    error.violations = successorProofContractViolations;
+    throw error;
+  }
   const backfillAllowed =
     previousPolicy
     && previousEntries.length === 0
@@ -2418,11 +2610,25 @@ export function buildCallerToActionLedger({
         candidateEdges,
         crossFileMigration,
       });
-      if (retiredMutationEvidence.error || candidateEdges.length !== 1) {
+      const successorResolution = candidateEdges.length === 1
+        ? resolveActionSuccessorProofs({
+          edge: candidateEdges[0],
+          retiredMembership,
+          writers,
+          normalizedEdges,
+          actionMembershipIndex,
+        })
+        : null;
+      if (
+        retiredMutationEvidence.error
+        || candidateEdges.length !== 1
+        || successorResolution?.error
+      ) {
         missingProofs.push({
           code: "legacy-membership-retirement-replacement-missing",
           retiredMembershipIdentity: entry.retiredMembershipIdentity,
           reason: retiredMutationEvidence.error
+            || successorResolution?.error
             || (candidateEdges.length === 0
               ? "explicit-cross-file-action-edge-missing"
               : "explicit-cross-file-action-edge-ambiguous"),
@@ -2440,8 +2646,12 @@ export function buildCallerToActionLedger({
           edge: candidateEdges[0],
           crossFileMigration,
           retiredInPhase: entry.retiredInPhase || previousPhase,
-          recordedInPhase: normalizedPhase,
+          recordedInPhase: entry.recordedInPhase || normalizedPhase,
           backfilled: entry.backfilled,
+          successorActionProofs:
+            successorResolution.successorActionProofs,
+          successorProofContractIdentity:
+            successorResolution.successorProofContractIdentity,
         }),
       );
       continue;
@@ -2468,16 +2678,17 @@ export function buildCallerToActionLedger({
               === proof.enclosingFunctionIdentity
           ),
       );
-      const observedActionMemberships = observed
-        ? actionMembershipIndex.get(
-          `${observed.actionModulePath}#${observed.actionExportName}`,
-        )
+      let liveEdge = observed || null;
+      let successorResolution = liveEdge
+        ? resolveActionSuccessorProofs({
+          edge: liveEdge,
+          retiredMembership,
+          writers,
+          normalizedEdges,
+          actionMembershipIndex,
+        })
         : null;
-      let liveEdge = observedActionMemberships?.has(
-        retiredMembership.replacementKey,
-      )
-        ? observed
-        : null;
+      if (successorResolution?.error) liveEdge = null;
       if (!liveEdge && entry.crossFileMigrationContractIdentity) {
         missingProofs.push({
           code: "legacy-membership-retirement-replacement-missing",
@@ -2499,12 +2710,18 @@ export function buildCallerToActionLedger({
                 === proof.enclosingFunctionIdentity
               : !edge.enclosingFunctionIdentity
           )
-          && actionMembershipIndex.get(
-            `${edge.actionModulePath}#${edge.actionExportName}`,
-          )?.has(retiredMembership.replacementKey)
-        );
+        ).map((edge) => ({
+          edge,
+          resolution: resolveActionSuccessorProofs({
+            edge,
+            retiredMembership,
+            writers,
+            normalizedEdges,
+            actionMembershipIndex,
+          }),
+        })).filter(({ resolution }) => !resolution.error);
         const successorActionIdentities = new Set(
-          successorEdges.map((edge) => [
+          successorEdges.map(({ edge }) => [
             edge.actionModulePath,
             edge.actionExportName,
             edge.targetArgumentIndex,
@@ -2524,8 +2741,8 @@ export function buildCallerToActionLedger({
               : "caller-action-successor-edge-ambiguous",
             successorActionCallEdgeIdentities:
               successorEdges.map(
-                ({ actionCallEdgeIdentity }) =>
-                  actionCallEdgeIdentity,
+                ({ edge }) =>
+                  edge.actionCallEdgeIdentity,
               ).sort(),
           });
           continue;
@@ -2533,7 +2750,8 @@ export function buildCallerToActionLedger({
         // Repeated calls to one registered action still prove one authority
         // boundary. normalizedEdges is source-stable, so the proof keeps the
         // first exact call site while distinct action owners remain ambiguous.
-        [liveEdge] = successorEdges;
+        liveEdge = successorEdges[0].edge;
+        successorResolution = successorEdges[0].resolution;
       }
       const refreshLiveObservation =
         previousPhase !== normalizedPhase
@@ -2551,7 +2769,19 @@ export function buildCallerToActionLedger({
           line: liveEdge.line,
           column: liveEdge.column,
           sourceFingerprint: liveEdge.sourceFingerprint,
+          ...(successorResolution.successorActionProofs.length
+            ? {
+              successorActionProofs:
+                successorResolution.successorActionProofs,
+              successorProofContractIdentity:
+                successorResolution.successorProofContractIdentity,
+            }
+            : {}),
         });
+        if (!successorResolution.successorActionProofs.length) {
+          delete proof.successorActionProofs;
+          delete proof.successorProofContractIdentity;
+        }
       }
     }
   }
@@ -2626,31 +2856,38 @@ export function buildCallerToActionLedger({
       ) {
         return false;
       }
-      const memberships = actionMembershipIndex.get(
-        `${edge.actionModulePath}#${edge.actionExportName}`,
-      );
-      return memberships?.has(retiredMembership.replacementKey);
+      return true;
     });
+    const resolvedCandidates = candidateEdges.map((edge) => ({
+      edge,
+      resolution: resolveActionSuccessorProofs({
+        edge,
+        retiredMembership,
+        writers,
+        normalizedEdges,
+        actionMembershipIndex,
+      }),
+    })).filter(({ resolution }) => !resolution.error);
     let retiredMutationEvidence = buildRetiredMutationEvidence({
       previousPolicy,
       retiredMembership,
-      candidateEdges,
+      candidateEdges: resolvedCandidates.map(({ edge }) => edge),
       crossFileMigration,
     });
     if (
       bootstrapSeed
       && retiredMutationEvidence.error
-      && candidateEdges.length === 1
-      && candidateEdges[0].enclosingFunctionIdentity
+      && resolvedCandidates.length === 1
+      && resolvedCandidates[0].edge.enclosingFunctionIdentity
     ) {
       retiredMutationEvidence = {
         enclosingFunctionIdentity:
-          candidateEdges[0].enclosingFunctionIdentity,
+          resolvedCandidates[0].edge.enclosingFunctionIdentity,
         siteFingerprint: createHash("sha256")
           .update(
             [
               retiredMembership.signature,
-              candidateEdges[0].enclosingFunctionIdentity,
+          resolvedCandidates[0].edge.enclosingFunctionIdentity,
               "historical-bootstrap",
             ].join("|"),
           )
@@ -2661,15 +2898,20 @@ export function buildCallerToActionLedger({
     }
     const functionProofs = retiredMutationEvidence.functionEvidences
       ?.map((functionEvidence) => {
-        const edge = candidateEdges.find(
-          ({ enclosingFunctionIdentity }) =>
-            enclosingFunctionIdentity
+        const resolved = resolvedCandidates.find(
+          ({ edge: candidate }) =>
+            candidate.enclosingFunctionIdentity
               === functionEvidence.enclosingFunctionIdentity,
         );
+        const edge = resolved?.edge;
         return edge
           ? buildCallerToActionFunctionProof({
             retiredMutationEvidence: functionEvidence,
             edge,
+            successorActionProofs:
+              resolved.resolution.successorActionProofs,
+            successorProofContractIdentity:
+              resolved.resolution.successorProofContractIdentity,
           })
           : null;
       });
@@ -2681,12 +2923,12 @@ export function buildCallerToActionLedger({
       || retiredMutationEvidence.functionEvidences
       ? null
       : crossFileMigration
-        ? candidateEdges[0]
-        : candidateEdges.find(
-          ({ enclosingFunctionIdentity }) =>
-            enclosingFunctionIdentity
+        ? resolvedCandidates[0]?.edge
+        : resolvedCandidates.find(
+          ({ edge }) =>
+            edge.enclosingFunctionIdentity
             === retiredMutationEvidence.enclosingFunctionIdentity,
-        );
+        )?.edge;
     if (
       retiredMutationEvidence.error
       || missingFunctionEvidence
@@ -2737,6 +2979,12 @@ export function buildCallerToActionLedger({
           retiredMutationEvidence,
           edge: candidate,
           crossFileMigration,
+          successorActionProofs:
+            resolvedCandidates.find(({ edge }) => edge === candidate)
+              ?.resolution.successorActionProofs || [],
+          successorProofContractIdentity:
+            resolvedCandidates.find(({ edge }) => edge === candidate)
+              ?.resolution.successorProofContractIdentity || "",
           ...provenance,
         }),
     );
@@ -2769,14 +3017,22 @@ export function buildCallerToActionLedger({
     );
   return {
     schemaVersion:
-      Number(previousLedger?.schemaVersion) === 2
+      Number(previousLedger?.schemaVersion) === 3
+      || entries.some((entry) =>
+        Array.isArray(entry.successorActionProofs)
+        || entry.functionProofs?.some((proof) =>
+          Array.isArray(proof.successorActionProofs)
+        )
+      )
+        ? 3
+        : Number(previousLedger?.schemaVersion) === 2
       || entries.some((entry) =>
         Array.isArray(entry.functionProofs)
         || entry.proofPrecision
           === "explicit-cross-file-multi-function"
       )
-        ? 2
-        : 1,
+          ? 2
+          : 1,
     entries,
   };
 }
@@ -2906,10 +3162,45 @@ export function validateLegacyMembershipRetirementReplacements({
     );
     const functionProofsValid =
       functionProofs.length > 0
-      && functionProofs.every((functionProof) =>
-        actionMembershipIndex.get(
-          `${functionProof.actionModulePath}#${functionProof.actionExportName}`,
-        )?.has(record.replacementKey)
+      && functionProofs.every((functionProof) => {
+        const successorContract =
+          findStateActionSuccessorProofContractEntry(
+            functionProof.actionModulePath,
+            functionProof.actionExportName,
+            record.replacementKey,
+          );
+        const authorityProofs = Array.isArray(
+          functionProof.successorActionProofs,
+        ) ? functionProof.successorActionProofs : [functionProof];
+        const authorityValid = authorityProofs.every((authorityProof) => {
+          const requiredMembership = authorityProof.terminalMembership
+            || record.replacementKey;
+          return successorContract
+            ? actionBindingOwnsExactMembership(
+              findActionTargetBinding(
+                writers,
+                authorityProof.actionModulePath,
+                authorityProof.actionExportName,
+              ),
+              requiredMembership,
+            )
+            : actionMembershipIndex.get(
+              `${authorityProof.actionModulePath}#${authorityProof.actionExportName}`,
+            )?.has(requiredMembership);
+        });
+        const directMembershipsValid = !successorContract
+          || successorContract.requiredDirectMemberships.every(
+            (membership) => actionBindingOwnsExactMembership(
+              findActionTargetBinding(
+                writers,
+                functionProof.actionModulePath,
+                functionProof.actionExportName,
+              ),
+              membership,
+            ),
+          );
+        return authorityValid
+        && directMembershipsValid
         && (
           explicitCrossFileCaller
           || (
@@ -2917,8 +3208,8 @@ export function validateLegacyMembershipRetirementReplacements({
             && functionProof.callerBindingIdentity
               === expectedCallerBindingIdentity
           )
-        )
-      );
+        );
+      });
     if (
       !proof
       || proofRetiredCallerPath !== record.path
@@ -4751,7 +5042,9 @@ export function buildStateWriterDerivedAliasTaintModeManifest({
     ).filter((relativePath) => !isTestPath(relativePath));
   const persistent = new Set(persistentStrictProductionPaths);
   const modeByPath = Object.fromEntries(
-    normalizeCandidatePathList(candidatePaths).map((relativePath) => [
+    // Deleted production files remain in the frozen-baseline diff. Keep their
+    // strict modes for historical proof without adding them to current scans.
+    normalizeCandidatePathList([...candidatePaths, ...changedProductionPaths]).map((relativePath) => [
       relativePath,
       resolveStateWriterDerivedAliasTaintMode({
         relativePath,
@@ -4868,7 +5161,13 @@ export async function discoverScannedCandidateBindings(
       } of bindingInventories
     ) {
       actionDelegations.push(...bindingActionDelegations);
-      if (!findings.length) {
+      if (!shouldRetainScannedWriterCandidate({
+        relativePath,
+        surface,
+        binding,
+        findings,
+        actionDelegations: bindingActionDelegations,
+      })) {
         continue;
       }
       candidates.push({
@@ -4876,6 +5175,13 @@ export async function discoverScannedCandidateBindings(
         surface,
         binding,
         findings,
+        delegationOnly: isDelegationOnlyStateWriterCandidate({
+          relativePath,
+          surface,
+          binding,
+          findings,
+          actionDelegations: bindingActionDelegations,
+        }),
       });
     }
   }
@@ -4889,6 +5195,39 @@ export async function discoverScannedCandidateBindings(
       normalizeStateActionDelegations(actionDelegations),
     derivedAliasTaintModeManifest,
   };
+}
+
+export function shouldRetainScannedWriterCandidate({
+  relativePath = "",
+  surface = "",
+  binding = null,
+  findings = [],
+  actionDelegations = [],
+} = {}) {
+  if (Array.isArray(findings) && findings.length) return true;
+  return isDelegationOnlyStateWriterCandidate({
+    relativePath,
+    surface,
+    binding,
+    findings,
+    actionDelegations,
+  });
+}
+
+export function isDelegationOnlyStateWriterCandidate({
+  relativePath = "",
+  surface = "",
+  binding = null,
+  findings = [],
+  actionDelegations = [],
+} = {}) {
+  return surface === "production"
+    && isActionPath(relativePath)
+    && binding?.kind === "function-parameter"
+    && Array.isArray(findings)
+    && findings.length === 0
+    && Array.isArray(actionDelegations)
+    && actionDelegations.length > 0;
 }
 
 export async function resolveCachedStateWriterRepositoryScan({
@@ -5235,6 +5574,23 @@ function summarizeWriterClassification(bindings) {
 
 // P4.0 冻结基线后，各阶段只能基于 previousPolicy 递进生成；显式刷新
 // 被限制在 P4.0，防止维护命令悄悄重定义历史允许面。
+export async function validateImportedBorrowedProjectionSources() {
+  const seen = new Set();
+  for (const entry of STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT) {
+    const id = `${entry.modulePath}#${entry.exportName}`;
+    if (seen.has(id)) throw new Error(`Duplicate borrowed projection contract: ${id}`);
+    seen.add(id);
+    const source = await fs.readFile(path.join(PROJECT_ROOT, entry.modulePath), "utf8");
+    const { violations } = inspectStateImportedBorrowedProjectionSource(source, entry);
+    if (violations.length) {
+      const error = new Error(`Borrowed projection source proof failed: ${id}`);
+      error.code = "state-imported-borrowed-projection-contract-violation";
+      error.violations = violations;
+      throw error;
+    }
+  }
+}
+
 export async function buildStateWriterPolicySnapshot({
   baseSha = "",
   generatedAt = "",
@@ -5246,6 +5602,7 @@ export async function buildStateWriterPolicySnapshot({
   repositoryScanCache = null,
   historicalDerivedAliasProofCache = null,
 } = {}) {
+  await validateImportedBorrowedProjectionSources();
   const normalizedPhase = normalizeP4StateActionPhase(phase);
   if (refreshP4Baseline && normalizedPhase !== "P4.0") {
     throw new Error("--refresh-p4-baseline is valid only for phase P4.0.");
@@ -5356,6 +5713,9 @@ export async function buildStateWriterPolicySnapshot({
         candidate.surface,
         candidate.binding,
       ),
+      ...(candidate.delegationOnly === true
+        ? { delegationOnly: true }
+        : {}),
       grants: buildStateWriterBindingGrants(
         candidate.findings,
         candidate.path,
@@ -5723,6 +6083,7 @@ function policyBindingSignatures(policy) {
 export async function scanStateWriterPolicySnapshot(policy, {
   repositoryScanCache = null,
 } = {}) {
+  await validateImportedBorrowedProjectionSources();
   const legacyAllowlistPaths = await readLegacyStateWriterAllowlist();
   const policySignatures = policyBindingSignatures(policy);
   const {
@@ -5791,6 +6152,7 @@ export async function scanStateWriterPolicySnapshot(policy, {
         path: writer.path,
         surface: writer.surface,
         bindingId: binding.id,
+        delegationOnly: candidate?.delegationOnly === true,
         findings: applyStateWriterBindingFindingContracts({
           relativePath: writer.path,
           binding,

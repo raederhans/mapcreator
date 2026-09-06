@@ -954,6 +954,57 @@ test("scenario chunk promotion snapshots restore exact values and absent propert
   assert.equal(target.sentinel, "preserved");
 });
 
+test("special-zone layer promotion delegates present commits and preserves absent rollback", async () => {
+  const {
+    applyScenarioChunkOptionalLayerState,
+    captureScenarioChunkPromotionState,
+    restoreScenarioChunkPromotionState,
+  } = await importExpectedModule(ACTIVATION_ACTIONS_PATH, "scenario activation actions");
+  const target = {};
+  const absentSnapshot = captureScenarioChunkPromotionState(target, ["specialzonelayers"]);
+  const scenarioLayers = {
+    layers: [{ id: "scenario-zone", memberFeatureIds: ["a", "b"] }],
+    activeLayerId: "scenario-zone",
+  };
+
+  const firstApply = applyScenarioChunkOptionalLayerState(
+    target,
+    "specialzonelayers",
+    scenarioLayers,
+  );
+  assert.equal(firstApply.changed, true);
+  assert.equal(target.specialZoneLayers, scenarioLayers);
+  assert.equal(
+    applyScenarioChunkOptionalLayerState(
+      target,
+      "specialzonelayers",
+      scenarioLayers,
+    ).changed,
+    false,
+  );
+  assert.equal(Object.hasOwn(target, "specialZonesOverlayDirty"), false);
+
+  const presentSnapshot = captureScenarioChunkPromotionState(target, ["specialzonelayers"]);
+  applyScenarioChunkOptionalLayerState(target, "specialzonelayers", {
+    layers: [{ id: "replacement-zone", memberFeatureIds: [] }],
+    activeLayerId: "replacement-zone",
+  });
+  restoreScenarioChunkPromotionState(target, [presentSnapshot[0]]);
+  assert.equal(target.specialZoneLayers, presentSnapshot[0].stateValue);
+  assert.equal(target.specialZoneLayers.activeLayerId, "scenario-zone");
+  assert.equal(Object.hasOwn(target, "specialZonesOverlayDirty"), false);
+
+  applyScenarioChunkOptionalLayerState(target, "specialzonelayers", {
+    layers: [{ id: "second-replacement-zone", memberFeatureIds: [] }],
+    activeLayerId: "second-replacement-zone",
+  });
+  restoreScenarioChunkPromotionState(target, [...presentSnapshot]);
+  assert.equal(target.specialZoneLayers, presentSnapshot[0].stateValue);
+
+  restoreScenarioChunkPromotionState(target, absentSnapshot);
+  assert.equal(Object.hasOwn(target, "specialZoneLayers"), false);
+});
+
 test("scenario city external-effect application is owned by presentation actions", async () => {
   const { applyScenarioChunkCityExternalEffectState } = await importExpectedModule(
     PRESENTATION_ACTIONS_PATH,

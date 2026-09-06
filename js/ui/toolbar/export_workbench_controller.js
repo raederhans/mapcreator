@@ -3,8 +3,16 @@
 // toolbar.js 继续保留 overlay 外壳、跨面板仲裁、URL/focus 协调和 open/close facade。
 
 import { resolveSampleExportRecommendationContext } from "../../core/sample_export_recommendation.js";
-import { replaceExportWorkbenchUiState } from "../../core/state/index.js";
-import { normalizeExportAdjustmentValue } from "./export_artifact_model.js";
+import {
+  ensureExportWorkbenchUiState as ensureExportWorkbenchUiAction,
+  setExportAdjustmentsState,
+  setExportBakeState,
+  setExportLayerOrderState,
+  setExportOutputState,
+  setExportPreviewState,
+  setExportTextVisibilityState,
+  setExportVisibilityState,
+} from "../../core/state/actions/export_workbench_actions.js";
 
 const EXPORT_MAIN_LAYER_VIEW_MODELS = Object.freeze([
   Object.freeze({ id: "background", name: "Background", summary: "Base frame", passNames: ["background"] }),
@@ -43,6 +51,18 @@ function identityT(key) {
 function assertRequiredCallableDependency(value, name) {
   if (typeof value !== "function") {
     throw new TypeError(`createExportWorkbenchController requires ${name} to be a function.`);
+  }
+}
+
+function assertRequiredObjectDependency(value, name) {
+  if (!value || typeof value !== "object") {
+    throw new TypeError(`createExportWorkbenchController requires ${name} to be an object.`);
+  }
+}
+
+function assertRequiredArrayDependency(value, name) {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`createExportWorkbenchController requires ${name} to be an array.`);
   }
 }
 
@@ -121,42 +141,9 @@ function getExportAnnotationCountSummary(mapSvg = null) {
 }
 
 function ensureExportWorkbenchUiState(state, normalizeExportWorkbenchUiState) {
-  const existingBakeCache = state.exportWorkbenchUi?.bakeCache instanceof Map
-    ? state.exportWorkbenchUi.bakeCache
-    : null;
-  const exportWorkbenchUi = replaceExportWorkbenchUiState(state, state.exportWorkbenchUi, {
+  return ensureExportWorkbenchUiAction(state, {
     normalizeState: normalizeExportWorkbenchUiState,
   });
-  exportWorkbenchUi.layerOrder = normalizeExportWorkbenchLayerOrder(exportWorkbenchUi.layerOrder);
-  exportWorkbenchUi.visibility = normalizeExportWorkbenchVisibility(exportWorkbenchUi.visibility);
-  exportWorkbenchUi.textVisibility = normalizeExportWorkbenchTextVisibility(
-    exportWorkbenchUi.textVisibility,
-    exportWorkbenchUi.includeTextLayer
-  );
-  exportWorkbenchUi.includeTextLayer = Object.values(exportWorkbenchUi.textVisibility).some(Boolean);
-  exportWorkbenchUi.scale = ["1", "1.5", "2", "4"].includes(String(exportWorkbenchUi.scale || "").trim())
-    ? String(exportWorkbenchUi.scale || "").trim()
-    : "2";
-  exportWorkbenchUi.previewMode = String(exportWorkbenchUi.previewMode || "").trim().toLowerCase() === "layer"
-    ? "layer"
-    : "main";
-  exportWorkbenchUi.previewLayerId = [
-    ...EXPORT_MAIN_LAYER_IDS,
-    ...EXPORT_TEXT_LAYER_IDS,
-  ].includes(String(exportWorkbenchUi.previewLayerId || "").trim())
-    ? String(exportWorkbenchUi.previewLayerId || "").trim()
-    : "background";
-  const adjustments = exportWorkbenchUi.adjustments && typeof exportWorkbenchUi.adjustments === "object"
-    ? exportWorkbenchUi.adjustments
-    : {};
-  exportWorkbenchUi.adjustments = {
-    brightness: normalizeExportAdjustmentValue(adjustments.brightness),
-    contrast: normalizeExportAdjustmentValue(adjustments.contrast),
-    saturation: normalizeExportAdjustmentValue(adjustments.saturation),
-    clarity: normalizeExportAdjustmentValue(adjustments.clarity),
-  };
-  exportWorkbenchUi.bakeCache = existingBakeCache || new Map();
-  return exportWorkbenchUi;
 }
 
 function resolveExportPassSequence(exportWorkbenchUi, renderPassNames) {
@@ -224,10 +211,20 @@ function createExportWorkbenchController({
   triggerCanvasDownload,
   triggerBlobDownload,
   bakeLayer,
+  clearBakeCache,
   exportMaxConcurrentJobs = 1,
 } = {}) {
+  assertRequiredObjectDependency(state, "state");
+  assertRequiredCallableDependency(t, "t");
   assertRequiredCallableDependency(showToast, "showToast");
   assertRequiredCallableDependency(showExportFailureToast, "showExportFailureToast");
+  assertRequiredCallableDependency(normalizeExportWorkbenchUiState, "normalizeExportWorkbenchUiState");
+  assertRequiredArrayDependency(renderPassNames, "renderPassNames");
+  assertRequiredCallableDependency(buildCompositeSourceCanvas, "buildCompositeSourceCanvas");
+  assertRequiredCallableDependency(buildSingleExportSourceCanvas, "buildSingleExportSourceCanvas");
+  assertRequiredCallableDependency(applyExportAdjustmentsToCanvas, "applyExportAdjustmentsToCanvas");
+  assertRequiredCallableDependency(bakeLayer, "bakeLayer");
+  assertRequiredCallableDependency(clearBakeCache, "clearBakeCache");
 
   let exportWorkbenchDraggedLayerId = "";
   let exportWorkbenchPreviewRenderToken = 0;
@@ -336,8 +333,7 @@ function createExportWorkbenchController({
       item.draggable = true;
       item.classList.toggle("is-selected", exportUi.previewLayerId === layer.id);
       item.addEventListener("click", () => {
-        const liveExportUi = getExportUi();
-        liveExportUi.previewLayerId = layer.id;
+        setExportPreviewState(state, { layerId: layer.id });
         renderExportWorkbenchUi(true);
       });
 
@@ -361,7 +357,7 @@ function createExportWorkbenchController({
         if (draggedIndex === -1 || targetIndex === -1) return;
         nextOrder.splice(draggedIndex, 1);
         nextOrder.splice(targetIndex, 0, exportWorkbenchDraggedLayerId);
-        state.exportWorkbenchUi.layerOrder = normalizeExportWorkbenchLayerOrder(nextOrder);
+        setExportLayerOrderState(state, normalizeExportWorkbenchLayerOrder(nextOrder));
         renderExportWorkbenchLayerList();
       });
 
@@ -390,8 +386,7 @@ function createExportWorkbenchController({
       input.checked = exportUi.visibility[layer.id] !== false;
       input.addEventListener("click", (event) => event.stopPropagation());
       input.addEventListener("change", () => {
-        const liveExportUi = getExportUi();
-        liveExportUi.visibility[layer.id] = input.checked;
+        setExportVisibilityState(state, layer.id, input.checked);
         renderExportWorkbenchUi(true);
       });
       const text = document.createElement("span");
@@ -427,8 +422,7 @@ function createExportWorkbenchController({
       item.dataset.exportTextLayerId = entry.id;
       item.classList.toggle("is-selected", exportUi.previewLayerId === entry.id);
       item.addEventListener("click", () => {
-        const liveExportUi = getExportUi();
-        liveExportUi.previewLayerId = entry.id;
+        setExportPreviewState(state, { layerId: entry.id });
         renderExportWorkbenchUi(true);
       });
 
@@ -465,9 +459,7 @@ function createExportWorkbenchController({
       input.checked = exportUi.textVisibility?.[entry.id] !== false;
       input.addEventListener("click", (event) => event.stopPropagation());
       input.addEventListener("change", () => {
-        const liveExportUi = getExportUi();
-        liveExportUi.textVisibility[entry.id] = input.checked;
-        liveExportUi.includeTextLayer = Object.values(liveExportUi.textVisibility).some(Boolean);
+        setExportTextVisibilityState(state, entry.id, input.checked);
         renderExportWorkbenchUi(true);
       });
       const text = document.createElement("span");
@@ -492,9 +484,9 @@ function createExportWorkbenchController({
       exportWorkbenchPreviewLayerSelect.appendChild(option);
     });
     if (!entries.some((entry) => entry.id === exportUi.previewLayerId)) {
-      exportUi.previewLayerId = entries[0]?.id || "background";
+      setExportPreviewState(state, { layerId: entries[0]?.id || "background" });
     }
-    exportWorkbenchPreviewLayerSelect.value = exportUi.previewLayerId;
+    exportWorkbenchPreviewLayerSelect.value = getExportUi().previewLayerId;
     exportWorkbenchPreviewLayerSelect.disabled = exportUi.previewMode !== "layer";
   };
 
@@ -654,14 +646,16 @@ function createExportWorkbenchController({
     }
     exportJobsInFlight += 1;
     try {
-      const exportUi = syncExportWorkbenchControlsFromState();
+      let exportUi = syncExportWorkbenchControlsFromState();
       const scaleMultiplier = getSelectedExportScale();
-      exportUi.scale = String(scaleMultiplier);
+      setExportOutputState(state, { scale: String(scaleMultiplier) });
+      exportUi = getExportUi();
       const extension = exportUi.target === "per-layer" || exportUi.target === "bake-pack"
         ? "png"
         : (exportUi.format === "jpg" ? "jpg" : "png");
       if (exportUi.target === "composite") {
-        exportUi.format = extension;
+        setExportOutputState(state, { format: extension });
+        exportUi = getExportUi();
       }
       const exportTargetKind = exportUi.target;
       if (exportTargetKind === "per-layer") {
@@ -706,8 +700,9 @@ function createExportWorkbenchController({
     exportWorkbenchPreviewModeButtons.forEach((button) => {
       if (!button || button.dataset.bound === "true") return;
       button.addEventListener("click", () => {
-        const exportUi = getExportUi();
-        exportUi.previewMode = String(button.dataset.exportPreviewMode || "main") === "layer" ? "layer" : "main";
+        setExportPreviewState(state, {
+          mode: String(button.dataset.exportPreviewMode || "main") === "layer" ? "layer" : "main",
+        });
         renderExportWorkbenchUi(true);
       });
       button.dataset.bound = "true";
@@ -716,7 +711,9 @@ function createExportWorkbenchController({
     if (exportWorkbenchPreviewLayerSelect && !exportWorkbenchPreviewLayerSelect.dataset.bound) {
       exportWorkbenchPreviewLayerSelect.addEventListener("change", () => {
         const exportUi = getExportUi();
-        exportUi.previewLayerId = String(exportWorkbenchPreviewLayerSelect.value || "").trim() || exportUi.previewLayerId;
+        setExportPreviewState(state, {
+          layerId: String(exportWorkbenchPreviewLayerSelect.value || "").trim() || exportUi.previewLayerId,
+        });
         renderExportWorkbenchUi(true);
       });
       exportWorkbenchPreviewLayerSelect.dataset.bound = "true";
@@ -724,11 +721,12 @@ function createExportWorkbenchController({
 
     if (exportTarget && !exportTarget.dataset.bound) {
       exportTarget.addEventListener("change", () => {
-        const exportUi = getExportUi();
         const nextTarget = String(exportTarget.value || "").trim().toLowerCase();
-        exportUi.target = ["composite", "per-layer", "bake-pack"].includes(nextTarget)
-          ? nextTarget
-          : "composite";
+        setExportOutputState(state, {
+          target: ["composite", "per-layer", "bake-pack"].includes(nextTarget)
+            ? nextTarget
+            : "composite",
+        });
         renderExportWorkbenchUi(true);
       });
       exportTarget.dataset.bound = "true";
@@ -736,8 +734,9 @@ function createExportWorkbenchController({
 
     if (exportFormat && !exportFormat.dataset.bound) {
       exportFormat.addEventListener("change", () => {
-        const exportUi = getExportUi();
-        exportUi.format = exportFormat.value === "jpg" ? "jpg" : "png";
+        setExportOutputState(state, {
+          format: exportFormat.value === "jpg" ? "jpg" : "png",
+        });
         renderExportWorkbenchUi(true);
       });
       exportFormat.dataset.bound = "true";
@@ -745,12 +744,11 @@ function createExportWorkbenchController({
 
     if (exportScale && !exportScale.dataset.bound) {
       exportScale.addEventListener("change", () => {
-        const exportUi = getExportUi();
         const normalizedScale = ["1", "1.5", "2", "4"].includes(String(exportScale.value || "").trim())
           ? String(exportScale.value || "").trim()
           : "2";
         exportScale.value = normalizedScale;
-        exportUi.scale = normalizedScale;
+        setExportOutputState(state, { scale: normalizedScale });
         renderExportWorkbenchUi(true);
       });
       exportScale.dataset.bound = "true";
@@ -764,8 +762,9 @@ function createExportWorkbenchController({
     ].forEach(([input, key]) => {
       if (!(input instanceof HTMLInputElement) || input.dataset.bound === "true") return;
       input.addEventListener("input", () => {
-        const exportUi = getExportUi();
-        exportUi.adjustments[key] = normalizeExportAdjustmentValue(input.value);
+        setExportAdjustmentsState(state, {
+          [key]: Math.max(0, Math.min(200, Math.round(Number(input.value) || 100))),
+        });
         renderExportWorkbenchUi(true);
       });
       input.dataset.bound = "true";
@@ -793,9 +792,8 @@ function createExportWorkbenchController({
 
     if (exportWorkbenchClearBakeBtn && !exportWorkbenchClearBakeBtn.dataset.bound) {
       exportWorkbenchClearBakeBtn.addEventListener("click", () => {
-        const exportUi = getExportUi();
-        exportUi.bakeCache = new Map();
-        exportUi.bakeArtifacts = [];
+        clearBakeCache();
+        setExportBakeState(state, { bakeArtifacts: [] });
         renderExportWorkbenchUi(true);
         showToast(t("Cleared baked cache.", "ui"), {
           title: t("Bake cache cleared", "ui"),
@@ -823,6 +821,7 @@ function createExportWorkbenchController({
     renderExportWorkbenchTextElementList,
     renderExportWorkbenchUi,
     resolveExportPassSequence: (exportWorkbenchUi) => resolveExportPassSequence(exportWorkbenchUi, renderPassNames),
+    setExportBakeArtifacts: (bakeArtifacts) => setExportBakeState(state, { bakeArtifacts }),
     syncExportPreviewSourceOptions,
     syncExportWorkbenchControlsFromState,
   };

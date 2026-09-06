@@ -1,6 +1,5 @@
 import { POST_READY_IDLE_QUIET_MS } from "./post_ready_scheduler.js";
 import { patchScenarioChunkLoadState } from "../core/state/actions/scenario_chunk_runtime_actions.js";
-import { setUiHydrationState } from "../core/state/actions/boot_actions.js";
 
 const DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";
 
@@ -17,10 +16,15 @@ const REQUIRED_HELPERS = Object.freeze([
   "shouldFastTrackScenarioHydration",
 ]);
 
-function getRequiredFunction(source, name) {
+const REQUIRED_EFFECTS = Object.freeze([
+  "commitUiHydrationState",
+  "getStartupUiBootstrapPromise",
+]);
+
+function getRequiredFunction(source, name, scope = "helpers") {
   const value = source?.[name];
   if (typeof value !== "function") {
-    throw new Error(`createStartupReadyHandoffOwner requires helpers.${name}.`);
+    throw new Error(`createStartupReadyHandoffOwner requires ${scope}.${name}.`);
   }
   return value;
 }
@@ -38,6 +42,7 @@ function normalizeReadyReason(reason, fallback = "post-ready") {
 export function createStartupReadyHandoffOwner({
   runtimeState,
   postReadyScheduler,
+  effects = {},
   helpers = {},
 } = {}) {
   const targetRuntime = runtimeState;
@@ -51,9 +56,14 @@ export function createStartupReadyHandoffOwner({
   for (const helperName of REQUIRED_HELPERS) {
     getRequiredFunction(helpers, helperName);
   }
+  for (const effectName of REQUIRED_EFFECTS) {
+    getRequiredFunction(effects, effectName, "effects");
+  }
 
   const buildInteractionInfrastructureAfterStartup = helpers.buildInteractionInfrastructureAfterStartup;
   const checkpointBootMetric = helpers.checkpointBootMetric;
+  const commitUiHydrationState = effects.commitUiHydrationState;
+  const getStartupUiBootstrapPromise = effects.getStartupUiBootstrapPromise;
   const completeBootSequenceLogging = helpers.completeBootSequenceLogging;
   const ensureActiveScenarioBundleHydrated = helpers.ensureActiveScenarioBundleHydrated;
   const ensureContextLayerDataReady = helpers.ensureContextLayerDataReady;
@@ -170,7 +180,7 @@ export function createStartupReadyHandoffOwner({
   }
 
   function beginUiHydration() {
-    return setUiHydrationState(targetRuntime, {
+    return commitUiHydrationState({
       status: "pending",
       error: "",
       updatedAt: Date.now(),
@@ -178,18 +188,19 @@ export function createStartupReadyHandoffOwner({
   }
 
   function markUiHydrationReady() {
-    return setUiHydrationState(targetRuntime, {
+    return commitUiHydrationState({
       status: "ready",
       error: "",
       updatedAt: Date.now(),
     });
   }
 
-  function observePostReadyUiBootstrap(startupUiBootstrapPromise, {
+  function observePostReadyUiBootstrap({
     runPostScenarioUiReplay,
     handleUiBootstrapReady,
     handleUiBootstrapFailure,
   } = {}) {
+    const startupUiBootstrapPromise = getStartupUiBootstrapPromise();
     if (!startupUiBootstrapPromise || typeof startupUiBootstrapPromise.then !== "function") {
       return Promise.resolve({ ready: false, skipped: true, error: null });
     }
@@ -215,7 +226,7 @@ export function createStartupReadyHandoffOwner({
         return { ready: true, skipped: false, error: null };
       })
       .catch(async (error) => {
-        setUiHydrationState(targetRuntime, {
+        commitUiHydrationState({
           status: "failed",
           error: error?.message || String(error || "UI hydration failed."),
           updatedAt: Date.now(),
@@ -329,7 +340,7 @@ export function createStartupReadyHandoffOwner({
     }
   }
 
-  return {
+  return Object.freeze({
     beginUiHydration,
     reset,
     flushPendingScenarioChunkRefreshAfterReady,
@@ -341,5 +352,5 @@ export function createStartupReadyHandoffOwner({
     schedulePostReadyPoliticalReconcile,
     schedulePostReadyDeferredContextWarmup,
     schedulePostReadyVisualWarmup,
-  };
+  });
 }

@@ -13,11 +13,14 @@ import {
   STATE_MUTATION_DELEGATING_OWNER_CONTRACT,
   STATE_IMPORTED_PURE_NORMALIZER_CONTRACT,
   STATE_TARGET_PURE_READER_CONTRACT,
+  STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT,
+  inspectStateImportedBorrowedProjectionSource,
   inspectStateImportedPureNormalizerSource,
   inspectStateDetachedCaptureSource,
   inspectStateMutationDelegatingOwnerSources,
   validateStateActionModuleSource,
   validateStateActionModulePhaseAdmissions,
+  validateStateActionDelegationContract,
   validateStateImportedPureNormalizerContract,
   validateStateDetachedCaptureContract,
   validateStateMutationDelegatingOwnerContract,
@@ -28,6 +31,7 @@ import {
   discoverStateWriterBindingsForSource,
   normalizeStateActionDelegations,
   scanStateWriterBindingInventoriesBatch,
+  validateStateActionNonTargetParameterMutations,
 } from "../tools/build_state_writer_policy.mjs";
 import {
   scanStateMutationInventory,
@@ -68,7 +72,10 @@ test("source-bound detached captures return fresh values and fail closed on alia
       ["captureRenderPerfContextBreakdownState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureRenderPerfMetricEntryState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureProjectedBoundsDiagnosticsState", "js/core/state/actions/renderer_diagnostics_actions.js"],
+      ["captureRenderSnapshotState", "js/core/state/actions/renderer_diagnostics_actions.js"],
       ["captureExactAfterSettleControllerState", "js/core/state/actions/renderer_exact_refresh_actions.js"],
+      ["serializeSpecialZoneLayersState", "js/core/special_zone_layers.js"],
+      ["captureScenarioLayerSaveRequestState", "js/core/special_zone_layers.js"],
     ].map(([exportName, modulePath]) => ({ modulePath, exportName, targetArgumentIndex: 0 })),
   );
 
@@ -80,6 +87,36 @@ test("source-bound detached captures return fresh values and fail closed on alia
       entry.exportName,
     );
   }
+
+  const specialZoneEntry = STATE_DETACHED_CAPTURE_CONTRACT.find(
+    ({ exportName }) => exportName === "serializeSpecialZoneLayersState",
+  );
+  const specialZoneSource = fs.readFileSync(specialZoneEntry.modulePath, "utf8");
+  assert.ok(inspectStateDetachedCaptureSource(
+    specialZoneSource.replace(
+      "const normalized = normalizeSpecialZoneLayersState(rawState, options);",
+      "const normalized = rawState;",
+    ),
+    specialZoneEntry,
+  ).violations.some(({ code }) => code === "state-detached-capture-source-drift"));
+  assert.ok(inspectStateDetachedCaptureSource(
+    specialZoneSource.replace(
+      "function normalizeSpecialZoneLayersState(rawState, options = {}) {",
+      "function normalizeSpecialZoneLayersState(rawState, options = {}) { void options;",
+    ),
+    specialZoneEntry,
+  ).violations.some(({ code }) => code === "state-detached-capture-clone-helper-source-drift"));
+  const specialZoneCaller = `
+    import { state as runtimeState } from "../core/state.js";
+    import { serializeSpecialZoneLayersState } from "../core/special_zone_layers.js";
+    const snapshot = serializeSpecialZoneLayersState(runtimeState.specialZoneLayers);
+    consumeSnapshot(snapshot);
+  `;
+  assert.deepEqual(scan(specialZoneCaller).findings, []);
+  assert.ok(scan(specialZoneCaller.replace(
+    "runtimeState.specialZoneLayers",
+    "runtimeState.unregisteredLayers",
+  )).findings.some(({ reason }) => reason === "state-alias-escape"));
 
   const source = [
     'import { state as runtimeState } from "../core/state.js";',
@@ -202,9 +239,43 @@ test("source-bound detached captures return fresh values and fail closed on alia
   }
 });
 
+test("registered owner proofs match current composition and factory sources", () => {
+  for (const entry of STATE_MUTATION_DELEGATING_OWNER_CONTRACT) {
+    assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+      compositionSource: fs.readFileSync(entry.compositionModulePath, "utf8"),
+      factorySource: fs.readFileSync(entry.factoryModulePath, "utf8"),
+      entry,
+    }).violations, [], entry.compositionExportName);
+  }
+});
+
+test("selection owner proof rejects borrowed getter and facade drift", () => {
+  const entry = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ compositionExportName }) => compositionExportName === "getSelectionOverlayOwner",
+  );
+  const compositionSource = fs.readFileSync(entry.compositionModulePath, "utf8");
+  const factorySource = fs.readFileSync(entry.factoryModulePath, "utf8");
+  for (const [sourceKey, source, before, after, code] of [
+    ["compositionSource", compositionSource, "getLandIndex: () => runtimeState.landIndex",
+      "getLandIndex: () => runtimeState.landIndex.clear()", "state-mutation-owner-composition-source-drift"],
+    ["factorySource", factorySource, "return Object.freeze({",
+      "getLandIndex().clear(); return Object.freeze({", "state-mutation-owner-factory-source-drift"],
+    ["factorySource", factorySource, "return Object.freeze({",
+      "return Object.freeze({ leak: getLandIndex,", "state-mutation-owner-factory-source-drift"],
+  ]) {
+    assert.ok(source.includes(before), before);
+    const result = inspectStateMutationDelegatingOwnerSources({
+      compositionSource, factorySource, entry, [sourceKey]: source.replace(before, after),
+    });
+    assert.ok(result.violations.some((violation) => violation.code === code), after);
+  }
+});
+
 test("source-bound render perf owner proves factory composition and registered action effects", () => {
   assert.deepEqual(validateStateMutationDelegatingOwnerContract(), []);
-  const [entry] = STATE_MUTATION_DELEGATING_OWNER_CONTRACT;
+  const entry = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ compositionExportName }) => compositionExportName === "getRenderPerfMetricsRuntimeOwner",
+  );
   assert.deepEqual(entry.methods, [
     "recordRenderPerfMetric",
     "beginContextMetricSession",
@@ -482,10 +553,22 @@ test("P4.2b optional and city action exports have one canonical owner", () => {
     assert.equal(entries[0].modulePath, modulePath);
     assert.equal(entries[0].introducedInPhase, "P4.2b");
   }
-  assert.ok(STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.every(
-    ({ modulePath }) =>
-      modulePath === "js/core/state/actions/scenario_activation_actions.js",
-  ));
+  assert.deepEqual(
+    STATE_ACTION_LEGACY_MEMBERSHIP_REPLACEMENT_CONTRACT.filter(
+      ({ retiredMembership }) =>
+        retiredMembership === "scenario|P4.2|assign|*",
+    ).map(({ modulePath, exportName }) => ({ modulePath, exportName })),
+    [
+      {
+        modulePath: "js/core/state/actions/scenario_activation_actions.js",
+        exportName: "applyScenarioChunkOptionalLayerState",
+      },
+      {
+        modulePath: "js/core/state/actions/scenario_activation_actions.js",
+        exportName: "restoreScenarioChunkPromotionState",
+      },
+    ],
+  );
   assert.deepEqual(
     validateStateActionModulePhaseAdmissions({
       modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
@@ -497,6 +580,50 @@ test("P4.2b optional and city action exports have one canonical owner", () => {
     modulePaths: ["js/core/state/actions/scenario_activation_actions.js"],
     phase: "P4.2b",
   }).some(({ code }) => code === "state-action-module-phase-not-admitted"));
+});
+
+test("P4.4 action modules admit every direct export only at the P4.4 boundary", async () => {
+  const modulePaths = [
+    "js/core/state/actions/appearance_actions.js",
+    "js/core/state/actions/appearance_preset_actions.js",
+    "js/core/state/actions/appearance_reference_actions.js",
+    "js/core/state/actions/appearance_selection_actions.js",
+    "js/core/state/actions/appearance_visibility_actions.js",
+    "js/core/state/actions/export_workbench_actions.js",
+    "js/core/state/actions/intensity_field_actions.js",
+    "js/core/state/actions/special_zone_actions.js",
+    "js/core/state/actions/strategic_overlay_actions.js",
+    "js/core/state/actions/transport_actions.js",
+    "js/core/state/actions/ui_chrome_actions.js",
+    "js/core/state/actions/ui_dirty_actions.js",
+    "js/core/state/actions/ui_visibility_actions.js",
+  ];
+  for (const modulePath of modulePaths) {
+    const source = fs.readFileSync(modulePath, "utf8");
+    assert.deepEqual(
+      validateStateActionModuleSource(source, {
+        filePath: modulePath,
+      }),
+      [],
+      modulePath,
+    );
+    assert.deepEqual(
+      await validateStateActionNonTargetParameterMutations(modulePath, source),
+      [],
+      modulePath,
+    );
+  }
+
+  assert.deepEqual(
+    validateStateActionModulePhaseAdmissions({ modulePaths, phase: "P4.4" }),
+    [],
+  );
+  assert.equal(
+    validateStateActionModulePhaseAdmissions({ modulePaths, phase: "P4.3" })
+      .filter(({ code }) => code === "state-action-module-phase-not-admitted")
+      .length,
+    modulePaths.length,
+  );
 });
 
 test("P4.2c scenario health actions have canonical owners and cross-file retirement proofs", () => {
@@ -590,16 +717,20 @@ test("P4.3 renderer cross-boundary proofs lock retired evidence and exact replac
       proof.retiredMutationSites.length,
     ]),
     [
+      ["js/core/map_renderer.js", "cachedDetailAdmBorders", "replaceCachedDetailAdmBordersState", 5],
       ["js/core/map_renderer.js", "deferExactAfterSettle", "setDeferExactAfterSettleState", 3],
       ["js/core/map_renderer.js", "dprLastStageSwitchAt", "commitRendererDprStageState", 1],
       ["js/core/map_renderer.js", "dprStage", "commitRendererDprStageState", 1],
       ["js/core/map_renderer.js", "firstVisibleFramePainted", "setFirstVisibleFramePaintedState", 1],
+      ["js/core/map_renderer.js", "lastMouseMoveTime", "setLastMouseMoveTimeState", 1],
       ["js/core/map_renderer.js", "pendingDayNightRefresh", "setPendingDayNightRefreshState", 2],
       ["js/core/map_renderer.js", "pendingExactPoliticalFastFrame", "setPendingExactPoliticalFastFrameState", 2],
       ["js/core/map_renderer.js", "projectedBoundsById", "commitProjectedBoundsCacheState", 1],
       ["js/core/map_renderer.js", "projectedBoundsDiagnostics", "setProjectedBoundsDiagnosticsState", 2],
       ["js/core/map_renderer.js", "renderPerfMetrics", "ensureRenderPerfMetricsState", 1],
       ["js/core/map_renderer.js", "renderPerfMetricSequence", "commitRenderPerfMetricState", 1],
+      ["js/core/map_renderer.js", "cachedDetailAdmBorders", "replaceCachedDetailAdmBordersState", 1],
+      ["js/core/renderer/border_draw_owner.js", "cachedDetailAdmBorders", "replaceCachedDetailAdmBordersState", 1],
       ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "ensureExactAfterSettleControllerState", 2],
       ["js/core/state/renderer_runtime_state.js", "renderPassCache", "commitRenderPassCacheState", 49],
       ["js/core/state/renderer_runtime_state.js", "sphericalFeatureDiagnosticsById", "commitProjectedBoundsCacheState", 1],
@@ -753,8 +884,10 @@ test("Day/Night actions have one registry owner and one live canonical handoff",
     }],
     recognizeCurrentContracts: false,
   });
-  assert.ok(rawInventory.findings.some(({ reason }) => (
-    reason === "unsupported-call-mutation"
+  assert.ok(rawInventory.findings.some(({ reason, evidenceKind, key }) => (
+    reason === "state-alias-escape"
+    && evidenceKind === "return-value"
+    && key === "styleConfig"
   )), JSON.stringify(rawInventory.findings));
   assert.deepEqual(
     inventory.actionDelegations.map(({ actionExportName }) => actionExportName).sort(),
@@ -793,6 +926,53 @@ test("Day/Night actions have one registry owner and one live canonical handoff",
     },
   );
   assert.ok(unknownOwnerInventory.findings.length > 0);
+});
+
+test("scenario style defaults use one P4.3 action handoff without legacy alias authority", async () => {
+  const entries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+    ({ exportName }) => exportName === "mergeScenarioStyleDefaultsState",
+  );
+  assert.deepEqual(entries.map(({ modulePath, targetArgumentIndex, introducedInPhase }) => ({
+    modulePath,
+    targetArgumentIndex,
+    introducedInPhase,
+  })), [{
+    modulePath: "js/core/state/actions/scenario_presentation_actions.js",
+    targetArgumentIndex: 0,
+    introducedInPhase: "P4.3",
+  }]);
+
+  const relativePath = "js/core/scenario/presentation_ocean_fill_restore.js";
+  const source = fs.readFileSync(relativePath, "utf8");
+  const actionCall = "mergeScenarioStyleDefaultsState(state, projectedOverride)";
+  assert.equal(source.split(actionCall).length - 1, 1);
+  const { bindingInventories } = await discoverStateWriterBindingsForSource(
+    relativePath,
+    source,
+    "production",
+    {
+      scanAllParameters: true,
+      includeInventories: true,
+    },
+  );
+  const actionDelegations = bindingInventories.flatMap(
+    ({ actionDelegations: delegations }) => delegations,
+  );
+  assert.deepEqual(
+    actionDelegations
+      .filter(({ actionExportName }) => (
+        actionExportName === "mergeScenarioStyleDefaultsState"
+      ))
+      .map(({ actionExportName }) => actionExportName),
+    ["mergeScenarioStyleDefaultsState"],
+  );
+  const findings = bindingInventories.flatMap(({ findings: values }) => values);
+  assert.equal(findings.some(({ sourceFingerprint }) => (
+    sourceFingerprint
+      === "b87e63dd78b611d49e68df89e99c837dbaa3915ab6e5bf28b983fc15f53b9e22"
+    || sourceFingerprint
+      === "cc52c4a40d11016bfc97a3f61ed1e34e48aa964578291cdb48d280138cd835de0"
+  )), false);
 });
 
 test("source-bound owner proof prepares once and applies independently per binding", () => {
@@ -868,8 +1048,10 @@ test("source-bound owner proof prepares once and applies independently per bindi
     recognizeCurrentContracts: false,
   });
   assert.deepEqual(raw.actionDelegations, []);
-  assert.ok(raw.findings.some(({ reason }) => (
-    reason === "unsupported-call-mutation"
+  assert.ok(raw.findings.some(({ reason, evidenceKind, key }) => (
+    reason === "state-alias-escape"
+    && evidenceKind === "return-value"
+    && key === "styleConfig"
   )), JSON.stringify(raw.findings));
 
   const virtual = scanStateMutationInventory(
@@ -928,6 +1110,61 @@ test("source-bound owner proof prepares once and applies independently per bindi
     },
   });
   assert.equal(factoryDriftPreparedCandidateCount, 0);
+});
+
+test("startup ready handoff has one source-bound hydration action effect", async () => {
+  const ownerProof = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ factoryExportName }) => factoryExportName === "createStartupReadyHandoffOwner",
+  );
+  assert.ok(ownerProof);
+  assert.equal(ownerProof.compositionModulePath, "js/main.js");
+  assert.equal(ownerProof.compositionExportName, "getStartupReadyHandoffOwner");
+  assert.equal(ownerProof.ownerBindingName, "startupReadyHandoffOwner");
+  assert.deepEqual(ownerProof.actionExports, ["setUiHydrationState"]);
+  assert.ok(ownerProof.methods.includes("observePostReadyUiBootstrap"));
+  assert.ok(ownerProof.methods.includes("scheduleReadyPostBootWork"));
+
+  const compositionSource = fs.readFileSync(ownerProof.compositionModulePath, "utf8");
+  const factorySource = fs.readFileSync(ownerProof.factoryModulePath, "utf8");
+  assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+    compositionSource,
+    factorySource,
+    entry: ownerProof,
+  }).violations, []);
+
+  const discovery = await discoverStateWriterBindingsForSource(
+    ownerProof.compositionModulePath,
+    compositionSource,
+    "production",
+    { scanAllParameters: true, includeInventories: true },
+  );
+  const moduleInventory = discovery.bindingInventories.find(({ binding }) => (
+    binding.kind === "module" && binding.name === "runtimeState"
+  ));
+  assert.ok(moduleInventory);
+  assert.deepEqual(
+    moduleInventory.actionDelegations
+      .filter(({ actionExportName }) => actionExportName === "setUiHydrationState")
+      .map(({ actionExportName }) => actionExportName),
+    ["setUiHydrationState"],
+  );
+  const retiredProgressionFingerprints = new Set([
+    "26a46030",
+    "b48eb2fe",
+    "b8749af3",
+    "c1aef68e",
+    "cb9a4c29",
+    "cd1615e5",
+    "ffe6e265",
+  ]);
+  assert.deepEqual(
+    moduleInventory.findings.filter(({ sourceFingerprint }) => (
+      [...retiredProgressionFingerprints].some((prefix) => (
+        sourceFingerprint.startsWith(prefix)
+      ))
+    )),
+    [],
+  );
 });
 
 test("click selection actions have one registry owner and one source-bound transaction handoff", () => {
@@ -1410,6 +1647,124 @@ test("registered actions accept only declared static non-root read-only argument
       evidenceKind: "unknown-call-argument",
       key: "runtimeChunkLoadState",
     })),
+  );
+});
+
+test("canonical actions accept only declared exact parameter identity transfers", async () => {
+  const declaredTransfers = new Map([
+    ["setAppearanceStyleConfigState", [1]],
+    ["setAppearanceStyleGroupState", [2]],
+    ["setAppearanceParentBorderEnabledMapState", [1]],
+    ["setSelectedColorState", [1]],
+    ["setAppearanceVisibilitySnapshotState", [2]],
+    ["commitSpecialZoneLayersState", [1]],
+    ["setUiChromeState", [1]],
+    ["commitUiVisibilityState", [1]],
+  ]);
+  for (const [exportName, expectedIndexes] of declaredTransfers) {
+    const entries = STATE_ACTION_DELEGATION_CONTRACT.filter(
+      (entry) => entry.exportName === exportName,
+    );
+    assert.equal(entries.length, 1, exportName);
+    assert.deepEqual(
+      entries[0].referenceIdentityArgumentIndexes,
+      expectedIndexes,
+      exportName,
+    );
+  }
+  assert.deepEqual(validateStateActionDelegationContract(), []);
+  const selectedColorEntry = STATE_ACTION_DELEGATION_CONTRACT.find(
+    ({ exportName }) => exportName === "setSelectedColorState",
+  );
+  assert.ok(validateStateActionDelegationContract([{
+    ...selectedColorEntry,
+    referenceIdentityArgumentIndexes: [0],
+  }]).some(({ code }) => (
+    code === "state-action-contract-reference-identity-argument-index-invalid"
+  )));
+
+  const callerPath = "js/core/state/actions/renderer_interaction_actions.js";
+  const source = [
+    'import { setSelectedColorState as commitColor } from "./appearance_selection_actions.js";',
+    "export function setClickSelectedColorState(target, color) {",
+    "  commitColor(target, color);",
+    "}",
+    "",
+  ].join("\n");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(callerPath, source),
+    [],
+  );
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      source.replace("commitColor(target, color)", "commitColor(target, color.value)"),
+    ),
+    [],
+  );
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      source.replace("commitColor(target, color)", "commitColor(target, alias)")
+        .replace(
+          "export function setClickSelectedColorState(target, color) {",
+          "export function setClickSelectedColorState(target, color) {\n  const alias = color;",
+        ),
+    ),
+    [],
+  );
+
+  for (const rejectedSource of [
+    source.replace("commitColor(target, color)", "commitColor(color, target)"),
+    source.replace("commitColor(target, color)", "commitColor(target, color[dynamicKey])")
+      .replace(
+        "export function setClickSelectedColorState(target, color) {",
+        'const dynamicKey = "value";\nexport function setClickSelectedColorState(target, color) {',
+      ),
+    source.replace("commitColor(target, color)", "commitColor(target, { color })"),
+    source.replace(
+      'import { setSelectedColorState as commitColor } from "./appearance_selection_actions.js";',
+      'import { unregisteredSelectedColorState as commitColor } from "./appearance_selection_actions.js";',
+    ),
+    source.replace("commitColor(target, color)", "commitColor[color](target, color)"),
+  ]) {
+    const violations = await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      rejectedSource,
+    );
+    assert.ok(
+      violations.some(({ reason }) => reason === "state-alias-escape"),
+      rejectedSource,
+    );
+  }
+});
+
+test("declared identity argument also accepts static payload projections without transferring the container", async () => {
+  const callerPath = "js/core/state/actions/appearance_visibility_actions.js";
+  const source = [
+    'import { commitUiVisibilityState } from "./ui_visibility_actions.js";',
+    "export function patchAppearanceVisibilityState(target, patch) {",
+    "  commitUiVisibilityState(target, {",
+    "    showWaterRegions: patch.showWaterRegions,",
+    "    nested: { metric: patch.strategicChoroplethMetric },",
+    "  });",
+    "}",
+    "",
+  ].join("\n");
+  assert.deepEqual(
+    await validateStateActionNonTargetParameterMutations(callerPath, source),
+    [],
+  );
+
+  const rootInContainer = source.replace(
+    "showWaterRegions: patch.showWaterRegions,",
+    "showWaterRegions: patch,",
+  );
+  assert.ok(
+    (await validateStateActionNonTargetParameterMutations(
+      callerPath,
+      rootInContainer,
+    )).some(({ reason }) => reason === "state-alias-escape"),
   );
 });
 
@@ -2133,4 +2488,33 @@ test("pure-reader contracts reject wildcard accepted escapes", () => {
         code === "state-target-pure-reader-escape-wildcard-forbidden",
     ),
   );
+});
+
+
+test("country query model preserves reviewed borrows and rejects new mutation or escape", async () => {
+  const modulePath = "js/ui/sidebar/country_inspector_model.js";
+  const source = fs.readFileSync(modulePath, "utf8");
+  const discovery = await discoverStateWriterBindingsForSource(modulePath, source, "production", { scanAllParameters: true });
+  assert.equal(discovery.some(({ functionName }) => functionName === "createCountryInspectorModel"), false);
+  const hiddenExport = source.replace("export function createCountryInspectorModel", "function createCountryInspectorModel");
+  await assert.rejects(() => discoverStateWriterBindingsForSource(modulePath, hiddenExport, "production", { scanAllParameters: true }),
+    (error) => error?.violations?.some(({ code }) => code === "state-target-pure-reader-direct-export-required"));
+  for (const statement of ["entry.tag = 'changed';", "consumeUnknownMetadata(entry);"]) {
+    const mutated = source.replace("    return entry;", statement + "\n    return entry;");
+    assert.notEqual(mutated, source);
+    await assert.rejects(() => discoverStateWriterBindingsForSource(modulePath, mutated, "production", { scanAllParameters: true }),
+      (error) => error?.code === "state-target-pure-reader-contract-violation");
+  }
+});
+
+test("borrowed projection source proof rejects source drift and new input writes", () => {
+  const entry = STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT[0];
+  const source = fs.readFileSync(entry.modulePath, "utf8").replaceAll("\r\n", "\n");
+  assert.deepEqual(inspectStateImportedBorrowedProjectionSource(source, entry).violations, []);
+  const mutated = source.replace("  const normalized = normalizeSpecialZoneLayersState(layerState);",
+    "  layerState.layers = [];\n  const normalized = normalizeSpecialZoneLayersState(layerState);");
+  assert.notEqual(mutated, source);
+  assert.ok(inspectStateImportedBorrowedProjectionSource(mutated, entry).violations.some(({ code }) => code.endsWith("source-drift")));
+  const refreshed = { ...entry, sourceFingerprint: createHash("sha256").update(mutated).digest("hex") };
+  assert.ok(inspectStateImportedBorrowedProjectionSource(mutated, refreshed).violations.some(({ code }) => code.endsWith("input-hazard")));
 });

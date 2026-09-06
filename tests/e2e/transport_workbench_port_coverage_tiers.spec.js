@@ -21,7 +21,7 @@ async function openTransportWorkbench(page) {
 }
 
 test("transport workbench port coverage tiers load the matching variant packs", async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(180000);
 
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);

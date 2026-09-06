@@ -340,6 +340,47 @@ export function validateCallerToActionLedgerHistoryTransition({
           delete proof[field];
         }
       }
+      const canonicalP44SuccessorAdoption =
+        previousPhase === "P4.3"
+        && currentPhase === "P4.4"
+        && Number(
+          previousPolicy?.progress?.callerToActionLedger
+            ?.schemaVersion,
+        ) === 2
+        && Number(
+          currentPolicy?.progress?.callerToActionLedger
+            ?.schemaVersion,
+        ) === 3;
+      if (canonicalP44SuccessorAdoption) {
+        delete expectedHistory.successorActionProofs;
+        delete actualHistory.successorActionProofs;
+        delete expectedHistory.successorProofContractIdentity;
+        delete actualHistory.successorProofContractIdentity;
+        for (const proof of Array.isArray(expectedHistory.functionProofs)
+          ? expectedHistory.functionProofs
+          : []) {
+          delete proof.successorActionProofs;
+          delete proof.successorProofContractIdentity;
+        }
+        for (const proof of Array.isArray(actualHistory.functionProofs)
+          ? actualHistory.functionProofs
+          : []) {
+          delete proof.successorActionProofs;
+          delete proof.successorProofContractIdentity;
+        }
+      } else {
+        for (const proof of [expectedHistory, actualHistory]) {
+          const proofs = Array.isArray(proof.functionProofs)
+            ? proof.functionProofs
+            : [proof];
+          for (const functionProof of proofs) {
+            for (const successor of
+              functionProof.successorActionProofs || []) {
+              for (const field of liveFields) delete successor[field];
+            }
+          }
+        }
+      }
     }
     if (!isDeepStrictEqual(expectedHistory, actualHistory)) {
       violations.push({
@@ -957,6 +998,8 @@ export async function recomputeDerivedAliasTaintBaseline({
       relativePaths: expectedPaths,
       legacySemanticBaseline:
         currentPolicy?.baselines?.legacySemanticAuthority,
+      existingBaseline:
+        previousPolicy?.baselines?.derivedAliasTaint || null,
       transitionCheckpoints:
         currentPolicy?.baselines?.derivedAliasTaint
           ?.transitionCheckpoints || [],

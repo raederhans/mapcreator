@@ -17,6 +17,18 @@ function defaultCreateWorkerError(event) {
   return new Error(event?.message || "Worker task client crashed.");
 }
 
+function createAbortError(reason = null) {
+  if (reason instanceof Error && reason.name === "AbortError") {
+    return reason;
+  }
+  if (typeof globalThis.DOMException === "function") {
+    return new globalThis.DOMException("Worker task aborted.", "AbortError");
+  }
+  const error = new Error("Worker task aborted.");
+  error.name = "AbortError";
+  return error;
+}
+
 export function createWorkerTaskClient({
   createWorker,
   defaultTimeoutMs = 20_000,
@@ -47,8 +59,11 @@ export function createWorkerTaskClient({
     const normalizedTaskId = normalizeTaskId(taskId);
     const pending = pendingTasks.get(normalizedTaskId);
     if (!pending) return null;
-    if (pending.timeoutId) {
+    if (pending.timeoutId !== null && pending.timeoutId !== undefined) {
       globalThis.clearTimeout?.(pending.timeoutId);
+    }
+    if (pending.signal && pending.abortListener) {
+      pending.signal.removeEventListener?.("abort", pending.abortListener);
     }
     pendingTasks.delete(normalizedTaskId);
     return pending;
@@ -108,28 +123,64 @@ export function createWorkerTaskClient({
     return workerLoadPromise;
   }
 
-  function dispatchTask(type, payload = {}, { timeoutMs = null } = {}) {
+  function dispatchTask(type, payload = {}, { timeoutMs = null, signal = null } = {}) {
+    if (signal?.aborted) {
+      return Promise.reject(createAbortError(signal.reason));
+    }
     return ensureWorker().then((worker) => new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(createAbortError(signal.reason));
+        return;
+      }
       const taskId = normalizeTaskId(createTaskId(type, ++taskSequence));
       const effectiveTimeoutMs = resolveTimeoutMs(type, timeoutMs);
       const timeoutId = globalThis.setTimeout?.(() => {
-        cleanupPendingTask(taskId);
+        const pending = cleanupPendingTask(taskId);
+        if (!pending) return;
         const timeoutError = createTimeoutError(type, taskId);
         recycleWorker(createRecycleError(type, taskId, timeoutError));
-        reject(timeoutError);
+        pending.reject(timeoutError);
       }, effectiveTimeoutMs);
-      pendingTasks.set(taskId, {
+      const pending = {
         resolve,
         reject,
         timeoutId,
         type,
         payload,
-      });
-      worker.postMessage({
-        type,
-        taskId,
-        ...payload,
-      });
+        signal,
+        abortListener: null,
+      };
+      const abortTask = () => {
+        const activePending = cleanupPendingTask(taskId);
+        if (!activePending) return;
+        try {
+          worker.postMessage({ type: "CANCEL_TASK", taskId });
+        } catch (_error) {
+          // The caller still receives the requested cancellation if the worker is already gone.
+        }
+        activePending.reject(createAbortError(signal?.reason));
+      };
+      pending.abortListener = abortTask;
+      pendingTasks.set(taskId, pending);
+      if (signal) {
+        signal.addEventListener?.("abort", abortTask, { once: true });
+        if (signal.aborted) {
+          abortTask();
+          return;
+        }
+      }
+      try {
+        worker.postMessage({
+          type,
+          taskId,
+          ...payload,
+        });
+      } catch (error) {
+        const activePending = cleanupPendingTask(taskId);
+        if (activePending) {
+          activePending.reject(error);
+        }
+      }
     }));
   }
 

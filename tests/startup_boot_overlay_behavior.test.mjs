@@ -4,7 +4,9 @@ import test from "node:test";
 import { createStartupBootOverlayController } from "../js/bootstrap/startup_boot_overlay.js";
 import { state as runtimeState } from "../js/core/state.js";
 import {
+  clearStartupReadonlyStateFields,
   commitStartupReadonlyStateFields,
+  replaceBootMetricsState,
 } from "../js/core/state/actions/boot_actions.js";
 
 const BOOT_STATE_KEYS = Object.freeze([
@@ -20,10 +22,35 @@ function snapshotProperties(target, keys) {
 }
 
 function restoreProperties(target, snapshot) {
-  for (const [key, value] of snapshot) {
-    target[key] = value;
+  clearStartupReadonlyStateFields(target, { preserveSince: false });
+  commitStartupReadonlyStateFields(target, {
+    active: true,
+    reason: snapshot.get("startupReadonlyReason"),
+    unlockInFlight: snapshot.get("startupReadonlyUnlockInFlight"),
+    since: snapshot.get("startupReadonlySince"),
+  });
+  if (!snapshot.get("startupReadonly")) {
+    clearStartupReadonlyStateFields(target, { preserveSince: true });
   }
+  replaceBootMetricsState(target, snapshot.get("bootMetrics"));
 }
+
+test("boot snapshot restore preserves active and inactive timestamps and metrics identity", () => {
+  for (const active of [false, true]) {
+    const metrics = { fixture: { startedAt: 10 } };
+    const original = {
+      startupReadonly: active,
+      startupReadonlyReason: active ? "detail-promotion" : "",
+      startupReadonlyUnlockInFlight: active,
+      startupReadonlySince: 123,
+      bootMetrics: metrics,
+    };
+    const target = { ...original, startupReadonlySince: 999, bootMetrics: {} };
+    restoreProperties(target, snapshotProperties(original, BOOT_STATE_KEYS));
+    assert.deepEqual(target, original);
+    assert.equal(target.bootMetrics, metrics);
+  }
+});
 
 function createDocumentStub() {
   return {

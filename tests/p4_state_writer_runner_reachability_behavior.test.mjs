@@ -267,6 +267,42 @@ test("exact P4.3 gates reach renderer state action and boundary regressions", ()
   );
 });
 
+test("exact P4.4 gates reach every replay lane and the strict checker producer", () => {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const nodeCommand = packageJson.scripts["test:node:p4:p4-4"];
+  const pythonCommand = packageJson.scripts["test:python:p4:p4-4-boundary"];
+
+  for (const testFile of [
+    "tests/appearance_actions_behavior.test.mjs",
+    "tests/appearance_preset_actions_behavior.test.mjs",
+    "tests/appearance_reference_actions_behavior.test.mjs",
+    "tests/appearance_visibility_actions_behavior.test.mjs",
+    "tests/export_workbench_actions_behavior.test.mjs",
+    "tests/intensity_field_actions_behavior.test.mjs",
+    "tests/transport_actions_behavior.test.mjs",
+    "tests/transport_workbench_state_owner_behavior.test.mjs",
+    "tests/ui_chrome_actions_behavior.test.mjs",
+    "tests/ui_dirty_actions_behavior.test.mjs",
+    "tests/ui_visibility_actions_behavior.test.mjs",
+    "tests/strategic_overlay_actions_behavior.test.mjs",
+    "tests/special_zone_actions_behavior.test.mjs",
+    "tests/special_zones_workbench_controller_behavior.test.mjs",
+  ]) {
+    assert.ok(nodeCommand.split(/\s+/).includes(testFile), testFile);
+  }
+  assert.match(pythonCommand, /tests\.test_state_write_guardrail_contract/);
+  assert.deepEqual(
+    buildP4PhaseVerificationPlan({ phase: "P4.4" }).commands,
+    [
+      "npm run test:node:p4:p4-4",
+      "node tools/verification/state_writer_policy_evidence.mjs produce --phase P4.4",
+      "npm run test:python:p4:p4-4-boundary",
+      "npm run test:node:p4:state-writer-policy",
+      "node tools/check_p4_state_action_routes.mjs --phase P4.4 --history-base HEAD^",
+    ],
+  );
+});
+
 test("node route discovery keeps wrapper-based named gates reachable", () => {
   const route = buildNodeRoutes().find(
     ({ commandRef }) => commandRef === "test:node:p4:state-writer-policy",

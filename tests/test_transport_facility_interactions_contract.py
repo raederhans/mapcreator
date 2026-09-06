@@ -9,9 +9,9 @@ FACILITY_SURFACE_JS = REPO_ROOT / "js" / "core" / "renderer" / "facility_surface
 TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_overview_render_owner.js"
 TRANSPORT_FACILITY_DISPLAY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_display_policy.js"
 TRANSPORT_FACILITY_ICONS_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icons.js"
-FACILITY_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
 CITY_POINTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_points_render_owner.js"
 MAP_HOVER_INTERACTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "map_hover_interaction_owner.js"
+CLICK_SELECTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "click_selection_transaction_owner.js"
 
 
 class TransportFacilityInteractionsContractTest(unittest.TestCase):
@@ -49,48 +49,50 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
     def test_map_renderer_wires_facility_hover_and_card_logic(self):
         content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
         hover_owner_content = MAP_HOVER_INTERACTION_OWNER_JS.read_text(encoding="utf-8")
+        click_owner_content = CLICK_SELECTION_OWNER_JS.read_text(encoding="utf-8")
         city_owner_content = CITY_POINTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
         owner_content = FACILITY_SURFACE_JS.read_text(encoding="utf-8")
         transport_owner_content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
-        facade_content = FACILITY_FACADE_JS.read_text(encoding="utf-8")
         required_tokens = [
             "function getHoveredFacilityEntryFromEvent",
             'recordInteractionDurationMetric("interactionHoverFacilityProbeDuration"',
             "function applyFacilityInfoCardState",
             "function zoomToFacilityEntry",
+            "createMapHoverInteractionOwner({",
             "getHoveredFacilityEntryFromEvent,",
-            "getFacilityKey: buildFacilityEntryKey,",
-            "setHoveredFacilityEntry: (entry) => {",
-            "setMapInteractionCursor,",
-            "if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {",
-            'noteRenderAction("click-facility-info", actionStart);',
             "function shouldBlockUnderlyingSelectionForFacility",
-            "function clearUnderlyingHoverForFacilityEntry",
-            "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {",
-            'noteRenderAction("click-facility-block-underlying", actionStart);',
             "transportPanel.hidden !== true",
         ]
         for token in required_tokens:
             self.assertIn(token, content)
         hover_owner_required_tokens = [
             "const facilityDetailsActive = hoveredFacility",
-            'runGetter(trace, "isFacilityDetailsSurfaceActive", hoveredFacility.familyId)',
+            "getterApi.isFacilityDetailsSurfaceActive(hoveredFacility.familyId)",
             "const nextFacilityKey = helperApi.getFacilityKey(hoveredFacility);",
-            "const previousFacilityKey = helperApi.getFacilityKey(runGetter(trace, \"getHoveredFacilityEntry\"));",
-            "runEffect(trace, \"setHoveredFacilityEntry\", hoveredFacility || null);",
+            "const previousFacilityKey = helperApi.getFacilityKey(getHoveredFacilityEntry());",
+            "setHoveredFacilityEntry(hoveredFacility || null);",
+            "function clearUnderlyingHoverForFacilityEntry(entry)",
+            "const patch = buildUnderlyingMapHoverClearPatch(state);",
             'const cursor = facilityDetailsActive ? "pointer" : "";',
-            'runEffect(trace, "setMapInteractionCursor", cursor);',
+            "setMapInteractionCursor(cursor);",
         ]
         for token in hover_owner_required_tokens:
             self.assertIn(token, hover_owner_content)
+        for token in [
+            "if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {",
+            'noteRenderAction("click-facility-info", actionStart);',
+            "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {",
+            'noteRenderAction("click-facility-block-underlying", actionStart);',
+        ]:
+            self.assertIn(token, click_owner_content)
         self.assertIn('recordInteractionDurationMetric("interactionHoverCityProbeDuration"', city_owner_content)
-        self.assertIn("readFacadeGetter('getFacilitySurfaceOwner')().buildFacilityTooltipText(entry);", facade_content)
+        self.assertIn("return getFacilitySurfaceOwner().buildFacilityTooltipText(...args);", content)
         self.assertIn("getFacilitySurfaceOwner().applyFacilityInfoCardState(entry, {", content)
         self.assertIn("setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries, {", transport_owner_content)
         self.assertIn("const nextEntriesByKey = new Map(", content)
         self.assertIn("function buildFacilityEntrySemanticKey", content)
         self.assertIn("dedupeFacilityHoverEntriesBySemanticKey(", content)
-        self.assertIn("hoveredFacilityEntry = nextHoveredEntry;", content)
+        self.assertIn("let hoveredFacilityEntry = null;", hover_owner_content)
         self.assertIn("selectedFacilityEntry = nextSelectedEntry;", content)
         self.assertIn("function buildFacilityTooltipText", owner_content)
         self.assertIn("buildFacilityInfoCardFieldSections: buildFacilityInfoCardRows", owner_content)
@@ -231,27 +233,33 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         self.assertIn("transportPanel.hidden !== true", renderer_content)
         self.assertIn("applyFacilityInfoCardState(null);", renderer_content)
 
-    def test_map_renderer_coalesces_mousemove_hover_overlay_only(self):
+    def test_hover_owner_coalesces_mousemove_overlay_and_root_keeps_render_triggers(self):
         content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
-        required_tokens = [
-            "let hoverOverlayRenderRafHandle = null;",
+        hover_owner_content = MAP_HOVER_INTERACTION_OWNER_JS.read_text(encoding="utf-8")
+        owner_required_tokens = [
+            "let overlayFrame = null;",
+            "function scheduleFrame(callback)",
             "function scheduleHoverOverlayRender()",
-            "if (hoverOverlayRenderRafHandle !== null && hoverOverlayRenderRafHandle !== undefined) {",
-            'hoverOverlayRenderRafHandle = typeof globalThis.requestAnimationFrame === "function"',
+            "if (overlayFrame) return;",
+            "overlayFrame = scheduleFrame(() => {",
             'renderHoverOverlayIfNeeded({ eventType: "hover" });',
             "function cancelScheduledHoverOverlayRender()",
-            "cancelScheduledHoverOverlayRender();",
-            'recordInteractionDurationMetric("interactionHoverOverlayDuration"',
+            "overlayFrame?.cancel();",
+            'effectApi.recordInteractionDurationMetric("interactionHoverOverlayDuration"',
+        ]
+        for token in owner_required_tokens:
+            self.assertIn(token, hover_owner_content)
+        root_required_tokens = [
+            "getMapHoverInteractionOwner().cancelPendingHoverWork();",
             'renderHoverOverlayIfNeeded({ eventType: "facility-card-visibility" });',
-            'renderHoverOverlayIfNeeded({ eventType: "facility-card-open" });',
-            'renderHoverOverlayIfNeeded({ eventType: "facility-card-clear" });',
-            'renderHoverOverlayIfNeeded({ force: true, eventType: "zoom-start" });',
-            'renderHoverOverlayIfNeeded({ eventType: "mouseleave" });',
+            'renderHoverOverlayIfNeeded({ eventType: "render-frame" });',
             'renderHoverOverlayIfNeeded({ eventType: "facility-card-close" });',
         ]
-        for token in required_tokens:
+        for token in root_required_tokens:
             self.assertIn(token, content)
-        self.assertIn('interactionRect.on("mouseleave", () => {', content)
+        self.assertNotIn("hoverOverlayRenderRafHandle", content)
+        self.assertIn("function handleMapMouseLeave() {", content)
+        self.assertIn("getMapHoverInteractionOwner().handleMapMouseLeave();", content)
         self.assertIn('facilityInfoCardCloseBtn.addEventListener("click", () => {', content)
 
 

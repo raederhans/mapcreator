@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   SPECIAL_ZONE_PRESETS,
   buildSpecialZoneRenderFeatures,
+  captureScenarioLayerSaveRequestState,
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,
   getSpecialZoneLayerMemberSetOperationIds,
@@ -16,6 +17,12 @@ import {
   updateSpecialZoneLayerMembership,
 } from "../js/core/special_zone_layers.js";
 
+import {
+  commitSpecialZoneLayersState,
+  mutateSpecialZoneLayersStateAction,
+} from "../js/core/state/actions/special_zone_actions.js";
+import { createSpecialZoneLayersRenderOwner } from "../js/core/renderer/special_zone_layers_render_owner.js";
+
 test("special zone layer defaults and preset registry are stable", () => {
   const state = createEmptySpecialZoneLayersState({ topologyFingerprint: "topo-a" });
   assert.equal(state.version, 1);
@@ -27,6 +34,61 @@ test("special zone layer defaults and preset registry are stable", () => {
   assert.equal(SPECIAL_ZONE_PRESETS.length, 18);
   const layer = createLayerFromPreset("custom", { id: "legend-default" });
   assert.equal(layer.legendVisible, true);
+});
+
+test("canonical layer actions preserve dirty state and diagnostic entry identity", () => {
+  const initialLayers = createEmptySpecialZoneLayersState();
+  const diagnostic = { code: "runtime-diagnostic" };
+  initialLayers.diagnostics = [diagnostic];
+
+  for (const initialDirty of [false, true]) {
+    const target = {
+      specialZoneLayers: initialLayers,
+      specialZonesOverlayDirty: initialDirty,
+    };
+    const committed = commitSpecialZoneLayersState(target, initialLayers, {
+      topologyFingerprint: "runtime-topology",
+    }, { markDirty: false });
+    assert.equal(target.specialZonesOverlayDirty, initialDirty);
+    assert.equal(committed, target.specialZoneLayers);
+    assert.equal(committed.topologyFingerprint, "runtime-topology");
+    assert.equal(committed.diagnostics[0], diagnostic);
+  }
+
+  const mutatedTarget = {
+    specialZoneLayers: initialLayers,
+    specialZonesOverlayDirty: false,
+  };
+  const mutationResult = mutateSpecialZoneLayersStateAction(mutatedTarget, {
+    action: "addLayer",
+    layer: createLayerFromPreset("custom", { id: "dirty-layer" }),
+  });
+  assert.equal(mutationResult, mutatedTarget.specialZoneLayers);
+  assert.equal(mutatedTarget.specialZonesOverlayDirty, true);
+});
+
+test("renderer normalizes layer input without writing runtime state", () => {
+  const originalLayers = {
+    layers: [createLayerFromPreset("custom", { id: "render-layer", memberFeatureIds: ["land-a"] })],
+    activeLayerId: "render-layer",
+    diagnostics: [{ code: "render-diagnostic" }],
+  };
+  const runtimeState = {
+    specialZoneLayers: originalLayers,
+    landIndex: new Map([["land-a", {
+      type: "Feature",
+      properties: { id: "land-a" },
+      geometry: { type: "Polygon", coordinates: [] },
+    }]]),
+  };
+  const owner = createSpecialZoneLayersRenderOwner({ state: runtimeState });
+
+  const collection = owner.getEffectiveSpecialZonesFeatureCollection();
+
+  assert.equal(collection.features.length, 1);
+  assert.equal(collection.features[0].properties.sourceFeatureId, "land-a");
+  assert.equal(runtimeState.specialZoneLayers, originalLayers);
+  assert.equal(runtimeState.specialZoneLayers.diagnostics[0].code, "render-diagnostic");
 });
 
 test("normalizes schema, diagnostics, legacy drops, and sorted member arrays", () => {
@@ -178,6 +240,61 @@ test("serialization and render feature bridge preserve canonical ids", () => {
   assert.equal(buildSpecialZoneRenderFeatures(hiddenMapLayer, featureById).features.length, 0);
 });
 
+test("serialization detaches diagnostic entries from the input state", () => {
+  const fixtureState = createEmptySpecialZoneLayersState();
+  fixtureState.diagnostics.push({ code: "detached", detail: "input" });
+
+  const serialized = serializeSpecialZoneLayersState(fixtureState);
+  assert.notEqual(serialized.diagnostics[0], fixtureState.diagnostics[0]);
+
+  serialized.diagnostics[0].detail = "serialized";
+  assert.equal(fixtureState.diagnostics[0].detail, "input");
+
+  fixtureState.diagnostics[0].detail = "mutated-input";
+  assert.equal(serialized.diagnostics[0].detail, "serialized");
+});
+
+test("scenario layer save capture detaches the queued request from runtime state", () => {
+  const saveSource = {
+    activeScenarioId: " tno_1962 ",
+    currentScenarioApplyRequestId: 7,
+    activeScenarioManifest: {
+      special_zone_layers_url: "data/scenarios/tno_1962/special_zone_layers.json",
+      source: { runtime_topology_sha256: "topology-a" },
+    },
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", {
+        id: "layer-a",
+        memberFeatureIds: ["b", "a"],
+      })],
+      activeLayerId: "layer-a",
+      diagnostics: [{ code: "fixture", detail: "runtime" }],
+    },
+  };
+
+  const request = captureScenarioLayerSaveRequestState(saveSource, 12);
+
+  assert.equal(request.scenarioId, "tno_1962");
+  assert.equal(request.saveRequestId, 12);
+  assert.deepEqual(request.loadContext, {
+    scenarioId: "tno_1962",
+    scenarioApplyRequestId: 7,
+    declaresLayerAsset: true,
+  });
+  assert.deepEqual(request.requestedState.layers[0].memberFeatureIds, ["a", "b"]);
+  assert.equal(request.requestedState.topologyFingerprint, "topology-a");
+
+  request.requestedState.layers[0].memberFeatureIds.push("captured-only");
+  request.requestedState.diagnostics[0].detail = "captured";
+  assert.deepEqual(saveSource.specialZoneLayers.layers[0].memberFeatureIds, ["a", "b"]);
+  assert.equal(saveSource.specialZoneLayers.diagnostics[0].detail, "runtime");
+
+  saveSource.specialZoneLayers.layers[0].name = "runtime-only";
+  saveSource.specialZoneLayers.diagnostics[0].detail = "mutated-runtime";
+  assert.notEqual(request.requestedState.layers[0].name, "runtime-only");
+  assert.equal(request.requestedState.diagnostics[0].detail, "captured");
+});
+
 test("style preset updates preserve members and replace mode keeps one explicit set", () => {
   let state = createEmptySpecialZoneLayersState();
   state = mutateSpecialZoneLayersState(state, {
@@ -223,4 +340,28 @@ test("style preset updates preserve members and replace mode keeps one explicit 
   state = updateSpecialZoneLayerMembership(state, "active", [], "replace");
   layer = state.layers.find((entry) => entry.id === "active");
   assert.deepEqual(layer.memberFeatureIds, []);
+});
+
+
+test("render projection copies layer metadata while retaining land geometry", () => {
+  const layer = createLayerFromPreset("custom", { id: "copy-proof", memberFeatureIds: ["a"] });
+  const layerState = { layers: [layer], diagnostics: [{ code: "preserved" }] };
+  const freezeTree = (value) => {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) {
+      Object.values(value).forEach(freezeTree);
+      Object.freeze(value);
+    }
+    return value;
+  };
+  freezeTree(layerState);
+  const geometry = { type: "Polygon", coordinates: [] };
+  const nestedProperty = { label: "borrowed" };
+  const index = new Map([["a", { type: "Feature", geometry, properties: { nestedProperty } }]]);
+  const projected = buildSpecialZoneRenderFeatures(layerState, index).features[0];
+  assert.equal(projected.geometry, geometry);
+  assert.equal(projected.properties.nestedProperty, nestedProperty);
+  assert.notEqual(projected.properties.__specialZoneLayerStyle, layer.style);
+  projected.properties.__specialZoneLayerStyle.fill = "#000000";
+  assert.notEqual(layer.style.fill, "#000000");
+  assert.equal(layerState.diagnostics[0].code, "preserved");
 });

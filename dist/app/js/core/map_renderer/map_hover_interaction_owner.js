@@ -1,34 +1,32 @@
+import {
+  setClickHoverOverlayDirtyState,
+  setHoveredFeatureIdsState,
+  setLastMouseMoveTimeState,
+  setTooltipPendingState,
+  setTooltipRafHandleState,
+} from "../state/actions/renderer_interaction_actions.js";
+
 const TOOLTIP_OFFSET_PX = 12;
 
 const REQUIRED_GETTER_NAMES = Object.freeze([
   "nowMs",
-  "getLastMouseMoveTime",
-  "getMouseThrottleMs",
-  "hasHoverData",
-  "isSpecialZoneEditorActive",
   "inspectHgoRuntimePreviewFromEvent",
-  "isReducedHoverPhase",
-  "getHoverIds",
   "getHitFromEvent",
-  "hasTooltip",
-  "getHoveredFacilityEntry",
+  "getFeatureForHit",
   "getHoveredFacilityEntryFromEvent",
   "isFacilityDetailsSurfaceActive",
   "getHoveredCityTooltipEntry",
-  "getFeatureForHit",
   "getTooltipTextForFeature",
+  "getOverlayProjectionSignature",
+  "getSelectedFacilityEntry",
+  "shouldBlockUnderlyingSelectionForFacility"
 ]);
 
 const REQUIRED_EFFECT_NAMES = Object.freeze([
-  "setLastMouseMoveTime",
-  "setHoverIds",
-  "setHoveredFacilityEntry",
   "updateDevHoverHit",
-  "markHoverOverlayDirty",
-  "scheduleHoverOverlayRender",
-  "queueTooltipUpdate",
-  "setMapInteractionCursor",
-  "clearUnderlyingHoverForFacilityEntry",
+  "renderHoverOverlay",
+  "recordInteractionDurationMetric",
+  "hidePhysicalIntensityBrushPreview"
 ]);
 
 const REQUIRED_HELPER_NAMES = Object.freeze(["getFacilityKey"]);
@@ -45,15 +43,7 @@ function createApi(source, names, label) {
   return Object.fromEntries(names.map((name) => [name, requireFunction(source, name, label)]));
 }
 
-function createTrace() {
-  return { effectOrder: [], getterOrder: [] };
-}
-
-function freezeArray(values) {
-  return Object.freeze([...(values || [])]);
-}
-
-function createSummary({ branch, skipped = false, hit = null, cursor = "", tooltipVisible = false, trace }) {
+function createSummary({ branch, skipped = false, hit = null, cursor = "", tooltipVisible = false }) {
   return Object.freeze({
     branch,
     skipped: Boolean(skipped),
@@ -61,8 +51,6 @@ function createSummary({ branch, skipped = false, hit = null, cursor = "", toolt
     targetType: String(hit?.targetType || ""),
     cursor: String(cursor || ""),
     tooltipVisible: Boolean(tooltipVisible),
-    effectOrder: freezeArray(trace?.effectOrder),
-    getterOrder: freezeArray(trace?.getterOrder),
   });
 }
 
@@ -87,169 +75,280 @@ function getNextHoverIds(hit = {}) {
   });
 }
 
-function hasAnyHoverId(ids = {}) {
-  return !!(ids.landId || ids.waterId || ids.specialId);
-}
-
-function sameHoverIds(left = {}, right = {}) {
-  return left.landId === right.landId
-    && left.waterId === right.waterId
-    && left.specialId === right.specialId;
-}
-
-export function createMapHoverInteractionOwner({ state = {}, getters = {}, effects = {}, helpers = {} } = {}) {
-  const hoverSnapPx = Number(state.hoverSnapPx || 0);
+export function createMapHoverInteractionOwner({ state = {}, surfaceHost, constants = {}, getters = {}, effects = {}, helpers = {} } = {}) {
+  const hoverSnapPx = Number(constants.hoverSnapPx || 0);
+  const renderPhaseIdle = constants.renderPhaseIdle || "idle";
   const getterApi = createApi(getters, REQUIRED_GETTER_NAMES, "getters");
   const effectApi = createApi(effects, REQUIRED_EFFECT_NAMES, "effects");
   const helperApi = createApi(helpers, REQUIRED_HELPER_NAMES, "helpers");
 
-  function runGetter(trace, name, ...args) {
-    trace.getterOrder.push(name);
-    return getterApi[name](...args);
+  let hoveredFacilityEntry = null;
+  let lastHoverOverlaySignature = "";
+  let overlayFrame = null;
+  let tooltipFrame = null;
+  const getGlobal = getters.getGlobal || (() => globalThis);
+
+  function scheduleFrame(callback) {
+    const host = getGlobal();
+    const useRaf = typeof host.requestAnimationFrame === "function" && typeof host.cancelAnimationFrame === "function";
+    const request = useRaf ? host.requestAnimationFrame.bind(host) : (fn) => host.setTimeout(fn, 0);
+    const cancel = (useRaf ? host.cancelAnimationFrame : host.clearTimeout).bind(host);
+    const frame = { handle: null, active: true, cancel() { this.active = false; cancel(this.handle); } };
+    frame.handle = request(() => {
+      if (!frame.active) return;
+      frame.active = false;
+      callback();
+    });
+    return frame;
   }
 
-  function runEffect(trace, name, ...args) {
-    trace.effectOrder.push(name);
-    return effectApi[name](...args);
+  function isReducedHoverPhase() {
+    return Boolean(state.renderPhase !== renderPhaseIdle || state.isInteracting || state.scenarioApplyInFlight
+      || state.startupReadonly || state.startupReadonlyUnlockInFlight);
+  }
+  function hasHoverIds() {
+    return Boolean(state.hoveredId || state.hoveredWaterRegionId || state.hoveredSpecialRegionId);
+  }
+  function setHoverIds({ landId = null, waterId = null, specialId = null } = {}) {
+    setHoveredFeatureIdsState(state, { landId, waterId, specialId });
+  }
+  function getHoveredFacilityEntry() { return hoveredFacilityEntry; }
+  function setHoveredFacilityEntry(entry) { hoveredFacilityEntry = entry || null; }
+  function setHoverOverlayDirty(dirty = true) { setClickHoverOverlayDirtyState(state, dirty); }
+  function getHoverOverlaySignature() {
+    const entry = hoveredFacilityEntry || getterApi.getSelectedFacilityEntry();
+    return [
+      getterApi.getOverlayProjectionSignature(), String(state.renderPhase || renderPhaseIdle),
+      String(state.hoveredId || ""), String(state.hoveredWaterRegionId || ""), String(state.hoveredSpecialRegionId || ""),
+      helperApi.getFacilityKey(entry), Number(entry?.projectedPoint?.[0] || 0).toFixed(1), Number(entry?.projectedPoint?.[1] || 0).toFixed(1),
+    ].join("::");
+  }
+  function renderHoverOverlayIfNeeded({ force = false, eventType = "hover" } = {}) {
+    const nextSignature = getHoverOverlaySignature();
+    if (!force && !state.hoverOverlayDirty && nextSignature === lastHoverOverlaySignature) return;
+    const startedAt = getterApi.nowMs();
+    effectApi.renderHoverOverlay();
+    setHoverOverlayDirty(false);
+    lastHoverOverlaySignature = nextSignature;
+    effectApi.recordInteractionDurationMetric("interactionHoverOverlayDuration", getterApi.nowMs() - startedAt, { eventType, force: !!force });
+  }
+  function cancelScheduledHoverOverlayRender() {
+    overlayFrame?.cancel();
+    overlayFrame = null;
+  }
+  function scheduleHoverOverlayRender() {
+    if (overlayFrame) return;
+    overlayFrame = scheduleFrame(() => {
+      overlayFrame = null;
+      renderHoverOverlayIfNeeded({ eventType: "hover" });
+    });
+  }
+  function applyTooltipState(visible = false, text = "", x = 0, y = 0) {
+    const tooltip = surfaceHost.getTooltip();
+    if (!tooltip) return;
+    tooltip.textContent = visible ? text : "";
+    tooltip.style.opacity = visible ? "1" : "0";
+    tooltip.style.transform = visible
+      ? `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`
+      : "translate3d(-9999px, -9999px, 0)";
+  }
+  function queueTooltipUpdate(nextState = null) {
+    setTooltipPendingState(
+      state,
+      nextState && typeof nextState === "object" ? { ...nextState } : { visible: false },
+    );
+    if (tooltipFrame) return;
+    tooltipFrame = scheduleFrame(() => {
+      tooltipFrame = null;
+      setTooltipRafHandleState(state, null);
+      const pending = state.tooltipPendingState;
+      setTooltipPendingState(state, null);
+      if (pending?.visible) {
+        applyTooltipState(true, String(pending.text || ""), Number(pending.x || 0), Number(pending.y || 0));
+      } else {
+        applyTooltipState();
+      }
+    });
+    setTooltipRafHandleState(state, tooltipFrame.handle);
+  }
+  function resetTooltipState() {
+    tooltipFrame?.cancel();
+    tooltipFrame = null;
+    setTooltipRafHandleState(state, null);
+    setTooltipPendingState(state, null);
+    applyTooltipState();
+  }
+  function cancelPendingHoverWork() {
+    cancelScheduledHoverOverlayRender();
+    resetTooltipState();
+  }
+  function setMapInteractionCursor(nextCursor = "") {
+    surfaceHost.getInteractionRect()?.style("cursor", nextCursor || null);
+  }
+  function clearUnderlyingHoverForFacilityEntry(entry) {
+    if (!getterApi.shouldBlockUnderlyingSelectionForFacility(entry)) return false;
+    const hadUnderlyingHover = hasHoverIds() || Boolean(state.devHoverHit?.id);
+    setHoverIds();
+    effectApi.updateDevHoverHit(null);
+    if (hadUnderlyingHover) markAndSchedule();
+    return true;
+  }
+  function handleMapMouseLeave() {
+    cancelPendingHoverWork();
+    setHoverIds();
+    setHoveredFacilityEntry(null);
+    effectApi.updateDevHoverHit(null);
+    setHoverOverlayDirty();
+    renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
+    setMapInteractionCursor("");
+    effectApi.hidePhysicalIntensityBrushPreview();
   }
 
-  function markAndSchedule(trace) {
-    runEffect(trace, "markHoverOverlayDirty");
-    runEffect(trace, "scheduleHoverOverlayRender");
+  function markAndSchedule() {
+    setHoverOverlayDirty();
+    scheduleHoverOverlayRender();
   }
 
-  function hideTooltipAndCursor(trace) {
-    runEffect(trace, "queueTooltipUpdate", { visible: false });
-    runEffect(trace, "setMapInteractionCursor", "");
+  function hideTooltipAndCursor() {
+    queueTooltipUpdate({ visible: false });
+    setMapInteractionCursor("");
   }
 
-  function clearFacilityIfPresent(trace) {
-    if (runGetter(trace, "getHoveredFacilityEntry")) {
-      runEffect(trace, "setHoveredFacilityEntry", null);
+  function clearFacilityIfPresent() {
+    if (getHoveredFacilityEntry()) {
+      setHoveredFacilityEntry(null);
     }
   }
 
-  function clearHoverForExclusiveMode(trace, branch, devHit = null, cursor = "") {
-    runEffect(trace, "setHoverIds", normalizeHoverIds());
-    clearFacilityIfPresent(trace);
-    runEffect(trace, "updateDevHoverHit", devHit);
-    markAndSchedule(trace);
-    runEffect(trace, "queueTooltipUpdate", { visible: false });
-    runEffect(trace, "setMapInteractionCursor", cursor);
-    return createSummary({ branch, hit: devHit, cursor, trace });
+  function clearHoverForExclusiveMode(branch, devHit = null, cursor = "") {
+    setHoverIds(normalizeHoverIds());
+    clearFacilityIfPresent();
+    effectApi.updateDevHoverHit(devHit);
+    markAndSchedule();
+    queueTooltipUpdate({ visible: false });
+    setMapInteractionCursor(cursor);
+    return createSummary({ branch, hit: devHit, cursor });
   }
 
-  function clearReducedHover(trace) {
-    const currentHoverIds = normalizeHoverIds(runGetter(trace, "getHoverIds"));
-    if (hasAnyHoverId(currentHoverIds)) {
-      runEffect(trace, "setHoverIds", normalizeHoverIds());
-      markAndSchedule(trace);
+  function clearReducedHover() {
+    if (hasHoverIds()) {
+      setHoverIds(normalizeHoverIds());
+      markAndSchedule();
     }
-    if (runGetter(trace, "getHoveredFacilityEntry")) {
-      runEffect(trace, "setHoveredFacilityEntry", null);
-      markAndSchedule(trace);
+    if (getHoveredFacilityEntry()) {
+      setHoveredFacilityEntry(null);
+      markAndSchedule();
     }
-    runEffect(trace, "updateDevHoverHit", null);
-    hideTooltipAndCursor(trace);
-    return createSummary({ branch: "reduced-hover", skipped: true, trace });
+    effectApi.updateDevHoverHit(null);
+    hideTooltipAndCursor();
+    return createSummary({ branch: "reduced-hover", skipped: true });
   }
 
-  function updateHoverIds(trace, hit) {
+  function updateHoverIds(hit) {
     const nextHoverIds = getNextHoverIds(hit);
-    const currentHoverIds = normalizeHoverIds(runGetter(trace, "getHoverIds"));
-    if (!sameHoverIds(nextHoverIds, currentHoverIds)) {
-      runEffect(trace, "setHoverIds", nextHoverIds);
-      markAndSchedule(trace);
+    if (nextHoverIds.landId !== (state.hoveredId || null)
+      || nextHoverIds.waterId !== (state.hoveredWaterRegionId || null)
+      || nextHoverIds.specialId !== (state.hoveredSpecialRegionId || null)) {
+      setHoverIds(nextHoverIds);
+      markAndSchedule();
     }
   }
 
-  function queueVisibleTooltip(trace, event, text, branch, hit = null, cursor = "") {
-    runEffect(trace, "queueTooltipUpdate", getTooltipPayload(event, text));
-    return createSummary({ branch, hit, cursor, tooltipVisible: true, trace });
+  function queueVisibleTooltip(event, text, branch, hit = null, cursor = "") {
+    queueTooltipUpdate(getTooltipPayload(event, text));
+    return createSummary({ branch, hit, cursor, tooltipVisible: true });
   }
 
   function handleMouseMove(event) {
-    const trace = createTrace();
-    const now = runGetter(trace, "nowMs");
-    const throttleMs = Number(runGetter(trace, "getMouseThrottleMs") || 0);
-    const lastMouseMoveTime = Number(runGetter(trace, "getLastMouseMoveTime") || 0);
+    const now = getterApi.nowMs();
+    const throttleMs = Number(state.MOUSE_THROTTLE_MS || 0);
+    const lastMouseMoveTime = Number(state.lastMouseMoveTime || 0);
     if (now - lastMouseMoveTime < throttleMs) {
-      return createSummary({ branch: "throttled", skipped: true, trace });
+      return createSummary({ branch: "throttled", skipped: true });
     }
-    runEffect(trace, "setLastMouseMoveTime", now);
-    if (!runGetter(trace, "hasHoverData")) {
-      return createSummary({ branch: "no-hover-data", skipped: true, trace });
+    setLastMouseMoveTimeState(state, now);
+    if (!(state.landData || state.waterRegionsData || state.scenarioSpecialRegionsData)) {
+      return createSummary({ branch: "no-hover-data", skipped: true });
     }
-    if (runGetter(trace, "isSpecialZoneEditorActive")) {
-      return clearHoverForExclusiveMode(trace, "special-zone-editor");
+    if (state.specialZoneEditor?.active) {
+      return clearHoverForExclusiveMode("special-zone-editor");
     }
 
-    const hgoRuntimeHover = runGetter(trace, "inspectHgoRuntimePreviewFromEvent", event, { eventType: "hover" });
+    const hgoRuntimeHover = getterApi.inspectHgoRuntimePreviewFromEvent(event, { eventType: "hover" });
     if (hgoRuntimeHover?.active) {
       const hgoHit = hgoRuntimeHover.hit?.id ? hgoRuntimeHover.hit : null;
-      return clearHoverForExclusiveMode(trace, "hgo-runtime-hover", hgoHit, hgoHit ? "pointer" : "");
+      return clearHoverForExclusiveMode("hgo-runtime-hover", hgoHit, hgoHit ? "pointer" : "");
     }
 
-    if (runGetter(trace, "isReducedHoverPhase")) {
-      return clearReducedHover(trace);
+    if (isReducedHoverPhase()) {
+      return clearReducedHover();
     }
 
-    const hit = runGetter(trace, "getHitFromEvent", event, {
+    const hit = getterApi.getHitFromEvent(event, {
       enableSnap: false,
       snapPx: hoverSnapPx,
       eventType: "hover",
     }) || {};
-    updateHoverIds(trace, hit);
-    runEffect(trace, "updateDevHoverHit", hit.id ? hit : null);
+    updateHoverIds(hit);
+    effectApi.updateDevHoverHit(hit.id ? hit : null);
 
-    if (!runGetter(trace, "hasTooltip")) {
-      return createSummary({ branch: "no-tooltip", hit, skipped: true, trace });
+    if (!surfaceHost.getTooltip()) {
+      return createSummary({ branch: "no-tooltip", hit, skipped: true });
     }
 
-    const hoveredFacility = runGetter(trace, "getHoveredFacilityEntryFromEvent", event);
+    const hoveredFacility = getterApi.getHoveredFacilityEntryFromEvent(event);
     const facilityDetailsActive = hoveredFacility
-      ? runGetter(trace, "isFacilityDetailsSurfaceActive", hoveredFacility.familyId)
+      ? getterApi.isFacilityDetailsSurfaceActive(hoveredFacility.familyId)
       : false;
     const nextFacilityKey = helperApi.getFacilityKey(hoveredFacility);
-    const previousFacilityKey = helperApi.getFacilityKey(runGetter(trace, "getHoveredFacilityEntry"));
+    const previousFacilityKey = helperApi.getFacilityKey(getHoveredFacilityEntry());
     if (nextFacilityKey !== previousFacilityKey) {
-      runEffect(trace, "setHoveredFacilityEntry", hoveredFacility || null);
-      markAndSchedule(trace);
+      setHoveredFacilityEntry(hoveredFacility || null);
+      markAndSchedule();
     }
     const blockedUnderlyingHover = hoveredFacility
-      ? runEffect(trace, "clearUnderlyingHoverForFacilityEntry", hoveredFacility)
+      ? clearUnderlyingHoverForFacilityEntry(hoveredFacility)
       : false;
     const cursor = facilityDetailsActive ? "pointer" : "";
-    runEffect(trace, "setMapInteractionCursor", cursor);
+    setMapInteractionCursor(cursor);
     if (hoveredFacility?.tooltipText) {
-      return queueVisibleTooltip(trace, event, hoveredFacility.tooltipText, "facility-tooltip", hit, cursor);
+      return queueVisibleTooltip(event, hoveredFacility.tooltipText, "facility-tooltip", hit, cursor);
     }
     if (blockedUnderlyingHover) {
-      runEffect(trace, "queueTooltipUpdate", { visible: false });
-      return createSummary({ branch: "facility-blocked-underlying", hit, cursor, trace });
+      queueTooltipUpdate({ visible: false });
+      return createSummary({ branch: "facility-blocked-underlying", hit, cursor });
     }
 
-    const hoveredCityEntry = runGetter(trace, "getHoveredCityTooltipEntry", event, hit);
+    const hoveredCityEntry = getterApi.getHoveredCityTooltipEntry(event, hit);
     if (hoveredCityEntry?.tooltipText) {
-      return queueVisibleTooltip(trace, event, hoveredCityEntry.tooltipText, "city-tooltip", hit, cursor);
+      return queueVisibleTooltip(event, hoveredCityEntry.tooltipText, "city-tooltip", hit, cursor);
     }
 
-    const feature = hit.id ? runGetter(trace, "getFeatureForHit", hit) : null;
+    const feature = hit.id ? getterApi.getFeatureForHit(hit) : null;
     if (feature) {
       return queueVisibleTooltip(
-        trace,
         event,
-        runGetter(trace, "getTooltipTextForFeature", feature),
+        getterApi.getTooltipTextForFeature(feature),
         "feature-tooltip",
         hit,
         cursor,
       );
     }
-    runEffect(trace, "queueTooltipUpdate", { visible: false });
-    return createSummary({ branch: "empty-hover", hit, cursor, trace });
+    queueTooltipUpdate({ visible: false });
+    return createSummary({ branch: "empty-hover", hit, cursor });
   }
 
   return Object.freeze({
     handleMouseMove,
+    handleMapMouseLeave,
+    getHoveredFacilityEntry,
+    setHoveredFacilityEntry,
+    setHoverOverlayDirty,
+    renderHoverOverlayIfNeeded,
+    cancelScheduledHoverOverlayRender,
+    cancelPendingHoverWork,
+    queueTooltipUpdate,
+    resetTooltipState,
+    setMapInteractionCursor,
   });
 }

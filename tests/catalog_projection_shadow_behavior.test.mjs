@@ -176,11 +176,26 @@ test("receipt chain rejects duplicate runs and tampered prior state", () => {
   );
 });
 
-test("repository canonical projections match every retained legacy surface", () => {
-  const comparison = buildRepositoryCatalogProjectionShadowComparison();
-  assert.equal(comparison.equal, true, JSON.stringify(comparison.mismatches));
-  assert.deepEqual(comparison.mismatches, []);
-  assert.equal(comparison.zeroSpawn, true);
+test("historical comparison reports current drift without requiring baseline equality", () => {
+  const snapshot = buildLegacyCatalogProjections();
+  assert.deepEqual(Object.keys(snapshot).sort(), [...CATALOG_PROJECTION_KEYS].sort());
+  assert.ok(snapshot.documentation.length > 0);
+  assert.ok(snapshot.documentation.every((entry) => entry.sourceRef.startsWith("docs/")));
+  const current = buildRepositoryCatalogProjectionShadowComparison();
+  assert.equal(current.zeroSpawn, true);
+  assert.equal(current.equal, current.mismatches.length === 0);
+
+  // A legitimate new documentation reference must remain valid metadata. The
+  // explicit historical audit reports drift; everyday tests do not demand that
+  // the frozen snapshot be rewritten to match it.
+  const changedSource = structuredClone(VERIFICATION_METADATA_SOURCE);
+  changedSource.records[0].sourceRefs.push("docs/testing/new-contract-reference.md");
+  const changedBundle = buildCanonicalCatalogProjectionBundle(changedSource);
+  assert.ok(changedBundle.projections.documentation.some((entry) => entry.sourceRef === "docs/testing/new-contract-reference.md"));
+  const report = buildRepositoryCatalogProjectionShadowComparison({ canonicalBundle: changedBundle });
+  assert.equal(report.equal, false);
+  assert.ok(report.mismatches.some((entry) => entry.projection === "documentation"));
+  assert.deepEqual(buildLegacyCatalogProjections(), snapshot);
 });
 
 test("repository legacy projection detects heavy, alias, profile, Nightly, and docs drift", () => {

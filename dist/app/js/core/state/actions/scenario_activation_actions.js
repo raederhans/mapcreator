@@ -1,6 +1,8 @@
 // Canonical scenario activation state authority.
 // Rendering, observers, rollback orchestration, and recovery stay outside this module.
 
+import { commitSpecialZoneLayersState } from "./special_zone_actions.js";
+
 export const SCENARIO_ACTIVATION_STATE_KEYS = Object.freeze([
   "activeScenarioId",
   "scenarioBorderMode",
@@ -185,7 +187,12 @@ export function applyScenarioChunkOptionalLayerState(target, layerKey, payload) 
     case "specialzonelayers":
       changed = target.specialZoneLayers !== payload;
       if (!changed) break;
-      target.specialZoneLayers = payload;
+      commitSpecialZoneLayersState(
+        target,
+        payload,
+        {},
+        { markDirty: false, preserveIdentity: true },
+      );
       break;
     case "relief":
       changed = target.scenarioReliefOverlaysData !== payload;
@@ -207,15 +214,39 @@ export function applyScenarioChunkOptionalLayerState(target, layerKey, payload) 
 
 export function captureScenarioChunkPromotionState(target, layerKeys = []) {
   assertStateTarget(target);
-  const entries = (Array.isArray(layerKeys) ? layerKeys : []).map((layerKey) => {
-    const { layerKey: normalizedLayerKey, config } = getOptionalLayerConfig(layerKey);
-    return Object.freeze({
+  const requestedLayers = (Array.isArray(layerKeys) ? layerKeys : [])
+    .map((layerKey) => getOptionalLayerConfig(layerKey));
+  const capturesSpecialZoneLayers = requestedLayers.some(
+    ({ layerKey }) => layerKey === "specialzonelayers",
+  );
+  const specialZoneLayersReferencePresent = capturesSpecialZoneLayers
+    && hasOptionalLayerValue(target, "specialzonelayers");
+  const specialZoneLayersReference = capturesSpecialZoneLayers
+    ? readOptionalLayerValue(target, "specialzonelayers")
+    : undefined;
+  const entries = requestedLayers.map(({ layerKey: normalizedLayerKey, config }) => {
+    const statePresent = normalizedLayerKey === "specialzonelayers"
+      ? specialZoneLayersReferencePresent
+      : hasOptionalLayerValue(target, normalizedLayerKey);
+    const stateValue = normalizedLayerKey === "specialzonelayers"
+      ? specialZoneLayersReference
+      : readOptionalLayerValue(target, normalizedLayerKey);
+    const entry = {
       layerKey: normalizedLayerKey,
-      statePresent: hasOptionalLayerValue(target, normalizedLayerKey),
-      stateValue: readOptionalLayerValue(target, normalizedLayerKey),
+      statePresent,
+      stateValue,
       revisionPresent: !!config.revisionField && hasOptionalLayerRevision(target, normalizedLayerKey),
       revisionValue: config.revisionField ? readOptionalLayerRevision(target, normalizedLayerKey) : undefined,
+    };
+    Object.defineProperties(entry, {
+      specialZoneLayersReference: {
+        value: specialZoneLayersReference,
+      },
+      specialZoneLayersReferencePresent: {
+        value: specialZoneLayersReferencePresent,
+      },
     });
+    return Object.freeze(entry);
   });
   return Object.freeze(entries);
 }
@@ -223,6 +254,9 @@ export function captureScenarioChunkPromotionState(target, layerKeys = []) {
 export function restoreScenarioChunkPromotionState(target, snapshot) {
   assertStateTarget(target);
   const externalEffects = [];
+  const specialZoneLayersReference = snapshot?.[0]?.specialZoneLayersReference;
+  const specialZoneLayersReferencePresent =
+    snapshot?.[0]?.specialZoneLayersReferencePresent === true;
   for (const entry of Array.isArray(snapshot) ? snapshot : []) {
     const layerKey = entry?.layerKey;
     if (layerKey === "cities") {
@@ -255,7 +289,23 @@ export function restoreScenarioChunkPromotionState(target, snapshot) {
         else delete target.scenarioAtlantropaRevision;
         break;
       case "specialzonelayers":
-        if (entry.statePresent) target.specialZoneLayers = entry.stateValue;
+        if (entry.statePresent) {
+          if (specialZoneLayersReferencePresent) {
+            commitSpecialZoneLayersState(
+              target,
+              specialZoneLayersReference,
+              {},
+              { markDirty: false, preserveIdentity: true },
+            );
+          } else {
+            commitSpecialZoneLayersState(
+              target,
+              structuredClone(entry.stateValue),
+              {},
+              { markDirty: false, preserveIdentity: true },
+            );
+          }
+        }
         else delete target.specialZoneLayers;
         break;
       case "relief":

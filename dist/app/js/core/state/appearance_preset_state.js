@@ -12,7 +12,6 @@ import {
 import {
   createDefaultStyleConfig,
   normalizeOpenOceanLayerVisibility,
-  restoreImportedLayerVisibilityState,
   restoreImportedStyleConfigState,
 } from "./ui_state.js";
 
@@ -106,7 +105,7 @@ function areIntensityChannelsEqual(leftChannel, rightChannel) {
   );
 }
 
-function restorePresetIntensityFields(currentFields, snapshotFields) {
+export function buildRestoredAppearancePresetIntensityFields(currentFields, snapshotFields) {
   const current = normalizeIntensityFieldsState(currentFields);
   const next = normalizeIntensityFieldsState(snapshotFields);
   INTENSITY_FIELD_CHANNEL_IDS.forEach((channelId) => {
@@ -362,18 +361,4 @@ export function buildAppearancePresetExportPayload(preset = null) {
     schemaVersion: APPEARANCE_PRESET_SCHEMA_VERSION,
     preset: normalizedPreset,
   };
-}
-
-export function applyAppearancePresetToRuntimeState(target, presetOrSnapshot = null) {
-  if (!target || typeof target !== "object") return null;
-  const source =
-    presetOrSnapshot && typeof presetOrSnapshot === "object" && presetOrSnapshot.snapshot
-      ? presetOrSnapshot.snapshot
-      : presetOrSnapshot;
-  const snapshot = normalizeAppearancePresetSnapshot(source);
-  // 应用顺序和导入顺序保持一致：先恢复 style/layer，再替换 intensityFields，避免局部状态混用旧 schema。
-  restoreImportedStyleConfigState(target, snapshot.styleConfig);
-  restoreImportedLayerVisibilityState(target, snapshot.layerVisibility);
-  target.intensityFields = restorePresetIntensityFields(target.intensityFields, snapshot.intensityFields);
-  return snapshot;
 }

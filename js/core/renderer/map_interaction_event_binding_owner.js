@@ -77,7 +77,7 @@ export function createMapInteractionEventBindingOwner({
     return true;
   }
 
-  return {
+  return Object.freeze({
     bindEvents,
-  };
+  });
 }

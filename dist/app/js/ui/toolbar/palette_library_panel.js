@@ -3,6 +3,7 @@
 // toolbar.js 继续保留主初始化、快捷色板、主题选择和其他面板编排。
 
 import { PALETTE_THEMES, state as runtimeState } from "../../core/state.js";
+import { setSelectedColorState } from "../../core/state/actions/appearance_selection_actions.js";
 import {
   buildPaletteLibraryEntries,
   getPaletteSourceOptions,
@@ -291,7 +292,7 @@ function createPaletteLibraryPanelController({
   }
 
   const selectPaletteLibraryEntry = (entry) => {
-    runtimeState.selectedColor = entry.color;
+    setSelectedColorState(runtimeState, entry.color);
     activeRowKey = entry.key;
     updateSwatchUI?.();
     syncPaletteLibraryRowFocus();

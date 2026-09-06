@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const MODULE_PATH = "../js/core/state/actions/renderer_interaction_actions.js";
@@ -35,12 +36,18 @@ test("renderer interaction actions reject invalid targets", async () => {
 
 test("zoom transform actions preserve object identity and explicit null", async () => {
   const {
+    setZoomTransformState,
     setPendingZoomTransformState,
     setZoomGestureStartTransformState,
   } = await loadActions();
   const target = { sentinel: "preserved" };
   const startTransform = { x: 1, y: 2, k: 3 };
   const pendingTransform = { x: 4, y: 5, k: 6 };
+
+  assert.equal(setZoomTransformState(target, pendingTransform), pendingTransform);
+  assert.equal(target.zoomTransform, pendingTransform);
+  assert.equal(setZoomTransformState(target, undefined), undefined);
+  assert.equal(target.zoomTransform, undefined);
 
   assert.equal(setZoomGestureStartTransformState(target, startTransform), startTransform);
   assert.equal(target.zoomGestureStartTransform, startTransform);
@@ -163,7 +170,12 @@ test("click selection actions reject invalid targets", async () => {
   const clickActions = [
     ["clearClickHoveredIdState", []],
     ["clearClickScenarioHoverIdsState", []],
+    ["setScenarioHoverRegionIdsState", [{}]],
     ["setClickHoverOverlayDirtyState", [true]],
+    ["setHoveredFeatureIdsState", [{}]],
+    ["setLastMouseMoveTimeState", [0]],
+    ["setTooltipPendingState", [null]],
+    ["setTooltipRafHandleState", [null]],
     ["setClickSelectedWaterRegionIdState", ["water-1"]],
     ["setClickSelectedSpecialRegionIdState", ["special-1"]],
     ["setClickSelectedColorState", ["#123456"]],
@@ -225,4 +237,56 @@ test("click selection actions preserve normalization deletion and paired color w
   assert.equal(removeClickWaterRegionOverrideState(target, ""), false);
   assert.equal(removeClickCountryColorsState(target, ""), false);
   assert.equal(setClickCountryColorsState(target, "", "#000000"), false);
+});
+
+test("hover lifecycle actions preserve grouped IDs prepared payloads and frame handles", async () => {
+  const {
+    setHoveredFeatureIdsState,
+    setLastMouseMoveTimeState,
+    setScenarioHoverRegionIdsState,
+    setTooltipPendingState,
+    setTooltipRafHandleState,
+  } = await loadActions();
+  const target = { sentinel: "preserved" };
+  const pendingState = { visible: true, text: "prepared" };
+
+  setHoveredFeatureIdsState(target, {
+    landId: "land-1",
+    waterId: "water-1",
+    specialId: "special-1",
+  });
+  assert.deepEqual(
+    [target.hoveredId, target.hoveredWaterRegionId, target.hoveredSpecialRegionId],
+    ["land-1", "water-1", "special-1"],
+  );
+  setScenarioHoverRegionIdsState(target, {
+    waterId: "water-2",
+    specialId: "special-2",
+  });
+  assert.deepEqual(
+    [target.hoveredId, target.hoveredWaterRegionId, target.hoveredSpecialRegionId],
+    ["land-1", "water-2", "special-2"],
+  );
+  setHoveredFeatureIdsState(target);
+  assert.deepEqual(
+    [target.hoveredId, target.hoveredWaterRegionId, target.hoveredSpecialRegionId],
+    [null, null, null],
+  );
+
+  assert.equal(setLastMouseMoveTimeState(target, 17.5), 17.5);
+  assert.equal(target.lastMouseMoveTime, 17.5);
+  assert.equal(setTooltipPendingState(target, pendingState), pendingState);
+  assert.equal(target.tooltipPendingState, pendingState);
+  for (const handle of [0, null, undefined]) {
+    assert.equal(setTooltipRafHandleState(target, handle), handle);
+    assert.equal(target.tooltipRafHandle, handle);
+  }
+  assert.equal(target.sentinel, "preserved");
+});
+
+test("click selected color delegates to the canonical appearance selection action", async () => {
+  const source = await readFile(new URL(MODULE_PATH, import.meta.url), "utf8");
+  assert.match(source, /import \{ setSelectedColorState \} from "\.\/appearance_selection_actions\.js";/);
+  assert.match(source, /return setSelectedColorState\(target, color\);/);
+  assert.doesNotMatch(source, /target\.selectedColor\s*=/);
 });

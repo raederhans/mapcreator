@@ -10,6 +10,7 @@ import {
   DERIVED_ALIAS_TAINT_MODES,
   discoverFunctionParameterBindings,
   normalizeDerivedAliasTaintMode,
+  normalizeJavaScriptSource,
   scanStateMutationInventory,
   scanStateMutations,
 } from "../tools/state_writer_inventory.mjs";
@@ -1013,6 +1014,33 @@ test("registered imported actions accept a defaulted full-root state target only
   );
 });
 
+test("runtime hook registration accepts only the exact imported compat target", () => {
+  const binding = {
+    id: "module:runtimeState",
+    kind: "module",
+    name: "runtimeState",
+  };
+  const accepted = scanStateMutations(`
+    import { state as runtimeState } from "../core/state.js";
+    import { registerRuntimeHook as registerHook } from "../core/state/index.js";
+    registerHook(runtimeState, "refreshUiFn", () => true);
+  `, {
+    filePath: "js/ui/runtime_hook_fixture.js",
+    bindings: [binding],
+  });
+  assert.deepEqual(accepted, []);
+
+  const wrongSource = scanStateMutations(`
+    import { state as runtimeState } from "../core/state.js";
+    import { registerRuntimeHook } from "../core/other_helper.js";
+    registerRuntimeHook(runtimeState, "refreshUiFn", () => true);
+  `, {
+    filePath: "js/ui/runtime_hook_fixture.js",
+    bindings: [binding],
+  });
+  assert.ok(wrongSource.some(({ reason }) => reason === "state-alias-escape"));
+});
+
 test("local helper return aliases retain state identity through direct, wrapped, and container results", () => {
   const source = `
     function getState() {
@@ -1062,6 +1090,540 @@ test("local helper return aliases retain state identity through direct, wrapped,
     ),
     true,
   );
+});
+
+test("mutable non-state captures do not taint immutable helper results, while target and dynamic captures remain fail-closed", () => {
+  const nonStateCapture = scanStateMutations(`
+    let tooltipNode = null;
+    function getTooltipNode() { return tooltipNode; }
+    tooltipNode = document.createElement("div");
+    const tooltip = getTooltipNode();
+    tooltip.textContent = "ready";
+  `, {
+    filePath: "js/non_state_capture_fixture.js",
+    bindings: [{
+      id: "module:state",
+      kind: "module",
+      name: "state",
+    }],
+  });
+  assert.deepEqual(nonStateCapture, []);
+
+  for (const source of [
+    `
+      let captured = null;
+      function getCaptured() { return captured; }
+      captured = state;
+      publish(getCaptured());
+    `,
+    `
+      let captured = null;
+      function getCaptured() { return captured; }
+      captured = enabled ? state : fallback;
+      publish(getCaptured());
+    `,
+  ]) {
+    const findings = scanStateMutations(source, {
+      filePath: "js/mutable_capture_fixture.js",
+      bindings: [{
+        id: "module:state",
+        kind: "module",
+        name: "state",
+      }],
+    });
+    assert.equal(
+      findings.some(({ operation, reason }) => (
+        operation === "unsupported"
+        && ["state-alias-escape", "ambiguous-alias-flow"].includes(reason)
+      )),
+      true,
+      JSON.stringify(findings),
+    );
+  }
+});
+
+test("chained and parameter-mediated mutable captures remain fail-closed", () => {
+  const chained = scanStateMutations(`
+    let first = null;
+    let second = null;
+    function mutate() { second.chainWrite = true; }
+    second = first;
+    first = state;
+    mutate();
+  `, {
+    filePath: "js/chained_mutable_capture_fixture.js",
+    bindings: [{
+      id: "module:state",
+      kind: "module",
+      name: "state",
+    }],
+  });
+  assert.equal(
+    chained.some(({ operation, key, reason, line }) => (
+      operation === "unsupported"
+      && key === "*"
+      && reason === "ambiguous-alias-flow"
+      && line === 4
+    )),
+    true,
+    JSON.stringify(chained),
+  );
+
+  const parameterMediated = scanStateMutations(`
+    let captured = null;
+    function receive(value) { captured = value; }
+    receive(state);
+    function mutate() { captured.parameterWrite = true; }
+    mutate();
+  `, {
+    filePath: "js/parameter_mutable_capture_fixture.js",
+    bindings: [{
+      id: "module:state",
+      kind: "module",
+      name: "state",
+    }],
+  });
+  assert.equal(
+    parameterMediated.some(({ operation, key, reason, line }) => (
+      operation === "unsupported"
+      && key === "*"
+      && reason === "ambiguous-alias-flow"
+      && line === 5
+    )),
+    true,
+    JSON.stringify(parameterMediated),
+  );
+
+  const nonStateChain = scanStateMutations(`
+    let first = null;
+    let second = null;
+    function mutate() { second.safeWrite = true; }
+    second = first;
+    first = document.createElement("div");
+    mutate();
+  `, {
+    filePath: "js/non_state_chained_capture_fixture.js",
+    bindings: [{
+      id: "module:state",
+      kind: "module",
+      name: "state",
+    }],
+  });
+  assert.deepEqual(nonStateChain, []);
+});
+
+test("registered reference-identity action arguments accept static destructured state paths only", () => {
+  const source = `
+    import { commitSpecialZoneLayersState } from "../core/state/actions/special_zone_actions.js";
+    export function commit({ runtimeState }) {
+      commitSpecialZoneLayersState(runtimeState, runtimeState.specialZoneLayers, {});
+    }
+  `;
+  const binding = parameterBindingFor(source, "commit", "runtimeState");
+  const accepted = scanStateMutations(source, {
+    filePath: "js/ui/reference_identity_fixture.js",
+    bindings: [binding],
+  });
+  assert.deepEqual(accepted, []);
+
+  const directRootSource = source.replace(
+    "commit({ runtimeState })",
+    "commit(runtimeState)",
+  );
+  assert.deepEqual(scanStateMutations(directRootSource, {
+    filePath: "js/ui/reference_identity_fixture.js",
+    bindings: [parameterBindingFor(
+      directRootSource,
+      "commit",
+      "runtimeState",
+    )],
+  }), []);
+
+  for (const argument of [
+    "runtimeState[key]",
+    "runtimeState.specialZoneLayers[key]",
+  ]) {
+    const findings = scanStateMutations(source.replace(
+      "runtimeState.specialZoneLayers",
+      argument,
+    ), {
+      filePath: "js/ui/reference_identity_fixture.js",
+      bindings: [binding],
+    });
+    assert.equal(
+      findings.some(({ reason }) => reason === "state-alias-escape"),
+      true,
+      JSON.stringify(findings),
+    );
+  }
+
+  const shadowedActionSource = source.replace(
+    'import { commitSpecialZoneLayersState } from "../core/state/actions/special_zone_actions.js";\n',
+    "",
+  ).replace(
+    "commitSpecialZoneLayersState(runtimeState, runtimeState.specialZoneLayers, {});",
+    "const commitSpecialZoneLayersState = () => {};\n      commitSpecialZoneLayersState(runtimeState, runtimeState.specialZoneLayers, {});",
+  );
+  const shadowed = scanStateMutations(shadowedActionSource, {
+    filePath: "js/ui/reference_identity_fixture.js",
+    bindings: [parameterBindingFor(
+      shadowedActionSource,
+      "commit",
+      "runtimeState",
+    )],
+  });
+  assert.equal(
+    shadowed.some(({ reason }) => reason === "state-alias-escape"),
+    true,
+    JSON.stringify(shadowed),
+  );
+});
+
+test("explicit imported pure readers accept only an exact direct state root", () => {
+  const source = `
+    import { createCountryInspectorModel } from "./country_inspector_model.js";
+    export function read(runtimeState, t, extra = []) {
+      createCountryInspectorModel(runtimeState, t);
+    }
+  `;
+  const options = {
+    filePath: "js/ui/sidebar/country_inspector_controller.js",
+    bindings: [parameterBindingFor(source, "read", "runtimeState")],
+  };
+  assert.deepEqual(scanStateMutations(source, options), []);
+
+  for (const rejectedSource of [
+    source.replace(
+      "createCountryInspectorModel(runtimeState, t);",
+      "createCountryInspectorModel(runtimeState.countryMetadata, t);",
+    ),
+    source.replace(
+      "createCountryInspectorModel(runtimeState, t);",
+      "createCountryInspectorModel(runtimeState);",
+    ),
+    source.replace(
+      "createCountryInspectorModel(runtimeState, t);",
+      "createCountryInspectorModel(runtimeState, ...extra);",
+    ),
+    source.replace(
+      'import { createCountryInspectorModel } from "./country_inspector_model.js";\n',
+      "",
+    ).replace(
+      "createCountryInspectorModel(runtimeState, t);",
+      "const createCountryInspectorModel = () => {};\n      createCountryInspectorModel(runtimeState, t);",
+    ),
+  ]) {
+    const rejected = scanStateMutations(rejectedSource, {
+      ...options,
+      bindings: [parameterBindingFor(
+        rejectedSource,
+        "read",
+        "runtimeState",
+      )],
+    });
+    assert.equal(
+      rejected.some(({ reason, evidenceKind }) => (
+        reason === "state-alias-escape"
+        && evidenceKind === "unknown-call-argument"
+      )),
+      true,
+      JSON.stringify(rejected),
+    );
+  }
+});
+
+test("source-bound special-zone projection keeps its land-index output borrowed", () => {
+  const source = `
+    import { buildSpecialZoneRenderFeatures } from "../special_zone_layers.js";
+    export function project(runtimeState) {
+      return buildSpecialZoneRenderFeatures(
+        runtimeState.specialZoneLayers,
+        runtimeState.landIndex,
+      );
+    }
+  `;
+  const options = {
+    filePath: "js/core/renderer/special_zone_layers_render_owner.js",
+    bindings: [parameterBindingFor(source, "project", "runtimeState")],
+  };
+  const directReturn = scanStateMutations(source, options);
+  assert.equal(
+    directReturn.some(({ key, evidenceKind }) => (
+      key === "specialZoneLayers"
+      && evidenceKind === "unknown-call-argument"
+    )),
+    false,
+    JSON.stringify(directReturn),
+  );
+  assert.equal(
+    directReturn.filter(({ key, evidenceKind }) => (
+      key === "landIndex" && evidenceKind === "unknown-call-argument"
+    )).length,
+    1,
+    JSON.stringify(directReturn),
+  );
+  assert.equal(
+    directReturn.some(({ key, evidenceKind }) => (
+      key === "landIndex" && evidenceKind === "return-value"
+    )),
+    false,
+    JSON.stringify(directReturn),
+  );
+
+  const localWriteSource = source.replace(
+    "return buildSpecialZoneRenderFeatures(\n        runtimeState.specialZoneLayers,\n        runtimeState.landIndex,\n      );",
+    "const projected = buildSpecialZoneRenderFeatures(\n        runtimeState.specialZoneLayers,\n        runtimeState.landIndex,\n      );\n      projected.features[0].geometry = null;",
+  );
+  const localWrite = scanStateMutations(localWriteSource, {
+    ...options,
+    bindings: [parameterBindingFor(
+      localWriteSource,
+      "project",
+      "runtimeState",
+    )],
+  });
+  assert.equal(
+    localWrite.some(({ operation, key }) => (
+      operation === "assign" && key === "landIndex"
+    )),
+    true,
+    JSON.stringify(localWrite),
+  );
+
+  const sinkSource = source.replace(
+    "return buildSpecialZoneRenderFeatures(\n        runtimeState.specialZoneLayers,\n        runtimeState.landIndex,\n      );",
+    "holder.value = buildSpecialZoneRenderFeatures(\n        runtimeState.specialZoneLayers,\n        runtimeState.landIndex,\n      );",
+  );
+  const sink = scanStateMutations(sinkSource, {
+    ...options,
+    bindings: [parameterBindingFor(sinkSource, "project", "runtimeState")],
+  });
+  assert.equal(
+    sink.some(({ key, evidenceKind }) => (
+      key === "landIndex" && evidenceKind === "assignment-value"
+    )),
+    true,
+    JSON.stringify(sink),
+  );
+
+  for (const rejectedSource of [
+    source.replace("runtimeState.landIndex,\n      );", "runtimeState.landIndex, extra,\n      );"),
+    source.replace("runtimeState.landIndex", "runtimeState[landIndexKey]"),
+    source.replace(
+      "buildSpecialZoneRenderFeatures(\n        runtimeState.specialZoneLayers,\n        runtimeState.landIndex,\n      )",
+      "buildSpecialZoneRenderFeatures(...[\n        runtimeState.specialZoneLayers,\n        runtimeState.landIndex,\n      ])",
+    ),
+  ]) {
+    const rejected = scanStateMutations(rejectedSource, {
+      ...options,
+      bindings: [parameterBindingFor(
+        rejectedSource,
+        "project",
+        "runtimeState",
+      )],
+    });
+    assert.equal(
+      rejected.some(({ key, reason }) => (
+        key === "specialZoneLayers"
+        && reason === "state-alias-escape"
+      )),
+      true,
+      JSON.stringify(rejected),
+    );
+  }
+});
+
+test("exact Map.prototype.get.call keeps borrowed state provenance and rejects mutable or inexact intrinsics", () => {
+  const readSource = `
+    const entry = Map.prototype.get.call(state.recordsById, id);
+    entry.label = "updated";
+  `;
+  const borrowedWrite = scanStateMutations(readSource, {
+    filePath: "js/map_intrinsic_fixture.js",
+    bindings: [{ id: "module:state", kind: "module", name: "state" }],
+  });
+  assert.deepEqual(
+    borrowedWrite.map(({ operation, key }) => ({ operation, key })),
+    [{ operation: "assign", key: "recordsById" }],
+  );
+
+  const returnEscape = scanStateMutations(`
+    function readEntry() {
+      return Map.prototype.get.call(state.recordsById, id);
+    }
+  `, {
+    filePath: "js/map_intrinsic_return_fixture.js",
+    bindings: [{ id: "module:state", kind: "module", name: "state" }],
+  });
+  const sinkEscape = scanStateMutations(`
+    holder.entry = Map.prototype.get.call(state.recordsById, id);
+  `, {
+    filePath: "js/map_intrinsic_sink_fixture.js",
+    bindings: [{ id: "module:state", kind: "module", name: "state" }],
+  });
+  for (const findings of [returnEscape, sinkEscape]) {
+    assert.equal(
+    findings.some(({ key, reason }) => (
+      key === "recordsById" && reason === "state-alias-escape"
+    )),
+      true,
+      JSON.stringify(findings),
+    );
+  }
+
+  const rejectedSources = [
+    "Map.prototype.get.call(state.recordsById, id, extra);",
+    "Map.prototype.get.call(state, id);",
+    "Map.prototype.get.apply(state.recordsById, [id]);",
+    "Map.prototype[\"get\"].call(state.recordsById, id);",
+    "state.recordsById.get(id);",
+    "function inspect(Map) { Map.prototype.get.call(state.recordsById, id); }",
+    "function inspect(Function) { Map.prototype.get.call(state.recordsById, id); }",
+    "Map = FakeMap; Map.prototype.get.call(state.recordsById, id);",
+    "Map.prototype = {}; Map.prototype.get.call(state.recordsById, id);",
+    "Map.prototype.get = replacement; Map.prototype.get.call(state.recordsById, id);",
+    "Object.defineProperty(Map.prototype, \"get\", { value: replacement }); Map.prototype.get.call(state.recordsById, id);",
+    "Reflect.set(Function.prototype, \"call\", replacement); Map.prototype.get.call(state.recordsById, id);",
+    "patch(Map.prototype); Map.prototype.get.call(state.recordsById, id);",
+    "const prototype = Map.prototype; patch(prototype); Map.prototype.get.call(state.recordsById, id);",
+    "patch(Function.prototype.call); Map.prototype.get.call(state.recordsById, id);",
+    "const prototype = Object.getPrototypeOf(new Map()); prototype.get = replacement; Map.prototype.get.call(state.recordsById, id);",
+    "const get = Map.prototype.get; const prototype = Reflect.getPrototypeOf(get); prototype.call = replacement; Map.prototype.get.call(state.recordsById, id);",
+    "const prototype = new Map().__proto__; prototype.get = replacement; Map.prototype.get.call(state.recordsById, id);",
+    "const get = Map.prototype.get; const prototype = get.constructor.prototype; prototype.call = replacement; Map.prototype.get.call(state.recordsById, id);",
+  ];
+  for (const source of rejectedSources) {
+    const findings = scanStateMutations(source, {
+      filePath: "js/map_intrinsic_rejected_fixture.js",
+      bindings: [{ id: "module:state", kind: "module", name: "state" }],
+    });
+    assert.equal(
+      findings.some(({ reason }) => (
+        reason === "state-alias-escape"
+        || reason === "unsupported-call-mutation"
+      )),
+      true,
+      JSON.stringify(findings),
+    );
+  }
+});
+
+test("source-bound owner factories admit only their exact state property", async () => {
+  // Scanner offsets refer to normalized LF source, including on Windows checkouts.
+  const rendererSource = normalizeJavaScriptSource(await readFile(
+    new URL("../js/core/map_renderer.js", import.meta.url),
+    "utf8",
+  ));
+  const functionStart = rendererSource.indexOf("function getRenderCacheOwner() {");
+  const nextFunctionStart = rendererSource.indexOf(
+    "\nfunction ",
+    functionStart + 1,
+  );
+  assert.ok(functionStart >= 0 && nextFunctionStart > functionStart);
+  const getterSource = rendererSource
+    .slice(functionStart, nextFunctionStart)
+    .trim();
+  const source = [
+    'import { state as runtimeState } from "./state.js";',
+    'import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";',
+    getterSource,
+  ].join("\n\n");
+  const options = {
+    filePath: "js/core/map_renderer.js",
+    bindings: [{
+      id: "module:runtimeState",
+      kind: "module",
+      name: "runtimeState",
+    }],
+  };
+  const stateValueStart = source.indexOf("state: runtimeState")
+    + "state: ".length;
+  const factoryObjectStart = source.indexOf(
+    "{",
+    source.indexOf("createRenderCacheOwner("),
+  );
+  assert.ok(stateValueStart >= "state: ".length);
+  assert.ok(factoryObjectStart >= 0);
+  const findings = scanStateMutations(source, options);
+  assert.deepEqual(findings, []);
+
+  const driftedSource = source.replace(
+    "state: runtimeState,",
+    "state: runtimeState /* source drift */,",
+  );
+  assert.notEqual(driftedSource, source);
+  const driftedStateValueStart = driftedSource.indexOf("state: runtimeState")
+    + "state: ".length;
+  const driftedFactoryObjectStart = driftedSource.indexOf(
+    "{",
+    driftedSource.indexOf("createRenderCacheOwner("),
+  );
+  const drifted = scanStateMutations(driftedSource, options);
+  assert.equal(
+    drifted.some(({ start, reason }) => (
+      start === driftedStateValueStart && reason === "state-alias-escape"
+    )),
+    true,
+    JSON.stringify(drifted),
+  );
+  assert.equal(
+    drifted.some(({ start, reason, evidenceKind }) => (
+      start === driftedFactoryObjectStart
+      && reason === "state-alias-escape"
+      && evidenceKind === "unknown-call-argument"
+    )),
+    true,
+    JSON.stringify(drifted),
+  );
+
+  const unregisteredSource = source.replaceAll(
+    "createRenderCacheOwner",
+    "unregisteredFactory",
+  );
+  const unregisteredStateValueStart = unregisteredSource.indexOf(
+    "state: runtimeState",
+  ) + "state: ".length;
+  const unregisteredFactoryObjectStart = unregisteredSource.indexOf(
+    "{",
+    unregisteredSource.indexOf("unregisteredFactory("),
+  );
+  const unregistered = scanStateMutations(unregisteredSource, options);
+  assert.equal(
+    unregistered.some(({ start, reason }) => (
+      start === unregisteredStateValueStart && reason === "state-alias-escape"
+    )),
+    true,
+    JSON.stringify(unregistered),
+  );
+  assert.equal(
+    unregistered.some(({ start, reason, evidenceKind }) => (
+      start === unregisteredFactoryObjectStart
+      && reason === "state-alias-escape"
+      && evidenceKind === "unknown-call-argument"
+    )),
+    true,
+    JSON.stringify(unregistered),
+  );
+
+  const extraStateSource = source.replace(
+    "state: runtimeState,",
+    "state: runtimeState, escapedState: runtimeState,",
+  );
+  const extraStateValueStart = extraStateSource.indexOf("escapedState: runtimeState")
+    + "escapedState: ".length;
+  const extraStateFindings = scanStateMutations(extraStateSource, options);
+  assert.ok(extraStateFindings.some(({ start, reason }) => (
+    start === extraStateValueStart && reason === "state-alias-escape"
+  )), JSON.stringify(extraStateFindings));
+
+  const mutatedSource = source.replace(
+    "return renderCacheOwner;",
+    "runtimeState.bootPhase = 'ready'; return renderCacheOwner;",
+  );
+  const mutationFindings = scanStateMutations(mutatedSource, options);
+  assert.ok(mutationFindings.some(({ key, unsupported }) => (
+    key === "bootPhase" && !unsupported
+  )), JSON.stringify(mutationFindings));
 });
 
 test("direct object containers retain state taint for downstream member writes", () => {

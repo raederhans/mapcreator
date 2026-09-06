@@ -326,7 +326,7 @@ jobs:
             --resolved-authority .runtime/repair/authorities/fast/nightly/p4-fast-contracts-routes.resolved.json \
             --expected-sha "${{ needs.plan.outputs.source_sha }}" \
             --expected-tree "${{ needs.plan.outputs.source_tree }}" \
-            --evidence .runtime/repair/authorities/checker/p4-state-actions/P4.3/state-writer-policy-evidence.json \
+            --evidence .runtime/repair/authorities/checker/p4-state-actions/P4.4/state-writer-policy-evidence.json \
             --tap .runtime/repair/authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.tap \
             --completed .runtime/repair/authorities/full/p4-state-actions/P4.0/state-writer-policy-tests.completed.json \
             --repair-plan .runtime/repair/plan/p4-repair-plan.json \

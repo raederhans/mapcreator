@@ -49,7 +49,6 @@ import {
 } from "../js/core/renderer/spatial_index_runtime_state_ops.js";
 import {
   createSpatialIndexPerfPayload,
-  deriveRuntimePrimaryFeaturePayload,
 } from "../js/core/renderer/spatial_index_runtime_derivation.js";
 import {
   buildWaterSpatialItems,
@@ -618,17 +617,7 @@ test("secondary spatial pending state can preserve the last valid snapshot", () 
   assert.deepEqual(state.waterSpatialItems.map((item) => item.id), ["water-next"]);
 });
 
-test("spatial derivation payloads stay pure and explicit", () => {
-  const projectedBoundsCache = new Map();
-  const payload = deriveRuntimePrimaryFeaturePayload({
-    feature: { id: "feature-1" },
-    id: "feature-1",
-    canvasWidth: 100,
-    canvasHeight: 100,
-    projectedBoundsCache,
-    computeProjectedFeatureBounds: () => ({ minX: 1, minY: 2, maxX: 3, maxY: 4 }),
-    shouldSkipFeature: () => false,
-  });
+test("spatial performance payloads stay pure and explicit", () => {
   const perfPayload = createSpatialIndexPerfPayload({
     landCount: 10,
     spatialItems: 8,
@@ -644,12 +633,6 @@ test("spatial derivation payloads stay pure and explicit", () => {
     chunked: true,
   });
 
-  assert.deepEqual(payload, {
-    bounds: { minX: 1, minY: 2, maxX: 3, maxY: 4 },
-    skipped: false,
-  });
-  assert.deepEqual(Object.keys(payload).sort(), ["bounds", "skipped"]);
-  assert.deepEqual(projectedBoundsCache.get("feature-1"), { minX: 1, minY: 2, maxX: 3, maxY: 4 });
   assert.deepEqual(perfPayload, {
     landCount: 10,
     spatialItems: 8,

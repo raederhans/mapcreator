@@ -16,7 +16,6 @@ const PREFLIGHT_DOC_PATH = "docs/active/renderer-political-pass-preflight-p3-3a-
 const CANONICAL_OWNER_PATH = "js/core/renderer/political_pass_orchestrator_owner.js";
 const PARTIAL_OWNER_PATH = "js/core/renderer/political_partial_repaint_owner.js";
 const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
-const RUNTIME_CONTEXT_PATH = "js/core/map_renderer/renderer_runtime_context.js";
 const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
 
 const PREFLIGHT_HEADINGS = Object.freeze([
@@ -363,7 +362,6 @@ test("P3.3b installs one canonical owner and keeps protected architecture surfac
     /^function drawPoliticalPass\(k\) \{\s*return getPoliticalPassOrchestratorOwner\(\)\.drawPoliticalPass\(k\);\s*\}$/,
   );
   assert.equal(readRepoFile(PUBLIC_FACADE_PATH).includes("political_pass_orchestrator_owner"), false);
-  assert.equal(readRepoFile(RUNTIME_CONTEXT_PATH).includes("politicalPass"), false);
   assert.equal(readRepoFile(STATE_WRITE_ALLOWLIST_PATH).includes(CANONICAL_OWNER_PATH), false);
   for (const protectedPath of [
     "js/core/renderer/render_pipeline_catalog.js",

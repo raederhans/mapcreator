@@ -166,9 +166,9 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         hover_body = renderer_content[hover_start:hover_end]
         self.assertIn("getMapHoverInteractionOwner().handleMouseMove(event);", hover_body)
         self.assertIn('"inspectHgoRuntimePreviewFromEvent"', hover_owner_content)
-        self.assertIn('runGetter(trace, "inspectHgoRuntimePreviewFromEvent", event, { eventType: "hover" });', hover_owner_content)
+        self.assertIn('getterApi.inspectHgoRuntimePreviewFromEvent(event, { eventType: "hover" });', hover_owner_content)
         self.assertIn('if (hgoRuntimeHover?.active) {', hover_owner_content)
-        self.assertIn('return clearHoverForExclusiveMode(trace, "hgo-runtime-hover", hgoHit, hgoHit ? "pointer" : "");', hover_owner_content)
+        self.assertIn('return clearHoverForExclusiveMode("hgo-runtime-hover", hgoHit, hgoHit ? "pointer" : "");', hover_owner_content)
 
         click_start = click_owner_content.index("async function handleClick(event, _interactionContext = null) {")
         click_end = click_owner_content.index("const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);", click_start)

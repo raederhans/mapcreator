@@ -46,7 +46,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         )
 
 
-    def test_spatial_owner_pass_through_uses_module_level_bindings(self):
+    def test_spatial_owner_pass_through_calls_owner_directly(self):
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+resetSecondarySpatialIndexState\s*=")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+resetSecondarySpatialIndexState\s*\(")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+buildSecondarySpatialIndexes\s*=")
@@ -54,14 +54,11 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         combined_runtime_content = f"{self.renderer_content}\n{self.refresh_runtime_content}"
         self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({"), 3)
         self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
-        self.assertIn(
-            "buildIndexChunked,\n  buildSpatialIndex,\n  buildSpatialIndexChunked,\n  configureSpatialRuntimeFacade,\n} from \"./map_renderer/facade_spatial_runtime.js\";",
-            self.renderer_content,
-        )
-        self.assertIn(
-            "configureSpatialRuntimeFacade({\n  getSpatialIndexRuntimeOwner,\n});",
-            self.renderer_content,
-        )
+        self.assertNotIn("facade_spatial_runtime.js", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildIndex(...args);", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildIndexChunked(...args);", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildSpatialIndex(...args);", self.renderer_content)
+        self.assertIn("return getSpatialIndexRuntimeOwner().buildSpatialIndexChunked(...args);", self.renderer_content)
 
     def test_chunk_promotion_visual_stage_reuses_primary_derived_state_rebuild(self):
         self.assertIn("function rebuildPrimaryPoliticalDerivedState({", self.renderer_content)
@@ -155,10 +152,20 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         )
 
     def test_hover_hit_keeps_reduced_phase_before_precise_hit_resolution(self):
+        hover_content = (MAP_RENDERER_JS.parent / "map_renderer" / "map_hover_interaction_owner.js").read_text(encoding="utf-8")
+        binding_start = self.renderer_content.index("function getMapHoverInteractionOwner() {")
+        binding = self.renderer_content[binding_start:self.renderer_content.index("function getVisibleFrameDiagnosticsOwner()", binding_start)]
+        self.assertIn("mapHoverInteractionOwner = createMapHoverInteractionOwner({", binding)
+        self.assertIn("state: runtimeState,", binding)
+        self.assertIn("hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX", binding)
+        self.assertIn("renderPhaseIdle: RENDER_PHASE_IDLE", binding)
+        self.assertIn("      getHitFromEvent,", binding)
+        self.assertRegex(self.renderer_content, r"function handleMouseMove\(event\) \{\s*getMapHoverInteractionOwner\(\)\.handleMouseMove\(event\);\s*\}")
+        self.assertRegex(hover_content, r"function isReducedHoverPhase\(\) \{\s*return Boolean\(state\.renderPhase !== renderPhaseIdle \|\| state\.isInteracting \|\| state\.scenarioApplyInFlight\s*\|\| state\.startupReadonly \|\| state\.startupReadonlyUnlockInFlight\);")
         self.assertRegex(
-            self.renderer_content,
+            hover_content,
             re.compile(
-                r'const reducedHoverPhase =[\s\S]*?if \(reducedHoverPhase\) \{[\s\S]*?return;\s*\}\s*const hit = getHitFromEvent\(event, \{\s*enableSnap: false,\s*snapPx: HIT_SNAP_RADIUS_HOVER_PX,\s*eventType: "hover",\s*\}\);',
+                r'function handleMouseMove\(event\) \{[\s\S]*?if \(isReducedHoverPhase\(\)\) \{\s*return clearReducedHover\(\);\s*\}\s*const hit = getterApi.getHitFromEvent\(event, \{\s*enableSnap: false,\s*snapPx: hoverSnapPx,\s*eventType: "hover",\s*\}\) \|\| \{\};',
                 re.S,
             ),
         )

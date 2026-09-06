@@ -1,6 +1,5 @@
 import {
   buildSpecialZoneRenderFeatures,
-  ensureSpecialZoneLayersState,
 } from "../special_zone_layers.js";
 
 // Merged outlines are topology-heavy; keep a small bounded LRU cache per render owner.
@@ -74,7 +73,7 @@ export function createSpecialZoneLayersRenderOwner({
   }
 
   function getEffectiveSpecialZonesFeatureCollection() {
-    return buildSpecialZoneRenderFeatures(ensureSpecialZoneLayersState(runtimeState), runtimeState.landIndex);
+    return buildSpecialZoneRenderFeatures(runtimeState.specialZoneLayers, runtimeState.landIndex);
   }
 
   function getSpecialZoneStyle(feature) {

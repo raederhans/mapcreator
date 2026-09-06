@@ -216,6 +216,69 @@ function cloneDiagnosticValue(value, seen = new WeakMap()) {
   return clone;
 }
 
+function createRejectedRenderSnapshotRecordCarrier() {
+  return Object.create(Object.freeze({ rejectedRenderSnapshotRecord: true }));
+}
+
+function cloneRenderSnapshotRecord(target, key) {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
+  if (!descriptor) {
+    return key in target ? createRejectedRenderSnapshotRecordCarrier() : {};
+  }
+  if (!Object.hasOwn(descriptor, "value")) {
+    return createRejectedRenderSnapshotRecordCarrier();
+  }
+  const value = descriptor.value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return value;
+  }
+  for (const ownKey of Reflect.ownKeys(value)) {
+    const ownDescriptor = Object.getOwnPropertyDescriptor(value, ownKey);
+    if (
+      typeof ownKey !== "string"
+      || !ownDescriptor?.enumerable
+      || !Object.hasOwn(ownDescriptor, "value")
+    ) {
+      return createRejectedRenderSnapshotRecordCarrier();
+    }
+  }
+  return cloneDiagnosticValue(value);
+}
+
+function cloneRenderSnapshotState(target, getters) {
+  for (const name of [
+    "getViewportRenderSignature",
+    "getProjectionRenderSignature",
+    "getViewportGeoBounds",
+  ]) {
+    if (typeof getters?.[name] !== "function") {
+      throw new TypeError(
+        `[renderer_diagnostics_actions] getters.${name} must be a function`,
+      );
+    }
+  }
+  const transform = getOwnDataPropertyValue(target, "zoomTransform");
+  const transformRecord = transform && typeof transform === "object"
+    ? transform
+    : {};
+  return Object.freeze({
+    sovereignBaseColors: cloneRenderSnapshotRecord(target, "sovereignBaseColors"),
+    sovereigntyByFeatureId: cloneRenderSnapshotRecord(target, "sovereigntyByFeatureId"),
+    viewportTransform: Object.freeze({
+      x: Number(getOwnDataPropertyValue(transformRecord, "x") ?? 0),
+      y: Number(getOwnDataPropertyValue(transformRecord, "y") ?? 0),
+      k: Number(getOwnDataPropertyValue(transformRecord, "k") ?? 1),
+    }),
+    viewportRenderSignature: getters.getViewportRenderSignature(),
+    projectionRenderSignature: getters.getProjectionRenderSignature(),
+    viewportGeoBounds: cloneDiagnosticValue(getters.getViewportGeoBounds()),
+  });
+}
+
 export function captureRenderPerfMetricsState(target) {
   assertStateTarget(target);
   const metrics = getOwnDataPropertyValue(target, "renderPerfMetrics");
@@ -265,6 +328,11 @@ export function captureProjectedBoundsDiagnosticsState(target) {
     };
   }
   return cloneDiagnosticValue(diagnostics);
+}
+
+export function captureRenderSnapshotState(target, getters) {
+  assertStateTarget(target);
+  return cloneRenderSnapshotState(target, getters);
 }
 
 export function ensureRenderPerfMetricsState(target) {

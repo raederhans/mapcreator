@@ -5,8 +5,10 @@ import test from "node:test";
 
 import {
   discoverStateWriterBindingsForSource,
+  isDelegationOnlyStateWriterCandidate,
   scanStateWriterBindingInventoriesBatch,
   scanStateWriterPolicySnapshot,
+  shouldRetainScannedWriterCandidate,
 } from "../tools/build_state_writer_policy.mjs";
 import {
   DERIVED_ALIAS_TAINT_MODES,
@@ -218,6 +220,49 @@ test("batch binding inventory invokes the scanner once for all scannable binding
       PARAMETER_BINDING.id,
       DIAGNOSTIC_BINDING.id,
     ],
+  );
+});
+
+test("delegate-only domain actions remain writer candidates without admitting no-op bindings", () => {
+  const delegatedAction = {
+    relativePath: "js/core/state/actions/example_actions.js",
+    surface: "production",
+    binding: PARAMETER_BINDING,
+    findings: [],
+    actionDelegations: [{ actionExportName: "setBootStateFields" }],
+  };
+
+  assert.equal(shouldRetainScannedWriterCandidate(delegatedAction), true);
+  assert.equal(isDelegationOnlyStateWriterCandidate(delegatedAction), true);
+  assert.equal(
+    shouldRetainScannedWriterCandidate({ ...delegatedAction, actionDelegations: [] }),
+    false,
+  );
+  assert.equal(
+    shouldRetainScannedWriterCandidate({ ...delegatedAction, surface: "test" }),
+    false,
+  );
+  assert.equal(
+    shouldRetainScannedWriterCandidate({
+      ...delegatedAction,
+      relativePath: "js/core/example.js",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldRetainScannedWriterCandidate({
+      ...delegatedAction,
+      findings: [{ key: "bootPhase" }],
+      actionDelegations: [],
+    }),
+    true,
+  );
+  assert.equal(
+    isDelegationOnlyStateWriterCandidate({
+      ...delegatedAction,
+      findings: [{ key: "bootPhase" }],
+    }),
+    false,
   );
 });
 

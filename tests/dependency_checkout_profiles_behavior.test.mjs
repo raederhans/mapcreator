@@ -42,6 +42,7 @@ test("canonical metadata derives the complete P4 boundary root set read-only", (
     "test:python:p4:p4-2b-boundary",
     "test:python:p4:p4-2c-boundary",
     "test:python:p4:p4-3-boundary",
+    "test:python:p4:p4-4-boundary",
     "test:python:p4:state-write-boundary",
   ]);
   assert.ok(inputs.pythonRoots.includes("tests/test_state_write_guardrail_contract.py"));

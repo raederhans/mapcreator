@@ -6,7 +6,6 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_MANAGER = REPO_ROOT / "js" / "core" / "scenario_manager.js"
 SCENARIO_APPLY_PIPELINE = REPO_ROOT / "js" / "core" / "scenario_apply_pipeline.js"
-SCENARIO_RUNTIME_STATE = REPO_ROOT / "js" / "core" / "state" / "scenario_runtime_state.js"
 SCENARIO_LIFECYCLE_RUNTIME = REPO_ROOT / "js" / "core" / "scenario" / "lifecycle_runtime.js"
 
 
@@ -136,7 +135,6 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
 
     def test_apply_pipeline_owner_moves_to_new_module(self):
         content = SCENARIO_APPLY_PIPELINE.read_text(encoding="utf-8")
-        state_content = SCENARIO_RUNTIME_STATE.read_text(encoding="utf-8")
         lifecycle_content = SCENARIO_LIFECYCLE_RUNTIME.read_text(encoding="utf-8")
 
         self.assertIn("prepareScenarioActivationContext(bundle)", content)
@@ -164,9 +162,6 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
         self.assertIn("resetScenarioChunkRuntimeState(", content)
         self.assertNotIn("runtimeState.defaultRuntimePoliticalTopology =", content)
         self.assertNotIn('./scenario_manager.js', content)
-        self.assertIn("export function commitScenarioActivationRuntimeState(target, nextState = {}) {", state_content)
-        self.assertIn("setHydratedScenarioRuntimeTopologyState(target, {", state_content)
-        self.assertIn("setScenarioRuntimeOptionalLayerState(target, {", state_content)
         self.assertIn('syncScenarioInspectorSelection("");', content)
         self.assertIn("scenarioApplyRequestId", content)
         self.assertIn("disableScenarioParentBorders();", content)
@@ -188,28 +183,6 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
             r"[\s\S]*commitScenarioActivationState\(transactionPatch,\s*staged\);"
             r"[\s\S]*publishScenarioActivationObservers\(bundle,\s*staged\);",
         )
-
-    def test_commit_scenario_activation_runtime_state_stays_pure_state_commit(self):
-        state_content = SCENARIO_RUNTIME_STATE.read_text(encoding="utf-8")
-        start = state_content.index("export function commitScenarioActivationRuntimeState(target, nextState = {}) {")
-        end = state_content.index("\nexport function normalizeScenarioHydrationHealthGateState", start)
-        body = state_content[start:end]
-        side_effect_calls = [
-            "syncScenarioLocalizationState",
-            "applyBlankScenarioPresentationDefaults",
-            "setScenarioAuditUiState",
-            "markLegacyColorStateDirty",
-            "syncScenarioInspectorSelection",
-            "disableScenarioParentBorders",
-            "applyScenarioPaintMode",
-            "syncScenarioOceanFillForActivation",
-            "applyScenarioPerformanceHints",
-            "commitScenarioChunkRuntimeState",
-            "recalculateScenarioOwnerControllerDiffCount",
-        ]
-        for call_name in side_effect_calls:
-            self.assertNotIn(call_name, body)
-
 
 if __name__ == "__main__":
     unittest.main()

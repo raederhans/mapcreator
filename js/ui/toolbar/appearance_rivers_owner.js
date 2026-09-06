@@ -1,4 +1,9 @@
 import { normalizeRiversStyleConfig } from "../../core/state.js";
+import {
+  patchAppearanceStyleGroupState,
+  setAppearanceStyleGroupState,
+} from "../../core/state/actions/appearance_actions.js";
+import { setAppearanceVisibilityState } from "../../core/state/actions/appearance_visibility_actions.js";
 
 export { normalizeRiversStyleConfig };
 
@@ -27,11 +32,10 @@ export function createAppearanceRiversOwner({
   const nodes = collectRiversNodes(documentRef);
 
   const syncRiversConfig = () => {
-    runtimeState.styleConfig.rivers = normalizeRiversStyleConfig(runtimeState.styleConfig.rivers, {
+    return setAppearanceStyleGroupState(runtimeState, "rivers", normalizeRiversStyleConfig(runtimeState.styleConfig.rivers, {
       clamp,
       normalizeOceanFillColor,
-    });
-    return runtimeState.styleConfig.rivers;
+    }));
   };
 
   const renderRiversUi = () => {
@@ -52,7 +56,7 @@ export function createAppearanceRiversOwner({
     if (nodes.toggle && nodes.toggle.dataset.bound !== "true") {
       nodes.toggle.checked = !!runtimeState.showRivers;
       nodes.toggle.addEventListener("change", (event) => {
-        runtimeState.showRivers = !!event.target.checked;
+        setAppearanceVisibilityState(runtimeState, "showRivers", event.target.checked);
         if (runtimeState.showRivers && typeof runtimeState.ensureContextLayerDataFn === "function") {
           void runtimeState.ensureContextLayerDataFn("rivers", { reason: "toolbar-toggle", renderNow: true });
         }
@@ -63,7 +67,8 @@ export function createAppearanceRiversOwner({
 
     if (nodes.color && nodes.color.dataset.bound !== "true") {
       nodes.color.addEventListener("input", (event) => {
-        syncRiversConfig().color = normalizeOceanFillColor(event.target.value);
+        syncRiversConfig();
+        patchAppearanceStyleGroupState(runtimeState, "rivers", { color: normalizeOceanFillColor(event.target.value) });
         renderDirty("rivers-color");
       });
       nodes.color.dataset.bound = "true";
@@ -73,7 +78,8 @@ export function createAppearanceRiversOwner({
       nodes.opacity.addEventListener("input", (event) => {
         const value = Number(event.target.value);
         const nextOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.88, 0, 1);
-        syncRiversConfig().opacity = nextOpacity;
+        syncRiversConfig();
+        patchAppearanceStyleGroupState(runtimeState, "rivers", { opacity: nextOpacity });
         if (nodes.opacityValue) nodes.opacityValue.textContent = `${Math.round(nextOpacity * 100)}%`;
         renderDirty("rivers-opacity");
       });
@@ -84,7 +90,8 @@ export function createAppearanceRiversOwner({
       nodes.width.addEventListener("input", (event) => {
         const value = Number(event.target.value);
         const nextWidth = clamp(Number.isFinite(value) ? value : 0.5, 0.2, 4);
-        syncRiversConfig().width = nextWidth;
+        syncRiversConfig();
+        patchAppearanceStyleGroupState(runtimeState, "rivers", { width: nextWidth });
         if (nodes.widthValue) nodes.widthValue.textContent = Number(nextWidth).toFixed(2);
         renderDirty("rivers-width");
       });
@@ -93,7 +100,8 @@ export function createAppearanceRiversOwner({
 
     if (nodes.outlineColor && nodes.outlineColor.dataset.bound !== "true") {
       nodes.outlineColor.addEventListener("input", (event) => {
-        syncRiversConfig().outlineColor = normalizeOceanFillColor(event.target.value);
+        syncRiversConfig();
+        patchAppearanceStyleGroupState(runtimeState, "rivers", { outlineColor: normalizeOceanFillColor(event.target.value) });
         renderDirty("rivers-outline-color");
       });
       nodes.outlineColor.dataset.bound = "true";
@@ -103,7 +111,8 @@ export function createAppearanceRiversOwner({
       nodes.outlineWidth.addEventListener("input", (event) => {
         const value = Number(event.target.value);
         const nextOutlineWidth = clamp(Number.isFinite(value) ? value : 0.25, 0, 3);
-        syncRiversConfig().outlineWidth = nextOutlineWidth;
+        syncRiversConfig();
+        patchAppearanceStyleGroupState(runtimeState, "rivers", { outlineWidth: nextOutlineWidth });
         if (nodes.outlineWidthValue) nodes.outlineWidthValue.textContent = Number(nextOutlineWidth).toFixed(2);
         renderDirty("rivers-outline-width");
       });
@@ -112,7 +121,8 @@ export function createAppearanceRiversOwner({
 
     if (nodes.dashStyle && nodes.dashStyle.dataset.bound !== "true") {
       nodes.dashStyle.addEventListener("change", (event) => {
-        syncRiversConfig().dashStyle = String(event.target.value || "solid");
+        syncRiversConfig();
+        patchAppearanceStyleGroupState(runtimeState, "rivers", { dashStyle: String(event.target.value || "solid") });
         renderDirty("rivers-dash");
       });
       nodes.dashStyle.dataset.bound = "true";

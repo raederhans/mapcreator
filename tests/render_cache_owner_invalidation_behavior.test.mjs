@@ -84,6 +84,7 @@ function createOwner({
   renderPassNames = RENDER_PASS_NAMES,
   identity = {},
   getTransformSignature = (transform) => transform ? `${transform.k}:${transform.x}:${transform.y}` : "none",
+  getterOverrides = {},
   helperOverrides = {},
 } = {}) {
   const state = { renderPassCache: cache };
@@ -94,6 +95,9 @@ function createOwner({
       constants: {
         interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
         renderPassNames,
+      },
+      getters: {
+        ...getterOverrides,
       },
       helpers: {
         cloneZoomTransform,
@@ -117,6 +121,41 @@ function createOwner({
     }),
   };
 }
+
+test("main-target canvas caches retain their identities while tracking the live target size", () => {
+  const lastGoodFrameCanvas = { width: 1, height: 1 };
+  const interactionCompositeCanvas = { width: 2, height: 2 };
+  const compositeBufferCanvas = { width: 3, height: 3 };
+  const cache = createRenderPassCache({
+    lastGoodFrame: { canvas: lastGoodFrameCanvas },
+    interactionComposite: { canvas: interactionCompositeCanvas },
+    compositeBuffer: { canvas: compositeBufferCanvas },
+  });
+  const { owner } = createOwner({
+    cache,
+    getterOverrides: {
+      getContext: () => ({ canvas: { width: 960, height: 540 } }),
+    },
+  });
+
+  assert.equal(owner.ensureLastGoodFrameCanvas(), lastGoodFrameCanvas);
+  assert.equal(owner.ensureInteractionCompositeCanvas(), interactionCompositeCanvas);
+  assert.equal(owner.ensureCompositeBufferCanvas(), compositeBufferCanvas);
+  assert.deepEqual(
+    [lastGoodFrameCanvas, interactionCompositeCanvas, compositeBufferCanvas]
+      .map(({ width, height }) => ({ width, height })),
+    [
+      { width: 960, height: 540 },
+      { width: 960, height: 540 },
+      { width: 960, height: 540 },
+    ],
+  );
+  assert.deepEqual(cache.interactionComposite.layout, {
+    pixelWidth: 960,
+    pixelHeight: 540,
+    dpr: 1,
+  });
+});
 
 function assertSummaryEnvelope(result, operation, reason) {
   assert.equal(result.version, 1);
@@ -293,4 +332,10 @@ test("canDrawInteractionComposite uses owner-local invalidation on mismatch", ()
   assert.equal(cache.interactionComposite.valid, false);
   assert.equal(cache.interactionComposite.reason, "signature-mismatch");
   assert.equal(cache.interactionComposite.rejectedReason, "signature-mismatch");
+});
+
+test("factory freezes its exact public API", () => {
+  const { owner } = createOwner();
+
+  assert.equal(Object.isFrozen(owner), true);
 });

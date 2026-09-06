@@ -365,3 +365,9 @@ test("owner reports missing required update map effect", () => {
     /requires effects\.updateMap/,
   );
 });
+
+test("factory freezes its exact public API", () => {
+  const { owner } = createHarness();
+
+  assert.equal(Object.isFrozen(owner), true);
+});

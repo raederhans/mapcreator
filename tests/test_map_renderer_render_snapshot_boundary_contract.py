@@ -20,27 +20,24 @@ def get_function_body(source, function_name):
 
 
 class MapRendererRenderSnapshotBoundaryContractTest(unittest.TestCase):
-    def test_map_renderer_owns_one_lazy_snapshot_owner_and_read_only_facade(self):
+    def test_map_renderer_owns_one_snapshot_owner_and_read_only_facade(self):
         renderer = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        owner_body = get_function_body(renderer, "getRenderSnapshotOwner")
         facade_body = get_function_body(renderer, "captureRenderSnapshot")
 
-        self.assertEqual(renderer.count("let renderSnapshotOwner = null;"), 1)
+        self.assertEqual(
+            renderer.count("const renderSnapshotOwner = createRenderSnapshotOwner();"),
+            1,
+        )
         self.assertIn(
             'import { createRenderSnapshotOwner } from "./renderer/render_snapshot.js";',
             renderer,
         )
-        self.assertIn("renderSnapshotOwner = createRenderSnapshotOwner({", owner_body)
-        self.assertIn("getSovereignBaseColors: () => runtimeState.sovereignBaseColors,", owner_body)
-        self.assertIn("getSovereigntyByFeatureId: () => runtimeState.sovereigntyByFeatureId,", owner_body)
-        self.assertIn("getViewportTransform: () => runtimeState.zoomTransform", owner_body)
-        self.assertIn("getViewportRenderSignature", owner_body)
-        self.assertIn("getProjectionRenderSignature", owner_body)
-        self.assertIn("getViewportGeoBounds", owner_body)
-        self.assertEqual(
-            facade_body.strip(),
-            "return getRenderSnapshotOwner().captureRenderSnapshot();",
-        )
+        self.assertNotIn("function getRenderSnapshotOwner", renderer)
+        self.assertIn("renderSnapshotOwner.captureRenderSnapshot(", facade_body)
+        self.assertIn("captureRenderSnapshotState(runtimeState, {", facade_body)
+        self.assertIn("getViewportRenderSignature", facade_body)
+        self.assertIn("getProjectionRenderSignature", facade_body)
+        self.assertIn("getViewportGeoBounds", facade_body)
         self.assertRegex(renderer, r"\n\s+captureRenderSnapshot,\n")
 
     def test_snapshot_and_change_set_modules_are_declarative_only(self):
@@ -50,9 +47,9 @@ class MapRendererRenderSnapshotBoundaryContractTest(unittest.TestCase):
         for token in [
             "sovereignBaseColors",
             "sovereigntyByFeatureId",
-            "getViewportRenderSignature",
-            "getProjectionRenderSignature",
-            "getViewportGeoBounds",
+            "viewportRenderSignature",
+            "projectionRenderSignature",
+            "viewportGeoBounds",
         ]:
             self.assertIn(token, snapshot)
 

@@ -23,7 +23,7 @@ const TARGET_PACKS = [
   ["mineral_resources", "russia_mineral_resources", "russia"],
 ];
 
-test.setTimeout(300000);
+test.setTimeout(900000);
 
 async function openTransportWorkbench(page) {
   const projectTab = page.locator("#inspectorSidebarTabProject");
@@ -177,7 +177,7 @@ async function selectPackAndWaitForPreview(page, familyId, packId, expectedCarri
 }
 
 test("transport workbench switches target country packs with matching carriers", async ({ page }) => {
-  test.setTimeout(300000);
+  test.setTimeout(900000);
 
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);

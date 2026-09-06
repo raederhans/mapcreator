@@ -170,11 +170,21 @@ function createDirtyIndicator() {
 }
 
 function createController(projectSaveStatus, overrides = {}) {
+  const elements = { projectSaveStatus, ...overrides.elements };
+  const elementIds = {
+    scenarioAuditSection: "scenarioAuditPanel",
+    legendList: "legendEditorList",
+    debugModeSelect: "debug-mode-select",
+  };
+  const nodesById = new Map(Object.entries(elements).map(([name, node]) => [elementIds[name] || name, node]));
   return createProjectSupportDiagnosticsController({
     state,
-    elements: {
-      projectSaveStatus,
-      ...overrides.elements,
+    hosts: overrides.hosts,
+    documentRef: overrides.documentRef || {
+      getElementById: (id) => nodesById.get(id) || null,
+      createElement: (...args) => globalThis.document.createElement(...args),
+      addEventListener: (...args) => globalThis.document.addEventListener(...args),
+      get body() { return globalThis.document.body; },
     },
     helpers: {
       t: (value) => value,
@@ -199,6 +209,175 @@ function createController(projectSaveStatus, overrides = {}) {
     },
   });
 }
+
+function createMountDocument() {
+  const documentRef = { activeElement: null, listeners: {}, listenerCounts: {} };
+  documentRef.addEventListener = (type, handler) => {
+    documentRef.listeners[type] = handler;
+    documentRef.listenerCounts[type] = (documentRef.listenerCounts[type] || 0) + 1;
+  };
+  documentRef.createElement = (tagName) => {
+    const node = createElementNode(tagName);
+    node.listenerCounts = {};
+    const addEventListener = node.addEventListener;
+    node.addEventListener = function (type, handler) {
+      this.listenerCounts[type] = (this.listenerCounts[type] || 0) + 1;
+      addEventListener.call(this, type, handler);
+    };
+    const appendChild = node.appendChild;
+    node.appendChild = function (child) {
+      child.parentNode = this;
+      appendChild.call(this, child);
+      if (tagName === "select" && this.children.length === 1) this.value = child.value;
+    };
+    node.classList = {
+      contains: (name) => node.className.split(/\s+/).includes(name),
+      toggle(name, force) {
+        const classes = new Set(node.className.split(/\s+/).filter(Boolean));
+        const enabled = force === undefined ? !classes.has(name) : !!force;
+        if (enabled) classes.add(name);
+        else classes.delete(name);
+        node.className = [...classes].join(" ");
+        return enabled;
+      },
+      add(name) { this.toggle(name, true); },
+    };
+    node.focus = () => { documentRef.activeElement = node; };
+    return node;
+  };
+  documentRef.body = documentRef.createElement("body");
+  documentRef.getElementById = (id) => findNode(documentRef.body, (node) => node.id === id);
+  const hosts = Object.fromEntries([
+    "projectManagementStack", "legendEditorStack", "diagnosticStack", "rightSidebarContent",
+  ].map((id) => {
+    const host = documentRef.createElement("div");
+    host.id = id;
+    documentRef.body.appendChild(host);
+    return [id, host];
+  }));
+  return {
+    documentRef,
+    hosts,
+    helpers: {
+      createEmptyNote: (message) => Object.assign(documentRef.createElement("p"), { textContent: message }),
+    },
+  };
+}
+
+test("project support mounts panels with original defaults and body-owned account dialog", () => {
+  const fixture = createMountDocument();
+  createController(null, fixture);
+  const get = fixture.documentRef.getElementById;
+  assert.equal(get("projectManagement").parentNode, fixture.hosts.projectManagementStack);
+  assert.equal(get("legendEditor").parentNode, fixture.hosts.legendEditorStack);
+  assert.equal(get("scenarioAuditPanel").parentNode, fixture.hosts.diagnosticStack);
+  assert.equal(get("debugViewControl").parentNode, fixture.hosts.diagnosticStack);
+  assert.equal(get("rightSidebarAccountShelf").parentNode, fixture.hosts.rightSidebarContent);
+  for (const id of ["backendAccountBackdrop", "backendAccountPopover"]) {
+    assert.equal(get(id).parentNode, fixture.documentRef.body);
+    assert.equal(get(id).classList.contains("hidden"), true);
+  }
+  for (const [id, value] of Object.entries({
+    projectDownloadFormat: "json", projectDownloadDestination: "picker",
+    projectPackageContents: "minimal", projectLoadSource: "local", "debug-mode-select": "PROD",
+  })) assert.equal(get(id).value, value, id);
+  assert.equal(get("projectFileName").textContent, "No file selected");
+  assert.equal(get("projectFileName").dataset.projectFileState, "empty");
+  assert.equal(get("backendCloudSection").hidden, true);
+  assert.equal(get("backendAccountPopover").getAttribute("role"), "dialog");
+  assert.equal(get("backendAccountPopover").getAttribute("aria-modal"), "true");
+  assert.equal(get("backendAccountPopover").getAttribute("aria-labelledby"), "backendAccountPopoverTitle");
+  assert.equal(get("backendAccountToggleBtn").getAttribute("aria-controls"), "backendAccountPopover");
+  assert.match(get("backendAccountToggleBtn").innerHTML, /<svg[\s\S]*aria-hidden="true"/);
+  assert.equal(get("downloadProjectBtn").getAttribute("data-i18n"), "Download Project");
+  assert.equal(get("projectFileInput").getAttribute("data-i18n-aria-label"), "Load Project");
+  assert.equal(get("projectSaveStatus").getAttribute("aria-live"), "polite");
+});
+
+test("project support reuses mounted markup and preserves user values without duplicate nodes", () => {
+  const fixture = createMountDocument();
+  createController(null, fixture);
+  const { documentRef } = fixture;
+  const originalNodes = collectNodes(documentRef.body, (node) => !!node.id);
+  documentRef.getElementById("backendCloudUsername").value = "existing-user";
+  documentRef.getElementById("backendCloudSaveTitle").value = "existing-title";
+  documentRef.getElementById("projectDownloadFormat").value = "zip";
+  const name = documentRef.getElementById("projectFileName");
+  name.textContent = "edited-project.zip";
+  name.dataset.projectFileState = "selected";
+  createController(null, fixture);
+  assert.deepEqual(collectNodes(documentRef.body, (node) => !!node.id), originalNodes);
+  assert.equal(documentRef.getElementById("backendCloudUsername").value, "existing-user");
+  assert.equal(documentRef.getElementById("backendCloudSaveTitle").value, "existing-title");
+  assert.equal(documentRef.getElementById("projectDownloadFormat").value, "zip");
+  assert.equal(name.textContent, "edited-project.zip");
+  name.textContent = "";
+  createController(null, fixture);
+  assert.equal(name.textContent, "No file selected");
+  assert.equal(name.dataset.projectFileState, "empty");
+});
+
+test("project support tolerates absent hosts and reuses an existing project section", () => {
+  const { documentRef, hosts } = createMountDocument();
+  const project = documentRef.createElement("div");
+  project.id = "projectManagement";
+  hosts.projectManagementStack.appendChild(project);
+  createController(null, { documentRef, hosts: { projectManagementStack: hosts.projectManagementStack } });
+  assert.equal(documentRef.getElementById("projectManagement"), project);
+  assert.equal(documentRef.getElementById("backendAccountPopover"), null);
+  assert.equal(documentRef.getElementById("legendEditor"), null);
+  assert.equal(documentRef.getElementById("scenarioAuditPanel"), null);
+  assert.equal(documentRef.getElementById("debugViewControl"), null);
+});
+
+test("mounted project account binds once and preserves close focus and ARIA behavior", async () => {
+  const fixture = createMountDocument();
+  const previousDocument = globalThis.document;
+  const previousWindow = globalThis.window;
+  const previousFetch = globalThis.fetch;
+  globalThis.document = fixture.documentRef;
+  globalThis.window = { requestAnimationFrame: (callback) => callback() };
+  let sessionProbes = 0;
+  globalThis.fetch = async () => {
+    sessionProbes += 1;
+    return { ok: true, json: async () => ({ user: { username: "existing-user" } }) };
+  };
+  try {
+    const controller = createController(null, fixture);
+    controller.bindEvents();
+    controller.bindEvents();
+    createController(null, fixture).bindEvents();
+    const get = fixture.documentRef.getElementById;
+    for (const node of collectNodes(fixture.documentRef.body, (node) => !!node.listeners)) {
+      for (const count of Object.values(node.listenerCounts)) assert.equal(count, 1, node.id);
+    }
+    assert.equal(fixture.documentRef.listenerCounts.keydown, 1);
+    const trigger = get("backendAccountToggleBtn");
+    const popover = get("backendAccountPopover");
+    for (const close of [
+      () => get("backendAccountCloseBtn").listeners.click(),
+      () => get("backendAccountBackdrop").listeners.click(),
+      () => fixture.documentRef.listeners.keydown({ key: "Escape" }),
+    ]) {
+      trigger.listeners.click();
+      assert.equal(popover.classList.contains("hidden"), false);
+      assert.equal(trigger.getAttribute("aria-expanded"), "true");
+      assert.equal(fixture.documentRef.activeElement, get("backendCloudUsername"));
+      close();
+      assert.equal(popover.classList.contains("hidden"), true);
+      assert.equal(get("backendAccountBackdrop").classList.contains("hidden"), true);
+      assert.equal(trigger.getAttribute("aria-expanded"), "false");
+      assert.equal(fixture.documentRef.activeElement, trigger);
+      assert.equal(fixture.documentRef.body.classList.contains("project-account-dialog-open"), false);
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(sessionProbes, 1);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.window = previousWindow;
+    globalThis.fetch = previousFetch;
+  }
+});
 
 test("project save status refreshes when dirty state changes", () => {
   const previousDocument = globalThis.document;

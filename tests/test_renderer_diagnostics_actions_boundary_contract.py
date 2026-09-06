@@ -10,7 +10,6 @@ MAP_RENDERER = REPO_ROOT / "js/core/map_renderer.js"
 RUNTIME_STATE = REPO_ROOT / "js/core/state/renderer_runtime_state.js"
 STARTUP_SUPPORT = REPO_ROOT / "js/bootstrap/startup_bootstrap_support.js"
 SCENARIO_CHUNK_RUNTIME = REPO_ROOT / "js/core/scenario/chunk_runtime.js"
-RUNTIME_CONTEXT = REPO_ROOT / "js/core/map_renderer/renderer_runtime_context.js"
 PUBLIC_FACADE = REPO_ROOT / "js/core/map_renderer/public.js"
 STATE_WRITER_ALLOWLIST = REPO_ROOT / "tools/eslint-rules/state-writer-allowlist.json"
 
@@ -39,6 +38,7 @@ READ_ONLY_ACTION_NAMES = {
     "captureRenderPerfMetricsState",
     "captureRenderPerfContextBreakdownState",
     "captureRenderPerfMetricEntryState",
+    "captureRenderSnapshotState",
 }
 MAP_RENDERER_DIRECT_ACTION_NAMES = {
     *READ_ONLY_ACTION_NAMES,
@@ -293,8 +293,8 @@ class RendererDiagnosticsActionsBoundaryContractTest(unittest.TestCase):
         self.assertIn("recordedAt: Date.now()", self.startup_support)
         self.assertIn("recordedAt: Date.now()", self.scenario_chunk_runtime)
 
-    def test_runtime_context_public_facade_and_legacy_allowlist_do_not_expose_actions(self):
-        for protected_path in (RUNTIME_CONTEXT, PUBLIC_FACADE, STATE_WRITER_ALLOWLIST):
+    def test_public_facade_and_legacy_allowlist_do_not_expose_actions(self):
+        for protected_path in (PUBLIC_FACADE, STATE_WRITER_ALLOWLIST):
             protected_source = protected_path.read_text(encoding="utf-8")
             self.assertNotIn(DIAGNOSTICS_ACTION_IMPORT, protected_source)
             self.assertNotIn("renderer_diagnostics_actions", protected_source)

@@ -1,12 +1,10 @@
 from pathlib import Path
-import re
 import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 STRATEGIC_OVERLAY_HELPERS_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_helpers.js"
-STRATEGIC_OVERLAY_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_render_owner.js"
 UNIT_COUNTER_RUNTIME_DOMAIN_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_runtime" / "unit_counter_runtime_domain.js"
 EXPECTED_STRATEGIC_OVERLAY_HELPER_WHITELIST = [
     "renderStrategicDefs",
@@ -85,89 +83,13 @@ class MapRendererStrategicOverlayHelpersBoundaryContractTest(unittest.TestCase):
             if line.strip()
         ]
 
-    def test_map_renderer_keeps_facade_while_owner_takes_strategic_overlay_draw_helpers(self):
+    def test_draw_helpers_do_not_commit_transactions(self):
+        # Zoom ordering is exercised by renderer_viewport_update_owner_behavior.test.mjs;
+        # render gates and editing are covered by strategic overlay owner behavior tests.
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         owner_content = STRATEGIC_OVERLAY_HELPERS_JS.read_text(encoding="utf-8")
-        render_owner_content = STRATEGIC_OVERLAY_RENDER_OWNER_JS.read_text(encoding="utf-8")
         unit_counter_domain_content = UNIT_COUNTER_RUNTIME_DOMAIN_JS.read_text(encoding="utf-8")
-        renderer_imports = renderer_content.replace('"', "'")
 
-        self.assertIn("import { createStrategicOverlayHelpersOwner } from './renderer/strategic_overlay_helpers.js';", renderer_imports)
-        self.assertIn("import { createStrategicOverlayRenderOwner } from './renderer/strategic_overlay_render_owner.js';", renderer_imports)
-        self.assertIn("let strategicOverlayHelpersOwner = null;", renderer_content)
-        self.assertIn("let strategicOverlayRenderOwner = null;", renderer_content)
-        self.assertIn("function getStrategicOverlayHelpersOwner() {", renderer_content)
-        self.assertIn("function getStrategicOverlayRenderOwner() {", renderer_content)
-        self.assertNotRegex(renderer_content, r"(?m)^\s*(?:const|let|var)\s+syncUnitCounterScalesDuringZoom\s*=")
-        self.assertNotRegex(renderer_content, r"(?m)^\s*function\s+syncUnitCounterScalesDuringZoom\s*\(")
-        self.assertNotRegex(renderer_content, r"(?m)^\s*(?:const|let|var)\s+renderOperationalLinesOverlay\s*=")
-        self.assertNotRegex(renderer_content, r"(?m)^\s*function\s+renderOperationalLinesOverlay\s*\(")
-        self.assertNotRegex(renderer_content, r"(?m)^\s*(?:const|let|var)\s+renderOperationGraphicsOverlay\s*=")
-        self.assertNotRegex(renderer_content, r"(?m)^\s*function\s+renderOperationGraphicsOverlay\s*\(")
-        self.assertIn("getStrategicOverlayHelpersOwner().renderUnitCountersOverlay();", renderer_content)
-        self.assertIn("bindUnitCounterOverlayInteractions();", renderer_content)
-        self.assertNotRegex(renderer_content, r"(?m)^\s*(?:const|let|var)\s+renderSpecialZones\s*=")
-        self.assertNotRegex(renderer_content, r"(?m)^\s*function\s+renderSpecialZones\s*\(")
-        self.assertIn("renderSpecialZones: () => getStrategicOverlayHelpersOwner().renderSpecialZones(),", renderer_content)
-        self.assertIn("renderOperationGraphicsOverlay: () => getStrategicOverlayHelpersOwner().renderOperationGraphicsOverlay(),", renderer_content)
-        self.assertIn("renderOperationalLinesOverlay: () => getStrategicOverlayHelpersOwner().renderOperationalLinesOverlay(),", renderer_content)
-        self.assertIn("renderOperationGraphicsEditorOverlay,", renderer_content)
-        self.assertIn("updateSpecialZonesPaths,", renderer_content)
-        self.assertIn("renderSpecialZoneEditorOverlay,", renderer_content)
-        self.assertRegex(
-            renderer_content,
-            r"function updateMap\(transform\) \{[\s\S]*?"
-            r"viewportGroup\.attr\(\"transform\", `translate\(\$\{transform\.x\},\$\{transform\.y\}\) scale\(\$\{transform\.k\}\)`\);[\s\S]*?"
-            r"getStrategicOverlayRenderOwner\(\)\.syncUnitCounterScalesDuringZoom\(\);[\s\S]*?"
-            r"syncSpecialZonePatternTransformDuringZoom\(\);[\s\S]*?"
-            r"drawCanvas\(\);"
-        )
-        self.assertIn("renderFrontlineOverlayIfNeeded();", renderer_content)
-        self.assertIn("renderOperationalLinesIfNeeded();", renderer_content)
-        self.assertIn("renderOperationGraphicsIfNeeded();", renderer_content)
-        self.assertIn("renderUnitCountersIfNeeded();", renderer_content)
-        self.assertIn("renderSpecialZonesIfNeeded();", renderer_content)
-
-        self.assertIn("export function createStrategicOverlayHelpersOwner({", owner_content)
-        self.assertIn("function syncUnitCounterScalesDuringZoom() {", owner_content)
-        self.assertIn("function renderOperationalLinesOverlay() {", owner_content)
-        self.assertIn("function renderOperationGraphicsOverlay() {", owner_content)
-        self.assertIn("function renderUnitCountersOverlay() {", owner_content)
-        self.assertIn("function renderSpecialZones() {", owner_content)
-        self.assertIn("const operationalLinesGroup = groupGetters.getOperationalLinesGroup?.() || null;", owner_content)
-        self.assertIn("const operationGraphicsGroup = groupGetters.getOperationGraphicsGroup?.() || null;", owner_content)
-        self.assertIn("const unitCountersGroup = groupGetters.getUnitCountersGroup?.() || null;", owner_content)
-        self.assertIn("const specialZonesGroup = groupGetters.getSpecialZonesGroup?.() || null;", owner_content)
-        self.assertIn("const specialZoneEditorGroup = groupGetters.getSpecialZoneEditorGroup?.() || null;", owner_content)
-
-        self.assertNotIn('let lastSpecialZonesOverlaySignature = "";', renderer_content)
-        self.assertNotIn('let lastOperationalLinesOverlaySignature = "";', renderer_content)
-        self.assertNotIn('let lastOperationGraphicsOverlaySignature = "";', renderer_content)
-        self.assertNotIn('let lastUnitCountersOverlaySignature = "";', renderer_content)
-        self.assertIn('let lastSpecialZonesOverlaySignature = "";', render_owner_content)
-        self.assertIn('let lastOperationalLinesOverlaySignature = "";', render_owner_content)
-        self.assertIn('let lastOperationGraphicsOverlaySignature = "";', render_owner_content)
-        self.assertIn('let lastUnitCountersOverlaySignature = "";', render_owner_content)
-        self.assertNotIn("function getSpecialZonesOverlaySignature() {", renderer_content)
-        self.assertNotIn("function getOperationGraphicsOverlaySignature() {", renderer_content)
-        self.assertNotIn("function getOperationalLinesOverlaySignature() {", renderer_content)
-        self.assertNotIn("function getUnitCountersOverlaySignature() {", renderer_content)
-        self.assertIn("function getSpecialZonesOverlaySignature() {", render_owner_content)
-        self.assertIn("function getOperationGraphicsOverlaySignature() {", render_owner_content)
-        self.assertIn("function getOperationalLinesOverlaySignature() {", render_owner_content)
-        self.assertIn("function getUnitCountersOverlaySignature() {", render_owner_content)
-        self.assertIn("function renderSpecialZonesIfNeeded({ force = false } = {}) {", renderer_content)
-        self.assertIn("function renderOperationGraphicsIfNeeded({ force = false } = {}) {", renderer_content)
-        self.assertIn("function renderOperationalLinesIfNeeded({ force = false } = {}) {", renderer_content)
-        self.assertIn("function renderUnitCountersIfNeeded({ force = false } = {}) {", renderer_content)
-        self.assertIn("getStrategicOverlayRenderOwner().renderSpecialZonesIfNeeded({ force });", renderer_content)
-        self.assertIn("getStrategicOverlayRenderOwner().renderOperationGraphicsIfNeeded({ force });", renderer_content)
-        self.assertIn("getStrategicOverlayRenderOwner().renderOperationalLinesIfNeeded({ force });", renderer_content)
-        self.assertIn("getStrategicOverlayRenderOwner().renderUnitCountersIfNeeded({ force });", renderer_content)
-        self.assertNotIn('const groups = operationalLinesGroup', renderer_content)
-        self.assertNotIn('const groups = operationGraphicsGroup', renderer_content)
-        self.assertNotIn('const groups = unitCountersGroup', renderer_content)
-        self.assertIn("function bindUnitCounterOverlayInteractions() {", renderer_content)
         self.assertNotIn('markDirty("move-unit-counter");', renderer_content)
         self.assertNotIn('renderUnitCountersIfNeeded({ force: true });', renderer_content)
         self.assertIn('markDirty("move-unit-counter");', unit_counter_domain_content)
@@ -182,7 +104,10 @@ class MapRendererStrategicOverlayHelpersBoundaryContractTest(unittest.TestCase):
         owner_helper_fields = self._extract_owner_helpers_destructured_fields(owner_content)
         self.assertGreater(len(owner_helper_fields), 0)
 
-        renderer_injected_helper_fields = self._extract_object_keys(renderer_content, "helpers: {")
+        owner_creation = renderer_content.index("createStrategicOverlayHelpersOwner({")
+        renderer_injected_helper_fields = self._extract_object_keys(
+            renderer_content[owner_creation:], "helpers: {"
+        )
         self.assertGreater(len(renderer_injected_helper_fields), 0)
 
         self.assertEqual(

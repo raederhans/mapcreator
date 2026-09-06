@@ -2153,15 +2153,18 @@ test("scenario style defaults extend their baseline and stay scoped across scena
   const baselineStyle = {
     coastlines: {
       color: "#333333",
+      extensionJoin: "round",
       opacity: 0.8,
       width: 1.2,
     },
     empireBorders: {
       color: "#666666",
+      extensionDash: [2, 1],
       opacity: 0.9,
       width: 1,
     },
     ocean: {
+      extensionTone: "legacy-import",
       fillColor: "#123456",
       preset: "bathymetry_soft",
       experimentalAdvancedStyles: true,
@@ -2199,9 +2202,13 @@ test("scenario style defaults extend their baseline and stay scoped across scena
   assert.deepEqual(runtimeState.scenarioPresentationStyleBeforeActivate, {
     ocean: baselineStyle.ocean,
   });
+  assert.equal(runtimeState.styleConfig.ocean.extensionTone, "legacy-import");
 
   runtime.syncScenarioOceanFillForActivation(blankManifest);
   assert.deepEqual(runtimeState.scenarioPresentationStyleBeforeActivate, baselineStyle);
+  assert.equal(runtimeState.styleConfig.coastlines.extensionJoin, "round");
+  assert.deepEqual(runtimeState.styleConfig.empireBorders.extensionDash, [2, 1]);
+  assert.equal(runtimeState.styleConfig.ocean.extensionTone, "legacy-import");
   assert.equal(runtimeState.styleConfig.coastlines.width, 0.8);
   assert.equal(runtimeState.styleConfig.empireBorders.opacity, 0.4);
   assert.equal(runtimeState.styleConfig.ocean.fillColor, "#2d4769");
@@ -2209,6 +2216,7 @@ test("scenario style defaults extend their baseline and stay scoped across scena
   runtime.syncScenarioOceanFillForActivation(tnoManifest);
   assert.deepEqual(runtimeState.styleConfig.coastlines, baselineStyle.coastlines);
   assert.deepEqual(runtimeState.styleConfig.empireBorders, baselineStyle.empireBorders);
+  assert.equal(runtimeState.styleConfig.ocean.extensionTone, "legacy-import");
   assert.equal(runtimeState.styleConfig.ocean.fillColor, "#345678");
 
   runtime.restoreScenarioOceanFillAfterExit();

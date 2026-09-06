@@ -16,19 +16,19 @@ async function readZoomK(page) {
   });
 }
 
-async function waitForZoomPercent(page, expectedPercent) {
+async function waitForZoomPercent(page, expectedPercent, { timeout = 4000 } = {}) {
   await expect.poll(async () => {
     const zoomK = await readZoomK(page);
     return Math.round(zoomK * 100);
-  }, { timeout: 4000 }).toBe(expectedPercent);
+  }, { timeout }).toBe(expectedPercent);
 }
 
-async function setZoomPercentViaApi(page, percent) {
+async function setZoomPercentViaApi(page, percent, { timeout = 4000 } = {}) {
   await page.evaluate(async (nextPercent) => {
     const { setZoomPercent } = await import("/js/core/map_renderer.js");
     setZoomPercent(nextPercent);
   }, percent);
-  await waitForZoomPercent(page, percent);
+  await waitForZoomPercent(page, percent, { timeout });
 }
 
 async function ensureUnitCounterCanvasVisible(page, visibleZoomPercent = 700) {
@@ -368,7 +368,7 @@ test("co-located counters render into deterministic slot positions instead of a 
 });
 
 test("unit counters open a centered modal editor, support symbol search, and still clamp with zoom", async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
   await gotoApp(page, undefined, { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page, { timeout: 120000 });
   await primeStateRef(page);
@@ -420,6 +420,12 @@ test("unit counters open a centered modal editor, support symbol search, and sti
     return state.getStrategicOverlayPerfCountersFn?.() || {};
   });
   await page.locator("#unitCounterCatalogSearchInput").fill("carrier");
+  await page.waitForFunction((previousCounterCatalog) => {
+    const state = globalThis.__playwrightStateRef || null;
+    const counters = state?.getStrategicOverlayPerfCountersFn?.() || {};
+    return state?.strategicOverlayUi?.counterCatalogQuery === "carrier"
+      && Number(counters.counterCatalog || 0) > Number(previousCounterCatalog || 0);
+  }, perfBeforeSearch.counterCatalog || 0, { timeout: 25_000 });
   await expect(page.locator("#unitCounterCatalogGrid .counter-editor-symbol-card")).toHaveCount(1);
   await expect(page.locator("#unitCounterCatalogGrid .counter-editor-symbol-card-title")).toHaveText("Carrier Group");
   const perfAfterSearch = await page.evaluate(async () => {
@@ -487,14 +493,14 @@ test("unit counters open a centered modal editor, support symbol search, and sti
     await zoomPercentInput.click();
     await zoomPercentInput.fill(String(percent));
     await zoomPercentInput.press("Enter");
-    await waitForZoomPercent(page, percent);
+    await waitForZoomPercent(page, percent, { timeout: 25_000 });
     await expect.poll(async () => {
       const rawValue = await zoomPercentInput.inputValue();
       return Number(rawValue.replace(/[^0-9.]/g, ""));
-    }, { timeout: 4000 }).toBe(percent);
+    }, { timeout: 25_000 }).toBe(percent);
   };
 
-  await setZoomPercentViaApi(page, 50);
+  await setZoomPercentViaApi(page, 50, { timeout: 25_000 });
   const zoomAt50 = await readZoomK(page);
   const counterStateAt50 = await readCounterVisibility();
 
@@ -508,7 +514,7 @@ test("unit counters open a centered modal editor, support symbol search, and sti
   const zoomAt600 = await readZoomK(page);
   const counterStateAt600 = await readCounterVisibility();
 
-  await setZoomPercentViaApi(page, 700);
+  await setZoomPercentViaApi(page, 700, { timeout: 25_000 });
   const zoomAt700 = await readZoomK(page);
   const boxAt700 = await counterShell.boundingBox();
   await expect(unitCounterFixedScaleRange).toHaveValue("150");

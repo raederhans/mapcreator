@@ -103,6 +103,72 @@ test("day-night style config initializes its container and preserves config iden
   assert.equal(target.styleConfig.dayNight, config);
 });
 
+test("scenario style defaults merge in place and reject invalid patches", async () => {
+  const { mergeScenarioStyleDefaultsState } = await import(
+    "../js/core/state/actions/scenario_presentation_actions.js"
+  );
+  for (const invalidTarget of [null, undefined, [], "state"]) {
+    assert.throws(
+      () => mergeScenarioStyleDefaultsState(invalidTarget, {}),
+      /target must be an object/,
+    );
+  }
+  const ocean = {
+    fillColor: "#000000",
+    opacity: 0.8,
+    scenarioShallowContourFadeEndZoom: 3.1,
+  };
+  const styleConfig = {
+    ocean,
+    coastlines: "invalid-group",
+  };
+  const target = {
+    styleConfig,
+  };
+
+  assert.equal(
+    mergeScenarioStyleDefaultsState(target, {
+      ocean: {
+        fillColor: "#123456",
+        preset: "scenario",
+        scenarioShallowContourFadeEndZoom: 2.9,
+      },
+      coastlines: { width: 2 },
+    }),
+    true,
+  );
+  assert.equal(target.styleConfig, styleConfig);
+  assert.equal(target.styleConfig.ocean, ocean);
+  assert.deepEqual(target.styleConfig.ocean, {
+    fillColor: "#123456",
+    opacity: 0.8,
+    preset: "scenario",
+    scenarioShallowContourFadeEndZoom: 2.9,
+  });
+  assert.deepEqual(target.styleConfig.coastlines, { width: 2 });
+  assert.throws(
+    () => mergeScenarioStyleDefaultsState(target, []),
+    /styleOverride must be an object/,
+  );
+  assert.throws(
+    () => mergeScenarioStyleDefaultsState(target, { lakes: {} }),
+    /unknown group: lakes/,
+  );
+  assert.throws(
+    () => mergeScenarioStyleDefaultsState(target, { ocean: { unknown: true } }),
+    /unknown key: unknown/,
+  );
+  const beforeRejectedPatch = structuredClone(target);
+  assert.throws(
+    () => mergeScenarioStyleDefaultsState(target, {
+      ocean: { fillColor: "#ffffff" },
+      coastlines: { unknown: true },
+    }),
+    /unknown key: unknown/,
+  );
+  assert.deepEqual(target, beforeRejectedPatch);
+});
+
 test("DPR stage and switch timestamp commit as one exact pair", async () => {
   const { commitRendererDprStageState } = await loadActions();
   const target = {

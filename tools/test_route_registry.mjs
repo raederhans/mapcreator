@@ -2,10 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import {
-  buildVerificationMetadataRoutes,
-} from "./verification/verification_metadata_helpers.mjs";
-import {
-  LEGACY_VERIFICATION_DOMAINS,
+  VERIFICATION_DOMAINS,
   VERIFICATION_EXACT_DIRECT_COMMAND_REFS,
   VERIFICATION_CI_PROFILES,
   VERIFICATION_COSTS,
@@ -56,526 +53,6 @@ export const LAYERS = VERIFICATION_LAYERS;
 export const CI_PROFILES = VERIFICATION_CI_PROFILES;
 export const PLATFORMS = Object.freeze(["all", "win32", "linux", "darwin"]);
 export const ROUTE_REGISTRY_SOURCE_IDENTITY = VERIFICATION_METADATA_SOURCE_IDENTITY;
-
-const INFRASTRUCTURE_ROUTES = [
-  {
-    id: "infra:deploy-minimal-dependency-guard",
-    commandRef: "python tools/check_min_ci_requirements.py",
-    sourceRef: "requirements-ci-min.lock.txt,tools/check_min_ci_requirements.py,.github/workflows/verify-shared.yml",
-    domain: "test-routing",
-    ownerHint: "deploy-runtime",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "deploy-minimal",
-  },
-  {
-    id: "infra:heavy-test-classification",
-    commandRef: "python tools/check_heavy_test_classification.py",
-    sourceRef: "tools/check_heavy_test_classification.py,tests/heavy_dependency_groups.json,.github/workflows/nightly-verification.yml,.github/workflows/verify-shared.yml",
-    domain: "test-routing",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:e2e-layer-manifest",
-    commandRef: "verify:test:e2e-layers",
-    sourceRef: "tools/e2e_layering.mjs,tests/e2e/test-layer-manifest.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
-    domain: "test-routing",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:verification-selector",
-    commandRef: "node tools/select_verification_targets.mjs --check",
-    sourceRef: ".gitignore,tools/run_adaptive_tests.mjs,tools/verification/command_supersession.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
-    domain: "test-routing",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:sf-ats-contracts",
-    commandRef: "verify:supervisor-contracts",
-    sourceRef: "AGENTS.md,docs/testing/sf-ats-overview.md,docs/active/_worktree_registry.md,docs/archive/sf-ats-wp2-supervisor-plan-20260702,tools/ai_test_supervisor,tests/supervisor_domain_registry_behavior.test.mjs,tests/supervisor_schema_contracts.test.mjs",
-    domain: "test-routing",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-    guidance: {
-      taskEntry: ["SF-ATS contract and schema health gate"],
-      ownerFiles: [
-        "AGENTS.md",
-        "docs/active/_worktree_registry.md",
-        "docs/testing/sf-ats-overview.md",
-        "tools/ai_test_supervisor",
-        "tests/supervisor_domain_registry_behavior.test.mjs",
-        "tests/supervisor_schema_contracts.test.mjs",
-      ],
-      commonChecks: ["npm run verify:supervisor-contracts"],
-      riskSignals: [
-        "SF-ATS contract drift",
-        "supervisor schema drift",
-        "domain registry drift",
-        "agent verification contract drift",
-      ],
-      diagnostics: [
-        ".runtime/reports/generated/test-adaptive-selection.json",
-        ".runtime/reports/generated/test-adaptive-selection.md",
-      ],
-      status: "active",
-    },
-  },
-  {
-    id: "infra:core-verification-runner",
-    commandRef: "test:node:verify-core-runner",
-    sourceRef: "tools/run_core_verification.mjs,tools/verification/resumable_verification.mjs,tools/verification/command_supersession.mjs,tests/verify_core_runner_behavior.test.mjs,docs/testing/verify-core.md,docs/active/test-verification-reform-20260813,docs/active/mapcreator-recovery-gates-20260814,package.json",
-    domain: "test-routing",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:test-import-graph",
-    commandRef: "verify:test-import-graph",
-    sourceRef: "tools/build_test_import_graph.mjs,tools/check_test_import_graph.mjs,tests/e2e/test-import-graph.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
-    domain: "test-routing",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:architecture-boundaries",
-    commandRef: "verify:architecture-boundaries",
-    sourceRef: "tools/check_architecture_boundaries.mjs,js/core/map_renderer.js,js/core/renderer/render_pipeline_passes.js,js/core/renderer/viewport_resize_lifecycle_owner.js,js/core/map_renderer/scenario_refresh_runtime.js,js/core/map_renderer/exact_after_settle_scheduler.js,js/core/map_renderer/hgo_runtime_preview_render_owner.js,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml,package.json",
-    domain: "architecture-boundaries",
-    ownerHint: "architecture",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:playwright-observability",
-    commandRef: "python -m unittest tests.test_e2e_structural_tooling -q",
-    sourceRef: ".gitignore,playwright.config.cjs,tests/e2e/support/fixtures.js,tests/e2e/support/playwright-app.js,tests/e2e/support/reporters,tests/e2e/support/playwright-selectors.js,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,tests/test_e2e_structural_tooling.py,tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,tools/test_timeout_inventory.mjs,tools/check_console_allowlist_decay.mjs,tools/check_test_timeout_guardrails.mjs,tools/test_timing_summary.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
-    domain: "playwright-observability",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:perf-gate-contract",
-    commandRef: "verify:perf-gate-contract",
-    sourceRef: ".github/workflows/perf-pr-gate.yml,docs/perf/baseline_2026-07-30-ratification.json,ops/browser-mcp/editor-performance-benchmark.py,tools/perf/run_baseline.mjs",
-    domain: "perf",
-    ownerHint: "perf-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:browser-smoke-static-contract",
-    commandRef: "python -m unittest tests.test_playwright_app_ready_gate_contract -q",
-    sourceRef: "ops/browser-mcp/run-smoke-browser-inspection.sh,ops/browser-mcp/inspection-profile.toml,ops/browser-mcp/inspection-profile.schema.md,tests/test_playwright_app_ready_gate_contract.py,tools/browser_smoke_profile_contract.py",
-    domain: "browser-smoke",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:test-timeout-inventory",
-    commandRef: "verify:test-timeout-inventory",
-    sourceRef: "tools/test_timeout_inventory.mjs,tests/e2e/test-layer-manifest.json,tests/e2e/test-import-graph.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
-    domain: "playwright-observability",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:test-console-allowlist",
-    commandRef: "verify:test-console-allowlist",
-    sourceRef: "tools/check_console_allowlist_decay.mjs,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
-    domain: "playwright-observability",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:test-timeout-guardrails",
-    commandRef: "verify:test-timeout-guardrails",
-    sourceRef: "tools/check_test_timeout_guardrails.mjs,tests/e2e/test-layer-manifest.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
-    domain: "playwright-observability",
-    ownerHint: "test-infra",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:perf-gate",
-    commandRef: "perf:gate",
-    sourceRef: "tools/perf/run_baseline.mjs,ops/browser-mcp/editor-performance-benchmark.py,js/core/renderer/cached_pass_compositor_owner.js,js/core/map_renderer/transformed_frame_compositor_owner.js,js/core/renderer/visual_effects_pass_owner.js,js/core/renderer/context_pass_orchestrator_owner.js,js/core/renderer/political_pass_orchestrator_owner.js,js/core/renderer/political_background_render_owner.js,js/core/renderer/political_partial_repaint_owner.js",
-    domain: "perf",
-    ownerHint: "perf-runtime",
-    layer: "heavy",
-    cost: "heavy",
-    resourceLocks: ["perf-dev-server", "playwright-browser", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "perf-pr-gate",
-  },
-  {
-    id: "infra:pages-dist",
-    commandRef: "verify:pages-dist-and-drift",
-    sourceRef: "tools/build_pages_dist.py,tools/pages_artifact_shadow.py,tests/test_pages_dist_startup_shell.py,tests/test_pages_artifact_shadow.py,js/core/map_renderer.js,js/core/map_renderer,js/core/renderer,.github/workflows/verify-shared.yml,.github/workflows/nightly-verification.yml",
-    domain: "pages-dist",
-    ownerHint: "deploy-runtime",
-    layer: "heavy",
-    cost: "heavy",
-    resourceLocks: ["dist", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "deploy-minimal",
-  },
-  {
-    id: "infra:scenario-contracts-strict",
-    commandRef: "verify:scenario-contracts:strict",
-    sourceRef: "tools/check_scenario_contracts.py,data/scenarios/tno_1962,.github/workflows/scenario-contract-matrix.yml",
-    domain: "scenario-contracts",
-    ownerHint: "scenario-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: ["scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "scenario-contract-matrix",
-  },
-  {
-    id: "infra:scenario-contracts-strict-pr-fast",
-    commandRef: "verify:scenario-contracts:strict",
-    sourceRef: "tools/check_scenario_contracts.py,data/scenarios/tno_1962,.github/workflows/verify-shared.yml",
-    domain: "scenario-contracts",
-    ownerHint: "scenario-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: ["scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "infra:scenario-contracts-strict-full",
-    commandRef: "verify:scenario-contracts:strict",
-    sourceRef: "tools/check_scenario_contracts.py,data/scenarios/tno_1962,.github/workflows/verify-shared.yml",
-    domain: "scenario-contracts",
-    ownerHint: "scenario-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: ["scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "full",
-  },
-  {
-    id: "infra:tno-coverage-ledger",
-    commandRef: "verify:tno-coverage-ledger",
-    sourceRef: "tools/check_scenario_contracts.py,data/scenarios/tno_1962/derived/atlantropa_donor_ledger.json,data/scenarios/tno_1962/derived/geometry_drop_audit.json",
-    domain: "tno-coverage-chain",
-    ownerHint: "scenario-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: ["scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "scenario-contract-matrix",
-  },
-  {
-    id: "infra:tno-atlantropa-coverage",
-    commandRef: "verify:tno-atlantropa-coverage",
-    sourceRef: "tools/check_scenario_contracts.py,data/scenarios/tno_1962/scenario_atlantropa_metadata.json,data/scenarios/tno_1962/chunks",
-    domain: "tno-coverage-chain",
-    ownerHint: "scenario-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: ["scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "scenario-contract-matrix",
-  },
-  {
-    id: "infra:tno-polar-coverage",
-    commandRef: "verify:tno-polar-coverage",
-    sourceRef: "tools/validate_tno_water_geometries.py,data/scenarios/tno_1962/runtime_topology.topo.json,data/scenarios/tno_1962/water_regions.geojson",
-    domain: "tno-water",
-    ownerHint: "tno-water",
-    layer: "heavy",
-    cost: "heavy",
-    resourceLocks: ["heavy-geo", "scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "full",
-  },
-  {
-    id: "infra:tno-coverage-chain",
-    commandRef: "verify:tno-coverage-chain",
-    sourceRef: "tools/check_scenario_contracts.py,tools/validate_tno_water_geometries.py,tools/patch_tno_1962_bundle.py,tests/scenario_chunk_contracts.test.mjs,data/scenarios/tno_1962",
-    domain: "tno-coverage-chain",
-    ownerHint: "scenario-runtime",
-    layer: "heavy",
-    cost: "heavy",
-    resourceLocks: ["heavy-geo", "scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "full",
-  },
-  {
-    id: "infra:scenario-builder",
-    commandRef: "python tools/build_hoi4_scenario.py",
-    sourceRef: "tools/build_hoi4_scenario.py,tools/build_startup_bundle.py,scenario_builder",
-    domain: "scenario-build",
-    ownerHint: "scenario-builder",
-    layer: "heavy",
-    cost: "heavy",
-    resourceLocks: ["scenario-data", "checkpoint-builder", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "full",
-  },
-  {
-    id: "infra:tno-water-validator",
-    commandRef: "python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json",
-    sourceRef: "tools/validate_tno_water_geometries.py,data/scenarios/tno_1962/water_regions.geojson,data/scenarios/tno_1962/runtime_topology.topo.json,data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json,data/scenarios/tno_1962/detail_chunks.manifest.json,data/scenarios/tno_1962/chunks/water",
-    domain: "tno-water",
-    ownerHint: "tno-water",
-    layer: "heavy",
-    cost: "heavy",
-    resourceLocks: ["heavy-geo", "scenario-data", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "full",
-    guidance: {
-      taskEntry: ["TNO water geometry health gate"],
-      ownerFiles: [
-        "tools/validate_tno_water_geometries.py",
-        "data/scenarios/tno_1962/water_regions.geojson",
-        "data/scenarios/tno_1962/detail_chunks.manifest.json",
-      ],
-      commonChecks: ["python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_1962.polar_coverage_report.json"],
-      riskSignals: ["water geometry source/runtime drift", "chunk manifest coverage drift", "D3 spherical safety regression"],
-      diagnostics: [".runtime/reports/generated/tno_1962.polar_coverage_report.json"],
-      status: "active",
-    },
-  },
-  {
-    id: "infra:data-health",
-    commandRef: "python tools/data_health.py --json",
-    sourceRef: "tools/data_health.py,tools/build_data_catalog.py,data/CATALOG.json,data/runtime_asset_registry.json,data/scenarios/index.json",
-    domain: "data-governance",
-    ownerHint: "data-governance",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-    guidance: {
-      taskEntry: ["Data catalog governance health gate"],
-      ownerFiles: ["tools/data_health.py", "data/CATALOG.json", "data/runtime_asset_registry.json"],
-      commonChecks: ["python tools/data_health.py --json"],
-      riskSignals: ["catalog/runtime asset drift", "scenario registry coverage drift", "transport manifest path drift"],
-      diagnostics: ["stdout JSON health report"],
-      status: "active",
-    },
-  },
-  {
-    id: "infra:transport-manifest-contracts",
-    commandRef: "python tools/check_transport_workbench_manifests.py --root data/transport_layers --report-path .runtime/reports/generated/transport_workbench_manifest_report.json",
-    sourceRef: "tools/check_transport_workbench_manifests.py,map_builder/transport_workbench_contracts.py,data/transport_layers",
-    domain: "transport-workbench",
-    ownerHint: "transport-workbench",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-    guidance: {
-      taskEntry: ["Transport workbench manifest health gate"],
-      ownerFiles: ["tools/check_transport_workbench_manifests.py", "map_builder/transport_workbench_contracts.py", "data/transport_layers"],
-      commonChecks: ["python tools/check_transport_workbench_manifests.py --root data/transport_layers --report-path .runtime/reports/generated/transport_workbench_manifest_report.json"],
-      riskSignals: ["transport family manifest drift", "coverage variant path drift", "runtime workbench contract drift"],
-      diagnostics: [".runtime/reports/generated/transport_workbench_manifest_report.json"],
-      status: "active",
-    },
-  },
-];
-
-const PYTHON_FAST_CONTRACTS = [
-  {
-    id: "python:polar-water-spherical-safety",
-    commandRef: "python -m pytest tests/test_polar_water_spherical_safety.py -q",
-    sourceRef: [
-      "init_map_data.py",
-      "map_builder/geo/topology.py",
-      "map_builder/geo/spherical_safety.py",
-      "data/europe_topology.json",
-      "data/water_regions.geojson",
-      "tests/test_polar_water_spherical_safety.py",
-    ].join(","),
-    domain: "geo-contract",
-    ownerHint: "polar-water-spherical-safety",
-    layer: "heavy",
-    cost: "heavy",
-    resourceLocks: ["heavy-geo", ".runtime-output"],
-    executionOwner: "main-thread",
-    ciProfile: "full",
-  },
-  {
-    id: "python:backend-cloud-support",
-    commandRef: "test:py:backend-cloud-support",
-    sourceRef: "map_backend,tools/dev_server.py,tests/test_backend_service.py,tests/test_backend_routes.py,tests/test_dev_server.py",
-    domain: "backend-cloud-support",
-    ownerHint: "backend-cloud-support",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:thematic-layer-contracts",
-    commandRef: "test:py:thematic-layer-contracts",
-    sourceRef: [
-      "tools/build_thematic_layers.py",
-      "map_builder/thematic_layer_contracts.py",
-      "map_builder/thematic_wgi_ingest.py",
-      "map_builder/contracts.py",
-      "map_builder/runtime_asset_registry.py",
-      "data/thematic_layers",
-      "data/manifest.json",
-      "data/runtime_asset_registry.json",
-      "tests/test_thematic_layer_contracts.py",
-      "tests/test_thematic_wgi_source_ingest.py",
-      "tests/fixtures/thematic_wgi_2024_minimal.csv",
-    ].join(","),
-    domain: "data-governance",
-    ownerHint: "thematic-layer-contracts",
-    layer: "contract",
-    cost: "fast",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:tests.test_app_entry_resolver",
-    commandRef: "python -m unittest tests.test_app_entry_resolver -q",
-    sourceRef: "tests/test_app_entry_resolver.py",
-    domain: "startup",
-    ownerHint: "startup-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract",
-    commandRef: "python -m unittest tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract -q",
-    sourceRef: "tests/test_map_renderer_strategic_overlay_render_owner_boundary_contract.py,js/core/map_renderer.js,js/core/renderer/strategic_overlay_render_owner.js,js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_domain.js",
-    domain: "renderer-runtime",
-    ownerHint: "strategic-overlay-render-owner",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:tests.test_i18n_audit",
-    commandRef: "python -m unittest tests.test_i18n_audit -q",
-    sourceRef: "tests/test_i18n_audit.py,tools/i18n_audit.py,tools/translate_manager.py,data/locales.json,data/i18n/locales_baseline.json,data/city_aliases.json,data/geo_aliases.json,data/hgo_catalogs/hgo_place_names.json,data/hgo_catalogs/hgo_identity_aliases.json",
-    domain: "i18n-data",
-    ownerHint: "i18n-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:tests.deferred_detail_promotion_contracts",
-    commandRef: "python -m unittest tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract -q",
-    sourceRef: "js/bootstrap/deferred_detail_promotion.js,tests/test_main_deferred_detail_promotion_boundary_contract.py,tests/test_scenario_chunk_refresh_contracts.py,tests/test_scenario_renderer_bridge_boundary_contract.py",
-    domain: "scenario-runtime",
-    ownerHint: "deferred-detail-promotion",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:tests.test_map_renderer_interaction_border_snapshot_orchestration_contract",
-    commandRef: "python -m unittest tests.test_map_renderer_interaction_border_snapshot_orchestration_contract -q",
-    sourceRef: "js/core/map_renderer.js,js/core/map_renderer/transformed_frame_compositor_owner.js,js/core/renderer/render_cache_owner.js,js/core/renderer/zoom_interaction_lifecycle_owner.js,tests/test_map_renderer_interaction_border_snapshot_orchestration_contract.py",
-    domain: "renderer-runtime",
-    ownerHint: "renderer-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:tests.test_perf_gate_contract",
-    commandRef: "python -m unittest tests.test_perf_gate_contract -q",
-    sourceRef: "tests/test_perf_gate_contract.py",
-    domain: "perf",
-    ownerHint: "perf-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-  {
-    id: "python:tests.test_startup_shell",
-    commandRef: "python -m unittest tests.test_startup_shell -q",
-    sourceRef: "tests/test_startup_shell.py",
-    domain: "startup",
-    ownerHint: "startup-runtime",
-    layer: "contract",
-    cost: "contract",
-    resourceLocks: [],
-    executionOwner: "child-safe",
-    ciProfile: "pr-fast",
-  },
-];
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -1026,7 +503,7 @@ export function buildE2eRoutes() {
 
 export function buildNodeRoutes(
   packageJson = readJson(PACKAGE_JSON_PATH),
-  verificationMetadata = LEGACY_VERIFICATION_DOMAINS,
+  verificationMetadata = VERIFICATION_DOMAINS,
 ) {
   const scripts = packageJson.scripts || {};
   const platformsByCommand = new Map(verificationMetadata
@@ -1088,59 +565,6 @@ export function buildDirectE2EScriptRoutes(packageJson = readJson(PACKAGE_JSON_P
     });
 }
 
-export function buildPythonRoutes() {
-  const routes = [...PYTHON_FAST_CONTRACTS];
-  if (fs.existsSync(PYTHON_HEAVY_GROUPS_PATH)) {
-    const groups = readJson(PYTHON_HEAVY_GROUPS_PATH);
-    for (const [groupName, group] of Object.entries(groups)) {
-      const patterns = Array.isArray(group?.patterns) ? group.patterns : [];
-      for (const sourceRef of patterns) {
-        const domain = sourceRef.includes("transport")
-          ? "transport-workbench"
-          : sourceRef.includes("water")
-            ? "tno-water"
-            : sourceRef.includes("city") || sourceRef.includes("urban")
-              ? "city-runtime"
-              : "geo-contract";
-        const sourceRefs = [sourceRef];
-        if (sourceRef === "tests/test_tno_bundle_builder.py" || sourceRef === "tests/test_tno_water_geometries.py") {
-          sourceRefs.push("tools/patch_tno_1962_bundle.py");
-        }
-        if (sourceRef === "tests/test_global_transport_builder_contracts.py") {
-          sourceRefs.push("map_builder/transport_country_pack_writer.py");
-        }
-        routes.push({
-          id: `python-heavy:${groupName}:${sourceRef}`,
-          commandRef: pythonCommandForTestPath(sourceRef),
-          sourceRef: sourceRefs.join(","),
-          domain,
-          ownerHint: domain,
-          layer: "heavy",
-          cost: "heavy",
-          resourceLocks: ["heavy-geo", ".runtime-output"],
-          executionOwner: "main-thread",
-          ciProfile: "full",
-        });
-      }
-    }
-  }
-  return routes;
-}
-
-// Legacy discovery remains available only to the zero-spawn shadow comparator.
-export function buildLegacyRouteIndex() {
-  const metadataRoutes = buildVerificationMetadataRoutes(LEGACY_VERIFICATION_DOMAINS);
-  const metadataRouteIds = new Set(metadataRoutes.map((route) => route.id));
-  return [
-    ...metadataRoutes,
-    ...INFRASTRUCTURE_ROUTES.filter((route) => !metadataRouteIds.has(route.id)),
-    ...buildE2eRoutes(),
-    ...buildDirectE2EScriptRoutes(),
-    ...buildNodeRoutes().filter((route) => !metadataRouteIds.has(route.id)),
-    ...buildPythonRoutes(),
-  ];
-}
-
 export function buildRouteIndex() {
   return buildCanonicalRouteIndex();
 }
@@ -1170,7 +594,7 @@ export function summarizeRoutes(routes) {
   };
 }
 
-export function validateRoute(route, packageJson = readJson(PACKAGE_JSON_PATH)) {
+export function validateRoute(route, packageJson = readJson(PACKAGE_JSON_PATH), directCommands = null) {
   for (const field of ROUTE_SCHEMA_FIELDS) {
     if (!(field in route)) {
       throw new Error(`Route ${route?.id || "<unknown>"} is missing schema field: ${field}`);
@@ -1209,7 +633,7 @@ export function validateRoute(route, packageJson = readJson(PACKAGE_JSON_PATH)) 
   }
   validateRouteGuidance(route);
   const scripts = packageJson.scripts || {};
-  const exactDirectCommands = new Set([
+  const exactDirectCommands = directCommands || new Set([
     ...VERIFICATION_EXACT_DIRECT_COMMAND_REFS,
     ...buildCanonicalRouteIndex().map((entry) => entry.commandRef),
   ]);
@@ -1244,13 +668,53 @@ function validateRouteGuidance(route) {
 
 export function validateRouteIndex(routes = buildRouteIndex()) {
   const packageJson = readJson(PACKAGE_JSON_PATH);
+  const directCommands = new Set([
+    ...VERIFICATION_EXACT_DIRECT_COMMAND_REFS,
+    ...buildCanonicalRouteIndex().map((entry) => entry.commandRef),
+  ]);
   const seen = new Set();
   for (const route of routes) {
-    validateRoute(route, packageJson);
+    validateRoute(route, packageJson, directCommands);
     if (seen.has(route.id)) {
       throw new Error(`Duplicate route id: ${route.id}`);
     }
     seen.add(route.id);
   }
   return summarizeRoutes(routes);
+}
+
+// Discover executable entrypoints from actual package/manifest files, not a second
+// hand-maintained metadata table. This catches a missing canonical route.
+export function validateDiscoveredRouteCoverage(routes = buildRouteIndex(), {
+  packageJson = readJson(PACKAGE_JSON_PATH),
+  e2eRoutes = buildE2eRoutes(),
+  heavyGroups = readJson(PYTHON_HEAVY_GROUPS_PATH),
+} = {}) {
+  const routed = new Set(routes.map((route) => route.commandRef));
+  const expected = new Set([
+    ...Object.keys(packageJson.scripts || {}).filter((name) => /^test:(?:node|py|python):/u.test(name)),
+    ...buildDirectE2EScriptRoutes(packageJson).map((route) => route.commandRef),
+    ...e2eRoutes.map((route) => route.commandRef),
+    ...Object.values(heavyGroups).flatMap((group) => group.patterns || []).map(pythonCommandForTestPath),
+  ]);
+  const scripts = packageJson.scripts || {};
+  const normalizeCommand = (command) => String(command).trim()
+    .replace(/^npm run python -- /u, "python ")
+    .replace(/^node tools\/run_python\.mjs /u, "python ");
+  const routedCommands = new Set([...routed].map((ref) => normalizeCommand(scripts[ref] || ref)));
+  function covered(ref, seen = new Set()) {
+    if (routed.has(ref) || routedCommands.has(normalizeCommand(scripts[ref] || ref))) return true;
+    if (!scripts[ref] || seen.has(ref)) return false;
+    const next = new Set([...seen, ref]);
+    // Only pure npm aliases/aggregates inherit coverage. Inline commands or
+    // forwarded arguments require their own route, rather than being skipped.
+    const pieces = scripts[ref].split("&&").map((piece) => piece.trim());
+    return pieces.every((piece) => {
+      if (!/^npm (?:run|run-script) [\w:.-]+$/u.test(piece)) return false;
+      return extractNpmScriptRefs(piece, "").every((child) => covered(child, next));
+    });
+  }
+  const missing = [...expected].filter((command) => !covered(command)).sort();
+  if (missing.length) throw new Error(`verification-route-coverage-missing:${missing.join(",")}`);
+  return { discoveredCommands: expected.size };
 }
