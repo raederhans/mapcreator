@@ -62,7 +62,7 @@ function createOwnerWiringHarness(name, { dependencies = {}, includeFunctions = 
   assert.equal(getOwner(), owner, "owner singleton is preserved");
   assert.equal(constructions, 1);
   assert.equal(reads, 0, "assembling dependencies must not resolve live surfaces or browser globals");
-  if (["RenderCacheOwner", "ViewportReadModelOwner", "ViewportCommandOwner", "ViewportResizeLifecycleOwner", "ZoomInteractionLifecycleOwner", "RendererFitProjectionOwner", "MapHoverInteractionOwner"].includes(name)) {
+  if (["RenderCacheOwner", "ViewportCommandOwner", "ViewportResizeLifecycleOwner", "ZoomInteractionLifecycleOwner", "RendererFitProjectionOwner", "MapHoverInteractionOwner"].includes(name)) {
     assert.equal(owner.state, runtimeState, "the original runtime state instance must reach the owner");
     assert.equal(Object.isFrozen(runtimeState), false);
   }
@@ -98,7 +98,7 @@ test("renderer owner wiring remains lazy and preserves live host and global read
     HgoRuntimePreviewRenderOwner: { getProjection: "Projection", getMapSvg: "MapSvg", getTargetCanvas: "TargetCanvas" },
     StrategicOverlayHelpersOwner: { getOperationalLinesGroup: "OperationalLinesGroup", getOperationGraphicsGroup: "OperationGraphicsGroup", getUnitCountersGroup: "UnitCountersGroup", getSpecialZonesGroup: "SpecialZonesGroup", getSpecialZoneEditorGroup: "SpecialZoneEditorGroup" },
     RenderCacheOwner: { getContext: "Context" },
-    ViewportReadModelOwner: { getProjection: "Projection", getPathSvg: "PathSvg", getZoomIdentity: "zoomIdentity" },
+    ViewportReadModelOwner: {},
     ViewportCommandOwner: { getZoomBehavior: "ZoomBehavior", getInteractionRect: "InteractionRect", getD3: "d3" },
     RendererViewportUpdateOwner: { getViewportGroup: "ViewportGroup" },
     ViewportResizeLifecycleOwner: { getMapContainer: "MapContainer", getDevicePixelRatio: "devicePixelRatio" },
@@ -129,6 +129,30 @@ test("renderer owner wiring remains lazy and preserves live host and global read
         assert.equal(owner.getters.getInteractionRectNode(), node);
       }
     }
+  }
+});
+
+test("viewport read model wiring provides fresh detached snapshots instead of raw state and handles", () => {
+  const { owner, handles, runtimeState } = createOwnerWiringHarness("ViewportReadModelOwner");
+  assert.equal(owner.state, undefined);
+  assert.equal(owner.getters.getProjection, undefined);
+  assert.equal(owner.getters.getPathSvg, undefined);
+  for (let version = 1; version <= 2; version++) {
+    const translate = [version, version + 1];
+    handles.Projection = { scale: () => version * 10, translate: () => translate };
+    Object.assign(runtimeState, { width: String(version * 100), height: version * 50,
+      dpr: String(version), zoomTransform: { x: String(version), y: version + 1, k: version } });
+    assert.deepEqual(owner.getters.getViewportDimensions(), { width: version * 100, height: version * 50 });
+    assert.equal(owner.getters.getViewportDpr(), version);
+    const snapshot = owner.capabilities.getProjectionSnapshot();
+    assert.deepEqual(snapshot, { scale: version * 10, translate });
+    assert.notEqual(snapshot.translate, translate);
+    snapshot.translate[0] = 999;
+    assert.equal(translate[0], version);
+    const zoom = owner.capabilities.getZoomTransformSnapshot();
+    assert.deepEqual(zoom, { x: version, y: version + 1, k: version });
+    zoom.x = 999;
+    assert.equal(runtimeState.zoomTransform.x, String(version));
   }
 });
 

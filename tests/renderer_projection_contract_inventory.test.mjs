@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  PROJECTION_CONTRACT_PATHS,
   PROJECTION_STATIC_NORMALIZED_NAMES,
   analyzeRendererProjectionModule,
   evaluateRendererProjectionContract,
@@ -22,6 +23,36 @@ test("canonical renderer projection contract keeps every normalized identity gre
   assert.ok(REPORT.findings.sourceInputs.length > 20);
   for (const relativePath of REPORT.findings.sourceInputs) {
     assert.equal(fs.existsSync(path.join(process.cwd(), relativePath)), true, relativePath);
+  }
+});
+
+test("viewport capability contract rejects missing snapshots and raw state or handle injection", () => {
+  const sources = new Map(Object.values(PROJECTION_CONTRACT_PATHS).map((relativePath) => [
+    relativePath, fs.readFileSync(path.join(process.cwd(), relativePath), "utf8"),
+  ]));
+  const cases = [
+    ["renderer", "getProjectionSnapshot: () => {", "missingProjectionSnapshot: () => {", 8],
+    ["renderer", "viewportReadModelOwner = createViewportReadModelOwner({",
+      "viewportReadModelOwner = createViewportReadModelOwner({ state: runtimeState,", 8],
+    ["renderer", "viewportReadModelOwner = createViewportReadModelOwner({",
+      "viewportReadModelOwner = createViewportReadModelOwner({ getProjection: () => rendererSurfaceHost.getProjection(),", 8],
+    ["renderer", "viewportReadModelOwner = createViewportReadModelOwner({",
+      "viewportReadModelOwner = createViewportReadModelOwner({ getPathSvg: () => rendererSurfaceHost.getPathSvg(),", 8],
+    ["viewportReadModel", "capabilities.getProjectionSnapshot", "capabilities.missingProjectionSnapshot", 4],
+    ["viewportReadModel", "  constants = {},", "  state = {}, constants = {},", 4],
+    ["viewportReadModel", "  function getProjectionRenderSignature() {",
+      "  function getProjectionRenderSignature() { getters.getProjection();", 4],
+    ["viewportReadModel", "  function getProjectionRenderSignature() {",
+      "  function getProjectionRenderSignature() { getters.getPathSvg();", 4],
+  ];
+  for (const [key, before, after, ruleIndex] of cases) {
+    const relativePath = PROJECTION_CONTRACT_PATHS[key];
+    const source = sources.get(relativePath);
+    const changed = source.replaceAll(before, after);
+    assert.notEqual(changed, source, `${key}: fixture mutation must apply`);
+    const report = evaluateRendererProjectionContract({ sources: new Map(sources).set(relativePath, changed) });
+    assert.equal(report.equal, false, `${key}: ${after}`);
+    assert.equal(report.results[ruleIndex].status, "fail", `${key}: ${after}`);
   }
 });
 

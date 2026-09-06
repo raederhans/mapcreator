@@ -1869,7 +1869,7 @@ function collectFailures() {
     "[RUNTIME_STATE_TOKEN, \".specialRegionOverrides = {};\"],",
     "[RUNTIME_STATE_TOKEN, \".sovereigntyInitialized = false;\"],",
     "[RUNTIME_STATE_TOKEN, \".deferHitCanvasBuild = Boolean(deferred);\"],",
-    "[RUNTIME_STATE_TOKEN, \".hitCanvasDirty = Boolean(dirty);\"],",
+    "[\"setHitCanvasDirtyState(runtimeState, dirty);\"],",
     "const P38_OUT_OF_SCOPE_ANCHORS = Object.freeze([",
     "const P38_ALLOWED_DOC_TOKENS = Object.freeze([",
     "const P38_FORBIDDEN_DOC_TOKENS = Object.freeze([",

@@ -52,14 +52,11 @@ const FIT_PROJECTION_WIRING_ANCHORS = Object.freeze([
   "rebuildProjectedBoundsCache,",
   "buildSpatialIndex,",
   "setHitCanvasDirty: () => {",
+  "setHitCanvasDirtyState(runtimeState, true);",
   "updateSpecialZonesPaths,",
   "renderSpecialZoneEditorOverlay,",
   "updateZoomTranslateExtent,",
   "markAllOverlaysDirty,",
-]);
-
-const FIT_PROJECTION_ANCHOR_PARTS = Object.freeze([
-  ["runtimeState.", "hitCanvasDirty = true;"],
 ]);
 
 const SURFACE_LIFECYCLE_FORBIDDEN_TOKENS = Object.freeze([
@@ -156,7 +153,7 @@ test("map_renderer keeps fitting composition outside the projection/path owner",
   const fitProjectionOwnerSource = sliceBetween(
     rendererSource,
     "function getRendererFitProjectionOwner()",
-    "function getStrategicOverlayHelpersOwner()",
+    "function getRendererStartupTransactionOwner()",
   );
 
   for (const token of FIT_PROJECTION_RENDERER_ANCHORS) {
@@ -169,13 +166,8 @@ test("map_renderer keeps fitting composition outside the projection/path owner",
       "map_renderer must keep fitProjection injected side-effect anchor",
     );
   }
-  for (const tokenParts of FIT_PROJECTION_ANCHOR_PARTS) {
-    assertIncludes(
-      fitProjectionOwnerSource,
-      tokenParts.join(""),
-      "map_renderer must keep current fitProjection state-dirty side-effect anchor",
-    );
-  }
+  assert.doesNotMatch(fitProjectionOwnerSource, /runtimeState\.hitCanvasDirty\s*=/,
+    "fitProjection dirty state must flow through its action");
 });
 
 test("surface lifecycle owner remains mechanical-only for projection/path concerns", () => {

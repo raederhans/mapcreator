@@ -335,7 +335,14 @@ export function evaluateRendererProjectionContract(options = {}) {
     ]),
     makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[4], [
       check(["getProjection", "getPathCanvas", "getPathSvg"].every((name) => sources.get(PROJECTION_CONTRACT_PATHS.projectedBounds).includes(name)), "projected bounds getter injection drift"),
-      check(["getters.getProjection", "getters.getPathSvg"].every((name) => sources.get(PROJECTION_CONTRACT_PATHS.viewportReadModel).includes(name)), "viewport getter injection drift"),
+      check([
+        "getters.getViewportDimensions", "getters.getViewportDpr",
+        "capabilities.getProjectionSnapshot", "capabilities.invertProjectionPoint",
+        "capabilities.getZoomTransformSnapshot",
+      ].every((name) => sources.get(PROJECTION_CONTRACT_PATHS.viewportReadModel).includes(name))
+        && !/\b(?:state|runtimeState)\b|\bgetters\.(?:getProjection|getPathSvg)\b/.test(
+          sources.get(PROJECTION_CONTRACT_PATHS.viewportReadModel),
+        ), "viewport snapshot capability injection drift"),
       check(!imports(modules.projectedBounds, "../map_renderer.js") && !imports(modules.viewportReadModel, "../map_renderer.js"), "projection consumer import direction drift"),
     ]),
     makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[5], [
@@ -349,7 +356,12 @@ export function evaluateRendererProjectionContract(options = {}) {
     ]),
     makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[8], [
       check(hasNames(projectionFactory?.properties, ["surfaceHost", "getD3", "projectionPrecision", "pathPointRadius"]), "projection factory shape drift"),
-      check(hasNames(viewportReadOwner?.properties, ["state", "getProjection", "getPathSvg"]), "viewport read owner shape drift"),
+      check(hasNames(viewportReadOwner?.properties, [
+        "getters", "capabilities", "getViewportDimensions", "getViewportDpr",
+        "getProjectionSnapshot", "invertProjectionPoint", "getZoomTransformSnapshot",
+        "createZoomTransform", "getPanContentBoundsSnapshots", "getProjectedRenderableContentBoundsSnapshots",
+      ]) && !viewportReadOwner?.properties.some((name) => ["state", "getProjection", "getPathSvg"].includes(name)),
+      "viewport read owner shape drift"),
       check(hasNames(viewportCommandOwner?.properties, ["state", "minZoomScale", "maxZoomScale", "setZoomTransform"]), "viewport command owner shape drift"),
     ]),
     makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[9], [

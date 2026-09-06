@@ -598,19 +598,21 @@ const nul = String.fromCharCode(0);
 const fakeRunner = (_bin, args) => {
   calls.push(args.join(' '));
   const joined = args.join(' ');
-  if (joined.includes('diff --name-only --diff-filter=ACMRD -z')) {
-    return { status: 0, stdout: ['js/ui/sidebar.js', ''].join(nul) };
+  if (joined === 'status --porcelain=v1 -z --untracked-files=all') {
+    return { status: 0, stdout: [
+      ' M js/ui/sidebar.js',
+      'M  tests/test_startup_shell.py',
+      '?? tools/run_adaptive_tests.mjs',
+      '',
+    ].join(nul) };
   }
-  if (joined.includes('diff --name-only --cached --diff-filter=ACMRD -z')) {
-    return { status: 0, stdout: ['tests/test_startup_shell.py', ''].join(nul) };
-  }
-  if (joined.includes('ls-files --others --exclude-standard -z')) {
-    return { status: 0, stdout: ['tools/run_adaptive_tests.mjs', ''].join(nul) };
-  }
-  return { status: 0, stdout: ['SHOULD_NOT_APPEAR', ''].join(nul) };
+  throw new Error(`unexpected workspace discovery command: ${joined}`);
 };
 const { discoverChangedFiles } = await import('./tools/run_adaptive_tests.mjs');
 const files = discoverChangedFiles({ runner: fakeRunner });
+if (calls.length !== 1) {
+  throw new Error(`workspace discovery should use one coherent status snapshot: ${calls.join(' | ')}`);
+}
 if (calls.some((entry) => entry.includes('origin/main...HEAD') || entry.includes('HEAD^'))) {
   throw new Error(`history-based discovery should stay disabled by default: ${calls.join(' | ')}`);
 }

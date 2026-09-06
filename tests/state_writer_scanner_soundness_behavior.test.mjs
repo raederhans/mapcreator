@@ -10,6 +10,7 @@ import {
   DERIVED_ALIAS_TAINT_MODES,
   discoverFunctionParameterBindings,
   normalizeDerivedAliasTaintMode,
+  normalizeJavaScriptSource,
   scanStateMutationInventory,
   scanStateMutations,
 } from "../tools/state_writer_inventory.mjs";
@@ -1508,10 +1509,11 @@ test("exact Map.prototype.get.call keeps borrowed state provenance and rejects m
 });
 
 test("source-bound owner factories admit only their exact state property", async () => {
-  const rendererSource = await readFile(
+  // Scanner offsets refer to normalized LF source, including on Windows checkouts.
+  const rendererSource = normalizeJavaScriptSource(await readFile(
     new URL("../js/core/map_renderer.js", import.meta.url),
     "utf8",
-  );
+  ));
   const functionStart = rendererSource.indexOf("function getRenderCacheOwner() {");
   const nextFunctionStart = rendererSource.indexOf(
     "\nfunction ",
@@ -1602,6 +1604,26 @@ test("source-bound owner factories admit only their exact state property", async
     true,
     JSON.stringify(unregistered),
   );
+
+  const extraStateSource = source.replace(
+    "state: runtimeState,",
+    "state: runtimeState, escapedState: runtimeState,",
+  );
+  const extraStateValueStart = extraStateSource.indexOf("escapedState: runtimeState")
+    + "escapedState: ".length;
+  const extraStateFindings = scanStateMutations(extraStateSource, options);
+  assert.ok(extraStateFindings.some(({ start, reason }) => (
+    start === extraStateValueStart && reason === "state-alias-escape"
+  )), JSON.stringify(extraStateFindings));
+
+  const mutatedSource = source.replace(
+    "return renderCacheOwner;",
+    "runtimeState.bootPhase = 'ready'; return renderCacheOwner;",
+  );
+  const mutationFindings = scanStateMutations(mutatedSource, options);
+  assert.ok(mutationFindings.some(({ key, unsupported }) => (
+    key === "bootPhase" && !unsupported
+  )), JSON.stringify(mutationFindings));
 });
 
 test("direct object containers retain state taint for downstream member writes", () => {

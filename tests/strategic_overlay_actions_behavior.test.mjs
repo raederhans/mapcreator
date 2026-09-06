@@ -338,6 +338,10 @@ test("strategic overlay callers retain direct entity mutation only in declared d
     path.join(REPO_ROOT, "js/core/special_zone_layers.js"),
     "utf8",
   );
+  const specialZoneActionsSource = fs.readFileSync(
+    path.join(REPO_ROOT, "js/core/state/actions/special_zone_actions.js"),
+    "utf8",
+  );
   const specialZonesWorkbenchSource = fs.readFileSync(
     path.join(REPO_ROOT, "js/ui/toolbar/special_zones_workbench_controller.js"),
     "utf8",
@@ -417,8 +421,8 @@ test("strategic overlay callers retain direct entity mutation only in declared d
     getFunctionSource(specialZonesRuntimeSource, "selectSpecialZoneById"),
     /patchSpecialZoneEditorState\(state,/,
   );
-  assert.match(
-    specialZoneLayersSource,
-    /mutateSpecialZoneLayersStateAction\(target, mutation, options\)/,
-  );
+  assert.doesNotMatch(specialZoneLayersSource, /\bmutateSpecialZoneLayersStateAction\b/);
+  const mutateLayersActionSource = getFunctionSource(specialZoneActionsSource, "mutateSpecialZoneLayersStateAction");
+  assert.match(mutateLayersActionSource, /mutateSpecialZoneLayersState\(current, inputs\.mutation\)/);
+  assert.match(mutateLayersActionSource, /return commitSpecialZoneLayersState\(target, nextState, inputs\.options\);/);
 });
