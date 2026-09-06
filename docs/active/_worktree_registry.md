@@ -10,7 +10,20 @@
 | [P4 当前状态](state-action-ownership-p4-20260719/task.md#current-status) | 区分 P4.4 本地实现、正式 admission 与发布；这里不复制第二份阶段结论。 |
 | [历史 registry 正文](../archive/worktree-registry-history-through-20260831.md) | 完整保留原登记、提交、验收、恢复与清理证据；下方保留原标题锚点并指向对应历史段落。 |
 
-本次本地核对位置为 C:/Users/raede/Desktop/dev/mapcreator，分支 codex/runtime-architecture-reset-r1-integration-20260831。已有未提交治理改动由各 writer 保留。未刷新远端、枚举其他 worktree 或启动/停止共享进程，因此不提供新的全局 clean、remote-sync 或进程释放声明。
+2026-09-06 收尾核对：功能整合提交 `a2adc4b627b0f0b6ad88c5ed04d68eae3f1ad15c`，包含此前治理、scenario 和 renderer 工作。本地 core74、官方策略生成与标准 checker（零违规）、Pages 构建和相关目标测试已通过；主分支接收以该分支 PR 的远端必需检查及合并回执为准，不代表正式 P4 B admission。个人 `.codex/config.toml` 修改保留在主工作区。
+
+工作树清理覆盖证据以整合父提交 `348a952eecf08aa6d720b13721da927afd19efb8` 为基准：以下五个工作树的独立提交在 `git cherry` 中全部为 `-`，没有未覆盖 merge commit；`da5f` 为主分支祖先。删除前已确认工作区干净、无匹配运行进程，并保存旧运行记录。合并后的实际删除/保留回执保存于主工作区 `.runtime/tmp/optimization-closeout-20260906/cleanup-receipt.json`；原始 tip 与回收输出分别保存在 `worktrees-before.txt` 和 `worktree-artifact-recovery/`。
+
+| 清理覆盖范围 | 可恢复 tip | 依据 |
+| --- | --- | --- |
+| `6e0c` | `5d6fd733bc8b14873328d3b887895bcc7b012bb1` | 两个独立提交已 patch-equivalent |
+| `7a32` | `a45c6824538e7fe8d1529eae8cc9c0750e3f25ee` | 三个独立提交已 patch-equivalent |
+| `8c4c` | `b5ed98f7ea2b913a25b67205a80707aa3cecfeab` | 四个独立提交已 patch-equivalent |
+| `8c6f` | `9803aa1c0a51462edbaf4d4c520b1f63b7f295c8` | 两个独立提交已 patch-equivalent；旧锁对应进程不存在 |
+| `da5f` | `4406c842747fc74ee5e3eb69ce0085a296c627f5` | origin/main 祖先，无独立提交 |
+| `gate4-startup-graph-audit-20260901` | `a1f0885c6617622d260bc633c257b3f67b941686` | 一个独立提交已 patch-equivalent |
+
+继续保留 `b52a`（`611c21400661085161e46c1daf0a9318f467b94b`，A-admitted-source）和 `d081`（`c41a17d2d9668243988929399108fb28e4707eac`）：仍有 `git cherry +` 的提交，未证明被整合结果完整覆盖。清理分支范围仅为本次 integration、已合并 baseline，以及已等价覆盖的 gate4；不扩大到这些保留工作树。
 
 ## 历史记录索引
 
