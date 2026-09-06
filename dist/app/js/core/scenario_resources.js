@@ -2,6 +2,7 @@ import { countryNames, defaultCountryPalette, state as runtimeState } from "./st
 import {
   patchScenarioChunkLoadState,
 } from "./state/actions/scenario_chunk_runtime_actions.js";
+import { getScenarioChunkOptionalLayerState } from "./state/actions/scenario_activation_actions.js";
 import { commitSpecialZoneLayersState } from "./state/actions/special_zone_actions.js";
 import { ensureSovereigntyState, markLegacyColorStateDirty } from "./sovereignty_manager.js";
 import { normalizeMapSemanticMode } from "./state.js";
@@ -1117,7 +1118,7 @@ async function ensureActiveScenarioOptionalLayerLoaded(
       delayMs: 0,
       scenarioApplyRequestId,
     });
-    return state[getScenarioOptionalLayerConfig(normalizedKey)?.stateField] || null;
+    return getScenarioChunkOptionalLayerState(state, normalizedKey) || null;
   }
   const payload = await loadScenarioOptionalLayerPayload(bundle, normalizedKey, {
     d3Client,

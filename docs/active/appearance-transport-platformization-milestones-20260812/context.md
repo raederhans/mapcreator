@@ -2,6 +2,13 @@
 
 ## Current truth
 
+- 2026-09-05 起，B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 的实现与正式 admission 统一见 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status)；本文件不维护另一份“尚未开始”或“已准入”结论。
+- 当前局部治理的 writer、进度和交接由 [development-loop 记录](../development-loop-simplification-20260905/context.md) 维护。下方 A 准入、进程与 Git 清洁状态只证明对应历史候选，不代表当前工作区、远端或共享进程状态。
+
+## 2026-09-04 Stage A handoff snapshot (historical)
+
+以下保留当时的 A 交接摘要，其中 B 尚未开始的描述已被上述 P4 当前状态取代。
+
 - 2026-09-04 Stage A 已正式准入：`A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`，tree `ba969a24a4730072245c60efeefba66409f2c88d`；验收前后 tracked/index 均 clean。
 - 当前 integration checkout：`C:\Users\raede\Desktop\dev\mapcreator`，branch `codex/runtime-architecture-reset-r1-integration-20260831`；docs-only 状态提交只记录 marker，不替代 A source identity。
 - exact P4.3、zero-gap route、Pages/dist、core 93/93、browser quick、standard perf 与 independent review 均绑定 `5fff7388` 并通过；perf artifact 位于 `.runtime/output/perf/baseline_2026-07-30/gate/perf-gate-current.json`。
@@ -9,6 +16,8 @@
 - B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 已解除 A 依赖但尚未开始；`B_ADMITTED_SHA` pending，C 仍 blocked on B。
 
 ## Decisions and deviations
+
+以下为 2026-08-12 至 2026-08-15 的原始决策记录；日期内的“当前”“B 建立 actions”等措辞保留历史语境。
 
 | Time | Evidence or decision | Impact |
 | --- | --- | --- |
@@ -29,6 +38,8 @@
 
 ## Live process ownership
 
+以下为 2026-08-12 至 2026-09-04 的 A 阶段进程与验收记录，不是当前 live-process 清单。
+
 | Process | Owner | Command / cwd / outputs | State |
 | --- | --- | --- | --- |
 | A P4.3 policy checkpoint generator | 本 A task delegated owner | `node tools/build_state_writer_policy.mjs --phase P4.3 --write`；cwd `C:\Users\raede\.codex\worktrees\ded1\mapcreator`；PID `99112`，parent PID `211148`；目标输出 `tools/state_writer_policy.json` | released；start `2026-08-12 21:37:27 +08:00`；exit 1；observed elapsed约 `460.4s`；文件长度/mtime 保持 `10035935` bytes / `21:30:38`。失败为 `state-action-non-target-parameter-mutation`，三处 `diagnostics` alias escape。 |
@@ -48,10 +59,12 @@
 
 ## Handoff
 
+以下保留 A 阶段的历史交接约束；已实现工作不会因这份记录被重新派发，后续正式准入仍由主监督确认候选和证据。
+
 - A execution owner 的 `ready-for-supervisor-validation` 包与主监督 live gates/review 已收口；正式 source marker 为 `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`。
 - B 只能从正式 `A_ADMITTED_SHA` 建立 clean replay worktree；P4.4 recovery lineage 只作为职责级补丁来源。
 - C 只能从正式 `B_ADMITTED_SHA` 建立产品里程碑 worktree。
 
 ## Next step
 
-从 `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66` 建立 B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 三个 clean semantic-replay worktree；共享 UI、policy、routes、live gates 与最终 B marker 继续由主监督单 owner 串行处理。
+按 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status) 和主任务当前分工继续工作，不再自动创建历史 B1/B2/B3 重放任务。正式 B admission 开始时，由主监督确认候选血缘及缺失 gate；C 仍以正式 B marker 为前置条件。

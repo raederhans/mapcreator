@@ -1,7 +1,6 @@
 import {
   buildSpecialZoneRenderFeatures,
 } from "../special_zone_layers.js";
-import { ensureSpecialZoneLayersState } from "../state/actions/special_zone_actions.js";
 
 // Merged outlines are topology-heavy; keep a small bounded LRU cache per render owner.
 const OUTLINE_MERGE_CACHE_LIMIT = 96;
@@ -74,7 +73,7 @@ export function createSpecialZoneLayersRenderOwner({
   }
 
   function getEffectiveSpecialZonesFeatureCollection() {
-    return buildSpecialZoneRenderFeatures(ensureSpecialZoneLayersState(runtimeState), runtimeState.landIndex);
+    return buildSpecialZoneRenderFeatures(runtimeState.specialZoneLayers, runtimeState.landIndex);
   }
 
   function getSpecialZoneStyle(feature) {

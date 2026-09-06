@@ -150,6 +150,25 @@ export function commitProjectedBoundsCacheState(
   return true;
 }
 
+export function setDynamicBordersDirtyState(target, dirty, reason) {
+  assertStateTarget(target);
+  target.dynamicBordersDirty = dirty;
+  target.dynamicBordersDirtyReason = reason;
+  return dirty;
+}
+
+export function setPendingDynamicBorderTimerState(target, timerId) {
+  assertStateTarget(target);
+  target.pendingDynamicBorderTimerId = timerId;
+  return timerId;
+}
+
+export function replaceCachedDetailAdmBordersState(target, meshes) {
+  assertStateTarget(target);
+  target.cachedDetailAdmBorders = meshes;
+  return meshes;
+}
+
 export function clearSphericalFeatureDiagnosticsCacheState(target) {
   assertStateTarget(target);
   assertMap(target.sphericalFeatureDiagnosticsById, "sphericalFeatureDiagnosticsById");

@@ -423,6 +423,8 @@ export const RENDERER_FRAME_ORCHESTRATION_RECORDS = [
       "tests/cached_pass_compositor_owner_behavior.test.mjs",
       "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
       "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-cached-pass-compositor-owner-p2-2a-20260711.md",
       "package.json"
     ],
@@ -668,6 +670,8 @@ export const RENDERER_FRAME_ORCHESTRATION_RECORDS = [
       "tests/transformed_frame_compositor_owner_behavior.test.mjs",
       "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
       "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-transformed-frame-compositor-owner-p2-2b-20260712.md",
       "package.json"
     ],
@@ -710,7 +714,6 @@ export const RENDERER_FRAME_ORCHESTRATION_RECORDS = [
       "js/core/map_renderer.js",
       "js/core/map_renderer/draw_canvas_orchestration_owner.js",
       "js/core/map_renderer/public.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "tools/eslint-rules/state-writer-allowlist.json",
       "tools/check_architecture_boundaries.mjs",
       "tests/draw_canvas_orchestration_owner_behavior.test.mjs",
@@ -758,7 +761,6 @@ export const RENDERER_FRAME_ORCHESTRATION_RECORDS = [
       "js/core/renderer/cached_pass_compositor_owner.js",
       "js/core/map_renderer/transformed_frame_compositor_owner.js",
       "js/core/map_renderer/public.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "tools/eslint-rules/state-writer-allowlist.json",
       "tools/check_architecture_boundaries.mjs",
       "tests/cached_pass_compositor_owner_behavior.test.mjs",

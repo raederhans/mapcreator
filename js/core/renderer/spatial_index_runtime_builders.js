@@ -101,9 +101,20 @@ export function buildWaterSpatialItems({
     const id = getFeatureId(feature);
     if (!id) return;
     const hitGeometries = collectFeatureHitGeometries(feature);
+    let featureBounds;
+    let featureBoundsComputed = false;
     hitGeometries.forEach((hitGeometry, partIndex) => {
       if (shouldExcludeWaterHitGeometry(hitGeometry, feature, id)) return;
-      const bounds = computeProjectedGeoBounds(hitGeometry) || computeProjectedGeoBounds(feature);
+      let bounds = computeProjectedGeoBounds(hitGeometry);
+      if (!bounds) {
+        // Several parts can require the same whole-feature fallback. Keep this
+        // result (including null) local so the next rebuild sees new geometry.
+        if (!featureBoundsComputed) {
+          featureBounds = computeProjectedGeoBounds(feature);
+          featureBoundsComputed = true;
+        }
+        bounds = featureBounds;
+      }
       if (!bounds) return;
       items.push({
         id: `${id}::part:${partIndex}`,

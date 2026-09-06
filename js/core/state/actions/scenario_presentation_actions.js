@@ -132,6 +132,57 @@ function assertStateTarget(target) {
   }
 }
 
+export function ensureInspectorExpansionState(target) {
+  assertStateTarget(target);
+  if (!(target.expandedInspectorContinents instanceof Set)) {
+    target.expandedInspectorContinents = new Set();
+    return true;
+  }
+  return false;
+}
+
+export function markInspectorExpansionInitializedState(target) {
+  assertStateTarget(target);
+  target.inspectorExpansionInitialized = true;
+}
+
+export function setInspectorContinentExpandedState(target, groupKey, expanded) {
+  if (!(target.expandedInspectorContinents instanceof Set)) {
+    target.expandedInspectorContinents = new Set();
+  }
+  const key = String(groupKey || "");
+  if (!key) return false;
+  const shouldExpand = expanded === true;
+  const previousSize = target.expandedInspectorContinents.size;
+  if (shouldExpand) {
+    target.expandedInspectorContinents.add(key);
+  } else {
+    target.expandedInspectorContinents.delete(key);
+  }
+  return target.expandedInspectorContinents.size !== previousSize;
+}
+
+export function setBatchFillScopeState(target, scope) {
+  assertStateTarget(target);
+  const nextScope = scope === "country" ? "country" : "parent";
+  if (target.batchFillScope === nextScope) return false;
+  target.batchFillScope = nextScope;
+  return true;
+}
+
+export function setHgoIdentityVariantSelectionState(
+  target,
+  countryCode,
+  variantKey,
+) {
+  assertStateTarget(target);
+  if (variantKey) {
+    target.hgoIdentity.variantSelections[countryCode] = variantKey;
+  } else {
+    delete target.hgoIdentity.variantSelections[countryCode];
+  }
+}
+
 export function captureActiveScenarioPerformanceHintsState(target) {
   assertStateTarget(target);
   return Object.freeze({
@@ -152,6 +203,15 @@ export function clearClickScenarioHoverIdsState(target) {
   assertStateTarget(target);
   target.hoveredWaterRegionId = null;
   target.hoveredSpecialRegionId = null;
+}
+
+export function setScenarioHoverRegionIdsState(
+  target,
+  { waterId = null, specialId = null } = {},
+) {
+  assertStateTarget(target);
+  target.hoveredWaterRegionId = waterId;
+  target.hoveredSpecialRegionId = specialId;
 }
 
 export function setClickSelectedWaterRegionIdState(target, regionId = "") {

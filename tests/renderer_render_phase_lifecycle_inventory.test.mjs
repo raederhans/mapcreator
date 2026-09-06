@@ -164,7 +164,13 @@ test("map_renderer delegates phase lifecycle wrappers while keeping render ancho
 
   for (const actionPath of [PHASE_ACTION_PATH, INTERACTION_ACTION_PATH]) {
     const actionSource = readProjectFile(actionPath);
-    for (const forbidden of ["from ", "runtimeState", "document", "window", "globalThis", "Date.now"]) {
+    const actionImports = [...actionSource.matchAll(/\bfrom\s+["']([^"']+)["']/g)]
+      .map((match) => match[1]).sort();
+    assert.deepEqual(actionImports, actionPath === INTERACTION_ACTION_PATH ? [
+      "./appearance_selection_actions.js",
+      "./scenario_presentation_actions.js",
+    ] : [], `${actionPath} may only delegate to its explicit sibling actions`);
+    for (const forbidden of ["runtimeState", "document", "window", "globalThis", "Date.now"]) {
       assert.equal(actionSource.includes(forbidden), false, `${actionPath} must avoid ${forbidden}`);
     }
   }

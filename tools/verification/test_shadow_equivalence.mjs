@@ -27,6 +27,8 @@ const INPUT_PATHS = Object.freeze([
   TEST_PATHS.legacy,
   TEST_PATHS.quick,
   TEST_PATHS.heavy,
+  "tests/scenario_chunk_contracts.quick_cases.mjs",
+  "tests/scenario_chunk_contracts.heavy_cases.mjs",
   "tests/helpers/scenario_chunk_contract_support.mjs",
   "tests/scenario_chunk_contract_shadow_behavior.test.mjs",
   "tools/verification/test_shadow_equivalence.mjs",
@@ -289,9 +291,22 @@ export function collectScenarioChunkCatalogEvidence({
     mismatches: policyMismatches,
     inputs,
     inputSets: {
-      legacy: inputSet([TEST_PATHS.legacy, "tests/helpers/scenario_chunk_contract_support.mjs"]),
-      quick: inputSet([TEST_PATHS.quick, TEST_PATHS.legacy, "tests/helpers/scenario_chunk_contract_support.mjs"]),
-      heavy: inputSet([TEST_PATHS.heavy, TEST_PATHS.legacy, "tests/helpers/scenario_chunk_contract_support.mjs"]),
+      legacy: inputSet([
+        TEST_PATHS.legacy,
+        "tests/scenario_chunk_contracts.quick_cases.mjs",
+        "tests/scenario_chunk_contracts.heavy_cases.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
+      ]),
+      quick: inputSet([
+        TEST_PATHS.quick,
+        "tests/scenario_chunk_contracts.quick_cases.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
+      ]),
+      heavy: inputSet([
+        TEST_PATHS.heavy,
+        "tests/scenario_chunk_contracts.heavy_cases.mjs",
+        "tests/helpers/scenario_chunk_contract_support.mjs",
+      ]),
     },
     sourceIdentity: prepared.sourceIdentity,
     catalogIdentity: {

@@ -75,6 +75,31 @@ test("transaction cancellation and disabled immediate recompute leave no delayed
   assert.deepEqual(events, []);
 });
 
+test("border debounce clears the exact opaque timer handle it published", () => {
+  const state = { cachedDetailAdmBorders: [], dynamicBordersEnabled: true };
+  const firstHandle = { id: "first" };
+  const secondHandle = { id: "second" };
+  const handles = [firstHandle, secondHandle];
+  const clearedHandles = [];
+  const owner = createBorderMeshOwner({
+    state,
+    helpers: {
+      isDynamicBordersEnabled: () => true,
+      setTimeoutFn: () => handles.shift(),
+      clearTimeoutFn: (handle) => clearedHandles.push(handle),
+    },
+  });
+
+  owner.scheduleDynamicBorderRecompute("first");
+  assert.equal(state.pendingDynamicBorderTimerId, firstHandle);
+  owner.scheduleDynamicBorderRecompute("second");
+  assert.deepEqual(clearedHandles, [firstHandle]);
+  assert.equal(state.pendingDynamicBorderTimerId, secondHandle);
+  owner.clearPendingDynamicBorderTimer();
+  assert.deepEqual(clearedHandles, [firstHandle, secondHandle]);
+  assert.equal(state.pendingDynamicBorderTimerId, null);
+});
+
 test("immediate border rebuild can update its cache without requesting a render", () => {
   const { owner, state, timers, events } = createLifecycleOwner();
   owner.scheduleDynamicBorderRecompute("edit");
@@ -86,14 +111,18 @@ test("immediate border rebuild can update its cache without requesting a render"
 
 test("detail viewport change retires old meshes in the snapshot before scheduling once", () => {
   const { owner, state, events, getBuildState } = createLifecycleOwner();
-  owner.replaceDetailAdmBorders([{ coordinates: ["old"] }]);
+  const oldMeshes = [{ coordinates: ["old"] }];
+  owner.replaceDetailAdmBorders(oldMeshes);
+  assert.equal(state.cachedDetailAdmBorders, oldMeshes);
   const meta = { signature: "viewport-2", detailCountries: ["AAA"] };
   owner.reconcileDetailAdmBorders(meta);
   assert.deepEqual(state.cachedDetailAdmBorders, []);
   assert.deepEqual(events, [["snapshot", [], "building"], ["schedule", "viewport-2"]]);
   owner.reconcileDetailAdmBorders(meta);
   assert.equal(events.length, 2);
-  owner.replaceDetailAdmBorders([{ coordinates: ["new"] }]);
+  const newMeshes = [{ coordinates: ["new"] }];
+  owner.replaceDetailAdmBorders(newMeshes);
+  assert.equal(state.cachedDetailAdmBorders, newMeshes);
   owner.reconcileDetailAdmBorders({ signature: "viewport-empty", detailCountries: [] });
   assert.deepEqual(getBuildState(), { signature: "viewport-empty", status: "empty" });
   assert.deepEqual(events.at(-1), ["snapshot", [], "empty"]);

@@ -10,7 +10,6 @@ const REPO_ROOT = process.cwd();
 
 export const PROJECTION_CONTRACT_PATHS = Object.freeze({
   renderer: "js/core/map_renderer.js",
-  runtimeContext: "js/core/map_renderer/renderer_runtime_context.js",
   publicFacade: "js/core/map_renderer/public.js",
   projectionOwner: "js/core/renderer/renderer_projection_path_owner.js",
   surfaceLifecycle: "js/core/renderer/renderer_surface_lifecycle_owner.js",
@@ -30,10 +29,8 @@ export const PROJECTION_STATIC_NORMALIZED_NAMES = Object.freeze([
   "renderer owner imports remain inward-facing",
   "projection lifecycle preflight remains explicit",
   "package exposes the canonical projection contract",
-  "runtime context projection and viewport sections remain read models",
-  "projection and viewport receivers only validate context",
-  "owner construction consumes projection or viewport context",
-  "runtime context stays behind the renderer facade boundary",
+  "owner construction receives projection and viewport dependencies",
+  "renderer owners stay behind the public facade boundary",
 ]);
 
 function memberPath(node) {
@@ -289,8 +286,6 @@ export function evaluateRendererProjectionContract(options = {}) {
     "initializeProjectionPaths",
   );
   const projectionFactory = functionFacts(renderer, [], "getRendererProjectionPathOwner");
-  const projectionReceiver = functionFacts(renderer, [], "getProjectionReceiverContext");
-  const viewportReceiver = functionFacts(renderer, [], "getViewportReceiverContext");
   const viewportReadOwner = functionFacts(renderer, [], "getViewportReadModelOwner");
   const viewportCommandOwner = functionFacts(renderer, [], "getViewportCommandOwner");
   const surfaceOwnerPath = ["createRendererSurfaceLifecycleOwner"];
@@ -319,7 +314,7 @@ export function evaluateRendererProjectionContract(options = {}) {
     ], { callSequence: projectionInit?.calls.map(({ callee }) => callee) || [] }),
     makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[1], [
       check(imports(renderer, "./renderer/renderer_projection_path_owner.js"), "projection owner import missing"),
-      check(hasOrderedCalls(projectionFactory, ["getProjectionReceiverContext", "createRendererProjectionPathOwner"]), "projection factory sequence drift"),
+      check(hasCall(projectionFactory, "createRendererProjectionPathOwner"), "projection owner construction missing"),
       check(hasCall(functionFacts(renderer, [], "initMap"), "getRendererProjectionPathOwner.initializeProjectionPaths"), "initMap projection initialization missing"),
     ]),
     makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[2], [
@@ -353,21 +348,12 @@ export function evaluateRendererProjectionContract(options = {}) {
       check(JSON.parse(sources.get(PROJECTION_CONTRACT_PATHS.packageJson)).scripts?.["test:node:renderer-projection-contract"], "projection contract package command missing"),
     ]),
     makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[8], [
-      check(modules.runtimeContext.exports.includes("createRendererRuntimeContext"), "runtime context export drift"),
-      check(hasNames(functionFacts(modules.runtimeContext, [], "createRendererRuntimeContext")?.properties, ["projection", "viewport"]), "runtime context projection/viewport sections drift"),
-    ]),
-    makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[9], [
-      check((projectionReceiver?.assignments.length || 0) === 0, "projection receiver gained mutation"),
-      check((viewportReceiver?.assignments.length || 0) === 0, "viewport receiver gained mutation"),
-      check(hasCall(projectionReceiver, "rendererContext.projection.getProjection"), "projection receiver validation drift"),
-      check(hasCall(viewportReceiver, "rendererContext.viewport.getRuntimeState"), "viewport receiver validation drift"),
-    ]),
-    makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[10], [
       check(hasNames(projectionFactory?.properties, ["surfaceHost", "getD3", "projectionPrecision", "pathPointRadius"]), "projection factory shape drift"),
       check(hasNames(viewportReadOwner?.properties, ["state", "getProjection", "getPathSvg"]), "viewport read owner shape drift"),
       check(hasNames(viewportCommandOwner?.properties, ["state", "minZoomScale", "maxZoomScale", "setZoomTransform"]), "viewport command owner shape drift"),
     ]),
-    makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[11], [
+    makeResult(PROJECTION_STATIC_NORMALIZED_NAMES[9], [
+      check(!publicExports.some((name) => /(?:create|get).*Owner$/.test(name)), "public facade exports a renderer owner"),
       check(!publicExports.some((name) => name.includes("RendererRuntimeContext")), "public facade exports renderer runtime context"),
       check(!modules.publicFacade.imports.some((entry) => entry.source.includes("renderer_runtime_context")), "public facade imports renderer runtime context"),
     ], { publicFacadeExportShape: publicExports }),

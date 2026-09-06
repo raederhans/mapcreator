@@ -1,6 +1,6 @@
 // Internal catalog definitions. Consumers use verification_catalog_source.mjs.
-// This preserves the historical appended sequence: 24 local feedback records and
-// three Python coverage records, which retain their heavy/main-thread policy.
+// Local feedback records follow the authored domain records. The three Python
+// coverage records retain their heavy/main-thread policy.
 export function createLocalFeedbackRecords(baseRecords) {
   // Local action feedback reuses the existing behavior suites. Historical policy
   // and phase receipts remain explicit deeper-tier checks, not edit prerequisites.
@@ -31,7 +31,7 @@ export function createLocalFeedbackRecords(baseRecords) {
     id: "local:renderer:" + name,
     commandRef: "node --test tests/" + name + "_behavior.test.mjs",
     sourceRefs: ["js/core/renderer/" + name + ".js", "tests/" + name + "_behavior.test.mjs"],
-    ownerHints: ["renderer"], domains: ["renderer"], tiers: ["contract"],
+    ownerHints: ["renderer-runtime"], domains: ["renderer-runtime"], tiers: ["contract"],
     cost: "fast", resourceLocks: [], executionOwners: ["child-safe"], profiles: ["pr-fast"],
     platforms: ["all"], entrypointPolicyIndex: 5,
     verificationOrder: null, selectorOrder: localActionOrder + localActionTests.length + index,
@@ -44,7 +44,7 @@ export function createLocalFeedbackRecords(baseRecords) {
     commandRef: "node --test tests/country_inspector_model_behavior.test.mjs tests/country_inspector_controller_behavior.test.mjs",
     sourceRefs: ["js/ui/sidebar/country_inspector_model.js", "js/ui/sidebar/country_inspector_controller.js",
       "tests/country_inspector_model_behavior.test.mjs", "tests/country_inspector_controller_behavior.test.mjs"],
-    ownerHints: ["sidebar"], domains: ["sidebar"], tiers: ["contract"],
+    ownerHints: ["sidebar-shell"], domains: ["sidebar-shell"], tiers: ["contract"],
     cost: "fast", resourceLocks: [], executionOwners: ["child-safe"], profiles: ["pr-fast"],
     platforms: ["all"], entrypointPolicyIndex: 5,
     verificationOrder: null, selectorOrder: localActionOrder + localActionTests.length + 2,
@@ -72,36 +72,60 @@ export function createLocalFeedbackRecords(baseRecords) {
   // Each local leaf covers this owner only; broader roots and data retain their
   // existing PR/nightly/release requirements.
   const localOwnerCoverage = [
-    ["ocean-render", "renderer", "js/core/renderer/ocean_render_owner.js", "tests/ocean_render_owner_behavior.test.mjs"],
-    ["viewport-update", "renderer", "js/core/renderer/renderer_viewport_update_owner.js", "tests/renderer_viewport_update_owner_behavior.test.mjs"],
-    ["map-hover", "renderer", "js/core/map_renderer/map_hover_interaction_owner.js", "tests/map_hover_interaction_owner_behavior.test.mjs"],
-    ["city-lights-render", "renderer", "js/core/renderer/city_lights_render_owner.js", "tests/city_lights_render_owner_behavior.test.mjs"],
-    ["project-support-diagnostics", "sidebar", "js/ui/sidebar/project_support_diagnostics_controller.js", "tests/project_support_diagnostics_controller_behavior.test.mjs"],
+    ["state-write-allowlist", "state-ownership", "tools/check_state_write_allowlist.mjs", "tests/state_write_allowlist_behavior.test.mjs"],
+    ["viewport-read-model", "renderer-runtime", "js/core/renderer/viewport_read_model_owner.js", "tests/viewport_read_model_owner_behavior.test.mjs"],
+    ["selection-overlay", "renderer-runtime", "js/core/renderer/selection_overlay_owner.js", "tests/selection_overlay_owner_behavior.test.mjs"],
+    ["projected-geometry-bounds", "renderer-runtime", "js/core/renderer/projected_geometry_bounds_owner.js", "tests/projected_geometry_bounds_owner_behavior.test.mjs"],
+    ["spatial-index-runtime", "renderer-runtime", "js/core/renderer/spatial_index_runtime_owner.js", "tests/spatial_index_runtime_owner_behavior.test.mjs", ["js/core/renderer/spatial_index_runtime_derivation.js"]],
+    ["spatial-index-builders", "renderer-runtime", "js/core/renderer/spatial_index_runtime_builders.js", "tests/spatial_index_runtime_builders_behavior.test.mjs"],
+    ["legend-control", "renderer-runtime", "js/core/renderer/legend_control_owner.js", "tests/legend_control_owner_behavior.test.mjs"],
+    ["ocean-render", "renderer-runtime", "js/core/renderer/ocean_render_owner.js", "tests/ocean_render_owner_behavior.test.mjs"],
+    ["viewport-update", "renderer-runtime", "js/core/renderer/renderer_viewport_update_owner.js", "tests/renderer_viewport_update_owner_behavior.test.mjs"],
+    ["map-hover", "renderer-runtime", "js/core/map_renderer/map_hover_interaction_owner.js", "tests/map_hover_interaction_owner_behavior.test.mjs"],
+    ["city-lights-render", "renderer-runtime", "js/core/renderer/city_lights_render_owner.js", "tests/city_lights_render_owner_behavior.test.mjs"],
+    ["project-support-diagnostics", "sidebar-shell", "js/ui/sidebar/project_support_diagnostics_controller.js", "tests/project_support_diagnostics_controller_behavior.test.mjs"],
     ["commit-runner", "test-routing", "tools/run_commit_verification.mjs", "tests/verify_commit_runner_behavior.test.mjs"],
-    ["unit-counter-catalog", "sidebar", "js/ui/sidebar/strategic_overlay/unit_counter_catalog_helper.js", "tests/unit_counter_catalog_behavior.test.mjs"],
+    ["unit-counter-catalog", "sidebar-shell", "js/ui/sidebar/strategic_overlay/unit_counter_catalog_helper.js", "tests/unit_counter_catalog_behavior.test.mjs"],
+    ["workspace-chrome-support", "ui-shell", "js/ui/toolbar/workspace_chrome_support_surface_controller.js", "tests/workspace_chrome_support_surface_controller_behavior.test.mjs"],
+    ["command-supersession-contracts", "test-routing", "tests/contracts/command_supersession_contracts.mjs", "tests/command_supersession_contracts.test.mjs"],
+    ["state-action-source-contracts", "state-ownership", "tests/contracts/state_action_source_boundary_contracts.mjs", "tests/state_action_source_boundary_contracts.test.mjs"],
+    ["worker-task-client", "renderer-runtime", "js/core/worker_task_client.js", "tests/worker_task_client_behavior.test.mjs"],
+    ["regional-presets", "sidebar-shell", "js/ui/sidebar/regional_preset_controller.js", "tests/regional_preset_controller_behavior.test.mjs"],
+    ["scenario-transfers", "sidebar-shell", "js/ui/sidebar/scenario_transfer_controller.js", "tests/scenario_transfer_controller_behavior.test.mjs"],
+    ["scenario-territory", "sidebar-shell", "js/ui/sidebar/scenario_territory_controller.js", "tests/scenario_territory_controller_behavior.test.mjs"],
+    ["scenario-inspector", "sidebar-shell", "js/ui/sidebar/scenario_inspector_controller.js", "tests/scenario_inspector_controller_behavior.test.mjs"],
   ];
 
   const localOwnerOrder = pythonCoverageOrder + pythonRecords.length;
 
-  const ownerRecords = localOwnerCoverage.map(([id, domain, source, testFile], index) => ({
-    id: "local:owner:" + id, commandRef: "node --test " + testFile,
-    sourceRefs: [source, testFile], ownerHints: [domain], domains: [domain], tiers: ["contract"],
+  const ownerRecords = localOwnerCoverage.map(([id, domain, source, testFile, extraSources = []], index) => ({
+    id: "local:owner:" + id, commandRef: "node --test " + testFile
+      + (id === "regional-presets" ? " tests/scenario_core_plan_behavior.test.mjs" : ""),
+    sourceRefs: [source, testFile, ...extraSources, ...(id === "regional-presets" ? ["tests/scenario_core_plan_behavior.test.mjs"] : [])], ownerHints: [domain], domains: [domain], tiers: ["contract"],
     cost: "fast", resourceLocks: [], executionOwners: ["child-safe"], profiles: ["pr-fast"],
     platforms: ["all"], entrypointPolicyIndex: 5,
     verificationOrder: null, selectorOrder: localOwnerOrder + index,
     verification: null, selector: {},
   }));
 
-  const retiredFrontlineRecord = {
-    id: "local:test:retired-frontline", commandRef: "node --test tests/retired_frontline_behavior.test.mjs",
-    sourceRefs: ["tests/retired_frontline_behavior.test.mjs"],
-    ownerHints: ["renderer"], domains: ["renderer"], tiers: ["contract"],
+  // These narrow regression suites do not claim whole loader/startup coverage.
+  const localTestFiles = [
+    ["scenario-water-fill", "renderer-runtime", "tests/scenario_water_fill_behavior.test.mjs"],
+    ["scenario-water-signature", "renderer-runtime", "tests/scenario_water_signature_behavior.test.mjs"],
+    ["retired-frontline", "renderer-runtime", "tests/retired_frontline_behavior.test.mjs"],
+    ["scenario-chunk-cancellation", "scenario-runtime", "tests/scenario_chunk_cancellation_behavior.test.mjs"],
+    ["startup-boot-worker-cancellation", "scenario-runtime", "tests/startup_boot_worker_cancellation.test.mjs"],
+  ];
+  const testRecords = localTestFiles.map(([id, domain, testFile], index) => ({
+    id: "local:test:" + id, commandRef: "node --test " + testFile,
+    sourceRefs: [testFile],
+    ownerHints: [domain], domains: [domain], tiers: ["contract"],
     cost: "fast", resourceLocks: [], executionOwners: ["child-safe"], profiles: ["pr-fast"],
     platforms: ["all"], entrypointPolicyIndex: 5,
-    verificationOrder: null, selectorOrder: localOwnerOrder + localOwnerCoverage.length,
+    verificationOrder: null, selectorOrder: localOwnerOrder + localOwnerCoverage.length + index,
     verification: null, selector: {},
-  };
+  }));
 
   return [...actionRecords, ...borderRecords, countryInspectorRecord,
-    ...pythonRecords, ...ownerRecords, retiredFrontlineRecord];
+    ...pythonRecords, ...ownerRecords, ...testRecords];
 }

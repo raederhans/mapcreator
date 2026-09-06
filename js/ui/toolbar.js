@@ -653,6 +653,13 @@ function initToolbar({ render } = {}) {
     dockReferencePopover,
     dockEditPopover,
     dockQuickFillRow,
+    quickFillParentBtn,
+    quickFillCountryBtn,
+    dockQuickFillHint,
+    refreshPaintModeUi: () => {
+      if (typeof runtimeState.updatePaintModeUIFn === "function") runtimeState.updatePaintModeUIFn();
+    },
+    t,
     exportWorkbenchOverlay,
     exportWorkbenchPanel,
     dockExportBtn,
@@ -679,6 +686,8 @@ function initToolbar({ render } = {}) {
     closeExportWorkbench: ({ restoreFocus = true } = {}) => runtimeState.closeExportWorkbenchFn?.({ restoreFocus }),
   });
   const {
+    bindQuickFillControls,
+    refreshQuickFillControls,
     bindDockPopoverDismiss,
     closeDockPopover,
     closeScenarioGuidePopover,
@@ -1092,81 +1101,6 @@ function initToolbar({ render } = {}) {
     triggerScenarioGuide,
   } = scenarioContextBarController;
   registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);
-
-  const getActiveQuickFillPolicy = () => {
-    const selectedCode = normalizeCountryCode(
-      runtimeState.selectedInspectorCountryCode || runtimeState.inspectorHighlightCountryCode
-    );
-    if (!selectedCode || !(runtimeState.countryInteractionPoliciesByCode instanceof Map)) {
-      return null;
-    }
-    return runtimeState.countryInteractionPoliciesByCode.get(selectedCode) || null;
-  };
-
-  const getQuickFillParentLabel = (policy) => {
-    if (policy?.parentScopeLabel === "Province") {
-      return t("By Province", "ui");
-    }
-    return t("By Parent", "ui");
-  };
-
-  const getQuickFillHint = (policy) => {
-    const requestedScope = String(runtimeState.batchFillScope || "parent") === "country" ? "country" : "parent";
-    if (requestedScope === "country") {
-      return t("Single-click: one subdivision | Double-click: country batch", "ui");
-    }
-    if (policy?.parentScopeLabel === "Province") {
-      return t("Single-click: one subdivision | Double-click: province batch", "ui");
-    }
-    return t("Single-click: one subdivision | Double-click: parent batch", "ui");
-  };
-
-  const refreshQuickFillControls = () => {
-    const isScenarioMode = !!runtimeState.activeScenarioId;
-    const isOwnershipMode = String(runtimeState.paintMode || "visual") === "sovereignty";
-    const isSubdivisionMode = String(runtimeState.interactionGranularity || "subdivision") !== "country";
-    const activePolicy = getActiveQuickFillPolicy();
-    const parentEnabled = !activePolicy
-      || !Array.isArray(activePolicy.quickFillScopes)
-      || activePolicy.quickFillScopes.includes("parent");
-    const countryEnabled = !activePolicy
-      || !Array.isArray(activePolicy.quickFillScopes)
-      || activePolicy.quickFillScopes.includes("country");
-    const isVisible = !isScenarioMode && !isOwnershipMode && isSubdivisionMode;
-
-    if (dockQuickFillBtn) {
-      dockQuickFillBtn.classList.toggle("hidden", !isVisible);
-      dockQuickFillBtn.setAttribute("aria-hidden", isVisible ? "false" : "true");
-      dockQuickFillBtn.setAttribute("aria-expanded", runtimeState.activeDockPopover === "quickfill" ? "true" : "false");
-    }
-    if (dockQuickFillRow) {
-      const shouldShowPopover = isVisible && runtimeState.activeDockPopover === "quickfill";
-      dockQuickFillRow.classList.toggle("hidden", !shouldShowPopover);
-      dockQuickFillRow.setAttribute("aria-hidden", shouldShowPopover ? "false" : "true");
-    }
-    if (!isVisible && runtimeState.activeDockPopover === "quickfill") {
-      closeDockPopover();
-    }
-    if (quickFillParentBtn) {
-      quickFillParentBtn.textContent = getQuickFillParentLabel(activePolicy);
-      quickFillParentBtn.disabled = !parentEnabled;
-      quickFillParentBtn.classList.toggle(
-        "is-active",
-        parentEnabled && String(runtimeState.batchFillScope || "parent") !== "country"
-      );
-    }
-    if (quickFillCountryBtn) {
-      quickFillCountryBtn.textContent = t("By Country", "ui");
-      quickFillCountryBtn.disabled = !countryEnabled;
-      quickFillCountryBtn.classList.toggle(
-        "is-active",
-        countryEnabled && String(runtimeState.batchFillScope || "parent") === "country"
-      );
-    }
-    if (dockQuickFillHint) {
-      dockQuickFillHint.textContent = getQuickFillHint(activePolicy);
-    }
-  };
 
   const refreshPaintControlsLayout = () => {
     const isScenarioMode = !!runtimeState.activeScenarioId;
@@ -2267,15 +2201,7 @@ function initToolbar({ render } = {}) {
     dockEditPopoverBtn.dataset.bound = "true";
   }
 
-  if (dockQuickFillBtn && !dockQuickFillBtn.dataset.bound) {
-    dockQuickFillBtn.setAttribute("aria-haspopup", "dialog");
-    dockQuickFillBtn.setAttribute("aria-controls", "dockQuickFillRow");
-    dockQuickFillBtn.addEventListener("click", () => {
-      if (dockQuickFillBtn.classList.contains("hidden")) return;
-      openDockPopover("quickfill");
-    });
-    dockQuickFillBtn.dataset.bound = "true";
-  }
+  bindQuickFillControls();
 
   if (politicalEditingToggleBtn && !politicalEditingToggleBtn.dataset.bound) {
     politicalEditingToggleBtn.addEventListener("click", () => {
@@ -2890,26 +2816,6 @@ function initToolbar({ render } = {}) {
       runtimeState.interactionGranularity =
         runtimeState.paintMode === "sovereignty" ? "subdivision" : requested;
       paintGranularitySelect.value = runtimeState.interactionGranularity;
-      if (typeof runtimeState.updatePaintModeUIFn === "function") {
-        runtimeState.updatePaintModeUIFn();
-      }
-    });
-  }
-
-  if (quickFillParentBtn) {
-    quickFillParentBtn.addEventListener("click", () => {
-      runtimeState.batchFillScope = "parent";
-      closeDockPopover();
-      if (typeof runtimeState.updatePaintModeUIFn === "function") {
-        runtimeState.updatePaintModeUIFn();
-      }
-    });
-  }
-
-  if (quickFillCountryBtn) {
-    quickFillCountryBtn.addEventListener("click", () => {
-      runtimeState.batchFillScope = "country";
-      closeDockPopover();
       if (typeof runtimeState.updatePaintModeUIFn === "function") {
         runtimeState.updatePaintModeUIFn();
       }

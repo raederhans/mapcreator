@@ -624,7 +624,7 @@ test("hit candidates stay pure and hover owner does not own click selection", ()
     "function handleMouseMove(event)",
     "\"getHitFromEvent\"",
     "\"updateDevHoverHit\"",
-    "\"queueTooltipUpdate\"",
+    "function queueTooltipUpdate(nextState = null)",
   ]) {
     assertIncludes(hoverOwnerSource, token, "hover owner must keep hover-only token");
   }
@@ -766,7 +766,6 @@ test("P1.8 keeps one pure click decision owner and preserves forbidden boundarie
       "--untracked-files=all",
       "--",
       PUBLIC_FACADE_PATH,
-      "js/core/map_renderer/renderer_runtime_context.js",
       STATE_WRITE_ALLOWLIST_PATH,
     ],
     { cwd: REPO_ROOT, encoding: "utf8" },
@@ -777,6 +776,6 @@ test("P1.8 keeps one pure click decision owner and preserves forbidden boundarie
   assert.deepEqual(
     forbiddenDiff,
     [],
-    "P1.8 must keep public facade, runtime context, and state allowlist unchanged",
+    "P1.8 must keep public facade and state allowlist unchanged",
   );
 });

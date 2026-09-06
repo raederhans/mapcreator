@@ -8,7 +8,6 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 CACHED_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "cached_pass_compositor_owner.js"
 TRANSFORMED_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "transformed_frame_compositor_owner.js"
 PUBLIC_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
-RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
 
 
@@ -222,7 +221,6 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
             "transformedFrameCompositorOwner",
         ]:
             self.assertNotIn(token, read(PUBLIC_JS))
-            self.assertNotIn(token, read(RUNTIME_CONTEXT_JS))
             self.assertNotIn(token, read(STATE_WRITE_ALLOWLIST))
 
     def test_map_renderer_budget_moves_down_without_format_compaction(self):

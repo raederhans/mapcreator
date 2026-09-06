@@ -1,5 +1,4 @@
 import {
-  applyUnitCounterCatalogReviewAction,
   applyUnitCounterPresetSelection as applyUnitCounterPresetSelectionHelper,
   setUnitCounterCatalogCategory,
   setUnitCounterCatalogQuery,
@@ -61,7 +60,7 @@ export function bindUnitCounterSidebarEvents({
     clampUnitCounterFixedScaleMultiplier,
     clampUnitCounterStatValue,
     DEFAULT_UNIT_COUNTER_PRESET_ID,
-    exportHoi4UnitIconReviewDraft,
+    unitCounterCatalog,
     getRandomizedUnitCounterCombatState,
     getUnitCounterCombatPreset,
     getUnitCounterPresetMeta,
@@ -75,8 +74,6 @@ export function bindUnitCounterSidebarEvents({
     showAppDialog,
     refreshStrategicOverlayUI,
     t,
-    toggleHoi4EntryCurrentPresetMapping,
-    setHoi4CurrentPresetCandidate,
     unitCounterPresets,
     ensureStrategicOverlayUiState,
   } = helpers;
@@ -391,7 +388,7 @@ export function bindUnitCounterSidebarEvents({
   }
   if (unitCounterLibraryExportBtn && !unitCounterLibraryExportBtn.dataset.bound) {
     unitCounterLibraryExportBtn.addEventListener("click", () => {
-      exportHoi4UnitIconReviewDraft();
+      unitCounterCatalog.exportReviewDraft();
     });
     unitCounterLibraryExportBtn.dataset.bound = "true";
   }
@@ -402,12 +399,10 @@ export function bindUnitCounterSidebarEvents({
         const action = String(reviewButton.dataset.hoi4ReviewAction || "").trim();
         const entryId = String(reviewButton.dataset.hoi4EntryId || "").trim();
         const currentPresetId = String(state.unitCounterEditor?.presetId || DEFAULT_UNIT_COUNTER_PRESET_ID).trim();
-        const handled = applyUnitCounterCatalogReviewAction({
+        const handled = unitCounterCatalog.applyReviewAction({
           action,
           entryId,
           currentPresetId,
-          toggleHoi4EntryCurrentPresetMapping,
-          setHoi4CurrentPresetCandidate,
         });
         if (handled) {
           scheduleStrategicOverlayRefresh("counterCatalog");

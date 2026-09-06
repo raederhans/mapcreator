@@ -1,5 +1,5 @@
-// Canonical special-zone layer, compatibility-editor, brush-mode, and dirty-state authority.
-// Persistence, rendering, UI feedback, metrics, and runtime hooks stay in callers.
+// Canonical special-zone layer, editor, membership-tool, hook-registration, and dirty-state authority.
+// Persistence, rendering, UI feedback, metrics, and runtime hook invocation stay in callers.
 
 import {
   mutateSpecialZoneLayersState,
@@ -374,4 +374,35 @@ export function setSpecialZonesOverlayDirtyState(target, value = true) {
   const nextDirty = Boolean(value);
   target.specialZonesOverlayDirty = nextDirty;
   return nextDirty;
+}
+
+export function activateSpecialZoneMembershipToolState(target, tool = "multi") {
+  if (!target || typeof target !== "object") return null;
+  const normalizedTool = String(tool || "multi").trim() || "multi";
+  target.specialZoneMembershipTool = normalizedTool;
+  if (target.currentTool !== "special-zone-membership") {
+    target.specialZonePreviousTool = String(target.currentTool || "fill");
+  }
+  target.currentTool = "special-zone-membership";
+  target.brushModeEnabled = false;
+  patchSpecialZoneEditorState(target, { active: false });
+  return normalizedTool;
+}
+
+export function exitSpecialZoneMembershipToolState(target) {
+  if (!target || typeof target !== "object") return "";
+  const previousTool = String(target.specialZonePreviousTool || "fill");
+  target.currentTool = previousTool;
+  target.specialZonePreviousTool = "";
+  return previousTool;
+}
+
+export function registerSpecialZonesWorkbenchRuntimeHooks(target, hooks = {}) {
+  if (!target || typeof target !== "object") return;
+  if (typeof hooks.renderWorkbench === "function") {
+    target.updateSpecialZonesWorkbenchUIFn = hooks.renderWorkbench;
+  }
+  if (typeof hooks.renderCurrentTarget === "function") {
+    target.updateSpecialZonesWorkbenchCurrentTargetUIFn = hooks.renderCurrentTarget;
+  }
 }

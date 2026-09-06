@@ -152,10 +152,20 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         )
 
     def test_hover_hit_keeps_reduced_phase_before_precise_hit_resolution(self):
+        hover_content = (MAP_RENDERER_JS.parent / "map_renderer" / "map_hover_interaction_owner.js").read_text(encoding="utf-8")
+        binding_start = self.renderer_content.index("function getMapHoverInteractionOwner() {")
+        binding = self.renderer_content[binding_start:self.renderer_content.index("function getVisibleFrameDiagnosticsOwner()", binding_start)]
+        self.assertIn("mapHoverInteractionOwner = createMapHoverInteractionOwner({", binding)
+        self.assertIn("state: runtimeState,", binding)
+        self.assertIn("hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX", binding)
+        self.assertIn("renderPhaseIdle: RENDER_PHASE_IDLE", binding)
+        self.assertIn("      getHitFromEvent,", binding)
+        self.assertRegex(self.renderer_content, r"function handleMouseMove\(event\) \{\s*getMapHoverInteractionOwner\(\)\.handleMouseMove\(event\);\s*\}")
+        self.assertRegex(hover_content, r"function isReducedHoverPhase\(\) \{\s*return Boolean\(state\.renderPhase !== renderPhaseIdle \|\| state\.isInteracting \|\| state\.scenarioApplyInFlight\s*\|\| state\.startupReadonly \|\| state\.startupReadonlyUnlockInFlight\);")
         self.assertRegex(
-            self.renderer_content,
+            hover_content,
             re.compile(
-                r'const reducedHoverPhase =[\s\S]*?if \(reducedHoverPhase\) \{[\s\S]*?return;\s*\}\s*const hit = getHitFromEvent\(event, \{\s*enableSnap: false,\s*snapPx: HIT_SNAP_RADIUS_HOVER_PX,\s*eventType: "hover",\s*\}\);',
+                r'function handleMouseMove\(event\) \{[\s\S]*?if \(isReducedHoverPhase\(\)\) \{\s*return clearReducedHover\(\);\s*\}\s*const hit = getterApi.getHitFromEvent\(event, \{\s*enableSnap: false,\s*snapPx: hoverSnapPx,\s*eventType: "hover",\s*\}\) \|\| \{\};',
                 re.S,
             ),
         )

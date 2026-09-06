@@ -18,7 +18,7 @@ test("canonical renderer projection contract keeps every normalized identity gre
   assert.equal(REPORT.kind, "renderer-projection-runtime-context-contract");
   assert.equal(REPORT.equal, true, projectionContractFailures(REPORT).join("\n"));
   assert.deepEqual(REPORT.results.map(({ name }) => name), PROJECTION_STATIC_NORMALIZED_NAMES);
-  assert.equal(new Set(REPORT.results.map(({ name }) => name)).size, 12);
+  assert.equal(new Set(REPORT.results.map(({ name }) => name)).size, 10);
   assert.ok(REPORT.findings.sourceInputs.length > 20);
   for (const relativePath of REPORT.findings.sourceInputs) {
     assert.equal(fs.existsSync(path.join(process.cwd(), relativePath)), true, relativePath);

@@ -330,74 +330,6 @@ export const RENDERER_INTERACTION_RECORDS = [
     "selector": {}
   },
   {
-    "id": "node:test:node:renderer-runtime-context-hit-hover",
-    "commandRef": "test:node:renderer-runtime-context-hit-hover",
-    "sourceRefs": [
-      "tests/renderer_runtime_context_hit_hover_behavior.test.mjs",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/renderer_surface_host.js"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": null,
-    "selectorOrder": 281,
-    "verification": null,
-    "selector": {}
-  },
-  {
-    "id": "node:test:node:renderer-runtime-context-interaction",
-    "commandRef": "test:node:renderer-runtime-context-interaction",
-    "sourceRefs": [
-      "tests/renderer_runtime_context_interaction_behavior.test.mjs",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/renderer_surface_host.js"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": null,
-    "selectorOrder": 280,
-    "verification": null,
-    "selector": {}
-  },
-  {
     "id": "node:test:node:spatial-query-index",
     "commandRef": "test:node:spatial-query-index",
     "sourceRefs": [
@@ -654,105 +586,6 @@ export const RENDERER_INTERACTION_RECORDS = [
     "selector": {}
   },
   {
-    "id": "verify-core:test:node:renderer-runtime-context-hit-hover",
-    "commandRef": "test:node:renderer-runtime-context-hit-hover",
-    "sourceRefs": [
-      "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/map_renderer/hit_canvas_scheduling_owner.js",
-      "js/core/map_renderer/map_hover_interaction_owner.js",
-      "tests/renderer_runtime_context_hit_hover_behavior.test.mjs",
-      "tests/renderer_runtime_context_interaction_behavior.test.mjs",
-      "tests/hit_canvas_scheduling_owner_behavior.test.mjs",
-      "tests/hit_canvas_scheduling_owner_inventory.test.mjs",
-      "tests/map_hover_interaction_owner_behavior.test.mjs",
-      "tests/map_hover_interaction_owner_inventory.test.mjs",
-      "docs/active/renderer-runtime-context-hit-hover-p1-6-20260709.md",
-      "docs/active/renderer-runtime-context-p1-remaining-20260709/plan.md",
-      "docs/active/renderer-runtime-context-p1-remaining-20260709/context.md",
-      "docs/active/renderer-runtime-context-p1-remaining-20260709/task.md",
-      "package.json"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": 78,
-    "selectorOrder": 65,
-    "verification": {
-      "commandType": "package-script",
-      "packageScriptRequired": true,
-      "verifyCoreDefaultGroup": "renderer-owner",
-      "supervisorDomain": "renderer-runtime",
-      "routeRegistry": true
-    },
-    "selector": {}
-  },
-  {
-    "id": "verify-core:test:node:renderer-runtime-context-interaction",
-    "commandRef": "test:node:renderer-runtime-context-interaction",
-    "sourceRefs": [
-      "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/zoom_interaction_lifecycle_owner.js",
-      "js/core/renderer/map_interaction_event_binding_owner.js",
-      "tests/renderer_runtime_context_interaction_behavior.test.mjs",
-      "tests/renderer_runtime_context_receiver_behavior.test.mjs",
-      "tests/zoom_interaction_lifecycle_owner_behavior.test.mjs",
-      "tests/map_interaction_event_binding_owner_behavior.test.mjs",
-      "docs/active/renderer-runtime-context-interaction-p1-5-20260709.md",
-      "package.json"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": 76,
-    "selectorOrder": 63,
-    "verification": {
-      "commandType": "package-script",
-      "packageScriptRequired": true,
-      "verifyCoreDefaultGroup": "renderer-owner",
-      "supervisorDomain": "renderer-runtime",
-      "routeRegistry": true
-    },
-    "selector": {}
-  },
-  {
     "id": "verify-core:test:node:zoom-interaction-lifecycle-owner",
     "commandRef": "test:node:zoom-interaction-lifecycle-owner",
     "sourceRefs": [
@@ -856,7 +689,6 @@ export const RENDERER_INTERACTION_RECORDS = [
     "commandRef": "test:python:map-renderer-hit-hover-context-boundary",
     "sourceRefs": [
       "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "js/core/map_renderer/hit_canvas_scheduling_owner.js",
       "js/core/map_renderer/map_hover_interaction_owner.js",
       "js/core/map_renderer/public.js",
@@ -905,7 +737,6 @@ export const RENDERER_INTERACTION_RECORDS = [
     "commandRef": "test:python:map-renderer-interaction-context-boundary",
     "sourceRefs": [
       "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "js/core/renderer/zoom_interaction_lifecycle_owner.js",
       "js/core/renderer/map_interaction_event_binding_owner.js",
       "js/core/map_renderer/public.js",

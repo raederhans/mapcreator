@@ -8,7 +8,6 @@ MAP_RENDERER = REPO_ROOT / "js" / "core" / "map_renderer.js"
 OWNER = REPO_ROOT / "js" / "core" / "renderer" / "political_pass_orchestrator_owner.js"
 PARTIAL_OWNER = REPO_ROOT / "js" / "core" / "renderer" / "political_partial_repaint_owner.js"
 PUBLIC_FACADE = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
-RUNTIME_CONTEXT = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
 PASS_INVENTORY = REPO_ROOT / "tools" / "renderer_pass_family_inventory.mjs"
 
@@ -134,9 +133,8 @@ class MapRendererPoliticalPassOrchestratorBoundaryContractTest(unittest.TestCase
         ):
             self.assertIn(token, partial_repaint)
 
-    def test_public_context_allowlist_catalogs_and_existing_owners_remain_independent(self):
+    def test_public_allowlist_catalogs_and_existing_owners_remain_independent(self):
         self.assertNotIn("political_pass_orchestrator_owner", PUBLIC_FACADE.read_text(encoding="utf-8"))
-        self.assertNotIn("politicalPass", RUNTIME_CONTEXT.read_text(encoding="utf-8"))
         self.assertNotIn(CANONICAL_OWNER_PATH, STATE_WRITE_ALLOWLIST.read_text(encoding="utf-8"))
         for relative_path in (
             "js/core/renderer/render_pipeline_catalog.js",

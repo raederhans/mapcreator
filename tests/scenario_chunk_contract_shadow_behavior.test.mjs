@@ -18,11 +18,8 @@ function read(relativePath) {
   return fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
 }
 
-function registrationBlocks(source) {
+function registrationBlocks(source, partition) {
   const lines = source.split(/\r?\n/);
-  const heavyStart = lines.findIndex((line) => (
-    line.startsWith("export function registerScenarioChunkContractHeavyTests")
-  ));
   const blocks = [];
   for (let start = 0; start < lines.length; start += 1) {
     const match = /^  register\((\d+), "([^"]+)"/.exec(lines[start]);
@@ -33,7 +30,7 @@ function registrationBlocks(source) {
     blocks.push({
       order: Number(match[1]),
       name: match[2],
-      partition: start < heavyStart ? "quick" : "heavy",
+      partition,
       lines: lines.slice(start, end + 1),
     });
   }
@@ -45,11 +42,8 @@ function metrics(blocks) {
   const source = lines.join("\n");
   return {
     tests: blocks.length,
-    testBodyLoc: lines.length,
     readMarkers: (source.match(/readRepoFile\(/g) || []).length
       + (source.match(/loadVendorD3\(/g) || []).length,
-    wideRegexLines: lines.filter((line) => /\[\\s\\S\]/.test(line)).length,
-    regexTestCalls: (source.match(/\.test\(/g) || []).length,
   };
 }
 
@@ -62,11 +56,16 @@ function runFromManifest(manifest, partition = null, status = "pass", exitCode =
   };
 }
 
-test("legacy owns 79 static test bodies while quick and heavy entry files only select static registrars", () => {
+test("aggregate entry preserves 79 physical quick and heavy case registrations", () => {
   const legacySource = read("tests/scenario_chunk_contracts.test.mjs");
   const quickSource = read("tests/scenario_chunk_contracts.quick.test.mjs");
   const heavySource = read("tests/scenario_chunk_contracts.heavy.test.mjs");
-  const blocks = registrationBlocks(legacySource);
+  const quickCasesSource = read("tests/scenario_chunk_contracts.quick_cases.mjs");
+  const heavyCasesSource = read("tests/scenario_chunk_contracts.heavy_cases.mjs");
+  const blocks = [
+    ...registrationBlocks(quickCasesSource, "quick"),
+    ...registrationBlocks(heavyCasesSource, "heavy"),
+  ];
   const manifest = scenarioChunkContractRegistrationManifest();
 
   assert.equal(blocks.length, 79);
@@ -79,42 +78,37 @@ test("legacy owns 79 static test bodies while quick and heavy entry files only s
   assert.deepEqual(manifest.map((entry) => entry.order), Array.from({ length: 79 }, (_, index) => index));
   assert.equal(manifest.filter((entry) => entry.partition === "quick").length, 58);
   assert.equal(manifest.filter((entry) => entry.partition === "heavy").length, 21);
+  assert.match(legacySource, /from "\.\/scenario_chunk_contracts\.quick_cases\.mjs"/);
+  assert.match(legacySource, /from "\.\/scenario_chunk_contracts\.heavy_cases\.mjs"/);
   assert.match(legacySource, /registerScenarioChunkContractQuickTests\(collect\)/);
   assert.match(legacySource, /registerScenarioChunkContractHeavyTests\(collect\)/);
   assert.match(legacySource, /registrations\.sort\(\(left, right\) => left\.order - right\.order\)/);
-  assert.match(quickSource, /registerScenarioChunkContractQuickTests/);
-  assert.match(heavySource, /registerScenarioChunkContractHeavyTests/);
-  for (const entrySource of [quickSource, heavySource]) {
-    assert.doesNotMatch(entrySource, /--test-name-pattern|\.filter\(|register\(\d+,/);
-  }
+  assert.match(quickCasesSource, /export function registerScenarioChunkContractQuickTests/);
+  assert.match(heavyCasesSource, /export function registerScenarioChunkContractHeavyTests/);
+  assert.match(quickSource, /from "\.\/scenario_chunk_contracts\.quick_cases\.mjs"/);
+  assert.match(heavySource, /from "\.\/scenario_chunk_contracts\.heavy_cases\.mjs"/);
+  assert.doesNotMatch(quickSource, /scenario_chunk_contracts\.test|heavy_cases|register\(\d+,/);
+  assert.doesNotMatch(heavySource, /scenario_chunk_contracts\.test|quick_cases|register\(\d+,/);
+  assert.doesNotMatch(legacySource, /register\(\d+,/);
 });
 
-test("mechanical split preserves the frozen body and scan reduction counts", () => {
-  const blocks = registrationBlocks(read("tests/scenario_chunk_contracts.test.mjs"));
-  const quick = blocks.filter((entry) => entry.partition === "quick");
-  const heavy = blocks.filter((entry) => entry.partition === "heavy");
-  assert.deepEqual(metrics(blocks), {
-    tests: 79,
-    testBodyLoc: 4545,
-    readMarkers: 112,
-    wideRegexLines: 382,
-    regexTestCalls: 438,
-  });
+test("physical split keeps quick registrations free of heavy production-data reads", () => {
+  const quick = registrationBlocks(
+    read("tests/scenario_chunk_contracts.quick_cases.mjs"),
+    "quick",
+  );
+  const heavy = registrationBlocks(
+    read("tests/scenario_chunk_contracts.heavy_cases.mjs"),
+    "heavy",
+  );
+  const blocks = [...quick, ...heavy];
+  assert.deepEqual(metrics(blocks), { tests: 79, readMarkers: metrics(heavy).readMarkers });
   assert.deepEqual(metrics(quick), {
     tests: 58,
-    testBodyLoc: 2812,
     readMarkers: 0,
-    wideRegexLines: 0,
-    regexTestCalls: 1,
   });
-  assert.deepEqual(metrics(heavy), {
-    tests: 21,
-    testBodyLoc: 1733,
-    readMarkers: 112,
-    wideRegexLines: 382,
-    regexTestCalls: 437,
-  });
-  assert.equal(Number((((4545 - 2812) / 4545) * 100).toFixed(2)), 38.13);
+  assert.equal(metrics(heavy).tests, 21);
+  assert.ok(metrics(heavy).readMarkers > 0);
 });
 
 test("TAP parsing and ordered shadow comparison preserve pass fail skip and todo outcomes", () => {
@@ -194,6 +188,14 @@ test("catalog evidence binds independent inputs, leaf policy, and P4/TNO closure
   assert.match(evidence.inputSets.legacy.identity.digest, /^[a-f0-9]{64}$/);
   assert.notEqual(evidence.inputSets.legacy.identity.digest, evidence.inputSets.quick.identity.digest);
   assert.notEqual(evidence.inputSets.quick.identity.digest, evidence.inputSets.heavy.identity.digest);
+  const inputSetPaths = (name) => evidence.inputSets[name].entries
+    .map((entry) => entry.path);
+  assert.ok(inputSetPaths("legacy").includes("tests/scenario_chunk_contracts.quick_cases.mjs"));
+  assert.ok(inputSetPaths("legacy").includes("tests/scenario_chunk_contracts.heavy_cases.mjs"));
+  assert.ok(inputSetPaths("quick").includes("tests/scenario_chunk_contracts.quick_cases.mjs"));
+  assert.equal(inputSetPaths("quick").includes("tests/scenario_chunk_contracts.heavy_cases.mjs"), false);
+  assert.ok(inputSetPaths("heavy").includes("tests/scenario_chunk_contracts.heavy_cases.mjs"));
+  assert.equal(inputSetPaths("heavy").includes("tests/scenario_chunk_contracts.quick_cases.mjs"), false);
   assert.deepEqual(
     evidence.leaves["test:node:scenario-chunk-contracts:quick"].policy,
     { executionOwner: "child-safe", ciProfiles: ["pr-fast"], resourceLocks: [] },

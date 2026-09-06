@@ -58,6 +58,11 @@ import { showToast } from "./toast.js";
 import { showAppDialog } from "./app_dialog.js";
 import { initDevWorkspace } from "./dev_workspace.js";
 import { UI_URL_STATE_KEYS } from "./ui_contract.js";
+import { createCountryInspectorModel } from "./sidebar/country_inspector_model.js";
+import { createScenarioTerritoryController } from "./sidebar/scenario_territory_controller.js";
+import { createScenarioInspectorController } from "./sidebar/scenario_inspector_controller.js";
+import { createScenarioTransferController } from "./sidebar/scenario_transfer_controller.js";
+import { createRegionalPresetController } from "./sidebar/regional_preset_controller.js";
 import { createCountryInspectorController } from "./sidebar/country_inspector_controller.js";
 import { createStrategicOverlayController } from "./sidebar/strategic_overlay_controller.js";
 import { createWaterSpecialRegionController } from "./sidebar/water_special_region_controller.js";
@@ -92,16 +97,16 @@ import {
   UNIT_COUNTER_ECHELONS,
   UNIT_COUNTER_PRESETS,
 } from "../core/unit_counter_presets.js";
-import {
-  createEmptyHoi4UnitIconReviewDraft,
-  filterHoi4UnitIconEntries,
-  getHoi4UnitIconMappedPresetIds,
-  getHoi4UnitIconVariantPath,
-  loadHoi4UnitIconReviewDraft,
-  loadHoi4UnitIconManifest,
-  saveHoi4UnitIconReviewDraft,
-} from "../core/unit_counter_icon_libraries.js";
+
 const state = runtimeState;
+const {
+  getScenarioCountryMeta,
+  resolveScenarioInspectorGroupMeta,
+  resolveScenarioLookupCode,
+  resolveInspectorDataCode,
+  resolveCountryGroupingCode,
+  getCountryGroupingMeta,
+} = createCountryInspectorModel(runtimeState, t);
 
 function requestHgoIdentityAssetsForSettings(settings, loadAssets) {
   if (settings?.enabled === true && typeof loadAssets === "function") {
@@ -354,14 +359,6 @@ function getDynamicCountryEntries() {
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
-function buildInspectorTopLevelCountryEntries(entries = []) {
-  return (Array.isArray(entries) ? entries : []).filter(
-    (entry) => !entry?.releasable
-      && !entry?.hiddenFromCountryList
-      && (!entry?.scenarioSubject || !!entry?.inspectorGroupId)
-  );
-}
-
 function ensureCountryPaletteColor(code, fallbackIndex = 0) {
   const normalizedCode = normalizeCountryCode(code);
   if (!normalizedCode) return "#cccccc";
@@ -376,184 +373,6 @@ function ensureCountryPaletteColor(code, fallbackIndex = 0) {
     ColorManager.getPoliticalFallbackColor(normalizedCode, fallbackIndex) || "#cccccc";
   runtimeState.countryPalette[normalizedCode] = generated;
   return generated;
-}
-
-function getScenarioCountryMeta(entryOrCode) {
-  const rawCode = typeof entryOrCode === "object" && entryOrCode
-    ? entryOrCode.code
-    : entryOrCode;
-  const normalizedCode = normalizeCountryCode(rawCode);
-  if (!normalizedCode || !runtimeState.activeScenarioId) return null;
-  const entry = runtimeState.scenarioCountriesByTag?.[normalizedCode];
-  if (!entry || typeof entry !== "object") return null;
-  return entry;
-}
-
-const TNO_SCENARIO_ID = "tno_1962";
-const TNO_CHINA_INSPECTOR_GROUP = Object.freeze({
-  id: "scenario_group_china_region",
-  label: "China Region",
-  anchorId: "continent_asia",
-});
-const TNO_RUSSIA_INSPECTOR_GROUP = Object.freeze({
-  id: "scenario_group_russia_region",
-  label: "Russia Region",
-  anchorId: "continent_europe",
-});
-const INSPECTOR_GROUP_LABEL_CATALOG = Object.freeze({
-  "China Region": Object.freeze({ zh: "中国区域", en: "China Region" }),
-  "Russia Region": Object.freeze({ zh: "俄罗斯区域", en: "Russia Region" }),
-});
-
-function readExplicitInspectorGroupMeta(entry = {}) {
-  const id = String(entry?.inspector_group_id || entry?.inspectorGroupId || "").trim();
-  const label = String(entry?.inspector_group_label || entry?.inspectorGroupLabel || "").trim();
-  const anchorId = String(entry?.inspector_group_anchor_id || entry?.inspectorGroupAnchorId || "").trim();
-  if (!id) {
-    return {
-      id: "",
-      label: "",
-      anchorId: "",
-    };
-  }
-  return {
-    id,
-    label: label || id,
-    anchorId,
-  };
-}
-
-function collectScenarioInspectorIso2Codes(...entries) {
-  const iso2Codes = new Set();
-  entries.forEach((entry) => {
-    if (!entry || typeof entry !== "object") return;
-    [
-      entry.base_iso2,
-      entry.baseIso2,
-      entry.lookup_iso2,
-      entry.lookupIso2,
-      entry.provenance_iso2,
-      entry.provenanceIso2,
-    ].forEach((value) => {
-      const normalized = String(value || "").trim().toUpperCase();
-      if (normalized) {
-        iso2Codes.add(normalized);
-      }
-    });
-  });
-  return iso2Codes;
-}
-
-function resolveScenarioInspectorGroupMeta(entryOrCode) {
-  const entry = typeof entryOrCode === "object" && entryOrCode ? entryOrCode : null;
-  const scenarioMeta = getScenarioCountryMeta(entryOrCode) || null;
-  const explicitScenarioGroup = readExplicitInspectorGroupMeta(scenarioMeta || {});
-  if (explicitScenarioGroup.id) return explicitScenarioGroup;
-  const explicitEntryGroup = readExplicitInspectorGroupMeta(entry || {});
-  if (explicitEntryGroup.id) return explicitEntryGroup;
-
-  if (String(runtimeState.activeScenarioId || "").trim() !== TNO_SCENARIO_ID) {
-    return explicitEntryGroup;
-  }
-
-  const tag = normalizeCountryCode(
-    scenarioMeta?.tag
-    || entry?.tag
-    || entry?.code
-    || (typeof entryOrCode === "string" ? entryOrCode : "")
-  );
-  if (!tag) {
-    return explicitEntryGroup;
-  }
-
-  const iso2Codes = collectScenarioInspectorIso2Codes(scenarioMeta, entry);
-  if (iso2Codes.has("RU") && !tag.startsWith("RK")) {
-    return TNO_RUSSIA_INSPECTOR_GROUP;
-  }
-  if (iso2Codes.has("CN") && tag !== "MAN") {
-    return TNO_CHINA_INSPECTOR_GROUP;
-  }
-  return explicitEntryGroup;
-}
-
-function resolveScenarioLookupCode(entryOrCode) {
-  const fallbackCode = normalizeCountryCode(
-    typeof entryOrCode === "object" && entryOrCode
-      ? entryOrCode.code
-      : entryOrCode
-  );
-  if (!runtimeState.activeScenarioId) {
-    return fallbackCode;
-  }
-
-  const scenarioMeta = getScenarioCountryMeta(entryOrCode);
-  const entry = typeof entryOrCode === "object" && entryOrCode ? entryOrCode : null;
-  const candidates = [
-    scenarioMeta?.preset_lookup_code,
-    scenarioMeta?.presetLookupCode,
-    entry?.preset_lookup_code,
-    entry?.presetLookupCode,
-    scenarioMeta?.lookup_iso2,
-    scenarioMeta?.lookupIso2,
-    entry?.lookup_iso2,
-    entry?.lookupIso2,
-    scenarioMeta?.base_iso2,
-    scenarioMeta?.baseIso2,
-    entry?.base_iso2,
-    entry?.baseIso2,
-    fallbackCode,
-  ];
-
-  for (const candidate of candidates) {
-    const normalized = normalizeCountryCode(candidate);
-    if (normalized) {
-      return normalized;
-    }
-  }
-
-  return fallbackCode;
-}
-
-function resolveInspectorDataCode(entryOrCode) {
-  const fallbackCode = normalizeCountryCode(
-    typeof entryOrCode === "object" && entryOrCode
-      ? entryOrCode.code
-      : entryOrCode
-  );
-  if (!runtimeState.activeScenarioId) {
-    return fallbackCode;
-  }
-
-  const scenarioMeta = getScenarioCountryMeta(entryOrCode);
-  const entry = typeof entryOrCode === "object" && entryOrCode ? entryOrCode : null;
-  const candidates = [
-    scenarioMeta?.release_lookup_iso2,
-    scenarioMeta?.releaseLookupIso2,
-    entry?.release_lookup_iso2,
-    entry?.releaseLookupIso2,
-    scenarioMeta?.lookup_iso2,
-    scenarioMeta?.lookupIso2,
-    entry?.lookup_iso2,
-    entry?.lookupIso2,
-    scenarioMeta?.base_iso2,
-    scenarioMeta?.baseIso2,
-    entry?.base_iso2,
-    entry?.baseIso2,
-    fallbackCode,
-  ];
-
-  for (const candidate of candidates) {
-    const normalized = normalizeCountryCode(candidate);
-    if (normalized) {
-      return normalized;
-    }
-  }
-
-  return fallbackCode;
-}
-
-function resolveCountryGroupingCode(entryOrCode) {
-  return resolveInspectorDataCode(entryOrCode);
 }
 
 function getHierarchyGroupsForCode(code) {
@@ -576,226 +395,6 @@ function getHierarchyGroupsForCode(code) {
   });
   groups.sort((a, b) => a.label.localeCompare(b.label));
   return groups;
-}
-
-function getCountryGroupingMeta(entryOrCode) {
-  const normalizedCode = resolveCountryGroupingCode(entryOrCode);
-  if (!normalizedCode || !(runtimeState.countryGroupMetaByCode instanceof Map)) return null;
-  return runtimeState.countryGroupMetaByCode.get(normalizedCode) || null;
-}
-
-function getPriorityCountryOrderMap() {
-  const priorityByContinent = runtimeState.countryGroupsData?.priority_by_continent || {};
-  const priorityOrderMap = new Map();
-
-  Object.entries(priorityByContinent).forEach(([continentId, rawCodes]) => {
-    const continentOrder = new Map();
-    (Array.isArray(rawCodes) ? rawCodes : []).forEach((rawCode, index) => {
-      const code = normalizeCountryCode(rawCode);
-      if (code && !continentOrder.has(code)) {
-        continentOrder.set(code, index);
-      }
-    });
-    priorityOrderMap.set(continentId, continentOrder);
-  });
-
-  return priorityOrderMap;
-}
-
-function getCountryPriorityRank(countryState, priorityOrderMap = getPriorityCountryOrderMap()) {
-  const priorityCode = normalizeCountryCode(
-    countryState?.groupingCode || countryState?.lookupIso2 || countryState?.code
-  );
-  if (!countryState?.continentId || !priorityCode) return Number.MAX_SAFE_INTEGER;
-  const continentOrder = priorityOrderMap.get(countryState.continentId);
-  if (!continentOrder || !continentOrder.has(priorityCode)) {
-    return Number.MAX_SAFE_INTEGER;
-  }
-  return continentOrder.get(priorityCode);
-}
-
-function compareInspectorCountries(a, b, priorityOrderMap = getPriorityCountryOrderMap()) {
-  const featuredDelta = Number(!!b?.featured) - Number(!!a?.featured);
-  if (featuredDelta !== 0) return featuredDelta;
-
-  const priorityDelta =
-    getCountryPriorityRank(a, priorityOrderMap) - getCountryPriorityRank(b, priorityOrderMap);
-  if (priorityDelta !== 0) return priorityDelta;
-
-  const featureDelta = Number(b?.featureCount || 0) - Number(a?.featureCount || 0);
-  if (featureDelta !== 0) return featureDelta;
-
-  const scenarioOnlyDelta = Number(!!a?.scenarioOnly) - Number(!!b?.scenarioOnly);
-  if (scenarioOnlyDelta !== 0) return scenarioOnlyDelta;
-
-  return String(a?.displayName || "").localeCompare(String(b?.displayName || ""));
-}
-
-function sortCountriesWithinContinent(entries, priorityOrderMap = getPriorityCountryOrderMap()) {
-  return [...entries].sort((a, b) => compareInspectorCountries(a, b, priorityOrderMap));
-}
-
-function getInspectorGroupExpansionKey(groupId) {
-  return `group::${String(groupId || "").trim()}`;
-}
-
-function localizeInspectorGroupLabel(label) {
-  const normalizedLabel = String(label || "").trim();
-  if (!normalizedLabel) return "";
-  const inlineLabel = INSPECTOR_GROUP_LABEL_CATALOG[normalizedLabel];
-  if (inlineLabel) {
-    return inlineLabel[runtimeState.currentLanguage === "zh" ? "zh" : "en"] || inlineLabel.en || normalizedLabel;
-  }
-  const geoLabel = t(normalizedLabel, "geo") || normalizedLabel;
-  if (geoLabel !== normalizedLabel) return geoLabel;
-  return t(normalizedLabel, "ui") || geoLabel;
-}
-
-function getInspectorTopLevelGroupMeta(entry = {}) {
-  const fallbackContinentId = String(entry?.continentId || "continent_other").trim() || "continent_other";
-  const fallbackContinentLabel = String(entry?.continentLabel || "Other").trim() || "Other";
-  const groupId = String(entry?.topLevelGroupId || fallbackContinentId).trim() || fallbackContinentId;
-  const groupLabel = String(entry?.topLevelGroupLabel || fallbackContinentLabel).trim() || fallbackContinentLabel;
-  const groupAnchorId = String(entry?.topLevelGroupAnchorId || "").trim();
-  return {
-    id: groupId,
-    label: groupLabel,
-    displayLabel: localizeInspectorGroupLabel(groupLabel),
-    anchorId: groupAnchorId,
-  };
-}
-
-function getInspectorTopLevelGroupIdForCode(code) {
-  const normalizedCode = normalizeCountryCode(code);
-  if (!normalizedCode) return "";
-  const inspectorGroupId = resolveScenarioInspectorGroupMeta(normalizedCode).id;
-  if (inspectorGroupId) return inspectorGroupId;
-  return getCountryGroupingMeta(normalizedCode)?.continentId || "";
-}
-
-function buildCountryColorTree(entries) {
-  const tree = new Map();
-  const topLevelOrder = new Map();
-  const configuredContinents = Array.isArray(runtimeState.countryGroupsData?.continents)
-    ? runtimeState.countryGroupsData.continents
-    : [];
-  const priorityOrderMap = getPriorityCountryOrderMap();
-  const anchoredScenarioGroups = new Map();
-  const unanchoredScenarioGroups = new Map();
-  const orderedTopLevelGroups = [];
-
-  // inspector 分组树只决定右侧列表怎么归类和排序；真正的国家数据仍来自 scenario/meta。
-  // 有 anchor 的 scenario 分组会插到指定 continent 前，避免把 TNO 这类虚拟区域写成真实 continent。
-  const pushTopLevelGroup = (groupMeta) => {
-    if (!groupMeta?.id || topLevelOrder.has(groupMeta.id)) return;
-    topLevelOrder.set(groupMeta.id, orderedTopLevelGroups.length);
-    orderedTopLevelGroups.push(groupMeta);
-  };
-
-  entries.forEach((entry) => {
-    const groupMeta = getInspectorTopLevelGroupMeta(entry);
-    if (groupMeta.id === entry?.continentId) return;
-    if (groupMeta.anchorId) {
-      const list = anchoredScenarioGroups.get(groupMeta.anchorId) || [];
-      if (!list.some((item) => item.id === groupMeta.id)) {
-        list.push(groupMeta);
-        anchoredScenarioGroups.set(groupMeta.anchorId, list);
-      }
-      return;
-    }
-    if (!unanchoredScenarioGroups.has(groupMeta.id)) {
-      unanchoredScenarioGroups.set(groupMeta.id, groupMeta);
-    }
-  });
-
-  configuredContinents.forEach((continent) => {
-    const continentId = String(continent?.id || "").trim();
-    if (!continentId) return;
-
-    (anchoredScenarioGroups.get(continentId) || [])
-      .sort((a, b) => a.displayLabel.localeCompare(b.displayLabel))
-      .forEach(pushTopLevelGroup);
-
-    const continentLabel = String(continent?.label || "").trim() || continentId;
-    pushTopLevelGroup({
-      id: continentId,
-      label: continentLabel,
-      displayLabel: localizeInspectorGroupLabel(continentLabel),
-      anchorId: "",
-    });
-  });
-
-  Array.from(unanchoredScenarioGroups.values())
-    .sort((a, b) => a.displayLabel.localeCompare(b.displayLabel))
-    .forEach(pushTopLevelGroup);
-
-  entries.forEach((entry) => {
-    const groupMeta = getInspectorTopLevelGroupMeta(entry);
-    if (!topLevelOrder.has(groupMeta.id)) {
-      pushTopLevelGroup(groupMeta);
-    }
-  });
-
-  // 这里先补齐“顶层分组顺序”，再回填国家成员。
-  // 这样 scenario-only 分组既能挂到真实 continent 前后，又不会在后续 entries 遍历时被重复插入。
-  entries.forEach((entry) => {
-    const groupMeta = getInspectorTopLevelGroupMeta(entry);
-
-    if (!tree.has(groupMeta.id)) {
-      tree.set(groupMeta.id, {
-        id: groupMeta.id,
-        label: groupMeta.label,
-        displayLabel: groupMeta.displayLabel,
-        sortIndex: topLevelOrder.has(groupMeta.id) ? topLevelOrder.get(groupMeta.id) : Number.MAX_SAFE_INTEGER,
-        countries: [],
-      });
-    }
-
-    tree.get(groupMeta.id).countries.push(entry);
-  });
-
-  return Array.from(tree.values())
-    .map((groupNode) => ({
-      ...groupNode,
-      countries: sortCountriesWithinContinent(groupNode.countries, priorityOrderMap),
-    }))
-    .sort((a, b) => {
-      if (a.sortIndex !== b.sortIndex) return a.sortIndex - b.sortIndex;
-      return a.displayLabel.localeCompare(b.displayLabel);
-    });
-}
-
-function getDefaultExpandedInspectorGroupId(groupedEntries = []) {
-  const selectedCode = normalizeCountryCode(runtimeState.selectedInspectorCountryCode);
-  const selectedGroupId = getInspectorTopLevelGroupIdForCode(selectedCode);
-  if (selectedGroupId) return selectedGroupId;
-
-  const activeCode = normalizeCountryCode(runtimeState.activeSovereignCode);
-  const activeGroupId = getInspectorTopLevelGroupIdForCode(activeCode);
-  if (activeGroupId) return activeGroupId;
-
-  const europeNode = groupedEntries.find((entry) => entry.id === "continent_europe");
-  if (europeNode) return europeNode.id;
-
-  return groupedEntries[0]?.id || "";
-}
-
-function ensureInitialInspectorExpansion(groupedEntries = []) {
-  if (runtimeState.inspectorExpansionInitialized || !groupedEntries.length) return;
-  if (!(runtimeState.expandedInspectorContinents instanceof Set)) {
-    runtimeState.expandedInspectorContinents = new Set();
-  }
-
-  if (runtimeState.expandedInspectorContinents.size > 0) {
-    runtimeState.inspectorExpansionInitialized = true;
-    return;
-  }
-
-  const defaultGroupId = getDefaultExpandedInspectorGroupId(groupedEntries);
-  if (defaultGroupId) {
-    runtimeState.expandedInspectorContinents.add(getInspectorGroupExpansionKey(defaultGroupId));
-  }
-  runtimeState.inspectorExpansionInitialized = true;
 }
 
 function normalizeActionMode(mode = "auto") {
@@ -1115,45 +714,6 @@ function applyScenarioOwnerControllerAssignments(
   };
 }
 
-function getScenarioBoundaryVariantUnionFeatureIds(countryState, targetIds = []) {
-  const scenarioMeta = getScenarioCountryMeta(countryState?.code) || countryState || {};
-  const lookupEntry = {
-    tag: scenarioMeta?.code || countryState?.code || "",
-    release_lookup_iso2:
-      scenarioMeta?.release_lookup_iso2
-      || scenarioMeta?.releaseLookupIso2
-      || scenarioMeta?.lookup_iso2
-      || scenarioMeta?.lookupIso2
-      || scenarioMeta?.base_iso2
-      || scenarioMeta?.baseIso2
-      || "",
-    lookup_iso2:
-      scenarioMeta?.lookup_iso2
-      || scenarioMeta?.lookupIso2
-      || scenarioMeta?.release_lookup_iso2
-      || scenarioMeta?.releaseLookupIso2
-      || scenarioMeta?.base_iso2
-      || scenarioMeta?.baseIso2
-      || "",
-    base_iso2: scenarioMeta?.base_iso2 || scenarioMeta?.baseIso2 || scenarioMeta?.lookup_iso2 || scenarioMeta?.lookupIso2 || "",
-  };
-  const featureIds = new Set((targetIds || []).map((id) => String(id || "").trim()).filter(Boolean));
-  const variants = Array.isArray(scenarioMeta?.boundary_variants)
-    ? scenarioMeta.boundary_variants
-    : Array.isArray(scenarioMeta?.boundaryVariants)
-      ? scenarioMeta.boundaryVariants
-      : [];
-  variants.forEach((variant) => {
-    resolveFeatureIdsFromPresetSource(variant?.preset_source, lookupEntry).forEach((featureId) => {
-      const normalizedId = String(featureId || "").trim();
-      if (normalizedId) {
-        featureIds.add(normalizedId);
-      }
-    });
-  });
-  return Array.from(featureIds);
-}
-
 function applyHierarchyGroupWithMode(
   group,
   {
@@ -1286,184 +846,6 @@ function getOwnedVisibleFeatureIds(ownerCode) {
   return filterToVisibleFeatureIds(requestedIds);
 }
 
-function applyPresetWithMode(
-  countryCode,
-  presetIndex,
-  {
-    mode = "auto",
-    color,
-    ownerCode,
-    render,
-    ownershipHistoryKind = "preset-apply-sovereignty",
-    ownershipDirtyReason = "preset-apply-sovereignty",
-    visualHistoryKind = "preset-apply-color",
-    visualDirtyReason = "preset-apply-color",
-  } = {}
-) {
-  const presetLookupCode = resolveScenarioLookupCode(countryCode);
-  const presets = runtimeState.presetsState[presetLookupCode];
-  if (!presets || !presets[presetIndex]) {
-    console.warn(`Preset not found: ${presetLookupCode}[${presetIndex}]`);
-    return {
-      applied: false,
-      changed: 0,
-      matchedCount: 0,
-      requestedCount: 0,
-      missingCount: 0,
-      reason: "missing-preset",
-    };
-  }
-
-  const preset = presets[presetIndex];
-  const requestedFeatureIds = Array.isArray(preset.ids)
-    ? preset.ids
-    : [];
-  const {
-    requestedIds,
-    matchedIds: targetIds,
-    missingIds,
-  } = filterToVisibleFeatureIds(requestedFeatureIds);
-  if (!requestedIds.length) {
-    return {
-      applied: false,
-      changed: 0,
-      matchedCount: 0,
-      requestedCount: 0,
-      missingCount: 0,
-      reason: "empty-preset",
-    };
-  }
-  if (!targetIds.length) {
-    showToast(
-      t("Current map does not include this preset's detail features. Load detail topology and try again.", "ui"),
-      {
-        title: t("Preset not applied", "ui"),
-        tone: "warning",
-        duration: 4200,
-      }
-    );
-    console.warn("[scenario] Preset apply skipped because no visible feature ids matched.", {
-      countryCode,
-      presetLookupCode,
-      presetName: preset.name,
-      requestedCount: requestedIds.length,
-      missingCount: missingIds.length,
-    });
-    return {
-      applied: false,
-      changed: 0,
-      matchedCount: 0,
-      requestedCount: requestedIds.length,
-      missingCount: missingIds.length,
-      reason: "no-visible-features",
-    };
-  }
-
-  const resolvedMode = normalizeActionMode(mode);
-  if (resolvedMode === "ownership") {
-    const result = applyOwnershipToFeatureIds(targetIds, ownerCode || runtimeState.activeSovereignCode, {
-      render,
-      historyKind: ownershipHistoryKind,
-      dirtyReason: ownershipDirtyReason,
-      recomputeReason: "sidebar-preset-batch",
-    });
-    return {
-      ...result,
-      matchedCount: targetIds.length,
-      requestedCount: requestedIds.length,
-      missingCount: missingIds.length,
-    };
-  }
-
-  const result = applyVisualOverridesToFeatureIds(targetIds, color || runtimeState.selectedColor, {
-    render,
-    historyKind: visualHistoryKind,
-    dirtyReason: visualDirtyReason,
-  });
-  return {
-    ...result,
-    matchedCount: targetIds.length,
-    requestedCount: requestedIds.length,
-    missingCount: missingIds.length,
-  };
-}
-
-function applyPreset(countryCode, presetIndex, color, render) {
-  return applyPresetWithMode(countryCode, presetIndex, {
-    mode: "auto",
-    color,
-    render,
-  });
-}
-
-function applyExplicitOwnershipTransfer(
-  requestedFeatureIds,
-  targetOwnerCode,
-  {
-    render,
-    historyKind = "scenario-companion-transfer",
-    dirtyReason = "scenario-companion-transfer",
-    recomputeReason = "sidebar-companion-transfer",
-  } = {}
-) {
-  const {
-    requestedIds,
-    matchedIds: targetIds,
-    missingIds,
-  } = filterToVisibleFeatureIds(requestedFeatureIds);
-  if (!requestedIds.length) {
-    return {
-      applied: false,
-      changed: 0,
-      matchedCount: 0,
-      requestedCount: 0,
-      missingCount: 0,
-      reason: "empty-target",
-      mode: "ownership",
-    };
-  }
-  if (!targetIds.length) {
-    showToast(
-      t("Current map does not include this action's detail features. Load detail topology and try again.", "ui"),
-      {
-        title: t("Transfer not applied", "ui"),
-        tone: "warning",
-        duration: 4200,
-      }
-    );
-    return {
-      applied: false,
-      changed: 0,
-      matchedCount: 0,
-      requestedCount: requestedIds.length,
-      missingCount: missingIds.length,
-      reason: "no-visible-features",
-      mode: "ownership",
-    };
-  }
-  const assignmentsByFeatureId = Object.fromEntries(
-    targetIds.map((featureId) => [
-      featureId,
-      {
-        ownerCode: targetOwnerCode,
-        controllerCode: targetOwnerCode,
-      },
-    ])
-  );
-  const result = applyScenarioOwnerControllerAssignments(assignmentsByFeatureId, {
-    render,
-    historyKind,
-    dirtyReason,
-    recomputeReason,
-  });
-  return {
-    ...result,
-    matchedCount: targetIds.length,
-    requestedCount: requestedIds.length,
-    missingCount: missingIds.length,
-  };
-}
-
 function initSidebar({ render } = {}) {
   const list = document.getElementById("countryList");
   if (!list) return;
@@ -1486,295 +868,6 @@ function initSidebar({ render } = {}) {
   const legendEditorStack = document.getElementById("legendEditorStack")
     || projectManagementStack;
   const diagnosticStack = document.getElementById("diagnosticStack");
-
-  let projectSection = document.getElementById("projectManagement");
-  if (!projectSection && projectManagementStack) {
-    projectSection = document.createElement("div");
-    projectSection.id = "projectManagement";
-    projectSection.className = "inspector-tool-card project-management-card";
-
-    const actions = document.createElement("div");
-    actions.className = "project-management-actions";
-
-    const buildProjectSelect = (id, labelText, options) => {
-      const field = document.createElement("label");
-      field.className = "project-file-option";
-      field.htmlFor = id;
-      const label = document.createElement("span");
-      label.className = "sidebar-field-label";
-      label.setAttribute("data-i18n", labelText);
-      label.textContent = t(labelText, "ui");
-      const select = document.createElement("select");
-      select.id = id;
-      select.className = "select-input";
-      options.forEach(([value, text]) => {
-        const option = document.createElement("option");
-        option.value = value;
-        option.setAttribute("data-i18n", text);
-        option.textContent = t(text, "ui");
-        select.appendChild(option);
-      });
-      field.append(label, select);
-      return { field, select };
-    };
-
-    const projectDownloadOptions = document.createElement("div");
-    projectDownloadOptions.className = "project-file-options";
-    const projectDownloadFormat = buildProjectSelect("projectDownloadFormat", "File type", [
-      ["json", "Editable project JSON"],
-      ["zip", "Project ZIP package"],
-    ]);
-    const projectDownloadDestination = buildProjectSelect("projectDownloadDestination", "Download to", [
-      ["picker", "Save As dialog"],
-      ["browser", "Browser download"],
-    ]);
-    const projectPackageContents = buildProjectSelect("projectPackageContents", "Package contents", [
-      ["minimal", "Project only"],
-      ["recommended", "Project + metadata"],
-      ["diagnostic", "Project + diagnostics"],
-    ]);
-    const projectLoadSource = buildProjectSelect("projectLoadSource", "Load source", [
-      ["local", "Local project file"],
-      ["community", "Community save"],
-    ]);
-    projectDownloadOptions.append(
-      projectDownloadFormat.field,
-      projectPackageContents.field,
-      projectDownloadDestination.field,
-      projectLoadSource.field
-    );
-
-    const downloadBtn = document.createElement("button");
-    downloadBtn.id = "downloadProjectBtn";
-    downloadBtn.type = "button";
-    downloadBtn.className = "btn-primary";
-    downloadBtn.setAttribute("data-i18n", "Download Project");
-    downloadBtn.textContent = t("Download Project", "ui");
-
-    const uploadBtn = document.createElement("button");
-    uploadBtn.id = "uploadProjectBtn";
-    uploadBtn.type = "button";
-    uploadBtn.className = "btn-secondary";
-    uploadBtn.setAttribute("data-i18n", "Load Project");
-    uploadBtn.textContent = t("Load Project", "ui");
-
-    const fileInput = document.createElement("input");
-    fileInput.id = "projectFileInput";
-    fileInput.type = "file";
-    fileInput.accept = ".json,.zip,application/json,application/zip,application/x-zip-compressed";
-    fileInput.className = "hidden";
-    fileInput.setAttribute("aria-label", t("Load Project", "ui"));
-    fileInput.setAttribute("data-i18n-aria-label", "Load Project");
-
-    const fileMeta = document.createElement("div");
-    fileMeta.id = "projectFileMeta";
-    fileMeta.className = "project-file-meta";
-
-    const fileMetaLabel = document.createElement("span");
-    fileMetaLabel.id = "lblProjectFile";
-    fileMetaLabel.className = "section-header";
-    fileMetaLabel.setAttribute("data-i18n", "Selected File");
-    fileMetaLabel.textContent = t("Selected File", "ui");
-
-    const fileName = document.createElement("span");
-    fileName.id = "projectFileName";
-    fileName.className = "project-file-name u-truncate";
-    fileName.dataset.projectFileState = "empty";
-    fileName.textContent = t("No file selected", "ui");
-
-    fileMeta.appendChild(fileMetaLabel);
-    fileMeta.appendChild(fileName);
-
-    const projectSaveStatus = document.createElement("p");
-    projectSaveStatus.id = "projectSaveStatus";
-    projectSaveStatus.className = "sidebar-tool-hint project-save-status";
-    projectSaveStatus.setAttribute("role", "status");
-    projectSaveStatus.setAttribute("aria-live", "polite");
-    projectSaveStatus.setAttribute("aria-atomic", "true");
-    projectSaveStatus.classList.add("hidden");
-    projectSaveStatus.textContent = "";
-
-    const accountDock = document.createElement("div");
-    accountDock.className = "project-account-dock";
-
-    const accountHint = document.createElement("span");
-    accountHint.className = "project-account-hint";
-    accountHint.textContent = t("Account", "ui");
-
-    const accountToggleBtn = document.createElement("button");
-    accountToggleBtn.id = "backendAccountToggleBtn";
-    accountToggleBtn.type = "button";
-    accountToggleBtn.className = "project-account-toggle";
-    accountToggleBtn.setAttribute("aria-haspopup", "dialog");
-    accountToggleBtn.setAttribute("aria-expanded", "false");
-    accountToggleBtn.setAttribute("aria-controls", "backendAccountPopover");
-    accountToggleBtn.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
-    accountToggleBtn.title = t("Account and Cloud Saves", "ui");
-    accountToggleBtn.innerHTML = `
-      <svg class="project-account-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"></circle>
-        <path d="M5.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
-      </svg>
-    `;
-    accountDock.append(accountHint, accountToggleBtn);
-
-    const accountPopover = document.createElement("div");
-    accountPopover.id = "backendAccountPopover";
-    accountPopover.className = "project-account-popover hidden";
-    accountPopover.setAttribute("role", "dialog");
-    accountPopover.setAttribute("aria-label", t("Account and Cloud Saves", "ui"));
-    accountPopover.setAttribute("aria-modal", "true");
-
-    const accountBackdrop = document.createElement("div");
-    accountBackdrop.id = "backendAccountBackdrop";
-    accountBackdrop.className = "project-account-backdrop hidden";
-    accountBackdrop.setAttribute("aria-hidden", "true");
-
-    const accountShelf = document.createElement("div");
-    accountShelf.id = "rightSidebarAccountShelf";
-    accountShelf.className = "right-sidebar-account-shelf";
-    accountShelf.append(accountDock);
-
-    actions.appendChild(downloadBtn);
-    actions.appendChild(projectDownloadOptions);
-    actions.appendChild(uploadBtn);
-    actions.appendChild(projectSaveStatus);
-    actions.appendChild(fileMeta);
-    actions.appendChild(fileInput);
-
-    projectSection.appendChild(actions);
-    {
-      const cloudSection = document.createElement("div");
-      cloudSection.id = "backendCloudSection";
-      cloudSection.className = "project-account-panel";
-      cloudSection.hidden = true;
-
-      const cloudHeader = document.createElement("div");
-      cloudHeader.className = "project-account-panel-header";
-
-      const cloudHeaderCopy = document.createElement("div");
-      cloudHeaderCopy.className = "project-account-panel-copy";
-
-      const cloudTitle = document.createElement("h2");
-      cloudTitle.className = "project-account-panel-title";
-      cloudTitle.id = "backendAccountPopoverTitle";
-      cloudTitle.textContent = t("Cloud Saves", "ui");
-      accountPopover.setAttribute("aria-labelledby", "backendAccountPopoverTitle");
-
-      const cloudStatus = document.createElement("p");
-      cloudStatus.id = "backendCloudStatus";
-      cloudStatus.className = "project-account-panel-status";
-      cloudStatus.setAttribute("role", "status");
-      cloudStatus.setAttribute("aria-live", "polite");
-      cloudStatus.setAttribute("aria-atomic", "true");
-      cloudStatus.textContent = t("Local backend cloud saves are available after login.", "ui");
-      cloudHeaderCopy.append(cloudTitle, cloudStatus);
-
-      const closeAccountBtn = document.createElement("button");
-      closeAccountBtn.id = "backendAccountCloseBtn";
-      closeAccountBtn.type = "button";
-      closeAccountBtn.className = "project-account-close-btn";
-      closeAccountBtn.setAttribute("aria-label", t("Close", "ui"));
-      closeAccountBtn.textContent = "×";
-      cloudHeader.append(cloudHeaderCopy, closeAccountBtn);
-
-      const cloudCredentialGrid = document.createElement("div");
-      cloudCredentialGrid.className = "project-account-field-grid";
-
-      const cloudUsername = document.createElement("input");
-      cloudUsername.id = "backendCloudUsername";
-      cloudUsername.type = "text";
-      cloudUsername.autocomplete = "username";
-      cloudUsername.placeholder = t("Username", "ui");
-      cloudUsername.className = "input project-account-input";
-
-      const cloudPassword = document.createElement("input");
-      cloudPassword.id = "backendCloudPassword";
-      cloudPassword.type = "password";
-      cloudPassword.autocomplete = "current-password";
-      cloudPassword.placeholder = t("Password", "ui");
-      cloudPassword.className = "input project-account-input";
-
-      const cloudTitleInput = document.createElement("input");
-      cloudTitleInput.id = "backendCloudSaveTitle";
-      cloudTitleInput.type = "text";
-      cloudTitleInput.placeholder = t("Save title", "ui");
-      cloudTitleInput.className = "input project-account-input project-account-title-input";
-      cloudCredentialGrid.append(cloudUsername, cloudPassword, cloudTitleInput);
-
-      const cloudActions = document.createElement("div");
-      cloudActions.className = "project-account-actions";
-
-      const registerCloudBtn = document.createElement("button");
-      registerCloudBtn.id = "backendCloudRegisterBtn";
-      registerCloudBtn.type = "button";
-      registerCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
-      registerCloudBtn.textContent = t("Register", "ui");
-
-      const loginCloudBtn = document.createElement("button");
-      loginCloudBtn.id = "backendCloudLoginBtn";
-      loginCloudBtn.type = "button";
-      loginCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
-      loginCloudBtn.textContent = t("Login", "ui");
-
-      const logoutCloudBtn = document.createElement("button");
-      logoutCloudBtn.id = "backendCloudLogoutBtn";
-      logoutCloudBtn.type = "button";
-      logoutCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
-      logoutCloudBtn.textContent = t("Logout", "ui");
-
-      const saveCloudBtn = document.createElement("button");
-      saveCloudBtn.id = "backendCloudSaveBtn";
-      saveCloudBtn.type = "button";
-      saveCloudBtn.className = "btn-primary sidebar-support-entry-btn";
-      saveCloudBtn.textContent = t("Save Cloud Copy", "ui");
-
-      const publishCloudBtn = document.createElement("button");
-      publishCloudBtn.id = "backendCloudPublishBtn";
-      publishCloudBtn.type = "button";
-      publishCloudBtn.className = "btn-secondary sidebar-support-entry-btn";
-      publishCloudBtn.textContent = t("Publish Latest", "ui");
-
-      const refreshCommunityBtn = document.createElement("button");
-      refreshCommunityBtn.id = "backendCommunityRefreshBtn";
-      refreshCommunityBtn.type = "button";
-      refreshCommunityBtn.className = "btn-secondary sidebar-support-entry-btn";
-      refreshCommunityBtn.textContent = t("Refresh Community", "ui");
-
-      cloudActions.append(
-        registerCloudBtn,
-        loginCloudBtn,
-        logoutCloudBtn,
-        saveCloudBtn,
-        publishCloudBtn,
-        refreshCommunityBtn
-      );
-
-      const communityList = document.createElement("div");
-      communityList.id = "backendCommunityList";
-      communityList.className = "project-account-community-list";
-
-      cloudSection.append(cloudHeader, cloudCredentialGrid, cloudActions, communityList);
-      accountPopover.appendChild(cloudSection);
-    }
-    document.body.append(accountBackdrop, accountPopover);
-    projectManagementStack.appendChild(projectSection);
-    rightSidebarContent?.appendChild(accountShelf);
-  }
-
-  let legendSection = document.getElementById("legendEditor");
-  if (!legendSection && legendEditorStack) {
-    legendSection = document.createElement("div");
-    legendSection.id = "legendEditor";
-    legendSection.className = "inspector-tool-card";
-
-    const list = document.createElement("div");
-    list.id = "legendEditorList";
-    list.className = "mt-3";
-
-    legendSection.appendChild(list);
-    legendEditorStack.appendChild(legendSection);
-  }
 
   const frontlineTabStack = document.getElementById("frontlineTabStack");
   const buildRow = () => {
@@ -1987,298 +1080,6 @@ function initSidebar({ render } = {}) {
         .filter(Boolean);
       return haystacks.some((entry) => entry.includes(normalizedQuery));
     });
-  };
-  let hoi4UnitIconManifestStatus = "idle";
-  let hoi4UnitIconManifestData = null;
-  let hoi4UnitIconManifestError = null;
-  let hoi4UnitIconReviewDraft = loadHoi4UnitIconReviewDraft();
-  const normalizeHoi4ReviewPresetIds = (values = []) => Array.from(
-    new Set(
-      (Array.isArray(values) ? values : [])
-        .map((value) => String(value || "").trim().toLowerCase())
-        .filter(Boolean)
-    )
-  );
-  const persistHoi4UnitIconReviewDraft = () => {
-    hoi4UnitIconReviewDraft = saveHoi4UnitIconReviewDraft(hoi4UnitIconReviewDraft);
-  };
-  const getHoi4EffectiveMappedPresetIds = (entry) => getHoi4UnitIconMappedPresetIds(entry, hoi4UnitIconReviewDraft);
-  const formatUnitCounterPresetChipLabel = (presetId = "") => {
-    const normalizedPresetId = String(presetId || "").trim().toUpperCase();
-    if (!normalizedPresetId) return t("Unmapped", "ui");
-    const preset = getUnitCounterPresetMeta(normalizedPresetId);
-    return preset?.label || normalizedPresetId;
-  };
-  const getHoi4CurrentPresetCandidateEntryId = (presetId = "") => {
-    const normalizedPresetId = String(presetId || "").trim().toLowerCase();
-    return normalizedPresetId
-      ? String(hoi4UnitIconReviewDraft?.presetCandidates?.[normalizedPresetId] || "").trim()
-      : "";
-  };
-  const setHoi4EntryMappedPresetIds = (entryId = "", mappedPresetIds = []) => {
-    const normalizedEntryId = String(entryId || "").trim();
-    if (!normalizedEntryId) return;
-    const nextPresetIds = normalizeHoi4ReviewPresetIds(mappedPresetIds);
-    const entry = hoi4UnitIconManifestData?.entries?.find((candidate) => candidate.id === normalizedEntryId) || null;
-    const basePresetIds = entry ? normalizeHoi4ReviewPresetIds(entry.mappedPresetIds) : [];
-    if (!nextPresetIds.length && !basePresetIds.length) {
-      delete hoi4UnitIconReviewDraft.entryOverrides[normalizedEntryId];
-    } else if (JSON.stringify(nextPresetIds) === JSON.stringify(basePresetIds)) {
-      delete hoi4UnitIconReviewDraft.entryOverrides[normalizedEntryId];
-    } else {
-      hoi4UnitIconReviewDraft.entryOverrides[normalizedEntryId] = { mappedPresetIds: nextPresetIds };
-    }
-  };
-  const toggleHoi4EntryCurrentPresetMapping = (entryId = "", presetId = "") => {
-    const normalizedEntryId = String(entryId || "").trim();
-    const normalizedPresetId = String(presetId || "").trim().toLowerCase();
-    if (!normalizedEntryId || !normalizedPresetId) return false;
-    const entry = hoi4UnitIconManifestData?.entries?.find((candidate) => candidate.id === normalizedEntryId) || null;
-    if (!entry) return false;
-    const nextPresetIds = new Set(getHoi4EffectiveMappedPresetIds(entry));
-    if (nextPresetIds.has(normalizedPresetId)) {
-      nextPresetIds.delete(normalizedPresetId);
-      if (getHoi4CurrentPresetCandidateEntryId(normalizedPresetId) === normalizedEntryId) {
-        delete hoi4UnitIconReviewDraft.presetCandidates[normalizedPresetId];
-      }
-    } else {
-      nextPresetIds.add(normalizedPresetId);
-    }
-    setHoi4EntryMappedPresetIds(normalizedEntryId, Array.from(nextPresetIds));
-    persistHoi4UnitIconReviewDraft();
-    return nextPresetIds.has(normalizedPresetId);
-  };
-  const setHoi4CurrentPresetCandidate = (entryId = "", presetId = "") => {
-    const normalizedEntryId = String(entryId || "").trim();
-    const normalizedPresetId = String(presetId || "").trim().toLowerCase();
-    if (!normalizedEntryId || !normalizedPresetId) return;
-    const entry = hoi4UnitIconManifestData?.entries?.find((candidate) => candidate.id === normalizedEntryId) || null;
-    if (!entry) return;
-    const nextPresetIds = new Set(getHoi4EffectiveMappedPresetIds(entry));
-    nextPresetIds.add(normalizedPresetId);
-    setHoi4EntryMappedPresetIds(normalizedEntryId, Array.from(nextPresetIds));
-    hoi4UnitIconReviewDraft.presetCandidates[normalizedPresetId] = normalizedEntryId;
-    persistHoi4UnitIconReviewDraft();
-  };
-  const exportHoi4UnitIconReviewDraft = () => {
-    const normalizedDraft = saveHoi4UnitIconReviewDraft(hoi4UnitIconReviewDraft || createEmptyHoi4UnitIconReviewDraft());
-    const blob = new Blob([JSON.stringify(normalizedDraft, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "hoi4_unit_icon_review.json";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    globalThis.setTimeout(() => URL.revokeObjectURL(url), 100);
-    showToast(t("HOI4 review draft downloaded.", "ui"), {
-      title: t("Review exported", "ui"),
-      tone: "success",
-    });
-  };
-  const requestStrategicOverlayCatalogRefresh = () => {
-    callRuntimeHook(state, "updateStrategicOverlayUIFn", { scopes: ["counterCatalog"] });
-  };
-  const ensureHoi4UnitIconManifest = () => {
-    if (hoi4UnitIconManifestStatus === "loading" || hoi4UnitIconManifestStatus === "ready") {
-      return;
-    }
-    hoi4UnitIconManifestStatus = "loading";
-    hoi4UnitIconManifestError = null;
-    loadHoi4UnitIconManifest()
-      .then((manifest) => {
-        hoi4UnitIconManifestData = manifest;
-        hoi4UnitIconManifestStatus = "ready";
-        requestStrategicOverlayCatalogRefresh();
-      })
-      .catch((error) => {
-        console.error("Failed to load HOI4 unit icon manifest:", error);
-        hoi4UnitIconManifestStatus = "error";
-        hoi4UnitIconManifestError = error;
-        requestStrategicOverlayCatalogRefresh();
-      });
-  };
-  const getHoi4CatalogFilterOptionsLegacy = (effectivePresetId = "") => {
-    const currentPreset = getUnitCounterPresetMeta(effectivePresetId || DEFAULT_UNIT_COUNTER_PRESET_ID);
-    return [
-      ["all", t("All", "ui")],
-      ["current", currentPreset?.label ? `${t("Current Preset", "ui")} · ${currentPreset.label}` : t("Current Preset", "ui")],
-      ["ground", "Ground"],
-      ["air", "Air"],
-      ["naval", "Naval"],
-    ];
-  };
-  const formatHoi4EntryKind = (value = "") => String(value || "").replace(/_/g, " ");
-  const getHoi4ReviewSummaryText = (effectivePresetId = "") => {
-    const presetMeta = getUnitCounterPresetMeta(effectivePresetId || DEFAULT_UNIT_COUNTER_PRESET_ID);
-    const candidateEntryId = getHoi4CurrentPresetCandidateEntryId(presetMeta.id);
-    const candidateEntry = hoi4UnitIconManifestData?.entries?.find((entry) => entry.id === candidateEntryId) || null;
-    const overrideCount = Object.keys(hoi4UnitIconReviewDraft?.entryOverrides || {}).length;
-    return [
-      `${t("Current Preset", "ui")}: ${presetMeta.label}`,
-      candidateEntry ? `${t("Candidate", "ui")}: ${candidateEntry.label}` : `${t("Candidate", "ui")}: ${t("None selected", "ui")}`,
-      `${t("Draft Overrides", "ui")}: ${overrideCount}`,
-    ].join(" · ");
-  };
-  const cancelHoi4CatalogGridRender = (grid) => {
-    if (!grid) return;
-    if (typeof grid._hoi4RenderHandle === "number" && grid._hoi4RenderHandle) {
-      globalThis.cancelAnimationFrame(grid._hoi4RenderHandle);
-    }
-    grid._hoi4RenderHandle = 0;
-    grid._hoi4RenderToken = Number(grid._hoi4RenderToken || 0) + 1;
-  };
-  const buildHoi4CatalogCardRecord = (entry) => {
-    const card = document.createElement("article");
-    card.className = "counter-editor-symbol-card counter-editor-hoi4-card";
-    card.dataset.hoi4EntryId = entry.id;
-
-    const preview = document.createElement("div");
-    preview.className = "counter-editor-hoi4-preview is-single";
-    const image = document.createElement("img");
-    image.alt = entry.label;
-    image.loading = "lazy";
-    image.decoding = "async";
-    const missing = document.createElement("span");
-    missing.className = "counter-editor-hoi4-preview-missing";
-    const previewLabel = document.createElement("span");
-    previewLabel.className = "counter-editor-hoi4-preview-label";
-    preview.append(image, missing, previewLabel);
-
-    const title = document.createElement("span");
-    title.className = "counter-editor-symbol-card-title";
-    const subtitle = document.createElement("span");
-    subtitle.className = "counter-editor-symbol-card-subtitle";
-    const meta = document.createElement("div");
-    meta.className = "counter-editor-hoi4-meta";
-    const tags = document.createElement("div");
-    tags.className = "counter-editor-hoi4-tags";
-    const actions = document.createElement("div");
-    actions.className = "counter-editor-hoi4-actions";
-    const mappingBtn = document.createElement("button");
-    mappingBtn.type = "button";
-    mappingBtn.className = "counter-editor-hoi4-action-btn";
-    mappingBtn.dataset.hoi4ReviewAction = "toggle-current-mapping";
-    mappingBtn.dataset.hoi4EntryId = entry.id;
-    const candidateBtn = document.createElement("button");
-    candidateBtn.type = "button";
-    candidateBtn.className = "counter-editor-hoi4-action-btn";
-    candidateBtn.dataset.hoi4ReviewAction = "set-current-candidate";
-    candidateBtn.dataset.hoi4EntryId = entry.id;
-    actions.append(mappingBtn, candidateBtn);
-    card.append(preview, title, subtitle, meta, tags, actions);
-
-    return {
-      card,
-      image,
-      missing,
-      previewLabel,
-      title,
-      subtitle,
-      meta,
-      tags,
-      mappingBtn,
-      candidateBtn,
-    };
-  };
-  const updateHoi4CatalogCardRecord = (record, entry, { effectivePresetId, preferredVariant }) => {
-    const currentPresetId = String(effectivePresetId || DEFAULT_UNIT_COUNTER_PRESET_ID).trim().toLowerCase();
-    const variantPath = getHoi4UnitIconVariantPath(entry, preferredVariant);
-    const mappedPresetIds = getHoi4EffectiveMappedPresetIds(entry);
-    const isMappedToCurrentPreset = mappedPresetIds.includes(currentPresetId);
-    const isCurrentPresetCandidate = getHoi4CurrentPresetCandidateEntryId(currentPresetId) === entry.id;
-    record.card.classList.toggle("is-candidate", isCurrentPresetCandidate);
-    if (variantPath) {
-      if (record.image.getAttribute("src") !== variantPath) {
-        record.image.src = variantPath;
-      }
-      record.image.hidden = false;
-      record.missing.hidden = true;
-    } else {
-      record.image.hidden = true;
-      record.image.removeAttribute("src");
-      record.missing.hidden = false;
-      record.missing.textContent = preferredVariant === "large"
-        ? t("Missing Large", "ui")
-        : t("Missing Small", "ui");
-    }
-    record.previewLabel.textContent = preferredVariant === "large"
-      ? t("Large", "ui")
-      : t("On-map Small", "ui");
-    record.title.textContent = entry.label;
-    record.subtitle.textContent = `${entry.domain} · ${formatHoi4EntryKind(entry.kind)}`;
-    record.meta.textContent = entry.spriteName;
-    record.tags.replaceChildren();
-    const visiblePresetIds = mappedPresetIds.length ? mappedPresetIds : [""];
-    visiblePresetIds.forEach((presetId) => {
-      const tag = document.createElement("span");
-      tag.className = "counter-editor-hoi4-tag";
-      tag.textContent = presetId ? formatUnitCounterPresetChipLabel(presetId) : t("Unmapped", "ui");
-      record.tags.appendChild(tag);
-    });
-    if (isCurrentPresetCandidate) {
-      const candidateTag = document.createElement("span");
-      candidateTag.className = "counter-editor-hoi4-tag is-candidate";
-      candidateTag.textContent = t("Current Candidate", "ui");
-      record.tags.appendChild(candidateTag);
-    }
-    const currentPresetLabel = formatUnitCounterPresetChipLabel(currentPresetId);
-    record.mappingBtn.textContent = isMappedToCurrentPreset
-      ? `${t("Unmap", "ui")} ${currentPresetLabel}`
-      : `${t("Map", "ui")} ${currentPresetLabel}`;
-    record.mappingBtn.classList.toggle("is-active", isMappedToCurrentPreset);
-    record.candidateBtn.textContent = isCurrentPresetCandidate
-      ? t("Current Candidate", "ui")
-      : `${t("Set Candidate", "ui")} · ${currentPresetLabel}`;
-    record.candidateBtn.classList.toggle("is-active", isCurrentPresetCandidate);
-  };
-  const renderHoi4CatalogCards = (grid, entries, options) => {
-    cancelHoi4CatalogGridRender(grid);
-    const emptyState = document.createElement("div");
-    emptyState.className = "counter-editor-symbol-empty";
-    if (!entries.length) {
-      emptyState.textContent = t("No HOI4 icons match the current filter.", "ui");
-      grid.replaceChildren(emptyState);
-      return;
-    }
-    const cache = grid._hoi4CardCache instanceof Map ? grid._hoi4CardCache : new Map();
-    grid._hoi4CardCache = cache;
-    grid.replaceChildren();
-    const renderToken = Number(grid._hoi4RenderToken || 0) + 1;
-    grid._hoi4RenderToken = renderToken;
-    const chunkSize = 24;
-    const appendChunk = (startIndex = 0) => {
-      if (grid._hoi4RenderToken !== renderToken) return;
-      const fragment = document.createDocumentFragment();
-      const endIndex = Math.min(startIndex + chunkSize, entries.length);
-      for (let index = startIndex; index < endIndex; index += 1) {
-        const entry = entries[index];
-        let record = cache.get(entry.id);
-        if (!record) {
-          record = buildHoi4CatalogCardRecord(entry);
-          cache.set(entry.id, record);
-        }
-        updateHoi4CatalogCardRecord(record, entry, options);
-        fragment.appendChild(record.card);
-      }
-      grid.appendChild(fragment);
-      if (endIndex < entries.length) {
-        grid._hoi4RenderHandle = globalThis.requestAnimationFrame(() => appendChunk(endIndex));
-      } else {
-        grid._hoi4RenderHandle = 0;
-      }
-    };
-    appendChunk(0);
-  };
-  const getHoi4CatalogFilterOptions = (effectivePresetId = "") => {
-    const currentPreset = getUnitCounterPresetMeta(effectivePresetId || DEFAULT_UNIT_COUNTER_PRESET_ID);
-    return [
-      ["all", t("All", "ui")],
-      ["current", currentPreset?.label ? `${t("Current Preset", "ui")} · ${currentPreset.label}` : t("Current Preset", "ui")],
-      ["ground", "Ground"],
-      ["air", "Air"],
-      ["naval", "Naval"],
-    ];
   };
   const inferUnitCounterPresetId = (candidate = {}) => {
     const rawPreset = String(candidate?.presetId || candidate?.unitType || "").trim().toUpperCase();
@@ -3319,87 +2120,6 @@ function initSidebar({ render } = {}) {
     document.body.appendChild(strategicCommandBar);
   }
 
-  let scenarioAuditSection = document.getElementById("scenarioAuditPanel");
-  if (!scenarioAuditSection && diagnosticStack) {
-    scenarioAuditSection = document.createElement("div");
-    scenarioAuditSection.id = "scenarioAuditPanel";
-    scenarioAuditSection.className = "inspector-tool-card scenario-audit-panel";
-    diagnosticStack.appendChild(scenarioAuditSection);
-  }
-
-  let debugViewSection = document.getElementById("debugViewControl");
-  if (!debugViewSection && diagnosticStack) {
-    debugViewSection = document.createElement("div");
-    debugViewSection.id = "debugViewControl";
-    debugViewSection.className = "inspector-tool-card sidebar-tool-card-debug";
-
-    const title = document.createElement("div");
-    title.className = "section-header sidebar-tool-title";
-    title.textContent = t("Debug Mode", "ui");
-
-    const hint = document.createElement("p");
-    hint.className = "sidebar-tool-hint";
-    hint.textContent = t("Use diagnostics to inspect geometry and artifact behavior.", "ui");
-
-    const group = document.createElement("div");
-    group.className = "control-group mt-3";
-
-    const label = document.createElement("label");
-    label.setAttribute("for", "debug-mode-select");
-    label.textContent = t("View", "ui");
-
-    const select = document.createElement("select");
-    select.id = "debug-mode-select";
-    select.className = "select-input debug-select";
-
-    [
-      ["PROD", "Normal View"],
-      ["GEOMETRY", "1. Geometry Check (Pink/Green)"],
-      ["ARTIFACTS", "2. Artifact Hunter (Red Giants)"],
-      ["ISLANDS", "3. Island Detector (Orange)"],
-      ["ID_HASH", "4. ID Stability"],
-    ].forEach(([value, label]) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.id = `debugOption${value}`;
-      option.textContent = t(label, "ui");
-      select.appendChild(option);
-    });
-
-    group.appendChild(label);
-    group.appendChild(select);
-    debugViewSection.appendChild(title);
-    debugViewSection.appendChild(hint);
-    debugViewSection.appendChild(group);
-    diagnosticStack.appendChild(debugViewSection);
-  }
-
-  const downloadProjectBtn = document.getElementById("downloadProjectBtn");
-  const uploadProjectBtn = document.getElementById("uploadProjectBtn");
-  const projectDownloadFormat = document.getElementById("projectDownloadFormat");
-  const projectDownloadDestination = document.getElementById("projectDownloadDestination");
-  const projectPackageContents = document.getElementById("projectPackageContents");
-  const projectLoadSource = document.getElementById("projectLoadSource");
-  const projectFileInput = document.getElementById("projectFileInput");
-  const projectFileName = document.getElementById("projectFileName");
-  const projectSaveStatus = document.getElementById("projectSaveStatus");
-  const backendCloudSection = document.getElementById("backendCloudSection");
-  const backendCloudStatus = document.getElementById("backendCloudStatus");
-  const backendAccountToggleBtn = document.getElementById("backendAccountToggleBtn");
-  const backendAccountPopover = document.getElementById("backendAccountPopover");
-  const backendAccountBackdrop = document.getElementById("backendAccountBackdrop");
-  const backendAccountCloseBtn = document.getElementById("backendAccountCloseBtn");
-  const backendCloudUsername = document.getElementById("backendCloudUsername");
-  const backendCloudPassword = document.getElementById("backendCloudPassword");
-  const backendCloudSaveTitle = document.getElementById("backendCloudSaveTitle");
-  const backendCloudRegisterBtn = document.getElementById("backendCloudRegisterBtn");
-  const backendCloudLoginBtn = document.getElementById("backendCloudLoginBtn");
-  const backendCloudLogoutBtn = document.getElementById("backendCloudLogoutBtn");
-  const backendCloudSaveBtn = document.getElementById("backendCloudSaveBtn");
-  const backendCloudPublishBtn = document.getElementById("backendCloudPublishBtn");
-  const backendCommunityRefreshBtn = document.getElementById("backendCommunityRefreshBtn");
-  const backendCommunityList = document.getElementById("backendCommunityList");
-  const legendList = document.getElementById("legendEditorList");
   const inspectorSidebarTabButtons = Array.from(document.querySelectorAll("[data-inspector-tab]"));
   const inspectorSidebarTabPanels = Array.from(document.querySelectorAll("[data-inspector-panel]"));
   const rightSidebarDetails = () => Array.from(document.querySelectorAll("#rightSidebar details[id]"));
@@ -3561,7 +2281,6 @@ function initSidebar({ render } = {}) {
   const unitCounterLibraryExportBtn = document.getElementById("unitCounterLibraryExportBtn");
   const unitCounterCatalogCategoriesEl = document.getElementById("unitCounterCatalogCategories");
   const unitCounterCatalogGrid = document.getElementById("unitCounterCatalogGrid");
-  const debugModeSelect = document.getElementById("debug-mode-select");
   const countryInspectorDetail = document.getElementById("countryInspectorDetail");
   const countryInspectorSelected = document.getElementById("countryInspectorSelected");
   const countryInspectorSetActive = document.getElementById("countryInspectorSetActive");
@@ -3937,17 +2656,6 @@ function initSidebar({ render } = {}) {
     setRightSidebarCollapsed(rightSidebarCollapsePreference, { persist: false });
   };
 
-
-  if (
-    projectFileName
-    && (
-      !projectFileName.textContent.trim()
-      || projectFileName.dataset?.projectFileState === "empty"
-    )
-  ) {
-    if (projectFileName.dataset) projectFileName.dataset.projectFileState = "empty";
-    projectFileName.textContent = t("No file selected", "ui");
-  }
 
   if (!(runtimeState.expandedInspectorContinents instanceof Set)) {
     runtimeState.expandedInspectorContinents = new Set();
@@ -4502,8 +3210,13 @@ function initSidebar({ render } = {}) {
     });
   };
 
-  const setScenarioVisualAdjustmentsOpen = (nextOpen, { scrollIntoView = false } = {}) => {
+  const storeVisualOpen = (nextOpen) => {
+    if (!runtimeState.ui || typeof runtimeState.ui !== "object") runtimeState.ui = {};
     runtimeState.ui.scenarioVisualAdjustmentsOpen = !!nextOpen;
+  };
+
+  const setScenarioVisualAdjustmentsOpen = (nextOpen, { scrollIntoView = false } = {}) => {
+    storeVisualOpen(nextOpen);
     if (selectedCountryActionsSection) {
       selectedCountryActionsSection.open = true;
       if (scrollIntoView) {
@@ -4615,12 +3328,6 @@ function initSidebar({ render } = {}) {
     createEmptyNote,
     getDynamicCountryEntries,
     createCountryInspectorState,
-    buildInspectorTopLevelCountryEntries,
-    getPriorityCountryOrderMap,
-    compareInspectorCountries,
-    buildCountryColorTree,
-    ensureInitialInspectorExpansion,
-    getInspectorGroupExpansionKey,
     getCountryChildSectionsForParent,
     buildCountryRowMetaText,
     getResolvedCountryColor,
@@ -4700,344 +3407,53 @@ function initSidebar({ render } = {}) {
     return 0;
   };
 
-  const getPrimaryReleasablePresetRef = (countryState, { warnOnMissing = true } = {}) => {
-    const presetLookupCode = countryState?.presetLookupCode || countryState?.code;
-    const presets = Array.isArray(runtimeState.presetsState?.[presetLookupCode]) ? runtimeState.presetsState[presetLookupCode] : [];
-    const presetIndex = presets.findIndex((preset) => String(preset?.preset_kind || "").trim() === "releasable_core");
-    if (presetIndex >= 0) {
-      return {
-        presetLookupCode,
-        presetIndex,
-        preset: presets[presetIndex],
-      };
+  const activateCoreOwner = (countryCode, { forceSovereignty = false } = {}) => {
+    if (forceSovereignty && String(runtimeState.paintMode || "visual") !== "sovereignty") {
+      setScenarioMapPaintMode("ownership");
     }
-
-    const scenarioMeta = getScenarioCountryMeta(countryState?.code) || countryState || {};
-    const boundaryVariants = Array.isArray(scenarioMeta?.boundary_variants)
-      ? scenarioMeta.boundary_variants
-      : Array.isArray(countryState?.boundaryVariants)
-        ? countryState.boundaryVariants
-        : [];
-    if (!boundaryVariants.length) {
-      if (warnOnMissing) {
-        console.warn("[scenario] Missing releasable core preset for selected country.", {
-          code: countryState?.code || "",
-          presetLookupCode,
-        });
-      }
-      return null;
-    }
-
-    const selectedVariantId = String(
-      scenarioMeta?.selected_boundary_variant_id
-      || countryState?.selectedBoundaryVariantId
-      || scenarioMeta?.default_boundary_variant_id
-      || countryState?.defaultBoundaryVariantId
-      || ""
-    ).trim().toLowerCase();
-    const selectedVariant = boundaryVariants.find(
-      (variant) => String(variant?.id || "").trim().toLowerCase() === selectedVariantId
-    ) || boundaryVariants[0];
-    const presetSourceLookup = {
-      tag: scenarioMeta?.tag || countryState?.code || "",
-      release_lookup_iso2:
-        scenarioMeta?.release_lookup_iso2
-        || scenarioMeta?.releaseLookupIso2
-        || scenarioMeta?.lookup_iso2
-        || scenarioMeta?.lookupIso2
-        || scenarioMeta?.base_iso2
-        || scenarioMeta?.baseIso2
-        || "",
-      lookup_iso2:
-        scenarioMeta?.lookup_iso2
-        || scenarioMeta?.lookupIso2
-        || scenarioMeta?.release_lookup_iso2
-        || scenarioMeta?.releaseLookupIso2
-        || scenarioMeta?.base_iso2
-        || scenarioMeta?.baseIso2
-        || "",
-      base_iso2:
-        scenarioMeta?.base_iso2
-        || scenarioMeta?.baseIso2
-        || "",
-    };
-    const featureIds = resolveFeatureIdsFromPresetSource(selectedVariant?.preset_source, presetSourceLookup);
-    if (!featureIds.length) {
-      if (warnOnMissing) {
-        console.warn("[scenario] Boundary variant exists but resolved zero feature ids.", {
-          code: countryState?.code || "",
-          presetLookupCode,
-          variantId: selectedVariant?.id || "",
-        });
-      }
-      return null;
-    }
-    return {
-      presetLookupCode,
-      presetIndex: -1,
-      preset: {
-        name: t("Core Territory", "ui"),
-        ids: featureIds,
-        generated: true,
-        locked: true,
-        preset_kind: "releasable_core",
-        releasable_tag: countryState?.code || "",
-        boundary_variant_id: String(selectedVariant?.id || "").trim(),
-      },
-    };
+    runtimeState.activeSovereignCode = countryCode;
+    callRuntimeHook(state, "updateActiveSovereignUIFn");
   };
 
-  const hasScenarioCoreTerritoryActions = (countryState) => {
-    if (!countryState) return false;
-    if (countryState.releasable) return true;
-    if (Array.isArray(countryState?.boundaryVariants) && countryState.boundaryVariants.length > 1) {
-      return true;
-    }
-    return !!getPrimaryReleasablePresetRef(countryState, { warnOnMissing: false });
-  };
+  const activateScenarioCountry = (countryState) => {
+    const isReleasable = !!countryState?.releasable;
 
-  const applyScenarioReleasableCoreTerritory = (
-    countryState,
-    { source = "scenario-actions", forceSovereignty = false, actionMode = "ownership" } = {}
-  ) => {
-    const presetRef = getPrimaryReleasablePresetRef(countryState);
-    if (!presetRef) {
-      console.warn("[scenario] Missing releasable core preset.", {
-        source,
-        code: countryState?.code || "",
-      });
-      return false;
+    const normalizedCountryCode = normalizeCountryCode(countryState.code);
+    const alreadyActive = normalizedCountryCode && normalizedCountryCode === normalizeCountryCode(runtimeState.activeSovereignCode);
+    const previousActiveCode = normalizeCountryCode(runtimeState.activeSovereignCode);
+    const selectedCode = normalizeCountryCode(runtimeState.selectedInspectorCountryCode);
+    if (normalizedCountryCode) {
+      runtimeState.activeSovereignCode = normalizedCountryCode;
     }
-
-    if (actionMode === "ownership") {
-      if (forceSovereignty && String(runtimeState.paintMode || "visual") !== "sovereignty") {
-        setScenarioMapPaintMode("ownership");
-      }
-      runtimeState.activeSovereignCode = countryState.code;
-      callRuntimeHook(state, "updateActiveSovereignUIFn");
-      const requestedTargetIds = Array.isArray(presetRef.preset?.ids) ? presetRef.preset.ids : [];
-      const {
-        requestedIds,
-        matchedIds: targetIds,
-        missingIds,
-      } = filterToVisibleFeatureIds(requestedTargetIds);
-      if (!requestedIds.length) {
-        renderList();
-        return false;
-      }
-      if (!targetIds.length) {
-        showToast(
-          t("Current map does not include this preset's detail features. Load detail topology and try again.", "ui"),
-          {
-            title: t("Core territory was not applied.", "ui"),
-            tone: "warning",
-            duration: 4200,
-          }
-        );
-        console.warn("[scenario] Core territory apply skipped because no visible feature ids matched.", {
-          source,
-          code: countryState?.code || "",
-          requestedCount: requestedIds.length,
-          missingCount: missingIds.length,
-        });
-        renderList();
-        return false;
-      }
-      const unionRequestedIds = getScenarioBoundaryVariantUnionFeatureIds(countryState, targetIds);
-      const { matchedIds: variantUnionIds } = filterToVisibleFeatureIds(unionRequestedIds);
-      const assignmentsByFeatureId = {};
-      const targetIdSet = new Set(targetIds.map((featureId) => String(featureId || "").trim()).filter(Boolean));
-      variantUnionIds.forEach((featureId) => {
-        const normalizedId = String(featureId || "").trim();
-        if (!normalizedId) return;
-        if (targetIdSet.has(normalizedId)) {
-          assignmentsByFeatureId[normalizedId] = {
-            ownerCode: countryState.code,
-            controllerCode: countryState.code,
-          };
-          return;
-        }
-        const baselineOwnerCode = normalizeCountryCode(
-          runtimeState.scenarioBaselineOwnersByFeatureId?.[normalizedId]
-            || runtimeState.runtimeCanonicalCountryByFeatureId?.[normalizedId]
-            || ""
-        );
-        if (!baselineOwnerCode) return;
-        assignmentsByFeatureId[normalizedId] = {
-          ownerCode: baselineOwnerCode,
-        };
-      });
-      const result = applyScenarioOwnerControllerAssignments(assignmentsByFeatureId, {
-        render,
-        historyKind: "scenario-core-apply-ownership",
-        dirtyReason: "scenario-core-apply-ownership",
-        recomputeReason: "scenario-core-apply-ownership",
-      });
-      if (!result?.applied) {
-        if (result?.reason !== "no-visible-features") {
-          showToast(t("Core territory was not applied.", "ui"), {
-            title: t("Apply failed", "ui"),
-            tone: "warning",
-            duration: 3200,
-          });
-        }
-        renderList();
-        return false;
-      }
-      if (result.changed > 0) {
-        showToast(
-          `${t("Applied", "ui")} ${result.changed}/${result.matchedCount} ${t("features", "ui")}`,
-          {
-            title: t("Political ownership updated", "ui"),
-            tone: "success",
-            duration: 3200,
-          }
-        );
-      } else {
-        showToast(t("Core territory already matches current ownership.", "ui"), {
-          title: t("No changes", "ui"),
-          tone: "info",
-          duration: 2800,
-        });
-      }
-      applyScenarioAutoCompanionActions(countryState);
-      refreshScenarioShellOverlays({
-        renderNow: false,
-        borderReason: `scenario-shells:core-apply:${countryState.code}`,
-      });
-    } else {
-      const resolvedColor = getResolvedCountryColor(latestCountryStatesByCode.get(countryState.code) || countryState);
-      const result = applyPresetWithMode(presetRef.presetLookupCode, presetRef.presetIndex, {
-        mode: "visual",
-        color: resolvedColor,
-        render,
-        visualHistoryKind: "scenario-core-apply-visual",
-        visualDirtyReason: "scenario-core-apply-visual",
-      });
-      if (!result?.applied) {
-        if (result?.reason !== "no-visible-features") {
-          showToast(t("Core territory was not applied.", "ui"), {
-            title: t("Apply failed", "ui"),
-            tone: "warning",
-            duration: 3200,
-          });
-        }
-        renderList();
-        return false;
-      }
-      showToast(
-        `${t("Applied", "ui")} ${result.matchedCount}/${result.requestedCount} ${t("features", "ui")}`,
-        {
-          title: t("Visual color applied", "ui"),
-          tone: "success",
-          duration: 3200,
-        }
-      );
+    setScenarioMapPaintMode("ownership");
+    if (!alreadyActive) {
+      markDirty("set-active-sovereign");
     }
-
-    renderList();
-    return true;
-  };
-
-  const applyScenarioCompanionAction = (
-    countryState,
-    action,
-    { silent = false, suppressRenderList = false, recomputeShells = true } = {}
-  ) => {
-    if (!countryState || !action) return false;
-    const targetOwnerCode = normalizeCountryCode(action.target_owner_tag);
-    if (!targetOwnerCode) {
-      if (!silent) {
-        showToast(t("Historical transfer target is missing.", "ui"), {
-          title: t("Transfer not applied", "ui"),
-          tone: "warning",
-          duration: 3200,
-        });
-      }
-      return false;
-    }
-    const featureIds = resolveCompanionActionFeatureIds(action, getScenarioCountryMeta(countryState.code) || countryState);
-    const result = applyExplicitOwnershipTransfer(featureIds, targetOwnerCode, {
-      render,
-      historyKind: `scenario-companion-transfer:${countryState.code}:${action.id || "action"}`,
-      dirtyReason: "scenario-companion-transfer",
-      recomputeReason: "sidebar-companion-transfer",
+    callRuntimeHook(state, "updateActiveSovereignUIFn");
+    refreshCountryRows({
+      countryCodes: [previousActiveCode, normalizedCountryCode, selectedCode],
+      refreshInspector: true,
     });
-    if (!result?.applied) {
-      if (!silent && result?.reason !== "no-visible-features") {
-        showToast(t("Historical transfer was not applied.", "ui"), {
-          title: t("Transfer not applied", "ui"),
-          tone: "warning",
-          duration: 3200,
-        });
-      }
-      if (!suppressRenderList) {
-        renderList();
-      }
-      return false;
-    }
-    if (!silent && result.changed > 0) {
-      showToast(
-        `${t("Applied", "ui")} ${result.changed}/${result.matchedCount} ${t("features", "ui")}`,
-        {
-          title: action.label || t("Historical transfer applied", "ui"),
-          tone: "success",
-          duration: 3200,
-        }
-      );
-    } else if (!silent) {
-      showToast(t("Historical transfer already matches current ownership.", "ui"), {
-        title: t("No changes", "ui"),
-        tone: "info",
+    showToast(
+      t(
+        alreadyActive
+          ? (isReleasable
+            ? "Political ownership editing already targets this releasable."
+            : "Political ownership editing already targets this country.")
+          : (isReleasable
+            ? "Political ownership editing now targets this releasable."
+            : "Political ownership editing now targets this country."),
+        "ui"
+      ),
+      {
+        title: t("Active owner updated", "ui"),
+        tone: alreadyActive ? "info" : "success",
         duration: 2800,
-      });
-    }
-    if (recomputeShells) {
-      refreshScenarioShellOverlays({
-        renderNow: false,
-        borderReason: `scenario-shells:companion-action:${countryState.code}:${action.id || "action"}`,
-      });
-    }
-    if (!suppressRenderList) {
-      renderList();
-    }
-    return true;
+      }
+    );
   };
 
-  const applyScenarioAutoCompanionActions = (countryState) => {
-    const actions = Array.isArray(countryState?.companionActions) ? countryState.companionActions : [];
-    let appliedAny = false;
-    actions.forEach((action) => {
-      if (!action?.auto_apply_on_core_territory) return;
-      const applied = applyScenarioCompanionAction(countryState, action, {
-        silent: true,
-        suppressRenderList: true,
-        recomputeShells: false,
-      });
-      appliedAny = applied || appliedAny;
-    });
-    return appliedAny;
-  };
-
-  const applyReleasableBoundaryVariantSelection = (countryState, variant) => {
-    if (!countryState?.code || !variant?.id) return false;
-    const result = setReleasableBoundaryVariant(countryState.code, variant.id);
-    if (!result) {
-      showToast(t("Boundary variant could not be selected.", "ui"), {
-        title: t("Variant not applied", "ui"),
-        tone: "warning",
-        duration: 3200,
-      });
-      return false;
-    }
-
-    const refreshedCountryState = latestCountryStatesByCode.get(countryState.code) || countryState;
-    applyScenarioReleasableCoreTerritory(refreshedCountryState, {
-      source: "scenario-boundary-variant",
-      actionMode: "ownership",
-    });
-    return true;
-  };
+  const getCountryState = (code) => latestCountryStatesByCode.get(code);
 
   const appendActionSection = (
     container,
@@ -5086,78 +3502,23 @@ function initSidebar({ render } = {}) {
     return body;
   };
 
-  const buildPresetEntries = (presetLookupCode, predicate = null) => {
-    const presets = Array.isArray(runtimeState.presetsState?.[presetLookupCode]) ? runtimeState.presetsState[presetLookupCode] : [];
-    return presets
-      .map((preset, presetIndex) => ({ preset, presetIndex }))
-      .filter(({ preset }) => (typeof predicate === "function" ? predicate(preset) : true));
-  };
-
-  const renderPresetEntryRows = (
-    container,
-    presetLookupCode,
-    presetEntries = [],
-    emptyMessage,
-    {
-      onApply = null,
-      disabled = false,
-      disabledTitle = "",
-      getDisabledInfo = null,
-      requireActiveOwner = normalizeActionMode() === "ownership",
-    } = {}
-  ) => {
-    if (!presetEntries.length) {
-      container.appendChild(createEmptyNote(emptyMessage));
-      return;
-    }
-
-    const disableForMissingActiveSovereign = (
-      !!requireActiveOwner &&
-      !normalizeCountryCode(runtimeState.activeSovereignCode)
-    );
-
-    presetEntries.forEach(({ preset, presetIndex }) => {
-      const rowDisabledInfo = typeof getDisabledInfo === "function"
-        ? getDisabledInfo({ preset, presetIndex, presetLookupCode })
-        : null;
-      const rowDisabled = !!rowDisabledInfo?.disabled;
-      const rowDisabledTitle = String(rowDisabledInfo?.title || "").trim();
-      const nameBtn = document.createElement("button");
-      nameBtn.type = "button";
-      nameBtn.className = "inspector-item-btn";
-      nameBtn.textContent = preset.name;
-      nameBtn.disabled = disabled || rowDisabled || disableForMissingActiveSovereign;
-      if (rowDisabledTitle && rowDisabled) {
-        nameBtn.title = rowDisabledTitle;
-      } else if (disabledTitle && (disabled || disableForMissingActiveSovereign)) {
-        nameBtn.title = disabledTitle;
-      } else if (disableForMissingActiveSovereign) {
-        nameBtn.title = t("Choose an active owner before changing political ownership or borders.", "ui");
-      }
-      nameBtn.addEventListener("click", () => {
-        if (typeof onApply === "function") {
-          onApply({ preset, presetIndex, presetLookupCode });
-          return;
-        }
-        applyPreset(presetLookupCode, presetIndex, runtimeState.selectedColor, render);
-      });
-      container.appendChild(nameBtn);
-    });
-  };
-
-  const getCountryPresetDisabledInfo = (countryState, preset) => {
-    if (!countryState || !preset) return null;
-    const disabledNames = Array.isArray(countryState.disabledRegionalPresetNames)
-      ? countryState.disabledRegionalPresetNames
-      : [];
-    if (!disabledNames.length) return null;
-    const normalizedName = normalizePresetName(preset?.name);
-    if (!normalizedName || !disabledNames.includes(normalizedName)) return null;
-    return {
-      disabled: true,
-      title: countryState.disabledRegionalPresetReason || t("Already applied in scenario baseline", "ui"),
-    };
-  };
+  const {
+    applyScenarioAutoCompanionActions,
+    renderScenarioHistoricalTransfers,
+  } = createScenarioTransferController({
+    t,
+    normalizeCountryCode,
+    getScenarioCountryMeta,
+    resolveCompanionActionFeatureIds,
+    filterToVisibleFeatureIds,
+    applyScenarioOwnerControllerAssignments,
+    showToast,
+    refreshScenarioShellOverlays,
+    render,
+    renderList,
+    appendActionSection,
+    createInspectorActionButton,
+  });
 
   const renderNoActiveGuard = (container) => {
     const needsGuard = runtimeState.activeScenarioId
@@ -5173,25 +3534,49 @@ function initSidebar({ render } = {}) {
     return true;
   };
 
-  const getFilteredRegionalPresets = (countryState) => {
-    const presetLookupCode = countryState?.presetLookupCode || countryState?.code;
-    const consumedPresetNames = runtimeState.activeScenarioId
-      ? Array.isArray(runtimeState.scenarioReleasableIndex?.consumedPresetNamesByParentLookup?.[presetLookupCode])
-        ? runtimeState.scenarioReleasableIndex.consumedPresetNamesByParentLookup[presetLookupCode]
-        : []
-      : [];
-    const disabledPresetNames = runtimeState.activeScenarioId && Array.isArray(countryState?.disabledRegionalPresetNames)
-      ? countryState.disabledRegionalPresetNames
-      : [];
-    return buildPresetEntries(presetLookupCode, (preset) => {
-      if (!runtimeState.activeScenarioId) return true;
-      const normalizedPresetName = normalizePresetName(preset?.name);
-      return (
-        !consumedPresetNames.includes(normalizedPresetName)
-        && !disabledPresetNames.includes(normalizedPresetName)
-      );
-    });
-  };
+  const {
+    getPrimaryReleasablePresetRef,
+    prepareScenarioCoreApplication,
+    hasScenarioCoreTerritoryActions,
+    applyPresetReference,
+    renderRegionalPresets,
+  } = createRegionalPresetController(runtimeState, {
+    t,
+    normalizeCountryCode,
+    normalizePresetName,
+    resolveScenarioLookupCode,
+    getScenarioCountryMeta,
+    resolveFeatureIdsFromPresetSource,
+    normalizeActionMode,
+    filterToVisibleFeatureIds,
+    applyOwnershipToFeatureIds,
+    applyVisualOverridesToFeatureIds,
+    showToast,
+    render,
+    appendActionSection,
+    setScenarioVisualAdjustmentsOpen,
+  });
+
+  const {
+    applyScenarioReleasableCoreTerritory,
+    applyReleasableBoundaryVariantSelection,
+  } = createScenarioTerritoryController({
+    t,
+    prepareScenarioCoreApplication,
+    getPrimaryReleasablePresetRef,
+    applyPresetReference,
+    getCountryState,
+    getResolvedCountryColor,
+    blockLockedScenarioInteraction,
+    applyScenarioOwnerControllerAssignments,
+    activateCoreOwner,
+    setReleasableBoundaryVariant,
+    applyScenarioAutoCompanionActions,
+    refreshScenarioShellOverlays,
+    showToast,
+    render,
+    renderList,
+  });
 
   const renderCountryColorSyncAffordance = (container, countryState) => {
     if (!container || !countryState) return;
@@ -5311,565 +3696,49 @@ function initSidebar({ render } = {}) {
       groupSection.appendChild(createEmptyNote(t("No hierarchy groups", "ui")));
     }
 
-    const filteredPresetEntries = getFilteredRegionalPresets(countryState);
-    if (filteredPresetEntries.length > 0) {
-      const presetSection = appendActionSection(container, t("Regional Presets", "ui"), {
-        collapsible: true,
-        defaultOpen: false,
-        rememberKey: "territories-presets:regional-presets",
-      });
-      renderPresetEntryRows(
-        presetSection,
-        countryState.presetLookupCode || countryState.code,
-        filteredPresetEntries,
-        t("No regional presets", "ui"),
-        {
-          getDisabledInfo: ({ preset }) => getCountryPresetDisabledInfo(countryState, preset),
-        }
-      );
-    }
+    renderRegionalPresets(container, countryState);
   };
 
-  const renderScenarioActionStatus = (container) => {
-    const intro = document.createElement("div");
-    intro.className = "scenario-action-intro";
-    intro.textContent = t(
-      "Scenario Actions change political ownership and dynamic borders. Use Color Only for color-only edits.",
-      "ui"
-    );
-    container.appendChild(intro);
-  };
-
-  const appendScenarioChildCountryRows = (container, childStates = []) => {
-    const children = Array.isArray(childStates) ? childStates : [];
-    children.forEach((childState) => {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "scenario-action-card";
-      card.addEventListener("click", () => {
-        selectInspectorCountry(childState.code);
-      });
-
-      const copy = document.createElement("div");
-      copy.className = "scenario-action-card-copy";
-
-      const title = document.createElement("div");
-      title.className = "country-row-title";
-      title.textContent = childState.displayName;
-
-      const meta = document.createElement("div");
-      meta.className = "country-select-meta";
-      const subjectLabel = childState.scenarioSubject ? getScenarioSubjectKindLabel(childState) : "";
-      meta.textContent = subjectLabel
-        ? `(${childState.code}) · ${subjectLabel}`
-        : `(${childState.code})`;
-
-      copy.appendChild(title);
-      copy.appendChild(meta);
-
-      const side = document.createElement("div");
-      side.className = "country-row-actions";
-      const swatch = document.createElement("span");
-      swatch.className = "country-select-swatch";
-      swatch.style.backgroundColor = getResolvedCountryColor(childState);
-      side.appendChild(swatch);
-
-      card.appendChild(copy);
-      card.appendChild(side);
-      container.appendChild(card);
-    });
-  };
-
-  const renderScenarioRelatedCountryGroups = (container, countryState) => {
-    const subjectChildren = getScenarioSubjectChildrenForParent(countryState?.code);
-    const releasableChildren = getReleasableChildrenForParent(countryState?.code);
-    if (!subjectChildren.length && !releasableChildren.length) return;
-
-    const section = appendActionSection(container, t("Related Governments", "ui"), {
-      bodyClassName: "inspector-action-list-natural",
-    });
-
-    if (subjectChildren.length) {
-      const label = document.createElement("div");
-      label.className = "inspector-mini-label";
-      label.textContent = t("Subject Governments", "ui");
-      section.appendChild(label);
-      appendScenarioChildCountryRows(section, subjectChildren);
-    }
-
-    if (releasableChildren.length) {
-      const label = document.createElement("div");
-      label.className = "inspector-mini-label";
-      label.textContent = t("Releasable Countries", "ui");
-      section.appendChild(label);
-      appendScenarioChildCountryRows(section, releasableChildren);
-    }
-  };
-
-  const renderScenarioParentActions = (container, countryState) => {
-    if (countryState?.scenarioSubject) {
-      renderScenarioParentReturnAction(container, countryState);
-    }
-    renderScenarioRelatedCountryGroups(container, countryState);
-
-    if (countryState.hierarchyGroups.length > 0) {
-      const groupSection = appendActionSection(container, t("Hierarchy Groups", "ui"), {
-        collapsible: true,
-        defaultOpen: false,
-        rememberKey: "territories-presets:hierarchy-groups",
-      });
-      countryState.hierarchyGroups.forEach((group) => {
-        const button = createInspectorActionButton(
-          t(group.label, "geo") || group.label,
-          () => applyHierarchyGroupWithMode(group, {
-            mode: "ownership",
-            ownerCode: countryState.code,
-            render,
-            ownershipHistoryKind: "scenario-hierarchy-apply-ownership",
-            ownershipDirtyReason: "scenario-hierarchy-apply-ownership",
-          })
-        );
-        groupSection.appendChild(button);
-      });
-    } else {
-      const groupSection = appendActionSection(container, t("Hierarchy Groups", "ui"), {
-        collapsible: true,
-        defaultOpen: false,
-        rememberKey: "territories-presets:hierarchy-groups",
-      });
-      groupSection.appendChild(createEmptyNote(t("No hierarchy groups", "ui")));
-    }
-
-    const filteredPresetEntries = getFilteredRegionalPresets(countryState);
-    if (filteredPresetEntries.length > 0) {
-      const presetSection = appendActionSection(container, t("Regional Presets", "ui"), {
-        collapsible: true,
-        defaultOpen: false,
-        rememberKey: "territories-presets:regional-presets",
-      });
-      renderPresetEntryRows(
-        presetSection,
-        countryState.presetLookupCode || countryState.code,
-        filteredPresetEntries,
-        t("No regional presets", "ui"),
-        {
-          onApply: ({ presetIndex, presetLookupCode }) => {
-            applyPresetWithMode(presetLookupCode, presetIndex, {
-              mode: "ownership",
-              ownerCode: countryState.code,
-              render,
-              ownershipHistoryKind: "scenario-preset-apply-ownership",
-              ownershipDirtyReason: "scenario-preset-apply-ownership",
-            });
-          },
-          getDisabledInfo: ({ preset }) => getCountryPresetDisabledInfo(countryState, preset),
-          requireActiveOwner: false,
-        },
-      );
-    }
-  };
-
-  const renderScenarioParentReturnAction = (container, countryState) => {
-    const parentCode = normalizeCountryCode(
-      countryState?.parentOwnerTag
-      || (Array.isArray(countryState?.parentOwnerTags) ? countryState.parentOwnerTags[0] : "")
-    );
-    if (!parentCode) return;
-    const parentState = latestCountryStatesByCode.get(parentCode);
-    if (!parentState) return;
-
-    const returnBtn = document.createElement("button");
-    returnBtn.type = "button";
-    returnBtn.className = "scenario-action-card scenario-navigation-card scenario-parent-return-btn";
-    returnBtn.addEventListener("click", () => {
-      selectInspectorCountry(parentState.code);
-    });
-
-    const copy = document.createElement("div");
-    copy.className = "scenario-action-card-copy";
-    const title = document.createElement("div");
-    title.className = "country-row-title";
-    title.textContent = `${t("Return to", "ui")} ${parentState.displayName}`;
-    const meta = document.createElement("div");
-    meta.className = "country-select-meta";
-    meta.textContent = `(${parentState.code})`;
-    copy.appendChild(title);
-    copy.appendChild(meta);
-
-    const side = document.createElement("div");
-    side.className = "country-row-actions";
-    const swatch = document.createElement("span");
-    swatch.className = "country-select-swatch";
-    swatch.style.backgroundColor = getResolvedCountryColor(parentState);
-    side.appendChild(swatch);
-
-    returnBtn.appendChild(copy);
-    returnBtn.appendChild(side);
-    container.appendChild(returnBtn);
-  };
-
-  const renderScenarioBoundaryVariantActions = (container, countryState) => {
-    const variants = Array.isArray(countryState?.boundaryVariants) ? countryState.boundaryVariants : [];
-    if (variants.length <= 1) return;
-
-    const section = appendActionSection(container, t("Boundary Variants", "ui"));
-    const activeVariant = getResolvedReleasableBoundaryVariant(getScenarioCountryMeta(countryState.code) || countryState);
-
-    variants.forEach((variant) => {
-      const button = createInspectorActionButton(variant.label || variant.id, () => {
-        applyReleasableBoundaryVariantSelection(countryState, variant);
-      });
-      const isActive = String(activeVariant?.id || "").trim().toLowerCase() === String(variant?.id || "").trim().toLowerCase();
-      button.disabled = isActive;
-      if (isActive) {
-        button.title = t("Already using this boundary variant.", "ui");
-      }
-      section.appendChild(button);
-    });
-  };
-
-  const renderScenarioCoreTerritoryAction = (container, countryState) => {
-    const section = appendActionSection(container, t("Core Territory", "ui"));
-    const presetRef = getPrimaryReleasablePresetRef(countryState);
-    if (!presetRef) {
-      section.appendChild(createEmptyNote(t("No core territory defined", "ui")));
-      return;
-    }
-
-    const card = document.createElement("div");
-    card.className = "scenario-action-card scenario-core-action-card";
-
-    const copy = document.createElement("div");
-    copy.className = "scenario-action-card-copy";
-
-    const title = document.createElement("div");
-    title.className = "country-row-title";
-    title.textContent = presetRef.preset?.name || t("Core Territory", "ui");
-
-    const meta = document.createElement("div");
-    meta.className = "country-select-meta";
-    const metaBits = [`${presetRef.preset?.ids?.length || 0} ${t("features", "ui")}`];
-    const selectedVariantLabel = String(countryState?.selectedBoundaryVariantLabel || "").trim();
-    if (selectedVariantLabel && Array.isArray(countryState?.boundaryVariants) && countryState.boundaryVariants.length > 1) {
-      metaBits.push(selectedVariantLabel);
-    }
-    meta.textContent = metaBits.join(" · ");
-
-    copy.appendChild(title);
-    copy.appendChild(meta);
-
-    const actions = document.createElement("div");
-    actions.className = "country-row-actions scenario-core-action-row";
-    const isReleasable = !!countryState?.releasable;
-
-    const activateBtn = document.createElement("button");
-    activateBtn.type = "button";
-    activateBtn.className = "btn-primary";
-    activateBtn.textContent = isReleasable ? t("Activate Releasable", "ui") : t("Target This Country", "ui");
-    activateBtn.addEventListener("click", () => {
-      const normalizedCountryCode = normalizeCountryCode(countryState.code);
-      const alreadyActive = normalizedCountryCode && normalizedCountryCode === normalizeCountryCode(runtimeState.activeSovereignCode);
-      const previousActiveCode = normalizeCountryCode(runtimeState.activeSovereignCode);
-      const selectedCode = normalizeCountryCode(runtimeState.selectedInspectorCountryCode);
-      if (normalizedCountryCode) {
-        runtimeState.activeSovereignCode = normalizedCountryCode;
-      }
-      setScenarioMapPaintMode("ownership");
-      if (!alreadyActive) {
-        markDirty("set-active-sovereign");
-      }
-      callRuntimeHook(state, "updateActiveSovereignUIFn");
-      refreshCountryRows({
-        countryCodes: [previousActiveCode, normalizedCountryCode, selectedCode],
-        refreshInspector: true,
-      });
-      showToast(
-        t(
-          alreadyActive
-            ? (isReleasable
-              ? "Political ownership editing already targets this releasable."
-              : "Political ownership editing already targets this country.")
-            : (isReleasable
-              ? "Political ownership editing now targets this releasable."
-              : "Political ownership editing now targets this country."),
-          "ui"
-        ),
-        {
-          title: t("Active owner updated", "ui"),
-          tone: alreadyActive ? "info" : "success",
-          duration: 2800,
-        }
-      );
-    });
-    actions.appendChild(activateBtn);
-
-    const applyBtn = document.createElement("button");
-    applyBtn.type = "button";
-    applyBtn.className = "btn-secondary";
-    applyBtn.textContent = t("Reapply Core Territory", "ui");
-    applyBtn.addEventListener("click", () => {
-      applyScenarioReleasableCoreTerritory(countryState, {
-        source: "scenario-actions",
-        actionMode: "ownership",
-      });
-    });
-    actions.appendChild(applyBtn);
-
-    card.appendChild(copy);
-    card.appendChild(actions);
-    section.appendChild(card);
-  };
-
-  const renderScenarioHistoricalTransfers = (container, countryState) => {
-    const actions = Array.isArray(countryState?.companionActions)
-      ? countryState.companionActions.filter((action) => !action?.hidden_in_ui)
-      : [];
-    if (!actions.length) return;
-
-    const section = appendActionSection(container, t("Historical Transfers", "ui"));
-    actions.forEach((action) => {
-      const button = createInspectorActionButton(action.label || action.id, () => {
-        applyScenarioCompanionAction(countryState, action);
-      });
-      section.appendChild(button);
-    });
-  };
-
-  const renderScenarioReleasableActions = (container, countryState) => {
-    renderScenarioParentReturnAction(container, countryState);
-    renderScenarioBoundaryVariantActions(container, countryState);
-    renderScenarioCoreTerritoryAction(container, countryState);
-    renderScenarioHistoricalTransfers(container, countryState);
-  };
-
-  const renderScenarioVisualAdjustments = (container, countryState) => {
-    const details = document.createElement("details");
-    details.className = "scenario-visual-adjustments inspector-action-section";
-    details.open = !!runtimeState.ui?.scenarioVisualAdjustmentsOpen;
-    selectedCountryActionsSection?.classList.toggle("has-open-visual-adjustments", details.open);
-    details.addEventListener("toggle", () => {
-      if (!runtimeState.ui || typeof runtimeState.ui !== "object") {
-        runtimeState.ui = {};
-      }
-      runtimeState.ui.scenarioVisualAdjustmentsOpen = details.open;
-      selectedCountryActionsSection?.classList.toggle("has-open-visual-adjustments", details.open);
-      scheduleAdaptiveInspectorHeights();
-    });
-
-    const summary = document.createElement("summary");
-    summary.className = "section-header";
-    summary.textContent = t("Color Only", "ui");
-    details.appendChild(summary);
-
-    const body = document.createElement("div");
-    body.className = "scenario-visual-adjustments-body";
-
-    // Color Only 面板面向视觉颜色调整，主要写入 runtimeState.visualOverrides。
-    // 它可以复用 preset/hierarchy 的目标选择，但不得触发 owner/controller、边界或 diff 计数链。
-    const note = document.createElement("p");
-    note.className = "scenario-action-hint";
-    note.textContent = t(
-      "These actions only change visual color. Ownership, controllers, and dynamic borders stay unchanged.",
-      "ui"
-    );
-    body.appendChild(note);
-
-    const brushSection = appendActionSection(body, t("Brush", "ui"));
-    const isVisualBrush = String(runtimeState.paintMode || "visual") !== "sovereignty";
-    const brushBtn = createInspectorActionButton(
-      isVisualBrush
-        ? t("Return to Political Ownership Brush", "ui")
-        : t("Use Visual Color Brush", "ui"),
-      () => {
-        if (!runtimeState.ui || typeof runtimeState.ui !== "object") {
-          runtimeState.ui = {};
-        }
-        runtimeState.ui.scenarioVisualAdjustmentsOpen = true;
-        setScenarioMapPaintMode(isVisualBrush ? "ownership" : "visual");
-      }
-    );
-    brushSection.appendChild(brushBtn);
-
-    if (!countryState) {
-      body.appendChild(
-        createEmptyNote(t("Select a country to inspect territories, presets, and releasables.", "ui"))
-      );
-      details.appendChild(body);
-      container.appendChild(details);
-      return;
-    }
-
-    if (countryState.releasable) {
-      const presetRef = getPrimaryReleasablePresetRef(countryState);
-      const coreSection = appendActionSection(body, t("Core Territory Visuals", "ui"));
-
-      const applyVisualBtn = createInspectorActionButton(
-        t("Apply Visual Color to Core Territory", "ui"),
-        () => {
-          applyScenarioReleasableCoreTerritory(countryState, {
-            source: "visual-adjustments",
-            actionMode: "visual",
-          });
-          setScenarioVisualAdjustmentsOpen(true);
-        }
-      );
-      applyVisualBtn.disabled = !presetRef;
-      coreSection.appendChild(applyVisualBtn);
-
-      const clearVisualBtn = createInspectorActionButton(
-        t("Clear Core Territory Visual Overrides", "ui"),
-        () => {
-          if (!presetRef) return;
-          const requestedFeatureIds = Array.isArray(presetRef.preset?.ids) ? presetRef.preset.ids : [];
-          const { matchedIds } = filterToVisibleFeatureIds(requestedFeatureIds);
-          const result = clearVisualOverridesForFeatureIds(matchedIds, {
-            render,
-            historyKind: "scenario-core-clear-visual",
-            dirtyReason: "scenario-core-clear-visual",
-          });
-          if (result.changed > 0) {
-            showToast(
-              `${t("Cleared", "ui")} ${result.changed} ${t("features", "ui")}`,
-              {
-                title: t("Visual overrides cleared", "ui"),
-                tone: "success",
-                duration: 2800,
-              }
-            );
-          } else {
-            showToast(t("No visual overrides to clear.", "ui"), {
-              title: t("No changes", "ui"),
-              tone: "info",
-              duration: 2600,
-            });
-          }
-          setScenarioVisualAdjustmentsOpen(true);
-        }
-      );
-      clearVisualBtn.disabled = !presetRef;
-      coreSection.appendChild(clearVisualBtn);
-
-      if (!presetRef) {
-        coreSection.appendChild(createEmptyNote(t("No core territory defined", "ui")));
-      }
-    } else {
-      const countrySection = appendActionSection(body, t("Country Visuals", "ui"));
-
-      countrySection.appendChild(createInspectorActionButton(
-        t("Paint Owned Regions With Country Color", "ui"),
-        () => {
-          const result = applyVisualColorToOwnedRegions(countryState);
-          if (result.changed > 0) {
-            showToast(
-              `${t("Applied", "ui")} ${result.changed}/${result.matchedCount} ${t("features", "ui")}`,
-              {
-                title: t("Visual color applied", "ui"),
-                tone: "success",
-                duration: 2800,
-              }
-            );
-          } else {
-            showToast(t("No owned regions were recolored.", "ui"), {
-              title: t("No changes", "ui"),
-              tone: "info",
-              duration: 2600,
-            });
-          }
-          setScenarioVisualAdjustmentsOpen(true);
-        }
-      ));
-
-      countrySection.appendChild(createInspectorActionButton(
-        t("Clear Owned Region Visual Overrides", "ui"),
-        () => {
-          const result = clearCountryVisualOverrides(countryState);
-          if (result.changed > 0) {
-            showToast(
-              `${t("Cleared", "ui")} ${result.changed} ${t("features", "ui")}`,
-              {
-                title: t("Visual overrides cleared", "ui"),
-                tone: "success",
-                duration: 2800,
-              }
-            );
-          } else {
-            showToast(t("No visual overrides to clear.", "ui"), {
-              title: t("No changes", "ui"),
-              tone: "info",
-              duration: 2600,
-            });
-          }
-          setScenarioVisualAdjustmentsOpen(true);
-        }
-      ));
-
-      if (countryState.hierarchyGroups.length > 0) {
-        const groupSection = appendActionSection(body, t("Hierarchy Groups (Visual Color)", "ui"));
-        countryState.hierarchyGroups.forEach((group) => {
-          groupSection.appendChild(createInspectorActionButton(
-            t(group.label, "geo") || group.label,
-            () => {
-              applyHierarchyGroupWithMode(group, {
-                mode: "visual",
-                color: runtimeState.selectedColor,
-                render,
-                visualHistoryKind: "scenario-hierarchy-apply-visual",
-                visualDirtyReason: "scenario-hierarchy-apply-visual",
-              });
-              setScenarioVisualAdjustmentsOpen(true);
-            }
-          ));
-        });
-      }
-
-      const filteredPresetEntries = getFilteredRegionalPresets(countryState);
-      if (filteredPresetEntries.length > 0) {
-        const presetSection = appendActionSection(body, t("Regional Presets (Visual Color)", "ui"));
-        renderPresetEntryRows(
-          presetSection,
-          countryState.presetLookupCode || countryState.code,
-          filteredPresetEntries,
-          t("No regional presets", "ui"),
-          {
-            onApply: ({ presetIndex, presetLookupCode }) => {
-              applyPresetWithMode(presetLookupCode, presetIndex, {
-                mode: "visual",
-                color: runtimeState.selectedColor,
-                render,
-                visualHistoryKind: "scenario-preset-apply-visual",
-                visualDirtyReason: "scenario-preset-apply-visual",
-              });
-              setScenarioVisualAdjustmentsOpen(true);
-            },
-            getDisabledInfo: ({ preset }) => getCountryPresetDisabledInfo(countryState, preset),
-            requireActiveOwner: false,
-          }
-        );
-      }
-    }
-
-    details.appendChild(body);
-    container.appendChild(details);
-  };
-
-  const renderScenarioActionsPanel = (container, countryState) => {
-    container.replaceChildren();
-    if (countryState) {
-      renderCountryColorSyncAffordance(container, countryState);
-    }
-
-    if (!countryState) {
-      container.appendChild(createEmptyNote(t("Select a country to inspect territories, presets, and releasables.", "ui")));
-      return;
-    }
-
-    if (hasScenarioCoreTerritoryActions(countryState)) {
-      renderScenarioReleasableActions(container, countryState);
-    } else {
-      renderScenarioParentActions(container, countryState);
-    }
-    renderScenarioVisualAdjustments(container, countryState);
-  };
+  const { renderScenarioActionsPanel } = createScenarioInspectorController({
+    t,
+    getView: () => ({
+      visualOpen: !!runtimeState.ui?.scenarioVisualAdjustmentsOpen,
+      paintMode: String(runtimeState.paintMode || "visual"),
+      selectedColor: String(runtimeState.selectedColor || ""),
+    }),
+    getCountryState,
+    activateScenarioCountry,
+    storeVisualOpen,
+    selectInspectorCountry,
+    getScenarioSubjectKindLabel,
+    getResolvedCountryColor,
+    getScenarioSubjectChildrenForParent,
+    getReleasableChildrenForParent,
+    appendActionSection,
+    createInspectorActionButton,
+    applyHierarchyGroupWithMode,
+    render,
+    createEmptyNote,
+    renderRegionalPresets,
+    normalizeCountryCode,
+    getResolvedReleasableBoundaryVariant,
+    getScenarioCountryMeta,
+    applyReleasableBoundaryVariantSelection,
+    getPrimaryReleasablePresetRef,
+    applyScenarioReleasableCoreTerritory,
+    renderScenarioHistoricalTransfers,
+    selectedCountryActionsSection,
+    scheduleAdaptiveInspectorHeights,
+    setScenarioMapPaintMode,
+    setScenarioVisualAdjustmentsOpen,
+    filterToVisibleFeatureIds,
+    clearVisualOverridesForFeatureIds,
+    showToast,
+    applyVisualColorToOwnedRegions,
+    clearCountryVisualOverrides,
+    renderCountryColorSyncAffordance,
+    hasScenarioCoreTerritoryActions,
+  });
 
   const getSelectedLandFeatureIdsForCountryInference = () => {
     const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
@@ -6102,35 +3971,11 @@ function initSidebar({ render } = {}) {
     renderScenarioAuditPanel,
   } = createProjectSupportDiagnosticsController({
     state,
-    elements: {
-      scenarioAuditSection,
-      legendList,
-      downloadProjectBtn,
-      uploadProjectBtn,
-      projectDownloadFormat,
-      projectDownloadDestination,
-      projectPackageContents,
-      projectLoadSource,
-      projectFileInput,
-      projectFileName,
-      projectSaveStatus,
-      backendCloudSection,
-      backendCloudStatus,
-      backendAccountToggleBtn,
-      backendAccountPopover,
-      backendAccountBackdrop,
-      backendAccountCloseBtn,
-      backendCloudUsername,
-      backendCloudPassword,
-      backendCloudSaveTitle,
-      backendCloudRegisterBtn,
-      backendCloudLoginBtn,
-      backendCloudLogoutBtn,
-      backendCloudSaveBtn,
-      backendCloudPublishBtn,
-      backendCommunityRefreshBtn,
-      backendCommunityList,
-      debugModeSelect,
+    hosts: {
+      projectManagementStack,
+      legendEditorStack,
+      diagnosticStack,
+      rightSidebarContent,
     },
     helpers: {
       t,
@@ -6281,21 +4126,7 @@ function initSidebar({ render } = {}) {
       clampUnitCounterStatValue,
       getUnitCounterCombatPreset,
       getRandomizedUnitCounterCombatState,
-      ensureHoi4UnitIconManifest,
-      cancelHoi4CatalogGridRender,
-      filterHoi4UnitIconEntries,
-      renderHoi4CatalogCards,
-      getHoi4EffectiveMappedPresetIds,
-      getHoi4ReviewSummaryText,
-      getHoi4CatalogFilterOptions,
-      getHoi4UnitIconManifestState: () => ({
-        status: hoi4UnitIconManifestStatus,
-        error: hoi4UnitIconManifestError,
-        data: hoi4UnitIconManifestData,
-      }),
-      exportHoi4UnitIconReviewDraft,
-      toggleHoi4EntryCurrentPresetMapping,
-      setHoi4CurrentPresetCandidate,
+      showToast,
       DEFAULT_UNIT_COUNTER_PRESET_ID,
     },
   }));

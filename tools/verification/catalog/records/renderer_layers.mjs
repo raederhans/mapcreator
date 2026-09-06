@@ -1407,6 +1407,8 @@ export const RENDERER_LAYERS_RECORDS = [
       "tools/renderer_pass_family_inventory.mjs",
       "tests/renderer_pass_family_inventory_behavior.test.mjs",
       "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "tests/test_map_renderer_render_pipeline_passes_boundary_contract.py",
       "tools/eslint-rules/state-writer-allowlist.json",
       "package.json"
@@ -1536,7 +1538,6 @@ export const RENDERER_LAYERS_RECORDS = [
       "js/core/map_renderer.js",
       "js/core/renderer/political_pass_orchestrator_owner.js",
       "js/core/map_renderer/public.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "tools/eslint-rules/state-writer-allowlist.json",
       "tools/check_architecture_boundaries.mjs",
       "tools/renderer_pass_family_inventory.mjs",

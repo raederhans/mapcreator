@@ -325,7 +325,7 @@ export function createViewportResizeLifecycleOwner({
     resizeSpatialRefreshHandle = null;
   }
 
-  return {
+  return Object.freeze({
     getResizeReason,
     isInteractiveLayoutResize,
     scheduleResizeSpatialRefresh,
@@ -341,5 +341,5 @@ export function createViewportResizeLifecycleOwner({
     handleResize,
     handleSidebarLayoutStart,
     dispose,
-  };
+  });
 }

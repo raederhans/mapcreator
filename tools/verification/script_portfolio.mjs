@@ -196,6 +196,18 @@ export function assertVerificationEstimatePolicy(policy) {
       throw new Error(`verification-plan-estimate-policy-unscaled:${cost}`);
     }
   }
+  const calibration = policy.localRuntimeCalibration;
+  if (calibration !== undefined) {
+    if (!calibration || !["win32", "linux", "darwin"].includes(calibration.platform)
+      || !COST_ORDER.includes(calibration.cost)
+      || !Number.isFinite(calibration.groupBaseRuntimeSeconds) || calibration.groupBaseRuntimeSeconds < 0
+      || !Number.isFinite(calibration.perLeafRuntimeSeconds) || calibration.perLeafRuntimeSeconds <= 0
+      || !Array.isArray(calibration.leafIds) || calibration.leafIds.length === 0
+      || calibration.leafIds.some((id) => typeof id !== "string" || !id.startsWith("node-test:tests/"))
+      || new Set(calibration.leafIds).size !== calibration.leafIds.length) {
+      throw new Error("verification-plan-estimate-policy-invalid-calibration");
+    }
+  }
   return policy;
 }
 

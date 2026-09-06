@@ -317,12 +317,10 @@ export function createRenderCacheOwner({
     return cache.canvases[passName];
   }
 
-  function resizeCanvasToMainTarget(targetCanvas) {
+  function getMainTargetCanvasDimensions() {
     const context = getContext();
     const width = Math.max(1, Number(context?.canvas?.width || 1));
     const height = Math.max(1, Number(context?.canvas?.height || 1));
-    if (targetCanvas.width !== width) targetCanvas.width = width;
-    if (targetCanvas.height !== height) targetCanvas.height = height;
     return { width, height };
   }
 
@@ -334,7 +332,10 @@ export function createRenderCacheOwner({
       canvas.height = 1;
       cache.lastGoodFrame.canvas = canvas;
     }
-    resizeCanvasToMainTarget(cache.lastGoodFrame.canvas);
+    const { width, height } = getMainTargetCanvasDimensions();
+    const canvas = cache.lastGoodFrame.canvas;
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
     return cache.lastGoodFrame.canvas;
   }
 
@@ -346,7 +347,10 @@ export function createRenderCacheOwner({
       canvas.height = 1;
       cache.interactionComposite.canvas = canvas;
     }
-    const { width, height } = resizeCanvasToMainTarget(cache.interactionComposite.canvas);
+    const { width, height } = getMainTargetCanvasDimensions();
+    const canvas = cache.interactionComposite.canvas;
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
     cache.interactionComposite.layout = {
       pixelWidth: width,
       pixelHeight: height,
@@ -366,7 +370,10 @@ export function createRenderCacheOwner({
       canvas.height = 1;
       cache.compositeBuffer.canvas = canvas;
     }
-    resizeCanvasToMainTarget(cache.compositeBuffer.canvas);
+    const { width, height } = getMainTargetCanvasDimensions();
+    const canvas = cache.compositeBuffer.canvas;
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
     return cache.compositeBuffer.canvas;
   }
 
@@ -577,7 +584,7 @@ export function createRenderCacheOwner({
     return false;
   }
 
-  return {
+  return Object.freeze({
     canDrawInteractionComposite,
     clearLastGoodFrame,
     clearPassFullReferenceTransforms,
@@ -599,5 +606,5 @@ export function createRenderCacheOwner({
     resizeRenderPassCanvases,
     setPassFullReferenceTransform,
     setPassReferenceTransform,
-  };
+  });
 }

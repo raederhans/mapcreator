@@ -8,6 +8,8 @@ import {
   commitSpecialZoneLayersState,
   ensureManualSpecialZonesState,
   ensureSpecialZoneEditorState,
+  activateSpecialZoneMembershipToolState,
+  exitSpecialZoneMembershipToolState,
   mutateSpecialZoneLayersStateAction,
   patchSpecialZoneEditorState,
   restoreSpecialZoneSnapshotState,
@@ -16,6 +18,7 @@ import {
   setSpecialZonePresetCategoryState,
   setSpecialZonesVisibilityState,
   setSpecialZonesOverlayDirtyState,
+  registerSpecialZonesWorkbenchRuntimeHooks,
 } from "../js/core/state/actions/special_zone_actions.js";
 import {
   buildStateWriterBindingGrants,
@@ -187,6 +190,27 @@ test("special zone layer mutation action normalizes, mutates, and commits inside
   assert.equal(next, target.specialZoneLayers);
   assert.deepEqual(next.layers[0].memberFeatureIds, ["a", "b", "c"]);
   assert.equal(target.specialZonesOverlayDirty, true);
+});
+
+test("special zone membership tools store string tools and retain runtime hook identity", () => {
+  const renderWorkbench = () => {};
+  const renderCurrentTarget = () => {};
+  const target = {
+    currentTool: { toString: () => "select" },
+    brushModeEnabled: true,
+    specialZoneEditor: { active: true, vertices: [], zoneType: "custom", label: "", selectedId: null, counter: 1 },
+  };
+
+  assert.equal(activateSpecialZoneMembershipToolState(target, "brush"), "brush");
+  assert.equal(target.specialZonePreviousTool, "select");
+  assert.equal(target.currentTool, "special-zone-membership");
+  assert.equal(target.brushModeEnabled, false);
+  assert.equal(exitSpecialZoneMembershipToolState(target), "select");
+  assert.equal(target.currentTool, "select");
+
+  registerSpecialZonesWorkbenchRuntimeHooks(target, { renderWorkbench, renderCurrentTarget });
+  assert.equal(target.updateSpecialZonesWorkbenchUIFn, renderWorkbench);
+  assert.equal(target.updateSpecialZonesWorkbenchCurrentTargetUIFn, renderCurrentTarget);
 });
 
 test("special zone snapshot restore preserves absent properties and normalizes present properties", () => {

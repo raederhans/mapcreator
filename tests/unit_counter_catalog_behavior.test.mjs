@@ -44,6 +44,19 @@ class Element {
   click() { this.clicked = true; this.listeners.get("click")?.({ target: this }); }
 }
 
+function buildCatalogView(state) {
+  const ui = state.strategicOverlayUi || {};
+  return {
+    isModalOpen: Boolean(ui.counterEditorModalOpen),
+    source: String(ui.counterCatalogSource || "internal"),
+    variant: String(ui.hoi4CounterVariant || "small"),
+    internalQuery: String(ui.counterCatalogQuery || ""),
+    hoi4Query: String(ui.hoi4CounterQuery || ""),
+    internalCategory: String(ui.counterCatalogCategory || "all"),
+    hoi4Category: String(ui.hoi4CounterCategory || "all"),
+  };
+}
+
 function fixture(context, { count = 1 } = {}) {
   const originals = Object.fromEntries(["document", "requestAnimationFrame", "cancelAnimationFrame", "HTMLElement", "HTMLButtonElement"].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const frames = new Map();
@@ -82,7 +95,7 @@ function fixture(context, { count = 1 } = {}) {
   const summary = new Element();
   const state = { strategicOverlayUi: { counterCatalogSource: "hoi4", counterEditorModalOpen: false }, unitCounterEditor: { presetId: "INF" } };
   const render = () => catalog.render({
-    elements: { unitCounterCatalogGrid: grid, unitCounterLibraryReviewSummary: summary }, state,
+    elements: { unitCounterCatalogGrid: grid, unitCounterLibraryReviewSummary: summary }, catalogView: buildCatalogView(state),
     effectivePresetId: "INF", helpers: { getFilteredUnitCounterCatalog: () => [] },
   });
   const ready = async () => { resolve({ entries }); await pending; await Promise.resolve(); };

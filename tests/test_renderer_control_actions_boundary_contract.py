@@ -8,7 +8,6 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 PHASE_ACTIONS_JS = REPO_ROOT / "js" / "core" / "state" / "actions" / "renderer_phase_actions.js"
 INTERACTION_ACTIONS_JS = REPO_ROOT / "js" / "core" / "state" / "actions" / "renderer_interaction_actions.js"
 RUNTIME_STATE_JS = REPO_ROOT / "js" / "core" / "state" / "renderer_runtime_state.js"
-RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 PUBLIC_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
 
 
@@ -39,7 +38,6 @@ INTERACTION_KEYS = {
 CLICK_INTERACTION_KEYS = {
     "hoveredId",
     "hoverOverlayDirty",
-    "selectedColor",
     "waterRegionOverrides",
 }
 
@@ -63,10 +61,18 @@ class RendererControlActionsBoundaryContractTest(unittest.TestCase):
         )
 
     def test_action_modules_remain_import_free_state_only_surfaces(self):
+        self.assertNotRegex(self.phase_actions, r"^\s*import\s", re.MULTILINE)
+        self.assertIn(
+            'import { setSelectedColorState } from "./appearance_selection_actions.js";',
+            self.interaction_actions,
+        )
         for source in [self.phase_actions, self.interaction_actions]:
-            self.assertNotRegex(source, r"^\s*import\s", re.MULTILINE)
             for token in ["runtimeState", "globalThis", "document", "window", "Date.now", "requestAnimationFrame"]:
                 self.assertNotIn(token, source)
+        self.assertIn(
+            "return setSelectedColorState(target, color);",
+            self.interaction_actions,
+        )
 
     def test_map_renderer_delegates_all_approved_writes(self):
         for import_path in [
@@ -86,11 +92,9 @@ class RendererControlActionsBoundaryContractTest(unittest.TestCase):
             self.assertNotRegex(runtime_state, rf"\btarget\.{re.escape(key)}\s*=(?!=)")
         self.assertIn("setInteractionInfrastructureActionStateFields(target, stage, options)", runtime_state)
 
-    def test_protected_boundaries_remain_read_only_and_private(self):
-        runtime_context = RUNTIME_CONTEXT_JS.read_text(encoding="utf-8")
+    def test_public_boundary_remains_private(self):
         public_facade = PUBLIC_FACADE_JS.read_text(encoding="utf-8")
         for token in ["renderer_phase_actions", "renderer_interaction_actions"]:
-            self.assertNotIn(token, runtime_context)
             self.assertNotIn(token, public_facade)
 
 

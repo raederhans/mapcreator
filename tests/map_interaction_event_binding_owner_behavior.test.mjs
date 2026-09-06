@@ -211,3 +211,9 @@ test("resize and browser zoom observers run after listener binding", () => {
   assert.ok(calls.order.indexOf("node:lostpointercapture") < calls.order.indexOf("bindMapContainerResizeObserver"));
   assert.ok(calls.order.indexOf("bindMapContainerResizeObserver") < calls.order.indexOf("bindBrowserZoomObservers"));
 });
+
+test("factory freezes its exact public API", () => {
+  const { owner } = createHarness();
+
+  assert.equal(Object.isFrozen(owner), true);
+});

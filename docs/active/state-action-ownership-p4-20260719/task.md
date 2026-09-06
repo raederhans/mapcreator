@@ -2,7 +2,17 @@
 
 ## Current status
 
-`P4.3 admitted / P4.4 unblocked` — exact source candidate `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`（tree `ba969a24a4730072245c60efeefba66409f2c88d`）已完成 P4.3 exact phase、zero-gap routes、Pages/dist、core 93/93、browser quick、standard perf 与 independent review；`A_ADMITTED_SHA` 固定为该 source SHA。P4.4 尚未开始，P4.5 与 closeout 仍 pending。
+截至 2026-09-06，本文件是 P4 当前状态的唯一摘要；下方带日期的验证记录仅证明各自历史候选。
+
+| 层次 | 当前已知状态与依据 |
+| --- | --- |
+| P4.3 正式验收 | 历史 `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`（tree `ba969a24a4730072245c60efeefba66409f2c88d`）及其已记录的验收保留。 |
+| P4.4 实现 | 已在本地提交 `12d967fc` 完成迁移；当前 `tools/state_writer_policy.json` 的 `progress.latestPhase` 为 `P4.4`，并包含对应 checkpoint。UI、appearance、transport、strategic action 实现已存在，不能再标为未开始。 |
+| 后续本地治理 | 已提交 `3092b17e`、`1f31ef7e`、`348a952e`；后续 deeper stages 1–4 及本轮治理均由 [development-loop 记录](../development-loop-simplification-20260905/task.md) 维护，当前工作区仍有未提交的本地集成；具体完成项与 policy 同步缺口以该记录为准。 |
+| 2026-09-06 阶段 1 | 阶段 1 的策略生成和标准 checker 已通过，零 violations、unknown candidate bindings 和 stale policy bindings。证据见 development-loop 阶段 1 closeout；后续 scenario/renderer 改动的最新策略正在合并收尾中重新验证，不能沿用旧快照结论。未刷新冻结历史或扩大 scanner 例外。 |
+| P4.4 正式验收 | 当前工作区的完整 admission 尚未确认；提交标题、policy checkpoint 和局部测试不能替代 fresh exact-candidate 验收，本次不写入 `B_ADMITTED_SHA`。 |
+| P4.5 / closeout | 尚待确认并完成阶段验收及最终收尾，不因 P4.4 的本地实现自动推进。 |
+| 远端与发布 | 本次仅核对本地代码、Git 记录和既有交接记录；未刷新远端、运行 CI 或验证发布，旧记录中的 main/remote 相等声明不代表当前状态。 |
 
 ## Checklist
 
@@ -22,10 +32,14 @@
 - [x] Complete P4.2b Scenario chunk/promotion/generation/error action ownership and exact checkpoint evidence.
 - [x] Complete P4.2c Scenario health, hydration-gate and presentation-hint action ownership and exact checkpoint evidence.
 - [x] Complete and formally admit P4.3 renderer phase/interaction/cache/diagnostics actions at `5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`.
-- [ ] Execute P4.4 and P4.5 in order; P4.4 B1/B2/B3 semantic replay is unblocked but not started.
+- [x] Complete local P4.4 UI/appearance/transport/strategic migration (`12d967fc`).
+- [ ] Confirm formal P4.4 admission for the intended source candidate and record `B_ADMITTED_SHA` only with complete evidence.
+- [ ] Complete the remaining P4.5 hook phase and its acceptance.
 - [ ] Complete the remaining phase reviews, UltraQA, full P4 acceptance, final integration and safe cleanup.
 
 ## Validation evidence
+
+以下表格与后续带日期的段落是历史执行记录；当前实现、验收和发布状态以顶部摘要为准。本次文档收口只做路径、引用和文本保留检查，不复跑其中的项目验证。
 
 | Command or check | Result |
 | --- | --- |
@@ -233,7 +247,7 @@
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - Action-proof helper traversal remains the dominant local policy-tooling cost: `map_renderer.js` measures about 60.75 seconds and `scenario/chunk_runtime.js` about 7.4 seconds. Exact-context memoization requires a dedicated follow-up because helper output depends on alias state, parameter classifications, reachability and enclosing identity.
 - P4.3 is complete and admitted; the active task directory remains the control surface for P4.4 and later P4 phases.
-- P4.4 B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone require semantic replay from the exact A source；shared UI files remain main-thread-only.
+- P4.4 B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 的本地实现已完成；后续正式 admission 仍需明确候选与 exact A 血缘，不能把旧的“重放尚未开始”说明作为当前工作指令。共享 UI 文件继续遵循单 writer 规则。
 - P4.4 still requires fresh exact-phase, browser, performance, scenario-data/heavy-geo, Pages/dist, core and independent review evidence before `B_ADMITTED_SHA` can be written.
 
 ### 2026-08-05 P4.3 audit repair evidence

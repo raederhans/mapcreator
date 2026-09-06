@@ -26,7 +26,13 @@ const startupWorkerTaskClient = createWorkerTaskClient({
   createWorker: () => new Worker(STARTUP_WORKER_URL),
   createTaskId: (type) => `${type}:${Date.now()}:${++taskCounter}`,
   resolveTimeoutMs: resolveTaskTimeoutMs,
-  createMessageError: (message) => new Error(message.message || `Startup worker failed during ${message.stage || "unknown"}.`),
+  createMessageError: (message) => {
+    const error = new Error(message.message || `Startup worker failed during ${message.stage || "unknown"}.`);
+    if (message?.name) {
+      error.name = String(message.name);
+    }
+    return error;
+  },
   createTimeoutError: (type) => new Error(`Startup worker timed out for ${type}.`),
   createRecycleError: (type) => new Error(`Startup worker recycled after timeout for ${type}.`),
   createWorkerError: (event) => (
@@ -81,8 +87,8 @@ function resolveWorkerResourceUrl(url) {
   }
 }
 
-function dispatchTask(type, payload, { timeoutMs = null } = {}) {
-  return startupWorkerTaskClient.dispatchTask(type, payload, { timeoutMs });
+function dispatchTask(type, payload, { timeoutMs = null, signal = null } = {}) {
+  return startupWorkerTaskClient.dispatchTask(type, payload, { timeoutMs, signal });
 }
 
 export async function loadBaseStartupViaWorker({
@@ -151,12 +157,13 @@ export async function decodeRuntimeChunkViaWorker({
   chunkUrl,
   chunkType = "runtime-topology",
   timeoutMs = null,
+  signal = null,
 } = {}) {
   const message = await dispatchTask(MESSAGE_TYPES.DECODE_RUNTIME_CHUNK, {
     runtimeTopologyUrl: resolveWorkerResourceUrl(runtimeTopologyUrl),
     chunkUrl: resolveWorkerResourceUrl(chunkUrl),
     chunkType,
-  }, { timeoutMs });
+  }, { timeoutMs, signal });
   return {
     runtimePoliticalTopology: message.runtimePoliticalTopology || null,
     runtimePoliticalMeta: message.runtimePoliticalMeta || null,

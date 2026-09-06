@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { discoverGlobalStateImportBindings } from "./state_writer_policy.mjs";
+import { scanStateMutations } from "./state_writer_inventory.mjs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -18,14 +20,35 @@ const SCAN_ROOTS = [
   path.join(PROJECT_ROOT, "tests"),
 ];
 const EXTENSIONS = new Set([".js", ".mjs"]);
-const LEGACY_SCANNER_FIXTURE_PATHS = new Set([
-  "tests/state_writer_policy_behavior.test.mjs",
-  "tests/state_writer_policy_manifest_behavior.test.mjs",
-  "tests/state_writer_scanner_soundness_behavior.test.mjs",
-  "tests/state_writer_policy_soundness_behavior.test.mjs",
-  "tests/day_night_runtime_owner_behavior.test.mjs",
-  "tests/political_background_render_owner_behavior.test.mjs",
-]);
+// Test-local fixtures are not the application singleton. Resolve canonical
+// imports and lexical bindings rather than matching text inside assertions.
+export function hasDirectStateWrites(content, relativePath) {
+  if (!normalizeRelativePath(relativePath).startsWith("tests/")) {
+    return scanContentForStateWrites(content).length > 0;
+  }
+  let imports;
+  try {
+    imports = discoverGlobalStateImportBindings(content, { filePath: relativePath });
+  } catch (error) {
+    // Browser tests also use dynamic imports. Keep the existing conservative
+    // scan for access forms the binding resolver cannot represent.
+    if (error.code !== "unsupported-global-state-facade-access") throw error;
+    return scanContentForStateWrites(content).length > 0;
+  }
+  if (!imports.length) return false;
+  // Escape diagnostics also cover readonly assertions; the policy checker
+  // handles those separately. This check inventories concrete direct writes.
+  return scanStateMutations(content, {
+    filePath: relativePath,
+    bindings: imports.map(({ localName, importSource, importedName }) => ({
+      id: `module:${localName}`,
+      kind: "module",
+      name: localName,
+      importSource,
+      importedName,
+    })),
+  }).some((finding) => finding.operation !== "unsupported");
+}
 
 function walkFiles(rootDir) {
   const results = [];
@@ -53,11 +76,8 @@ function collectCurrentWriters() {
       const relativePath = normalizeRelativePath(
         path.relative(PROJECT_ROOT, filePath),
       );
-      if (LEGACY_SCANNER_FIXTURE_PATHS.has(relativePath)) {
-        continue;
-      }
       const content = fs.readFileSync(filePath, "utf8");
-      if (scanContentForStateWrites(content).length > 0) {
+      if (hasDirectStateWrites(content, relativePath)) {
         current.add(relativePath);
       }
     }
@@ -65,39 +85,45 @@ function collectCurrentWriters() {
   return current;
 }
 
-const allowlist = loadAllowlist(ALLOWLIST_PATH);
-const currentWriters = collectCurrentWriters();
-const policy = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));
-const policyProjection = new Set(
-  (policy.writers || [])
-    .filter((writer) => writer?.authority === "legacy-direct")
-    .map((writer) => normalizeRelativePath(writer.path)),
-);
-const unexpected = [...currentWriters].filter((filePath) => !allowlist.has(filePath)).sort();
-const missingFromAllowlist = [...policyProjection]
-  .filter((filePath) => !allowlist.has(filePath))
-  .sort();
-const stale = [...allowlist]
-  .filter((filePath) => !policyProjection.has(filePath))
-  .sort();
-
-if (!unexpected.length && !missingFromAllowlist.length && !stale.length) {
-  console.log(
-    `State write allowlist passed with ${allowlist.size} policy-projected files; legacy scanner observed ${currentWriters.size}.`,
+function main() {
+  const allowlist = loadAllowlist(ALLOWLIST_PATH);
+  const currentWriters = collectCurrentWriters();
+  const policy = JSON.parse(fs.readFileSync(POLICY_PATH, "utf8"));
+  const policyProjection = new Set(
+    (policy.writers || [])
+      .filter((writer) => writer?.authority === "legacy-direct")
+      .map((writer) => normalizeRelativePath(writer.path)),
   );
-  process.exit(0);
+  const unexpected = [...currentWriters].filter((filePath) => !allowlist.has(filePath)).sort();
+  const missingFromAllowlist = [...policyProjection]
+    .filter((filePath) => !allowlist.has(filePath))
+    .sort();
+  const stale = [...allowlist]
+    .filter((filePath) => !policyProjection.has(filePath))
+    .sort();
+
+  if (!unexpected.length && !missingFromAllowlist.length && !stale.length) {
+    console.log(
+      `State write allowlist passed with ${allowlist.size} policy-projected files; direct write scans observed ${currentWriters.size}.`,
+    );
+    return 0;
+  }
+
+  if (unexpected.length) {
+    console.error("Unexpected direct state write files:");
+    unexpected.forEach((filePath) => console.error(`  + ${filePath}`));
+  }
+  if (missingFromAllowlist.length) {
+    console.error("Policy-projected direct state writers missing from the allowlist:");
+    missingFromAllowlist.forEach((filePath) => console.error(`  + ${filePath}`));
+  }
+  if (stale.length) {
+    console.error("Stale allowlist entries:");
+    stale.forEach((filePath) => console.error(`  - ${filePath}`));
+  }
+  return 1;
 }
 
-if (unexpected.length) {
-  console.error("Unexpected direct state write files:");
-  unexpected.forEach((filePath) => console.error(`  + ${filePath}`));
+if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+  process.exitCode = main();
 }
-if (missingFromAllowlist.length) {
-  console.error("Policy-projected direct state writers missing from the allowlist:");
-  missingFromAllowlist.forEach((filePath) => console.error(`  + ${filePath}`));
-}
-if (stale.length) {
-  console.error("Stale allowlist entries:");
-  stale.forEach((filePath) => console.error(`  - ${filePath}`));
-}
-process.exit(1);

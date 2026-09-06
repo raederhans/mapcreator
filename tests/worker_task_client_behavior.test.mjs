@@ -223,3 +223,167 @@ test("worker task client rejects pending work on worker error", async () => {
   assert.equal(FakeWorker.instance.terminated, true);
   assert.equal(client.getPendingTaskCount(), 0);
 });
+
+test("worker task client cancels one task without recycling its shared worker", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const clearedTimeouts = [];
+  const postedMessages = [];
+  const abortListeners = new Set();
+  const signal = {
+    aborted: false,
+    reason: null,
+    addEventListener(type, listener) {
+      if (type === "abort") abortListeners.add(listener);
+    },
+    removeEventListener(type, listener) {
+      if (type === "abort") abortListeners.delete(listener);
+    },
+  };
+
+  class FakeWorker {
+    constructor() {
+      FakeWorker.instance = this;
+      this.onmessage = null;
+      this.onerror = null;
+    }
+
+    postMessage(message) {
+      postedMessages.push(message);
+    }
+
+    terminate() {
+      this.terminated = true;
+    }
+  }
+
+  try {
+    let timerSequence = 0;
+    globalThis.setTimeout = () => `timeout-${++timerSequence}`;
+    globalThis.clearTimeout = (timeoutId) => clearedTimeouts.push(timeoutId);
+    const client = createWorkerTaskClient({
+      createWorker: () => new FakeWorker(),
+      createTaskId: (type, sequence) => `${type}:${sequence}`,
+    });
+
+    await client.ensureWorker();
+    const abortedTask = client.dispatchTask("LOAD_A", {}, { signal });
+    const successfulTask = client.dispatchTask("LOAD_B", {});
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.deepEqual(postedMessages.map((message) => message.taskId), ["LOAD_A:1", "LOAD_B:2"]);
+    assert.equal(abortListeners.size, 1);
+
+    signal.aborted = true;
+    signal.reason = new DOMException("cancelled", "AbortError");
+    for (const listener of [...abortListeners]) listener();
+
+    await assert.rejects(abortedTask, (error) => error?.name === "AbortError");
+    assert.deepEqual(postedMessages.at(-1), { type: "CANCEL_TASK", taskId: "LOAD_A:1" });
+    assert.equal(FakeWorker.instance.terminated, undefined);
+    assert.equal(client.getPendingTaskCount(), 1);
+    assert.equal(abortListeners.size, 0);
+    assert.deepEqual(clearedTimeouts, ["timeout-1"]);
+
+    FakeWorker.instance.onmessage({ data: { type: "READY", taskId: "LOAD_A:1", value: "late" } });
+    assert.equal(client.getPendingTaskCount(), 1);
+    FakeWorker.instance.onmessage({ data: { type: "READY", taskId: "LOAD_B:2", value: "kept" } });
+    assert.equal((await successfulTask).value, "kept");
+    assert.equal(client.getPendingTaskCount(), 0);
+    assert.deepEqual(clearedTimeouts, ["timeout-1", "timeout-2"]);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});
+
+test("worker task client skips worker dispatch for an already aborted signal", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let workersCreated = 0;
+  const client = createWorkerTaskClient({
+    createWorker: () => {
+      workersCreated += 1;
+      return {};
+    },
+  });
+
+  await assert.rejects(
+    client.dispatchTask("LOAD", {}, { signal: controller.signal }),
+    (error) => error?.name === "AbortError",
+  );
+  assert.equal(workersCreated, 0);
+  assert.equal(client.getPendingTaskCount(), 0);
+});
+
+test("worker task client cleans pending state when postMessage throws", async () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const clearedTimeouts = [];
+
+  try {
+    globalThis.setTimeout = () => "timeout-post-failure";
+    globalThis.clearTimeout = (timeoutId) => clearedTimeouts.push(timeoutId);
+    const client = createWorkerTaskClient({
+      createWorker: () => ({
+        postMessage() {
+          throw new Error("post failed");
+        },
+      }),
+    });
+
+    await assert.rejects(client.dispatchTask("LOAD"), /post failed/);
+    assert.equal(client.getPendingTaskCount(), 0);
+    assert.deepEqual(clearedTimeouts, ["timeout-post-failure"]);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});
+
+test("startup worker client preserves serialized AbortError names", async () => {
+  const originalWorker = globalThis.Worker;
+  const postedMessages = [];
+  let startupWorkerClient = null;
+
+  class FakeWorker {
+    constructor() {
+      FakeWorker.instance = this;
+      this.onmessage = null;
+      this.onerror = null;
+    }
+
+    postMessage(message) {
+      postedMessages.push(message);
+    }
+
+    terminate() {
+      this.terminated = true;
+    }
+  }
+
+  try {
+    globalThis.Worker = FakeWorker;
+    startupWorkerClient = await import(
+      new URL(`../js/core/startup_worker_client.js?abort-error=${Date.now()}`, import.meta.url),
+    );
+    const resultPromise = startupWorkerClient.decodeRuntimeChunkViaWorker({
+      runtimeTopologyUrl: "/runtime.json",
+      chunkUrl: "/chunk.json",
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    FakeWorker.instance.onmessage({
+      data: {
+        type: "ERROR",
+        taskId: postedMessages[0].taskId,
+        message: "cancelled",
+        name: "AbortError",
+      },
+    });
+
+    await assert.rejects(resultPromise, (error) => error?.name === "AbortError");
+  } finally {
+    startupWorkerClient?.terminateStartupWorker();
+    globalThis.Worker = originalWorker;
+  }
+});

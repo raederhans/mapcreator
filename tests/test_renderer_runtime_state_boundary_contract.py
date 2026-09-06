@@ -70,18 +70,21 @@ class RendererRuntimeStateBoundaryContractTest(unittest.TestCase):
 
     def test_dev_selection_overlay_merges_selected_feature_boundary(self):
         content = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        render_body = content.split("function renderDevSelectionOverlay() {", 1)[1].split(
+        owner = (MAP_RENDERER_JS.parent / "renderer" / "selection_overlay_owner.js").read_text(encoding="utf-8")
+        self.assertIn("getSelectionOverlayOwner().renderDevSelectionOverlay()", content)
+        self.assertIn("getSelectionOverlayOwner().renderDevSelectionOverlayIfNeeded({ force })", content)
+        render_body = owner.split("function renderDevSelectionOverlay() {", 1)[1].split(
             "function renderDevSelectionOverlayIfNeeded", 1
         )[0]
 
         self.assertIn("const overlayData = buildDevSelectionOverlayData(orderedIds, data);", render_body)
         self.assertIn(".data(overlayData,", render_body)
         self.assertIn('.attr("stroke-width", 1.35);', render_body)
-        self.assertIn("function getRuntimeTopologySelectionGeometries(featureIds) {", content)
-        self.assertIn("function buildDevSelectionOverlayData(orderedIds, fallbackFeatures) {", content)
-        self.assertIn("globalThis.topojson.merge(topology, geometries)", content)
-        self.assertIn('devSelectionKey: `merged:${orderedIds.join("|")}`', content)
-        self.assertIn('selectionGeometry: "topology-boolean-merge"', content)
+        self.assertIn("function buildDevSelectionOverlayData(orderedIds, fallbackFeatures) {", owner)
+        self.assertIn("geometriesById.size !== selectedIds.size", owner)
+        self.assertIn("topojson.merge(topology, featureIds.map((id) => geometriesById.get(id)))", owner)
+        self.assertIn('devSelectionKey: `merged:${JSON.stringify(featureIds)}`', owner)
+        self.assertIn('selectionGeometry: "topology-boolean-merge"', owner)
         self.assertIn("Number(runtimeState.topologyRevision || 0)", content)
 
     def test_sidebar_reuses_sidebar_perf_factory(self):
@@ -101,14 +104,14 @@ class RendererRuntimeStateBoundaryContractTest(unittest.TestCase):
         self.assertIn("resetPrimarySpatialState(state);", owner_content)
         self.assertIn("applyPrimarySpatialSnapshot(state, {", owner_content)
         self.assertIn("applySecondarySpatialSnapshot(state, {", owner_content)
-        self.assertIn("deriveRuntimePrimaryFeaturePayload({", owner_content)
+        self.assertIn("cacheFeatureBounds(feature, id);", owner_content)
         self.assertIn("createSpatialIndexPerfPayload({", owner_content)
         self.assertIn("export function clearPrimaryIndexMaps(state) {", state_ops_content)
         self.assertIn("export function resetPrimarySpatialState(state) {", state_ops_content)
         self.assertIn("export function resetSecondarySpatialState(state) {", state_ops_content)
         self.assertIn("export function applyPrimarySpatialSnapshot(state, {", state_ops_content)
         self.assertIn("export function applySecondarySpatialSnapshot(state, {", state_ops_content)
-        self.assertIn("export function deriveRuntimePrimaryFeaturePayload({", derivation_content)
+        self.assertNotIn("deriveRuntimePrimaryFeaturePayload", derivation_content)
         self.assertIn("export function createSpatialIndexPerfPayload({", derivation_content)
 
 

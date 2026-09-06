@@ -154,38 +154,18 @@ test("map_renderer wrapper delegates scheduling while keeping old false return",
   assertIncludes(rendererSource, "let hitCanvasSchedulingOwner = null;", "map_renderer must keep owner singleton");
   assertIncludes(rendererSource, "function getHitCanvasSchedulingOwner()", "map_renderer must expose owner factory");
   for (const token of [
-    "const rendererContext = getInteractionReceiverContext();",
-    "const hitHoverContext = rendererContext.interaction.hitHover;",
-    "renderPhaseIdle: hitHoverContext.constants.renderPhaseIdle,",
     "idleTimeoutMs: STAGED_HIT_CANVAS_TIMEOUT_MS,",
-    "hasHitCanvasRuntime: hitHoverContext.hasHitCanvasRuntime,",
-    "isHitCanvasDirty: hitHoverContext.isHitCanvasDirty,",
-    "isHitCanvasBuildDeferred: hitHoverContext.isHitCanvasBuildDeferred,",
-    "getRenderPhase: hitHoverContext.getRenderPhase,",
-    "getScheduledHitCanvasBuildHandle: hitHoverContext.getScheduledHitCanvasBuildHandle,",
-    "getActiveScenarioId: hitHoverContext.getActiveScenarioId,",
     "scheduleDeferredWork,",
     "cancelDeferredWork,",
     "setScheduledHitCanvasBuildHandle: (handle) => {",
-    stateWriteToken("hitCanvasBuildScheduled", "handle;"),
+    "setHitCanvasBuildScheduledState(runtimeState, handle)",
     "runScheduledHitCanvasBuild: (details) => drawScheduledHitCanvasWithMetric(details)",
   ]) {
     assertIncludes(ownerFactorySource, token, "map_renderer must inject scheduling owner dependency");
   }
   assertIncludes(rendererSource, "function drawScheduledHitCanvasWithMetric(details = {})", "map_renderer must keep scheduled draw body");
   assertIncludes(rendererSource, "mode: \"deferred\"", "map_renderer must keep deferred draw mode");
-  for (const forbiddenToken of [
-    "renderPhaseIdle: RENDER_PHASE_IDLE,",
-    "hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas())",
-    "isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty)",
-    "isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild)",
-    "getRenderPhase: () => runtimeState.renderPhase",
-    "getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled",
-    "getActiveScenarioId: () => runtimeState.activeScenarioId",
-    "rendererRuntimeContext:",
-  ]) {
-    assertExcludes(ownerFactorySource, forbiddenToken, "scheduling owner factory must consume only the narrow receiver reads");
-  }
+
 
   const wrapperSource = sliceBetween(
     rendererSource,

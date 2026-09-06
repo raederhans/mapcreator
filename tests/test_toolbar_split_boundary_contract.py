@@ -1527,6 +1527,19 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("bindScenarioGuideEvents({", content)
         self.assertIn("toggleScenarioGuidePopover(trigger);", content)
 
+    def test_quick_fill_policy_and_events_belong_to_support_surface_controller(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        owner_content = WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS.read_text(encoding="utf-8")
+        for name in ["getActiveQuickFillPolicy", "getQuickFillParentLabel", "getQuickFillHint", "refreshQuickFillControls", "bindQuickFillControls"]:
+            self.assertIn(f"const {name} =", owner_content)
+            self.assertNotIn(f"const {name} =", toolbar_content)
+        self.assertIn("bindQuickFillControls();", toolbar_content)
+        self.assertIn("refreshQuickFillControls();", toolbar_content)
+        self.assertIn("state.batchFillScope = scope;", owner_content)
+        self.assertNotIn("runtimeState.batchFillScope =", toolbar_content)
+        self.assertIn("const refreshPaintControlsLayout = () => {", toolbar_content)
+        self.assertNotIn("refreshPaintControlsLayout", owner_content)
+
 
 if __name__ == "__main__":
     unittest.main()

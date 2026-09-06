@@ -18,7 +18,9 @@ class MapRendererSpecialZoneLayersRenderOwnerBoundaryContractTest(unittest.TestC
         self.assertIn("function getSpecialZoneLayersRenderOwner() {", renderer_content)
         self.assertIn("getSpecialZoneLayersRenderOwner().updateSpecialZonesPaths();", renderer_content)
         self.assertIn("getSpecialZoneLayersRenderOwner().getEffectiveSpecialZonesFeatureCollection();", renderer_content)
-        self.assertIn("syncSpecialZonePatternTransformDuringZoom();", renderer_content)
+        viewport_owner_content = (REPO_ROOT / "js/core/renderer/renderer_viewport_update_owner.js").read_text(encoding="utf-8")
+        self.assertIn("syncSpecialZonePatternTransformDuringZoom,", renderer_content)
+        self.assertIn("syncSpecialZonePatternTransformDuringZoom();", viewport_owner_content)
 
         self.assertIn("export function createSpecialZoneLayersRenderOwner({", owner_content)
         self.assertIn("buildSpecialZoneRenderFeatures", owner_content)

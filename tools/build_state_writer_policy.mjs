@@ -18,6 +18,8 @@ import {
   expandStateActionMembershipsWithLegacyReplacements,
   findStateActionCrossFileMigrationContractEntry,
   findStateActionSuccessorProofContractEntry,
+  STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT,
+  inspectStateImportedBorrowedProjectionSource,
   getStateTargetPureReaderContractEntriesForModule,
   getStateActionDelegationContractEntriesForModule,
   inspectStateDetachedCaptureSource,
@@ -2644,7 +2646,7 @@ export function buildCallerToActionLedger({
           edge: candidateEdges[0],
           crossFileMigration,
           retiredInPhase: entry.retiredInPhase || previousPhase,
-          recordedInPhase: normalizedPhase,
+          recordedInPhase: entry.recordedInPhase || normalizedPhase,
           backfilled: entry.backfilled,
           successorActionProofs:
             successorResolution.successorActionProofs,
@@ -5040,7 +5042,9 @@ export function buildStateWriterDerivedAliasTaintModeManifest({
     ).filter((relativePath) => !isTestPath(relativePath));
   const persistent = new Set(persistentStrictProductionPaths);
   const modeByPath = Object.fromEntries(
-    normalizeCandidatePathList(candidatePaths).map((relativePath) => [
+    // Deleted production files remain in the frozen-baseline diff. Keep their
+    // strict modes for historical proof without adding them to current scans.
+    normalizeCandidatePathList([...candidatePaths, ...changedProductionPaths]).map((relativePath) => [
       relativePath,
       resolveStateWriterDerivedAliasTaintMode({
         relativePath,
@@ -5570,6 +5574,23 @@ function summarizeWriterClassification(bindings) {
 
 // P4.0 冻结基线后，各阶段只能基于 previousPolicy 递进生成；显式刷新
 // 被限制在 P4.0，防止维护命令悄悄重定义历史允许面。
+export async function validateImportedBorrowedProjectionSources() {
+  const seen = new Set();
+  for (const entry of STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT) {
+    const id = `${entry.modulePath}#${entry.exportName}`;
+    if (seen.has(id)) throw new Error(`Duplicate borrowed projection contract: ${id}`);
+    seen.add(id);
+    const source = await fs.readFile(path.join(PROJECT_ROOT, entry.modulePath), "utf8");
+    const { violations } = inspectStateImportedBorrowedProjectionSource(source, entry);
+    if (violations.length) {
+      const error = new Error(`Borrowed projection source proof failed: ${id}`);
+      error.code = "state-imported-borrowed-projection-contract-violation";
+      error.violations = violations;
+      throw error;
+    }
+  }
+}
+
 export async function buildStateWriterPolicySnapshot({
   baseSha = "",
   generatedAt = "",
@@ -5581,6 +5602,7 @@ export async function buildStateWriterPolicySnapshot({
   repositoryScanCache = null,
   historicalDerivedAliasProofCache = null,
 } = {}) {
+  await validateImportedBorrowedProjectionSources();
   const normalizedPhase = normalizeP4StateActionPhase(phase);
   if (refreshP4Baseline && normalizedPhase !== "P4.0") {
     throw new Error("--refresh-p4-baseline is valid only for phase P4.0.");
@@ -6061,6 +6083,7 @@ function policyBindingSignatures(policy) {
 export async function scanStateWriterPolicySnapshot(policy, {
   repositoryScanCache = null,
 } = {}) {
+  await validateImportedBorrowedProjectionSources();
   const legacyAllowlistPaths = await readLegacyStateWriterAllowlist();
   const policySignatures = policyBindingSignatures(policy);
   const {

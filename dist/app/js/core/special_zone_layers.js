@@ -1,11 +1,5 @@
-// Layer-based special zone model and mutations.
+// Pure layer-based special zone model and transformations.
 // The layer store is the canonical special-zone runtime shape; legacy freehand data is reported as diagnostics on import.
-
-import {
-  commitSpecialZoneLayersState,
-  mutateSpecialZoneLayersStateAction,
-  patchSpecialZoneEditorState,
-} from "./state/actions/special_zone_actions.js";
 
 const SPECIAL_ZONE_LAYER_VERSION = 1;
 const SPECIAL_ZONE_SOURCES = new Set(["project", "scenario"]);
@@ -296,58 +290,6 @@ function captureScenarioLayerSaveRequestState(target, saveRequestId = 0) {
   };
 }
 
-function ensureSpecialZoneLayersState(target) {
-  const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || target || null);
-  if (target && Object.prototype.hasOwnProperty.call(target, "specialZoneLayers")) {
-    return commitSpecialZoneLayersState(target, normalized, {}, { markDirty: false });
-  }
-  return normalized;
-}
-
-function normalizeRuntimeSpecialZoneLayersState(target, options = {}) {
-  const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || null, options);
-  if (target && typeof target === "object") {
-    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
-  }
-  return normalized;
-}
-
-function setRuntimeSpecialZoneLayersState(target, nextState, options = {}) {
-  const normalized = normalizeSpecialZoneLayersState(nextState, options);
-  if (target && typeof target === "object") {
-    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
-  }
-  return normalized;
-}
-
-function mutateRuntimeSpecialZoneLayersState(target, mutation, options = {}) {
-  if (!target || typeof target !== "object") return undefined;
-  mutateSpecialZoneLayersStateAction(target, mutation, options);
-  return undefined;
-}
-
-function activateSpecialZoneMembershipToolState(target, tool = "multi") {
-  if (!target || typeof target !== "object") return null;
-  const normalizedTool = String(tool || "multi").trim() || "multi";
-  target.specialZoneMembershipTool = normalizedTool;
-  if (target.currentTool !== "special-zone-membership") {
-    target.specialZonePreviousTool = target.currentTool || "fill";
-  }
-  target.currentTool = "special-zone-membership";
-  target.brushModeEnabled = false;
-  patchSpecialZoneEditorState(target, { active: false });
-  return normalizedTool;
-}
-
-function exitSpecialZoneMembershipToolState(target) {
-  if (!target || typeof target !== "object") return "";
-  const previousTool = target.specialZonePreviousTool || "fill";
-  target.currentTool = previousTool;
-  target.specialZonePreviousTool = "";
-  return previousTool;
-}
-
-
 function normalizeSpecialZoneMembershipBrushModeState(value) {
   const mode = String(value || "add").trim();
   return SPECIAL_ZONE_MEMBERSHIP_BRUSH_MODES.has(mode) ? mode : "add";
@@ -479,16 +421,6 @@ function createSpecialZonePatternPreviewStyle(style = {}) {
     borderColor: stroke,
     opacity: String(Math.max(0.24, opacity)),
   };
-}
-
-function registerSpecialZonesWorkbenchRuntimeHooks(target, hooks = {}) {
-  if (!target || typeof target !== "object") return;
-  if (typeof hooks.renderWorkbench === "function") {
-    target.updateSpecialZonesWorkbenchUIFn = hooks.renderWorkbench;
-  }
-  if (typeof hooks.renderCurrentTarget === "function") {
-    target.updateSpecialZonesWorkbenchCurrentTargetUIFn = hooks.renderCurrentTarget;
-  }
 }
 
 function createLayerFromPreset(presetId = "custom", patch = {}) {
@@ -649,24 +581,17 @@ export {
   createEmptySpecialZoneLayersState,
   createLayerFromPreset,
   createSpecialZoneLayerStyle,
-  activateSpecialZoneMembershipToolState,
   applySpecialZoneStoryStepToPreviewState,
-  ensureSpecialZoneLayersState,
-  exitSpecialZoneMembershipToolState,
   getSpecialZoneLayerMemberSetOperationIds,
   getSpecialZoneLegendLayers,
   getSpecialZoneLegendSignature,
   getSpecialZoneStoryPreviewSteps,
   mutateSpecialZoneLayersState,
-  mutateRuntimeSpecialZoneLayersState,
-  normalizeRuntimeSpecialZoneLayersState,
   normalizeSpecialZoneLayersState,
   normalizeSpecialZoneMembershipBrushModeState,
   normalizeSpecialZoneStoryState,
   parseSpecialZoneMemberImportText,
-  registerSpecialZonesWorkbenchRuntimeHooks,
   resolveSpecialZoneTopologyFingerprint,
   serializeSpecialZoneLayersState,
-  setRuntimeSpecialZoneLayersState,
   updateSpecialZoneLayerMembership,
 };

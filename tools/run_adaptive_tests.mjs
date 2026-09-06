@@ -33,6 +33,8 @@ import {
   selectorPrCostObservation,
 } from "./verification/verification_profile.mjs";
 
+import { discoverWorkspaceChangedFiles } from "./verification/workspace_changes.mjs";
+
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "test-adaptive-selection.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "test-adaptive-selection.md");
@@ -45,11 +47,6 @@ function readPackageScriptsForProfile() {
   }
   return packageScriptsForProfile;
 }
-const DEFAULT_DISCOVERY_COMMANDS = [
-  ["diff", "--name-only", "--diff-filter=ACMRD", "-z"],
-  ["diff", "--name-only", "--cached", "--diff-filter=ACMRD", "-z"],
-  ["ls-files", "--others", "--exclude-standard", "-z"],
-];
 const HISTORY_DISCOVERY_COMMANDS = [
   ["diff", "--name-only", "origin/main...HEAD", "--diff-filter=ACMRD", "-z"],
 ];
@@ -191,7 +188,7 @@ export function discoverChangedFiles({
   historyBase = "",
   historyHead = "HEAD",
 } = {}) {
-  const discovered = new Set();
+  const discovered = new Set(discoverWorkspaceChangedFiles({ runner, cwd: REPO_ROOT }));
   // workspace 与 branch history 合并时只收集路径；实际 route 判定交给 selector，避免 Git 探测层携带业务语义。
   const normalizedHistoryBase = String(historyBase || "").trim();
   const historyCommands = normalizedHistoryBase
@@ -206,15 +203,6 @@ export function discoverChangedFiles({
     : includeBranchHistory
       ? HISTORY_DISCOVERY_COMMANDS
       : [];
-  for (const gitArgs of DEFAULT_DISCOVERY_COMMANDS) {
-    const result = runGitPathCommand(gitArgs, runner);
-    if (result.status === 0) {
-      const files = parseGitPathOutput(result.stdout);
-      for (const file of files) {
-        discovered.add(file);
-      }
-    }
-  }
   let successfulHistoryCommands = 0;
   for (const gitArgs of historyCommands) {
     const result = runGitPathCommand(gitArgs, runner);
@@ -1859,6 +1847,7 @@ export function buildExecutionPlan(report, {
   platform = process.platform,
   preparedCatalog = null,
   executionPlanner = buildVerificationSelectionPlan,
+  requiredCanonicalCommandRefs = [],
 } = {}) {
   const authority = resolveSelectionAuthority(report, { platform });
   const routeGaps = [
@@ -1923,6 +1912,38 @@ export function buildExecutionPlan(report, {
     selectedAuthorityContributors.filter(supportsCurrentPlatform),
     "selected",
   );
+  const requiredRefs = Array.isArray(requiredCanonicalCommandRefs)
+    && requiredCanonicalCommandRefs.every((ref) => typeof ref === "string" && ref.trim())
+    ? uniqueSorted(requiredCanonicalCommandRefs) : [];
+  if (!Array.isArray(requiredCanonicalCommandRefs) || requiredRefs.length !== requiredCanonicalCommandRefs.length) {
+    routeGaps.push(planGap("adaptive-required-roots-invalid", "requiredCanonicalCommandRefs", "expected-unique-command-refs"));
+  }
+  for (const commandRef of requiredRefs) {
+    const matches = (currentPreparedCatalog?.authority || []).filter((entry) => entry.commandRef === commandRef);
+    const entry = matches[0];
+    if (matches.length !== 1 || !entry.metadataComplete) {
+      routeGaps.push(planGap("adaptive-required-root-authority-missing", commandRef, "expected-one-complete-canonical-authority"));
+      continue;
+    }
+    const contributor = validateAuthorityContributor({
+      ...entry,
+      disposition: entry.executionOwner,
+      provenance: { routeIds: entry.routeIds, safetyContributorRouteIds: entry.safetyContributorRouteIds },
+      batchSafe: false,
+      isolation: "process",
+      maxLeaves: HARD_MAX_GROUP_LEAVES,
+      maxArgvBytes: platform === "win32" ? WINDOWS_MAX_ARGV_BYTES : POSIX_MAX_ARGV_BYTES,
+    }, "child-safe", platform, routeGaps, "requiredCanonicalCommandRefs");
+    if (!contributor) continue;
+    if (!supportsCurrentPlatform(contributor) || contributor.entrypointPolicy.executionTarget !== "child-safe"
+      || contributor.entrypointPolicy.plannerDisposition !== "planned") {
+      routeGaps.push(planGap("adaptive-required-root-not-executable", commandRef, "requires-child-safe-current-platform-planned-authority"));
+      continue;
+    }
+    if (!selectedContributors.some((candidate) => candidate.commandRef === commandRef)) {
+      selectedContributors.push({ ...contributor, executionDisposition: "selected" });
+    }
+  }
   const deferredMainContributors = contributorsFor(
     includeMainThread ? [] : mainThreadContributors,
     "deferred-main-thread",
@@ -1969,6 +1990,13 @@ export function buildExecutionPlan(report, {
   const selectedLeaves = selectedProjection.leaves;
   const deferredMainThreadLeaves = deferredMainProjection.leaves;
   const deferredCiOnlyLeaves = deferredCiProjection.leaves;
+  const requiredRefSet = new Set(requiredRefs);
+  const deferredLeafIds = new Set([...deferredMainThreadLeaves, ...deferredCiOnlyLeaves].map((leaf) => leaf.leafId));
+  for (const leaf of selectedLeaves) {
+    if (deferredLeafIds.has(leaf.leafId) && leaf.sourceCommandRefs.some((ref) => requiredRefSet.has(ref))) {
+      routeGaps.push(planGap("adaptive-required-root-deferred-conflict", leaf.sourceCommandRefs.join(","), `leaf=${leaf.leafId}`));
+    }
+  }
   for (const [disposition, leaves] of [
     ["selected", selectedLeaves],
     ["deferred-main-thread", deferredMainThreadLeaves],
@@ -2031,9 +2059,14 @@ export function buildExecutionPlan(report, {
     if (blockedReason) {
       return { commandRef, disposition: "blocked", reason: blockedReason };
     }
+    const deferred = deferredByCommand.get(commandRef);
+    // Commit controls are an independent obligation, not promotion of an edit's
+    // deferred PR recommendation. Preserve that selector outcome separately.
+    if (deferred && requiredRefSet.has(commandRef) && !authority.recommendedByCommand.has(commandRef)) {
+      return { commandRef, disposition: "deferred-by-tier", reason: deferred.reason, minimumDepth: deferred.minimumDepth };
+    }
     const planned = plannedOutcomeByCommand.get(commandRef);
     if (planned) return planned;
-    const deferred = deferredByCommand.get(commandRef);
     if (deferred) {
       return {
         commandRef,
@@ -2085,6 +2118,9 @@ export function buildExecutionPlan(report, {
     gatePolicySignals: report?.gatePolicySignals ? structuredClone(report.gatePolicySignals) : null,
     gatePolicySignalsDigest: report?.gatePolicySignalsDigest || null,
     selectorRootSet: uniqueSorted(report?.selectorRootSet || []),
+    requiredCanonicalCommandRefs: requiredRefs,
+    requiredRootOutcomes: requiredRefs.map((commandRef) => plannedOutcomeByCommand.get(commandRef)
+      || { commandRef, disposition: "gap" }),
     changedFiles: uniqueSorted(report?.changedFiles || []),
     selectorPrCost: selectionCost ? structuredClone(selectionCost) : null,
     selectorPrCostDigest: selectionCost?.observationDigest || null,
@@ -2176,13 +2212,22 @@ export function applyLocalEntrypointExecutionBudget(executionPlan, entrypoint, {
         `cost=${group.cost || "missing"};leaves=${leafCount}`,
       ));
     }
+    const calibration = estimatePolicy?.localRuntimeCalibration;
+    const calibratedIds = calibration?.platform === preparedCatalog?.catalog?.identity?.platform
+      && calibration?.cost === group.cost ? new Set(calibration.leafIds) : new Set();
+    const leafRuntimeClasses = (group.leafIds || []).map((id) => calibratedIds.has(id) ? calibration : costClass);
+    // Max base plus additive leaf estimates stays monotone for mixed measured
+    // and unmeasured groups; cost and execution eligibility remain independent.
+    const runtimeSeconds = costClass && leafRuntimeClasses.length === leafCount
+      ? Math.max(...leafRuntimeClasses.map((entry) => entry.groupBaseRuntimeSeconds))
+        + leafRuntimeClasses.reduce((sum, entry) => sum + entry.perLeafRuntimeSeconds, 0)
+      : costClass ? costClass.groupBaseRuntimeSeconds + costClass.perLeafRuntimeSeconds * leafCount
+        : limits.maxEstimatedRuntimeSeconds + 1;
     return {
       groupId: group.groupId,
       cost: group.cost,
       leafCount,
-      runtimeSeconds: costClass
-        ? costClass.groupBaseRuntimeSeconds + costClass.perLeafRuntimeSeconds * leafCount
-        : limits.maxEstimatedRuntimeSeconds + 1,
+      runtimeSeconds,
       costUnits: costClass
         ? costClass.groupBaseCostUnits + costClass.perLeafCostUnits * leafCount
         : limits.maxEstimatedCostUnits + 1,
@@ -2444,6 +2489,7 @@ export function executeAdaptivePlan(executionPlan, {
   cwd = REPO_ROOT,
   now = () => new Date(),
   onCheckpoint = () => {},
+  continueOnFailure = false,
 } = {}) {
   if ((executionPlan.routeGaps || []).length > 0) return [];
   const executionResults = [];
@@ -2472,6 +2518,10 @@ export function executeAdaptivePlan(executionPlan, {
     onCheckpoint(executionResults);
 
     const command = plannedCommand.process || commandToProcess(commandRef);
+    if (command) {
+      entry.bin = command.bin;
+      entry.args = command.args;
+    }
     const result = command
       ? runner(command.bin, command.args, {
         cwd,
@@ -2497,7 +2547,7 @@ export function executeAdaptivePlan(executionPlan, {
     entry.status = entry.interrupted ? "interrupted" : entry.exitCode === 0 ? "passed" : "failed";
     if (result?.error) entry.error = String(result.error);
     onCheckpoint(executionResults);
-    if (entry.exitCode !== 0) break;
+    if (entry.exitCode !== 0 && !continueOnFailure) break;
   }
   return executionResults;
 }

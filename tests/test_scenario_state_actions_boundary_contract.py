@@ -57,11 +57,40 @@ READ_ONLY_ACTION_EXPORTS = {
     ),
 }
 
+ACTION_STATE_DEPENDENCIES = {
+    "scenario_activation_actions.js": {
+        "./special_zone_actions.js": {"commitSpecialZoneLayersState"},
+    },
+    "scenario_presentation_actions.js": {
+        "./appearance_actions.js": {
+            "patchAppearanceStyleGroupState", "setAppearanceParentBorderEnabledMapState",
+            "setAppearanceStyleConfigState", "setAppearanceStyleGroupState",
+        },
+        "./appearance_visibility_actions.js": {"setAppearanceVisibilitySnapshotState"},
+        "./ui_chrome_actions.js": {"patchUiChromeState", "setUiChromeState"},
+        "./ui_visibility_actions.js": {"commitUiVisibilityState"},
+    },
+}
+
 
 class ScenarioStateActionsBoundaryContractTest(unittest.TestCase):
-    def test_canonical_action_modules_are_import_free_state_only_surfaces(self):
+    def test_canonical_action_modules_keep_only_explicit_state_authority_dependencies(self):
         for file_name, export_names in ACTION_MODULE_EXPORTS.items():
             content = (ACTIONS_ROOT / file_name).read_text(encoding="utf-8")
+            named_import = re.compile(
+                r'^\s*import\s*\{([^}]+)\}\s*from\s+[\"\']([^\"\']+)[\"\']\s*;',
+                re.MULTILINE,
+            )
+            imports = named_import.findall(content)
+            expected = ACTION_STATE_DEPENDENCIES.get(file_name, {})
+            self.assertCountEqual([source for _, source in imports], expected, file_name)
+            for names, source in imports:
+                self.assertCountEqual(
+                    [name.strip() for name in names.split(",") if name.strip()],
+                    expected[source],
+                    f"{file_name}: {source}",
+                )
+            content = named_import.sub("", content)
             self.assertNotRegex(content, re.compile(r"^\s*import\s", re.MULTILINE))
             for forbidden in (
                 "document",

@@ -4,7 +4,6 @@ import { buildLaneSummary } from "../tools/ai_test_supervisor/command_lanes.mjs"
 import {
   buildSupervisorPlan,
   executeSupervisorPlan,
-  runCommand,
   supervisorExitCodeForPlan,
 } from "../tools/ai_test_supervisor/supervise_adaptive_verification.mjs";
 import { renderSupervisorMarkdown } from "../tools/ai_test_supervisor/render_supervisor_markdown.mjs";
@@ -83,6 +82,32 @@ test("strict-blocked is recorded in execution policy when blocked commands remai
   assert.equal(plan.executionPolicy.strictBlocked, true);
   assert.ok(plan.blockedCommands.length > 0);
   assert.ok(plan.stopConditions.some((condition) => condition.includes("Blocked main-thread")));
+});
+
+test("supervisor shared execution preserves main-thread, CI and explicit blocked lanes", () => {
+  for (const includeMainThread of [false, true]) {
+    for (const includeCiOnly of [false, true]) {
+      const input = dossier();
+      input.laneSummary.blockedCommands = [
+        laneEntry("unavailable-platform-check", "blocked", { reason: "unsupported platform" }),
+      ];
+      const plan = buildSupervisorPlan({
+        dossier: input, includeMainThread, includeCiOnly, strictBlocked: true, execute: true, now: NOW,
+      });
+      let calls = 0;
+      const executed = executeSupervisorPlan(plan, {
+        runner: () => { calls++; return { status: 0 }; },
+        now: () => NOW,
+      });
+      const refs = executed.executionResults.map(({ commandRef }) => commandRef);
+      assert.equal(calls, 1 + Number(includeMainThread) + Number(includeCiOnly));
+      assert.equal(refs.includes("npm run test:e2e:smoke"), includeMainThread);
+      assert.equal(refs.includes("deploy-preview-check"), includeCiOnly);
+      assert.ok(!refs.includes("unavailable-platform-check"));
+      assert.equal(supervisorExitCodeForPlan(executed), 2);
+      assert.ok(executed.executionResults.every((entry) => !("leafIds" in entry) && !("resourceLocks" in entry)));
+    }
+  }
 });
 
 test("executeSupervisorPlan records fake runner results and stops after failure", () => {
@@ -178,8 +203,9 @@ test("executeSupervisorPlan checkpoints running and terminal command states", ()
   assert.equal(executed.executionResults[0].exitCode, 0);
 });
 
-test("runCommand resolves npm script commands through the shared adaptive runner resolver", () => {
-  const result = runCommand("verify:supervisor-contracts", {
+test("supervisor delegates command resolution and process evidence to the adaptive executor", () => {
+  const plan = buildSupervisorPlan({ dossier: dossier(), execute: true, now: NOW });
+  const { executionResults: [result] } = executeSupervisorPlan(plan, {
     runner(bin, args) {
       assert.ok(bin === "npm" || bin === "cmd.exe");
       assert.ok(args.includes("verify:supervisor-contracts"));
@@ -190,6 +216,44 @@ test("runCommand resolves npm script commands through the shared adaptive runner
 
   assert.equal(result.exitCode, 0);
   assert.equal(result.commandRef, "verify:supervisor-contracts");
+  assert.equal(result.processStarted, true);
+  assert.equal(result.interrupted, false);
+  assert.ok(result.args.includes("verify:supervisor-contracts"));
+});
+
+test("supervisor continue-on-failure records both commands through the shared executor", () => {
+  const plan = buildSupervisorPlan({ dossier: dossier(), continueOnFailure: true, execute: true, now: NOW });
+  plan.commandsToRun = ["first-check", "second-check"];
+  const calls = [];
+  const checkpoints = [];
+  const executed = executeSupervisorPlan(plan, {
+    runner(bin, args) {
+      calls.push({ bin, args });
+      return { status: calls.length === 1 ? 1 : 0 };
+    },
+    now: () => NOW,
+    onCheckpoint: (checkpoint) => checkpoints.push(checkpoint),
+  });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(executed.executionResults.map(({ status }) => status), ["failed", "passed"]);
+  assert.deepEqual(checkpoints.map(({ executionResults }) => executionResults.at(-1).status), [
+    "running", "failed", "running", "passed",
+  ]);
+  assert.equal(checkpoints[0].executionResults.length, 1);
+  assert.equal(supervisorExitCodeForPlan(executed), 1);
+});
+
+test("supervisor retains failed terminal status and shared interruption evidence", () => {
+  const plan = buildSupervisorPlan({ dossier: dossier(), execute: true, now: NOW });
+  const executed = executeSupervisorPlan(plan, {
+    runner: () => ({ status: null, signal: "SIGTERM" }),
+    now: () => NOW,
+  });
+  const [result] = executed.executionResults;
+  assert.equal(result.status, "failed");
+  assert.equal(result.interrupted, true);
+  assert.equal(result.signal, "SIGTERM");
+  assert.equal(supervisorExitCodeForPlan(executed), 1);
 });
 
 test("route gaps block execute and strict verification outcomes", () => {

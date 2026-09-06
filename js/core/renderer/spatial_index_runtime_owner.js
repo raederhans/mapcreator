@@ -14,7 +14,6 @@ import {
 } from "./spatial_index_runtime_state_ops.js";
 import {
   createSpatialIndexPerfPayload,
-  deriveRuntimePrimaryFeaturePayload,
 } from "./spatial_index_runtime_derivation.js";
 
 export function createSpatialIndexRuntimeOwner({
@@ -105,7 +104,13 @@ export function createSpatialIndexRuntimeOwner({
     clearPrimaryIndexMaps(state);
     rebuildAuxiliaryRegionIndexes();
 
-    const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
+    // This phase prepares IDs and bounds. Culling belongs to spatial item creation,
+    // where its result is consumed, rather than this unconditional index rebuild.
+    const cacheFeatureBounds = (feature, id) => {
+      if (!id || !projectedBoundsCache?.set) return;
+      const bounds = computeProjectedFeatureBounds(feature);
+      if (bounds) projectedBoundsCache.set(id, bounds);
+    };
     appendLandIndexEntriesRange({
       state,
       features: Array.isArray(state.landData?.features) ? state.landData.features : [],
@@ -113,15 +118,7 @@ export function createSpatialIndexRuntimeOwner({
       shouldExcludePoliticalInteractionFeature,
       getFeatureCountryCodeNormalized,
       onLandFeatureIndexed: ({ feature, id }) => {
-        const payload = deriveRuntimePrimaryFeaturePayload({
-          feature,
-          id,
-          canvasWidth,
-          canvasHeight,
-          projectedBoundsCache,
-          computeProjectedFeatureBounds,
-          shouldSkipFeature,
-        });
+        cacheFeatureBounds(feature, id);
       },
     });
 

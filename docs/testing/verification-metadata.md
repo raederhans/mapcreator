@@ -38,6 +38,7 @@ HOI4 catalog helper 对应 `unit_counter_catalog_behavior.test.mjs`，不扩展�
 - `tools/test_route_registry.mjs` 从 canonical route projection 读取全部路由；独立读取实际 package scripts、E2E manifest 和 Python heavy groups 检查缺失的命令路由。
 - `tools/select_verification_targets.mjs` 把 `tools/verification/**` 和这份文档映射到 `test-routing`，避免 metadata 改动出现 route gap。
 - `tests/verification_metadata_behavior.test.mjs` 检查 metadata、route registry、verify:core plan、selector 推荐之间的一致性。
+- `test:node:verification-metadata` 只运行当前 metadata 测试；`test:node:catalog-projection-history` 单独运行历史投影与 receipt 契约。后者不属于默认 core 或 local-infra；修改历史实现时仍由其精确路由选中。
 - `tools/verification/verification_catalog_projection.mjs` 还生成 heavy dependency groups、package aliases、PR profile IDs、Nightly jobs/shards/final dependencies 与 documentation refs。这里只投影能够和现有 legacy surface 逐项机械比较的字段；未被 legacy 表达的推断不会伪装成 shadow 证据。
 - `tools/verification/catalog_projection_legacy.mjs` 仅供历史迁移 receipt 使用：读取实际 JSON、package scripts 和 workflows，以及 `catalog_projection_historical_baseline.json` 中冻结的旧 documentation/supersession 快照。它不进入日常 portfolio 检查，快照不能随当前 metadata 改动同步更新。
 
@@ -54,3 +55,5 @@ HOI4 catalog helper 对应 `unit_counter_catalog_behavior.test.mjs`，不扩展�
 新旧 domain、route 聚合与 supersession 的重复手写定义已退役，portfolio 的 `shadow-check` 子命令也已移除。普通开发只维护 canonical source。
 
 `catalog_projection_shadow_cli.mjs` 及迁移 ledger 的旧 receipt 格式暂时保留供历史审计，其十次连续记录规则不再是日常修改或本次定义退役的前置条件。冻结快照只表达退役时的旧投影；当前 metadata 变化导致历史比较不同，是基线变化，不应通过更新快照掩盖。旧 receipt 的 `legacyRetained` 仅涉及这份历史投影快照，不表示完整旧路由系统仍存在。Pages/dist 和发布验证规则未在本次改动中改变。
+
+Supervisor 保留 dossier、lane 选择、逐命令 checkpoint 和报告，进程执行由 `executeAdaptivePlan` 统一完成。其显式 main-thread/CI 选择及 `--continue-on-failure` 语义保持；普通 adaptive 调用仍默认遇到失败即停止。这是执行实现复用，Supervisor 没有改用 adaptive 的 catalog-bound leaf planner，不能将其报告作为该 planner 的绑定证据。

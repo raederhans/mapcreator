@@ -101,11 +101,11 @@ export function createViewportCommandOwner({
     selection.call(zoomBehavior.translateBy, 0, 0);
   }
 
-  return {
+  return Object.freeze({
     updateZoomTranslateExtent,
     resetZoomToFit,
     zoomByStep,
     setZoomPercent,
     enforceZoomConstraints,
-  };
+  });
 }

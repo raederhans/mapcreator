@@ -18,11 +18,10 @@ import {
 } from "../js/core/special_zone_layers.js";
 
 import {
-  ensureSpecialZoneLayersState,
-  normalizeRuntimeSpecialZoneLayersState,
-  setRuntimeSpecialZoneLayersState,
-  mutateRuntimeSpecialZoneLayersState,
+  commitSpecialZoneLayersState,
+  mutateSpecialZoneLayersStateAction,
 } from "../js/core/state/actions/special_zone_actions.js";
+import { createSpecialZoneLayersRenderOwner } from "../js/core/renderer/special_zone_layers_render_owner.js";
 
 test("special zone layer defaults and preset registry are stable", () => {
   const state = createEmptySpecialZoneLayersState({ topologyFingerprint: "topo-a" });
@@ -37,35 +36,59 @@ test("special zone layer defaults and preset registry are stable", () => {
   assert.equal(layer.legendVisible, true);
 });
 
-test("runtime layer normalization preserves dirty state while mutations mark it", () => {
+test("canonical layer actions preserve dirty state and diagnostic entry identity", () => {
   const initialLayers = createEmptySpecialZoneLayersState();
-  const nonMutatingCalls = [
-    (target) => ensureSpecialZoneLayersState(target),
-    (target) => normalizeRuntimeSpecialZoneLayersState(target),
-    (target) => setRuntimeSpecialZoneLayersState(target, initialLayers),
-  ];
+  const diagnostic = { code: "runtime-diagnostic" };
+  initialLayers.diagnostics = [diagnostic];
 
   for (const initialDirty of [false, true]) {
-    for (const call of nonMutatingCalls) {
-      const target = {
-        specialZoneLayers: initialLayers,
-        specialZonesOverlayDirty: initialDirty,
-      };
-      call(target);
-      assert.equal(target.specialZonesOverlayDirty, initialDirty);
-    }
+    const target = {
+      specialZoneLayers: initialLayers,
+      specialZonesOverlayDirty: initialDirty,
+    };
+    const committed = commitSpecialZoneLayersState(target, initialLayers, {
+      topologyFingerprint: "runtime-topology",
+    }, { markDirty: false });
+    assert.equal(target.specialZonesOverlayDirty, initialDirty);
+    assert.equal(committed, target.specialZoneLayers);
+    assert.equal(committed.topologyFingerprint, "runtime-topology");
+    assert.equal(committed.diagnostics[0], diagnostic);
   }
 
   const mutatedTarget = {
     specialZoneLayers: initialLayers,
     specialZonesOverlayDirty: false,
   };
-  const mutationResult = mutateRuntimeSpecialZoneLayersState(mutatedTarget, {
+  const mutationResult = mutateSpecialZoneLayersStateAction(mutatedTarget, {
     action: "addLayer",
     layer: createLayerFromPreset("custom", { id: "dirty-layer" }),
   });
-  assert.equal(mutationResult, undefined);
+  assert.equal(mutationResult, mutatedTarget.specialZoneLayers);
   assert.equal(mutatedTarget.specialZonesOverlayDirty, true);
+});
+
+test("renderer normalizes layer input without writing runtime state", () => {
+  const originalLayers = {
+    layers: [createLayerFromPreset("custom", { id: "render-layer", memberFeatureIds: ["land-a"] })],
+    activeLayerId: "render-layer",
+    diagnostics: [{ code: "render-diagnostic" }],
+  };
+  const runtimeState = {
+    specialZoneLayers: originalLayers,
+    landIndex: new Map([["land-a", {
+      type: "Feature",
+      properties: { id: "land-a" },
+      geometry: { type: "Polygon", coordinates: [] },
+    }]]),
+  };
+  const owner = createSpecialZoneLayersRenderOwner({ state: runtimeState });
+
+  const collection = owner.getEffectiveSpecialZonesFeatureCollection();
+
+  assert.equal(collection.features.length, 1);
+  assert.equal(collection.features[0].properties.sourceFeatureId, "land-a");
+  assert.equal(runtimeState.specialZoneLayers, originalLayers);
+  assert.equal(runtimeState.specialZoneLayers.diagnostics[0].code, "render-diagnostic");
 });
 
 test("normalizes schema, diagnostics, legacy drops, and sorted member arrays", () => {
@@ -317,4 +340,28 @@ test("style preset updates preserve members and replace mode keeps one explicit 
   state = updateSpecialZoneLayerMembership(state, "active", [], "replace");
   layer = state.layers.find((entry) => entry.id === "active");
   assert.deepEqual(layer.memberFeatureIds, []);
+});
+
+
+test("render projection copies layer metadata while retaining land geometry", () => {
+  const layer = createLayerFromPreset("custom", { id: "copy-proof", memberFeatureIds: ["a"] });
+  const layerState = { layers: [layer], diagnostics: [{ code: "preserved" }] };
+  const freezeTree = (value) => {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) {
+      Object.values(value).forEach(freezeTree);
+      Object.freeze(value);
+    }
+    return value;
+  };
+  freezeTree(layerState);
+  const geometry = { type: "Polygon", coordinates: [] };
+  const nestedProperty = { label: "borrowed" };
+  const index = new Map([["a", { type: "Feature", geometry, properties: { nestedProperty } }]]);
+  const projected = buildSpecialZoneRenderFeatures(layerState, index).features[0];
+  assert.equal(projected.geometry, geometry);
+  assert.equal(projected.properties.nestedProperty, nestedProperty);
+  assert.notEqual(projected.properties.__specialZoneLayerStyle, layer.style);
+  projected.properties.__specialZoneLayerStyle.fill = "#000000";
+  assert.notEqual(layer.style.fill, "#000000");
+  assert.equal(layerState.diagnostics[0].code, "preserved");
 });

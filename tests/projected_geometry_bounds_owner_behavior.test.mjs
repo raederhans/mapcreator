@@ -233,6 +233,77 @@ test("mergeProjectedBounds ignores empty lists and merges valid bounds", () => {
   });
 });
 
+test("mergeProjectedBounds handles 150000 bounds without argument spreading", () => {
+  const { owner } = createHarness();
+  const bounds = Array.from({ length: 150000 }, (_, index) => ({
+    minX: index, minY: -index, maxX: index + 1, maxY: 2,
+  }));
+  assert.deepEqual(owner.mergeProjectedBounds(bounds), {
+    minX: 0, minY: -149999, maxX: 150000, maxY: 2,
+    width: 150000, height: 150001, area: 22500150000,
+  });
+});
+
+test("mergeProjectedBounds preserves falsy filtering and numeric coercion", () => {
+  const { owner } = createHarness();
+  const valid = { minX: "-2", minY: null, maxX: "3", maxY: true };
+  assert.deepEqual(owner.mergeProjectedBounds([null, false, undefined, 0, valid]), {
+    minX: -2, minY: 0, maxX: 3, maxY: 1, width: 5, height: 1, area: 5,
+  });
+  for (const invalid of [{}, { ...valid, minX: NaN }, { ...valid, maxY: Infinity }]) {
+    assert.equal(owner.mergeProjectedBounds([valid, invalid]), null);
+  }
+  for (const empty of [null, {}, [], [null, false, undefined]]) {
+    assert.equal(owner.mergeProjectedBounds(empty), null);
+  }
+});
+
+test("coordinate fallback includes nested geometry and feature collections", () => {
+  const collection = {
+    type: "FeatureCollection",
+    features: [
+      createFeature("empty", null),
+      createFeature("nested", {
+        type: "GeometryCollection",
+        geometries: [
+          { type: "GeometryCollection", geometries: [] },
+          { type: "Point", coordinates: ["-3", "2"] },
+          { type: "GeometryCollection", geometries: [
+            { type: "LineString", coordinates: [[1, 4], [5, -2]] },
+            { type: "Point", coordinates: [NaN, 0] },
+          ] },
+        ],
+      }),
+    ],
+  };
+  const expected = {
+    minX: -29, minY: -18, maxX: 51, maxY: 12,
+    width: 80, height: 30, area: 2400,
+  };
+  for (const pathBounds of [
+    () => { throw new Error("path unavailable"); },
+    () => [[Infinity, Infinity], [-Infinity, -Infinity]],
+  ]) {
+    const { owner } = createHarness({ pathBounds });
+    assert.deepEqual(owner.computeProjectedGeoBounds(collection), expected);
+    assert.deepEqual(owner.computeProjectedCoordinateBounds(collection.features[1].geometry), expected);
+    assert.equal(owner.computeProjectedGeoBounds({
+      type: "FeatureCollection", features: [createFeature("empty", {
+        type: "GeometryCollection", geometries: [{ type: "GeometryCollection", geometries: [] }],
+      })],
+    }), null);
+  }
+});
+
+test("malformed nested path bounds use coordinate fallback", () => {
+  const feature = createFeature("A", createPolygon([1, 2]));
+  const expected = createHarness().owner.computeProjectedCoordinateBounds(feature);
+  for (const bounds of [[null, null], [undefined, [1, 2]], [[1, 2], null], [[], []]]) {
+    const { owner } = createHarness({ pathBounds: () => bounds });
+    assert.deepEqual(owner.computeProjectedGeoBounds(feature), expected);
+  }
+});
+
 test("spherical diagnostics cache d3 results by geo object identity", () => {
   const diagnostics = createD3Diagnostics();
   const { owner } = createHarness({ d3: diagnostics.d3 });

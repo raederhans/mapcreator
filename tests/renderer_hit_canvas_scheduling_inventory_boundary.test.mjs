@@ -220,7 +220,7 @@ test("dirty topology and point probing stay in map_renderer", () => {
   for (const token of [
     stateWriteToken("hitCanvasDirty", "true;"),
     stateWriteToken("hitCanvasDirty", "false;"),
-    stateWriteToken("hitCanvasDirty", "Boolean(dirty);"),
+    "setHitCanvasDirtyState(runtimeState, dirty)",
     stateWriteToken("hitCanvasTopologyRevision", "0;"),
     stateWriteToken("hitCanvasTopologyRevision", "Number(runtimeState.topologyRevision || 0);"),
     "function markRendererTopologyChanged({ hitCanvasDirty = false } = {})",

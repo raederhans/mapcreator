@@ -187,10 +187,10 @@ export function createZoomInteractionLifecycleOwner({
     effects.setZoomBehavior?.(null);
   }
 
-  return {
+  return Object.freeze({
     initZoom,
     flushLatestZoomTransform,
     getZoomBehavior,
     dispose,
-  };
+  });
 }

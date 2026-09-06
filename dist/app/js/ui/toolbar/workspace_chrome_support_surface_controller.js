@@ -3,6 +3,9 @@
 // toolbar.js 继续保留 export workbench facade、special zone facade、drawer 切换和更高层的页面编排。
 
 import {
+  setBatchFillScopeState,
+} from "../../core/state/actions/scenario_presentation_actions.js";
+import {
   setActiveDockPopoverState,
   setRestoredSupportSurfaceViewState,
 } from "../../core/state/actions/ui_chrome_actions.js";
@@ -22,6 +25,11 @@ export function createWorkspaceChromeSupportSurfaceController({
   dockReferencePopover = null,
   dockEditPopover = null,
   dockQuickFillRow = null,
+  quickFillParentBtn = null,
+  quickFillCountryBtn = null,
+  dockQuickFillHint = null,
+  refreshPaintModeUi = () => {},
+  t = (text) => text,
   exportWorkbenchOverlay = null,
   exportWorkbenchPanel = null,
   dockExportBtn = null,
@@ -168,6 +176,104 @@ export function createWorkspaceChromeSupportSurfaceController({
       syncSupportSurfaceUrlState(nextKind);
     }
     focusOverlaySurface?.(target);
+  };
+
+  const getActiveQuickFillPolicy = () => {
+    const selectedCode = String(state.selectedInspectorCountryCode || state.inspectorHighlightCountryCode || "")
+      .trim().toUpperCase().replace(/[^A-Z]/g, "");
+    if (!selectedCode || !(state.countryInteractionPoliciesByCode instanceof Map)) {
+      return null;
+    }
+    const policy = Map.prototype.get.call(state.countryInteractionPoliciesByCode, selectedCode);
+    if (!policy) return null;
+    const scopes = Array.isArray(policy.quickFillScopes) ? Array.from(policy.quickFillScopes) : null;
+    return {
+      parentScopeLabel: policy.parentScopeLabel === "Province" ? "Province" : "",
+      parentEnabled: !scopes || scopes.includes("parent"),
+      countryEnabled: !scopes || scopes.includes("country"),
+    };
+  };
+
+  const getQuickFillParentLabel = (policy) => {
+    if (policy?.parentScopeLabel === "Province") {
+      return t("By Province", "ui");
+    }
+    return t("By Parent", "ui");
+  };
+
+  const getQuickFillHint = (policy) => {
+    const requestedScope = String(state.batchFillScope || "parent") === "country" ? "country" : "parent";
+    if (requestedScope === "country") {
+      return t("Single-click: one subdivision | Double-click: country batch", "ui");
+    }
+    if (policy?.parentScopeLabel === "Province") {
+      return t("Single-click: one subdivision | Double-click: province batch", "ui");
+    }
+    return t("Single-click: one subdivision | Double-click: parent batch", "ui");
+  };
+
+  const refreshQuickFillControls = () => {
+    const isScenarioMode = !!state.activeScenarioId;
+    const isOwnershipMode = String(state.paintMode || "visual") === "sovereignty";
+    const isSubdivisionMode = String(state.interactionGranularity || "subdivision") !== "country";
+    const activePolicy = getActiveQuickFillPolicy();
+    const parentEnabled = !activePolicy || activePolicy.parentEnabled;
+    const countryEnabled = !activePolicy || activePolicy.countryEnabled;
+    const isVisible = !isScenarioMode && !isOwnershipMode && isSubdivisionMode;
+
+    if (dockQuickFillBtn) {
+      dockQuickFillBtn.classList.toggle("hidden", !isVisible);
+      dockQuickFillBtn.setAttribute("aria-hidden", isVisible ? "false" : "true");
+      dockQuickFillBtn.setAttribute("aria-expanded", state.activeDockPopover === "quickfill" ? "true" : "false");
+    }
+    if (dockQuickFillRow) {
+      const shouldShowPopover = isVisible && state.activeDockPopover === "quickfill";
+      dockQuickFillRow.classList.toggle("hidden", !shouldShowPopover);
+      dockQuickFillRow.setAttribute("aria-hidden", shouldShowPopover ? "false" : "true");
+    }
+    if (!isVisible && state.activeDockPopover === "quickfill") {
+      closeDockPopover();
+    }
+    if (quickFillParentBtn) {
+      quickFillParentBtn.textContent = getQuickFillParentLabel(activePolicy);
+      quickFillParentBtn.disabled = !parentEnabled;
+      quickFillParentBtn.classList.toggle(
+        "is-active",
+        parentEnabled && String(state.batchFillScope || "parent") !== "country"
+      );
+    }
+    if (quickFillCountryBtn) {
+      quickFillCountryBtn.textContent = t("By Country", "ui");
+      quickFillCountryBtn.disabled = !countryEnabled;
+      quickFillCountryBtn.classList.toggle(
+        "is-active",
+        countryEnabled && String(state.batchFillScope || "parent") === "country"
+      );
+    }
+    if (dockQuickFillHint) {
+      dockQuickFillHint.textContent = getQuickFillHint(activePolicy);
+    }
+  };
+
+  const bindQuickFillControls = () => {
+    if (dockQuickFillBtn && !dockQuickFillBtn.dataset.bound) {
+      dockQuickFillBtn.setAttribute("aria-haspopup", "dialog");
+      dockQuickFillBtn.setAttribute("aria-controls", "dockQuickFillRow");
+      dockQuickFillBtn.addEventListener("click", () => {
+        if (!dockQuickFillBtn.classList.contains("hidden")) openDockPopover("quickfill");
+      });
+      dockQuickFillBtn.dataset.bound = "true";
+    }
+    for (const [button, scope] of [[quickFillParentBtn, "parent"], [quickFillCountryBtn, "country"]]) {
+      if (!button || button.dataset.bound) continue;
+      button.addEventListener("click", () => {
+        if (button.disabled) return;
+        setBatchFillScopeState(state, scope);
+        closeDockPopover();
+        refreshPaintModeUi();
+      });
+      button.dataset.bound = "true";
+    }
   };
 
   const restoreSupportSurfaceFromUrl = () => {
@@ -333,6 +439,8 @@ export function createWorkspaceChromeSupportSurfaceController({
   };
 
   return {
+    bindQuickFillControls,
+    refreshQuickFillControls,
     bindDockPopoverDismiss,
     closeDockPopover,
     closeScenarioGuidePopover,

@@ -687,7 +687,15 @@ export function createStrategicOverlayController({
             unitCounterLibraryReviewSummary,
             unitCounterLibraryVariantRow,
           },
-          state,
+          catalogView: {
+            isModalOpen: Boolean(state.strategicOverlayUi?.counterEditorModalOpen),
+            source: String(state.strategicOverlayUi?.counterCatalogSource || "internal"),
+            variant: String(state.strategicOverlayUi?.hoi4CounterVariant || "small"),
+            internalQuery: String(state.strategicOverlayUi?.counterCatalogQuery || ""),
+            hoi4Query: String(state.strategicOverlayUi?.hoi4CounterQuery || ""),
+            internalCategory: String(state.strategicOverlayUi?.counterCatalogCategory || "all"),
+            hoi4Category: String(state.strategicOverlayUi?.hoi4CounterCategory || "all"),
+          },
           t,
           effectivePresetId: unitCounterViewModel.effectivePresetId,
           helpers: {

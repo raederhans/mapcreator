@@ -356,16 +356,20 @@ async function loadScenarioChunkFile(
     scenarioId = "",
     resourceLabel = "scenario_chunk",
     useWorker = shouldUseStartupWorker(),
+    signal = null,
   } = {}
 ) {
   const normalizedUrl = String(url || "").trim();
   if (!normalizedUrl) return null;
+  signal?.throwIfAborted();
   if (useWorker) {
     try {
       const workerResult = await decodeRuntimeChunkViaWorker({
         chunkUrl: normalizedUrl,
         chunkType: "scenario-chunk",
+        signal,
       });
+      signal?.throwIfAborted();
       if (workerResult.chunkPayload) {
         return {
           payload: workerResult.chunkPayload,
@@ -374,12 +378,14 @@ async function loadScenarioChunkFile(
         };
       }
     } catch (error) {
+      if (error?.name === "AbortError" || signal?.aborted) throw error;
       console.warn(`[scenario] Worker chunk load failed for "${normalizedUrl}". Falling back to main thread.`, error);
     }
   }
   const result = await loadMeasuredJsonResource(cacheBust(normalizedUrl), {
     d3Client,
     label: `scenario:${resourceLabel}`,
+    signal,
   });
   return {
     payload: result.payload,

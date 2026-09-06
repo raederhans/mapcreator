@@ -271,6 +271,8 @@ function createScenarioChunkRuntimeController({
   const runtimeState = explicitRuntimeState || state;
   let promotionCommitPromise = null;
   let promotionCommitRunId = 0;
+  const chunkRequestsByRequest = new Map();
+  let activeRequestScenarioId = normalizeScenarioId(String(runtimeState.activeScenarioChunks?.scenarioId || runtimeState.activeScenarioId || ""));
 
   function getScenarioApplyEpochFromDiagnostics(scenarioId = "") {
     const diagnostics = runtimeState?.renderTransactionDiagnostics || {};
@@ -1020,11 +1022,26 @@ function createScenarioChunkRuntimeController({
   }
 
   function resetScenarioChunkRuntimeState({ scenarioId = "" } = {}) {
-    cancelScenarioChunkPromotionCommit("scenario-chunk-runtime-reset");
     const normalizedScenarioId = normalizeScenarioId(scenarioId);
+    const outgoingScenarioId = activeRequestScenarioId
+      || normalizeScenarioId(String(runtimeState.activeScenarioChunks?.scenarioId || ""));
+    cancelScenarioChunkPromotionCommit("scenario-chunk-runtime-reset");
+    if (outgoingScenarioId && outgoingScenarioId !== normalizedScenarioId) {
+      // activeScenarioId may already refer to the incoming scene after commit.
+      // A same-scene reload can replace its bundle while requests remain alive.
+      // Only this controller's in-flight bundles for the outgoing scene belong here.
+      for (const [request, { bundle: outgoingBundle, chunkId }] of chunkRequestsByRequest) {
+        if (getScenarioBundleId(outgoingBundle) !== outgoingScenarioId) continue;
+        chunkRequestsByRequest.delete(request);
+        const promiseCache = ensureScenarioChunkPromiseCache(outgoingBundle);
+        if (promiseCache[chunkId] === request.promise) delete promiseCache[chunkId];
+        request.controller.abort();
+      }
+    }
     resetScenarioChunkRuntimeStateAction(runtimeState, {
       scenarioId: normalizedScenarioId,
     });
+    activeRequestScenarioId = normalizedScenarioId;
   }
 
   function getScenarioChunkIdsByLayer(chunkState, layerKey, activeChunkIdSet = null) {
@@ -2367,6 +2384,7 @@ function createScenarioChunkRuntimeController({
     }
     const promiseCache = ensureScenarioChunkPromiseCache(bundle);
     ensureRuntimeChunkLoadState();
+    if (!activeRequestScenarioId) activeRequestScenarioId = normalizeScenarioId(String(runtimeState.activeScenarioId || ""));
     const expectedLoadStateGeneration = Math.max(
       0,
       Number(runtimeState.runtimeChunkLoadState?.generation || 0),
@@ -2381,13 +2399,17 @@ function createScenarioChunkRuntimeController({
     beginScenarioChunkLoadState(runtimeState, normalizedChunkId, {
       expectedLoadStateGeneration,
     });
+    const request = { controller: new AbortController(), promise: null };
+    chunkRequestsByRequest.set(request, { bundle, chunkId: normalizedChunkId });
     const loadPromise = (async () => {
       try {
         const result = await loadScenarioChunkFile(chunkMeta.url, {
           d3Client,
           scenarioId: getScenarioBundleId(bundle),
           resourceLabel: `chunk:${chunkMeta.layer}:${normalizedChunkId}`,
+          signal: request.controller.signal,
         });
+        request.controller.signal.throwIfAborted();
         const payload = {
           layerKey: chunkMeta.layer,
           payload: result?.payload || null,
@@ -2411,11 +2433,13 @@ function createScenarioChunkRuntimeController({
         });
       }
     })();
+    request.promise = loadPromise;
     promiseCache[normalizedChunkId] = loadPromise;
     const clearCachedLoadPromise = () => {
       if (promiseCache[normalizedChunkId] === loadPromise) {
         delete promiseCache[normalizedChunkId];
       }
+      chunkRequestsByRequest.delete(request);
     };
     void loadPromise.then(clearCachedLoadPromise, clearCachedLoadPromise);
     return loadPromise;

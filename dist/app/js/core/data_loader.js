@@ -884,6 +884,7 @@ export async function loadMeasuredJsonResource(
     label = "resource",
     cache = "default",
     credentials = "same-origin",
+    signal = null,
   } = {}
 ) {
   const createDataLoaderError = (
@@ -903,12 +904,14 @@ export async function loadMeasuredJsonResource(
     });
   }
   const startedAt = nowMs();
+  signal?.throwIfAborted();
   // 这里统一收口 fetch + JSON parse + timing metrics。
   // 上层 loader 只关心 payload 和指标，不再各自拼接重复的网络错误语义。
   if (typeof globalThis.fetch === "function") {
     const response = await globalThis.fetch(url, {
       cache,
       credentials,
+      ...(signal ? { signal } : {}),
     });
     const textLoadedAt = nowMs();
     if (!response.ok) {
@@ -924,6 +927,7 @@ export async function loadMeasuredJsonResource(
       );
     }
     const rawText = await response.text();
+    signal?.throwIfAborted();
     const fetchCompletedAt = nowMs();
     const parseStartedAt = fetchCompletedAt;
     try {
@@ -942,6 +946,7 @@ export async function loadMeasuredJsonResource(
         },
       };
     } catch (error) {
+      if (error?.name === "AbortError") throw error;
       throw createDataLoaderError(
         "invalid-json",
         `[data_loader] Invalid JSON for ${label} at ${url}: ${error?.message || error}`,
@@ -959,7 +964,10 @@ export async function loadMeasuredJsonResource(
       url,
     });
   }
+  // This legacy loader has no cancellation contract. Reject stale results after
+  // it settles; only the native fetch branch can interrupt the network request.
   const payload = await d3Client.json(url);
+  signal?.throwIfAborted();
   const finishedAt = nowMs();
   return {
     payload,

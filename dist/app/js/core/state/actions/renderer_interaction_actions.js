@@ -2,6 +2,7 @@
 // Event handling, render scheduling, metrics, and async recovery work stay in composition roots.
 
 import { setSelectedColorState } from "./appearance_selection_actions.js";
+import { setScenarioHoverRegionIdsState } from "./scenario_presentation_actions.js";
 
 function assertStateTarget(target) {
   if (!target || typeof target !== "object" || Array.isArray(target)) {
@@ -107,6 +108,56 @@ export function setClickHoverOverlayDirtyState(target, dirty) {
   const nextDirty = Boolean(dirty);
   target.hoverOverlayDirty = nextDirty;
   return nextDirty;
+}
+
+export function setZoomTransformState(target, transform) {
+  assertStateTarget(target);
+  target.zoomTransform = transform;
+  return transform;
+}
+
+export function setHitCanvasDirtyState(target, dirty) {
+  assertStateTarget(target);
+  const nextDirty = Boolean(dirty);
+  target.hitCanvasDirty = nextDirty;
+  return nextDirty;
+}
+
+export function setHitCanvasBuildScheduledState(target, handle) {
+  assertStateTarget(target);
+  target.hitCanvasBuildScheduled = handle;
+  return handle;
+}
+
+export function setHoveredFeatureIdsState(
+  target,
+  {
+    landId = null,
+    waterId = null,
+    specialId = null,
+  } = {},
+) {
+  assertStateTarget(target);
+  target.hoveredId = landId;
+  setScenarioHoverRegionIdsState(target, { waterId, specialId });
+}
+
+export function setLastMouseMoveTimeState(target, lastMouseMoveTime) {
+  assertStateTarget(target);
+  target.lastMouseMoveTime = lastMouseMoveTime;
+  return lastMouseMoveTime;
+}
+
+export function setTooltipPendingState(target, pendingState) {
+  assertStateTarget(target);
+  target.tooltipPendingState = pendingState;
+  return pendingState;
+}
+
+export function setTooltipRafHandleState(target, handle) {
+  assertStateTarget(target);
+  target.tooltipRafHandle = handle;
+  return handle;
 }
 
 export function setClickSelectedColorState(target, color) {

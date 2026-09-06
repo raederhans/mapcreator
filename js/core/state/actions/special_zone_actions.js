@@ -376,42 +376,12 @@ export function setSpecialZonesOverlayDirtyState(target, value = true) {
   return nextDirty;
 }
 
-export function ensureSpecialZoneLayersState(target) {
-  const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || target || null);
-  if (target && Object.prototype.hasOwnProperty.call(target, "specialZoneLayers")) {
-    return commitSpecialZoneLayersState(target, normalized, {}, { markDirty: false });
-  }
-  return normalized;
-}
-
-export function normalizeRuntimeSpecialZoneLayersState(target, options = {}) {
-  const normalized = normalizeSpecialZoneLayersState(target?.specialZoneLayers || null, options);
-  if (target && typeof target === "object") {
-    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
-  }
-  return normalized;
-}
-
-export function setRuntimeSpecialZoneLayersState(target, nextState, options = {}) {
-  const normalized = normalizeSpecialZoneLayersState(nextState, options);
-  if (target && typeof target === "object") {
-    return commitSpecialZoneLayersState(target, normalized, options, { markDirty: false });
-  }
-  return normalized;
-}
-
-export function mutateRuntimeSpecialZoneLayersState(target, mutation, options = {}) {
-  if (!target || typeof target !== "object") return undefined;
-  mutateSpecialZoneLayersStateAction(target, mutation, options);
-  return undefined;
-}
-
 export function activateSpecialZoneMembershipToolState(target, tool = "multi") {
   if (!target || typeof target !== "object") return null;
   const normalizedTool = String(tool || "multi").trim() || "multi";
   target.specialZoneMembershipTool = normalizedTool;
   if (target.currentTool !== "special-zone-membership") {
-    target.specialZonePreviousTool = target.currentTool || "fill";
+    target.specialZonePreviousTool = String(target.currentTool || "fill");
   }
   target.currentTool = "special-zone-membership";
   target.brushModeEnabled = false;
@@ -421,7 +391,7 @@ export function activateSpecialZoneMembershipToolState(target, tool = "multi") {
 
 export function exitSpecialZoneMembershipToolState(target) {
   if (!target || typeof target !== "object") return "";
-  const previousTool = target.specialZonePreviousTool || "fill";
+  const previousTool = String(target.specialZonePreviousTool || "fill");
   target.currentTool = previousTool;
   target.specialZonePreviousTool = "";
   return previousTool;

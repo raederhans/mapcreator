@@ -472,40 +472,6 @@ export const RENDERER_CACHE_PIPELINE_RECORDS = [
     "selector": {}
   },
   {
-    "id": "node:test:node:renderer-runtime-context-render-cache",
-    "commandRef": "test:node:renderer-runtime-context-render-cache",
-    "sourceRefs": [
-      "tests/renderer_runtime_context_render_cache_behavior.test.mjs",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/renderer_surface_host.js"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": null,
-    "selectorOrder": 277,
-    "verification": null,
-    "selector": {}
-  },
-  {
     "id": "verify-core:test:node:render-cache-owner",
     "commandRef": "test:node:render-cache-owner",
     "sourceRefs": [
@@ -732,50 +698,6 @@ export const RENDERER_CACHE_PIPELINE_RECORDS = [
       "supervisorDomain": "renderer-runtime"
     },
     "selector": null
-  },
-  {
-    "id": "verify-core:test:node:renderer-runtime-context-render-cache",
-    "commandRef": "test:node:renderer-runtime-context-render-cache",
-    "sourceRefs": [
-      "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/render_cache_owner.js",
-      "tests/renderer_runtime_context_render_cache_behavior.test.mjs",
-      "tests/renderer_runtime_context_receiver_behavior.test.mjs",
-      "docs/active/renderer-runtime-context-render-cache-read-model-p1-2-20260709.md",
-      "package.json"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": 68,
-    "selectorOrder": 55,
-    "verification": {
-      "commandType": "package-script",
-      "packageScriptRequired": true,
-      "verifyCoreDefaultGroup": "renderer-owner",
-      "supervisorDomain": "renderer-runtime",
-      "routeRegistry": true
-    },
-    "selector": {}
   },
   {
     "id": "verify-core:test:python:map-renderer-render-cache-owner-boundary",

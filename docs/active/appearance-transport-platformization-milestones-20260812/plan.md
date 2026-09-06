@@ -18,8 +18,10 @@
 
 ## Stages
 
+2026-09-05 状态收口：B1/B2/B3 的实现进度与正式 admission 统一读取 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status)。下列复选框表示里程碑正式准入，不用于重复登记局部实现；Scope 中的 lineage 和重放顺序保留原计划含义。
+
 - [x] A — P4.3 Admission Pack：`A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`（source candidate；tree `ba969a24a4730072245c60efeefba66409f2c88d`）。
-- [ ] B — P4.4 Replay and Admission Pack：A dependency released；B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone 均 not started；`B_ADMITTED_SHA` pending。
+- [ ] B — P4.4 Replay and Admission Pack：正式准入与 `B_ADMITTED_SHA` 确认以 [P4 当前状态](../state-action-ownership-p4-20260719/task.md#current-status) 为准，不再以历史的 B1/B2/B3 尚未开始描述当前实现。
 - [ ] C — Appearance / Transport user-visible milestone：blocked on `B_ADMITTED_SHA`。
 
 ## Acceptance criteria

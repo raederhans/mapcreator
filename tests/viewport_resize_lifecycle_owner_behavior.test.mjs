@@ -503,3 +503,9 @@ test("dispose clears resize observers scheduled work and zoom listeners", () => 
   assert.equal(harness.timers[0].cleared, true);
   assert.equal(harness.deferredWork[0].canceled, true);
 });
+
+test("factory freezes its exact public API", () => {
+  const { owner } = createHarness();
+
+  assert.equal(Object.isFrozen(owner), true);
+});

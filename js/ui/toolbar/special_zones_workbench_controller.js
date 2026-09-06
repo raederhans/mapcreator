@@ -18,7 +18,6 @@ import {
 import {
   activateSpecialZoneMembershipToolState,
   exitSpecialZoneMembershipToolState,
-  normalizeRuntimeSpecialZoneLayersState,
   registerSpecialZonesWorkbenchRuntimeHooks,
   commitSpecialZoneLayersState,
   setSpecialZoneMembershipBrushModeState,
@@ -165,11 +164,16 @@ function createSpecialZonesWorkbenchController({
   const translate = (value) => (typeof t === "function" ? t(value, "ui") : value);
 
   const normalizeState = (options = {}) => {
-    return normalizeRuntimeSpecialZoneLayersState(runtimeState, {
-      defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
-      topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
-      ...options,
-    });
+    return commitSpecialZoneLayersState(
+      runtimeState,
+      runtimeState.specialZoneLayers,
+      {
+        defaultSource: runtimeState.activeScenarioId ? "scenario" : "project",
+        topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+        ...options,
+      },
+      { markDirty: false },
+    );
   };
 
   const activeLayer = () => {
@@ -1193,10 +1197,15 @@ function createSpecialZonesWorkbenchController({
       loadedScenarioLayerRequestId = scenarioApplyRequestId;
       failedScenarioLayerAssetId = "";
       failedScenarioLayerRequestId = 0;
-      normalizeRuntimeSpecialZoneLayersState(runtimeState, {
-        defaultSource: "scenario",
-        topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
-      });
+      commitSpecialZoneLayersState(
+        runtimeState,
+        runtimeState.specialZoneLayers,
+        {
+          defaultSource: "scenario",
+          topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
+        },
+        { markDirty: false },
+      );
       const diagnostics = Array.isArray(runtimeState.specialZoneLayers?.diagnostics)
         ? runtimeState.specialZoneLayers.diagnostics
         : [];

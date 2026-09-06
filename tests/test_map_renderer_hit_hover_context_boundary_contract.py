@@ -4,27 +4,10 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+MAP_HOVER_INTERACTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "map_hover_interaction_owner.js"
 CLICK_SELECTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "click_selection_transaction_owner.js"
-RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 PUBLIC_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
-
-
-HIT_HOVER_ACCESSORS = [
-    "hasHitCanvasRuntime",
-    "isHitCanvasDirty",
-    "isHitCanvasBuildDeferred",
-    "getRenderPhase",
-    "getScheduledHitCanvasBuildHandle",
-    "getActiveScenarioId",
-    "hasHoverData",
-    "isSpecialZoneEditorActive",
-    "isReducedHoverPhase",
-    "getHoverIds",
-    "hasTooltip",
-    "getHoveredFacilityEntry",
-    "getFeatureForHit",
-]
 
 
 def slice_between(source, start_marker, end_marker):
@@ -41,92 +24,9 @@ class MapRendererHitHoverContextBoundaryContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        cls.context_content = RUNTIME_CONTEXT_JS.read_text(encoding="utf-8")
+        cls.hover_owner_content = MAP_HOVER_INTERACTION_OWNER_JS.read_text(encoding="utf-8")
 
-    def test_hit_hover_context_is_an_exact_readonly_capsule(self):
-        hit_hover_model = slice_between(
-            self.context_content,
-            "function createInteractionHitHoverReadModel(hitHover)",
-            "function createInteractionReadModel(interaction)",
-        )
-
-        for token in [
-            '"renderPhaseIdle"',
-            '"hoverSnapPx"',
-        ]:
-            self.assertIn(token, hit_hover_model)
-        for accessor_name in HIT_HOVER_ACCESSORS:
-            self.assertIn(f'"{accessor_name}"', self.context_content)
-            self.assertIn(
-                f"{accessor_name}: hitHoverAccessors.{accessor_name},",
-                hit_hover_model,
-            )
-
-        for forbidden in [
-            "helpers:",
-            "effects:",
-            "handlers:",
-            "nowMs",
-            "getLastMouseMoveTime",
-            "getMouseThrottleMs",
-            "inspectHgoRuntimePreviewFromEvent",
-            "getHitFromEvent",
-            "getHoveredFacilityEntryFromEvent",
-            "isFacilityDetailsSurfaceActive",
-            "getHoveredCityTooltipEntry",
-            "getTooltipTextForFeature",
-            "scheduleDeferredWork",
-            "cancelDeferredWork",
-            "setScheduledHitCanvasBuildHandle",
-            "runScheduledHitCanvasBuild",
-            "recordRenderPerfMetric",
-            "setHoverIds",
-            "queueTooltipUpdate",
-            "setMapInteractionCursor",
-            "dispatchMapClick",
-        ]:
-            self.assertNotIn(forbidden, hit_hover_model)
-
-    def test_composition_root_assembles_live_reads_and_receiver_does_not_invoke_them(self):
-        runtime_context_factory = slice_between(
-            self.renderer_content,
-            "function getRendererRuntimeContext()",
-            "function getRenderPassReceiverContext()",
-        )
-        interaction_receiver = slice_between(
-            self.renderer_content,
-            "function getInteractionReceiverContext()",
-            "function getRendererSurfaceLifecycleOwner()",
-        )
-
-        for token in [
-            "hitHover: {",
-            "renderPhaseIdle: RENDER_PHASE_IDLE,",
-            "hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,",
-            "hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas()),",
-            "isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),",
-            "isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),",
-            "getRenderPhase: () => runtimeState.renderPhase,",
-            "getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,",
-            "getActiveScenarioId: () => runtimeState.activeScenarioId,",
-            "hasHoverData: () => Boolean(runtimeState.landData || runtimeState.waterRegionsData || runtimeState.scenarioSpecialRegionsData),",
-            "isSpecialZoneEditorActive: () => Boolean(runtimeState.specialZoneEditor?.active),",
-            "getHoverIds: () => ({",
-            "hasTooltip: () => Boolean(rendererSurfaceHost.getTooltip()),",
-            "getHoveredFacilityEntry: () => hoveredFacilityEntry,",
-            "getFeatureForHit: (hit) => {",
-        ]:
-            self.assertIn(token, runtime_context_factory)
-
-        self.assertIn("const hitHoverContext = interactionContext.hitHover;", interaction_receiver)
-        self.assertIn(
-            "RendererRuntimeContext.interaction.hitHover receiver is required.",
-            interaction_receiver,
-        )
-        for accessor_name in HIT_HOVER_ACCESSORS:
-            self.assertNotIn(f"hitHoverContext.{accessor_name}()", interaction_receiver)
-
-    def test_hit_canvas_owner_reads_capsule_and_retains_root_scheduling(self):
+    def test_hit_canvas_owner_receives_live_reads_and_root_scheduling_directly(self):
         owner_factory = slice_between(
             self.renderer_content,
             "function getHitCanvasSchedulingOwner()",
@@ -134,37 +34,30 @@ class MapRendererHitHoverContextBoundaryContractTest(unittest.TestCase):
         )
 
         for token in [
-            "const rendererContext = getInteractionReceiverContext();",
-            "const hitHoverContext = rendererContext.interaction.hitHover;",
-            "renderPhaseIdle: hitHoverContext.constants.renderPhaseIdle,",
+            "renderPhaseIdle: RENDER_PHASE_IDLE,",
             "idleTimeoutMs: STAGED_HIT_CANVAS_TIMEOUT_MS,",
-            "hasHitCanvasRuntime: hitHoverContext.hasHitCanvasRuntime,",
-            "isHitCanvasDirty: hitHoverContext.isHitCanvasDirty,",
-            "isHitCanvasBuildDeferred: hitHoverContext.isHitCanvasBuildDeferred,",
-            "getRenderPhase: hitHoverContext.getRenderPhase,",
-            "getScheduledHitCanvasBuildHandle: hitHoverContext.getScheduledHitCanvasBuildHandle,",
-            "getActiveScenarioId: hitHoverContext.getActiveScenarioId,",
+            "hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas()),",
+            "isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),",
+            "isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),",
+            "getRenderPhase: () => runtimeState.renderPhase,",
+            "getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,",
+            "getActiveScenarioId: () => runtimeState.activeScenarioId,",
             "scheduleDeferredWork,",
             "cancelDeferredWork,",
             "setScheduledHitCanvasBuildHandle: (handle) => {",
-            "runtimeState.hitCanvasBuildScheduled = handle;",
+            "setHitCanvasBuildScheduledState(runtimeState, handle);",
             "runScheduledHitCanvasBuild: (details) => drawScheduledHitCanvasWithMetric(details),",
         ]:
             self.assertIn(token, owner_factory)
 
         for forbidden in [
-            "renderPhaseIdle: RENDER_PHASE_IDLE,",
-            "hasHitCanvasRuntime: () =>",
-            "isHitCanvasDirty: () =>",
-            "isHitCanvasBuildDeferred: () =>",
-            "getRenderPhase: () =>",
-            "getScheduledHitCanvasBuildHandle: () =>",
-            "getActiveScenarioId: () =>",
+            "getInteractionReceiverContext",
+            "getRendererRuntimeContext",
             "rendererRuntimeContext:",
         ]:
             self.assertNotIn(forbidden, owner_factory)
 
-    def test_hover_owner_reads_capsule_and_retains_event_ui_and_effect_dependencies(self):
+    def test_hover_owner_receives_shared_state_surface_and_root_effects_directly(self):
         owner_factory = slice_between(
             self.renderer_content,
             "function getMapHoverInteractionOwner()",
@@ -172,46 +65,52 @@ class MapRendererHitHoverContextBoundaryContractTest(unittest.TestCase):
         )
 
         for token in [
-            "const rendererContext = getInteractionReceiverContext();",
-            "const hitHoverContext = rendererContext.interaction.hitHover;",
-            "hoverSnapPx: hitHoverContext.constants.hoverSnapPx,",
-            "hasHoverData: hitHoverContext.hasHoverData,",
-            "isSpecialZoneEditorActive: hitHoverContext.isSpecialZoneEditorActive,",
-            "isReducedHoverPhase: hitHoverContext.isReducedHoverPhase,",
-            "getHoverIds: hitHoverContext.getHoverIds,",
-            "hasTooltip: hitHoverContext.hasTooltip,",
-            "getHoveredFacilityEntry: hitHoverContext.getHoveredFacilityEntry,",
-            "getFeatureForHit: hitHoverContext.getFeatureForHit,",
-            "nowMs: () => performance.now(),",
-            "getLastMouseMoveTime: () => runtimeState.lastMouseMoveTime,",
-            "getMouseThrottleMs: () => runtimeState.MOUSE_THROTTLE_MS,",
+            "state: runtimeState,",
+            "surfaceHost: rendererSurfaceHost,",
+            "hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,",
+            "renderPhaseIdle: RENDER_PHASE_IDLE",
+            "nowMs,",
             "inspectHgoRuntimePreviewFromEvent,",
             "getHitFromEvent,",
             "getHoveredFacilityEntryFromEvent,",
             "isFacilityDetailsSurfaceActive,",
             "getHoveredCityTooltipEntry,",
-            "getTooltipTextForFeature: (feature) => getTooltipText(feature),",
-            "effects: {",
-            "scheduleHoverOverlayRender,",
-            "queueTooltipUpdate,",
-            "setMapInteractionCursor,",
-            "clearUnderlyingHoverForFacilityEntry,",
-            "getFacilityKey: buildFacilityEntryKey,",
+            "getTooltipTextForFeature: getTooltipText,",
+            "getSelectedFacilityEntry: () => selectedFacilityEntry,",
+            "updateDevHoverHit,",
+            "renderHoverOverlay,",
+            "recordInteractionDurationMetric,",
+            "hidePhysicalIntensityBrushPreview,",
+            "helpers: { getFacilityKey: buildFacilityEntryKey },",
         ]:
             self.assertIn(token, owner_factory)
 
         for forbidden in [
-            "hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,",
-            "hasHoverData: () =>",
-            "isSpecialZoneEditorActive: () =>",
-            "isReducedHoverPhase: () =>",
-            "getHoverIds: () =>",
-            "hasTooltip: () =>",
-            "getHoveredFacilityEntry: () =>",
-            "getFeatureForHit: (hit) =>",
+            "getInteractionReceiverContext",
+            "getRendererRuntimeContext",
             "rendererRuntimeContext:",
         ]:
             self.assertNotIn(forbidden, owner_factory)
+
+        for token in [
+            "function hasHoverIds() {",
+            "setHoveredFeatureIdsState(state, { landId, waterId, specialId });",
+            "const throttleMs = Number(state.MOUSE_THROTTLE_MS || 0);",
+            "const lastMouseMoveTime = Number(state.lastMouseMoveTime || 0);",
+            "setLastMouseMoveTimeState(state, now);",
+            "if (!surfaceHost.getTooltip()) {",
+            "let hoveredFacilityEntry = null;",
+            "function setHoverOverlayDirty(dirty = true) { setClickHoverOverlayDirtyState(state, dirty); }",
+            "const entry = hoveredFacilityEntry || getterApi.getSelectedFacilityEntry();",
+        ]:
+            self.assertIn(token, self.hover_owner_content)
+
+        direct_write = (
+            r"\bstate\.(?:hoveredId|hoveredWaterRegionId|hoveredSpecialRegionId|"
+            r"hoverOverlayDirty|lastMouseMoveTime|tooltipPendingState|tooltipRafHandle)\s*=(?!=)"
+        )
+        self.assertNotRegex(self.hover_owner_content, direct_write)
+        self.assertIn('../state/actions/renderer_interaction_actions.js', self.hover_owner_content)
 
     def test_click_transaction_is_owner_owned_with_one_private_root_facade(self):
         click_facade = slice_between(

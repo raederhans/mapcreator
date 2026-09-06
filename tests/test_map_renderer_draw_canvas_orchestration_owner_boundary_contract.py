@@ -7,7 +7,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "draw_canvas_orchestration_owner.js"
 PUBLIC_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
-RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
 ARCHITECTURE_TOOL = REPO_ROOT / "tools" / "check_architecture_boundaries.mjs"
 
@@ -141,10 +140,9 @@ class DrawCanvasOrchestrationOwnerBoundaryContract(unittest.TestCase):
         self.assertLess(owner.index('"drawCanvas-stale-overlay"'), owner.index('"drawCanvas-non-idle"'))
         self.assertLess(owner.index('"compose-cached-passes-failed"'), owner.index('"lastGoodFrameCaptureSkipped"'))
 
-    def test_public_context_and_state_write_surfaces_do_not_expose_owner(self):
+    def test_public_and_state_write_surfaces_do_not_expose_owner(self):
         token = "draw_canvas_orchestration_owner"
         self.assertNotIn(token, read(PUBLIC_JS))
-        self.assertNotIn(token, read(RUNTIME_CONTEXT_JS))
         self.assertNotIn(token, read(STATE_WRITE_ALLOWLIST))
         self.assertIn("drawCanvasOrchestrationOwner", read(ARCHITECTURE_TOOL))
 

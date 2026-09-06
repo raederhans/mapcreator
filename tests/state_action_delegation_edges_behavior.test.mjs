@@ -13,6 +13,8 @@ import {
   STATE_MUTATION_DELEGATING_OWNER_CONTRACT,
   STATE_IMPORTED_PURE_NORMALIZER_CONTRACT,
   STATE_TARGET_PURE_READER_CONTRACT,
+  STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT,
+  inspectStateImportedBorrowedProjectionSource,
   inspectStateImportedPureNormalizerSource,
   inspectStateDetachedCaptureSource,
   inspectStateMutationDelegatingOwnerSources,
@@ -237,9 +239,43 @@ test("source-bound detached captures return fresh values and fail closed on alia
   }
 });
 
+test("registered owner proofs match current composition and factory sources", () => {
+  for (const entry of STATE_MUTATION_DELEGATING_OWNER_CONTRACT) {
+    assert.deepEqual(inspectStateMutationDelegatingOwnerSources({
+      compositionSource: fs.readFileSync(entry.compositionModulePath, "utf8"),
+      factorySource: fs.readFileSync(entry.factoryModulePath, "utf8"),
+      entry,
+    }).violations, [], entry.compositionExportName);
+  }
+});
+
+test("selection owner proof rejects borrowed getter and facade drift", () => {
+  const entry = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ compositionExportName }) => compositionExportName === "getSelectionOverlayOwner",
+  );
+  const compositionSource = fs.readFileSync(entry.compositionModulePath, "utf8");
+  const factorySource = fs.readFileSync(entry.factoryModulePath, "utf8");
+  for (const [sourceKey, source, before, after, code] of [
+    ["compositionSource", compositionSource, "getLandIndex: () => runtimeState.landIndex",
+      "getLandIndex: () => runtimeState.landIndex.clear()", "state-mutation-owner-composition-source-drift"],
+    ["factorySource", factorySource, "return Object.freeze({",
+      "getLandIndex().clear(); return Object.freeze({", "state-mutation-owner-factory-source-drift"],
+    ["factorySource", factorySource, "return Object.freeze({",
+      "return Object.freeze({ leak: getLandIndex,", "state-mutation-owner-factory-source-drift"],
+  ]) {
+    assert.ok(source.includes(before), before);
+    const result = inspectStateMutationDelegatingOwnerSources({
+      compositionSource, factorySource, entry, [sourceKey]: source.replace(before, after),
+    });
+    assert.ok(result.violations.some((violation) => violation.code === code), after);
+  }
+});
+
 test("source-bound render perf owner proves factory composition and registered action effects", () => {
   assert.deepEqual(validateStateMutationDelegatingOwnerContract(), []);
-  const [entry] = STATE_MUTATION_DELEGATING_OWNER_CONTRACT;
+  const entry = STATE_MUTATION_DELEGATING_OWNER_CONTRACT.find(
+    ({ compositionExportName }) => compositionExportName === "getRenderPerfMetricsRuntimeOwner",
+  );
   assert.deepEqual(entry.methods, [
     "recordRenderPerfMetric",
     "beginContextMetricSession",
@@ -681,16 +717,20 @@ test("P4.3 renderer cross-boundary proofs lock retired evidence and exact replac
       proof.retiredMutationSites.length,
     ]),
     [
+      ["js/core/map_renderer.js", "cachedDetailAdmBorders", "replaceCachedDetailAdmBordersState", 5],
       ["js/core/map_renderer.js", "deferExactAfterSettle", "setDeferExactAfterSettleState", 3],
       ["js/core/map_renderer.js", "dprLastStageSwitchAt", "commitRendererDprStageState", 1],
       ["js/core/map_renderer.js", "dprStage", "commitRendererDprStageState", 1],
       ["js/core/map_renderer.js", "firstVisibleFramePainted", "setFirstVisibleFramePaintedState", 1],
+      ["js/core/map_renderer.js", "lastMouseMoveTime", "setLastMouseMoveTimeState", 1],
       ["js/core/map_renderer.js", "pendingDayNightRefresh", "setPendingDayNightRefreshState", 2],
       ["js/core/map_renderer.js", "pendingExactPoliticalFastFrame", "setPendingExactPoliticalFastFrameState", 2],
       ["js/core/map_renderer.js", "projectedBoundsById", "commitProjectedBoundsCacheState", 1],
       ["js/core/map_renderer.js", "projectedBoundsDiagnostics", "setProjectedBoundsDiagnosticsState", 2],
       ["js/core/map_renderer.js", "renderPerfMetrics", "ensureRenderPerfMetricsState", 1],
       ["js/core/map_renderer.js", "renderPerfMetricSequence", "commitRenderPerfMetricState", 1],
+      ["js/core/map_renderer.js", "cachedDetailAdmBorders", "replaceCachedDetailAdmBordersState", 1],
+      ["js/core/renderer/border_draw_owner.js", "cachedDetailAdmBorders", "replaceCachedDetailAdmBordersState", 1],
       ["js/core/state/renderer_runtime_state.js", "exactAfterSettleController", "ensureExactAfterSettleControllerState", 2],
       ["js/core/state/renderer_runtime_state.js", "renderPassCache", "commitRenderPassCacheState", 49],
       ["js/core/state/renderer_runtime_state.js", "sphericalFeatureDiagnosticsById", "commitProjectedBoundsCacheState", 1],
@@ -844,8 +884,10 @@ test("Day/Night actions have one registry owner and one live canonical handoff",
     }],
     recognizeCurrentContracts: false,
   });
-  assert.ok(rawInventory.findings.some(({ reason }) => (
-    reason === "unsupported-call-mutation"
+  assert.ok(rawInventory.findings.some(({ reason, evidenceKind, key }) => (
+    reason === "state-alias-escape"
+    && evidenceKind === "return-value"
+    && key === "styleConfig"
   )), JSON.stringify(rawInventory.findings));
   assert.deepEqual(
     inventory.actionDelegations.map(({ actionExportName }) => actionExportName).sort(),
@@ -1006,8 +1048,10 @@ test("source-bound owner proof prepares once and applies independently per bindi
     recognizeCurrentContracts: false,
   });
   assert.deepEqual(raw.actionDelegations, []);
-  assert.ok(raw.findings.some(({ reason }) => (
-    reason === "unsupported-call-mutation"
+  assert.ok(raw.findings.some(({ reason, evidenceKind, key }) => (
+    reason === "state-alias-escape"
+    && evidenceKind === "return-value"
+    && key === "styleConfig"
   )), JSON.stringify(raw.findings));
 
   const virtual = scanStateMutationInventory(
@@ -2444,4 +2488,33 @@ test("pure-reader contracts reject wildcard accepted escapes", () => {
         code === "state-target-pure-reader-escape-wildcard-forbidden",
     ),
   );
+});
+
+
+test("country query model preserves reviewed borrows and rejects new mutation or escape", async () => {
+  const modulePath = "js/ui/sidebar/country_inspector_model.js";
+  const source = fs.readFileSync(modulePath, "utf8");
+  const discovery = await discoverStateWriterBindingsForSource(modulePath, source, "production", { scanAllParameters: true });
+  assert.equal(discovery.some(({ functionName }) => functionName === "createCountryInspectorModel"), false);
+  const hiddenExport = source.replace("export function createCountryInspectorModel", "function createCountryInspectorModel");
+  await assert.rejects(() => discoverStateWriterBindingsForSource(modulePath, hiddenExport, "production", { scanAllParameters: true }),
+    (error) => error?.violations?.some(({ code }) => code === "state-target-pure-reader-direct-export-required"));
+  for (const statement of ["entry.tag = 'changed';", "consumeUnknownMetadata(entry);"]) {
+    const mutated = source.replace("    return entry;", statement + "\n    return entry;");
+    assert.notEqual(mutated, source);
+    await assert.rejects(() => discoverStateWriterBindingsForSource(modulePath, mutated, "production", { scanAllParameters: true }),
+      (error) => error?.code === "state-target-pure-reader-contract-violation");
+  }
+});
+
+test("borrowed projection source proof rejects source drift and new input writes", () => {
+  const entry = STATE_IMPORTED_BORROWED_PROJECTION_CONTRACT[0];
+  const source = fs.readFileSync(entry.modulePath, "utf8").replaceAll("\r\n", "\n");
+  assert.deepEqual(inspectStateImportedBorrowedProjectionSource(source, entry).violations, []);
+  const mutated = source.replace("  const normalized = normalizeSpecialZoneLayersState(layerState);",
+    "  layerState.layers = [];\n  const normalized = normalizeSpecialZoneLayersState(layerState);");
+  assert.notEqual(mutated, source);
+  assert.ok(inspectStateImportedBorrowedProjectionSource(mutated, entry).violations.some(({ code }) => code.endsWith("source-drift")));
+  const refreshed = { ...entry, sourceFingerprint: createHash("sha256").update(mutated).digest("hex") };
+  assert.ok(inspectStateImportedBorrowedProjectionSource(mutated, refreshed).violations.some(({ code }) => code.endsWith("input-hazard")));
 });

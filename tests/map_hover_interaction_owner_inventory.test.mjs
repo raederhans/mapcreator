@@ -91,53 +91,14 @@ test("map_renderer keeps handleMouseMove wrapper and delegates to P48 owner", ()
   assertIncludes(rendererSource, "function getMapHoverInteractionOwner()", "map_renderer must expose P48 owner factory");
   assertIncludes(rendererSource, "mapHoverInteractionOwner = createMapHoverInteractionOwner({", "map_renderer must build P48 owner");
   for (const token of [
-    "const rendererContext = getInteractionReceiverContext();",
-    "const hitHoverContext = rendererContext.interaction.hitHover;",
-    "hoverSnapPx: hitHoverContext.constants.hoverSnapPx,",
-    "hasHoverData: hitHoverContext.hasHoverData,",
-    "isSpecialZoneEditorActive: hitHoverContext.isSpecialZoneEditorActive,",
-    "isReducedHoverPhase: hitHoverContext.isReducedHoverPhase,",
-    "getHoverIds: hitHoverContext.getHoverIds,",
-    "hasTooltip: hitHoverContext.hasTooltip,",
-    "getHoveredFacilityEntry: hitHoverContext.getHoveredFacilityEntry,",
-    "getFeatureForHit: hitHoverContext.getFeatureForHit,",
-    "nowMs: () => performance.now(),",
-    "getLastMouseMoveTime: () => runtimeState.lastMouseMoveTime,",
-    "getMouseThrottleMs: () => runtimeState.MOUSE_THROTTLE_MS,",
-    "inspectHgoRuntimePreviewFromEvent,",
-    "getHitFromEvent,",
-    "getHoveredFacilityEntryFromEvent,",
-    "isFacilityDetailsSurfaceActive,",
-    "getHoveredCityTooltipEntry,",
-    "setHoverIds: ({ landId = null, waterId = null, specialId = null } = {}) => {",
-    stateWriteToken("hoveredId", "landId;"),
-    stateWriteToken("hoveredWaterRegionId", "waterId;"),
-    stateWriteToken("hoveredSpecialRegionId", "specialId;"),
-    "setHoveredFacilityEntry: (entry) => {",
-    "hoveredFacilityEntry = entry || null;",
-    "markHoverOverlayDirty: () => {",
-    stateWriteToken("hoverOverlayDirty", "true;"),
-    "getTooltipTextForFeature: (feature) => getTooltipText(feature)",
-    "getFacilityKey: buildFacilityEntryKey,",
+    "state: runtimeState,", "surfaceHost: rendererSurfaceHost,", "nowMs,",
+    "getHitFromEvent,", "getHoveredFacilityEntryFromEvent,", "isFacilityDetailsSurfaceActive,",
+    "getHoveredCityTooltipEntry,", "getSelectedFacilityEntry: () => selectedFacilityEntry,",
+    "getTooltipTextForFeature: getTooltipText,", "renderHoverOverlay,", "recordInteractionDurationMetric,",
   ]) {
     assertIncludes(ownerFactorySource, token, "map_renderer must keep injected P48 state/effect boundary");
   }
-  const receiverIndex = ownerFactorySource.indexOf("const rendererContext = getInteractionReceiverContext();");
-  const createIndex = ownerFactorySource.indexOf("mapHoverInteractionOwner = createMapHoverInteractionOwner({");
-  assert.ok(receiverIndex >= 0 && receiverIndex < createIndex, "hover receiver assertion must run before owner construction");
-  for (const forbiddenToken of [
-    "hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,",
-    "hasHoverData: () => Boolean(runtimeState.landData || runtimeState.waterRegionsData || runtimeState.scenarioSpecialRegionsData)",
-    "isSpecialZoneEditorActive: () => Boolean(runtimeState.specialZoneEditor?.active)",
-    "isReducedHoverPhase: () => (",
-    "getHoverIds: () => ({",
-    "hasTooltip: () => Boolean(rendererSurfaceHost.getTooltip())",
-    "getHoveredFacilityEntry: () => hoveredFacilityEntry",
-    "getFeatureForHit: (hit) => {",
-    "rendererRuntimeContext:",
-  ]) {
-    assertExcludes(ownerFactorySource, forbiddenToken, "hover owner factory must consume only the narrow receiver reads");
-  }
+
 
   const wrapperSource = sliceBetween(
     rendererSource,
@@ -166,9 +127,9 @@ test("P48 owner declares hover dependencies and avoids forbidden migrations", ()
   for (const token of [
     "export function createMapHoverInteractionOwner",
     "\"getHitFromEvent\"",
-    "\"queueTooltipUpdate\"",
-    "\"setMapInteractionCursor\"",
-    "\"clearUnderlyingHoverForFacilityEntry\"",
+    "function queueTooltipUpdate(",
+    "function setMapInteractionCursor(",
+    "function clearUnderlyingHoverForFacilityEntry(",
     "function handleMouseMove(event)",
     "eventType: \"hover\"",
     "\"facility-tooltip\"",
@@ -280,7 +241,7 @@ test("package and architecture checker register P48 validation gates", () => {
     "mapHoverInteractionOwner: \"js/core/map_renderer/map_hover_interaction_owner.js\"",
     "mapHoverInteractionOwnerTest: \"tests/map_hover_interaction_owner_behavior.test.mjs\"",
     "mapHoverInteractionOwnerInventoryTest: \"tests/map_hover_interaction_owner_inventory.test.mjs\"",
-    "[FILES.mapHoverInteractionOwner]: 260",
+    "[FILES.mapHoverInteractionOwner]: 400",
     "must expose P48 map hover interaction script",
   ]) {
     assertIncludes(checkerSource, token, "architecture checker must register P48");

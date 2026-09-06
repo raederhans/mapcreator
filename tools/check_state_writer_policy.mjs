@@ -998,6 +998,8 @@ export async function recomputeDerivedAliasTaintBaseline({
       relativePaths: expectedPaths,
       legacySemanticBaseline:
         currentPolicy?.baselines?.legacySemanticAuthority,
+      existingBaseline:
+        previousPolicy?.baselines?.derivedAliasTaint || null,
       transitionCheckpoints:
         currentPolicy?.baselines?.derivedAliasTaint
           ?.transitionCheckpoints || [],

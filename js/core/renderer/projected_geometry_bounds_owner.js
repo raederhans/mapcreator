@@ -65,9 +65,6 @@ export function createProjectedGeometryBoundsOwner({
   function computeProjectedCoordinateBounds(geoObject) {
     const projection = getProjection();
     if (!projection || !geoObject || typeof geoObject !== "object") return null;
-    const geometry = String(geoObject.type || "") === "Feature" ? geoObject.geometry : geoObject;
-    const coordinates = geometry?.coordinates;
-    if (!Array.isArray(coordinates)) return null;
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -85,7 +82,20 @@ export function createProjectedGeometryBoundsOwner({
       }
       value.forEach(visit);
     };
-    visit(coordinates);
+    const visitGeometry = (geometry) => {
+      if (!geometry || typeof geometry !== "object") return;
+      const type = String(geometry.type || "");
+      if (type === "Feature") {
+        visitGeometry(geometry.geometry);
+      } else if (type === "FeatureCollection") {
+        if (Array.isArray(geometry.features)) geometry.features.forEach(visitGeometry);
+      } else if (type === "GeometryCollection") {
+        if (Array.isArray(geometry.geometries)) geometry.geometries.forEach(visitGeometry);
+      } else {
+        visit(geometry.coordinates);
+      }
+    };
+    visitGeometry(geoObject);
     return buildProjectedBounds(minX, minY, maxX, maxY);
   }
 
@@ -99,7 +109,7 @@ export function createProjectedGeometryBoundsOwner({
       return computeProjectedCoordinateBounds(geoObject);
     }
     if (!bounds || bounds.length !== 2) return computeProjectedCoordinateBounds(geoObject);
-    const projectedBounds = buildProjectedBounds(bounds[0][0], bounds[0][1], bounds[1][0], bounds[1][1]);
+    const projectedBounds = buildProjectedBounds(bounds[0]?.[0], bounds[0]?.[1], bounds[1]?.[0], bounds[1]?.[1]);
     return projectedBounds || computeProjectedCoordinateBounds(geoObject);
   }
 
@@ -143,14 +153,19 @@ export function createProjectedGeometryBoundsOwner({
   }
 
   function mergeProjectedBounds(boundsList = []) {
-    const bounds = (Array.isArray(boundsList) ? boundsList : []).filter(Boolean);
-    if (!bounds.length) return null;
-    return buildProjectedBounds(
-      Math.min(...bounds.map((entry) => Number(entry.minX))),
-      Math.min(...bounds.map((entry) => Number(entry.minY))),
-      Math.max(...bounds.map((entry) => Number(entry.maxX))),
-      Math.max(...bounds.map((entry) => Number(entry.maxY))),
-    );
+    if (!Array.isArray(boundsList)) return null;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const entry of boundsList) {
+      if (!entry) continue;
+      minX = Math.min(minX, Number(entry.minX));
+      minY = Math.min(minY, Number(entry.minY));
+      maxX = Math.max(maxX, Number(entry.maxX));
+      maxY = Math.max(maxY, Number(entry.maxY));
+    }
+    return buildProjectedBounds(minX, minY, maxX, maxY);
   }
 
   function normalizeGeoObjectForSphericalDiagnostics(geoObject) {

@@ -1,4 +1,10 @@
 import { createCountryInspectorModel } from "./country_inspector_model.js";
+import {
+  ensureInspectorExpansionState,
+  markInspectorExpansionInitializedState,
+  setInspectorContinentExpandedState,
+  setHgoIdentityVariantSelectionState,
+} from "../../core/state/actions/scenario_presentation_actions.js";
 
 /**
  * Owns the country inspector explorer panel:
@@ -103,9 +109,29 @@ export function createCountryInspectorController({
     getPriorityCountryOrderMap,
     compareInspectorCountries,
     buildCountryColorTree,
-    ensureInitialInspectorExpansion,
+    getDefaultExpandedInspectorGroupId,
     getInspectorGroupExpansionKey,
   } = createCountryInspectorModel(runtimeState, t);
+
+  function ensureInitialInspectorExpansion(groupedEntries = []) {
+    if (runtimeState.inspectorExpansionInitialized || !groupedEntries.length) return;
+    ensureInspectorExpansionState(runtimeState);
+
+    if (runtimeState.expandedInspectorContinents.size > 0) {
+      markInspectorExpansionInitializedState(runtimeState);
+      return;
+    }
+
+    const defaultGroupId = getDefaultExpandedInspectorGroupId(groupedEntries);
+    if (defaultGroupId) {
+      setInspectorContinentExpandedState(
+        runtimeState,
+        getInspectorGroupExpansionKey(defaultGroupId),
+        true,
+      );
+    }
+    markInspectorExpansionInitializedState(runtimeState);
+  }
 
   const getSearchTerm = () => (searchInput?.value || "").trim().toLowerCase();
 
@@ -478,8 +504,7 @@ export function createCountryInspectorController({
     let requiresListRebuild = false;
     if (countryState?.topLevelGroupId) {
       const groupKey = getInspectorGroupExpansionKey(countryState.topLevelGroupId);
-      if (!runtimeState.expandedInspectorContinents.has(groupKey)) {
-        runtimeState.expandedInspectorContinents.add(groupKey);
+      if (setInspectorContinentExpandedState(runtimeState, groupKey, true)) {
         requiresListRebuild = true;
       }
     }
@@ -949,14 +974,10 @@ export function createCountryInspectorController({
         select.appendChild(node);
       });
       select.value = selectedOption?.key || "";
-      select.addEventListener("change", () => {
+      select.addEventListener("change", function handleHgoVariantChange() {
         const nextKey = String(select.value || "").trim();
-        const nextSettings = ensureHgoIdentitySettings();
-        if (nextKey) {
-          nextSettings.variantSelections[countryCode] = nextKey;
-        } else {
-          delete nextSettings.variantSelections[countryCode];
-        }
+        ensureHgoIdentitySettings();
+        setHgoIdentityVariantSelectionState(runtimeState, countryCode, nextKey);
         onHgoIdentitySettingsChange?.();
       });
       control.appendChild(select);
@@ -1026,11 +1047,7 @@ export function createCountryInspectorController({
       header.setAttribute("aria-expanded", String(isOpen));
       header.addEventListener("click", () => {
         const previousHeaderTop = header.getBoundingClientRect().top;
-        if (runtimeState.expandedInspectorContinents.has(groupKey)) {
-          runtimeState.expandedInspectorContinents.delete(groupKey);
-        } else {
-          runtimeState.expandedInspectorContinents.add(groupKey);
-        }
+        setInspectorContinentExpandedState(runtimeState, groupKey, !isOpen);
         renderList({ anchorGroupKey: groupKey, previousHeaderTop });
       });
 

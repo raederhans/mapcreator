@@ -204,6 +204,7 @@ export const TEST_ROUTING_RECORDS = [
     "id": "infra:local-verification-closure",
     "commandRef": "verify:local-infra",
     "sourceRefs": [
+      "tools/verification/workspace_changes.mjs",
       ".github/workflows/nightly-verification.yml",
       ".github/workflows/release-verification.yml",
       "package.json",
@@ -220,7 +221,6 @@ export const TEST_ROUTING_RECORDS = [
       "tests/verification_profile_behavior.test.mjs",
       "tools/verification/verification_profile.mjs",
       "docs/active/test-verification-reform-20260813/task.md",
-      "tests/catalog_projection_shadow_behavior.test.mjs",
       "tools/run_core_verification.mjs",
       "tools/verification/command_supersession.mjs",
       "tools/verification/verification_catalog_projection.mjs",
@@ -377,13 +377,8 @@ export const TEST_ROUTING_RECORDS = [
     "id": "infra:verification-metadata",
     "commandRef": "test:node:verification-metadata",
     "sourceRefs": [
-      "tools/verification/catalog_projection_shadow.mjs",
-      "tools/verification/catalog_projection_legacy.mjs",
-      "tools/verification/catalog_projection_historical_baseline.json",
-      "tools/verification/catalog_projection_shadow_cli.mjs",
       "tools/verification/verification_domains.mjs",
       "tools/verification/verification_metadata_helpers.mjs",
-      "tests/catalog_projection_shadow_behavior.test.mjs",
       "tests/verification_metadata_behavior.test.mjs",
       "docs/testing/verification-metadata.md",
       "package.json"
@@ -562,7 +557,9 @@ export const TEST_ROUTING_RECORDS = [
     "platforms": [
       "all"
     ],
-    "entrypointPolicyIndex": 6,
+    // Local metadata tests run schema and discovered-coverage checks in-process.
+    // The standalone selector remains an explicit commit/core/PR obligation.
+    "entrypointPolicyIndex": 4,
     "verificationOrder": 3,
     "selectorOrder": 3,
     "verification": {
@@ -812,14 +809,10 @@ export const TEST_ROUTING_RECORDS = [
     "id": "node:test:node:verification-metadata",
     "commandRef": "test:node:verification-metadata",
     "sourceRefs": [
-      "tests/catalog_projection_shadow_behavior.test.mjs",
       "tests/verification_metadata_behavior.test.mjs",
       "tools/run_core_verification.mjs",
       "tools/select_verification_targets.mjs",
       "tools/test_route_registry.mjs",
-      "tools/verification/catalog_projection_shadow.mjs",
-      "tools/verification/catalog_projection_legacy.mjs",
-      "tools/verification/catalog_projection_historical_baseline.json",
       "tools/verification/verification_catalog_projection.mjs",
       ...VERIFICATION_CATALOG_SOURCE_FILES,
       "tools/verification/verification_domains.mjs",
@@ -1663,6 +1656,30 @@ export const TEST_ROUTING_RECORDS = [
       "supervisorDomain": "test-routing",
       "routeRegistry": true
     },
+    "selector": {}
+  },
+  {
+    "id": "node:test:node:catalog-projection-history",
+    "commandRef": "test:node:catalog-projection-history",
+    "sourceRefs": [
+      "tools/verification/catalog_projection_shadow.mjs",
+      "tools/verification/catalog_projection_legacy.mjs",
+      "tools/verification/catalog_projection_historical_baseline.json",
+      "tools/verification/catalog_projection_shadow_cli.mjs",
+      "tests/catalog_projection_shadow_behavior.test.mjs"
+    ],
+    "ownerHints": ["test-infra"],
+    "domains": ["test-routing"],
+    "tiers": ["contract"],
+    "cost": "fast",
+    "resourceLocks": [],
+    "executionOwners": ["child-safe"],
+    "profiles": ["pr-fast"],
+    "platforms": ["all"],
+    "entrypointPolicyIndex": 4,
+    "verificationOrder": null,
+    "selectorOrder": 399,
+    "verification": null,
     "selector": {}
   }
 ];

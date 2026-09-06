@@ -68,64 +68,67 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
                 refresh_transaction_start,
             )
         ]
-        self.assertIn("resetRendererTransactionState({", set_map_data_body)
-        self.assertIn("cancelHoverOverlayRender: true,", set_map_data_body)
-        self.assertIn("cancelSecondarySpatialBuild: true,", set_map_data_body)
-        self.assertIn('clearLastGoodFrame("set-map-data");', set_map_data_body)
-        self.assertIn('invalidateAllRenderPasses("set-map-data");', set_map_data_body)
-        self.assertRegex(
-            set_map_data_body,
-            re.compile(
-                r"runtimeState\.countryBaseColors = sanitizeCountryColorMap\(runtimeState\.countryBaseColors\);[\s\S]*?"
-                r"runtimeState\.featureOverrides = sanitizeColorMap\(runtimeState\.featureOverrides\);[\s\S]*?"
-                r"runtimeState\.waterRegionOverrides = sanitizeColorMap\(runtimeState\.waterRegionOverrides\);[\s\S]*?"
-                r"runtimeState\.specialRegionOverrides = \{\};[\s\S]*?"
-                r"migrateLegacyColorState\(\);[\s\S]*?"
-                r"setCanvasSize\(\);[\s\S]*?"
-                r"buildRuntimePoliticalMeta\(\);",
-                re.S,
-            ),
-        )
+        transaction_content = (MAP_RENDERER_JS.parent / "map_renderer" / "set_map_data_transaction_owner.js").read_text(encoding="utf-8")
+        reset_content = (MAP_RENDERER_JS.parent / "map_renderer" / "renderer_transaction_reset_owner.js").read_text(encoding="utf-8")
+        scheduling_content = (MAP_RENDERER_JS.parent / "map_renderer" / "hit_canvas_scheduling_owner.js").read_text(encoding="utf-8")
+        binding_start = renderer_content.index("function getSetMapDataTransactionOwner() {")
+        transaction_binding = renderer_content[binding_start:renderer_content.index("  return setMapDataTransactionOwner;\n}", binding_start)]
+        reset_binding_start = renderer_content.index("function getRendererTransactionResetOwner() {")
+        reset_binding = renderer_content[reset_binding_start:renderer_content.index("function getMapHoverInteractionOwner()", reset_binding_start)]
+        self.assertIn("setMapDataTransactionOwner = createSetMapDataTransactionOwner({", transaction_binding)
+        self.assertRegex(set_map_data_body, r"return getSetMapDataTransactionOwner\(\)\.runSetMapDataTransaction\(\{\s*refitProjection,\s*resetZoom,\s*suppressRender,\s*interactionLevel,\s*deferInteractionInfrastructure,\s*\}\);")
+        for effect in ("resetRendererTransactionState", "clearLastGoodFrame", "invalidateAllRenderPasses", "migrateLegacyColorState", "setCanvasSize", "buildRuntimePoliticalMeta"):
+            self.assertIn(f"      {effect},", transaction_binding)
+        self.assertIn('const SET_MAP_DATA_REASON = "set-map-data";', transaction_content)
+        self.assertRegex(transaction_content, r'runEffect\("resetRendererTransactionState", \{\s*cancelHoverOverlayRender: true,\s*cancelSecondarySpatialBuild: true,\s*\}\);')
+        self.assertIn('runEffect("clearLastGoodFrame", SET_MAP_DATA_REASON);', transaction_content)
+        self.assertIn('runEffect("invalidateAllRenderPasses", SET_MAP_DATA_REASON);', transaction_content)
+        self.assertRegex(transaction_binding, r"sanitizeSetMapDataColorState: \(\) => \{\s*"
+                         r"runtimeState\.countryBaseColors = sanitizeCountryColorMap\(runtimeState\.countryBaseColors\);\s*"
+                         r"runtimeState\.featureOverrides = sanitizeColorMap\(runtimeState\.featureOverrides\);\s*"
+                         r"runtimeState\.waterRegionOverrides = sanitizeColorMap\(runtimeState\.waterRegionOverrides\);\s*"
+                         r"runtimeState\.specialRegionOverrides = \{\};")
+        self.assertRegex(transaction_content, r'runEffect\("sanitizeSetMapDataColorState"\);\s*runEffect\("migrateLegacyColorState"\);\s*runEffect\("setCanvasSize"\);\s*runEffect\("buildRuntimePoliticalMeta"\);')
         self.assertIn("resetRendererTransactionState({ hitCanvasDirty: true });", scenario_apply_body)
-        self.assertIn("if (cancelHoverOverlay) {", refresh_transaction_body)
-        self.assertIn("if (cancelSecondarySpatialBuild) {", refresh_transaction_body)
-        self.assertNotIn("getRenderPassCacheState()", refresh_transaction_body)
-        self.assertNotIn("runtimeState.topologyRevision", refresh_transaction_body)
-        self.assertRegex(
-            refresh_transaction_body,
-            re.compile(
-                r"clearPendingDynamicBorderTimer\(\);[\s\S]*?"
-                r"clearRenderPhaseTimer\(\);[\s\S]*?"
-                r"cancelPendingIndexUiRefresh\(\);[\s\S]*?"
-                r"cancelPendingSidebarRefresh\(\);[\s\S]*?"
-                r"if \(cancelHoverOverlay\) \{[\s\S]*?"
-                r"cancelScheduledHoverOverlayRender\(\);[\s\S]*?"
-                r"setRenderPhase\(RENDER_PHASE_IDLE\);[\s\S]*?"
-                r"resetRenderDiagnostics\(\);[\s\S]*?"
-                r"clearStagedMapDataTasks\(\);[\s\S]*?"
-                r"cancelExactAfterSettleRefresh\(\);[\s\S]*?"
-                r"cancelDeferredWork\(runtimeState\.hitCanvasBuildScheduled\);[\s\S]*?"
-                r"runtimeState\.hitCanvasBuildScheduled = null;[\s\S]*?"
-                r"if \(cancelSecondarySpatialBuild\) \{[\s\S]*?"
-                r"cancelDeferredWork\(secondarySpatialBuildHandle\);[\s\S]*?"
-                r"pendingSecondarySpatialBuildReasons\.clear\(\);[\s\S]*?"
-                r"runtimeState\.deferContextBasePass = false;[\s\S]*?"
-                r"runtimeState\.deferHitCanvasBuild = false;[\s\S]*?"
-                r"runtimeState\.deferExactAfterSettle = false;[\s\S]*?"
-                r"layerResolverCache\.primaryRef = null;[\s\S]*?"
-                r"layerResolverCache\.detailRef = null;[\s\S]*?"
-                r"layerResolverCache\.bundleMode = null;[\s\S]*?"
-                r"layerResolverCache\.contextRevision = 0;[\s\S]*?"
-                r"runtimeState\.devHoverHit = null;[\s\S]*?"
-                r"runtimeState\.devSelectedHit = null;[\s\S]*?"
-                r"runtimeState\.devSelectionFeatureIds = new Set\(\);[\s\S]*?"
-                r"runtimeState\.devSelectionOrder = \[\];[\s\S]*?"
-                r"runtimeState\.devClipboardFallbackText = \"\";[\s\S]*?"
-                r"runtimeState\.devClipboardPreviewFormat = \"names_with_ids\";[\s\S]*?"
-                r"resetPhysicalLandClipPathCache\(\);",
-                re.S,
-            ),
-        )
+        self.assertRegex(refresh_transaction_body, r"return getRendererTransactionResetOwner\(\)\.resetRendererRefreshTransactionState\(\{\s*cancelHoverOverlay,\s*cancelSecondarySpatialBuild,\s*\}\);")
+        refresh_start = reset_content.index("  function resetRendererRefreshTransactionState({")
+        refresh_body = reset_content[refresh_start:reset_content.index("  function markRendererTopologyChanged({", refresh_start)]
+        self.assertNotIn("getRenderPassCacheState()", refresh_body)
+        self.assertNotIn("topologyRevision", refresh_body)
+        reset_order = [
+            "clearPendingDynamicBorderTimer", "clearRenderPhaseTimer", "cancelPendingIndexUiRefresh",
+            "cancelPendingSidebarRefresh", "cancelScheduledHoverOverlayRender", "setRenderPhaseIdle",
+            "resetRenderDiagnostics", "clearStagedMapDataTasks", "cancelExactAfterSettleRefresh",
+            "cancelScheduledHitCanvasBuild", "cancelSecondarySpatialBuild", "setDeferContextBasePass",
+            "setDeferHitCanvasBuild", "setDeferExactAfterSettle", "resetLayerResolverCache",
+            "resetDevInteractionState", "resetDevClipboardState", "resetPhysicalLandClipPathCache",
+        ]
+        positions = [refresh_body.index(f'runEffect(trace, "{effect}"') for effect in reset_order]
+        self.assertEqual(positions, sorted(positions))
+        for effect in reset_order:
+            self.assertRegex(reset_binding, rf"\b{effect}(?:,|:)")
+        self.assertIn("rendererTransactionResetOwner = createRendererTransactionResetOwner({", reset_binding)
+        self.assertRegex(refresh_body, r'if \(cancelHoverOverlay\) \{\s*runEffect\(trace, "cancelScheduledHoverOverlayRender"\);\s*\}')
+        self.assertRegex(refresh_body, r'const canceledSecondarySpatial = cancelSecondarySpatialBuild\s*\? runEffect\(trace, "cancelSecondarySpatialBuild"\) !== false\s*: false;')
+        self.assertIn("setRenderPhaseIdle: () => setRenderPhase(RENDER_PHASE_IDLE)", reset_binding)
+        self.assertRegex(reset_binding, r"cancelDeferredWork\(secondarySpatialBuildHandle\);\s*secondarySpatialBuildHandle = null;\s*pendingSecondarySpatialBuildReasons\.clear\(\);")
+        self.assertIn("getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild(options)", reset_binding)
+        self.assertRegex(scheduling_content, r'runEffect\(trace, "cancelDeferredWork", scheduledHandle\);\s*runEffect\(trace, "setScheduledHitCanvasBuildHandle", null\);')
+        self.assertIn("getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled", renderer_content)
+        self.assertIn("setHitCanvasBuildScheduledState(runtimeState, handle);", renderer_content)
+        for field in ("ContextBasePass", "HitCanvasBuild", "ExactAfterSettle"):
+            self.assertIn(f'runEffect(trace, "setDefer{field}", false);', refresh_body)
+        self.assertIn("runtimeState.deferContextBasePass = Boolean(deferred);", reset_binding)
+        self.assertIn("runtimeState.deferHitCanvasBuild = Boolean(deferred);", reset_binding)
+        self.assertIn("setDeferExactAfterSettleState(runtimeState, deferred);", reset_binding)
+        for statement in (
+            "layerResolverCache.primaryRef = null;", "layerResolverCache.detailRef = null;",
+            "layerResolverCache.bundleMode = null;", "layerResolverCache.contextRevision = 0;",
+            "runtimeState.devHoverHit = null;", "runtimeState.devSelectedHit = null;",
+            "runtimeState.devSelectionFeatureIds = new Set();", "runtimeState.devSelectionOrder = [];",
+            'runtimeState.devClipboardFallbackText = "";', 'runtimeState.devClipboardPreviewFormat = "names_with_ids";',
+        ):
+            self.assertIn(statement, reset_binding)
         self.assertIn("return getSpatialIndexRuntimeOwner().buildIndex(...args);", renderer_content)
         self.assertIn("return getSpatialIndexRuntimeOwner().buildSpatialIndex(...args);", renderer_content)
         self.assertIn("return getSpatialIndexRuntimeOwner().buildIndexChunked(...args);", renderer_content)
@@ -154,7 +157,7 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
         self.assertIn("spatialGridCells: state.spatialGrid?.size || 0,", owner_content)
         self.assertIn("waterGridCells: state.waterSpatialGrid?.size || 0,", owner_content)
         self.assertIn("specialGridCells: state.specialSpatialGrid?.size || 0,", owner_content)
-        self.assertIn("deriveRuntimePrimaryFeaturePayload({", owner_content)
+        self.assertIn("cacheFeatureBounds(feature, id);", owner_content)
         self.assertNotIn("function rebuildRuntimeDerivedState({", owner_content)
         self.assertIn("getProjectedFeatureBounds(feature, {", builders_content)
         self.assertIn("borderMeshCountryCode: resolveBorderMeshCountryCode(feature),", builders_content)
@@ -168,7 +171,7 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
         self.assertIn("export function resetSecondarySpatialState(state) {", state_ops_content)
         self.assertIn("export function applyPrimarySpatialSnapshot(state, {", state_ops_content)
         self.assertIn("export function applySecondarySpatialSnapshot(state, {", state_ops_content)
-        self.assertIn("export function deriveRuntimePrimaryFeaturePayload({", derivation_content)
+        self.assertNotIn("deriveRuntimePrimaryFeaturePayload", derivation_content)
         self.assertIn("export function createSpatialIndexPerfPayload({", derivation_content)
         self.assertIn("spatialGridCells = 0,", derivation_content)
         self.assertIn("waterGridGlobals = 0,", derivation_content)

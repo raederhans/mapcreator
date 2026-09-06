@@ -189,6 +189,8 @@ function createTimerGenerationController(targetState, bundle) {
 
 function createChunkLoadGenerationFixture({
   ensureScenarioChunkRegistryLoaded = async () => {},
+  loadScenarioChunkFile: loadChunkFileOverride = null,
+  getCachedScenarioBundle = () => null,
 } = {}) {
   const targetState = {
     activeScenarioId: "tno_1962",
@@ -198,8 +200,8 @@ function createChunkLoadGenerationFixture({
   };
   const deferredByUrl = new Map();
   let loadAttemptCount = 0;
-  const createBundle = (url) => ({
-    manifest: { scenario_id: "tno_1962" },
+  const createBundle = (url, scenarioId = "tno_1962") => ({
+    manifest: { scenario_id: scenarioId },
     chunkRegistry: {
       byLayer: {
         political: [{
@@ -225,13 +227,14 @@ function createChunkLoadGenerationFixture({
     areScenarioFeatureCollectionsEquivalent: () => true,
     getScenarioDefaultCountryCode: () => "TT",
     getScenarioBundleId: (bundle) => String(bundle?.manifest?.scenario_id || ""),
-    getCachedScenarioBundle: () => null,
+    getCachedScenarioBundle,
     getVisibleScenarioChunkLayers: () => ["political"],
     selectScenarioChunks: () => ({ requiredChunks: [], optionalChunks: [], evictableChunkIds: [] }),
     mergeScenarioChunkPayloads: () => null,
     normalizeScenarioRenderBudgetHints: (value) => value || {},
-    loadScenarioChunkFile: (url) => {
+    loadScenarioChunkFile: (url, options) => {
       loadAttemptCount += 1;
+      if (loadChunkFileOverride) return loadChunkFileOverride(url, options);
       const deferred = deferredByUrl.get(url);
       assert.ok(deferred, `missing deferred loader for ${url}`);
       if (deferred.throwError) throw deferred.throwError;

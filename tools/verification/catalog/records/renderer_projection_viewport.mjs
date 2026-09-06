@@ -139,7 +139,6 @@ export const RENDERER_PROJECTION_VIEWPORT_RECORDS = [
       "tests/renderer_projection_contract_inventory.test.mjs",
       "tools/verification/renderer_projection_contract.mjs",
       "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "js/core/map_renderer/public.js",
       "js/core/renderer/renderer_projection_path_owner.js",
       "js/core/renderer/renderer_surface_lifecycle_owner.js",
@@ -275,74 +274,6 @@ export const RENDERER_PROJECTION_VIEWPORT_RECORDS = [
     "selector": {}
   },
   {
-    "id": "node:test:node:renderer-runtime-context-projection-viewport",
-    "commandRef": "test:node:renderer-runtime-context-projection-viewport",
-    "sourceRefs": [
-      "tests/renderer_runtime_context_projection_viewport_behavior.test.mjs",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/renderer_surface_host.js"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": null,
-    "selectorOrder": 278,
-    "verification": null,
-    "selector": {}
-  },
-  {
-    "id": "node:test:node:renderer-runtime-context-viewport-mutation",
-    "commandRef": "test:node:renderer-runtime-context-viewport-mutation",
-    "sourceRefs": [
-      "tests/renderer_runtime_context_viewport_mutation_behavior.test.mjs",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/renderer_surface_host.js"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": null,
-    "selectorOrder": 279,
-    "verification": null,
-    "selector": {}
-  },
-  {
     "id": "node:test:node:renderer-viewport-update-owner",
     "commandRef": "test:node:renderer-viewport-update-owner",
     "sourceRefs": [
@@ -472,92 +403,6 @@ export const RENDERER_PROJECTION_VIEWPORT_RECORDS = [
     "verificationOrder": null,
     "selectorOrder": 312,
     "verification": null,
-    "selector": {}
-  },
-  {
-    "id": "verify-core:test:node:renderer-runtime-context-projection-viewport",
-    "commandRef": "test:node:renderer-runtime-context-projection-viewport",
-    "sourceRefs": [
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "tests/renderer_runtime_context_projection_viewport_behavior.test.mjs",
-      "docs/active/renderer-runtime-context-projection-viewport-p1-3-20260709.md",
-      "package.json"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": 70,
-    "selectorOrder": 57,
-    "verification": {
-      "commandType": "package-script",
-      "packageScriptRequired": true,
-      "verifyCoreDefaultGroup": "renderer-owner",
-      "supervisorDomain": "renderer-runtime",
-      "routeRegistry": true
-    },
-    "selector": {}
-  },
-  {
-    "id": "verify-core:test:node:renderer-runtime-context-viewport-mutation",
-    "commandRef": "test:node:renderer-runtime-context-viewport-mutation",
-    "sourceRefs": [
-      "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
-      "js/core/renderer/renderer_fit_projection_owner.js",
-      "js/core/renderer/renderer_viewport_update_owner.js",
-      "js/core/renderer/viewport_resize_lifecycle_owner.js",
-      "tests/renderer_runtime_context_viewport_mutation_behavior.test.mjs",
-      "docs/active/renderer-runtime-context-viewport-mutation-chain-p1-4-20260709.md",
-      "package.json"
-    ],
-    "ownerHints": [
-      "renderer-runtime"
-    ],
-    "domains": [
-      "renderer-runtime"
-    ],
-    "tiers": [
-      "contract"
-    ],
-    "cost": "fast",
-    "resourceLocks": [],
-    "executionOwners": [
-      "child-safe"
-    ],
-    "profiles": [
-      "pr-fast"
-    ],
-    "platforms": [
-      "all"
-    ],
-    "entrypointPolicyIndex": 4,
-    "verificationOrder": 72,
-    "selectorOrder": 59,
-    "verification": {
-      "commandType": "package-script",
-      "packageScriptRequired": true,
-      "verifyCoreDefaultGroup": "renderer-owner",
-      "supervisorDomain": "renderer-runtime",
-      "routeRegistry": true
-    },
     "selector": {}
   },
   {
@@ -725,12 +570,10 @@ export const RENDERER_PROJECTION_VIEWPORT_RECORDS = [
     "commandRef": "test:python:map-renderer-projection-viewport-context-boundary",
     "sourceRefs": [
       "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "js/core/renderer/renderer_projection_path_owner.js",
       "js/core/renderer/viewport_read_model_owner.js",
       "js/core/renderer/viewport_command_owner.js",
       "tests/test_map_renderer_projection_viewport_context_boundary_contract.py",
-      "tests/renderer_runtime_context_receiver_behavior.test.mjs",
       "docs/active/renderer-runtime-context-projection-viewport-p1-3-20260709.md",
       "package.json"
     ],
@@ -771,7 +614,6 @@ export const RENDERER_PROJECTION_VIEWPORT_RECORDS = [
     "commandRef": "test:python:map-renderer-viewport-mutation-context-boundary",
     "sourceRefs": [
       "js/core/map_renderer.js",
-      "js/core/map_renderer/renderer_runtime_context.js",
       "js/core/map_renderer/public.js",
       "tools/eslint-rules/state-writer-allowlist.json",
       "tests/test_map_renderer_viewport_mutation_context_boundary_contract.py",

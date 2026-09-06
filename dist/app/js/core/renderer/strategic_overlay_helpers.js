@@ -267,10 +267,16 @@ function renderOperationGraphicsOverlay() {
 
 function syncUnitCounterScalesDuringZoom() {
   const unitCountersGroup = groupGetters.getUnitCountersGroup?.() || null;
-  if (!unitCountersGroup) return;
+  if (!unitCountersGroup) return false;
   const rootNode = typeof unitCountersGroup.node === "function" ? unitCountersGroup.node() : null;
-  if (!rootNode?.children?.length) return;
+  if (!rootNode) return false;
   const zoomK = Math.max(0.1, Number(state.zoomTransform?.k || 1));
+  if (!rootNode.children.length) {
+    // Low zoom deliberately omits counters from the SVG join. Once they become
+    // visible, scale syncing alone cannot create the first node.
+    if (getUnitCounterRenderScale(null, zoomK).hidden) return false;
+    return getUnitCounterRenderEntries().some(({ anchor }) => Boolean(getProjectedPoint(anchor?.coord)));
+  }
   unitCountersGroup.selectAll("g.unit-counter").each(function (d) {
     if (!d || !d.model) return;
     const previousScaleModel = d.scaleModel && typeof d.scaleModel === "object" ? d.scaleModel : null;
@@ -303,6 +309,7 @@ function syncUnitCounterScalesDuringZoom() {
       node.setAttribute("opacity", nextOpacity);
     }
   });
+  return false;
 }
 
 function renderUnitCountersOverlay() {

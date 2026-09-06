@@ -199,19 +199,22 @@ class MapRendererPublicContractTest(unittest.TestCase):
 
     def test_map_legend_is_a_floating_control(self):
         renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
+        owner = (CORE_ROOT / "renderer" / "legend_control_owner.js").read_text(encoding="utf-8")
         styles = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
-        self.assertIn("mapLegendControl", renderer)
+        self.assertIn("getLegendControlOwner().renderLegend(uniqueColors, labels)", renderer)
+        self.assertIn("getLegendControlOwner().ensureLegendControlElement()", renderer)
+        self.assertIn("mapLegendControl", owner)
         self.assertIn("map-legend-control", styles)
-        self.assertIn("map-legend-resize-handle", renderer)
-        self.assertIn("map-legend-opacity-panel", renderer)
-        self.assertIn("data-legend-resize", renderer)
-        self.assertIn("legendResizeSession", renderer)
+        self.assertIn("map-legend-resize-handle", owner)
+        self.assertIn("map-legend-opacity-panel", owner)
+        self.assertIn("data-legend-resize", owner)
+        self.assertIn("legendResizeSession", owner)
         self.assertIn(".map-legend-resize-handle", styles)
         self.assertIn(".map-legend-opacity-panel", styles)
         self.assertNotIn('append("g").attr("class", "legend-group")', renderer)
 
     def test_map_legend_resize_keeps_anchor_and_exposes_opacity(self):
-        renderer = MAP_RENDERER_ENTRY.read_text(encoding="utf-8")
+        renderer = (CORE_ROOT / "renderer" / "legend_control_owner.js").read_text(encoding="utf-8")
         resize_start = renderer.index("function storeLegendControlSize(")
         resize_end = renderer.index("function stopLegendResize()", resize_start)
         resize_body = renderer[resize_start:resize_end]
@@ -229,7 +232,10 @@ class MapRendererPublicContractTest(unittest.TestCase):
         self.assertIn("controlState.collapsed ? `${collapsedWidth}px`", size_body)
         self.assertIn("legendOpacityInputElement.value = String(Math.round(opacity * 100));", size_body)
 
-        self.assertEqual(3, renderer.count('addEventListener("pointerenter", showLegendOpacityPanel);'))
+        self.assertIn('["e", "east", "resizeWidth"]', renderer)
+        self.assertIn('["s", "south", "resizeHeight"]', renderer)
+        self.assertIn('["se", "south-east", "resizeBoth"]', renderer)
+        self.assertIn('handle.addEventListener("pointerenter", showLegendOpacityPanel);', renderer)
 
 if __name__ == "__main__":
     unittest.main()

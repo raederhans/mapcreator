@@ -46,6 +46,8 @@ import {
   setClickSelectedColorState,
   beginInteractionRecoveryTaskState, endInteractionRecoveryTaskState,
   setInteractionInfrastructureStateFields, setPendingZoomTransformState,
+  setZoomTransformState, setHitCanvasDirtyState,
+  setHitCanvasBuildScheduledState,
   setZoomGestureEndedAtState, setZoomGestureScaleDeltaState,
   setZoomGestureStartTransformState, setZoomRenderScheduledState,
 } from "./state/actions/renderer_interaction_actions.js";
@@ -83,6 +85,8 @@ import {
   requestPoliticalRasterWorkerPass,
 } from "./political_raster_worker_client.js";
 import { LegendManager } from "./legend_manager.js";
+import { createSelectionOverlayOwner } from "./renderer/selection_overlay_owner.js";
+import { createLegendControlOwner } from "./renderer/legend_control_owner.js";
 import { captureHistoryState, pushHistoryEntry } from "./history_manager.js";
 import {
   getPreferredGeoLabel,
@@ -138,7 +142,6 @@ import { createPoliticalCollectionOwner } from "./renderer/political_collection_
 import { createContextLayerResolverOwner } from "./renderer/context_layer_resolver.js";
 import { createRendererAssetUrlPolicyOwner } from "./renderer/asset_url_policy.js";
 import {
-  buildUnderlyingMapHoverClearPatch,
   createFacilitySurfaceOwner,
   shouldBlockUnderlyingMapSelectionForFacility,
 } from "./renderer/facility_surface.js";
@@ -175,11 +178,6 @@ import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lif
 import { createRenderPassCacheHostOwner } from "./map_renderer/render_pass_cache_host_owner.js";
 import { createRenderPassCommitAccountingOwner } from "./map_renderer/render_pass_commit_accounting_owner.js";
 import { createDrawCanvasOrchestrationOwner } from "./map_renderer/draw_canvas_orchestration_owner.js";
-import {
-  assertRendererRuntimeContext,
-  createRendererRuntimeContext,
-  describeRendererRuntimeContext,
-} from "./map_renderer/renderer_runtime_context.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
 import {
@@ -246,90 +244,6 @@ import { createRendererFitProjectionOwner } from "./renderer/renderer_fit_projec
 import { createVisibleFrameDiagnosticsOwner } from "./renderer/visible_frame_diagnostics_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
-import {
-  buildFacilityInfoCardBody,
-  buildFacilityInfoCardFieldSections,
-  buildFacilityInfoCardTitle,
-  buildFacilityTooltipText,
-  buildInteractiveLandData,
-  canPreferUrbanDetailCollection,
-  canRenderUrbanCollection,
-  collectCountryCoverageStats,
-  composePoliticalFeatureCollections,
-  composePoliticalFeatures,
-  computeLayerCoverageScore,
-  configureDataRuntimeFacade,
-  createUrbanLayerCapability,
-  ensureLayerDataFromTopology,
-  getDesiredBathymetryTopologyUrl,
-  getLayerFeatureCollection,
-  getPoliticalFeatureCollection,
-  getScenarioBathymetryTopologyUrl,
-  getUrbanFeatureGeoBounds,
-  getUrbanLayerCapability,
-  mergeOverrideFeatures,
-  normalizeFeatureGeometry,
-  pickBestLayerSource,
-  resolveContextLayerData,
-} from "./map_renderer/facade_data_runtime.js";
-import {
-  buildCountryParentBorderMeshes,
-  buildDetailAdmBorderMesh,
-  buildDynamicOwnerBorderMesh,
-  buildGlobalCoastlineMesh,
-  buildGlobalCountryBorderMesh,
-  buildOwnerBorderMesh,
-  buildSourceBorderMeshes,
-  configureBorderRuntimeFacade,
-  countUnresolvedOwnerBorderEntities,
-  getSourceCountrySets,
-  resolveCoastlineTopologySource,
-  simplifyCoastlineMesh,
-} from "./map_renderer/facade_border_runtime.js";
-import {
-  buildIndex,
-  buildIndexChunked,
-  buildSpatialIndex,
-  buildSpatialIndexChunked,
-  configureSpatialRuntimeFacade,
-} from "./map_renderer/facade_spatial_runtime.js";
-import {
-  appendOperationGraphicVertexFromEvent,
-  appendOperationalLineVertexFromEvent,
-  appendSpecialZoneVertexFromEvent,
-  cancelActiveStrategicInteractionModes,
-  cancelOperationGraphicDraw,
-  cancelOperationalLineDraw,
-  cancelSpecialZoneDraw,
-  cancelUnitCounterPlacement,
-  configureOverlayRuntimeFacade,
-  deleteSelectedManualSpecialZone,
-  deleteSelectedOperationGraphic,
-  deleteSelectedOperationGraphicVertex,
-  deleteSelectedOperationalLine,
-  deleteSelectedUnitCounter,
-  finishOperationGraphicDraw,
-  finishOperationalLineDraw,
-  finishSpecialZoneDraw,
-  getUnitCounterPreviewData,
-  placeUnitCounterFromEvent,
-  resolveUnitCounterNationForPlacement,
-  selectOperationGraphicById,
-  selectOperationalLineById,
-  selectSpecialZoneById,
-  selectUnitCounterById,
-  startOperationGraphicDraw,
-  startOperationalLineDraw,
-  startSpecialZoneDraw,
-  startUnitCounterPlacement,
-  syncOperationalLineAttachedCounterIds,
-  undoOperationGraphicVertex,
-  undoOperationalLineVertex,
-  undoSpecialZoneVertex,
-  updateSelectedOperationGraphic,
-  updateSelectedOperationalLine,
-  updateSelectedUnitCounter,
-} from "./map_renderer/facade_overlay_runtime.js";
 const state = runtimeState;
 
 function showToast(message, options = {}) {
@@ -351,20 +265,11 @@ const rendererSurfaceHost = createRendererSurfaceHost();
 let interactionInfrastructureBasicPromise = null;
 let interactionInfrastructureFullPromise = null;
 let lastHitCanvasBuildStats = null;
-let legendControlElement = null;
-let legendControlHeaderElement = null;
-let legendControlBodyElement = null;
-let legendOpacityPanelElement = null;
-let legendOpacityInputElement = null;
-let legendDragSession = null;
-let legendResizeSession = null;
-let lastLegendKey = null;
 let brushSession = null;
 let suppressNextClickAfterBrush = false;
 let lastDetailToastToken = "";
 let lastDetailToastAt = 0;
 let lastInspectorOverlaySignature = "";
-let lastHoverOverlaySignature = "";
 let lastDevSelectionOverlaySignature = "";
 let lastScenarioWaterRenderedCount = 0;
 
@@ -986,7 +891,6 @@ let politicalPartialRepaintOwner = null;
 let renderCacheOwner = null;
 let cachedPassCompositorOwner = null;
 let transformedFrameCompositorOwner = null;
-let rendererRuntimeContext = null;
 let renderPerfMetricsRuntimeOwner = null;
 const renderPerfMetricsMirrorRuntime = { snapshot: null };
 let renderPassCacheHostOwner = null;
@@ -1017,260 +921,74 @@ let hitCanvasSchedulingOwner = null;
 let visibleFrameDiagnosticsOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
+let legendControlOwner = null;
+let selectionOverlayOwner = null;
 
 // --- owner 初始化区：getXxxOwner() 统一承载组装入口与依赖注入。 ---
-function getRendererRuntimeContext() {
-  if (rendererRuntimeContext) {
-    return rendererRuntimeContext;
-  }
-  rendererRuntimeContext = createRendererRuntimeContext({
-    runtimeState,
-    rendererSurfaceHost,
-    projection: {
-      constants: {
-        projectionPrecision: PROJECTION_PRECISION,
-        pathPointRadius: PATH_POINT_RADIUS,
-        projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
-      },
-      helpers: {
-        getD3: () => globalThis.d3,
-      },
-      accessors: {
-        getProjection: () => rendererSurfaceHost.getProjection(),
-        getPathSvg: () => rendererSurfaceHost.getPathSvg(),
-        getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
-        getPathHitCanvas: () => rendererSurfaceHost.getPathHitCanvas(),
-        getContext: () => rendererSurfaceHost.getContext(),
-        getHitContext: () => rendererSurfaceHost.getHitContext(),
-      },
-    },
-    viewport: {
-      constants: {
-        mapPanPaddingPx: MAP_PAN_PADDING_PX,
-        minZoomScale: MIN_ZOOM_SCALE,
-        maxZoomScale: MAX_ZOOM_SCALE,
-        projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
-      },
-      helpers: {
-        getLogicalCanvasDimensions,
-        getRenderableLandFeatures,
-        getProjectedFeatureBounds,
-        shouldSkipFeature,
-        getFeatureId,
-        getHgoRuntimePreviewBounds: getProjectedHgoRuntimePreviewBounds,
-        isHgoRuntimePreviewReady,
-        getZoomIdentity: () => globalThis.d3?.zoomIdentity,
-        getD3: () => globalThis.d3,
-      },
-      accessors: {
-        getRuntimeState: () => runtimeState,
-        getSurfaceHost: () => rendererSurfaceHost,
-        getProjection: () => rendererSurfaceHost.getProjection(),
-        getPathSvg: () => rendererSurfaceHost.getPathSvg(),
-        getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
-        getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
-        getMapContainer: () => rendererSurfaceHost.getMapContainer(),
-        getViewportGroup: () => rendererSurfaceHost.getViewportGroup(),
-        getGlobal: () => globalThis,
-        getDevicePixelRatio: () => globalThis.devicePixelRatio,
-        hasLandFeatures: () => !!runtimeState.landData?.features?.length,
-      },
-    },
-    interaction: {
-      constants: {
-        minZoomScale: MIN_ZOOM_SCALE,
-        maxZoomScale: MAX_ZOOM_SCALE,
-        renderPhaseInteracting: RENDER_PHASE_INTERACTING,
-        renderPhaseSettling: RENDER_PHASE_SETTLING,
-      },
-      helpers: {
-        cloneZoomTransform,
-        shouldAllowZoomEvent,
-      },
-      accessors: {
-        getRuntimeState: () => runtimeState,
-        getSurfaceHost: () => rendererSurfaceHost,
-        getD3: () => globalThis.d3,
-        getWidth: () => runtimeState.width,
-        getHeight: () => runtimeState.height,
-        getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
-        getInteractionRectNode: () => rendererSurfaceHost.getInteractionRect()?.node?.(),
-        getWindow: () => window,
-        getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
-        getZoomIdentity: () => globalThis.d3?.zoomIdentity,
-        getZoomTransform: () => runtimeState.zoomTransform,
-        getPendingZoomTransform: () => runtimeState.pendingZoomTransform,
-        getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,
-        isZoomRenderScheduled: () => !!runtimeState.zoomRenderScheduled,
-      },
-      hitHover: {
-        constants: {
-          renderPhaseIdle: RENDER_PHASE_IDLE,
-          hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,
-        },
-        accessors: {
-          hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas()),
-          isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),
-          isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),
-          getRenderPhase: () => runtimeState.renderPhase,
-          getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,
-          getActiveScenarioId: () => runtimeState.activeScenarioId,
-          hasHoverData: () => Boolean(runtimeState.landData || runtimeState.waterRegionsData || runtimeState.scenarioSpecialRegionsData),
-          isSpecialZoneEditorActive: () => Boolean(runtimeState.specialZoneEditor?.active),
-          isReducedHoverPhase: () => (
-            runtimeState.renderPhase !== RENDER_PHASE_IDLE
-            || runtimeState.isInteracting
-            || runtimeState.scenarioApplyInFlight
-            || runtimeState.startupReadonly
-            || runtimeState.startupReadonlyUnlockInFlight
-          ),
-          getHoverIds: () => ({
-            landId: runtimeState.hoveredId,
-            waterId: runtimeState.hoveredWaterRegionId,
-            specialId: runtimeState.hoveredSpecialRegionId,
-          }),
-          hasTooltip: () => Boolean(rendererSurfaceHost.getTooltip()),
-          getHoveredFacilityEntry: () => hoveredFacilityEntry,
-          getFeatureForHit: (hit) => {
-            const id = hit?.id;
-            if (!id) return null;
-            if (hit.targetType === "special") return runtimeState.specialRegionsById?.get(id) || null;
-            if (hit.targetType === "water") return runtimeState.waterRegionsById?.get(id) || null;
-            return runtimeState.landIndex?.get(id) || null;
-          },
-        },
-      },
-    },
-    renderCache: {
-      constants: {
-        interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
-        renderPassNames: RENDER_PASS_NAMES,
-        renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
-        transformedFramePassNames: TRANSFORM_REUSED_RENDER_PASS_NAMES,
-      },
-      helpers: {
-        getTransformSignature,
-        getVisibleFrameIdentity,
-      },
-    },
-    ownerTag: "map-renderer",
+function markDevSelectionOverlayClean() {
+  runtimeState.devSelectionOverlayDirty = false;
+}
+
+function markInspectorOverlayClean() {
+  runtimeState.inspectorOverlayDirty = false;
+}
+
+function getSelectionOverlayOwner() {
+  if (selectionOverlayOwner) return selectionOverlayOwner;
+  selectionOverlayOwner = createSelectionOverlayOwner({
+    getOverlayProjectionSignature,
+    getTopologyRevision: () => Number(runtimeState.topologyRevision || 0),
+    getDevSelectionIds: () => Array.isArray(runtimeState.devSelectionOrder)
+      ? Array.from(runtimeState.devSelectionOrder, (id) => String(id || "").trim()).filter(Boolean) : [],
+    getInspectorSelection: () => ({
+      featureIds: Array.isArray(runtimeState.inspectorHighlightFeatureIds)
+        ? Array.from(runtimeState.inspectorHighlightFeatureIds, (id) => String(id || "").trim()).filter(Boolean) : [],
+      countryCode: String(runtimeState.inspectorHighlightCountryCode || ""),
+      groupMode: runtimeState.inspectorHighlightGroupMode === true,
+      label: String(runtimeState.inspectorHighlightLabel || ""),
+    }),
+    getLandFeatures: () => runtimeState.landData?.features || [],
+    getLandIndex: () => runtimeState.landIndex,
+    getRuntimeTopology: () => runtimeState.runtimePoliticalTopology,
+    getTopojson: () => globalThis.topojson,
+    getFeatureId,
+    getEntityFeatureId,
+    getFeatureCountryCodeNormalized,
+    getDevGroup: () => rendererSurfaceHost.getDevSelectionGroup(),
+    getInspectorGroup: () => rendererSurfaceHost.getInspectorHighlightGroup(),
+    getPath: () => rendererSurfaceHost.getPathSvg(),
+    isDevDirty: () => !!runtimeState.devSelectionOverlayDirty,
+    isInspectorDirty: () => !!runtimeState.inspectorOverlayDirty,
+    markDevClean: markDevSelectionOverlayClean,
+    markInspectorClean: markInspectorOverlayClean,
   });
-  return rendererRuntimeContext;
+  return selectionOverlayOwner;
 }
 
-function getRenderPassReceiverContext() {
-  const rendererContext = assertRendererRuntimeContext(getRendererRuntimeContext());
-  if (rendererContext.state.runtimeState !== runtimeState) {
-    throw new TypeError("RendererRuntimeContext runtimeState receiver mismatch.");
-  }
-  if (rendererContext.surface.host !== rendererSurfaceHost) {
-    throw new TypeError("RendererRuntimeContext surface host receiver mismatch.");
-  }
-  describeRendererRuntimeContext(rendererContext);
-  return rendererContext;
-}
-
-function getRenderCacheReceiverContext() {
-  const rendererContext = getRenderPassReceiverContext();
-  if (!rendererContext.renderCache) {
-    throw new TypeError("RendererRuntimeContext.renderCache receiver is required.");
-  }
-  if (rendererContext.renderCache.getRuntimeState() !== runtimeState) {
-    throw new TypeError("RendererRuntimeContext renderCache runtimeState receiver mismatch.");
-  }
-  if (rendererContext.renderCache.getSurfaceHost() !== rendererSurfaceHost) {
-    throw new TypeError("RendererRuntimeContext renderCache surface host receiver mismatch.");
-  }
-  return rendererContext;
-}
-
-function getProjectionReceiverContext() {
-  const rendererContext = getRenderPassReceiverContext();
-  if (!rendererContext.projection) {
-    throw new TypeError("RendererRuntimeContext.projection receiver is required.");
-  }
-  if (rendererContext.projection.getProjection() !== rendererSurfaceHost.getProjection()) {
-    throw new TypeError("RendererRuntimeContext projection projection receiver mismatch.");
-  }
-  if (rendererContext.projection.getPathSvg() !== rendererSurfaceHost.getPathSvg()) {
-    throw new TypeError("RendererRuntimeContext projection pathSvg receiver mismatch.");
-  }
-  if (rendererContext.projection.getPathCanvas() !== rendererSurfaceHost.getPathCanvas()) {
-    throw new TypeError("RendererRuntimeContext projection pathCanvas receiver mismatch.");
-  }
-  if (rendererContext.projection.getPathHitCanvas() !== rendererSurfaceHost.getPathHitCanvas()) {
-    throw new TypeError("RendererRuntimeContext projection pathHitCanvas receiver mismatch.");
-  }
-  if (rendererContext.projection.getContext() !== rendererSurfaceHost.getContext()) {
-    throw new TypeError("RendererRuntimeContext projection context receiver mismatch.");
-  }
-  if (rendererContext.projection.getHitContext() !== rendererSurfaceHost.getHitContext()) {
-    throw new TypeError("RendererRuntimeContext projection hitContext receiver mismatch.");
-  }
-  return rendererContext;
-}
-
-function getViewportReceiverContext() {
-  const rendererContext = getRenderPassReceiverContext();
-  if (!rendererContext.viewport) {
-    throw new TypeError("RendererRuntimeContext.viewport receiver is required.");
-  }
-  if (rendererContext.viewport.getRuntimeState() !== runtimeState) {
-    throw new TypeError("RendererRuntimeContext viewport runtimeState receiver mismatch.");
-  }
-  if (rendererContext.viewport.getSurfaceHost() !== rendererSurfaceHost) {
-    throw new TypeError("RendererRuntimeContext viewport surface host receiver mismatch.");
-  }
-  if (rendererContext.viewport.getMapContainer() !== rendererSurfaceHost.getMapContainer()) {
-    throw new TypeError("RendererRuntimeContext viewport map container receiver mismatch.");
-  }
-  if (rendererContext.viewport.getViewportGroup() !== rendererSurfaceHost.getViewportGroup()) {
-    throw new TypeError("RendererRuntimeContext viewport group receiver mismatch.");
-  }
-  if (rendererContext.viewport.getGlobal() !== globalThis) {
-    throw new TypeError("RendererRuntimeContext viewport global receiver mismatch.");
-  }
-  if (rendererContext.viewport.getDevicePixelRatio() !== globalThis.devicePixelRatio) {
-    throw new TypeError("RendererRuntimeContext viewport DPR receiver mismatch.");
-  }
-  if (rendererContext.viewport.hasLandFeatures() !== !!runtimeState.landData?.features?.length) {
-    throw new TypeError("RendererRuntimeContext viewport land feature receiver mismatch.");
-  }
-  return rendererContext;
-}
-
-function getInteractionReceiverContext() {
-  const rendererContext = getRenderPassReceiverContext();
-  if (!rendererContext.interaction) {
-    throw new TypeError("RendererRuntimeContext.interaction receiver is required.");
-  }
-  const interactionContext = rendererContext.interaction;
-  const hitHoverContext = interactionContext.hitHover;
-  if (!hitHoverContext) {
-    throw new TypeError("RendererRuntimeContext.interaction.hitHover receiver is required.");
-  }
-  if (interactionContext.getRuntimeState() !== runtimeState) {
-    throw new TypeError("RendererRuntimeContext interaction runtimeState receiver mismatch.");
-  }
-  if (interactionContext.getSurfaceHost() !== rendererSurfaceHost) {
-    throw new TypeError("RendererRuntimeContext interaction surface host receiver mismatch.");
-  }
-  if (interactionContext.getD3() !== globalThis.d3) {
-    throw new TypeError("RendererRuntimeContext interaction d3 receiver mismatch.");
-  }
-  if (interactionContext.getInteractionRect() !== rendererSurfaceHost.getInteractionRect()) {
-    throw new TypeError("RendererRuntimeContext interaction rect receiver mismatch.");
-  }
-  if (interactionContext.getInteractionRectNode() !== rendererSurfaceHost.getInteractionRect()?.node?.()) {
-    throw new TypeError("RendererRuntimeContext interaction rect node receiver mismatch.");
-  }
-  if (interactionContext.getWindow() !== window) {
-    throw new TypeError("RendererRuntimeContext interaction window receiver mismatch.");
-  }
-  if (interactionContext.getZoomBehavior() !== rendererSurfaceHost.getZoomBehavior()) {
-    throw new TypeError("RendererRuntimeContext interaction zoom behavior receiver mismatch.");
-  }
-  return rendererContext;
+function getLegendControlOwner() {
+  if (legendControlOwner) return legendControlOwner;
+  legendControlOwner = createLegendControlOwner({
+    getMapContainer: () => rendererSurfaceHost.getMapContainer(),
+    getViewportSize: () => ({ width: Number(runtimeState.width), height: Number(runtimeState.height) }),
+    getLanguage: () => String(runtimeState.currentLanguage || state.currentLanguage || ""),
+    getLegendModel: (uniqueColors, labels) => ({
+      colors: Array.isArray(uniqueColors) ? uniqueColors : LegendManager.getUniqueColors(state),
+      specialZoneLegendLayers: LegendManager.getSpecialZoneLayers(runtimeState),
+      labelMap: labels || LegendManager.getLabels(state),
+      activeScenarioId: runtimeState.activeScenarioId,
+      hasScenarioVisualEdits: !!runtimeState.activeScenarioId && (
+        Object.keys(runtimeState.visualOverrides || {}).length > 0
+        || Object.keys(runtimeState.featureOverrides || {}).length > 0
+      ),
+    }),
+    getControlState: () => LegendManager.getControlState(state),
+    getControlLimits: () => LegendManager.getControlLimits(),
+    updateControlState: (patch) => LegendManager.updateControlState(state, patch),
+    toggleControlCollapsed: () => LegendManager.toggleControlCollapsed(state),
+    hideControl: () => LegendManager.hideControl(state),
+    clamp,
+  });
+  return legendControlOwner;
 }
 
 function getRendererSurfaceLifecycleOwner() {
@@ -1298,16 +1016,14 @@ function getRendererProjectionPathOwner() {
   if (rendererProjectionPathOwner) {
     return rendererProjectionPathOwner;
   }
-  const rendererContext = getProjectionReceiverContext();
-  const projectionContext = rendererContext.projection;
   rendererProjectionPathOwner = createRendererProjectionPathOwner({
-    surfaceHost: rendererContext.surface.host,
+    surfaceHost: rendererSurfaceHost,
     getters: {
-      getD3: projectionContext.helpers.getD3,
+      getD3: () => globalThis.d3,
     },
     constants: {
-      projectionPrecision: projectionContext.constants.projectionPrecision,
-      pathPointRadius: projectionContext.constants.pathPointRadius,
+      projectionPrecision: PROJECTION_PRECISION,
+      pathPointRadius: PATH_POINT_RADIUS,
     },
   });
   return rendererProjectionPathOwner;
@@ -1333,20 +1049,15 @@ function getRendererFitProjectionOwner() {
   if (rendererFitProjectionOwner) {
     return rendererFitProjectionOwner;
   }
-  const rendererContext = getViewportReceiverContext();
-  const viewportContext = rendererContext.viewport;
-  const viewportHelpers = viewportContext.helpers;
-  const runtime = viewportContext.getRuntimeState();
-  const surfaceHost = viewportContext.getSurfaceHost();
   rendererFitProjectionOwner = createRendererFitProjectionOwner({
-    surfaceHost,
-    state: runtime,
+    surfaceHost: rendererSurfaceHost,
+    state: runtimeState,
     constants: {
-      projectionFitPaddingRatio: viewportContext.constants.projectionFitPaddingRatio,
+      projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
     },
     getters: {
-      getLogicalCanvasDimensions: viewportHelpers.getLogicalCanvasDimensions,
-      getRenderableLandFeatures: viewportHelpers.getRenderableLandFeatures,
+      getLogicalCanvasDimensions,
+      getRenderableLandFeatures,
     },
     effects: {
       resetCityAnchorCache: () => {
@@ -1355,7 +1066,7 @@ function getRendererFitProjectionOwner() {
       rebuildProjectedBoundsCache,
       buildSpatialIndex,
       setHitCanvasDirty: () => {
-        runtimeState.hitCanvasDirty = true;
+        setHitCanvasDirtyState(runtimeState, true);
       },
       updateSpecialZonesPaths,
       renderSpecialZoneEditorOverlay,
@@ -1433,10 +1144,7 @@ function getRendererStartupTransactionOwner() {
       resetRenderDiagnostics,
       clearRenderPhaseTimer,
       resetRenderPhaseState: () => getRenderPhaseLifecycleOwner().resetRenderPhaseState("init-map"),
-      resetTooltipState: () => {
-        runtimeState.tooltipPendingState = { visible: false };
-        runtimeState.tooltipRafHandle = null;
-      },
+      resetTooltipState: () => getMapHoverInteractionOwner().resetTooltipState(),
       cancelScheduledHoverOverlayRender,
       markAllOverlaysDirty,
       clearStagedMapDataTasks,
@@ -1555,7 +1263,7 @@ function getSetMapDataTransactionOwner() {
       resetZoomToFit,
       enforceZoomConstraints,
       setHitCanvasDirty: (dirty) => {
-        runtimeState.hitCanvasDirty = Boolean(dirty);
+        setHitCanvasDirtyState(runtimeState, dirty);
       },
       beginStagedMapDataWarmup,
       render,
@@ -1616,7 +1324,7 @@ function getRenderPhaseLifecycleOwner() {
       },
       cancelPoliticalPathWarmup,
       setHoverOverlayDirty: (dirty) => {
-        runtimeState.hoverOverlayDirty = Boolean(dirty);
+        getMapHoverInteractionOwner().setHoverOverlayDirty(Boolean(dirty));
       },
       setPendingDayNightRefresh: (pending) => {
         setPendingDayNightRefreshState(runtimeState, pending);
@@ -1646,26 +1354,24 @@ function getHitCanvasSchedulingOwner() {
   if (hitCanvasSchedulingOwner) {
     return hitCanvasSchedulingOwner;
   }
-  const rendererContext = getInteractionReceiverContext();
-  const hitHoverContext = rendererContext.interaction.hitHover;
   hitCanvasSchedulingOwner = createHitCanvasSchedulingOwner({
     state: {
-      renderPhaseIdle: hitHoverContext.constants.renderPhaseIdle,
+      renderPhaseIdle: RENDER_PHASE_IDLE,
       idleTimeoutMs: STAGED_HIT_CANVAS_TIMEOUT_MS,
     },
     getters: {
-      hasHitCanvasRuntime: hitHoverContext.hasHitCanvasRuntime,
-      isHitCanvasDirty: hitHoverContext.isHitCanvasDirty,
-      isHitCanvasBuildDeferred: hitHoverContext.isHitCanvasBuildDeferred,
-      getRenderPhase: hitHoverContext.getRenderPhase,
-      getScheduledHitCanvasBuildHandle: hitHoverContext.getScheduledHitCanvasBuildHandle,
-      getActiveScenarioId: hitHoverContext.getActiveScenarioId,
+      hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas()),
+      isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),
+      isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),
+      getRenderPhase: () => runtimeState.renderPhase,
+      getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,
+      getActiveScenarioId: () => runtimeState.activeScenarioId,
     },
     effects: {
       scheduleDeferredWork,
       cancelDeferredWork,
       setScheduledHitCanvasBuildHandle: (handle) => {
-        runtimeState.hitCanvasBuildScheduled = handle;
+        setHitCanvasBuildScheduledState(runtimeState, handle);
       },
       runScheduledHitCanvasBuild: (details) => drawScheduledHitCanvasWithMetric(details),
     },
@@ -1731,7 +1437,7 @@ function getRendererTransactionResetOwner() {
       },
       setHitCanvasDirty: (dirty) => {
         if (dirty) {
-          runtimeState.hitCanvasDirty = true;
+          setHitCanvasDirtyState(runtimeState, true);
         }
       },
       resetHitCanvasTopologyRevision: () => {
@@ -1743,57 +1449,37 @@ function getRendererTransactionResetOwner() {
 }
 
 function getMapHoverInteractionOwner() {
-  if (mapHoverInteractionOwner) {
-    return mapHoverInteractionOwner;
-  }
-  const rendererContext = getInteractionReceiverContext();
-  const hitHoverContext = rendererContext.interaction.hitHover;
+  if (mapHoverInteractionOwner) return mapHoverInteractionOwner;
   mapHoverInteractionOwner = createMapHoverInteractionOwner({
-    state: {
-      hoverSnapPx: hitHoverContext.constants.hoverSnapPx,
-    },
+    state: runtimeState,
+    surfaceHost: rendererSurfaceHost,
+    constants: { hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX, renderPhaseIdle: RENDER_PHASE_IDLE },
     getters: {
-      nowMs: () => performance.now(),
-      getLastMouseMoveTime: () => runtimeState.lastMouseMoveTime,
-      getMouseThrottleMs: () => runtimeState.MOUSE_THROTTLE_MS,
-      hasHoverData: hitHoverContext.hasHoverData,
-      isSpecialZoneEditorActive: hitHoverContext.isSpecialZoneEditorActive,
+      nowMs,
       inspectHgoRuntimePreviewFromEvent,
-      isReducedHoverPhase: hitHoverContext.isReducedHoverPhase,
-      getHoverIds: hitHoverContext.getHoverIds,
       getHitFromEvent,
-      hasTooltip: hitHoverContext.hasTooltip,
-      getHoveredFacilityEntry: hitHoverContext.getHoveredFacilityEntry,
       getHoveredFacilityEntryFromEvent,
       isFacilityDetailsSurfaceActive,
       getHoveredCityTooltipEntry,
-      getFeatureForHit: hitHoverContext.getFeatureForHit,
-      getTooltipTextForFeature: (feature) => getTooltipText(feature),
+      getTooltipTextForFeature: getTooltipText,
+      getFeatureForHit: (hit) => {
+        const id = hit?.id;
+        if (!id) return null;
+        if (hit.targetType === "special") return runtimeState.specialRegionsById?.get(id) || null;
+        if (hit.targetType === "water") return runtimeState.waterRegionsById?.get(id) || null;
+        return runtimeState.landIndex?.get(id) || null;
+      },
+      getOverlayProjectionSignature,
+      getSelectedFacilityEntry: () => selectedFacilityEntry,
+      shouldBlockUnderlyingSelectionForFacility,
     },
     effects: {
-      setLastMouseMoveTime: (value) => {
-        runtimeState.lastMouseMoveTime = value;
-      },
-      setHoverIds: ({ landId = null, waterId = null, specialId = null } = {}) => {
-        runtimeState.hoveredId = landId;
-        runtimeState.hoveredWaterRegionId = waterId;
-        runtimeState.hoveredSpecialRegionId = specialId;
-      },
-      setHoveredFacilityEntry: (entry) => {
-        hoveredFacilityEntry = entry || null;
-      },
       updateDevHoverHit,
-      markHoverOverlayDirty: () => {
-        runtimeState.hoverOverlayDirty = true;
-      },
-      scheduleHoverOverlayRender,
-      queueTooltipUpdate,
-      setMapInteractionCursor,
-      clearUnderlyingHoverForFacilityEntry,
+      renderHoverOverlay,
+      recordInteractionDurationMetric,
+      hidePhysicalIntensityBrushPreview,
     },
-    helpers: {
-      getFacilityKey: buildFacilityEntryKey,
-    },
+    helpers: { getFacilityKey: buildFacilityEntryKey },
   });
   return mapHoverInteractionOwner;
 }
@@ -2447,7 +2133,15 @@ function getBorderMeshOwner() {
     helpers: {
       asFeatureLike,
       canonicalCountryCode,
-      clearPendingDynamicBorderTimer,
+      renderDynamicBorders: () => {
+        if (rendererSurfaceHost.getContext()) render();
+      },
+      getDetailAdmMeshBuildState: () => detailAdmMeshBuildState,
+      setDetailAdmMeshBuildState: (nextState) => {
+        detailAdmMeshBuildState = nextState;
+      },
+      scheduleDeferredHeavyBorderMeshes,
+      syncStaticMeshSnapshot,
       ensureSovereigntyState,
       getAdmin1Group,
       getEntityCountryCode,
@@ -2523,7 +2217,6 @@ function getBorderDrawOwner() {
       getContext: () => rendererSurfaceHost.getContext(),
       getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
       getProjection: () => rendererSurfaceHost.getProjection(),
-      getDetailAdmMeshBuildState: () => detailAdmMeshBuildState,
       getScenarioOwnerOnlyCanonicalFallbackWarnings: () => scenarioOwnerOnlyCanonicalFallbackWarnings,
       getVisibleInternalBorderMeshSignature: () => visibleInternalBorderMeshSignature,
     },
@@ -2540,13 +2233,10 @@ function getBorderDrawOwner() {
       isDynamicBordersEnabled,
       sanitizePolyline,
       scheduleDeferredHeavyBorderMeshes,
-      setDetailAdmMeshBuildState: (nextState) => {
-        detailAdmMeshBuildState = nextState;
-      },
+      reconcileDetailAdmBorders: (meta) => getBorderMeshOwner().reconcileDetailAdmBorders(meta),
       setVisibleInternalBorderMeshSignature: (signature) => {
         visibleInternalBorderMeshSignature = signature;
       },
-      syncStaticMeshSnapshot,
     },
   });
   return borderDrawOwner;
@@ -2627,31 +2317,22 @@ function getRenderCacheOwner() {
   if (renderCacheOwner) {
     return renderCacheOwner;
   }
-  const rendererContext = getRenderCacheReceiverContext();
-  const runtime = rendererContext.state.runtimeState;
-  const surfaceHost = rendererContext.surface.host;
-  const renderCacheContext = rendererContext.renderCache;
-  if (surfaceHost !== renderCacheContext.getSurfaceHost()) {
-    throw new TypeError("RendererRuntimeContext renderCache surface read model mismatch.");
-  }
-  const renderCacheConstants = renderCacheContext.constants;
-  const renderCacheHelpers = renderCacheContext.helpers;
   renderCacheOwner = createRenderCacheOwner({
-    state: runtime,
+    state: runtimeState,
     constants: {
-      interactionCompositePassNames: renderCacheConstants.interactionCompositePassNames,
-      renderPassNames: renderCacheConstants.renderPassNames,
-      renderPassOverscanRatioPerSide: renderCacheConstants.renderPassOverscanRatioPerSide,
-      transformedFramePassNames: renderCacheConstants.transformedFramePassNames,
+      interactionCompositePassNames: Object.freeze([...INTERACTION_COMPOSITE_PASS_NAMES]),
+      renderPassNames: Object.freeze([...RENDER_PASS_NAMES]),
+      renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
+      transformedFramePassNames: new Set(TRANSFORM_REUSED_RENDER_PASS_NAMES),
     },
     getters: {
-      getContext: () => renderCacheContext.getMainContext(),
+      getContext: () => rendererSurfaceHost.getContext?.() || null,
     },
     helpers: {
       cloneZoomTransform,
       ensureRenderPassCacheState,
-      getTransformSignature: renderCacheHelpers.getTransformSignature,
-      getVisibleFrameIdentity: renderCacheHelpers.getVisibleFrameIdentity,
+      getTransformSignature,
+      getVisibleFrameIdentity,
     },
   });
   return renderCacheOwner;
@@ -2748,7 +2429,6 @@ function getRenderPassCacheHostOwner() {
   if (renderPassCacheHostOwner) {
     return renderPassCacheHostOwner;
   }
-  getRenderPassReceiverContext();
   renderPassCacheHostOwner = createRenderPassCacheHostOwner({
     effects: {
       ensureRenderPassCanvas,
@@ -2766,7 +2446,6 @@ function getRenderPassCommitAccountingOwner() {
   if (renderPassCommitAccountingOwner) {
     return renderPassCommitAccountingOwner;
   }
-  getRenderPassReceiverContext();
   renderPassCommitAccountingOwner = createRenderPassCommitAccountingOwner({
     effects: {
       clearPassFullReferenceTransforms,
@@ -2839,31 +2518,62 @@ function getViewportReadModelOwner() {
   if (viewportReadModelOwner) {
     return viewportReadModelOwner;
   }
-  const rendererContext = getViewportReceiverContext();
-  const viewportContext = rendererContext.viewport;
-  const viewportConstants = viewportContext.constants;
-  const viewportHelpers = viewportContext.helpers;
-  const runtime = viewportContext.getRuntimeState();
+  const snapshotBounds = (bounds) => bounds ? {
+    minX: Number(bounds.minX), minY: Number(bounds.minY),
+    maxX: Number(bounds.maxX), maxY: Number(bounds.maxY),
+  } : null;
+  const snapshotFeatureBounds = (features) => features.map((feature) => {
+    const featureId = getFeatureId(feature);
+    return snapshotBounds(getProjectedFeatureBounds(feature, { featureId, allowCompute: false })
+      || getProjectedFeatureBounds(feature, { featureId }));
+  });
   viewportReadModelOwner = createViewportReadModelOwner({
-    state: runtime,
     constants: {
-      mapPanPaddingPx: viewportConstants.mapPanPaddingPx,
-      projectionFitPaddingRatio: viewportConstants.projectionFitPaddingRatio,
+      mapPanPaddingPx: MAP_PAN_PADDING_PX,
     },
     getters: {
-      getProjection: () => viewportContext.getProjection(),
-      getPathSvg: () => viewportContext.getPathSvg(),
-      getZoomIdentity: viewportHelpers.getZoomIdentity,
-      getLogicalCanvasDimensions: viewportHelpers.getLogicalCanvasDimensions,
-      getLandFeatures: () => runtime.landData?.features || [],
-      getHgoRuntimePreviewBounds: viewportHelpers.getHgoRuntimePreviewBounds,
-      isHgoRuntimePreviewReady: viewportHelpers.isHgoRuntimePreviewReady,
+      getViewportDimensions: () => ({ width: Number(runtimeState.width), height: Number(runtimeState.height) }),
+      getViewportDpr: () => Number(runtimeState.dpr || 1),
     },
-    helpers: {
-      getFeatureId: viewportHelpers.getFeatureId,
-      getProjectedFeatureBounds: viewportHelpers.getProjectedFeatureBounds,
-      shouldSkipFeature: viewportHelpers.shouldSkipFeature,
-      getRenderableLandFeatures: viewportHelpers.getRenderableLandFeatures,
+    capabilities: {
+      getProjectionSnapshot: () => {
+        const projection = rendererSurfaceHost.getProjection();
+        if (!projection || typeof projection.scale !== "function" || typeof projection.translate !== "function") {
+          return null;
+        }
+        const translate = projection.translate() || [0, 0];
+        return { scale: projection.scale(), translate: [translate[0], translate[1]] };
+      },
+      invertProjectionPoint: (point) => {
+        const projection = rendererSurfaceHost.getProjection();
+        if (!projection || typeof projection.invert !== "function") return null;
+        const inverted = projection.invert(point);
+        return Array.isArray(inverted) ? inverted.map(Number) : null;
+      },
+      getZoomTransformSnapshot: () => {
+        const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+        return { x: Number(transform.x), y: Number(transform.y), k: Number(transform.k) };
+      },
+      createZoomTransform: ({ x, y, translate }) => {
+        const identity = globalThis.d3?.zoomIdentity;
+        return identity && translate && typeof identity.translate === "function"
+          ? identity.translate(x, y) : identity || null;
+      },
+      getPanContentBoundsSnapshots: () => {
+        if (isHgoRuntimePreviewReady()) return [snapshotBounds(getProjectedHgoRuntimePreviewBounds())];
+        const features = runtimeState.landData?.features;
+        if (!rendererSurfaceHost.getPathSvg() || !Array.isArray(features) || !features.length) return [];
+        const [width, height] = getLogicalCanvasDimensions();
+        return snapshotFeatureBounds(features.filter((feature) => !shouldSkipFeature(feature, width, height, { forceProd: true })));
+      },
+      getProjectedRenderableContentBoundsSnapshots: () => {
+        if (isHgoRuntimePreviewReady()) return [snapshotBounds(getProjectedHgoRuntimePreviewBounds())];
+        const features = runtimeState.landData?.features;
+        if (!Array.isArray(features) || !features.length || Number(runtimeState.width || 0) <= 0 || Number(runtimeState.height || 0) <= 0) return [];
+        const [width, height] = getLogicalCanvasDimensions();
+        const renderable = getRenderableLandFeatures(width, height, { forceProd: true });
+        return snapshotFeatureBounds(Array.isArray(renderable) && renderable.length ? renderable : features);
+      },
     },
   });
   return viewportReadModelOwner;
@@ -2873,27 +2583,22 @@ function getViewportCommandOwner() {
   if (viewportCommandOwner) {
     return viewportCommandOwner;
   }
-  const rendererContext = getViewportReceiverContext();
-  const viewportContext = rendererContext.viewport;
-  const viewportConstants = viewportContext.constants;
-  const viewportHelpers = viewportContext.helpers;
-  const runtime = viewportContext.getRuntimeState();
   viewportCommandOwner = createViewportCommandOwner({
-    state: runtime,
+    state: runtimeState,
     constants: {
-      minZoomScale: viewportConstants.minZoomScale,
-      maxZoomScale: viewportConstants.maxZoomScale,
+      minZoomScale: MIN_ZOOM_SCALE,
+      maxZoomScale: MAX_ZOOM_SCALE,
     },
     getters: {
-      getZoomBehavior: () => viewportContext.getZoomBehavior(),
-      getInteractionRect: () => viewportContext.getInteractionRect(),
-      getD3: viewportHelpers.getD3,
+      getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
+      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      getD3: () => globalThis.d3,
       calculatePanExtent,
       getCenteredFitZoomTransform,
     },
     effects: {
       setZoomTransform: (transform) => {
-        runtime.zoomTransform = transform;
+        setZoomTransformState(runtimeState, transform);
       },
     },
   });
@@ -2904,19 +2609,17 @@ function getRendererViewportUpdateOwner() {
   if (rendererViewportUpdateOwner) {
     return rendererViewportUpdateOwner;
   }
-  const rendererContext = getViewportReceiverContext();
-  const viewportContext = rendererContext.viewport;
-  const runtime = viewportContext.getRuntimeState();
+  const runtime = runtimeState;
   rendererViewportUpdateOwner = createRendererViewportUpdateOwner({
     getters: {
-      getViewportGroup: viewportContext.getViewportGroup,
+      getViewportGroup: () => rendererSurfaceHost.getViewportGroup(),
     },
     effects: {
       setZoomTransform: (transform) => {
-        runtime.zoomTransform = transform;
+        setZoomTransformState(runtimeState, transform);
       },
       setHitCanvasDirty: () => {
-        runtime.hitCanvasDirty = true;
+        setHitCanvasDirtyState(runtimeState, true);
       },
       updateZoomUi: () => {
         if (typeof runtime.updateZoomUIFn === "function") {
@@ -2940,16 +2643,13 @@ function getViewportResizeLifecycleOwner() {
   if (viewportResizeLifecycleOwner) {
     return viewportResizeLifecycleOwner;
   }
-  const rendererContext = getViewportReceiverContext();
-  const viewportContext = rendererContext.viewport;
-  const runtime = viewportContext.getRuntimeState();
   viewportResizeLifecycleOwner = createViewportResizeLifecycleOwner({
-    state: runtime,
+    state: runtimeState,
     getters: {
-      getMapContainer: viewportContext.getMapContainer,
-      getGlobal: viewportContext.getGlobal,
-      getDevicePixelRatio: viewportContext.getDevicePixelRatio,
-      hasLandFeatures: viewportContext.hasLandFeatures,
+      getMapContainer: () => rendererSurfaceHost.getMapContainer(),
+      getGlobal: () => globalThis,
+      getDevicePixelRatio: () => globalThis.devicePixelRatio,
+      hasLandFeatures: () => !!runtimeState.landData?.features?.length,
     },
     helpers: {
       scheduleDeferredWork,
@@ -2968,7 +2668,7 @@ function getViewportResizeLifecycleOwner() {
       render,
       buildSpatialIndex,
       setHitCanvasDirty: () => {
-        runtimeState.hitCanvasDirty = true;
+        setHitCanvasDirtyState(runtimeState, true);
       },
       scheduleHitCanvasBuildIfNeeded,
     },
@@ -3001,34 +2701,29 @@ function getZoomInteractionLifecycleOwner() {
   if (zoomInteractionLifecycleOwner) {
     return zoomInteractionLifecycleOwner;
   }
-  const rendererContext = getInteractionReceiverContext();
-  const interactionContext = rendererContext.interaction;
-  const interactionConstants = interactionContext.constants;
-  const interactionHelpers = interactionContext.helpers;
-  const runtime = interactionContext.getRuntimeState();
   zoomInteractionLifecycleOwner = createZoomInteractionLifecycleOwner({
-    state: runtime,
+    state: runtimeState,
     constants: {
-      minZoomScale: interactionConstants.minZoomScale,
-      maxZoomScale: interactionConstants.maxZoomScale,
-      renderPhaseInteracting: interactionConstants.renderPhaseInteracting,
-      renderPhaseSettling: interactionConstants.renderPhaseSettling,
+      minZoomScale: MIN_ZOOM_SCALE,
+      maxZoomScale: MAX_ZOOM_SCALE,
+      renderPhaseInteracting: RENDER_PHASE_INTERACTING,
+      renderPhaseSettling: RENDER_PHASE_SETTLING,
     },
     getters: {
-      getD3: interactionContext.getD3,
-      getWidth: interactionContext.getWidth,
-      getHeight: interactionContext.getHeight,
-      getInteractionRect: interactionContext.getInteractionRect,
-      getZoomBehavior: interactionContext.getZoomBehavior,
-      getZoomIdentity: interactionContext.getZoomIdentity,
-      getZoomTransform: interactionContext.getZoomTransform,
-      getPendingZoomTransform: interactionContext.getPendingZoomTransform,
-      getZoomGestureStartTransform: interactionContext.getZoomGestureStartTransform,
-      isZoomRenderScheduled: interactionContext.isZoomRenderScheduled,
+      getD3: () => globalThis.d3,
+      getWidth: () => runtimeState.width,
+      getHeight: () => runtimeState.height,
+      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
+      getZoomIdentity: () => globalThis.d3?.zoomIdentity,
+      getZoomTransform: () => runtimeState.zoomTransform,
+      getPendingZoomTransform: () => runtimeState.pendingZoomTransform,
+      getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,
+      isZoomRenderScheduled: () => !!runtimeState.zoomRenderScheduled,
     },
     helpers: {
-      cloneZoomTransform: interactionHelpers.cloneZoomTransform,
-      shouldAllowZoomEvent: interactionHelpers.shouldAllowZoomEvent,
+      cloneZoomTransform,
+      shouldAllowZoomEvent,
       nowMs,
       requestAnimationFrame: (callback) => globalThis.requestAnimationFrame(callback),
     },
@@ -3138,7 +2833,7 @@ function getClickSelectionTransactionOwner() {
         facilityInfoCardExpanded = Boolean(expanded);
       },
       setHoveredFacilityEntry: (entry) => {
-        hoveredFacilityEntry = entry;
+        getMapHoverInteractionOwner().setHoveredFacilityEntry(entry);
       },
       setSelectedFacilityEntry: (entry) => {
         selectedFacilityEntry = entry;
@@ -3208,13 +2903,11 @@ function getMapInteractionEventBindingOwner() {
   if (mapInteractionEventBindingOwner) {
     return mapInteractionEventBindingOwner;
   }
-  const rendererContext = getInteractionReceiverContext();
-  const interactionContext = rendererContext.interaction;
   mapInteractionEventBindingOwner = createMapInteractionEventBindingOwner({
     getters: {
-      getInteractionRect: interactionContext.getInteractionRect,
-      getWindow: interactionContext.getWindow,
-      getInteractionRectNode: interactionContext.getInteractionRectNode,
+      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      getWindow: () => window,
+      getInteractionRectNode: () => rendererSurfaceHost.getInteractionRect()?.node?.(),
     },
     helpers: {
       bindInteractionFunnel,
@@ -3702,7 +3395,6 @@ const visibleFacilityHoverEntriesByFamily = {
   port: [],
   rail: [],
 };
-let hoveredFacilityEntry = null;
 let selectedFacilityEntry = null;
 let facilityInfoCard = null;
 let facilityInfoCardTitle = null;
@@ -3718,7 +3410,6 @@ let deferredIndexUiRefreshHandle = null;
 let deferredIndexUiRefreshState = null;
 let pendingSidebarRefreshHandle = null;
 let pendingSidebarRefreshState = null;
-let hoverOverlayRenderRafHandle = null;
 let secondarySpatialBuildHandle = null;
 let pendingSecondarySpatialBuildReasons = new Set();
 let pendingScenarioChunkFlushAfterExactHandle = null;
@@ -3848,24 +3539,68 @@ function getStrategicOverlayRuntimeOwner() {
   return strategicOverlayRuntimeOwner;
 }
 
-configureDataRuntimeFacade({
-  getPoliticalCollectionOwner,
-  getContextLayerResolverOwner,
-  getRendererAssetUrlPolicyOwner,
-  getFacilitySurfaceOwner,
-});
+function getUrbanLayerCapability(...args) {
+  return getContextLayerResolverOwner().getUrbanLayerCapability(...args);
+}
 
-configureBorderRuntimeFacade({
-  getBorderMeshOwner,
-});
+function getPoliticalFeatureCollection(...args) { return getPoliticalCollectionOwner().getPoliticalFeatureCollection(...args); }
+function composePoliticalFeatures(...args) { return getPoliticalCollectionOwner().composePoliticalFeatures(...args); }
+function composePoliticalFeatureCollections(...args) { return getPoliticalCollectionOwner().composePoliticalFeatureCollections(...args); }
+function collectCountryCoverageStats(...args) { return getPoliticalCollectionOwner().collectCountryCoverageStats(...args); }
+function buildInteractiveLandData(...args) { return getPoliticalCollectionOwner().buildInteractiveLandData(...args); }
+function getLayerFeatureCollection(...args) { return getContextLayerResolverOwner().getLayerFeatureCollection(...args); }
+function ensureLayerDataFromTopology(...args) { return getContextLayerResolverOwner().ensureLayerDataFromTopology(...args); }
+function getScenarioBathymetryTopologyUrl(...args) { return getRendererAssetUrlPolicyOwner().getScenarioBathymetryTopologyUrl(...args); }
+function getDesiredBathymetryTopologyUrl(...args) { return getRendererAssetUrlPolicyOwner().getDesiredBathymetryTopologyUrl(...args); }
+function buildFacilityTooltipText(...args) { return getFacilitySurfaceOwner().buildFacilityTooltipText(...args); }
 
-configureSpatialRuntimeFacade({
-  getSpatialIndexRuntimeOwner,
-});
+function buildCountryParentBorderMeshes(...args) { return getBorderMeshOwner().buildCountryParentBorderMeshes(...args); }
+function buildDetailAdmBorderMesh(...args) { return getBorderMeshOwner().buildDetailAdmBorderMesh(...args); }
+function buildGlobalCoastlineMesh(...args) { return getBorderMeshOwner().buildGlobalCoastlineMesh(...args); }
+function buildGlobalCountryBorderMesh(...args) { return getBorderMeshOwner().buildGlobalCountryBorderMesh(...args); }
+function buildSourceBorderMeshes(...args) { return getBorderMeshOwner().buildSourceBorderMeshes(...args); }
+function getSourceCountrySets(...args) { return getBorderMeshOwner().getSourceCountrySets(...args); }
+function resolveCoastlineTopologySource(...args) { return getBorderMeshOwner().resolveCoastlineTopologySource(...args); }
+function simplifyCoastlineMesh(...args) { return getBorderMeshOwner().simplifyCoastlineMesh(...args); }
 
-configureOverlayRuntimeFacade({
-  getStrategicOverlayRuntimeOwner,
-});
+function buildIndex(...args) { return getSpatialIndexRuntimeOwner().buildIndex(...args); }
+function buildIndexChunked(...args) { return getSpatialIndexRuntimeOwner().buildIndexChunked(...args); }
+function buildSpatialIndex(...args) { return getSpatialIndexRuntimeOwner().buildSpatialIndex(...args); }
+function buildSpatialIndexChunked(...args) { return getSpatialIndexRuntimeOwner().buildSpatialIndexChunked(...args); }
+
+function appendOperationalLineVertexFromEvent(...args) { return getStrategicOverlayRuntimeOwner().appendOperationalLineVertexFromEvent(...args); }
+function appendOperationGraphicVertexFromEvent(...args) { return getStrategicOverlayRuntimeOwner().appendOperationGraphicVertexFromEvent(...args); }
+function appendSpecialZoneVertexFromEvent(...args) { return getStrategicOverlayRuntimeOwner().appendSpecialZoneVertexFromEvent(...args); }
+function placeUnitCounterFromEvent(...args) { return getStrategicOverlayRuntimeOwner().placeUnitCounterFromEvent(...args); }
+function startOperationalLineDraw(...args) { return getStrategicOverlayRuntimeOwner().startOperationalLineDraw(...args); }
+function undoOperationalLineVertex(...args) { return getStrategicOverlayRuntimeOwner().undoOperationalLineVertex(...args); }
+function finishOperationalLineDraw(...args) { return getStrategicOverlayRuntimeOwner().finishOperationalLineDraw(...args); }
+function cancelOperationalLineDraw(...args) { return getStrategicOverlayRuntimeOwner().cancelOperationalLineDraw(...args); }
+function selectOperationalLineById(...args) { return getStrategicOverlayRuntimeOwner().selectOperationalLineById(...args); }
+function deleteSelectedOperationalLine(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedOperationalLine(...args); }
+function updateSelectedOperationalLine(...args) { return getStrategicOverlayRuntimeOwner().updateSelectedOperationalLine(...args); }
+function startOperationGraphicDraw(...args) { return getStrategicOverlayRuntimeOwner().startOperationGraphicDraw(...args); }
+function undoOperationGraphicVertex(...args) { return getStrategicOverlayRuntimeOwner().undoOperationGraphicVertex(...args); }
+function finishOperationGraphicDraw(...args) { return getStrategicOverlayRuntimeOwner().finishOperationGraphicDraw(...args); }
+function cancelOperationGraphicDraw(...args) { return getStrategicOverlayRuntimeOwner().cancelOperationGraphicDraw(...args); }
+function selectOperationGraphicById(...args) { return getStrategicOverlayRuntimeOwner().selectOperationGraphicById(...args); }
+function deleteSelectedOperationGraphic(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedOperationGraphic(...args); }
+function deleteSelectedOperationGraphicVertex(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedOperationGraphicVertex(...args); }
+function updateSelectedOperationGraphic(...args) { return getStrategicOverlayRuntimeOwner().updateSelectedOperationGraphic(...args); }
+function startUnitCounterPlacement(...args) { return getStrategicOverlayRuntimeOwner().startUnitCounterPlacement(...args); }
+function cancelUnitCounterPlacement(...args) { return getStrategicOverlayRuntimeOwner().cancelUnitCounterPlacement(...args); }
+function cancelActiveStrategicInteractionModes(...args) { return getStrategicOverlayRuntimeOwner().cancelActiveStrategicInteractionModes(...args); }
+function selectUnitCounterById(...args) { return getStrategicOverlayRuntimeOwner().selectUnitCounterById(...args); }
+function deleteSelectedUnitCounter(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedUnitCounter(...args); }
+function updateSelectedUnitCounter(...args) { return getStrategicOverlayRuntimeOwner().updateSelectedUnitCounter(...args); }
+function getUnitCounterPreviewData(...args) { return getStrategicOverlayRuntimeOwner().getUnitCounterPreviewData(...args); }
+function resolveUnitCounterNationForPlacement(...args) { return getStrategicOverlayRuntimeOwner().resolveUnitCounterNationForPlacement(...args); }
+function startSpecialZoneDraw(...args) { return getStrategicOverlayRuntimeOwner().startSpecialZoneDraw(...args); }
+function undoSpecialZoneVertex(...args) { return getStrategicOverlayRuntimeOwner().undoSpecialZoneVertex(...args); }
+function finishSpecialZoneDraw(...args) { return getStrategicOverlayRuntimeOwner().finishSpecialZoneDraw(...args); }
+function cancelSpecialZoneDraw(...args) { return getStrategicOverlayRuntimeOwner().cancelSpecialZoneDraw(...args); }
+function deleteSelectedManualSpecialZone(...args) { return getStrategicOverlayRuntimeOwner().deleteSelectedManualSpecialZone(...args); }
+function selectSpecialZoneById(...args) { return getStrategicOverlayRuntimeOwner().selectSpecialZoneById(...args); }
 
 function getSidebarPerfState() {
   return ensureSidebarPerfState(state);
@@ -5162,19 +4897,19 @@ function getScenarioDetailPhaseSignatureToken() {
   ].join("/");
 }
 
-function getScenarioAtlantropaRevisionToken() {
+function getScenarioAtlantropaRevisionToken(counts = null) {
+  const buckets = counts ? null : getEffectiveAtlantropaFeatures();
   const atlantropaRef = runtimeState.scenarioAtlantropaData || null;
   const atlantropaFeatures = Array.isArray(atlantropaRef?.features)
     ? atlantropaRef.features
     : [];
-  const buckets = getEffectiveAtlantropaFeatures();
   return [
-    getObjectIdentityToken(atlantropaRef, "scenario-atlantropa"),
+    String(getObjectIdentityToken(atlantropaRef, "scenario-atlantropa")),
     `features:${atlantropaFeatures.length}`,
-    `water:${buckets.water.length}`,
-    `land:${buckets.land.length}`,
-    `shoal:${buckets.shoal.length}`,
-    `relief:${buckets.relief.length}`,
+    `water:${counts ? counts.water : buckets.water.length}`,
+    `land:${counts ? counts.land : buckets.land.length}`,
+    `shoal:${counts ? counts.shoal : buckets.shoal.length}`,
+    `relief:${counts ? counts.relief : buckets.relief.length}`,
     isScenarioAtlantropaVisible() ? "visible:on" : "visible:off",
   ].join(":");
 }
@@ -5195,29 +4930,47 @@ function isScenarioWaterTopologyExclusiveMode() {
   return getScenarioWaterRegionsMode() === "exclusive";
 }
 
-function getScenarioSurfaceVersionSignal() {
+function getScenarioSurfaceVersionParts(waterFeatureCount = null, atlantropaCounts = null) {
   const maskInfo = getPhysicalLandMaskInfo();
   const runtimeTopologyRef = runtimeState.scenarioRuntimeTopologyData || runtimeState.runtimePoliticalTopology || null;
-  const effectiveWaterFeatureCount = getEffectiveWaterRegionFeatures().length;
-  return [
-    runtimeState.activeScenarioId || "",
+  const effectiveWaterFeatureCount = Number(waterFeatureCount
+    ?? getEffectiveWaterRegionFeatures().length);
+  const signal = [
+    String(runtimeState.activeScenarioId || ""),
     `runtime-tag:${String(runtimeState.scenarioRuntimeTopologyVersionTag || "").trim() || `${getObjectIdentityToken(runtimeTopologyRef, "scenario-runtime-topology")}:${getScenarioRuntimeTopologySignatureToken()}`}`,
     `detail-phase:${getScenarioDetailPhaseSignatureToken()}`,
     `mask-tag:${String(runtimeState.scenarioContextLandMaskVersionTag || runtimeState.scenarioLandMaskVersionTag || "").trim() || `${maskInfo.maskSource}:${getObjectIdentityToken(maskInfo.collection, "scenario-mask")}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`}`,
     `water-ref:${getObjectIdentityToken(runtimeState.scenarioWaterRegionsData, "scenario-water")}`,
     `water-tag:${String(runtimeState.scenarioWaterOverlayVersionTag || "").trim() || `features:${effectiveWaterFeatureCount}`}`,
     `water-mode:${getScenarioWaterRegionsMode()}`,
-    `atlantropa:${getScenarioAtlantropaRevisionToken()}`,
-  ].join("|");
+  ];
+  // Allocate identity tokens in the same order as the standalone surface signal.
+  const atlantropaRevisionToken = String(getScenarioAtlantropaRevisionToken(atlantropaCounts));
+  signal.push(`atlantropa:${atlantropaRevisionToken}`);
+  return { signal: signal.join("|"), atlantropaRevisionToken };
+}
+
+function getScenarioSurfaceVersionSignal() {
+  return getScenarioSurfaceVersionParts().signal;
 }
 
 function getScenarioWaterVisualRevisionToken() {
+  const atlantropaFeatures = getEffectiveAtlantropaFeatures();
   const effectiveWaterFeatureCount = getEffectiveWaterRegionFeatures().length;
+  const atlantropaCounts = {
+    water: Number(atlantropaFeatures.water.length),
+    land: Number(atlantropaFeatures.land.length),
+    shoal: Number(atlantropaFeatures.shoal.length),
+    relief: Number(atlantropaFeatures.relief.length),
+  };
+  const { signal, atlantropaRevisionToken } = getScenarioSurfaceVersionParts(
+    effectiveWaterFeatureCount, atlantropaCounts
+  );
   return [
-    getScenarioSurfaceVersionSignal(),
+    signal,
     `water-effective:${effectiveWaterFeatureCount}`,
     `water-scenario:${getFeatureCollectionFeatureCount(runtimeState.scenarioWaterRegionsData)}`,
-    `water-atlantropa:${getScenarioAtlantropaRevisionToken()}`,
+    `water-atlantropa:${atlantropaRevisionToken}`,
     `water-overrides:${stableJson(runtimeState.waterRegionOverrides || {})}`,
     runtimeState.showWaterRegions ? "scenario-water:on" : "scenario-water:off",
     runtimeState.showOpenOceanRegions ? "open-ocean:on" : "open-ocean:off",
@@ -5482,10 +5235,7 @@ function isSovereigntyModeActive() {
 }
 
 function clearPendingDynamicBorderTimer() {
-  if (runtimeState.pendingDynamicBorderTimerId) {
-    globalThis.clearTimeout(runtimeState.pendingDynamicBorderTimerId);
-    runtimeState.pendingDynamicBorderTimerId = null;
-  }
+  return getBorderMeshOwner().clearPendingDynamicBorderTimer();
 }
 
 function updateDynamicBorderStatusUI() {
@@ -5495,15 +5245,7 @@ function updateDynamicBorderStatusUI() {
 }
 
 function markDynamicBordersDirty(reason = "") {
-  if (!isDynamicBordersEnabled()) {
-    runtimeState.dynamicBordersDirty = false;
-    runtimeState.dynamicBordersDirtyReason = "";
-    updateDynamicBorderStatusUI();
-    return;
-  }
-  runtimeState.dynamicBordersDirty = true;
-  runtimeState.dynamicBordersDirtyReason = String(reason || "").trim();
-  updateDynamicBorderStatusUI();
+  return getBorderMeshOwner().markDynamicBordersDirty(reason);
 }
 
 function resetRenderDiagnostics() {
@@ -6209,7 +5951,6 @@ function getFeatureRegionTag(feature) {
     "Unknown"
   );
 }
-
 
 function buildCountryDominantFillColorMap() {
   const cacheMatches =
@@ -7542,58 +7283,19 @@ function markOverlaysDirty({
     specialZones,
   });
   if (inspector) runtimeState.inspectorOverlayDirty = true;
-  if (hover) runtimeState.hoverOverlayDirty = true;
+  if (hover) getMapHoverInteractionOwner().setHoverOverlayDirty(true);
 }
 
 function markAllOverlaysDirty() {
   getStrategicOverlayRenderOwner().markAllOverlaysDirty();
   runtimeState.inspectorOverlayDirty = true;
-  runtimeState.hoverOverlayDirty = true;
+  getMapHoverInteractionOwner().setHoverOverlayDirty(true);
 }
 
 function getOverlayProjectionSignature() {
   return [
     Number(runtimeState.topologyRevision || 0),
     getProjectionRenderSignature(),
-  ].join("::");
-}
-
-function getInspectorOverlaySignature() {
-  const featureIds = Array.isArray(runtimeState.inspectorHighlightFeatureIds)
-    ? runtimeState.inspectorHighlightFeatureIds.map((id) => String(id || "").trim()).filter(Boolean)
-    : [];
-  return [
-    getOverlayProjectionSignature(),
-    String(runtimeState.inspectorHighlightCountryCode || "").trim().toUpperCase(),
-    featureIds.join("|"),
-    runtimeState.inspectorHighlightGroupMode ? "group" : "features",
-    Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
-  ].join("::");
-}
-
-function getHoverOverlaySignature() {
-  const activeFacilityEntry = getActiveFacilityHighlightEntry();
-  return [
-    getOverlayProjectionSignature(),
-    String(runtimeState.renderPhase || RENDER_PHASE_IDLE),
-    String(runtimeState.hoveredId || ""),
-    String(runtimeState.hoveredWaterRegionId || ""),
-    String(runtimeState.hoveredSpecialRegionId || ""),
-    buildFacilityEntryKey(activeFacilityEntry),
-    Number(activeFacilityEntry?.projectedPoint?.[0] || 0).toFixed(1),
-    Number(activeFacilityEntry?.projectedPoint?.[1] || 0).toFixed(1),
-  ].join("::");
-}
-
-function getDevSelectionOverlaySignature() {
-  const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
-    ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
-    : [];
-  return [
-    getOverlayProjectionSignature(),
-    orderedIds.join("|"),
-    Number(runtimeState.topologyRevision || 0),
-    Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
   ].join("::");
 }
 
@@ -7618,164 +7320,28 @@ function renderUnitCountersIfNeeded({ force = false } = {}) {
 }
 
 function renderInspectorHighlightOverlayIfNeeded({ force = false } = {}) {
-  const nextSignature = getInspectorOverlaySignature();
-  if (!force && !runtimeState.inspectorOverlayDirty && nextSignature === lastInspectorOverlaySignature) {
-    return;
-  }
-  renderInspectorHighlightOverlay();
-  runtimeState.inspectorOverlayDirty = false;
-  lastInspectorOverlaySignature = nextSignature;
+  return getSelectionOverlayOwner().renderInspectorHighlightOverlayIfNeeded({ force });
 }
 
 function renderHoverOverlayIfNeeded({ force = false, eventType = "hover" } = {}) {
-  const nextSignature = getHoverOverlaySignature();
-  if (!force && !runtimeState.hoverOverlayDirty && nextSignature === lastHoverOverlaySignature) {
-    return;
-  }
-  const startedAt = nowMs();
-  renderHoverOverlay();
-  runtimeState.hoverOverlayDirty = false;
-  lastHoverOverlaySignature = nextSignature;
-  recordInteractionDurationMetric("interactionHoverOverlayDuration", nowMs() - startedAt, {
-    eventType,
-    force: !!force,
-  });
+  return getMapHoverInteractionOwner().renderHoverOverlayIfNeeded({ force, eventType });
 }
 
 function cancelScheduledHoverOverlayRender() {
-  if (hoverOverlayRenderRafHandle === null || hoverOverlayRenderRafHandle === undefined) {
-    hoverOverlayRenderRafHandle = null;
-    return;
-  }
-  if (typeof globalThis.cancelAnimationFrame === "function") {
-    globalThis.cancelAnimationFrame(hoverOverlayRenderRafHandle);
-  } else {
-    globalThis.clearTimeout(hoverOverlayRenderRafHandle);
-  }
-  hoverOverlayRenderRafHandle = null;
+  getMapHoverInteractionOwner().cancelPendingHoverWork();
 }
 
-function scheduleHoverOverlayRender() {
-  if (hoverOverlayRenderRafHandle !== null && hoverOverlayRenderRafHandle !== undefined) {
-    return;
-  }
-  const callback = () => {
-    hoverOverlayRenderRafHandle = null;
-    renderHoverOverlayIfNeeded({ eventType: "hover" });
-  };
-  hoverOverlayRenderRafHandle = typeof globalThis.requestAnimationFrame === "function"
-    ? globalThis.requestAnimationFrame(callback)
-    : globalThis.setTimeout(callback, 0);
-}
 
 function renderDevSelectionOverlay() {
-  if (!rendererSurfaceHost.getDevSelectionGroup() || !rendererSurfaceHost.getPathSvg()) return;
-  const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
-    ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
-    : [];
-  const data = orderedIds
-    .map((featureId) => runtimeState.landIndex?.get(featureId) || null)
-    .filter(Boolean);
-  const overlayData = buildDevSelectionOverlayData(orderedIds, data);
-
-  const selection = rendererSurfaceHost.getDevSelectionGroup()
-    .selectAll("path.dev-selected-feature")
-    .data(overlayData, (feature, index) => feature?.devSelectionKey || getFeatureId(feature) || `dev-selection-${index}`);
-
-  selection
-    .enter()
-    .append("path")
-    .attr("class", "dev-selected-feature")
-    .attr("role", "presentation")
-    .attr("aria-hidden", "true")
-    .attr("vector-effect", "non-scaling-stroke")
-    .merge(selection)
-    .attr("d", rendererSurfaceHost.getPathSvg())
-    .attr("fill", "rgba(14, 165, 233, 0.14)")
-    .attr("stroke", "rgba(14, 165, 233, 0.94)")
-    .attr("stroke-width", 1.35);
-
-  selection.exit().remove();
-  rendererSurfaceHost.getDevSelectionGroup()
-    .attr("aria-hidden", data.length ? "false" : "true")
-    .attr("aria-label", data.length ? `Development selection overlay (${data.length})` : "Development selection overlay");
-}
-
-function getRuntimeTopologySelectionGeometries(featureIds) {
-  if (!runtimeState.runtimePoliticalTopology?.objects || !Array.isArray(featureIds) || !featureIds.length) return [];
-  const selectedIds = new Set(featureIds.map((id) => String(id || "").trim()).filter(Boolean));
-  if (!selectedIds.size) return [];
-  const geometries = [];
-  ["political", "scenario_atlantropa"].forEach((objectName) => {
-    const objectGeometries = runtimeState.runtimePoliticalTopology?.objects?.[objectName]?.geometries;
-    if (!Array.isArray(objectGeometries)) return;
-    objectGeometries.forEach((geometry) => {
-      const featureId = getEntityFeatureId(geometry);
-      if (featureId && selectedIds.has(featureId)) {
-        geometries.push(geometry);
-      }
-    });
-  });
-  return geometries;
-}
-
-function buildDevSelectionOverlayData(orderedIds, fallbackFeatures) {
-  if (!Array.isArray(fallbackFeatures) || fallbackFeatures.length <= 1 || typeof globalThis.topojson?.merge !== "function") {
-    return fallbackFeatures;
-  }
-  const topology = runtimeState.runtimePoliticalTopology;
-  const geometries = getRuntimeTopologySelectionGeometries(orderedIds);
-  if (!topology || geometries.length !== fallbackFeatures.length) {
-    return fallbackFeatures;
-  }
-  try {
-    const mergedShape = globalThis.topojson.merge(topology, geometries);
-    if (!mergedShape) return fallbackFeatures;
-    return [{
-      type: "Feature",
-      devSelectionKey: `merged:${orderedIds.join("|")}`,
-      properties: { id: "dev-selection-merged-overlay", selectionGeometry: "topology-boolean-merge" },
-      geometry: mergedShape,
-    }];
-  } catch {
-    return fallbackFeatures;
-  }
+  return getSelectionOverlayOwner().renderDevSelectionOverlay();
 }
 
 function renderDevSelectionOverlayIfNeeded({ force = false } = {}) {
-  const nextSignature = getDevSelectionOverlaySignature();
-  if (!force && !runtimeState.devSelectionOverlayDirty && nextSignature === lastDevSelectionOverlaySignature) {
-    return;
-  }
-  renderDevSelectionOverlay();
-  runtimeState.devSelectionOverlayDirty = false;
-  lastDevSelectionOverlaySignature = nextSignature;
-}
-
-function applyTooltipState(nextState = null) {
-  if (!rendererSurfaceHost.getTooltip()) return;
-  const visible = !!nextState?.visible;
-  const text = visible ? String(nextState?.text || "") : "";
-  rendererSurfaceHost.getTooltip().textContent = text;
-  rendererSurfaceHost.getTooltip().style.opacity = visible ? "1" : "0";
-  rendererSurfaceHost.getTooltip().style.transform = visible
-    ? `translate3d(${Math.round(Number(nextState?.x || 0))}px, ${Math.round(Number(nextState?.y || 0))}px, 0)`
-    : "translate3d(-9999px, -9999px, 0)";
+  return getSelectionOverlayOwner().renderDevSelectionOverlayIfNeeded({ force });
 }
 
 function queueTooltipUpdate(nextState = null) {
-  runtimeState.tooltipPendingState = nextState && typeof nextState === "object"
-    ? { ...nextState }
-    : { visible: false };
-  if (runtimeState.tooltipRafHandle) {
-    return;
-  }
-  runtimeState.tooltipRafHandle = globalThis.requestAnimationFrame(() => {
-    runtimeState.tooltipRafHandle = null;
-    const pendingState = runtimeState.tooltipPendingState;
-    runtimeState.tooltipPendingState = null;
-    applyTooltipState(pendingState);
-  });
+  getMapHoverInteractionOwner().queueTooltipUpdate(nextState);
 }
 
 function scheduleRenderPhaseIdle() {
@@ -8673,21 +8239,7 @@ function rebuildDynamicBorders() {
 }
 
 function recomputeDynamicBordersNow({ renderNow = true, reason = "" } = {}) {
-  clearPendingDynamicBorderTimer();
-  if (!isDynamicBordersEnabled()) {
-    runtimeState.dynamicBordersDirty = false;
-    runtimeState.dynamicBordersDirtyReason = "";
-    updateDynamicBorderStatusUI();
-    return false;
-  }
-  if (reason) {
-    runtimeState.dynamicBordersDirtyReason = String(reason);
-  }
-  rebuildDynamicBorders();
-  if (renderNow && rendererSurfaceHost.getContext()) {
-    render();
-  }
-  return true;
+  return getBorderMeshOwner().recomputeDynamicBordersNow({ renderNow, reason });
 }
 
 function refreshScenarioOpeningOwnerBorders({ renderNow = false, reason = "" } = {}) {
@@ -8699,12 +8251,7 @@ function refreshScenarioOpeningOwnerBorders({ renderNow = false, reason = "" } =
 }
 
 function scheduleDynamicBorderRecompute(reason = "", delayMs = 150) {
-  markDynamicBordersDirty(reason);
-  clearPendingDynamicBorderTimer();
-  runtimeState.pendingDynamicBorderTimerId = globalThis.setTimeout(() => {
-    runtimeState.pendingDynamicBorderTimerId = null;
-    recomputeDynamicBordersNow({ renderNow: true, reason });
-  }, Math.max(0, Number(delayMs) || 0));
+  return getBorderMeshOwner().scheduleDynamicBorderRecompute(reason, delayMs);
 }
 
 function isUsableMesh(mesh) {
@@ -9203,7 +8750,7 @@ function clearDeferredInternalBorderMeshCaches({ syncSnapshot = true } = {}) {
   runtimeState.cachedProvinceBordersByCountry = new Map();
   runtimeState.cachedLocalBorders = [];
   runtimeState.cachedLocalBordersByCountry = new Map();
-  runtimeState.cachedDetailAdmBorders = [];
+  getBorderMeshOwner().replaceDetailAdmBorders();
   runtimeState.cachedGridLines = [];
   resetVisibleInternalBorderMeshSignature();
   resetDetailAdmMeshBuildState();
@@ -9369,7 +8916,7 @@ function scheduleDeferredHeavyBorderMeshes() {
         const previousDetailAdmStatus = String(detailAdmMeshBuildState.status || "idle");
         const detailAdmMesh = buildDetailAdmBorderMesh(runtimeState.topologyDetail, new Set(detailAdmMeta.detailCountries));
         if (isUsableMesh(detailAdmMesh)) {
-          runtimeState.cachedDetailAdmBorders = [detailAdmMesh];
+          getBorderMeshOwner().replaceDetailAdmBorders([detailAdmMesh]);
           detailAdmMeshBuildState = {
             signature: detailAdmMeta.signature,
             status: "ready",
@@ -9472,7 +9019,7 @@ function restoreStaticMeshSnapshot(snapshot) {
   runtimeState.cachedProvinceBordersByCountry = new Map(snapshot.cachedProvinceBordersByCountry || []);
   runtimeState.cachedLocalBorders = [...(snapshot.cachedLocalBorders || [])];
   runtimeState.cachedLocalBordersByCountry = new Map(snapshot.cachedLocalBordersByCountry || []);
-  runtimeState.cachedDetailAdmBorders = [...(snapshot.cachedDetailAdmBorders || [])];
+  getBorderMeshOwner().replaceDetailAdmBorders([...(snapshot.cachedDetailAdmBorders || [])]);
   runtimeState.cachedCoastlines = [...(snapshot.cachedCoastlines || [])];
   runtimeState.cachedCoastlinesHigh = [...(snapshot.cachedCoastlinesHigh || [])];
   runtimeState.cachedCoastlinesMid = [...(snapshot.cachedCoastlinesMid || [])];
@@ -9531,7 +9078,7 @@ function rebuildStaticMeshes({
     runtimeState.cachedProvinceBordersByCountry = new Map();
     runtimeState.cachedLocalBorders = [];
     runtimeState.cachedLocalBordersByCountry = new Map();
-    runtimeState.cachedDetailAdmBorders = [];
+    getBorderMeshOwner().replaceDetailAdmBorders();
     runtimeState.cachedCoastlines = [];
     runtimeState.cachedCoastlinesHigh = [];
     runtimeState.cachedCoastlinesMid = [];
@@ -9610,7 +9157,7 @@ function rebuildStaticMeshes({
   runtimeState.cachedProvinceBordersByCountry = new Map();
   runtimeState.cachedLocalBorders = [];
   runtimeState.cachedLocalBordersByCountry = new Map();
-  runtimeState.cachedDetailAdmBorders = [];
+  getBorderMeshOwner().replaceDetailAdmBorders();
   runtimeState.cachedCoastlines = [];
   runtimeState.cachedCoastlinesHigh = [];
   runtimeState.cachedCoastlinesMid = [];
@@ -9629,7 +9176,7 @@ function rebuildStaticMeshes({
     );
     const detailAdmMesh = buildDetailAdmBorderMesh(runtimeState.topologyDetail, detailCountries);
     if (isUsableMesh(detailAdmMesh)) {
-      runtimeState.cachedDetailAdmBorders.push(detailAdmMesh);
+      getBorderMeshOwner().replaceDetailAdmBorders([detailAdmMesh]);
       detailAdmMeshBuildState = {
         signature: buildDetailAdmMeshSignature(visibleCountryCodes, runtimeState.zoomTransform?.k || 1).signature,
         status: "ready",
@@ -14228,14 +13775,14 @@ function clearFacilityHoverEntries(familyId = "") {
   if (normalizedFamilyId && Object.prototype.hasOwnProperty.call(visibleFacilityHoverEntriesByFamily, normalizedFamilyId)) {
     visibleFacilityHoverEntriesByFamily[normalizedFamilyId] = [];
   }
-  if (normalizedFamilyId && hoveredFacilityEntry?.familyId === normalizedFamilyId) {
-    hoveredFacilityEntry = null;
-    runtimeState.hoverOverlayDirty = true;
+  if (normalizedFamilyId && getMapHoverInteractionOwner().getHoveredFacilityEntry()?.familyId === normalizedFamilyId) {
+    getMapHoverInteractionOwner().setHoveredFacilityEntry(null);
+    getMapHoverInteractionOwner().setHoverOverlayDirty(true);
   }
   if (normalizedFamilyId && selectedFacilityEntry?.familyId === normalizedFamilyId) {
     selectedFacilityEntry = null;
     applyFacilityInfoCardState(null);
-    runtimeState.hoverOverlayDirty = true;
+    getMapHoverInteractionOwner().setHoverOverlayDirty(true);
   }
 }
 
@@ -14265,16 +13812,16 @@ function setVisibleFacilityHoverEntries(familyId = "", entries = [], { append = 
       .map((entry) => [buildFacilityEntryKey(entry), entry])
       .filter(([key]) => !!key)
   );
-  const hoveredKey = buildFacilityEntryKey(hoveredFacilityEntry);
+  const hoveredKey = buildFacilityEntryKey(getMapHoverInteractionOwner().getHoveredFacilityEntry());
   const selectedKey = buildFacilityEntryKey(selectedFacilityEntry);
   if (hoveredKey) {
     const nextHoveredEntry = nextEntriesByKey.get(hoveredKey) || null;
     if (nextHoveredEntry) {
-      hoveredFacilityEntry = nextHoveredEntry;
-      runtimeState.hoverOverlayDirty = true;
+      getMapHoverInteractionOwner().setHoveredFacilityEntry(nextHoveredEntry);
+      getMapHoverInteractionOwner().setHoverOverlayDirty(true);
     } else {
-      hoveredFacilityEntry = null;
-      runtimeState.hoverOverlayDirty = true;
+      getMapHoverInteractionOwner().setHoveredFacilityEntry(null);
+      getMapHoverInteractionOwner().setHoverOverlayDirty(true);
     }
   }
   if (selectedKey) {
@@ -14282,11 +13829,11 @@ function setVisibleFacilityHoverEntries(familyId = "", entries = [], { append = 
     if (nextSelectedEntry) {
       selectedFacilityEntry = nextSelectedEntry;
       applyFacilityInfoCardState(nextSelectedEntry);
-      runtimeState.hoverOverlayDirty = true;
+      getMapHoverInteractionOwner().setHoverOverlayDirty(true);
     } else {
       selectedFacilityEntry = null;
       applyFacilityInfoCardState(null);
-      runtimeState.hoverOverlayDirty = true;
+      getMapHoverInteractionOwner().setHoverOverlayDirty(true);
     }
   }
 }
@@ -14395,11 +13942,11 @@ function applyFacilityInfoCardState(entry, anchor = null) {
 }
 
 function setMapInteractionCursor(nextCursor = "") {
-  if (!rendererSurfaceHost.getInteractionRect()) return;
-  rendererSurfaceHost.getInteractionRect().style("cursor", nextCursor || null);
+  getMapHoverInteractionOwner().setMapInteractionCursor(nextCursor);
 }
 
 function getActiveFacilityHighlightEntry() {
+  const hoveredFacilityEntry = getMapHoverInteractionOwner().getHoveredFacilityEntry();
   return hoveredFacilityEntry || selectedFacilityEntry || null;
 }
 
@@ -14430,9 +13977,9 @@ function syncFacilityInfoCardVisibility() {
   if (isFacilityDetailsSurfaceActive(selectedFacilityEntry.familyId)) {
     return;
   }
-  hoveredFacilityEntry = null;
+  getMapHoverInteractionOwner().setHoveredFacilityEntry(null);
   applyFacilityInfoCardState(null);
-  runtimeState.hoverOverlayDirty = true;
+  getMapHoverInteractionOwner().setHoverOverlayDirty(true);
   renderHoverOverlayIfNeeded({ eventType: "facility-card-visibility" });
   queueTooltipUpdate({ visible: false });
   setMapInteractionCursor("");
@@ -14472,19 +14019,6 @@ function shouldBlockUnderlyingSelectionForFacility(entry) {
   return shouldBlockUnderlyingMapSelectionForFacility(entry, allowsFacilityUnderlyingSelection());
 }
 
-function clearUnderlyingHoverForFacilityEntry(entry) {
-  if (!shouldBlockUnderlyingSelectionForFacility(entry)) return false;
-  const patch = buildUnderlyingMapHoverClearPatch(runtimeState);
-  runtimeState.hoveredId = patch.hoveredId;
-  runtimeState.hoveredWaterRegionId = patch.hoveredWaterRegionId;
-  runtimeState.hoveredSpecialRegionId = patch.hoveredSpecialRegionId;
-  updateDevHoverHit(patch.devHoverHit);
-  if (patch.hadUnderlyingHover) {
-    runtimeState.hoverOverlayDirty = true;
-    scheduleHoverOverlayRender();
-  }
-  return true;
-}
 
 function getCityLayerRenderState(k, { interactive = false, cacheHoverEntries = false } = {}) {
   return getCityPointsRenderOwner().getCityLayerRenderState(k, { interactive, cacheHoverEntries });
@@ -14657,7 +14191,6 @@ function drawNightLightsLayer(k, config, solarState) {
 function syncDayNightClockTimer() {
   return getDayNightRuntimeOwner().syncDayNightClockTimer();
 }
-
 
 function drawBackgroundPass() {
   return getPoliticalBackgroundRenderOwner().drawBackgroundPass();
@@ -14938,28 +14471,33 @@ function drawScenarioWaterFillLayer(k, { waterFeatures = [] } = {}) {
     const waterPath = visibleParts.length === parts.length
       ? getScenarioWaterFeaturePath(feature, parts)
       : null;
+    let didFill = false;
     if (waterPath) {
       rendererSurfaceHost.getContext().fill(waterPath);
+      didFill = true;
     } else if (globalThis.Path2D) {
       visibleParts.forEach((part) => {
         const partPath = getScenarioWaterPartPath(part);
         if (partPath) {
           rendererSurfaceHost.getContext().fill(partPath);
+          didFill = true;
         } else if (rendererSurfaceHost.getPathCanvas()) {
           rendererSurfaceHost.getContext().beginPath();
           rendererSurfaceHost.getPathCanvas()(part);
           rendererSurfaceHost.getContext().fill();
+          didFill = true;
         }
       });
-    } else {
+    } else if (rendererSurfaceHost.getPathCanvas()) {
       rendererSurfaceHost.getContext().beginPath();
       visibleParts.forEach((part) => {
         if (rendererSurfaceHost.getPathCanvas()) rendererSurfaceHost.getPathCanvas()(part);
       });
       rendererSurfaceHost.getContext().fill();
+      didFill = true;
     }
     rendererSurfaceHost.getContext().restore();
-    renderedWaterCount += 1;
+    if (didFill) renderedWaterCount += 1;
   });
   collectContextMetric("drawScenarioWaterFillLayer", nowMs() - startedAt, {
     featureCount: waterFeatures.length,
@@ -15418,7 +14956,6 @@ function drawHgoPreviewPass() {
   return getHgoRuntimePreviewRenderOwner().drawPreviewPass();
 }
 
-
 function drawEffectsPass(k, options = undefined) {
   return getVisualEffectsPassOwner().drawEffectsPass(k, options);
 }
@@ -15536,7 +15073,6 @@ function renderPassToCache(passName, drawFn, transform, timings) {
   });
 }
 
-
 function resetCanvasContext(targetContext, width, height) {
   if (!targetContext) return;
   targetContext.setTransform(1, 0, 0, 1, 0, 0);
@@ -15601,7 +15137,6 @@ function composeCachedPasses(passNames, currentTransform = runtimeState.zoomTran
   incrementPerfCounter("composites");
   return true;
 }
-
 
 function canDrawTransformedPass(passName, cache = getRenderPassCacheState(), { allowDirty = false } = {}) {
   if (cache.dirty?.[passName] && !allowDirty) return false;
@@ -15734,7 +15269,6 @@ function composeRenderPassesToTarget(
     options,
   );
 }
-
 
 function renderExportPassesToCanvas(passNames) {
   const width = Number(runtimeState.colorCanvas?.width || 0);
@@ -16354,75 +15888,6 @@ function getMultiLineLabelAnchor(geometry, placementMode = "midpoint") {
   return getLineMidpointFromCoordinates(bestLine);
 }
 
-function getFrontlineLabelAnchors() {
-  if (
-    !runtimeState.activeScenarioId
-    || !runtimeState.annotationView?.frontlineEnabled
-    || !runtimeState.annotationView?.showFrontlineLabels
-    || !globalThis.topojson
-  ) {
-    runtimeState.cachedFrontlineLabelAnchors = [];
-    runtimeState.cachedFrontlineLabelAnchorsHash = "";
-    return [];
-  }
-  const nextHash = [
-    `scenario:${String(runtimeState.activeScenarioId || "")}`,
-    `ctrl:${0}`,
-    `shell:${Number(runtimeState.scenarioShellOverlayRevision || 0)}`,
-    `sov:${Number(runtimeState.sovereigntyRevision || 0)}`,
-    `placement:${String(runtimeState.annotationView?.labelPlacementMode || "midpoint")}`,
-    `lang:${String(runtimeState.currentLanguage || "")}`,
-  ].join("|");
-  if (
-    Array.isArray(runtimeState.cachedFrontlineLabelAnchors)
-    && runtimeState.cachedFrontlineLabelAnchorsHash === nextHash
-  ) {
-    return runtimeState.cachedFrontlineLabelAnchors;
-  }
-  const topology = runtimeState.runtimePoliticalTopology;
-  const object = topology?.objects?.political;
-  const geometries = Array.isArray(object?.geometries) ? object.geometries : [];
-  const neighbors = Array.isArray(runtimeState.runtimeNeighborGraph) ? runtimeState.runtimeNeighborGraph : [];
-  const ownershipContext = getBorderMeshOwner().getFrontlineOwnershipContext();
-  const anchors = [];
-  const seenPairs = new Set();
-
-  geometries.forEach((geometry, index) => {
-    const featureId = getEntityFeatureId(geometry);
-    if (!featureId || shouldExcludeOwnerBorderEntity(geometry, { excludeSea: true })) return;
-    const ownerA = resolveOwnerBorderCode(geometry, ownershipContext);
-    if (!ownerA) return;
-    const neighborIndexes = Array.isArray(neighbors[index]) ? neighbors[index] : [];
-    neighborIndexes.forEach((neighborIndex) => {
-      if (neighborIndex <= index) return;
-      const neighbor = geometries[neighborIndex];
-      if (!neighbor || shouldExcludeOwnerBorderEntity(neighbor, { excludeSea: true })) return;
-      const ownerB = resolveOwnerBorderCode(neighbor, ownershipContext);
-      if (!ownerB || ownerA === ownerB) return;
-      const pairKey = [ownerA, ownerB].sort().join("::");
-      if (seenPairs.has(pairKey)) return;
-      const pairMesh = globalThis.topojson.mesh(topology, object, (a, b) => (
-        (a === geometry && b === neighbor) || (a === neighbor && b === geometry)
-      ));
-      const anchor = getMultiLineLabelAnchor(pairMesh, runtimeState.annotationView?.labelPlacementMode || "midpoint");
-      if (!anchor) return;
-      const projected = getProjectedPoint(anchor);
-      if (!projected) return;
-      seenPairs.add(pairKey);
-      anchors.push({
-        key: pairKey,
-        coord: anchor,
-        projected,
-        label: `${getScenarioCountryDisplayName(ownerA) || ownerA} / ${getScenarioCountryDisplayName(ownerB) || ownerB}`,
-      });
-    });
-  });
-
-  runtimeState.cachedFrontlineLabelAnchorsHash = nextHash;
-  runtimeState.cachedFrontlineLabelAnchors = anchors;
-  return anchors;
-}
-
 function renderStrategicDefs() {
   if (!rendererSurfaceHost.getStrategicDefs()) return;
   const defs = [
@@ -16755,106 +16220,17 @@ function renderFrontlineOverlay() {
   if (!runtimeState.annotationView?.frontlineEnabled) {
     runtimeState.cachedFrontlineMesh = null;
     runtimeState.cachedFrontlineMeshHash = "";
-    runtimeState.cachedFrontlineLabelAnchors = [];
-    runtimeState.cachedFrontlineLabelAnchorsHash = "";
-    rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
-    rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
-    return;
+  } else {
+    // Derived frontlines were retired with the control layer; the mesh owner
+    // clears legacy mesh state and always returns null, including old saves.
+    getBorderMeshOwner().getFrontlineMesh();
   }
-  const mesh = getBorderMeshOwner().getFrontlineMesh();
-  const hasMesh = !!mesh && Array.isArray(mesh.coordinates) && mesh.coordinates.length > 0;
-  if (!hasMesh) {
-    rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
-    rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
-    rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
-    return;
-  }
-
-  const style = String(runtimeState.annotationView?.frontlineStyle || "clean");
-  const zoomK = Math.max(0.1, Number(runtimeState.zoomTransform?.k || 1));
-  const widthScale = zoomK >= 5 ? 1.18 : zoomK >= 2.4 ? 1.04 : zoomK >= 1.2 ? 0.92 : 0.82;
-  const pathValue = rendererSurfaceHost.getPathSvg()(mesh);
-  const layers = style === "dual-rail"
-    ? [
-      { key: "base", stroke: "rgba(17, 24, 39, 0.78)", width: 4.2 * widthScale, dasharray: null },
-      { key: "inner-a", stroke: "rgba(127, 29, 29, 0.46)", width: 1.5 * widthScale, dasharray: null },
-      { key: "inner-b", stroke: "rgba(30, 58, 138, 0.42)", width: 0.8 * widthScale, dasharray: "10 7" },
-    ]
-      : style === "teeth"
-      ? [
-        { key: "base", stroke: "rgba(24, 32, 45, 0.82)", width: 4.1 * widthScale, dasharray: null },
-        { key: "teeth", stroke: "rgba(231, 229, 221, 0.84)", width: 1.3 * widthScale, dasharray: "1.5 5.8" },
-      ]
-      : [
-        { key: "base", stroke: "rgba(20, 29, 43, 0.78)", width: 4.3 * widthScale, dasharray: null },
-        { key: "inner", stroke: "rgba(236, 232, 223, 0.9)", width: 1.7 * widthScale, dasharray: null },
-      ];
-
-  const selection = rendererSurfaceHost.getFrontlineOverlayGroup()
-    .selectAll("path.frontline-path")
-    .data(layers, (d) => d.key);
-
-  selection
-    .enter()
-    .append("path")
-    .attr("class", "frontline-path")
-    .attr("role", "presentation")
-    .attr("aria-hidden", "true")
-    .attr("vector-effect", "non-scaling-stroke")
-    .merge(selection)
-    .attr("d", pathValue)
-    .attr("fill", "none")
-    .attr("stroke", (d) => d.stroke)
-    .attr("stroke-width", (d) => d.width)
-    .attr("stroke-linecap", "round")
-    .attr("stroke-linejoin", "round")
-    .attr("stroke-dasharray", (d) => d.dasharray || null);
-
-  selection.exit().remove();
-  rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "false");
-
-  const labels = runtimeState.annotationView?.showFrontlineLabels ? getFrontlineLabelAnchors() : [];
-  const labelSelection = rendererSurfaceHost.getFrontlineLabelsGroup()
-    .selectAll("g.frontline-label")
-    .data(labels, (d) => d.key);
-
-  const labelEnter = labelSelection.enter().append("g").attr("class", "frontline-label");
-  labelEnter.append("rect").attr("rx", 4).attr("ry", 4);
-  labelEnter.append("text");
-
-  labelEnter.merge(labelSelection)
-    .attr("transform", (d) => `translate(${d.projected[0]},${d.projected[1]})`);
-
-  labelEnter.merge(labelSelection).select("text")
-    .attr("text-anchor", "middle")
-    .attr("dominant-baseline", "central")
-    .attr("font-family", STRATEGIC_LINE_LABEL_FONT)
-    .attr("font-size", 10)
-    .attr("font-weight", 600)
-    .attr("fill", "#f8fafc")
-    .text((d) => d.label);
-
-  labelEnter.merge(labelSelection).select("rect")
-    .each(function eachLabelRect(d) {
-      const textNode = globalThis.d3.select(this.parentNode).select("text").node();
-      const bbox = textNode?.getBBox?.();
-      const width = bbox ? bbox.width + 10 : 64;
-      const height = bbox ? bbox.height + 6 : 18;
-      globalThis.d3.select(this)
-        .attr("x", -width / 2)
-        .attr("y", -height / 2)
-        .attr("width", width)
-        .attr("height", height)
-        .attr("fill", "rgba(15, 23, 42, 0.78)")
-        .attr("stroke", "rgba(248, 250, 252, 0.18)")
-        .attr("stroke-width", 0.8);
-    });
-
-  labelSelection.exit().remove();
-  rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", labels.length ? "false" : "true");
+  runtimeState.cachedFrontlineLabelAnchors = [];
+  runtimeState.cachedFrontlineLabelAnchorsHash = "";
+  rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
+  rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
+  rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
+  rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
 }
 
 function syncInteractionLayerPointerEvents() {
@@ -17360,542 +16736,15 @@ function renderHoverOverlay() {
 }
 
 function renderInspectorHighlightOverlay() {
-  if (!rendererSurfaceHost.getInspectorHighlightGroup() || !rendererSurfaceHost.getPathSvg()) return;
-  const featureIds = Array.isArray(runtimeState.inspectorHighlightFeatureIds)
-    ? Array.from(new Set(runtimeState.inspectorHighlightFeatureIds.map((id) => String(id || "").trim()).filter(Boolean)))
-    : [];
-  const code = String(runtimeState.inspectorHighlightCountryCode || "").trim().toUpperCase();
-  if (!featureIds.length && !code) {
-    rendererSurfaceHost.getInspectorHighlightGroup().selectAll("path.inspector-highlight").remove();
-    rendererSurfaceHost.getInspectorHighlightGroup().attr("aria-hidden", "true");
-    return;
-  }
-  const landFeatures = runtimeState.landData?.features || [];
-  const featureLookup = runtimeState.landIndex instanceof Map && runtimeState.landIndex.size
-    ? runtimeState.landIndex
-    : new Map(landFeatures.map((feature) => [getFeatureId(feature), feature]).filter(([featureId]) => featureId));
-  const data = featureIds.length
-    ? featureIds
-      .map((featureId) => featureLookup.get(featureId))
-      .filter(Boolean)
-    : landFeatures.filter((feature) => getFeatureCountryCodeNormalized(feature) === code);
-  const renderAsGroup = featureIds.length > 0 && runtimeState.inspectorHighlightGroupMode === true;
-  const overlayData = renderAsGroup && data.length
-    ? [{
-      type: "FeatureCollection",
-      features: data,
-      inspectorHighlightKey: `group:${featureIds.join("|")}`,
-    }]
-    : data;
-  const selection = rendererSurfaceHost.getInspectorHighlightGroup()
-    .selectAll("path.inspector-highlight")
-    .data(overlayData, (d, index) => d?.inspectorHighlightKey || getFeatureId(d) || `${code}-${index}`);
-
-  selection
-    .enter()
-    .append("path")
-    .attr("class", "inspector-highlight")
-    .attr("role", "presentation")
-    .attr("aria-hidden", "true")
-    .attr("vector-effect", "non-scaling-stroke")
-    .merge(selection)
-    .attr("d", rendererSurfaceHost.getPathSvg())
-    .attr("fill", "none")
-    .attr("stroke", "rgba(0, 47, 167, 0.6)")
-    .attr("stroke-width", 2.4);
-
-  selection.exit().remove();
-  rendererSurfaceHost.getInspectorHighlightGroup()
-    .attr("aria-hidden", data.length ? "false" : "true")
-    .attr("aria-label", data.length
-      ? `Inspector highlight overlay for ${runtimeState.inspectorHighlightLabel || code || "feature group"}`
-      : "Inspector highlight overlay");
-}
-
-function getLegendControlText(key, count = 0) {
-  const zh = String(runtimeState.currentLanguage || state.currentLanguage || "").toLowerCase().startsWith("zh");
-  const catalog = zh
-    ? {
-      title: "图例",
-      drag: "拖动图例",
-      collapse: "收起图例",
-      expand: "展开图例",
-      close: "关闭图例",
-      resizeWidth: "调整图例宽度",
-      resizeHeight: "调整图例高度",
-      resizeBoth: "调整图例大小",
-      opacity: "透明度",
-      specialZones: "特殊区域图层",
-      count: `${count} 项`,
-    }
-    : {
-      title: "Legend",
-      drag: "Drag legend",
-      collapse: "Collapse legend",
-      expand: "Expand legend",
-      close: "Close legend",
-      resizeWidth: "Resize legend width",
-      resizeHeight: "Resize legend height",
-      resizeBoth: "Resize legend",
-      opacity: "Opacity",
-      specialZones: "Special Zone Layers",
-      count: `${count} items`,
-    };
-  return catalog[key] || catalog.title;
-}
-
-function setLegendControlButtonIcon(button, icon, label) {
-  if (!button) return;
-  let iconElement = button.querySelector("[data-legend-button-icon]");
-  if (!iconElement) {
-    iconElement = document.createElement("span");
-    iconElement.dataset.legendButtonIcon = "true";
-    iconElement.setAttribute("aria-hidden", "true");
-    button.replaceChildren(iconElement);
-  }
-  iconElement.textContent = icon;
-  button.title = label;
-  button.setAttribute("aria-label", label);
-}
-
-function getLegendControlBounds(element = legendControlElement) {
-  const width = Math.max(1, rendererSurfaceHost.getMapContainer()?.clientWidth || runtimeState.width || 1);
-  const height = Math.max(1, rendererSurfaceHost.getMapContainer()?.clientHeight || runtimeState.height || 1);
-  const elementWidth = Math.max(1, element?.offsetWidth || 180);
-  const elementHeight = Math.max(1, element?.offsetHeight || 120);
-  const padding = 8;
-  return {
-    maxLeft: Math.max(padding, width - elementWidth - padding),
-    maxTop: Math.max(padding, height - elementHeight - padding),
-    padding,
-  };
-}
-
-function getLegendControlLimits() {
-  return LegendManager.getControlLimits?.() || {
-    minWidth: 180,
-    maxWidth: 420,
-    minHeight: 130,
-    maxHeight: 560,
-    minOpacity: 0.35,
-    maxOpacity: 1,
-  };
-}
-
-function applyLegendControlSize(controlState) {
-  if (!legendControlElement) return;
-  const limits = getLegendControlLimits();
-  const width = clamp(Number(controlState.width || 240), limits.minWidth, limits.maxWidth);
-  const height = clamp(Number(controlState.height || 340), limits.minHeight, limits.maxHeight);
-  const opacity = clamp(Number(controlState.opacity || 0.9), limits.minOpacity, limits.maxOpacity);
-  const collapsedWidth = Math.min(176, limits.minWidth);
-  legendControlElement.style.width = controlState.collapsed ? `${collapsedWidth}px` : `${Math.round(width)}px`;
-  legendControlElement.style.height = controlState.collapsed ? "" : `${Math.round(height)}px`;
-  legendControlElement.style.opacity = String(opacity);
-  if (legendOpacityInputElement) {
-    legendOpacityInputElement.min = String(Math.round(limits.minOpacity * 100));
-    legendOpacityInputElement.max = String(Math.round(limits.maxOpacity * 100));
-    legendOpacityInputElement.value = String(Math.round(opacity * 100));
-    legendOpacityInputElement.setAttribute("aria-label", getLegendControlText("opacity"));
-  }
-}
-
-function showLegendOpacityPanel() {
-  if (!legendControlElement || !legendOpacityPanelElement) return;
-  legendControlElement.classList.add("is-edge-selected");
-  legendOpacityPanelElement.hidden = false;
-}
-
-function hideLegendOpacityPanel() {
-  if (!legendControlElement || !legendOpacityPanelElement || legendResizeSession) return;
-  legendControlElement.classList.remove("is-edge-selected");
-  legendOpacityPanelElement.hidden = true;
-}
-
-function applyLegendControlPosition(controlState) {
-  if (!legendControlElement) return;
-  applyLegendControlSize(controlState);
-  const bounds = getLegendControlBounds(legendControlElement);
-  const left = clamp(Math.round(bounds.maxLeft * Number(controlState.xRatio || 0)), bounds.padding, bounds.maxLeft);
-  const top = clamp(Math.round(bounds.maxTop * Number(controlState.yRatio || 0)), bounds.padding, bounds.maxTop);
-  legendControlElement.style.left = `${left}px`;
-  legendControlElement.style.top = `${top}px`;
-}
-
-function storeLegendControlPosition(left, top) {
-  const bounds = getLegendControlBounds(legendControlElement);
-  const clampedLeft = clamp(left, bounds.padding, bounds.maxLeft);
-  const clampedTop = clamp(top, bounds.padding, bounds.maxTop);
-  const xRatio = bounds.maxLeft > bounds.padding ? clampedLeft / bounds.maxLeft : 0;
-  const yRatio = bounds.maxTop > bounds.padding ? clampedTop / bounds.maxTop : 0;
-  LegendManager.updateControlState(state, { xRatio, yRatio });
-  if (legendControlElement) {
-    legendControlElement.style.left = `${Math.round(clampedLeft)}px`;
-    legendControlElement.style.top = `${Math.round(clampedTop)}px`;
-  }
-}
-
-function storeLegendControlSize(width, height) {
-  if (!legendControlElement) return LegendManager.getControlState(state);
-  const limits = getLegendControlLimits();
-  const rect = legendControlElement.getBoundingClientRect();
-  const containerRect = rendererSurfaceHost.getMapContainer()?.getBoundingClientRect?.() || { right: window.innerWidth || rect.right, bottom: window.innerHeight || rect.bottom };
-  const currentLeft = rect.left - (containerRect.left || 0);
-  const currentTop = rect.top - (containerRect.top || 0);
-  const viewportMaxWidth = Math.max(limits.minWidth, containerRect.right - rect.left - 8);
-  const viewportMaxHeight = Math.max(limits.minHeight, containerRect.bottom - rect.top - 8);
-  const nextWidth = clamp(width, limits.minWidth, Math.min(limits.maxWidth, viewportMaxWidth));
-  const nextHeight = clamp(height, limits.minHeight, Math.min(limits.maxHeight, viewportMaxHeight));
-  const sized = LegendManager.updateControlState(state, {
-    width: nextWidth,
-    height: nextHeight,
-  });
-  applyLegendControlSize(sized);
-  const bounds = getLegendControlBounds(legendControlElement);
-  const clampedLeft = clamp(currentLeft, bounds.padding, bounds.maxLeft);
-  const clampedTop = clamp(currentTop, bounds.padding, bounds.maxTop);
-  const xRatio = bounds.maxLeft > bounds.padding ? clampedLeft / bounds.maxLeft : 0;
-  const yRatio = bounds.maxTop > bounds.padding ? clampedTop / bounds.maxTop : 0;
-  const next = LegendManager.updateControlState(state, { xRatio, yRatio });
-  legendControlElement.style.left = `${Math.round(clampedLeft)}px`;
-  legendControlElement.style.top = `${Math.round(clampedTop)}px`;
-  return next;
-}
-
-function stopLegendResize() {
-  if (!legendResizeSession) return;
-  legendControlElement?.classList.remove("is-resizing");
-  document.removeEventListener("pointermove", handleLegendResizeMove);
-  document.removeEventListener("pointerup", stopLegendResize);
-  document.removeEventListener("pointercancel", stopLegendResize);
-  legendResizeSession = null;
-}
-
-function handleLegendResizeMove(event) {
-  if (!legendResizeSession) return;
-  event.preventDefault();
-  const deltaX = event.clientX - legendResizeSession.clientX;
-  const deltaY = event.clientY - legendResizeSession.clientY;
-  const width = legendResizeSession.edge.includes("e")
-    ? legendResizeSession.width + deltaX
-    : legendResizeSession.width;
-  const height = legendResizeSession.edge.includes("s")
-    ? legendResizeSession.height + deltaY
-    : legendResizeSession.height;
-  storeLegendControlSize(width, height);
-}
-
-function startLegendResize(event) {
-  if (!legendControlElement || event.button !== 0) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const edge = String(event.currentTarget?.dataset?.legendResize || "se");
-  const controlState = LegendManager.getControlState(state);
-  legendResizeSession = {
-    edge,
-    clientX: event.clientX,
-    clientY: event.clientY,
-    width: Number(controlState.width || legendControlElement.offsetWidth || 240),
-    height: Number(controlState.height || legendControlElement.offsetHeight || 340),
-  };
-  legendControlElement.classList.add("is-resizing");
-  showLegendOpacityPanel();
-  document.addEventListener("pointermove", handleLegendResizeMove);
-  document.addEventListener("pointerup", stopLegendResize);
-  document.addEventListener("pointercancel", stopLegendResize);
-}
-
-function updateLegendControlOpacity(event) {
-  const limits = getLegendControlLimits();
-  const nextOpacity = clamp(Number(event?.currentTarget?.value || 90) / 100, limits.minOpacity, limits.maxOpacity);
-  const next = LegendManager.updateControlState(state, { opacity: nextOpacity });
-  applyLegendControlSize(next);
-}
-
-function stopLegendDrag() {
-  if (!legendDragSession) return;
-  legendControlElement?.classList.remove("is-dragging");
-  document.removeEventListener("pointermove", handleLegendDragMove);
-  document.removeEventListener("pointerup", stopLegendDrag);
-  document.removeEventListener("pointercancel", stopLegendDrag);
-  legendDragSession = null;
-}
-
-function handleLegendDragMove(event) {
-  if (!legendDragSession) return;
-  event.preventDefault();
-  const nextLeft = legendDragSession.left + event.clientX - legendDragSession.clientX;
-  const nextTop = legendDragSession.top + event.clientY - legendDragSession.clientY;
-  storeLegendControlPosition(nextLeft, nextTop);
-}
-
-function startLegendDrag(event) {
-  if (
-    !legendControlElement
-    || event.button !== 0
-    || event.target?.closest?.(".map-legend-control-btn, .map-legend-resize-handle, .map-legend-opacity-panel")
-  ) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const containerRect = rendererSurfaceHost.getMapContainer()?.getBoundingClientRect?.() || { left: 0, top: 0 };
-  const rect = legendControlElement.getBoundingClientRect();
-  legendDragSession = {
-    clientX: event.clientX,
-    clientY: event.clientY,
-    left: rect.left - containerRect.left,
-    top: rect.top - containerRect.top,
-  };
-  legendControlElement.classList.add("is-dragging");
-  document.addEventListener("pointermove", handleLegendDragMove);
-  document.addEventListener("pointerup", stopLegendDrag);
-  document.addEventListener("pointercancel", stopLegendDrag);
+  return getSelectionOverlayOwner().renderInspectorHighlightOverlay();
 }
 
 function ensureLegendControlElement() {
-  if (!rendererSurfaceHost.getMapContainer() || typeof document === "undefined") return null;
-  if (legendControlElement && rendererSurfaceHost.getMapContainer().contains(legendControlElement)) return legendControlElement;
-
-  const element = document.createElement("section");
-  element.id = "mapLegendControl";
-  element.className = "map-legend-control";
-  element.setAttribute("aria-live", "polite");
-  element.hidden = true;
-
-  const header = document.createElement("div");
-  header.className = "map-legend-control-header";
-  header.title = getLegendControlText("drag");
-  header.addEventListener("pointerdown", startLegendDrag);
-
-  const title = document.createElement("div");
-  title.className = "map-legend-control-title";
-
-  const count = document.createElement("span");
-  count.className = "map-legend-control-count";
-
-  const actions = document.createElement("div");
-  actions.className = "map-legend-control-actions";
-
-  const toggleButton = document.createElement("button");
-  toggleButton.type = "button";
-  toggleButton.className = "map-legend-control-btn";
-  toggleButton.dataset.legendAction = "toggle";
-  setLegendControlButtonIcon(toggleButton, "-", getLegendControlText("collapse"));
-  toggleButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const next = LegendManager.toggleControlCollapsed(state);
-    element.classList.toggle("is-collapsed", next.collapsed);
-    setLegendControlButtonIcon(
-      toggleButton,
-      next.collapsed ? "+" : "-",
-      getLegendControlText(next.collapsed ? "expand" : "collapse"),
-    );
-    applyLegendControlPosition(next);
-  });
-
-  const closeButton = document.createElement("button");
-  closeButton.type = "button";
-  closeButton.className = "map-legend-control-btn";
-  closeButton.dataset.legendAction = "close";
-  setLegendControlButtonIcon(closeButton, "x", getLegendControlText("close"));
-  closeButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    LegendManager.hideControl(state);
-    element.hidden = true;
-  });
-
-  actions.append(toggleButton, closeButton);
-  header.append(title, count, actions);
-
-  const body = document.createElement("div");
-  body.className = "map-legend-control-body";
-
-  const opacityPanel = document.createElement("label");
-  opacityPanel.className = "map-legend-opacity-panel";
-  opacityPanel.hidden = true;
-  const opacityLabel = document.createElement("span");
-  opacityLabel.className = "map-legend-opacity-label";
-  opacityLabel.textContent = getLegendControlText("opacity");
-  const opacityInput = document.createElement("input");
-  opacityInput.type = "range";
-  opacityInput.className = "map-legend-opacity-input";
-  opacityInput.addEventListener("input", updateLegendControlOpacity);
-  opacityPanel.append(opacityLabel, opacityInput);
-
-  const resizeEast = document.createElement("button");
-  resizeEast.type = "button";
-  resizeEast.className = "map-legend-resize-handle is-east";
-  resizeEast.dataset.legendResize = "e";
-  resizeEast.title = getLegendControlText("resizeWidth");
-  resizeEast.setAttribute("aria-label", resizeEast.title);
-  resizeEast.addEventListener("pointerdown", startLegendResize);
-  resizeEast.addEventListener("pointerenter", showLegendOpacityPanel);
-  resizeEast.addEventListener("focus", showLegendOpacityPanel);
-
-  const resizeSouth = document.createElement("button");
-  resizeSouth.type = "button";
-  resizeSouth.className = "map-legend-resize-handle is-south";
-  resizeSouth.dataset.legendResize = "s";
-  resizeSouth.title = getLegendControlText("resizeHeight");
-  resizeSouth.setAttribute("aria-label", resizeSouth.title);
-  resizeSouth.addEventListener("pointerdown", startLegendResize);
-  resizeSouth.addEventListener("pointerenter", showLegendOpacityPanel);
-  resizeSouth.addEventListener("focus", showLegendOpacityPanel);
-
-  const resizeCorner = document.createElement("button");
-  resizeCorner.type = "button";
-  resizeCorner.className = "map-legend-resize-handle is-south-east";
-  resizeCorner.dataset.legendResize = "se";
-  resizeCorner.title = getLegendControlText("resizeBoth");
-  resizeCorner.setAttribute("aria-label", resizeCorner.title);
-  resizeCorner.addEventListener("pointerdown", startLegendResize);
-  resizeCorner.addEventListener("pointerenter", showLegendOpacityPanel);
-  resizeCorner.addEventListener("focus", showLegendOpacityPanel);
-
-  element.append(header, body, opacityPanel, resizeEast, resizeSouth, resizeCorner);
-  element.addEventListener("click", (event) => event.stopPropagation());
-  element.addEventListener("pointerleave", hideLegendOpacityPanel);
-  rendererSurfaceHost.getMapContainer().appendChild(element);
-
-  legendControlElement = element;
-  legendControlHeaderElement = header;
-  legendControlBodyElement = body;
-  legendOpacityPanelElement = opacityPanel;
-  legendOpacityInputElement = opacityInput;
-  return legendControlElement;
-}
-
-function setLegendControlHeader(itemCount, collapsed) {
-  if (!legendControlElement || !legendControlHeaderElement) return;
-  const title = legendControlHeaderElement.querySelector(".map-legend-control-title");
-  const count = legendControlHeaderElement.querySelector(".map-legend-control-count");
-  const toggleButton = legendControlHeaderElement.querySelector('[data-legend-action="toggle"]');
-  const closeButton = legendControlHeaderElement.querySelector('[data-legend-action="close"]');
-  const opacityLabel = legendControlElement.querySelector(".map-legend-opacity-label");
-  legendControlElement.setAttribute("aria-label", getLegendControlText("title"));
-  legendControlHeaderElement.title = getLegendControlText("drag");
-  if (title) title.textContent = getLegendControlText("title");
-  if (count) count.textContent = getLegendControlText("count", itemCount);
-  if (opacityLabel) opacityLabel.textContent = getLegendControlText("opacity");
-  if (toggleButton) {
-    setLegendControlButtonIcon(
-      toggleButton,
-      collapsed ? "+" : "-",
-      getLegendControlText(collapsed ? "expand" : "collapse"),
-    );
-  }
-  if (closeButton) {
-    setLegendControlButtonIcon(closeButton, "x", getLegendControlText("close"));
-  }
-  legendControlElement.querySelectorAll("[data-legend-resize]").forEach((handle) => {
-    const key = handle.dataset.legendResize === "e"
-      ? "resizeWidth"
-      : handle.dataset.legendResize === "s"
-        ? "resizeHeight"
-        : "resizeBoth";
-    handle.title = getLegendControlText(key);
-    handle.setAttribute("aria-label", handle.title);
-  });
-}
-
-function appendLegendRow(parent, { color, label, stroke = "#1f2937", pattern = "solid" }) {
-  const row = document.createElement("div");
-  row.className = "map-legend-row";
-
-  const swatch = document.createElement("span");
-  swatch.className = "map-legend-swatch";
-  swatch.style.backgroundColor = color || "#8b5cf6";
-  swatch.style.borderColor = stroke || "#1f2937";
-  if (String(pattern || "solid") !== "solid") swatch.classList.add("has-pattern");
-
-  const text = document.createElement("span");
-  text.className = "map-legend-label";
-  text.textContent = label || "";
-
-  row.append(swatch, text);
-  parent.appendChild(row);
+  return getLegendControlOwner().ensureLegendControlElement();
 }
 
 export function renderLegend(uniqueColors = null, labels = null) {
-  const controlElement = ensureLegendControlElement();
-  if (!controlElement || !legendControlBodyElement) return;
-
-  const colors = Array.isArray(uniqueColors)
-    ? uniqueColors
-    : LegendManager.getUniqueColors(state);
-  const specialZoneLegendLayers = LegendManager.getSpecialZoneLayers(runtimeState);
-  const labelMap = labels || LegendManager.getLabels(state);
-  const hasScenarioVisualEdits =
-    !!runtimeState.activeScenarioId &&
-    (
-      Object.keys(runtimeState.visualOverrides || {}).length > 0
-      || Object.keys(runtimeState.featureOverrides || {}).length > 0
-    );
-  const hasMeaningfulLabels = colors.some((color) => {
-    const key = String(color || "").toLowerCase();
-    return String(labelMap?.[key] || "").trim().length > 0;
-  });
-  const colorKey = colors.join("|");
-  const specialZoneLegendKey = LegendManager.getSpecialZoneSignature(runtimeState);
-  const normalizedLabels = colors.map((color) => {
-    const key = String(color || "").toLowerCase();
-    return labelMap?.[key] || "";
-  });
-  const legendKey = `${colorKey}::${normalizedLabels.join("|")}::specialZones:${specialZoneLegendKey}`;
-  const shouldRebuild = legendKey !== lastLegendKey;
-
-  if (!colors.length && !specialZoneLegendLayers.length) {
-    controlElement.hidden = true;
-    lastLegendKey = legendKey;
-    return;
-  }
-
-  if (runtimeState.activeScenarioId && !hasMeaningfulLabels && !hasScenarioVisualEdits && !specialZoneLegendLayers.length) {
-    controlElement.hidden = true;
-    lastLegendKey = `${legendKey}::scenario-hidden`;
-    return;
-  }
-
-  const controlState = LegendManager.getControlState(state);
-  if (!controlState.visible) {
-    controlElement.hidden = true;
-    lastLegendKey = legendKey;
-    return;
-  }
-
-  controlElement.hidden = false;
-  controlElement.classList.toggle("is-collapsed", controlState.collapsed);
-  setLegendControlHeader(colors.length + specialZoneLegendLayers.length, controlState.collapsed);
-
-  if (shouldRebuild) {
-    legendControlBodyElement.replaceChildren();
-
-    colors.forEach((color, index) => {
-      const normalized = String(color || "").toLowerCase();
-      const label = labelMap?.[normalized] || `Category ${index + 1}`;
-      appendLegendRow(legendControlBodyElement, { color, label });
-    });
-
-    if (specialZoneLegendLayers.length) {
-      const section = document.createElement("div");
-      section.className = "map-legend-section-title";
-      section.textContent = getLegendControlText("specialZones");
-      legendControlBodyElement.appendChild(section);
-      specialZoneLegendLayers.forEach((layer) => {
-        const style = layer.style || {};
-        appendLegendRow(legendControlBodyElement, {
-          color: style.fill || "#8b5cf6",
-          label: layer.name || layer.id,
-          stroke: style.stroke || "#6d28d9",
-          pattern: style.pattern || "solid",
-        });
-      });
-    }
-  }
-
-  applyLegendControlPosition(controlState);
-  lastLegendKey = legendKey;
+  return getLegendControlOwner().renderLegend(uniqueColors, labels);
 }
 
 function ensurePerfOverlayElement() {
@@ -19999,16 +18848,7 @@ function initZoom() {
 }
 
 function handleMapMouseLeave() {
-  runtimeState.hoveredId = null;
-  runtimeState.hoveredWaterRegionId = null;
-  runtimeState.hoveredSpecialRegionId = null;
-  hoveredFacilityEntry = null;
-  updateDevHoverHit(null);
-  runtimeState.hoverOverlayDirty = true;
-  renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
-  queueTooltipUpdate({ visible: false });
-  setMapInteractionCursor("");
-  hidePhysicalIntensityBrushPreview();
+  getMapHoverInteractionOwner().handleMapMouseLeave();
 }
 
 function bindEvents() {
@@ -20045,7 +18885,7 @@ function initMap({
   if (facilityInfoCardCloseBtn && !facilityInfoCardCloseBtn.dataset.bound) {
     facilityInfoCardCloseBtn.addEventListener("click", () => {
       applyFacilityInfoCardState(null);
-      runtimeState.hoverOverlayDirty = true;
+      getMapHoverInteractionOwner().setHoverOverlayDirty(true);
       renderHoverOverlayIfNeeded({ eventType: "facility-card-close" });
     });
     facilityInfoCardCloseBtn.dataset.bound = "true";

@@ -7,7 +7,7 @@ import {
   buildAdaptiveEntrypointRecommendation,
   constrainAdaptiveEntrypointSelection,
 } from "../tools/run_adaptive_tests.mjs";
-import { prepareRepositoryVerificationCatalog } from "../tools/verification/script_portfolio.mjs";
+import { buildVerificationSelectionPlan, prepareRepositoryVerificationCatalog } from "../tools/verification/script_portfolio.mjs";
 import {
   buildCoreVerificationPlan,
 } from "../tools/run_core_verification.mjs";
@@ -20,6 +20,7 @@ import {
   buildRouteIndex,
   reconcileVerificationRouteAuthority,
   validateRouteIndex,
+  validateDiscoveredRouteCoverage,
 } from "../tools/test_route_registry.mjs";
 import {
   VERIFICATION_DOMAINS,
@@ -50,6 +51,11 @@ import {
 } from "../tools/verification/verification_metadata_helpers.mjs";
 
 const REPO_ROOT = process.cwd();
+
+test("repository route inventory validates schema and independently discovered coverage", () => {
+  validateRouteIndex();
+  validateDiscoveredRouteCoverage();
+});
 
 test("split catalog sources preserve explicit local edit and impact control-plane routes", () => {
   assert.ok(Object.isFrozen(VERIFICATION_CATALOG_SOURCE_FILES));
@@ -109,6 +115,12 @@ test("local owner feedback selects existing behavior without admitting broader r
     ["js/ui/sidebar/project_support_diagnostics_controller.js", "tests/project_support_diagnostics_controller_behavior.test.mjs"],
     ["tools/run_commit_verification.mjs", "tests/verify_commit_runner_behavior.test.mjs"],
     ["js/ui/sidebar/strategic_overlay/unit_counter_catalog_helper.js", "tests/unit_counter_catalog_behavior.test.mjs"],
+    ["js/ui/toolbar/workspace_chrome_support_surface_controller.js", "tests/workspace_chrome_support_surface_controller_behavior.test.mjs"],
+    ["tests/contracts/command_supersession_contracts.mjs", "tests/command_supersession_contracts.test.mjs"],
+    ["tests/contracts/state_action_source_boundary_contracts.mjs", "tests/state_action_source_boundary_contracts.test.mjs"],
+    ["js/core/worker_task_client.js", "tests/worker_task_client_behavior.test.mjs"],
+    ["tests/scenario_chunk_cancellation_behavior.test.mjs", "tests/scenario_chunk_cancellation_behavior.test.mjs"],
+    ["tests/startup_boot_worker_cancellation.test.mjs", "tests/startup_boot_worker_cancellation.test.mjs"],
   ];
   const routes = buildRouteIndex();
   const preparedCatalog = prepareRepositoryVerificationCatalog();
@@ -131,7 +143,7 @@ test("local owner feedback selects existing behavior without admitting broader r
       const mixed = select([cases[0][0], broadOrUnknown], entrypoint);
       assert.ok(mixed.unmatchedChangedFiles.length > 0 || mixed.localEntrypointRouteGaps.length > 0, broadOrUnknown);
     }
-    for (const broadRoot of ["js/core/map_renderer.js", "js/ui/sidebar.js"]) {
+    for (const broadRoot of ["js/core/map_renderer.js", "js/ui/sidebar.js", "js/ui/toolbar.js"]) {
       const broad = select([broadRoot], entrypoint);
       assert.ok(broad.recommendedCommands.every((command) => !cases.some(([, testFile]) => command.commandRef === "node --test " + testFile)));
     }
@@ -144,17 +156,20 @@ test("local owner feedback selects existing behavior without admitting broader r
   const scripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
   assert.match(scripts["test:node:verify-core-runner"], /tests\/verify_commit_runner_behavior\.test\.mjs/);
   assert.match(scripts["verify:local-infra"], /tests\/verify_commit_runner_behavior\.test\.mjs/);
-  const commitFiles = VERIFICATION_METADATA_SOURCE.canonicalEntrypoints.tier.find((entry) => entry.id === "commit")
-    .commitProjection.controlPlaneTestFiles;
+  const commitRoots = VERIFICATION_METADATA_SOURCE.canonicalEntrypoints.tier.find((entry) => entry.id === "commit")
+    .commitProjection.controlPlaneCommandRefs;
+  const controlPlan = buildVerificationSelectionPlan(preparedCatalog.catalog, commitRoots, { preparedCatalog });
+  const commitFiles = controlPlan.executions.flatMap((execution) => execution.logicalArgv)
+    .filter((argument) => argument.endsWith(".test.mjs"));
   assert.equal(commitFiles.filter((file) => file === "tests/verify_commit_runner_behavior.test.mjs").length, 1);
 });
 
 test("authored catalog source covers command authority, policies, and every projection key", () => {
   const summary = verificationMetadataSourceSummary();
   assert.equal(summary.authoredSurfaces, 1);
-  assert.equal(summary.packageScriptCount, 346);
+  assert.equal(summary.packageScriptCount, Object.keys(readJson("package.json").scripts).length);
   assert.equal(summary.contributorRecords, VERIFICATION_METADATA_SOURCE.records.length);
-  assert.equal(summary.verificationRecordProjectionCount, 147);
+  assert.equal(summary.verificationRecordProjectionCount, 140);
   assert.equal(summary.routeProjectionCount, VERIFICATION_METADATA_SOURCE.records.filter((record) => record.selector !== null).length);
   assert.equal(summary.commandCount, new Set(VERIFICATION_METADATA_SOURCE.records.map((record) => record.commandRef)).size);
   assert.deepEqual(summary.identity, VERIFICATION_METADATA_SOURCE_IDENTITY);
@@ -183,7 +198,7 @@ test("authored catalog source covers command authority, policies, and every proj
   assert.equal(summary.packageAliasCount, 17);
   assert.equal(summary.prProfileCount, 4);
   assert.equal(summary.nightlyRoleCount, 12);
-  assert.equal(summary.documentationProjectionCount, 50);
+  assert.equal(summary.documentationProjectionCount, 48);
 });
 
 test("authored catalog normalization rejects duplicate arrays and stabilizes semantic digests", () => {
@@ -522,6 +537,41 @@ test("verification metadata validates against package scripts and supervisor dom
   );
 });
 
+test("current metadata and local infra exclude historical projection tests", () => {
+  const preparedCatalog = prepareRepositoryVerificationCatalog();
+  const historicalTest = "tests/catalog_projection_shadow_behavior.test.mjs";
+  const testFilesFor = (commandRef) => buildVerificationSelectionPlan(
+    preparedCatalog.catalog, [commandRef], { preparedCatalog },
+  ).executions.flatMap((execution) => execution.logicalArgv)
+    .filter((argument) => argument.endsWith(".test.mjs"));
+
+  assert.deepEqual(testFilesFor("test:node:verification-metadata"), [
+    "tests/verification_metadata_behavior.test.mjs",
+  ]);
+  assert.ok(!testFilesFor("verify:local-infra").includes(historicalTest));
+  assert.deepEqual(testFilesFor("test:node:catalog-projection-history"), [historicalTest]);
+  assert.ok(!commandRefsFromGroups(buildVerifyCoreDefaultGroups()).includes("test:node:catalog-projection-history"));
+
+  const historyFiles = [
+    "tools/verification/catalog_projection_shadow.mjs",
+    "tools/verification/catalog_projection_legacy.mjs",
+    "tools/verification/catalog_projection_historical_baseline.json",
+    "tools/verification/catalog_projection_shadow_cli.mjs",
+    historicalTest,
+  ];
+  const report = buildRecommendation(historyFiles);
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  for (const file of historyFiles) {
+    assert.ok(commandsForChangedFile(report, file).some(({ commandRef }) => (
+      commandRef === "test:node:catalog-projection-history"
+    )), file);
+  }
+  const currentReport = buildRecommendation(["tests/verification_metadata_behavior.test.mjs"]);
+  assert.ok(!currentReport.recommendedCommands.some(({ commandRef }) => (
+    commandRef === "test:node:catalog-projection-history"
+  )));
+});
+
 test("timeout guardrail allowlist selects the timeout guardrail contract", () => {
   const sourceRef = "tools/test-timeout-guardrail-allowlist.json";
   const verificationEntry = VERIFICATION_DOMAINS.find((entry) => (
@@ -600,6 +650,25 @@ test("scenario chunk split routes keep quick local and defer data-reading paths 
   ));
   const quick = byCommand("test:node:scenario-chunk-contracts:quick");
   assert.ok(quick);
+  const quickCases = "tests/scenario_chunk_contracts.quick_cases.mjs";
+  const heavyCases = "tests/scenario_chunk_contracts.heavy_cases.mjs";
+  assert.ok(quick.sourceRefs.includes(quickCases));
+  assert.ok(!quick.sourceRefs.includes(heavyCases));
+  assert.ok(!quick.sourceRefs.includes("tests/scenario_chunk_contracts.test.mjs"));
+  assert.ok(byCommand("test:node:scenario-chunk-contracts:heavy").sourceRefs.includes(heavyCases));
+  const routes = buildRouteIndex();
+  const preparedCatalog = prepareRepositoryVerificationCatalog();
+  for (const entrypoint of ["edit", "impact"]) {
+    const select = (file) => constrainAdaptiveEntrypointSelection(
+      buildAdaptiveEntrypointRecommendation([file], routes, { entrypoint }), entrypoint, { preparedCatalog },
+    );
+    const quickSelection = select(quickCases);
+    assert.deepEqual(quickSelection.unmatchedChangedFiles, []);
+    assert.deepEqual(quickSelection.localEntrypointRouteGaps, []);
+    assert.deepEqual(quickSelection.recommendedCommands.map(({ commandRef }) => commandRef), [quick.commandRef]);
+    const heavySelection = select(heavyCases);
+    assert.ok(heavySelection.recommendedCommands.every(({ commandRef }) => commandRef !== quick.commandRef));
+  }
   assert.equal(quick.cost, "fast");
   assert.deepEqual(quick.resourceLocks, []);
   assert.deepEqual(quick.executionOwners, ["child-safe"]);
@@ -1474,8 +1543,11 @@ test("verify-core reserved plan preserves metadata closure before command supers
     metadataPlan.commandsToRun.map((entry) => entry.commandRef),
     metadataDefaultRefs,
   );
-  assert.equal(metadataDefaultRefs.length, 97);
-  assert.equal(plan.commandsToRun.length, 91);
+  const supersededRefs = plan.supersededCommands.map((entry) => entry.commandRef);
+  assert.deepEqual(
+    plan.commandsToRun.map((entry) => entry.commandRef),
+    metadataDefaultRefs.filter((ref) => !supersededRefs.includes(ref)),
+  );
   assert.deepEqual(
     plan.supersededCommands.map((entry) => entry.commandRef),
     [
@@ -1621,155 +1693,31 @@ test("adaptive and selector direct route commands require exact parameter contra
   }
 });
 
-test("renderer runtime context foundation files route to renderer owner verification", () => {
-  const report = buildRecommendation([
-    "js/core/map_renderer/renderer_runtime_context.js",
-    "tests/renderer_runtime_context_foundation_behavior.test.mjs",
-    "docs/active/renderer-runtime-context-foundation-p1-0-20260709.md",
-    "package.json",
-  ]);
+test("retired renderer context commands leave real owner verification routes intact", () => {
+  const retiredCommandPrefix = "test:node:renderer-runtime-context-";
+  assert.equal(Object.keys(VERIFICATION_METADATA_SOURCE.packageScripts).some((name) => name.startsWith(retiredCommandPrefix)), false);
+  assert.equal(VERIFICATION_METADATA_SOURCE.records.some((record) => record.commandRef.startsWith(retiredCommandPrefix)), false);
+  assert.equal(VERIFICATION_METADATA_SOURCE.records.some((record) => record.sourceRefs.includes("js/core/map_renderer/renderer_runtime_context.js")), false);
 
-  assert.deepEqual(report.unmatchedChangedFiles, []);
-  assert.ok(report.coveredDomains.includes("renderer-runtime"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-foundation"));
-});
-
-test("renderer runtime context receiver files route to renderer owner verification", () => {
-  const report = buildRecommendation([
-    "js/core/map_renderer.js",
-    "js/core/map_renderer/renderer_runtime_context.js",
-    "js/core/map_renderer/render_pass_cache_host_owner.js",
-    "js/core/map_renderer/render_pass_commit_accounting_owner.js",
-    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
-    "docs/active/renderer-runtime-context-first-receiver-p1-1-20260709.md",
-    "package.json",
-  ]);
-
-  assert.deepEqual(report.unmatchedChangedFiles, []);
-  assert.ok(report.coveredDomains.includes("renderer-runtime"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-pass-cache-host-owner-suite"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-pass-commit-accounting-owner-suite"));
-});
-
-test("renderer runtime context render cache files route to renderer owner verification", () => {
-  const report = buildRecommendation([
-    "js/core/map_renderer.js",
-    "js/core/map_renderer/renderer_runtime_context.js",
-    "js/core/renderer/render_cache_owner.js",
-    "tests/renderer_runtime_context_render_cache_behavior.test.mjs",
-    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
-    "tests/test_map_renderer_render_cache_owner_boundary_contract.py",
-    "docs/active/renderer-runtime-context-render-cache-read-model-p1-2-20260709.md",
-    "package.json",
-  ]);
-
-  assert.deepEqual(report.unmatchedChangedFiles, []);
-  assert.ok(report.coveredDomains.includes("renderer-runtime"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-render-cache"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-cache-owner"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-render-cache-owner-boundary"));
-});
-
-test("renderer runtime context projection and viewport files route to renderer owner verification", () => {
-  const report = buildRecommendation([
-    "js/core/map_renderer.js",
-    "js/core/map_renderer/renderer_runtime_context.js",
-    "js/core/renderer/renderer_projection_path_owner.js",
-    "js/core/renderer/viewport_read_model_owner.js",
-    "js/core/renderer/viewport_command_owner.js",
-    "tests/renderer_runtime_context_projection_viewport_behavior.test.mjs",
-    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
-    "tests/test_map_renderer_projection_viewport_context_boundary_contract.py",
-    "docs/active/renderer-runtime-context-projection-viewport-p1-3-20260709.md",
-    "package.json",
-  ]);
-
-  assert.deepEqual(report.unmatchedChangedFiles, []);
-  assert.ok(report.coveredDomains.includes("renderer-runtime"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-projection-viewport"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-projection-viewport-context-boundary"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-projection-path-owner"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-projection-contract"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-read-model-owner"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-command-owner"));
-});
-
-test("renderer runtime context viewport mutation files route to renderer owner verification", () => {
-  const report = buildRecommendation([
-    "js/core/map_renderer.js",
-    "js/core/map_renderer/renderer_runtime_context.js",
-    "js/core/renderer/renderer_fit_projection_owner.js",
-    "js/core/renderer/renderer_viewport_update_owner.js",
-    "js/core/renderer/viewport_resize_lifecycle_owner.js",
-    "tests/renderer_runtime_context_viewport_mutation_behavior.test.mjs",
-    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
-    "tests/renderer_viewport_update_owner_behavior.test.mjs",
-    "tests/viewport_resize_lifecycle_owner_behavior.test.mjs",
-    "tests/test_map_renderer_viewport_mutation_context_boundary_contract.py",
-    "docs/active/renderer-runtime-context-viewport-mutation-chain-p1-4-20260709.md",
-    "package.json",
-  ]);
-
-  assert.deepEqual(report.unmatchedChangedFiles, []);
-  assert.ok(report.coveredDomains.includes("renderer-runtime"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-viewport-mutation"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-viewport-mutation-context-boundary"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-viewport-update-owner"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-resize-lifecycle-owner"));
-});
-
-test("renderer runtime context interaction files route to interaction owner verification", () => {
-  const report = buildRecommendation([
-    "js/core/map_renderer.js",
-    "js/core/map_renderer/renderer_runtime_context.js",
-    "js/core/renderer/zoom_interaction_lifecycle_owner.js",
-    "js/core/renderer/map_interaction_event_binding_owner.js",
-    "tests/renderer_runtime_context_interaction_behavior.test.mjs",
-    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
-    "tests/zoom_interaction_lifecycle_owner_behavior.test.mjs",
-    "tests/map_interaction_event_binding_owner_behavior.test.mjs",
-    "tests/test_map_renderer_interaction_context_boundary_contract.py",
-    "docs/active/renderer-runtime-context-interaction-p1-5-20260709.md",
-    "package.json",
-  ]);
-
-  assert.deepEqual(report.unmatchedChangedFiles, []);
-  assert.ok(report.coveredDomains.includes("renderer-runtime"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-interaction"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:zoom-interaction-lifecycle-owner"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:map-interaction-event-binding-owner"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-interaction-context-boundary"));
-});
-
-test("renderer runtime context hit hover files route to hit hover owner verification", () => {
-  const report = buildRecommendation([
-    "js/core/map_renderer.js",
-    "js/core/map_renderer/renderer_runtime_context.js",
-    "js/core/map_renderer/hit_canvas_scheduling_owner.js",
-    "js/core/map_renderer/map_hover_interaction_owner.js",
-    "tests/renderer_runtime_context_hit_hover_behavior.test.mjs",
-    "tests/renderer_runtime_context_interaction_behavior.test.mjs",
-    "tests/hit_canvas_scheduling_owner_behavior.test.mjs",
-    "tests/hit_canvas_scheduling_owner_inventory.test.mjs",
-    "tests/map_hover_interaction_owner_behavior.test.mjs",
-    "tests/map_hover_interaction_owner_inventory.test.mjs",
-    "tests/test_map_renderer_hit_hover_context_boundary_contract.py",
-    "docs/active/renderer-runtime-context-hit-hover-p1-6-20260709.md",
-    "docs/active/renderer-runtime-context-p1-remaining-20260709/plan.md",
-    "docs/active/renderer-runtime-context-p1-remaining-20260709/context.md",
-    "docs/active/renderer-runtime-context-p1-remaining-20260709/task.md",
-    "package.json",
-  ]);
-
-  assert.deepEqual(report.unmatchedChangedFiles, []);
-  assert.ok(report.coveredDomains.includes("renderer-runtime"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-hit-hover"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-hit-hover-context-boundary"));
-  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:hit-canvas-scheduling-owner-suite"));
+  for (const [files, commands] of [
+    [["js/core/map_renderer/render_pass_cache_host_owner.js", "js/core/map_renderer/render_pass_commit_accounting_owner.js"],
+      ["test:node:render-pass-cache-host-owner-suite", "test:node:render-pass-commit-accounting-owner-suite"]],
+    [["js/core/renderer/render_cache_owner.js"], ["test:node:render-cache-owner"]],
+    [["js/core/renderer/renderer_projection_path_owner.js", "js/core/renderer/viewport_read_model_owner.js", "js/core/renderer/viewport_command_owner.js"],
+      ["test:node:renderer-projection-path-owner", "test:node:renderer-projection-contract", "test:node:viewport-read-model-owner", "test:node:viewport-command-owner"]],
+    [["js/core/renderer/renderer_viewport_update_owner.js", "js/core/renderer/viewport_resize_lifecycle_owner.js"],
+      ["test:node:renderer-viewport-update-owner", "test:node:viewport-resize-lifecycle-owner"]],
+    [["js/core/renderer/zoom_interaction_lifecycle_owner.js", "js/core/renderer/map_interaction_event_binding_owner.js"],
+      ["test:node:zoom-interaction-lifecycle-owner", "test:node:map-interaction-event-binding-owner"]],
+    [["js/core/map_renderer/hit_canvas_scheduling_owner.js", "js/core/map_renderer/map_hover_interaction_owner.js"],
+      ["test:node:hit-canvas-scheduling-owner-suite", "test:node:map-hover-interaction-owner"]],
+  ]) {
+    const report = buildRecommendation(files);
+    assert.deepEqual(report.unmatchedChangedFiles, []);
+    assert.ok(report.coveredDomains.includes("renderer-runtime"));
+    const selected = new Set(report.recommendedCommands.map((command) => command.commandRef));
+    for (const command of commands) assert.ok(selected.has(command), command);
+  }
 });
 
 test("renderer click selection P1.8 files route to owner and both canonical boundary commands", () => {

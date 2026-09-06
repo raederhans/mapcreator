@@ -12,6 +12,7 @@ import {
   buildRepositoryVerificationSelectionPlan,
   buildVerificationSelectionPlan,
   assertPreparedVerificationCatalog,
+  assertVerificationEstimatePolicy,
   buildScriptPortfolio,
   CANONICAL_VERIFICATION_ENTRYPOINTS,
   VERIFICATION_PRODUCT_JOURNEY_ENTRYPOINTS,
@@ -41,6 +42,19 @@ import {
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CLI_PATH = path.join(REPO_ROOT, "tools", "verification", "script_portfolio.mjs");
+
+test("runtime calibration rejects malformed or duplicate measurements", () => {
+  for (const patch of [
+    { platform: "unknown" }, { cost: "unknown" }, { groupBaseRuntimeSeconds: -1 },
+    { perLeafRuntimeSeconds: 0 }, { leafIds: [] }, { leafIds: [42] },
+    { leafIds: ["node-test:tests/a", "node-test:tests/a"] },
+  ]) {
+    const policy = structuredClone(VERIFICATION_ESTIMATE_POLICY);
+    Object.assign(policy.localRuntimeCalibration, patch);
+    assert.throws(() => assertVerificationEstimatePolicy(policy), /invalid-calibration/);
+  }
+  assert.equal(assertVerificationEstimatePolicy(VERIFICATION_ESTIMATE_POLICY), VERIFICATION_ESTIMATE_POLICY);
+});
 
 test("canonical metadata owns runtime projections and checks actual package scripts", () => {
   const packageScripts = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")).scripts;
@@ -1692,10 +1706,10 @@ test("canonical catalog seals entrypoint depth eligibility with cost and owner a
     authority.get("node tools/select_verification_targets.mjs --check").entrypointPolicy,
     {
       schemaVersion: 1,
-      eligibleEntrypoints: ["edit", "impact", "pr"],
-      minimumDepth: "local",
+      eligibleEntrypoints: ["pr"],
+      minimumDepth: "pr",
       executionTarget: "child-safe",
-      deferredReason: null,
+      deferredReason: "requires-pr-verification",
       plannerDisposition: "planned",
       blockedReason: null,
       localProjection: null,

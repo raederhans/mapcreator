@@ -2,12 +2,10 @@
 
 ## Current truth
 
-- Current integration worktree: `C:\Users\raede\Desktop\dev\mapcreator`
-- Branch: `codex/runtime-architecture-reset-r1-integration-20260831`
-- Admission source: `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`, tree `ba969a24a4730072245c60efeefba66409f2c88d`; P4.2a/P4.2b/P4.2c checkpoints remain historical ancestry evidence.
-- Other registered worktrees and user-owned changes remain untouched; the docs-only marker descendant records status and does not replace the A source identity.
-- Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.3 is implementation- and admission-complete at `5fff7388`; exact phase 5/5、zero-gap route、Pages/dist、core 93/93、browser quick、standard perf and independent review are green. P4.4 is unblocked but B1/B2/B3 semantic replay has not started；`B_ADMITTED_SHA` pending。
+- 当前阶段统一读取 [task.md 的 Current status](task.md#current-status)，本文件保留决策、历史证据和交接边界，不再维护第二份阶段结论。
+- 2026-09-05 本地核对位置：`C:\Users\raede\Desktop\dev\mapcreator`，分支 `codex/runtime-architecture-reset-r1-integration-20260831`，已提交端点 `348a952e`；工作区还包含后续治理 WIP。当前工作所有权由 [development-loop 记录](../development-loop-simplification-20260905/context.md) 维护。
+- `12d967fc` 与 policy 的 `progress.latestPhase=P4.4`、P4.4 checkpoint 共同证明本地迁移已实现；没有把它提升为当前候选正式 admission。历史 A 身份和既有 Architect / Critic 记录保留，不替代 fresh B 验收。
+- 本次文档收口未启动项目进程、读取远端状态或改动其他 worktree；下方的进程释放、远端相等和旧工作路径都是当时的快照。
 
 ## Decisions and deviations
 
@@ -67,6 +65,8 @@
 
 ## Live process ownership
 
+以下为各历史验证轮次的进程交接记录，不是当前进程清单；当前任务的 live owner 以主任务协调记录为准。
+
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
 | Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/.last-run.json` plus root command evidence | P4.2c startup recovery 3/3, TNO ready-state 5/5 and Scenario resilience 3/3 pass; lane released and no task-owned live process remains |
@@ -84,11 +84,11 @@
 
 ## Handoff
 
-P4 uses one active task directory. Phase facts, validation exits, artifact paths, exact SHAs, route gaps, regression coverage and remaining risk are appended here and in `task.md`; parallel summary documents are not created.
+P4 uses one active task directory. `task.md` owns current phase and acceptance status; this file keeps dated decisions and handoff context, and `plan.md` keeps scope and acceptance criteria. Do not duplicate current status across all three files.
 
 ## Next step
 
-Create clean B1 Appearance、B2 UI/Transport、B3 Strategic/Special-Zone semantic-replay worktrees from exact `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`；workers own disjoint product files and focused tests，while `/root` retains shared UI、policy/routes、live gates、integration and the final B marker。
+先按当前主任务完成已授权的局部治理并保留已有 WIP；正式 P4.4 admission 开始时，由主任务确定候选、血缘和缺失证据，完成相应 gate 后才写 B marker。不再从本历史交接段自动重新创建已实现的 B1/B2/B3 迁移任务。
 
 ## 2026-08-05 audit handoff
 

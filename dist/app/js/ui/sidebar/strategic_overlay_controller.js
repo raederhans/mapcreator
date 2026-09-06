@@ -1,5 +1,5 @@
 import {
-  renderUnitCounterCatalogSection,
+  createUnitCounterCatalog,
 } from "./strategic_overlay/unit_counter_catalog_helper.js";
 import { setUnitCounterEditorModalState } from "./strategic_overlay/unit_counter_modal_helper.js";
 import { bindUnitCounterSidebarEvents } from "./strategic_overlay/unit_counter_bind_events_helper.js";
@@ -150,19 +150,16 @@ export function createStrategicOverlayController({
     clampUnitCounterStatValue,
     getUnitCounterCombatPreset,
     getRandomizedUnitCounterCombatState,
-    ensureHoi4UnitIconManifest,
-    cancelHoi4CatalogGridRender,
-    filterHoi4UnitIconEntries,
-    renderHoi4CatalogCards,
-    getHoi4EffectiveMappedPresetIds,
-    getHoi4ReviewSummaryText,
-    getHoi4CatalogFilterOptions,
-    getHoi4UnitIconManifestState,
-    exportHoi4UnitIconReviewDraft,
-    toggleHoi4EntryCurrentPresetMapping,
-    setHoi4CurrentPresetCandidate,
+    showToast,
     DEFAULT_UNIT_COUNTER_PRESET_ID,
   } = helpers;
+
+  const unitCounterCatalog = createUnitCounterCatalog({
+    t,
+    getUnitCounterPresetMeta,
+    showToast,
+    onManifestSettled: () => refreshStrategicOverlayUI({ scopes: ["counterCatalog"] }),
+  });
 
   const STRATEGIC_OVERLAY_REFRESH_SCOPES = Object.freeze([
     "frontlineControls",
@@ -246,6 +243,7 @@ export function createStrategicOverlayController({
       }, 0);
   };
   const setCounterEditorModalState = (nextOpen, { restoreFocus = true } = {}) => {
+    if (!nextOpen) unitCounterCatalog.cancelRender(unitCounterCatalogGrid);
     setUnitCounterEditorModalState({
       nextOpen,
       state,
@@ -677,7 +675,7 @@ export function createStrategicOverlayController({
       }
       if (shouldRefreshCounterCatalog) {
         recordStrategicOverlayPerfCounter("counterCatalog");
-        renderUnitCounterCatalogSection({
+        unitCounterCatalog.render({
           elements: {
             unitCounterCatalogCategoriesEl,
             unitCounterCatalogGrid,
@@ -689,21 +687,21 @@ export function createStrategicOverlayController({
             unitCounterLibraryReviewSummary,
             unitCounterLibraryVariantRow,
           },
-          state,
+          catalogView: {
+            isModalOpen: Boolean(state.strategicOverlayUi?.counterEditorModalOpen),
+            source: String(state.strategicOverlayUi?.counterCatalogSource || "internal"),
+            variant: String(state.strategicOverlayUi?.hoi4CounterVariant || "small"),
+            internalQuery: String(state.strategicOverlayUi?.counterCatalogQuery || ""),
+            hoi4Query: String(state.strategicOverlayUi?.hoi4CounterQuery || ""),
+            internalCategory: String(state.strategicOverlayUi?.counterCatalogCategory || "all"),
+            hoi4Category: String(state.strategicOverlayUi?.hoi4CounterCategory || "all"),
+          },
           t,
           effectivePresetId: unitCounterViewModel.effectivePresetId,
           helpers: {
-            cancelHoi4CatalogGridRender,
-            ensureHoi4UnitIconManifest,
-            filterHoi4UnitIconEntries,
             getFilteredUnitCounterCatalog,
-            getHoi4CatalogFilterOptions,
-            getHoi4EffectiveMappedPresetIds,
-            getHoi4ReviewSummaryText,
-            getHoi4UnitIconManifestState,
             getUnitCounterCategoryLabel,
             getUnitCounterIconPathById,
-            renderHoi4CatalogCards,
             unitCounterCatalogCategories,
           },
         });
@@ -1176,7 +1174,7 @@ export function createStrategicOverlayController({
       clampUnitCounterStatValue,
       DEFAULT_UNIT_COUNTER_PRESET_ID,
       ensureStrategicOverlayUiState,
-      exportHoi4UnitIconReviewDraft,
+      unitCounterCatalog,
       getRandomizedUnitCounterCombatState,
       getUnitCounterCombatPreset,
       getUnitCounterPresetMeta,
@@ -1188,10 +1186,8 @@ export function createStrategicOverlayController({
       resolveUnitCounterCombatState,
       scheduleStrategicOverlayRefresh,
       setCounterEditorModalState,
-      setHoi4CurrentPresetCandidate,
       showAppDialog,
       t,
-      toggleHoi4EntryCurrentPresetMapping,
       unitCounterPresets,
     },
   });

@@ -626,6 +626,8 @@ export const SCENARIO_RECORDS = [
       "tools/validate_tno_water_geometries.py",
       "tools/patch_tno_1962_bundle.py",
       "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "data/scenarios/tno_1962"
     ],
     "ownerHints": [
@@ -781,7 +783,7 @@ export const SCENARIO_RECORDS = [
     "sourceRefs": [
       "package.json",
       "tests/scenario_chunk_contracts.quick.test.mjs",
-      "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
       "tests/helpers/scenario_chunk_contract_support.mjs",
       "js/core/feature_identity.js",
       "js/core/frame_scheduler.js",
@@ -818,7 +820,7 @@ export const SCENARIO_RECORDS = [
     "commandRef": "test:node:scenario-chunk-contracts:heavy",
     "sourceRefs": [
       "tests/scenario_chunk_contracts.heavy.test.mjs",
-      "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "tests/helpers/scenario_chunk_contract_support.mjs",
       "data/scenarios/tno_1962",
       "vendor/d3.v7.min.js",
@@ -900,6 +902,8 @@ export const SCENARIO_RECORDS = [
     "id": "node:test:node:scenario-chunk-contracts:split",
     "commandRef": "test:node:scenario-chunk-contracts:split",
     "sourceRefs": [
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "tests/scenario_chunk_contracts.quick.test.mjs",
       "tests/scenario_chunk_contracts.heavy.test.mjs"
     ],
@@ -921,6 +925,8 @@ export const SCENARIO_RECORDS = [
     "id": "node:test:node:scenario-chunk-contracts:shadow",
     "commandRef": "test:node:scenario-chunk-contracts:shadow",
     "sourceRefs": [
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "tests/scenario_chunk_contract_shadow_behavior.test.mjs",
       "tools/verification/test_shadow_equivalence.mjs"
     ],
@@ -943,6 +949,8 @@ export const SCENARIO_RECORDS = [
     "commandRef": "test:node:scenario-chunk-contracts",
     "sourceRefs": [
       "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs",
       "tests/helpers/scenario_chunk_contract_support.mjs",
       "js/core/feature_identity.js",
       "js/core/frame_scheduler.js",
@@ -1240,7 +1248,9 @@ export const SCENARIO_RECORDS = [
     "commandRef": "test:node:scenario-chunk-contracts",
     "sourceRefs": [
       "js/core/renderer/context_pass_orchestrator_owner.js",
-      "tests/scenario_chunk_contracts.test.mjs"
+      "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs"
     ],
     "ownerHints": [
       "scenario-runtime"
@@ -1362,7 +1372,9 @@ export const SCENARIO_RECORDS = [
       "js/core/renderer/political_pass_orchestrator_owner.js",
       "js/core/renderer/political_background_render_owner.js",
       "js/core/renderer/political_partial_repaint_owner.js",
-      "tests/scenario_chunk_contracts.test.mjs"
+      "tests/scenario_chunk_contracts.test.mjs",
+      "tests/scenario_chunk_contracts.quick_cases.mjs",
+      "tests/scenario_chunk_contracts.heavy_cases.mjs"
     ],
     "ownerHints": [
       "scenario-runtime"

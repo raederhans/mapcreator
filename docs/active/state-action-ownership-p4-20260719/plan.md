@@ -1,5 +1,7 @@
 # P4 Global State Action Ownership Plan
 
+当前阶段、实现与正式验收的区别统一见 [task.md 的 Current status](task.md#current-status)。下文保留原阶段顺序与验收目标，不把历史候选的验收结果延伸到当前工作区。
+
 ## Goal
 
 保留全局 `state` 兼容 facade 和根形状，把写入权逐步收敛到 `js/core/state/actions/` 下的显式 domain actions；每个 action 接收显式 target，只修改登记键，DOM、渲染、调度、指标、bus、持久化和恢复副作用继续留在 composition root。
@@ -32,7 +34,8 @@
 - [x] P4.2b Scenario chunk and promotion actions
 - [x] P4.2c Scenario health and presentation-hint actions
 - [x] P4.3 Renderer actions — admitted at `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66`。
-- [ ] P4.4 UI/appearance/transport/strategic actions — A dependency released；B1/B2/B3 not started。
+- [x] P4.4 UI/appearance/transport/strategic actions — 本地迁移实现已提交为 `12d967fc`；这不是正式 admission。
+- [ ] P4.4 当前候选的正式 admission 与 `B_ADMITTED_SHA` 确认，见 task.md。
 - [ ] P4.5 Hook semantics
 - [ ] Closeout, integration, push, and cleanup
 
@@ -45,7 +48,7 @@
 - P4.1–P4.5 每阶段 legacy authority 单调不增。
 - Production legacy-direct writers 最终 `<=54`；legacy-direct + legacy-target unique membership 最终 `<=80%` P4.0 基线。
 - Actions 只位于 `js/core/state/actions/`，`*_state.js` 只保留 defaults/read/normalization 和移除期 compatibility re-export。
-- `RendererRuntimeContext` 始终保持 read-only。
+- 历史 `RendererRuntimeContext` 在存续期间保持 read-only；它已在后续本地治理中退役，现有 owner 的实时读取与状态身份契约继续保留，见 [后续治理记录](../development-loop-simplification-20260905/task.md#deeper-stages-1-4)。
 - `index.html`、`css/style.css`、`js/ui/toolbar.js` 只允许主线程串行修改。
 - 每阶段通过 named verification、adaptive zero-gap、exact-SHA checkpoint/attestation 和 registry/task truth。
 - P4.4 只从 `A_ADMITTED_SHA=5fff7388d6246fa3bfb6c92a33d9ae5535a8af66` 建立 clean replay；docs-only marker commit 不作为 source baseline。
@@ -64,4 +67,4 @@
 - P4.4 与 appearance/transport 平台化共享热点；共享文件采用单 writer 串行策略。
 - Browser、ports、dist、`.runtime`、perf、scenario-data 和 heavy-geo 由主线程 live-test owner 独占。
 - P4.0 使用 pinned dev-only Acorn 解析 JavaScript grammar/scope，并由仓库 policy 负责 mutation classification、binding locator 与 authority。
-- 任何 tracked 修正都会创建新的候选 SHA，并触发对应阶段 acceptance matrix 全量重跑。
+- 提交正式 admission 的候选发生 tracked 修正后，需要为新候选重新完成对应 acceptance matrix；普通局部修改遵循项目 AGENTS.md 的最小充分验证，不因这条历史验收规则自动触发全量运行。

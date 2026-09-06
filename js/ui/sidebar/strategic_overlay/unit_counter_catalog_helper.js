@@ -428,7 +428,7 @@ export function createUnitCounterCatalog({
 
   function renderUnitCounterCatalogSection({
     elements,
-    state,
+    catalogView = {},
     effectivePresetId,
     helpers,
   }) {
@@ -449,9 +449,18 @@ export function createUnitCounterCatalog({
       getUnitCounterIconPathById,
       unitCounterCatalogCategories,
     } = helpers;
-    const catalogSource = normalizeCatalogSource(state.strategicOverlayUi.counterCatalogSource);
+    const {
+      isModalOpen = false,
+      source = "internal",
+      variant = "small",
+      internalQuery = "",
+      hoi4Query = "",
+      internalCategory = "all",
+      hoi4Category = "all",
+    } = catalogView;
+    const catalogSource = normalizeCatalogSource(source);
     const usingHoi4Catalog = catalogSource === "hoi4";
-    const hoi4PreferredVariant = normalizeCatalogVariant(state.strategicOverlayUi.hoi4CounterVariant);
+    const hoi4PreferredVariant = normalizeCatalogVariant(variant);
     const manifestStatus = hoi4UnitIconManifestStatus;
 
     if (unitCounterCatalogHeaderTitle) {
@@ -491,8 +500,8 @@ export function createUnitCounterCatalog({
     }
     if (unitCounterCatalogSearchInput) {
       unitCounterCatalogSearchInput.value = usingHoi4Catalog
-        ? String(state.strategicOverlayUi?.hoi4CounterQuery || "")
-        : String(state.strategicOverlayUi?.counterCatalogQuery || "");
+        ? hoi4Query
+        : internalQuery;
       unitCounterCatalogSearchInput.placeholder = usingHoi4Catalog
         ? t("Search HOI4 sprite names, labels, keywords...", "ui")
         : t("Search internal presets, symbols, keywords...", "ui");
@@ -502,8 +511,8 @@ export function createUnitCounterCatalog({
         ? getHoi4CatalogFilterOptions(effectivePresetId)
         : [["all", t("All", "ui")], ...unitCounterCatalogCategories.map((category) => [category, getUnitCounterCategoryLabel(category)])];
       const activeCategory = usingHoi4Catalog
-        ? normalizeCatalogCategory(state.strategicOverlayUi?.hoi4CounterCategory || "all")
-        : normalizeCatalogCategory(state.strategicOverlayUi?.counterCatalogCategory || "all");
+        ? normalizeCatalogCategory(hoi4Category)
+        : normalizeCatalogCategory(internalCategory);
       unitCounterCatalogCategoriesEl.replaceChildren();
       categoryOptions.forEach(([categoryValue, label]) => {
         const button = document.createElement("button");
@@ -518,7 +527,7 @@ export function createUnitCounterCatalog({
       });
     }
     cancelHoi4CatalogGridRender(unitCounterCatalogGrid);
-    if (!(unitCounterCatalogGrid && state.strategicOverlayUi?.counterEditorModalOpen)) {
+    if (!(unitCounterCatalogGrid && isModalOpen)) {
       return;
     }
     unitCounterCatalogGrid.replaceChildren();
@@ -526,8 +535,8 @@ export function createUnitCounterCatalog({
     emptyState.className = "counter-editor-symbol-empty";
     if (!usingHoi4Catalog) {
       const filteredCatalog = getFilteredUnitCounterCatalog({
-        category: state.strategicOverlayUi?.counterCatalogCategory || "all",
-        query: state.strategicOverlayUi?.counterCatalogQuery || "",
+        category: internalCategory,
+        query: internalQuery,
       });
       if (!filteredCatalog.length) {
         emptyState.textContent = t("No symbols match the current filter.", "ui");
@@ -575,8 +584,8 @@ export function createUnitCounterCatalog({
       return;
     }
     const filteredEntries = filterHoi4UnitIconEntries(hoi4UnitIconManifestData?.entries || [], {
-      filter: state.strategicOverlayUi?.hoi4CounterCategory || "all",
-      query: state.strategicOverlayUi?.hoi4CounterQuery || "",
+      filter: hoi4Category,
+      query: hoi4Query,
       currentPresetId: effectivePresetId,
       getMappedPresetIds: getHoi4EffectiveMappedPresetIds,
     });

@@ -20,10 +20,16 @@ class MapRendererBorderMeshOwnerBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("facade_border_runtime.js", renderer)
         owned_fields = r"(?:dynamicBordersDirty|dynamicBordersDirtyReason|pendingDynamicBorderTimerId|cachedDetailAdmBorders)"
         direct_write = rf"\b(?:runtimeState|state)\.{owned_fields}\s*=(?!=)"
-        for source in (renderer, draw):
+        for source in (renderer, draw, owner):
             self.assertNotRegex(source, direct_write)
             self.assertNotRegex(source, r"cachedDetailAdmBorders\.(?:push|pop|splice|shift|unshift|sort|reverse)\(")
-        self.assertRegex(owner, direct_write)
+        for action_name in [
+            "replaceCachedDetailAdmBordersState",
+            "setDynamicBordersDirtyState",
+            "setPendingDynamicBorderTimerState",
+        ]:
+            self.assertIn(action_name, owner)
+        self.assertIn('../state/actions/renderer_cache_actions.js', owner)
 
     def test_map_renderer_imports_polyline_simplification_helpers(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

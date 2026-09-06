@@ -3,6 +3,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { VERIFICATION_METADATA_SOURCE } from "./verification/verification_catalog_source.mjs";
+import { prepareRepositoryVerificationCatalogBinding } from "./verification/script_portfolio.mjs";
+import { buildRouteIndex } from "./test_route_registry.mjs";
+import { buildPrCostObservation } from "./verification/verification_profile.mjs";
+import { discoverWorkspaceChangedFiles } from "./verification/workspace_changes.mjs";
+export { parsePorcelainChangedFiles } from "./verification/workspace_changes.mjs";
+import {
+  adaptivePlanningExitCode,
+  applyLocalEntrypointExecutionBudget,
+  buildAdaptiveEntrypointRecommendation,
+  buildExecutionPlan,
+  constrainAdaptiveEntrypointSelection,
+  executeAdaptivePlan,
+} from "./run_adaptive_tests.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -67,6 +80,7 @@ export function buildCommitVerificationPlan(changedFiles, {
       && nonControlPlaneSources.has(file)
   ));
   const commands = [];
+  const requiredCanonicalCommandRefs = [];
   if (!registeredProductOnly) {
     commands.push(["npm", ["run", "verify:script-portfolio"]]);
   }
@@ -74,23 +88,22 @@ export function buildCommitVerificationPlan(changedFiles, {
   // existing test import without modifying the test itself.
   commands.push(["npm", ["run", "verify:test-import-graph"]]);
   if (!registeredProductOnly) {
-    commands.push(["node", ["tools/select_verification_targets.mjs", "--check"]]);
+    requiredCanonicalCommandRefs.push("node tools/select_verification_targets.mjs --check");
   }
   if (controlPlaneFiles.length > 0) {
-    commands.push(["node", ["--test", ...entry.commitProjection.controlPlaneTestFiles]]);
-  }
-  if (productFiles.length > 0) {
-    commands.push(["node", [
-      "tools/run_adaptive_tests.mjs",
-      "--entrypoint",
-      "edit",
-      "--execute",
-      "--defer-main-thread",
-      ...productFiles.flatMap((file) => ["--changed-file", file]),
-    ]]);
+    const refs = entry.commitProjection.controlPlaneCommandRefs;
+    if (!Array.isArray(refs) || refs.length === 0
+      || refs.some((ref) => typeof ref !== "string" || !ref.trim())
+      || new Set(refs).size !== refs.length) {
+      throw new Error("verify-commit-control-plane-command-refs-invalid");
+    }
+    requiredCanonicalCommandRefs.push(...refs);
   }
   return {
     commands,
+    productFiles,
+    controlPlaneFiles,
+    requiredCanonicalCommandRefs,
     mode: [
       controlPlaneFiles.length > 0 ? "control-plane" : null,
       productFiles.length > 0 ? "adaptive-edit" : null,
@@ -98,37 +111,42 @@ export function buildCommitVerificationPlan(changedFiles, {
   };
 }
 
-export function parsePorcelainChangedFiles(output) {
-  const records = String(output || "").split("\0");
-  const files = [];
-  for (let index = 0; index < records.length; index += 1) {
-    const record = records[index];
-    if (!record) continue;
-    if (record.length < 4 || record[2] !== " ") {
-      throw new Error("verify-commit-porcelain-malformed");
-    }
-    const status = record.slice(0, 2);
-    const file = record.slice(3);
-    if (!file) throw new Error("verify-commit-porcelain-path-missing");
-    files.push(file);
-    if (/[RC]/u.test(status)) {
-      const previousPath = records[index + 1];
-      if (!previousPath) throw new Error("verify-commit-porcelain-previous-path-missing");
-      files.push(previousPath);
-      index += 1;
-    }
-  }
-  return [...new Set(files)].sort();
+export function buildCommitExecutionPlan(commitPlan, {
+  cwd = REPO_ROOT,
+  platform = process.platform,
+  catalogBinding = prepareRepositoryVerificationCatalogBinding({ repoRoot: cwd, platform }),
+  selectorRoutes = buildRouteIndex(),
+} = {}) {
+  const { preparedCatalog, bindSelectionReport } = catalogBinding;
+  const selectorStartedAt = performance.now();
+  const recommendation = buildAdaptiveEntrypointRecommendation(commitPlan.productFiles, selectorRoutes, {
+    entrypoint: "edit", routeAuthority: preparedCatalog.authority,
+  });
+  const boundSelection = bindSelectionReport(constrainAdaptiveEntrypointSelection(recommendation, "edit", { preparedCatalog }));
+  const report = {
+    ...boundSelection,
+    prCost: buildPrCostObservation({
+      selectorReport: boundSelection,
+      observationStage: "selector",
+      timingInputs: { selectorMs: { value: performance.now() - selectorStartedAt, source: "local-monotonic-clock" } },
+    }),
+  };
+  const productPlan = applyLocalEntrypointExecutionBudget(
+    buildExecutionPlan(report, { preparedCatalog, platform, packageScripts: preparedCatalog.sourceInputs.packageScripts }), "edit", { preparedCatalog },
+  );
+  const productExitCode = adaptivePlanningExitCode(report, productPlan);
+  // Fixed commit obligations never count towards, or repair, the product edit budget.
+  if (productExitCode) return { report, productPlan, executionPlan: productPlan, exitCode: productExitCode };
+  const executionPlan = commitPlan.requiredCanonicalCommandRefs.length > 0
+    ? buildExecutionPlan(report, { preparedCatalog, platform, packageScripts: preparedCatalog.sourceInputs.packageScripts, requiredCanonicalCommandRefs: commitPlan.requiredCanonicalCommandRefs })
+    : productPlan;
+  return { report, productPlan, executionPlan, exitCode: adaptivePlanningExitCode(report, executionPlan) };
 }
 
 export function discoverChangedFiles({ runner = spawnSync, cwd = REPO_ROOT } = {}) {
-  const result = runner("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
-    cwd,
-    encoding: "utf8",
-    shell: false,
+  return discoverWorkspaceChangedFiles({
+    runner, cwd, failureCode: "verify-commit-changed-files-unavailable",
   });
-  if (result?.status !== 0) throw new Error("verify-commit-changed-files-unavailable");
-  return parsePorcelainChangedFiles(result.stdout);
 }
 
 export function parseCommitVerificationArgs(argv = []) {
@@ -153,11 +171,19 @@ export function runCommitVerification({
   changedFiles = discoverChangedFiles({ runner, cwd }),
 } = {}) {
   const plan = buildCommitVerificationPlan(changedFiles);
+  const { report, executionPlan, exitCode } = buildCommitExecutionPlan(plan, { cwd });
+  if (exitCode) {
+    console.error("Commit verification planning failed:", JSON.stringify({ unmatchedChangedFiles: report.unmatchedChangedFiles, routeGaps: executionPlan.routeGaps }));
+    return exitCode;
+  }
   for (const [bin, args] of plan.commands) {
     const result = runCommand(runner, bin, args, { cwd, stdio: "inherit", shell: false });
     if (result?.status !== 0) return result?.status || 1;
   }
-  return 0;
+  const results = executeAdaptivePlan(executionPlan, { runner, cwd });
+  const failedResult = results.find((result) => result.exitCode !== 0);
+  if (failedResult) return failedResult.exitCode || 1;
+  return results.length === executionPlan.executionCommands.length ? 0 : 1;
 }
 
 export function runCommitVerificationCli(argv = process.argv.slice(2), options = {}) {

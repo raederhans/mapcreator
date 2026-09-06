@@ -216,3 +216,9 @@ test("command wrappers noop without d3 selection inputs", () => {
   assert.deepEqual(missingNode.calls.scaleTo, []);
   assert.deepEqual(missingNode.calls.translateBy, []);
 });
+
+test("factory freezes its exact public API", () => {
+  const { owner } = createHarness();
+
+  assert.equal(Object.isFrozen(owner), true);
+});

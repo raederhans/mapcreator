@@ -154,6 +154,21 @@ export const CATALOG_POLICIES = {
     "schemaVersion": 1,
     "kind": "verification-estimate-policy",
     "aggregation": "sum-process-group-base-plus-leaf-scale",
+    // Windows local measurements, 2026-09-06: each of these five leaves ran
+    // in a 0.3s process group. Keep headroom; unmeasured leaves retain defaults.
+    "localRuntimeCalibration": {
+      "platform": "win32",
+      "cost": "fast",
+      "groupBaseRuntimeSeconds": 1,
+      "perLeafRuntimeSeconds": 1,
+      "leafIds": [
+        "node-test:tests/border_mesh_owner_behavior.test.mjs",
+        "node-test:tests/border_draw_owner_behavior.test.mjs",
+        "node-test:tests/country_inspector_model_behavior.test.mjs",
+        "node-test:tests/country_inspector_controller_behavior.test.mjs",
+        "node-test:tests/workspace_chrome_support_surface_controller_behavior.test.mjs"
+      ]
+    },
     "costClasses": {
       "fast": {
         "groupBaseRuntimeSeconds": 20,
@@ -330,12 +345,10 @@ export const CATALOG_POLICIES = {
         "executionScope": "child-safe",
         "commitProjection": {
           "controlPlaneRecordIds": ["infra:local-verification-closure", "local:owner:commit-runner"],
-          "controlPlaneTestFiles": [
-            "tests/verification_metadata_behavior.test.mjs",
-            "tests/catalog_projection_shadow_behavior.test.mjs",
-            "tests/verification_script_portfolio_behavior.test.mjs",
-            "tests/verify_core_runner_behavior.test.mjs",
-            "tests/verify_commit_runner_behavior.test.mjs"
+          "controlPlaneCommandRefs": [
+            "test:node:verification-metadata",
+            "test:node:verification-script-portfolio",
+            "test:node:verify-core-runner"
           ]
         }
       },

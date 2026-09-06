@@ -1,6 +1,28 @@
 import test from "node:test";
+import fs from "node:fs";
+import { parse } from "acorn";
+import { simple } from "acorn-walk";
+import * as expansionActions from "../js/core/state/actions/scenario_presentation_actions.js";
 import assert from "node:assert/strict";
 import { createCountryInspectorModel } from "../js/ui/sidebar/country_inspector_model.js";
+
+
+function createExpansionInitializer(state, model) {
+  const source = fs.readFileSync(new URL("../js/ui/sidebar/country_inspector_controller.js", import.meta.url), "utf8");
+  let initializer;
+  simple(parse(source, { ecmaVersion: "latest", sourceType: "module" }), {
+    FunctionDeclaration(node) {
+      if (node.id.name === "ensureInitialInspectorExpansion") initializer = node;
+    },
+  });
+  assert.ok(initializer);
+  return new Function("runtimeState", "getDefaultExpandedInspectorGroupId", "getInspectorGroupExpansionKey",
+    "ensureInspectorExpansionState", "markInspectorExpansionInitializedState", "setInspectorContinentExpandedState",
+    `return (${source.slice(initializer.start, initializer.end)});`)(state,
+      model.getDefaultExpandedInspectorGroupId, model.getInspectorGroupExpansionKey,
+      expansionActions.ensureInspectorExpansionState, expansionActions.markInspectorExpansionInitializedState,
+      expansionActions.setInspectorContinentExpandedState);
+}
 
 const createModel = (state = {}) => createCountryInspectorModel(state, (label) => label);
 
@@ -79,15 +101,16 @@ test("initial expansion prefers selected then active country and preserves persi
   };
   const model = createModel(state);
   const groups = [{ id: "asia" }, { id: "europe" }];
-  model.ensureInitialInspectorExpansion(groups);
+  const initializeExpansion = createExpansionInitializer(state, model);
+  initializeExpansion(groups);
   assert.deepEqual([...state.expandedInspectorContinents], ["group::europe"]);
   state.selectedInspectorCountryCode = "";
   state.inspectorExpansionInitialized = false;
-  model.ensureInitialInspectorExpansion(groups);
+  initializeExpansion(groups);
   assert.deepEqual([...state.expandedInspectorContinents], ["group::europe"]);
   state.inspectorExpansionInitialized = false;
   state.expandedInspectorContinents.clear();
-  model.ensureInitialInspectorExpansion(groups);
+  initializeExpansion(groups);
   assert.deepEqual([...state.expandedInspectorContinents], ["group::asia"]);
 });
 
@@ -98,4 +121,20 @@ test("top-level countries omit hidden and releasable entries but retain grouped 
     { code: "RELEASE", releasable: true }, { code: "SUBJECT", scenarioSubject: true },
     { code: "GROUPED", scenarioSubject: true, inspectorGroupId: "region" },
   ]).map((entry) => entry.code), ["VISIBLE", "GROUPED"]);
+});
+
+test("country metadata reads preserve identity and follow live index replacement", () => {
+  const scenarioMeta = Object.freeze({ companionVariants: Object.freeze([{ tag: "GB_ALT" }]) });
+  const groupingMeta = Object.freeze({ continentId: "europe" });
+  const state = { activeScenarioId: "example", scenarioCountriesByTag: { GB: scenarioMeta },
+    countryGroupMetaByCode: new Map([["GB", groupingMeta]]) };
+  const model = createModel(state);
+  assert.equal(model.getScenarioCountryMeta("UK"), scenarioMeta);
+  assert.equal(model.getCountryGroupingMeta("UK"), groupingMeta);
+  state.scenarioCountriesByTag = { GB: { tag: "new" } };
+  state.countryGroupMetaByCode = new Map([["GB", { continentId: "new" }]]);
+  assert.equal(model.getScenarioCountryMeta("GB"), state.scenarioCountriesByTag.GB);
+  assert.equal(model.getCountryGroupingMeta("GB"), state.countryGroupMetaByCode.get("GB"));
+  state.activeScenarioId = "";
+  assert.equal(model.getScenarioCountryMeta("GB"), null);
 });

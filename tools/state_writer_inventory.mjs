@@ -7,6 +7,8 @@ import * as walk from "acorn-walk";
 import {
   STATE_MUTATION_DELEGATING_OWNER_CONTRACT,
   findStateActionDelegationContractEntry,
+  findStateImportedBorrowedProjectionContractEntry,
+  findStateImportedPureReaderContractEntry,
   findStateImportedPureNormalizerContractEntry,
   findStateDetachedCaptureContractEntry,
   findStateMutationDelegatingOwnerFactoryContractEntry,
@@ -1484,11 +1486,57 @@ function prepareBindingMutationAnalysisContext(
         ? trustedGlobalAliasPathsByRecord.get(record) || ""
         : canonicalizeTrustedGlobalPath(node.name);
     }
+    if (node?.type === "CallExpression") {
+      const callPath = trustedGlobalReferencePath(node.callee);
+      const prototypeTarget = unwrapChain(node.arguments?.[0]);
+      if (
+        (callPath === "Object.getPrototypeOf"
+          || callPath === "Reflect.getPrototypeOf")
+        && (node.arguments || []).length === 1
+      ) {
+        const targetPath = trustedGlobalReferencePath(prototypeTarget);
+        if (
+          targetPath === "Map"
+          || targetPath.startsWith("Map.prototype.get")
+        ) {
+          return "Function.prototype";
+        }
+        if (
+          prototypeTarget?.type === "NewExpression"
+          && prototypeTarget.callee?.type === "Identifier"
+          && prototypeTarget.callee.name === "Map"
+          && !analysis.resolveIdentifier(prototypeTarget.callee)
+        ) {
+          return "Map.prototype";
+        }
+      }
+      return "";
+    }
     if (node?.type !== "MemberExpression") {
       return "";
     }
     const objectPath = trustedGlobalReferencePath(node.object);
     const propertyName = staticPropertyName(node.property, node.computed);
+    const isMapIntrinsicFunction = [
+      "Map.prototype.get",
+      "Map.prototype.get.call",
+    ].includes(objectPath);
+    const memberObject = unwrapChain(node.object);
+    if (
+      propertyName === "__proto__"
+      && memberObject?.type === "NewExpression"
+      && memberObject.callee?.type === "Identifier"
+      && memberObject.callee.name === "Map"
+      && !analysis.resolveIdentifier(memberObject.callee)
+    ) {
+      return "Map.prototype";
+    }
+    if (
+      (propertyName === "__proto__" || propertyName === "constructor")
+      && (objectPath === "Map" || isMapIntrinsicFunction)
+    ) {
+      return propertyName === "constructor" ? "Function" : "Function.prototype";
+    }
     const result = objectPath && propertyName
       ? `${objectPath}.${propertyName}`
       : "";
@@ -1674,8 +1722,52 @@ function prepareBindingMutationAnalysisContext(
     return [targetPath];
   }
 
+  const mapPrototypeGetIntrinsicGuardPaths = new Set([
+    "Map",
+    "Map.prototype",
+    "Map.prototype.get",
+    "Map.prototype.get.call",
+    "Function",
+    "Function.prototype",
+    "Function.prototype.call",
+  ]);
+
+  function unshadowedStaticExternalEscapePaths(node) {
+    if (node?.type !== "CallExpression") {
+      return [];
+    }
+    const callName = trustedGlobalReferencePath(node.callee);
+    if (
+      OBJECT_MUTATION_OPERATIONS.has(callName)
+      || PURE_STATIC_STATE_READ_CALLS.has(callName)
+      || PURE_IDENTIFIER_STATE_READ_CALLS.has(callName)
+    ) {
+      return [];
+    }
+    const escapedPaths = new Set();
+    for (const argument of node.arguments || []) {
+      walk.full(argument, (descendant) => {
+        const path = trustedGlobalReferencePath(descendant);
+        if (mapPrototypeGetIntrinsicGuardPaths.has(path)) {
+          escapedPaths.add(path);
+        }
+      });
+    }
+    return [...escapedPaths];
+  }
+
   const mutatedUnshadowedStaticPaths = new Set();
   const identityTransitionRecords = new Set();
+  const identityTransitionSourcesByRecord = new Map();
+  function recordIdentityTransition(record, source = null) {
+    if (!record) return;
+    identityTransitionRecords.add(record);
+    if (!source) return;
+    if (!identityTransitionSourcesByRecord.has(record)) {
+      identityTransitionSourcesByRecord.set(record, []);
+    }
+    identityTransitionSourcesByRecord.get(record).push(source);
+  }
   invariantFullWalks += 1;
   walk.full(analysis.ast, (node) => {
     const staticMutationTarget = node.type === "AssignmentExpression"
@@ -1702,33 +1794,33 @@ function prepareBindingMutationAnalysisContext(
     ) {
       mutatedUnshadowedStaticPaths.add(staticMutationPath);
     }
+    for (
+      const staticEscapePath of
+      unshadowedStaticExternalEscapePaths(node)
+    ) {
+      mutatedUnshadowedStaticPaths.add(staticEscapePath);
+    }
     if (
       node.type === "AssignmentExpression"
       && node.left.type !== "MemberExpression"
     ) {
       for (const identifier of collectPatternIdentifiers(node.left)) {
         const record = analysis.resolveIdentifier(identifier);
-        if (record) {
-          identityTransitionRecords.add(record);
-        }
+        recordIdentityTransition(record, node.right);
       }
     } else if (
       node.type === "UpdateExpression"
       && node.argument.type === "Identifier"
     ) {
       const record = analysis.resolveIdentifier(node.argument);
-      if (record) {
-        identityTransitionRecords.add(record);
-      }
+      recordIdentityTransition(record);
     } else if (
       (node.type === "ForInStatement" || node.type === "ForOfStatement")
       && node.left.type !== "VariableDeclaration"
     ) {
       for (const identifier of collectPatternIdentifiers(node.left)) {
         const record = analysis.resolveIdentifier(identifier);
-        if (record) {
-          identityTransitionRecords.add(record);
-        }
+        recordIdentityTransition(record, node.right);
       }
     }
   });
@@ -1764,11 +1856,25 @@ function prepareBindingMutationAnalysisContext(
       }
       return false;
     },
+    hasLexicalBinding(name, node) {
+      const normalizedName = String(name || "");
+      let scope = analysis.nodeScopes.get(node) || analysis.rootScope;
+      while (scope) {
+        if ((scope.declarations.get(normalizedName) || []).length) {
+          return true;
+        }
+        scope = scope.parent;
+      }
+      return false;
+    },
     isIdentityTransitionRecord(record) {
       return identityTransitionRecords.has(record);
     },
     forEachIdentityTransitionRecord(callback) {
       identityTransitionRecords.forEach(callback);
+    },
+    identityTransitionSourceExpressions(record) {
+      return identityTransitionSourcesByRecord.get(record) || [];
     },
     functionIdentityContext,
   });
@@ -2088,6 +2194,7 @@ function analyzeBindingMutations(
   const findings = [];
   const diagnostics = [];
   const actionDelegations = [];
+  const borrowedProjectionCallsWithReportedBorrowedArgument = new WeakSet();
   const bindingMutationAnalysisContext =
     getBindingMutationAnalysisContextForScan();
   const exportedFunctionNodes =
@@ -2118,10 +2225,14 @@ function analyzeBindingMutations(
     bindingMutationAnalysisContext.trustedGlobalReferencePath;
   const hasUnshadowedStaticMutation =
     bindingMutationAnalysisContext.hasUnshadowedStaticMutation;
+  const hasLexicalBinding =
+    bindingMutationAnalysisContext.hasLexicalBinding;
   const isIdentityTransitionRecord =
     bindingMutationAnalysisContext.isIdentityTransitionRecord;
   const forEachIdentityTransitionRecord =
     bindingMutationAnalysisContext.forEachIdentityTransitionRecord;
+  const identityTransitionSourceExpressions =
+    bindingMutationAnalysisContext.identityTransitionSourceExpressions;
 
   function exactTrackedState(reference, record, aliasName = "") {
     const isConfiguredTarget = resolution.targetRecords.has(record);
@@ -2299,6 +2410,15 @@ function analyzeBindingMutations(
     }
     if (node.type === "CallExpression") {
       const importedDelegation = importedTargetDelegation(node);
+      const borrowedProjectionResult =
+        importedBorrowedProjectionResultClassification(
+          node,
+          aliasRecords,
+          importedDelegation?.borrowedProjectionContract,
+        );
+      if (borrowedProjectionResult) {
+        return borrowedProjectionResult;
+      }
       const detachedCaptureContract =
         importedDelegation?.detachedCaptureContract;
       const targetArgument = detachedCaptureContract
@@ -2328,6 +2448,13 @@ function analyzeBindingMutations(
       }
       if (isSanctionedMutationDelegatingOwnerGetterCall(node)) {
         return { status: "none", reference: null };
+      }
+      const mapReadResult = mapPrototypeGetCallResultClassification(
+        node,
+        aliasRecords,
+      );
+      if (mapReadResult) {
+        return mapReadResult;
       }
     }
     if (
@@ -2529,6 +2656,45 @@ function analyzeBindingMutations(
     }
   }
 
+  function identityTransitionMayReachTrackedState(
+    record,
+    aliasRecords,
+    visitedRecords = new Set(),
+  ) {
+    if (visitedRecords.has(record)) {
+      return false;
+    }
+    const nextVisitedRecords = new Set(visitedRecords);
+    nextVisitedRecords.add(record);
+    if (trackedStateStatus(effectiveRecordState(aliasRecords, record)) !== "none") {
+      return true;
+    }
+    return identityTransitionSourceExpressions(record).some((source) => {
+      const classification = referenceClassification(source, aliasRecords);
+      if (
+        classification.status !== "none"
+        || containerExpressionContainsTrackedReference(source, aliasRecords)
+      ) {
+        return true;
+      }
+      const sourceRecord = analysis.resolveIdentifier(
+        rawRootIdentifier(unwrapChain(source)),
+      );
+      if (sourceRecord?.kind === "parameter") {
+        return true;
+      }
+      return Boolean(
+        sourceRecord
+        && isIdentityTransitionRecord(sourceRecord)
+        && identityTransitionMayReachTrackedState(
+          sourceRecord,
+          aliasRecords,
+          nextVisitedRecords,
+        )
+      );
+    });
+  }
+
   function setRecordFromClassification(
     aliasRecords,
     record,
@@ -2704,6 +2870,75 @@ function analyzeBindingMutations(
       );
   }
 
+  function isExactUnshadowedMapPrototypeGetCall(node) {
+    if (
+      node?.type !== "CallExpression"
+      || node.optional === true
+      || (node.arguments || []).length !== 2
+    ) {
+      return false;
+    }
+    const callMember = unwrapChain(node.callee);
+    const getMember = unwrapChain(callMember?.object);
+    const prototypeMember = unwrapChain(getMember?.object);
+    const mapIdentifier = unwrapChain(prototypeMember?.object);
+    if (
+      callMember?.type !== "MemberExpression"
+      || callMember.computed
+      || callMember.optional === true
+      || callMember.property?.type !== "Identifier"
+      || callMember.property.name !== "call"
+      || getMember?.type !== "MemberExpression"
+      || getMember.computed
+      || getMember.optional === true
+      || getMember.property?.type !== "Identifier"
+      || getMember.property.name !== "get"
+      || prototypeMember?.type !== "MemberExpression"
+      || prototypeMember.computed
+      || prototypeMember.optional === true
+      || prototypeMember.property?.type !== "Identifier"
+      || prototypeMember.property.name !== "prototype"
+      || mapIdentifier?.type !== "Identifier"
+      || mapIdentifier.name !== "Map"
+      || analysis.resolveIdentifier(mapIdentifier)
+      || trustedGlobalReferencePath(callMember) !== "Map.prototype.get.call"
+      || hasLexicalBinding("Function", node)
+      || hasUnshadowedStaticMutation("Map.prototype.get.call")
+      || hasUnshadowedStaticMutation("Function.prototype.call")
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  function mapPrototypeGetCallResultClassification(node, aliasRecords) {
+    if (!isExactUnshadowedMapPrototypeGetCall(node)) {
+      return null;
+    }
+    const targetClassification = referenceClassification(
+      node.arguments[0],
+      aliasRecords,
+    );
+    const targetSegments = targetClassification.reference?.segments || [];
+    if (
+      targetClassification.status !== "exact"
+      || !targetSegments.length
+      || targetSegments.some((segment) => segment.dynamic)
+    ) {
+      return null;
+    }
+    return {
+      status: "exact",
+      reference: {
+        ...targetClassification.reference,
+        segments: [
+          ...targetSegments.map((segment) => ({ ...segment })),
+          { key: "*", dynamic: true },
+        ],
+      },
+    };
+  }
+
   function isKnownPureReadCall(node) {
     const name = unshadowedStaticCallName(node);
     if (PURE_STATIC_STATE_READ_CALLS.has(name)) {
@@ -2718,9 +2953,14 @@ function analyzeBindingMutations(
     node,
     argumentClassifications,
     receiverClassification,
+    aliasRecords,
   ) {
     const safeIndexes = new Set();
     if (node.type !== "CallExpression") {
+      return safeIndexes;
+    }
+    if (mapPrototypeGetCallResultClassification(node, aliasRecords)) {
+      safeIndexes.add(0);
       return safeIndexes;
     }
     const staticName = unshadowedStaticCallName(node);
@@ -2783,12 +3023,14 @@ function analyzeBindingMutations(
     {
       receiverClassification = { status: "none", reference: null },
       skippedArgumentIndexes = new Set(),
+      aliasRecords = new Map(),
     } = {},
   ) {
     const safeIndexes = knownSafeTrackedArgumentIndexes(
       node,
       argumentClassifications,
       receiverClassification,
+      aliasRecords,
     );
     for (let index = 0; index < argumentClassifications.length; index += 1) {
       if (
@@ -3085,7 +3327,10 @@ function analyzeBindingMutations(
     }
     if (functionRecord) {
       forEachIdentityTransitionRecord((record) => {
-        if (!analysis.isScopeDescendant(record.scope, functionRecord.scope)) {
+        if (
+          !analysis.isScopeDescendant(record.scope, functionRecord.scope)
+          && identityTransitionMayReachTrackedState(record, functionState)
+        ) {
           functionState.set(record, maybeTrackedState());
         }
       });
@@ -3236,6 +3481,19 @@ function analyzeBindingMutations(
         actionContract: null,
       };
     }
+    const borrowedProjectionContract =
+      findStateImportedBorrowedProjectionContractEntry(
+        source,
+        record.importedName,
+      );
+    if (borrowedProjectionContract) {
+      return {
+        targetArgumentIndex:
+          borrowedProjectionContract.copiedArgumentIndex,
+        actionContract: null,
+        borrowedProjectionContract,
+      };
+    }
     const pureNormalizerContract =
       findStateImportedPureNormalizerContractEntry(
         source,
@@ -3247,6 +3505,26 @@ function analyzeBindingMutations(
           pureNormalizerContract.targetArgumentIndex,
         actionContract: null,
         pureNormalizerContract,
+      };
+    }
+    const importedPureReaderContract =
+      findStateImportedPureReaderContractEntry(
+        source,
+        record.importedName,
+      );
+    if (
+      importedPureReaderContract
+      && (callNode.arguments || []).length
+        === importedPureReaderContract.importedArgumentCount
+      && !(callNode.arguments || []).some(
+        (argument) => unwrapChain(argument)?.type === "SpreadElement",
+      )
+    ) {
+      return {
+        targetArgumentIndex:
+          importedPureReaderContract.targetParameterIndex,
+        actionContract: null,
+        importedPureReaderContract,
       };
     }
     if (source === "js/core/state/index.js") {
@@ -3274,23 +3552,35 @@ function analyzeBindingMutations(
       const importedTargetIndex = importedDelegation.targetArgumentIndex;
       const targetClassification =
         argumentClassifications[importedTargetIndex];
-      const initiallySanctionedTarget = importedDelegation.pureNormalizerContract
-        ? isSanctionedImportedPureNormalizerTargetArgument(
-          node.arguments[importedTargetIndex],
-          targetClassification,
-          importedDelegation.pureNormalizerContract,
-        )
-        : importedDelegation.detachedCaptureContract
-          ? isSanctionedImportedDetachedCaptureTargetArgument(
-            node.arguments[importedTargetIndex],
-            targetClassification,
-            importedDelegation.detachedCaptureContract,
+      const initiallySanctionedTarget =
+        importedDelegation.borrowedProjectionContract
+          ? isSanctionedImportedBorrowedProjectionCall(
+            node,
+            argumentClassifications,
+            importedDelegation.borrowedProjectionContract,
           )
-        : isSanctionedImportedStateActionTargetArgument(
-          node.arguments[importedTargetIndex],
-          targetClassification,
-          aliasRecords,
-        );
+          : importedDelegation.pureNormalizerContract
+            ? isSanctionedImportedPureNormalizerTargetArgument(
+              node.arguments[importedTargetIndex],
+              targetClassification,
+              importedDelegation.pureNormalizerContract,
+            )
+            : importedDelegation.importedPureReaderContract
+              ? isDirectStateRootArgument(
+                unwrapChain(node.arguments[importedTargetIndex]),
+                targetClassification,
+              )
+            : importedDelegation.detachedCaptureContract
+              ? isSanctionedImportedDetachedCaptureTargetArgument(
+                node.arguments[importedTargetIndex],
+                targetClassification,
+                importedDelegation.detachedCaptureContract,
+              )
+              : isSanctionedImportedStateActionTargetArgument(
+                node.arguments[importedTargetIndex],
+                targetClassification,
+                aliasRecords,
+              );
       const callerActionContract = currentActionDelegationContract();
       const exactCurrentActionTarget = isExactCurrentActionTargetArgument(
         node.arguments[importedTargetIndex],
@@ -3764,6 +4054,91 @@ function analyzeBindingMutations(
     );
   }
 
+  function isSanctionedImportedBorrowedProjectionArgument(
+    argument,
+    classification,
+    staticPath,
+  ) {
+    const node = unwrapChain(argument);
+    if (
+      node?.type !== "MemberExpression"
+      || classification?.status !== "exact"
+    ) {
+      return false;
+    }
+    const expectedKeys = String(staticPath || "")
+      .split(".").filter(Boolean);
+    const segments = classification.reference?.segments || [];
+    return Boolean(
+      expectedKeys.length
+      && segments.length === expectedKeys.length
+      && segments.every(
+        (segment, index) =>
+          !segment.dynamic && segment.key === expectedKeys[index],
+      ),
+    );
+  }
+
+  function isSanctionedImportedBorrowedProjectionCall(
+    node,
+    argumentClassifications,
+    contractEntry,
+  ) {
+    if (
+      node?.type !== "CallExpression"
+      || node.optional === true
+      || !Number.isInteger(contractEntry?.argumentCount)
+      || (node.arguments || []).length !== contractEntry.argumentCount
+      || (node.arguments || []).some(
+        (argument) => argument?.type === "SpreadElement",
+      )
+    ) {
+      return false;
+    }
+    const copiedArgumentIndex = contractEntry.copiedArgumentIndex;
+    const borrowedArgumentIndex = contractEntry.borrowedArgumentIndex;
+    const sanctioned = Boolean(
+      Number.isInteger(copiedArgumentIndex)
+      && Number.isInteger(borrowedArgumentIndex)
+      && isSanctionedImportedBorrowedProjectionArgument(
+        node.arguments[copiedArgumentIndex],
+        argumentClassifications[copiedArgumentIndex],
+        contractEntry.copiedArgumentStaticPath,
+      )
+      && isSanctionedImportedBorrowedProjectionArgument(
+        node.arguments[borrowedArgumentIndex],
+        argumentClassifications[borrowedArgumentIndex],
+        contractEntry.borrowedArgumentStaticPath,
+      ),
+    );
+    return sanctioned;
+  }
+
+  function importedBorrowedProjectionResultClassification(
+    node,
+    aliasRecords,
+    contractEntry,
+  ) {
+    if (!contractEntry) {
+      return null;
+    }
+    const argumentClassifications = (node.arguments || []).map((argument) =>
+      referenceClassification(argument, aliasRecords)
+    );
+    if (!isSanctionedImportedBorrowedProjectionCall(
+      node,
+      argumentClassifications,
+      contractEntry,
+    )) {
+      return null;
+    }
+    return childReferenceClassification(
+      argumentClassifications[contractEntry.borrowedArgumentIndex],
+      "*",
+      true,
+    );
+  }
+
   function isSanctionedImportedDetachedCaptureTargetArgument(
     argument,
     classification,
@@ -3839,7 +4214,6 @@ function analyzeBindingMutations(
   ) {
     if (
       binding?.kind !== "function-parameter"
-      || binding.parameterPath !== "$"
       || !actionContract?.referenceIdentityArgumentIndexes?.includes(
         argumentIndex,
       )
@@ -4256,6 +4630,7 @@ function analyzeBindingMutations(
     {
       suppressContainerEscape = false,
       actionProofReachable = null,
+      sanctionedMutationDelegatingOwnerFactoryStateObject = false,
     } = {},
   ) {
     const node = unwrapChain(expression);
@@ -4371,6 +4746,9 @@ function analyzeBindingMutations(
       const importedDelegation = node.type === "CallExpression"
         ? importedTargetDelegation(node)
         : null;
+      const sanctionedMutationDelegatingOwnerFactoryCall =
+        node.type === "CallExpression"
+        && isSanctionedMutationDelegatingOwnerFactoryCall(node);
       let sanctionedImportedActionTarget = false;
       const argumentClassifications = [];
       for (
@@ -4400,6 +4778,11 @@ function analyzeBindingMutations(
           suppressContainerEscape: Boolean(
             importedDelegation?.actionContract
             && sanctionedImportedActionTarget,
+          ),
+          sanctionedMutationDelegatingOwnerFactoryStateObject: Boolean(
+            sanctionedMutationDelegatingOwnerFactoryCall
+            && argumentIndex === 0
+            && payloadNode?.type === "ObjectExpression",
           ),
         });
         if (
@@ -4448,6 +4831,12 @@ function analyzeBindingMutations(
         argumentClassifications,
         aliasRecords,
       );
+      if (
+        sanctionedMutationDelegatingOwnerFactoryCall
+        && unwrapChain(node.arguments?.[0])?.type === "ObjectExpression"
+      ) {
+        delegatedArgumentIndexes.add(0);
+      }
       if (node.type === "CallExpression") {
         recordUnknownCallMutation(
           node,
@@ -4457,7 +4846,26 @@ function analyzeBindingMutations(
       recordUnknownArgumentEscapes(node, argumentClassifications, {
         receiverClassification,
         skippedArgumentIndexes: delegatedArgumentIndexes,
+        aliasRecords,
       });
+      const borrowedProjectionContract =
+        importedDelegation?.borrowedProjectionContract;
+      if (
+        borrowedProjectionContract
+        && isSanctionedImportedBorrowedProjectionCall(
+          node,
+          argumentClassifications,
+          borrowedProjectionContract,
+        )
+        && argumentClassifications[
+          borrowedProjectionContract.borrowedArgumentIndex
+        ]?.status !== "none"
+        && !delegatedArgumentIndexes.has(
+          borrowedProjectionContract.borrowedArgumentIndex,
+        )
+      ) {
+        borrowedProjectionCallsWithReportedBorrowedArgument.add(node);
+      }
       recordPotentialThrow(aliasRecords);
       return aliasRecords;
     }
@@ -4490,7 +4898,24 @@ function analyzeBindingMutations(
         processExpression(property.value, aliasRecords, {
           suppressContainerEscape,
         });
-        if (!suppressContainerEscape) {
+        const sanctionedFactoryStateProperty = Boolean(
+          sanctionedMutationDelegatingOwnerFactoryStateObject
+          && property.type === "Property"
+          && !property.computed
+          && property.kind === "init"
+          && !property.method
+          && staticPropertyName(property.key, property.computed) === "state"
+          && unwrapChain(property.value)?.type === "Identifier"
+          && (() => {
+            const classification = referenceClassification(
+              property.value,
+              aliasRecords,
+            );
+            return classification.status === "exact"
+              && (classification.reference?.segments || []).length === 0;
+          })()
+        );
+        if (!suppressContainerEscape && !sanctionedFactoryStateProperty) {
           recordClassificationDiagnostic(
             referenceClassification(property.value, aliasRecords),
             property.value,
@@ -5522,12 +5947,16 @@ function analyzeBindingMutations(
     }
     if (statement.type === "ReturnStatement") {
       processExpression(statement.argument, aliasRecords);
-      recordClassificationDiagnostic(
-        referenceClassification(statement.argument, aliasRecords),
-        statement.argument || statement,
-        "state-alias-escape",
-        { evidenceKind: "return-value" },
-      );
+      if (!borrowedProjectionCallsWithReportedBorrowedArgument.has(
+        unwrapChain(statement.argument),
+      )) {
+        recordClassificationDiagnostic(
+          referenceClassification(statement.argument, aliasRecords),
+          statement.argument || statement,
+          "state-alias-escape",
+          { evidenceKind: "return-value" },
+        );
+      }
       return abruptCompletion("returns", aliasRecords);
     }
     if (statement.type === "ThrowStatement") {
